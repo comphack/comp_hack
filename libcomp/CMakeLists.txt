@@ -312,6 +312,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/cquest.xml
     schema/binarydata/csounddata.xml
     schema/binarydata/ctalkmessagedata.xml
+    schema/binarydata/cultureitemdata.xml
     schema/binarydata/czonerelationdata.xml
     schema/binarydata/devilbookdata.xml
     schema/binarydata/devilboostdata.xml
@@ -426,6 +427,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     CharacterLogin.cpp
     CharacterProgress.h
     CharacterProgress.cpp
+    CultureData.h
+    CultureData.cpp
     DatabaseConfig.h
     DatabaseConfig.cpp
     DatabaseConfigMariaDB.h
@@ -476,6 +479,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     EventExNPCMessage.cpp
     EventFlagCondition.h
     EventFlagCondition.cpp
+    EventITime.h
+    EventITime.cpp
     EventMultitalk.h
     EventMultitalk.cpp
     EventNPCMessage.h
@@ -546,6 +551,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ServerCommandLine.cpp
     ServerConfig.h
     ServerConfig.cpp
+    ServerCultureMachineSet.h
+    ServerCultureMachineSet.cpp
     ServerNPC.h
     ServerNPC.cpp
     ServerObject.h
@@ -662,6 +669,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiCMessageData.h
     MiCPolygonMovieData.cpp
     MiCPolygonMovieData.h
+    MiCultureItemData.cpp
+    MiCultureItemData.h
     MiPMBaseInfo.cpp
     MiPMBaseInfo.h
     MiPMCameraKeyTbl.cpp

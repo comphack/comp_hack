@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/CompShopOpen.cpp
+ * @file server/channel/src/packets/game/ITimeTalk.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to open a COMP shop.
+ * @brief Request from the client to start or continue an I-Time conversation.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -30,35 +30,49 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
-#include <ServerConstants.h>
 
 // channel Includes
-#include "AccountManager.h"
 #include "ChannelServer.h"
-#include "ChannelClientConnection.h"
 #include "EventManager.h"
 
 using namespace channel;
 
-bool Parsers::CompShopOpen::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ITimeTalk::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 0)
+    if(p.Size() < 2)
     {
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+    int8_t requestID = p.ReadS8();
+    bool itemIncluded = p.ReadS8() == 1;
+
+    int64_t itemID = -1;
+    if(itemIncluded)
+    {
+        if(p.Left() < 8)
+        {
+            return false;
+        }
+
+        itemID = p.ReadS64Little();
+    }
+
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
 
-    server->GetEventManager()->RequestMenu(client,
-        (int32_t)SVR_CONST.MENU_COMP_SHOP);
-
-    // Resend the current CP balance
-    server->GetAccountManager()->SendCPBalance(client);
+    server->QueueWork([](
+        const std::shared_ptr<ChannelServer>& pServer,
+        const std::shared_ptr<ChannelClientConnection> pClient,
+        int8_t pRequestID, int64_t pItemID)
+    {
+        pServer->GetEventManager()->HandleResponse(pClient, pRequestID,
+            pItemID);
+    }, server, client, requestID, itemID);
 
     return true;
 }

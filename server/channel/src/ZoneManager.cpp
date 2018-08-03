@@ -66,6 +66,7 @@
 #include <QmpElement.h>
 #include <QmpFile.h>
 #include <ServerBazaar.h>
+#include <ServerCultureMachineSet.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
@@ -85,6 +86,7 @@
 #include "AIState.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "CultureMachineState.h"
 #include "EventManager.h"
 #include "ManagerConnection.h"
 #include "PlasmaState.h"
@@ -1142,6 +1144,29 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<ChannelClientConnec
         ShowEntity(client, bState->GetEntityID(), true);
     }
 
+    for(auto& cmPair : zone->GetCultureMachines())
+    {
+        auto cmState = cmPair.second;
+        auto rental = cmState->GetRentalData();
+        bool active = rental && rental->GetActive();
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CULTURE_MACHINE_DATA);
+        p.WriteS32Little(cmState->GetEntityID());
+        p.WriteU32Little(cmPair.first);
+        p.WriteU8(active ? 1 : 0);
+        p.WriteS32Little((int32_t)zone->GetID());
+        p.WriteS32Little((int32_t)zoneDef->GetID());
+        p.WriteFloat(cmState->GetCurrentX());
+        p.WriteFloat(cmState->GetCurrentY());
+        p.WriteFloat(cmState->GetCurrentRotation());
+        p.WriteU8(active &&
+            rental->GetCharacter() == cState->GetEntityUUID() ? 1 : 0);
+
+        client->QueuePacket(p);
+        ShowEntity(client, cmState->GetEntityID(), true);
+    }
+
     for(auto lState : zone->GetLootBoxes())
     {
         SendLootBoxData(client, lState, nullptr, false, true);
@@ -1504,72 +1529,118 @@ void ZoneManager::SendBazaarMarketData(const std::shared_ptr<Zone>& zone,
     BroadcastPacket(zone, p);
 }
 
-void ZoneManager::ExpireBazaarMarkets(const std::shared_ptr<Zone>& zone,
-    const std::shared_ptr<BazaarState>& bState)
+void ZoneManager::SendCultureMachineData(const std::shared_ptr<Zone>& zone,
+    const std::shared_ptr<CultureMachineState>& cmState)
+{
+    libcomp::Packet p;
+    p.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_CULTURE_MACHINE_UPDATE);
+    p.WriteS32Little(cmState->GetEntityID());
+    p.WriteU8(cmState->GetRentalData() ? 1 : 0);
+
+    BroadcastPacket(zone, p);
+}
+
+void ZoneManager::ExpireRentals(const std::shared_ptr<Zone>& zone)
 {
     auto server = mServer.lock();
+    auto managerConnection = server->GetManagerConnection();
 
     uint32_t now = (uint32_t)std::time(0);
-    uint32_t currentExpiration = bState->GetNextExpiration();
+    uint32_t currentExpiration = zone->GetNextRentalExpiration();
 
-    std::list<std::shared_ptr<objects::BazaarData>> expired;
-    for(uint32_t marketID : bState->GetEntity()->GetMarketIDs())
+    auto machines = zone->GetCultureMachines();
+    auto bazaars = zone->GetBazaars();
+
+    std::list<std::shared_ptr<objects::BazaarData>> rMarkets;
+    for(auto bState : bazaars)
     {
-        auto market = bState->GetCurrentMarket(marketID);
-        if(market && market->GetExpiration() <= now)
+        for(uint32_t marketID : bState->GetEntity()->GetMarketIDs())
         {
-            market->SetState(objects::BazaarData::State_t::BAZAAR_INACTIVE);
-            bState->SetCurrentMarket(marketID, nullptr);
-
-            // Send the close notification
-            auto sellerAccount = market->GetAccount().Get();
-            auto sellerClient = sellerAccount ? server->GetManagerConnection()
-                ->GetClientConnection(sellerAccount->GetUsername()) : nullptr;
-
-            libcomp::Packet p;
-            if(sellerClient == nullptr)
+            auto market = bState->GetCurrentMarket(marketID);
+            if(market && market->GetExpiration() <= now)
             {
+                bState->SetCurrentMarket(marketID, nullptr);
+
+                // Send the close notification
+                auto sellerAccount = market->GetAccount().Get();
+
                 // Relay the packet through the world
+                libcomp::Packet p;
                 p.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
                 p.WriteS32Little(0);
                 p.WriteU8((uint8_t)PacketRelayMode_t::RELAY_ACCOUNT);
                 p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
                     market->GetAccount().GetUUID().ToString(), true);
+                p.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_CLOSE);
+                p.WriteS32Little(0);
+
+                managerConnection->GetWorldConnection()->SendPacket(p);
+
+                SendBazaarMarketData(zone, bState, marketID);
+
+                rMarkets.push_back(market);
             }
-
-            p.WritePacketCode(
-                ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_CLOSE);
-            p.WriteS32Little(0);
-
-            if(sellerClient)
-            {
-                // Send directly
-                sellerClient->SendPacket(p);
-            }
-            else
-            {
-                // Relay
-                server->GetManagerConnection()->GetWorldConnection()->SendPacket(p);
-            }
-
-            SendBazaarMarketData(zone, bState, marketID);
-
-            expired.push_back(market);
         }
     }
 
-    if(expired.size() > 0)
+    std::list<std::shared_ptr<objects::CultureData>> rMachines;
+    for(auto cmPair : machines)
+    {
+        auto cmState = cmPair.second;
+        auto rental = cmState->GetRentalData();
+        if(rental && rental->GetExpiration() <= now)
+        {
+            cmState->SetRentalData(nullptr);
+
+            // Send the complete notification
+            auto renter = libcomp::PersistentObject::LoadObjectByUUID<
+                objects::Character>(server->GetWorldDatabase(),
+                    rental->GetCharacter(), false);
+            if(renter)
+            {
+                auto cItem = rental->GetItem().Get(server->GetWorldDatabase());
+
+                // Relay the packet through the world
+                libcomp::Packet p;
+                p.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
+                p.WriteS32Little(0);
+                p.WriteU8((uint8_t)PacketRelayMode_t::RELAY_CHARACTER);
+                p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                    renter->GetName(), true);
+                p.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_CULTURE_COMPLETE);
+                p.WriteS32Little((int32_t)(cItem ? cItem->GetType() : 0));
+
+                managerConnection->GetWorldConnection()->SendPacket(p);
+            }
+
+            SendCultureMachineData(zone, cmState);
+
+            rMachines.push_back(rental);
+        }
+    }
+
+    if(rMachines.size() > 0 || rMarkets.size() > 0)
     {
         auto dbChanges = libcomp::DatabaseChangeSet::Create();
-        for(auto market : expired)
+        for(auto machine : rMachines)
         {
+            machine->SetActive(false);
+            dbChanges->Update(machine);
+        }
+
+        for(auto market : rMarkets)
+        {
+            market->SetState(objects::BazaarData::State_t::BAZAAR_INACTIVE);
             dbChanges->Update(market);
         }
 
         server->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
 
-    uint32_t nextExpiration = bState->SetNextExpiration();
+    uint32_t nextExpiration = zone->SetNextRentalExpiration();
     if(nextExpiration != 0 && nextExpiration != currentExpiration)
     {
         // If the next run is sooner than what is scheduled, schedule again
@@ -1577,11 +1648,10 @@ void ZoneManager::ExpireBazaarMarkets(const std::shared_ptr<Zone>& zone,
             ((uint64_t)(nextExpiration - now) * 1000000ULL);
 
         server->ScheduleWork(nextTime, [](ZoneManager* zoneManager,
-            const std::shared_ptr<Zone> pZone,
-            const std::shared_ptr<BazaarState>& pState)
+            const std::shared_ptr<Zone> pZone)
             {
-                zoneManager->ExpireBazaarMarkets(pZone, pState);
-            }, this, zone, bState);
+                zoneManager->ExpireRentals(pZone);
+            }, this, zone);
     }
 }
 
@@ -3725,7 +3795,7 @@ bool ZoneManager::TriggerZoneActions(const std::shared_ptr<Zone>& zone,
                 for(auto tr : triggers)
                 {
                     actionManager->PerformActions(client,
-                        tr->GetActions(), entityID, zone, 0);
+                        tr->GetActions(), entityID, zone, 0, true);
                     executed = true;
                 }
             }
@@ -4121,6 +4191,10 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
     uint32_t zoneID = definition->GetID();
     uint32_t dynamicMapID = definition->GetDynamicMapID();
 
+    libcomp::String zoneStr = libcomp::String("%1%2").Arg(zoneID)
+        .Arg(zoneID != dynamicMapID
+            ? libcomp::String(" (%1)").Arg(dynamicMapID) : "");
+
     uint32_t id = mNextZoneID++;
 
     auto server = mServer.lock();
@@ -4155,10 +4229,9 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         if(npc->GetSpotID() && !GetSpotPosition(dynamicMapID, npc->GetSpotID(),
             x, y, rot))
         {
-            LOG_WARNING(libcomp::String("NPC %1 in zone %2%3 is placed in"
+            LOG_WARNING(libcomp::String("NPC %1 in zone %2 is placed in"
                 " an invalid spot and will be ignored.\n").Arg(npc->GetID())
-                .Arg(zoneID).Arg(id != dynamicMapID
-                    ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
+                .Arg(zoneStr));
             continue;
         }
 
@@ -4184,10 +4257,9 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         if(obj->GetSpotID() && !GetSpotPosition(dynamicMapID, obj->GetSpotID(),
             x, y, rot))
         {
-            LOG_WARNING(libcomp::String("Object %1 in zone %2%3 is placed in"
+            LOG_WARNING(libcomp::String("Object %1 in zone %2 is placed in"
                 " an invalid spot and will be ignored.\n").Arg(obj->GetID())
-                .Arg(zoneID).Arg(id != dynamicMapID
-                    ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
+                .Arg(zoneStr));
             continue;
         }
 
@@ -4219,10 +4291,9 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             if(pSpawn->GetSpotID() && !GetSpotPosition(dynamicMapID,
                 pSpawn->GetSpotID(), x, y, rot))
             {
-                LOG_WARNING(libcomp::String("Plasma %1 in zone %2%3 is placed"
+                LOG_WARNING(libcomp::String("Plasma %1 in zone %2 is placed"
                     " in an invalid spot and will be ignored.\n")
-                    .Arg(pSpawn->GetID()).Arg(zoneID).Arg(id != dynamicMapID
-                        ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
+                    .Arg(pSpawn->GetID()).Arg(zoneStr));
                 continue;
             }
 
@@ -4261,10 +4332,9 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             if(bazaar->GetSpotID() && !GetSpotPosition(dynamicMapID,
                 bazaar->GetSpotID(), x, y, rot))
             {
-                LOG_WARNING(libcomp::String("Bazaar %1 in zone %2%3 is placed"
+                LOG_WARNING(libcomp::String("Bazaar %1 in zone %2 is placed"
                     " in an invalid spot and will be ignored.\n")
-                    .Arg(bazaar->GetID()).Arg(zoneID).Arg(id != dynamicMapID
-                        ? libcomp::String(" (%1)").Arg(dynamicMapID) : ""));
+                    .Arg(bazaar->GetID()).Arg(zoneStr));
                 continue;
             }
 
@@ -4283,9 +4353,63 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             }
 
             zone->AddBazaar(state);
-
-            ExpireBazaarMarkets(zone, state);
         }
+    }
+
+    if(definition->CultureMachinesCount() > 0)
+    {
+        std::list<std::shared_ptr<objects::CultureData>> activeMachines;
+        for(auto m : objects::CultureData::LoadCultureDataListByZone(
+            server->GetWorldDatabase(), zoneID))
+        {
+            if(m->GetActive())
+            {
+                activeMachines.push_back(m);
+            }
+        }
+
+        for(auto machineSet : definition->GetCultureMachines())
+        {
+            for(auto machine : machineSet->GetMachines())
+            {
+                auto state = std::shared_ptr<CultureMachineState>(
+                    new CultureMachineState(machine->GetID(), machineSet));
+
+                float x = machine->GetX();
+                float y = machine->GetY();
+                float rot = machine->GetRotation();
+                if(machine->GetSpotID() && !GetSpotPosition(dynamicMapID,
+                    machine->GetSpotID(), x, y, rot))
+                {
+                    LOG_WARNING(libcomp::String("Culture machine %1 in zone %2"
+                        " is placed in an invalid spot and will be ignored.\n")
+                        .Arg(machine->GetID()).Arg(zoneStr));
+                    continue;
+                }
+
+                state->SetCurrentX(x);
+                state->SetCurrentY(y);
+                state->SetCurrentRotation(rot);
+
+                state->SetEntityID(server->GetNextEntityID());
+
+                for(auto m : activeMachines)
+                {
+                    if(machine->GetID() == m->GetMachineID())
+                    {
+                        state->SetRentalData(m);
+                    }
+                }
+
+                zone->AddCultureMachine(state);
+            }
+        }
+    }
+
+    if(definition->BazaarsCount() > 0 || definition->CultureMachinesCount() > 0)
+    {
+        // Set/expire any existing rental expirations
+        ExpireRentals(zone);
     }
 
     // Gather setup triggers and sort all other types from the definition

@@ -347,6 +347,8 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
         mainItem->SetBasicEffect(basicEffect ? basicEffect
             : basicItem->GetType());
         mainItem->SetModSlots(basicItem->GetModSlots());
+        mainItem->SetTarot(basicItem->GetTarot());
+        mainItem->SetSoul(basicItem->GetSoul());
 
         uint32_t spEffect = specialItem->GetSpecialEffect();
         mainItem->SetSpecialEffect(spEffect ? spEffect

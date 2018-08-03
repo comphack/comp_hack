@@ -115,6 +115,13 @@ public:
     std::shared_ptr<BazaarState> GetBazaarState();
 
     /**
+     * Get the shop ID of the state's current event if it is an
+     * "open menu" type
+     * @return Shop ID or 0 if not applicable
+     */
+    int32_t GetCurrentMenuShopID() const;
+
+    /**
      * Registers the client state with the static entity map for access by
      * other clients.
      * @return true if the state was registered properly, otherwise false

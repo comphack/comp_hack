@@ -69,7 +69,7 @@ bool Parsers::QuestTitle::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto bonusData = definitionManager->GetQuestBonusCodeData(bonusID);
     if(!bonusData ||
-        (bonusData->GetTitleID() < (int32_t)(progress->SpecialTitlesCount() * 8)))
+        (bonusData->GetTitleID() >= (int32_t)(progress->SpecialTitlesCount() * 8)))
     {
         LOG_ERROR(libcomp::String("Invalid quest bonus ID supplied"
             " for QuestTitle request: %1\n").Arg(bonusID));

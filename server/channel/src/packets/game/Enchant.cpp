@@ -326,10 +326,10 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             // Check if a mirror exists that prevents removal of the crystal
             // on failure
-            auto it = SVR_CONST.SYNTH_ADJUSTMENTS.find(
+            auto it = SVR_CONST.ADJUSTMENT_ITEMS.find(
                 mirror ? mirror->GetType() : 0);
-            if(it == SVR_CONST.SYNTH_ADJUSTMENTS.end() ||
-                it->second[0] != 0 || it->second[2] != 1)
+            if(it == SVR_CONST.ADJUSTMENT_ITEMS.end() ||
+                it->second[0] != 1 || it->second[2] != 1)
             {
                 useItems.push_back(crystal);
             }

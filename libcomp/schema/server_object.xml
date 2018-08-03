@@ -15,6 +15,25 @@
             <element type="u32"/>
         </member>
     </object>
+    <object name="ServerCultureMachineSet" persistent="false">
+        <member type="list" name="Machines">
+            <element type="ServerObjectBase*"/>
+        </member>
+        <member type="u8" name="Days" min="1" max="5"/>
+        <member type="u16" name="Cost"/>
+        <member type="array" size="5" name="DailyItemRates">
+            <element type="u16"/>
+        </member>
+        <member type="u16" name="ExpertiseRate" default="100"/>
+        <member type="u32" name="MaxDailyPoints"/>
+        <member type="u32" name="RequiredDailyPoints"/>
+        <member type="list" name="SlotRates">
+            <element type="u16"/>
+        </member>
+        <member type="list" name="SlotRatePoints">
+            <element type="u32"/>
+        </member>
+    </object>
     <object name="ObjectPosition" persistent="false">
         <member type="u32" name="SpotID"/>
         <member type="float" name="X"/>

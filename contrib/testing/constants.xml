@@ -5,9 +5,6 @@
     <constant name="ELEMENTAL_2_AQUANS">582</constant>
     <constant name="ELEMENTAL_3_AEROS">583</constant>
     <constant name="ELEMENTAL_4_ERTHYS">584</constant>
-    <constant name="EVENT_MENU_DEMON_DEPO">event_demonDepo</constant>
-    <constant name="EVENT_MENU_ITEM_DEPO">event_itemDepo</constant>
-    <constant name="EVENT_MENU_COMP_SHOP">event_compShop</constant>
     <constant name="ITEM_MACCA">799</constant>
     <constant name="ITEM_MACCA_NOTE">699</constant>
     <constant name="ITEM_MAGNETITE">800</constant>
@@ -16,11 +13,17 @@
     <constant name="ITEM_BALM_OF_LIFE_DEMON">43001</constant>
     <constant name="ITEM_KREUZ">12198</constant>
     <constant name="ITEM_RBLOODSTONE">12203</constant>
+    <constant name="MENU_BAZAAR">360</constant>
+    <constant name="MENU_COMP_SHOP">531</constant>
+    <constant name="MENU_CULTURE">805</constant>
+    <constant name="MENU_DEMON_DEPO">181</constant>
     <constant name="MENU_FUSION_KZ">800</constant>
-    <constant name="MENU_WEB_GAME">764</constant>
+    <constant name="MENU_ITEM_DEPO">180</constant>
+    <constant name="MENU_ITIME">804</constant>
     <constant name="MENU_REPAIR_KZ">765</constant>
     <constant name="MENU_TRIFUSION">179</constant>
     <constant name="MENU_TRIFUSION_KZ">801</constant>
+    <constant name="MENU_WEB_GAME">764</constant>
 
     <!-- Skill Function IDs -->
     <constant name="SKILL_ESTOMA">100</constant>
@@ -37,8 +40,8 @@
     <constant name="SKILL_STATUS_DIRECT">113</constant>
     <constant name="SKILL_DURABILITY_DOWN">114</constant>
     <constant name="SKILL_CLOAK">115</constant>
-    <constant name="SKILL_CULTIVATE_UP">118</constant>
-    <constant name="SKILL_CULTIVATE_SLOT_UP">119</constant>
+    <constant name="SKILL_CULTURE_UP">118</constant>
+    <constant name="SKILL_CULTURE_SLOT_UP">119</constant>
     <constant name="SKILL_STATUS_RANDOM">121</constant>
     <constant name="SKILL_STATUS_RANDOM2">122</constant>
     <constant name="SKILL_ZONE_RESTRICTED">123</constant>
@@ -115,6 +118,73 @@
     <constant name="ZONE_DEFAULT">90105</constant>
 
     <!-- Complex types -->
+    <constant name="ADJUSTMENT_ITEMS">
+        <!-- Format: item ID => function, 2 contextual params -->
+        <!-- Function 1: Enchantment success, param 3 = 1 stops crystal loss -->
+        <pair>
+            <key>395</key>
+            <value>1,10,1</value>
+        </pair>
+        <pair>
+            <key>396</key>
+            <value>1,15,0</value>
+        </pair>
+        <pair>
+            <key>397</key>
+            <value>1,15,1</value>
+        </pair>
+        <pair>
+            <key>398</key>
+            <value>1,5,0</value>
+        </pair>
+        <pair>
+            <key>489</key>
+            <value>1,15,1</value>
+        </pair>
+        <pair>
+            <key>1056</key>
+            <value>1,15,0</value>
+        </pair>
+    </constant>
+    <constant name="ADJUSTMENT_SKILLS">
+        <!-- Format: skill ID => function, 2 contextual params -->
+        <!-- Function 1: Enchantment success -->
+        <!-- Function 2: Swordsmith mod slot creation success -->
+        <!-- Function 3: Armsmaker mod slot creation success -->
+        <!-- Function 4: Culture point/slot rate scalers -->
+        <pair>
+            <key>20007</key>
+            <value>2,10,5</value>
+        </pair>
+        <pair>
+            <key>20008</key>
+            <value>2,5,2</value>
+        </pair>
+        <pair>
+            <key>20009</key>
+            <value>3,10,5</value>
+        </pair>
+        <pair>
+            <key>20010</key>
+            <value>3,5,2</value>
+        </pair>
+        <pair>
+            <key>20011</key>
+            <value>1,20,0</value>
+        </pair>
+        <pair>
+            <key>20012</key>
+            <value>1,10,0</value>
+        </pair>
+        <pair>
+            <key>20013</key>
+            <value>4,1,0</value>
+        </pair>
+        <pair>
+            <key>20014</key>
+            <value>4,2,0</value>
+        </pair>
+    </constant>
     <constant name="BARTER_COOLDOWNS">
         <!-- Format: cooldown ID => duration (in seconds) -->
         <pair>
@@ -1051,6 +1121,25 @@
             <value>20</value>
         </pair>
     </constant>
+    <constant name="LEVELUP_STATUSES">
+        <!-- Format: status effect ID => stack -->
+        <pair>
+            <key>165</key>
+            <value>5</value>
+        </pair>
+        <pair>
+            <key>166</key>
+            <value>5</value>
+        </pair>
+        <pair>
+            <key>167</key>
+            <value>5</value>
+        </pair>
+        <pair>
+            <key>131</key>
+            <value>1</value>
+        </pair>
+    </constant>
     <constant name="QUEST_BONUS">
         <!-- Format: bonus adjusting quest complete count => tokusei ID list -->
         <!-- This replaces the partially functional QuestBonusData.sbin -->
@@ -1205,61 +1294,6 @@
         <pair>
             <key>28544</key>
             <value>100,0</value>
-        </pair>
-    </constant>
-    <constant name="SYNTH_ADJUSTMENTS">
-        <!-- Format: item/skill => function, 2 contextual params -->
-        <!-- Function 0: Enchantment item, param 3 = 1 stops crystal loss -->
-        <!-- Function 1: Enchantment skill boosts -->
-        <!-- Function 2: Swordsmith mod slot creation boost skills -->
-        <!-- Function 3: Armsmaker mod slot creation boost skills -->
-        <pair>
-            <key>395</key>
-            <value>0,10,1</value>
-        </pair>
-        <pair>
-            <key>396</key>
-            <value>0,15,0</value>
-        </pair>
-        <pair>
-            <key>397</key>
-            <value>0,15,1</value>
-        </pair>
-        <pair>
-            <key>398</key>
-            <value>0,5,0</value>
-        </pair>
-        <pair>
-            <key>489</key>
-            <value>0,15,1</value>
-        </pair>
-        <pair>
-            <key>1056</key>
-            <value>0,15,0</value>
-        </pair>
-        <pair>
-            <key>20007</key>
-            <value>2,10,5</value>
-        </pair>
-        <pair>
-            <key>20008</key>
-            <value>2,5,2</value>
-        </pair>
-        <pair>
-            <key>20009</key>
-            <value>3,10,5</value>
-        </pair>
-        <pair>
-            <key>20010</key>
-            <value>3,5,2</value>
-        </pair>
-        <pair>
-            <key>20011</key>
-            <value>1,20,0</value>
-        </pair>
-        <pair>
-            <key>20012</key>
-            <value>1,10,0</value>
         </pair>
     </constant>
     <constant name="SYNTH_SKILLS">

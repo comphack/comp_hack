@@ -444,6 +444,12 @@ public:
     void WriteFloat(float value);
 
     /**
+     * Write a 64-bit double precision @em value to the packet.
+     * @param value 64-bit double precision value to write.
+     */
+    void WriteDouble(double value);
+
+    /**
      * Write the enumeration @em value to the packet as an unsigned 16-bit
      * integer in little endian byte order.
      * @param Enumeration to write into the packet.

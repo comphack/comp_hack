@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/CompShopOpen.cpp
+ * @file server/channel/src/packets/game/CultureEnd.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client to open a COMP shop.
+ * @brief Request from the client to end interaction with a culture machine.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -30,17 +30,14 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
-#include <ServerConstants.h>
 
 // channel Includes
-#include "AccountManager.h"
 #include "ChannelServer.h"
-#include "ChannelClientConnection.h"
 #include "EventManager.h"
 
 using namespace channel;
 
-bool Parsers::CompShopOpen::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CultureEnd::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -49,16 +46,19 @@ bool Parsers::CompShopOpen::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
 
-    server->GetEventManager()->RequestMenu(client,
-        (int32_t)SVR_CONST.MENU_COMP_SHOP);
+    // End the current event
+    server->GetEventManager()->HandleEvent(client, nullptr);
 
-    // Resend the current CP balance
-    server->GetAccountManager()->SendCPBalance(client);
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CULTURE_END);
+    reply.WriteS8(0);
+
+    client->SendPacket(reply);
 
     return true;
 }

@@ -58,6 +58,7 @@ namespace channel
 {
 
 class ChannelClientConnection;
+class CultureMachineState;
 class PlasmaState;
 class WorldClock;
 class ZoneInstance;
@@ -192,6 +193,13 @@ public:
     void AddBazaar(const std::shared_ptr<BazaarState>& bazaar);
 
     /**
+     * Add a culture machine to the zone
+     * @param machine Pointer to the machine to add
+     */
+    void AddCultureMachine(const std::shared_ptr<
+        CultureMachineState>& machine);
+
+    /**
      * Add an enemy to the zone
      * @param enemy Pointer to the enemy to add
      */
@@ -220,7 +228,7 @@ public:
 
     /**
      * Add a plasma grouping to the zone
-     * @param object Pointer to the plasma to add
+     * @param plasma Pointer to the plasma to add
      */
     void AddPlasma(const std::shared_ptr<PlasmaState>& plasma);
 
@@ -293,6 +301,20 @@ public:
      * @return List of all bazaar instances in the zone
      */
     const std::list<std::shared_ptr<BazaarState>> GetBazaars() const;
+
+    /**
+     * Get a culture machine instance by it's ID.
+     * @param id Instance ID of the culture machine.
+     * @return Pointer to the culture machine instance.
+     */
+    std::shared_ptr<CultureMachineState> GetCultureMachine(int32_t id);
+
+    /**
+     * Get all culture machine instances in the zone
+     * @return List of all culture machine instances in the zone
+     */
+    const std::unordered_map<uint32_t,
+        std::shared_ptr<CultureMachineState>> GetCultureMachines() const;
 
     /**
      * Get an entity instance with a specified actor ID.
@@ -553,6 +575,19 @@ public:
             size_t freeSlots, std::unordered_map<uint32_t, uint16_t> stacksFree = {});
 
     /**
+     * Get the next entity rental expiration in system time
+     * @return Next entity rental expiration in system time
+     */
+    uint32_t GetNextRentalExpiration() const;
+
+    /**
+     * Set the next entity rental expiration in system time from the zone's
+     * bazaar markets and culture machines
+     * @return Next entity rental expiration in system time
+     */
+    uint32_t SetNextRentalExpiration();
+
+    /**
      * Determines if the supplied path collides with anything in the zone's
      * geometry
      * @param path Line representing a path
@@ -643,6 +678,10 @@ private:
     /// List of pointers to bazaars instantiated for the zone
     std::list<std::shared_ptr<BazaarState>> mBazaars;
 
+    /// Map of culture machine states by definition ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<CultureMachineState>> mCultureMachines;
+
     /// List of pointers to enemies instantiated for the zone
     std::list<std::shared_ptr<EnemyState>> mEnemies;
 
@@ -722,6 +761,9 @@ private:
 
     /// Zone instance pointer for non-global zones
     std::shared_ptr<ZoneInstance> mZoneInstance;
+
+    /// Next entity rental expiration time that will occur
+    uint32_t mNextRentalExpiration;
 
     /// Next ID to use for encounters registered for the zone
     uint32_t mNextEncounterID;

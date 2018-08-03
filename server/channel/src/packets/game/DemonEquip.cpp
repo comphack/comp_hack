@@ -190,6 +190,9 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
 
         for(size_t i = 0; i < 4; i++)
         {
+            // Skip the slot being equipped to
+            if((int8_t)i == demonSlot) continue;
+
             uint32_t skillID = growth->GetTraits(i);
 
             auto item = demon->GetEquippedItems(i).Get();

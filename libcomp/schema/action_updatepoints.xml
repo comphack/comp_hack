@@ -8,8 +8,10 @@
             <value>SOUL_POINTS</value>
             <value>DIGITALIZE_POINTS</value>
             <value>COINS</value>
+            <value>ITIME</value>
         </member>
         <member type="s64" name="value"/>
+        <member type="s8" name="iTimeID"/>
         <member type="bool" name="isSet"/>
     </object>
 </objgen>

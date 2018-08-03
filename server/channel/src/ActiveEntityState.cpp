@@ -99,6 +99,7 @@ namespace libcomp
                 .Func("GetAIState", &ActiveEntityState::GetAIState)
                 .Func("GetActionTime", &ActiveEntityState::GetActionTime)
                 .Func("SetActionTime", &ActiveEntityState::SetActionTime)
+                .Func("GetWorldCID", &ActiveEntityState::GetWorldCID)
                 .Func("GetEnemyBase", &ActiveEntityState::GetEnemyBase)
                 .Func("StatusEffectActive", &ActiveEntityState::StatusEffectActive)
                 .Func("StatusEffectTimeLeft", &ActiveEntityState::StatusEffectTimeLeft);
@@ -132,6 +133,12 @@ int16_t ActiveEntityState::GetCorrectValue(CorrectTbl tableID,
 const libobjgen::UUID ActiveEntityState::GetEntityUUID()
 {
     return NULLUUID;
+}
+
+int32_t ActiveEntityState::GetWorldCID()
+{
+    auto state = ClientState::GetEntityClientState(GetEntityID());
+    return state ? state->GetWorldCID() : 0;
 }
 
 std::shared_ptr<objects::EnemyBase> ActiveEntityState::GetEnemyBase() const

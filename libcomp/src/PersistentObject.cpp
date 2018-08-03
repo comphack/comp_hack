@@ -43,6 +43,7 @@
 #include "CharacterProgress.h"
 #include "Clan.h"
 #include "ClanMember.h"
+#include "CultureData.h"
 #include "Demon.h"
 #include "DemonBox.h"
 #include "DemonQuest.h"
@@ -417,6 +418,9 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::ClanMember), objects::ClanMember::GetMetadata(),
         []() {  return (PersistentObject*)new objects::ClanMember(); });
+
+    RegisterType(typeid(objects::CultureData), objects::CultureData::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::CultureData(); });
 
     RegisterType(typeid(objects::Demon), objects::Demon::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Demon(); });

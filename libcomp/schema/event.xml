@@ -33,6 +33,7 @@
             <value>OPEN_MENU</value>
             <value>PLAY_SCENE</value>
             <value>DIRECTION</value>
+            <value>ITIME</value>
         </member>
         <member type="string" name="transformScriptID"/>
         <member type="list" name="transformScriptParams">

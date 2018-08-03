@@ -157,12 +157,13 @@ void ActionManager::PerformActions(
     const std::shared_ptr<ChannelClientConnection>& client,
     const std::list<std::shared_ptr<objects::Action>>& actions,
     int32_t sourceEntityID, const std::shared_ptr<Zone>& zone,
-    uint32_t groupID)
+    uint32_t groupID, bool autoEventsOnly)
 {
     ActionContext ctx;
     ctx.Client = client;
     ctx.SourceEntityID = sourceEntityID;
     ctx.GroupID = groupID;
+    ctx.AutoEventsOnly = autoEventsOnly;
 
     if(zone)
     {
@@ -363,6 +364,10 @@ void ActionManager::PerformActions(
                             copyCtx.Client = charClient;
                             copyCtx.SourceEntityID = cState->GetEntityID();
 
+                            // Auto-events only setting only applies to direct
+                            // execution context
+                            copyCtx.AutoEventsOnly = false;
+
                             failure |= !it->second(*this, copyCtx);
                         }
                     }
@@ -411,8 +416,8 @@ bool ActionManager::StartEvent(ActionContext& ctx)
     auto server = mServer.lock();
     auto eventManager = server->GetEventManager();
 
-    eventManager->HandleEvent(ctx.Client, act->GetEventID(), ctx.SourceEntityID,
-        ctx.CurrentZone, ctx.GroupID);
+    eventManager->HandleEvent(ctx.Client, act->GetEventID(),
+        ctx.SourceEntityID, ctx.CurrentZone, ctx.GroupID, ctx.AutoEventsOnly);
     
     return true;
 }
@@ -800,6 +805,8 @@ bool ActionManager::AddRemoveItems(ActionContext& ctx)
             }
         }
         break;
+    case objects::ActionAddRemoveItems::Mode_t::CULTURE_PICKUP:
+        return characterManager->CultureItemPickup(ctx.Client);
     default:
         return false;
     }
@@ -1626,6 +1633,66 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                 ctx.Client, (int64_t)act->GetValue(), !act->GetIsSet());
         }
         break;
+    case objects::ActionUpdatePoints::PointType_t::ITIME:
+        if(act->GetITimeID() > 0)
+        {
+            auto state = ctx.Client->GetClientState();
+            auto cState = state->GetCharacterState();
+            auto character = cState->GetEntity();
+            auto progress = character
+                ? character->GetProgress().Get() : nullptr;
+            if(progress)
+            {
+                int16_t oldVal = progress->GetITimePoints(act->GetITimeID());
+                int16_t val = (int16_t)act->GetValue();
+                if(!act->GetIsSet())
+                {
+                    val = (int16_t)(oldVal + val);
+                    if(val < 0)
+                    {
+                        // Value cannot become negative
+                        val = 0;
+                    }
+                }
+
+                if(oldVal != val)
+                {
+                    if(val >= 0)
+                    {
+                        // Set value normally
+                        progress->SetITimePoints(act->GetITimeID(), val);
+                    }
+                    else
+                    {
+                        // Reset entry
+                        progress->RemoveITimePoints(act->GetITimeID());
+                        val = 0;
+                    }
+
+                    libcomp::Packet p;
+                    p.WritePacketCode(
+                        ChannelToClientPacketCode_t::PACKET_ITIME_UPDATE);
+                    p.WriteS8(act->GetITimeID());
+                    p.WriteS16Little(progress->GetITimePoints(act
+                        ->GetITimeID()));
+
+                    ctx.Client->SendPacket(p);
+
+                    mServer.lock()->GetWorldDatabase()->QueueUpdate(
+                        progress, state->GetAccountUID());
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            LOG_ERROR("Invalid I-Time ID specified for UpdatePoints action\n");
+            return false;
+        }
+        break;
     default:
         break;
     }
@@ -1742,7 +1809,7 @@ bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
                         val = 0;
                     }
 
-                    val = val + (incr ? 1 : -1);
+                    val = val + (incr ? pair.second : -pair.second);
                     ctx.CurrentZone->SetFlagState(pair.first, val, worldCID);
                 }
             }
@@ -1782,7 +1849,7 @@ bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
                             val = 0;
                         }
 
-                        val = val + (incr ? 1 : -1);
+                        val = val + (incr ? pair.second : -pair.second);
                         instance->SetFlagState(pair.first, val, worldCID);
                     }
                 }
@@ -2184,8 +2251,7 @@ bool ActionManager::Delay(ActionContext& ctx)
                     ctx.GroupID);
         }
     }
-    else if(act->GetDelayID() && (act->GetDelayID() > 0 ||
-        !act->GetDuration()))
+    else if(act->GetDelayID())
     {
         uint32_t sysTime = act->GetDuration()
             ? (uint32_t)((uint32_t)std::time(0) + act->GetDuration())

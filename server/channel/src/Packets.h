@@ -230,8 +230,13 @@ PACKET_PARSER_DECL(TriFusionSolo);          // 0x0384
 PACKET_PARSER_DECL(EquipmentSpiritDefuse);  // 0x0386
 PACKET_PARSER_DECL(DemonForceEnd);          // 0x0389
 PACKET_PARSER_DECL(SearchEntryInfo);        // 0x03A3
-PACKET_PARSER_DECL(HouraiData);             // 0x03A5
+PACKET_PARSER_DECL(ITimeData);              // 0x03A5
+PACKET_PARSER_DECL(ITimeTalk);              // 0x03A9
 PACKET_PARSER_DECL(CultureData);            // 0x03AC
+PACKET_PARSER_DECL(CultureMachineAccess);   // 0x03AE
+PACKET_PARSER_DECL(CultureStart);           // 0x03B0
+PACKET_PARSER_DECL(CultureItem);            // 0x03B2
+PACKET_PARSER_DECL(CultureEnd);             // 0x03B6
 PACKET_PARSER_DECL(EquipmentModEdit);       // 0x03CB
 PACKET_PARSER_DECL(PAttributeDeadline);     // 0x03EA
 PACKET_PARSER_DECL(DemonDepoList);          // 0x03F5

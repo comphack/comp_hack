@@ -35,6 +35,7 @@
 
 // object Includes
 #include <Ally.h>
+#include <CultureMachineState.h>
 #include <Loot.h>
 #include <LootBox.h>
 #include <PlasmaState.h>
@@ -84,7 +85,7 @@ Zone::Zone()
 }
 
 Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
-    : mNextEncounterID(1)
+    : mNextRentalExpiration(0), mNextEncounterID(1)
 {
     SetDefinition(definition);
     SetID(id);
@@ -387,6 +388,17 @@ void Zone::AddBazaar(const std::shared_ptr<BazaarState>& bazaar)
     RegisterEntityState(bazaar);
 }
 
+void Zone::AddCultureMachine(const std::shared_ptr<
+    CultureMachineState>& machine)
+{
+    if(mCultureMachines.find(machine->GetMachineID()) ==
+        mCultureMachines.end())
+    {
+        mCultureMachines[machine->GetMachineID()] = machine;
+        RegisterEntityState(machine);
+    }
+}
+
 void Zone::AddEnemy(const std::shared_ptr<EnemyState>& enemy)
 {
     {
@@ -528,6 +540,17 @@ std::shared_ptr<BazaarState> Zone::GetBazaar(int32_t id)
 const std::list<std::shared_ptr<BazaarState>> Zone::GetBazaars() const
 {
     return mBazaars;
+}
+
+std::shared_ptr<CultureMachineState> Zone::GetCultureMachine(int32_t id)
+{
+    return std::dynamic_pointer_cast<CultureMachineState>(GetEntity(id));
+}
+
+const std::unordered_map<uint32_t,
+    std::shared_ptr<CultureMachineState>> Zone::GetCultureMachines() const
+{
+    return mCultureMachines;
 }
 
 std::shared_ptr<EnemyState> Zone::GetEnemy(int32_t id)
@@ -1028,6 +1051,50 @@ std::unordered_map<size_t, std::shared_ptr<objects::Loot>>
     lBox->SetLoot(loot);
 
     return result;
+}
+
+uint32_t Zone::GetNextRentalExpiration() const
+{
+    return mNextRentalExpiration;
+}
+
+uint32_t Zone::SetNextRentalExpiration()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+
+    // Start with no expiration
+    mNextRentalExpiration = 0;
+
+    // Set from bazaar markets
+    for(auto& bState : mBazaars)
+    {
+        for(uint32_t marketID : bState->GetEntity()->GetMarketIDs())
+        {
+            auto market = bState->GetCurrentMarket(marketID);
+            if(market && market->GetState() !=
+                objects::BazaarData::State_t::BAZAAR_INACTIVE)
+            {
+                if(mNextRentalExpiration == 0 ||
+                    mNextRentalExpiration > market->GetExpiration())
+                {
+                    mNextRentalExpiration = market->GetExpiration();
+                }
+            }
+        }
+    }
+
+    // Set from culture machines
+    for(auto& cmPair : mCultureMachines)
+    {
+        auto rental = cmPair.second->GetRentalData();
+        if(rental && (mNextRentalExpiration == 0 ||
+            mNextRentalExpiration > rental->GetExpiration()))
+        {
+            mNextRentalExpiration = rental->GetExpiration();
+        }
+    }
+
+    return mNextRentalExpiration;
 }
 
 bool Zone::Collides(const Line& path, Point& point,

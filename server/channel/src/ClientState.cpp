@@ -40,6 +40,9 @@
 #include <BazaarData.h>
 #include <CharacterLogin.h>
 #include <ClientCostAdjustment.h>
+#include <EventInstance.h>
+#include <EventOpenMenu.h>
+#include <EventState.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -125,6 +128,23 @@ std::shared_ptr<BazaarState> ClientState::GetBazaarState()
     }
 
     return nullptr;
+}
+
+int32_t ClientState::GetCurrentMenuShopID() const
+{
+    auto eState = GetEventState();
+    auto current = eState ? eState->GetCurrent() : nullptr;
+    if(current)
+    {
+        auto menu = std::dynamic_pointer_cast<
+            objects::EventOpenMenu>(current->GetEvent());
+        if(menu)
+        {
+            return menu->GetShopID();
+        }
+    }
+
+    return 0;
 }
 
 bool ClientState::Register()

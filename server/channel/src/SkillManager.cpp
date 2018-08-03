@@ -3236,7 +3236,14 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
 
                 if(skill->EffectiveAffinity == 1)
                 {
-                    skill->EffectiveAffinity = weaponDef->GetCommon()->GetAffinity();
+                    // Weapon affinity comes from the basic effect (if one is set)
+                    uint32_t basicEffect = weapon->GetBasicEffect();
+                    auto bWeaponDef = definitionManager->GetItemData(
+                        basicEffect ? basicEffect : weapon->GetType());
+                    if(bWeaponDef)
+                    {
+                        skill->EffectiveAffinity = bWeaponDef->GetCommon()->GetAffinity();
+                    }
                 }
 
                 // Take the lowest value applied tokusei affinity override if one exists
@@ -5423,17 +5430,21 @@ void SkillManager::HandleFusionGauge(
         bool higherLevel = false;
         bool skillHit = false;
 
-        int8_t lvl = source->GetCoreStats()->GetLevel();
-        for(auto& target : pSkill->Targets)
+        auto cs = source->GetCoreStats();
+        if(cs)
         {
-            if(target.EntityState != source && !target.GuardModifier &&
-                !target.HitAvoided && !target.HitAbsorb)
+            int8_t lvl = cs->GetLevel();
+            for(auto& target : pSkill->Targets)
             {
-                skillHit = true;
-                if(target.EntityState->GetCoreStats()->GetLevel() > lvl)
+                if(target.EntityState != source && !target.GuardModifier &&
+                    !target.HitAvoided && !target.HitAbsorb)
                 {
-                    higherLevel = true;
-                    break;
+                    skillHit = true;
+                    if(target.EntityState->GetCoreStats()->GetLevel() > lvl)
+                    {
+                        higherLevel = true;
+                        break;
+                    }
                 }
             }
         }

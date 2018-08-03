@@ -45,6 +45,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ChatManager.cpp
     src/CharacterState.cpp
     src/ClientState.cpp
+    src/CultureMachineState.cpp
     src/DemonState.cpp
     src/EnemyState.cpp
     src/EntityState.cpp
@@ -80,6 +81,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ChatManager.h
     src/CharacterState.h
     src/ClientState.h
+    src/CultureMachineState.h
     src/DemonState.h
     src/EnemyState.h
     src/EntityState.h
@@ -352,8 +354,13 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/EquipmentSpiritDefuse.cpp  # 0x0386
     src/packets/game/DemonForceEnd.cpp          # 0x0389
     src/packets/game/SearchEntryInfo.cpp        # 0x03A3
-    src/packets/game/HouraiData.cpp             # 0x03A5
+    src/packets/game/ITimeData.cpp              # 0x03A5
+    src/packets/game/ITimeTalk.cpp              # 0x03A9
     src/packets/game/CultureData.cpp            # 0x03AC
+    src/packets/game/CultureMachineAccess.cpp   # 0x03AE
+    src/packets/game/CultureStart.cpp           # 0x03B0
+    src/packets/game/CultureItem.cpp            # 0x03B2
+    src/packets/game/CultureEnd.cpp             # 0x03B6
     src/packets/game/EquipmentModEdit.cpp       # 0x03CB
     src/packets/game/PAttributeDeadline.cpp     # 0x03EA
     src/packets/game/DemonDepoList.cpp          # 0x03F5

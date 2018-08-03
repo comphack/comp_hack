@@ -62,9 +62,7 @@ bool Parsers::BazaarMarketInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     auto cState = state->GetCharacterState();
     auto worldDB = server->GetWorldDatabase();
 
-    auto eventState = state->GetEventState();
-    auto currentEvent = eventState ? eventState->GetCurrent() : nullptr;
-    uint32_t marketID = currentEvent ? currentEvent->GetShopID() : 0;
+    uint32_t marketID = (uint32_t)state->GetCurrentMenuShopID();
     auto zone = cState->GetZone();
 
     bool invalidMarket = marketID == 0 || zone == nullptr;

@@ -83,14 +83,6 @@ bool ServerConstants::Initialize(const String& filePath)
     // Convert and assign all entries
     bool success = true;
 
-    // Load event constants
-    success &= LoadString(constants["EVENT_MENU_COMP_SHOP"],
-        sConstants.EVENT_MENU_COMP_SHOP);
-    success &= LoadString(constants["EVENT_MENU_DEMON_DEPO"],
-        sConstants.EVENT_MENU_DEMON_DEPO);
-    success &= LoadString(constants["EVENT_MENU_ITEM_DEPO"],
-        sConstants.EVENT_MENU_ITEM_DEPO);
-
     // Load demon constants
     success &= LoadInteger(constants["ELEMENTAL_1_FLAEMIS"],
         sConstants.ELEMENTAL_1_FLAEMIS);
@@ -120,8 +112,20 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.ITEM_RBLOODSTONE);
 
     // Load menu constants
+    success &= LoadInteger(constants["MENU_BAZAAR"],
+        sConstants.MENU_BAZAAR);
+    success &= LoadInteger(constants["MENU_COMP_SHOP"],
+        sConstants.MENU_COMP_SHOP);
+    success &= LoadInteger(constants["MENU_CULTURE"],
+        sConstants.MENU_CULTURE);
+    success &= LoadInteger(constants["MENU_DEMON_DEPO"],
+        sConstants.MENU_DEMON_DEPO);
     success &= LoadInteger(constants["MENU_FUSION_KZ"],
         sConstants.MENU_FUSION_KZ);
+    success &= LoadInteger(constants["MENU_ITEM_DEPO"],
+        sConstants.MENU_ITEM_DEPO);
+    success &= LoadInteger(constants["MENU_ITIME"],
+        sConstants.MENU_ITIME);
     success &= LoadInteger(constants["MENU_REPAIR_KZ"],
         sConstants.MENU_REPAIR_KZ);
     success &= LoadInteger(constants["MENU_TRIFUSION"],
@@ -144,10 +148,10 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.SKILL_CLOAK);
     success &= LoadInteger(constants["SKILL_GENDER_RESTRICTED"],
         sConstants.SKILL_GENDER_RESTRICTED);
-    success &= LoadInteger(constants["SKILL_CULTIVATE_SLOT_UP"],
-        sConstants.SKILL_CULTIVATE_SLOT_UP);
-    success &= LoadInteger(constants["SKILL_CULTIVATE_UP"],
-        sConstants.SKILL_CULTIVATE_UP);
+    success &= LoadInteger(constants["SKILL_CULTURE_SLOT_UP"],
+        sConstants.SKILL_CULTURE_SLOT_UP);
+    success &= LoadInteger(constants["SKILL_CULTURE_UP"],
+        sConstants.SKILL_CULTURE_UP);
     success &= LoadInteger(constants["SKILL_DCM"],
         sConstants.SKILL_DCM);
     success &= LoadInteger(constants["SKILL_DEMON_FUSION"],
@@ -327,7 +331,83 @@ bool ServerConstants::Initialize(const String& filePath)
         return false;
     }
 
-    auto complexIter = complexConstants.find("BARTER_COOLDOWNS");
+    auto complexIter = complexConstants.find("ADJUSTMENT_ITEMS");
+    if(complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        if(!LoadKeyValueStrings(complexIter->second, map))
+        {
+            LOG_ERROR("Failed to load ADJUSTMENT_ITEMS\n");
+            return false;
+        }
+
+        for(auto pair : map)
+        {
+            uint32_t key;
+            if(!LoadInteger(pair.first, key))
+            {
+                LOG_ERROR("Failed to load ADJUSTMENT_ITEMS key\n");
+                return false;
+            }
+            else if(sConstants.ADJUSTMENT_ITEMS.find(key) !=
+                sConstants.ADJUSTMENT_ITEMS.end())
+            {
+                LOG_ERROR("Duplicate ADJUSTMENT_ITEMS key encountered\n");
+                return false;
+            }
+            else if(!ToIntegerArray(sConstants.ADJUSTMENT_ITEMS[key],
+                    libcomp::String(pair.second).Split(",")))
+            {
+                LOG_ERROR("Failed to load an element in ADJUSTMENT_ITEMS\n");
+                return false;
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("ADJUSTMENT_ITEMS not found\n");
+        return false;
+    }
+
+    complexIter = complexConstants.find("ADJUSTMENT_SKILLS");
+    if(complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        if(!LoadKeyValueStrings(complexIter->second, map))
+        {
+            LOG_ERROR("Failed to load ADJUSTMENT_SKILLS\n");
+            return false;
+        }
+
+        for(auto pair : map)
+        {
+            uint32_t key;
+            if(!LoadInteger(pair.first, key))
+            {
+                LOG_ERROR("Failed to load ADJUSTMENT_SKILLS key\n");
+                return false;
+            }
+            else if(sConstants.ADJUSTMENT_SKILLS.find(key) !=
+                sConstants.ADJUSTMENT_SKILLS.end())
+            {
+                LOG_ERROR("Duplicate ADJUSTMENT_SKILLS key encountered\n");
+                return false;
+            }
+            else if(!ToIntegerArray(sConstants.ADJUSTMENT_SKILLS[key],
+                    libcomp::String(pair.second).Split(",")))
+            {
+                LOG_ERROR("Failed to load an element in ADJUSTMENT_SKILLS\n");
+                return false;
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("ADJUSTMENT_SKILLS not found\n");
+        return false;
+    }
+
+    complexIter = complexConstants.find("BARTER_COOLDOWNS");
     if(complexIter != complexConstants.end())
     {
         std::unordered_map<std::string, std::string> map;
@@ -766,6 +846,23 @@ bool ServerConstants::Initialize(const String& filePath)
         return false;
     }
 
+    complexIter = complexConstants.find("LEVELUP_STATUSES");
+    if(complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        if(!LoadKeyValueStrings(complexIter->second, map) ||
+            !LoadIntegerMap(map, sConstants.LEVELUP_STATUSES))
+        {
+            LOG_ERROR("Failed to load LEVELUP_STATUSES\n");
+            return false;
+        }
+    }
+    else
+    {
+        LOG_ERROR("LEVELUP_STATUSES not found\n");
+        return false;
+    }
+
     complexIter = complexConstants.find("QUEST_BONUS");
     if(complexIter != complexConstants.end())
     {
@@ -867,44 +964,6 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("SPIRIT_FUSION_BOOST not found\n");
-        return false;
-    }
-
-    complexIter = complexConstants.find("SYNTH_ADJUSTMENTS");
-    if(complexIter != complexConstants.end())
-    {
-        std::unordered_map<std::string, std::string> map;
-        if(!LoadKeyValueStrings(complexIter->second, map))
-        {
-            LOG_ERROR("Failed to load SYNTH_ADJUSTMENTS\n");
-            return false;
-        }
-
-        for(auto pair : map)
-        {
-            uint32_t key;
-            if(!LoadInteger(pair.first, key))
-            {
-                LOG_ERROR("Failed to load SYNTH_ADJUSTMENTS key\n");
-                return false;
-            }
-            else if(sConstants.SYNTH_ADJUSTMENTS.find(key) !=
-                sConstants.SYNTH_ADJUSTMENTS.end())
-            {
-                LOG_ERROR("Duplicate SYNTH_ADJUSTMENTS key encountered\n");
-                return false;
-            }
-            else if(!ToIntegerArray(sConstants.SYNTH_ADJUSTMENTS[key],
-                    libcomp::String(pair.second).Split(",")))
-            {
-                LOG_ERROR("Failed to load an element in SYNTH_ADJUSTMENTS\n");
-                return false;
-            }
-        }
-    }
-    else
-    {
-        LOG_ERROR("SYNTH_ADJUSTMENTS not found\n");
         return false;
     }
     

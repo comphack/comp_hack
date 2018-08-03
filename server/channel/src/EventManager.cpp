@@ -53,6 +53,7 @@
 #include <EventDirection.h>
 #include <EventExNPCMessage.h>
 #include <EventFlagCondition.h>
+#include <EventITime.h>
 #include <EventMultitalk.h>
 #include <EventNPCMessage.h>
 #include <EventOpenMenu.h>
@@ -123,7 +124,7 @@ EventManager::~EventManager()
 bool EventManager::HandleEvent(
     const std::shared_ptr<ChannelClientConnection>& client,
     const libcomp::String& eventID, int32_t sourceEntityID,
-    const std::shared_ptr<Zone>& zone, uint32_t actionGroupID)
+    const std::shared_ptr<Zone>& zone, uint32_t actionGroupID, bool autoOnly)
 {
     auto instance = PrepareEvent(eventID, sourceEntityID);
     if(instance)
@@ -135,6 +136,7 @@ bool EventManager::HandleEvent(
         ctx.EventInstance = instance;
         ctx.CurrentZone = client ? client->GetClientState()
             ->GetCharacterState()->GetZone() : zone;
+        ctx.AutoOnly = autoOnly || !client;
 
         return HandleEvent(ctx);
     }
@@ -157,8 +159,7 @@ std::shared_ptr<objects::EventInstance> EventManager::PrepareEvent(
     }
     else
     {
-        auto instance = std::shared_ptr<objects::EventInstance>(
-            new objects::EventInstance);
+        auto instance = std::make_shared<objects::EventInstance>();
         instance->SetEvent(event);
         instance->SetSourceEntityID(sourceEntityID);
 
@@ -166,8 +167,58 @@ std::shared_ptr<objects::EventInstance> EventManager::PrepareEvent(
     }
 }
 
+bool EventManager::RequestMenu(const std::shared_ptr<
+    ChannelClientConnection>& client, int32_t menuType, int32_t shopID,
+    int32_t sourceEntityID, bool allowInsert)
+{
+    auto state = client->GetClientState();
+    auto eState = state->GetEventState();
+    auto current = eState->GetCurrent();
+
+    if(!allowInsert && current)
+    {
+        LOG_ERROR(libcomp::String("Attempted to open menu type '%1' for"
+            " character already in an event on account: %2\n")
+            .Arg(menuType).Arg(state->GetAccountUID().ToString()));
+        return false;
+    }
+
+    // Build the menu
+    auto menu = std::make_shared<objects::EventOpenMenu>();
+    menu->SetID(libcomp::String("SYSTEM:MENU_%1_%2").Arg(menuType)
+        .Arg(shopID));
+    menu->SetMenuType(menuType);
+    menu->SetShopID(shopID);
+
+    // Set instance and handle the event
+    auto instance = std::make_shared<objects::EventInstance>();
+    instance->SetEvent(menu);
+    instance->SetSourceEntityID(sourceEntityID);
+
+    if(allowInsert)
+    {
+        // Process directly
+        if(current)
+        {
+            eState->AppendPrevious(instance);
+        }
+
+        EventContext ctx2;
+        ctx2.Client = client;
+        ctx2.EventInstance = instance;
+        ctx2.AutoOnly = true;
+
+        return OpenMenu(ctx2);
+    }
+    else
+    {
+        // Process normally
+        return HandleEvent(client, instance);
+    }
+}
+
 bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>& client,
-    int32_t responseID)
+    int32_t responseID, int64_t objectID)
 {
     auto state = client->GetClientState();
     auto eState = state->GetEventState();
@@ -234,6 +285,98 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
                 }
             }
             break;
+        case objects::Event::EventType_t::ITIME:
+            {
+                auto e = std::dynamic_pointer_cast<objects::EventITime>(event);
+
+                if(eState->GetITimeID() < 0)
+                {
+                    // Initial response, negate ID and repeat event now that
+                    // the menu is open
+                    eState->SetITimeID((int8_t)-eState->GetITimeID());
+                    HandleEvent(client, current);
+                    return true;
+                }
+                else if(eState->GetITimeID() == 0)
+                {
+                    // Clean up after faulty response
+                    EndEvent(client);
+                    return false;
+                }
+
+                if(e->GiftIDsCount() > 0)
+                {
+                    // Gift prompt, take branch matching gift ID index or next
+                    // if not found
+                    auto item = std::dynamic_pointer_cast<objects::Item>(
+                        libcomp::PersistentObject::GetObjectByUUID(
+                            state->GetObjectUUID(objectID)));
+                    uint32_t itemType = item ? item->GetType() : 0;
+
+                    if(item)
+                    {
+                        // Remove the item
+                        std::unordered_map<uint32_t, uint32_t> items;
+                        items[itemType] = 1;
+                        if(!mServer.lock()->GetCharacterManager()
+                            ->AddRemoveItems(client, items, false, objectID))
+                        {
+                            // Handle like no item selected
+                            itemType = 0;
+                        }
+                    }
+
+                    std::shared_ptr<objects::EventBase> branch;
+                    for(size_t i = 0; i < e->GiftIDsCount(); i++)
+                    {
+                        if(e->GetGiftIDs(i) == itemType)
+                        {
+                            branch = e->GetBranches(i);
+                            break;
+                        }
+                    }
+
+                    eState->AppendPrevious(current);
+                    eState->SetCurrent(nullptr);
+
+                    auto next = branch ? branch->GetNext() : e->GetNext();
+                    if(next.IsEmpty() || !HandleEvent(client, next,
+                        current->GetSourceEntityID()))
+                    {
+                        EndEvent(client);
+                    }
+
+                    return true;
+                }
+                else
+                {
+                    // Normal interaction
+                    bool doNext = e->ChoicesCount() == 0 || responseID < 0 ||
+                        responseID >= 4;
+                    if(!doNext &&
+                        current->DisabledChoicesContains((uint8_t)responseID))
+                    {
+                        // Disabled choices fire the default next instead
+                        doNext = true;
+                    }
+
+                    if(!doNext)
+                    {
+                        auto choice = e->GetChoices((size_t)responseID);
+                        if(choice == nullptr)
+                        {
+                            LOG_ERROR(libcomp::String("Invalid choice %1"
+                                " selected for event %2\n").Arg(responseID)
+                                .Arg(e->GetID()));
+                        }
+                        else
+                        {
+                            current->SetState(choice);
+                        }
+                    }
+                }
+            }
+            break;
         case objects::Event::EventType_t::OPEN_MENU:
         case objects::Event::EventType_t::PLAY_SCENE:
         case objects::Event::EventType_t::DIRECTION:
@@ -260,6 +403,7 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
     ctx.Client = client;
     ctx.EventInstance = current;
     ctx.CurrentZone = cState->GetZone();
+    ctx.AutoOnly = false;
     
     HandleNext(ctx);
 
@@ -2092,7 +2236,7 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
 
     // Synth based quests require a skill on that demon that boosts
     // the success
-    for(auto pair : SVR_CONST.SYNTH_ADJUSTMENTS)
+    for(auto pair : SVR_CONST.ADJUSTMENT_SKILLS)
     {
         if(demonTraits.find((uint32_t)pair.first) != demonTraits.end())
         {
@@ -2140,7 +2284,7 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
                 }
                 break;
             default:
-                return nullptr;
+                break;
             }
         }
     }
@@ -3058,6 +3202,7 @@ bool EventManager::HandleEvent(const std::shared_ptr<ChannelClientConnection>& c
         ctx.Client = client;
         ctx.EventInstance = instance;
         ctx.CurrentZone = client->GetClientState()->GetCharacterState()->GetZone();
+        ctx.AutoOnly = !client;
 
         return HandleEvent(ctx);
     }
@@ -3096,6 +3241,7 @@ void EventManager::StartWebGame(const std::shared_ptr<
             ctx.Client = client;
             ctx.EventInstance = current;
             ctx.CurrentZone = state->GetZone();
+            ctx.AutoOnly = !client;
 
             OpenMenu(ctx);
             valid = true;
@@ -3156,16 +3302,17 @@ void EventManager::EndWebGame(
 
 bool EventManager::HandleEvent(EventContext& ctx)
 {
+    auto client = !ctx.AutoOnly ? ctx.Client : nullptr;
     if(ctx.EventInstance == nullptr)
     {
         // End the event sequence
-        return EndEvent(ctx.Client);
+        return EndEvent(client);
     }
-    else if(ctx.Client)
+    else if(client)
     {
         // If an event is already in progress that is not the one
         // requested, queue the requested event and stop
-        auto state = ctx.Client->GetClientState();
+        auto state = client->GetClientState();
         auto eState = state->GetEventState();
         if(eState->GetCurrent())
         {
@@ -3191,7 +3338,7 @@ bool EventManager::HandleEvent(EventContext& ctx)
     if(conditions.size() > 0 && !EvaluateEventConditions(ctx, conditions))
     {
         handled = true;
-        EndEvent(ctx.Client);
+        EndEvent(client);
     }
     else
     {
@@ -3200,37 +3347,37 @@ bool EventManager::HandleEvent(EventContext& ctx)
         switch(eventType)
         {
             case objects::Event::EventType_t::NPC_MESSAGE:
-                if(ctx.Client)
+                if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(ctx.Client, 4);
+                    server->GetCharacterManager()->SetStatusIcon(client, 4);
                     handled = NPCMessage(ctx);
                 }
                 break;
             case objects::Event::EventType_t::EX_NPC_MESSAGE:
-                if(ctx.Client)
+                if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(ctx.Client, 4);
+                    server->GetCharacterManager()->SetStatusIcon(client, 4);
                     handled = ExNPCMessage(ctx);
                 }
                 break;
             case objects::Event::EventType_t::MULTITALK:
-                if(ctx.Client)
+                if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(ctx.Client, 4);
+                    server->GetCharacterManager()->SetStatusIcon(client, 4);
                     handled = Multitalk(ctx);
                 }
                 break;
             case objects::Event::EventType_t::PROMPT:
-                if(ctx.Client)
+                if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(ctx.Client, 4);
+                    server->GetCharacterManager()->SetStatusIcon(client, 4);
                     handled = Prompt(ctx);
                 }
                 break;
             case objects::Event::EventType_t::PLAY_SCENE:
-                if(ctx.Client)
+                if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(ctx.Client, 4);
+                    server->GetCharacterManager()->SetStatusIcon(client, 4);
                     handled = PlayScene(ctx);
                 }
                 break;
@@ -3238,17 +3385,24 @@ bool EventManager::HandleEvent(EventContext& ctx)
                 handled = PerformActions(ctx);
                 break;
             case objects::Event::EventType_t::OPEN_MENU:
-                if(ctx.Client)
+                if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(ctx.Client, 4);
+                    server->GetCharacterManager()->SetStatusIcon(client, 4);
                     handled = OpenMenu(ctx);
                 }
                 break;
             case objects::Event::EventType_t::DIRECTION:
-                if(ctx.Client)
+                if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(ctx.Client, 4);
+                    server->GetCharacterManager()->SetStatusIcon(client, 4);
                     handled = Direction(ctx);
+                }
+                break;
+            case objects::Event::EventType_t::ITIME:
+                if(client)
+                {
+                    server->GetCharacterManager()->SetStatusIcon(client, 4);
+                    handled = ITime(ctx);
                 }
                 break;
             case objects::Event::EventType_t::FORK:
@@ -3265,7 +3419,7 @@ bool EventManager::HandleEvent(EventContext& ctx)
 
         if(!handled)
         {
-            EndEvent(ctx.Client);
+            EndEvent(client);
         }
     }
 
@@ -3354,7 +3508,7 @@ void EventManager::HandleNext(EventContext& ctx)
         }
     }
 
-    if(!queueEventID.IsEmpty() && eState)
+    if(!queueEventID.IsEmpty() && eState && !ctx.AutoOnly)
     {
         auto queue = PrepareEvent(queueEventID,
             ctx.EventInstance->GetSourceEntityID());
@@ -3366,43 +3520,47 @@ void EventManager::HandleNext(EventContext& ctx)
 
     if(nextEventID.IsEmpty())
     {
-        if(eState)
+        if(!ctx.AutoOnly)
         {
-            auto previous = eState->PreviousCount() > 0
-                ? eState->GetPrevious().back() : nullptr;
-            if(previous != nullptr && (iState->GetPop() || iState->GetPopNext()))
+            if(eState)
             {
-                // Return to pop event
-                eState->RemovePrevious(eState->PreviousCount() - 1);
-                eState->SetCurrent(previous);
+                auto previous = eState->PreviousCount() > 0
+                    ? eState->GetPrevious().back() : nullptr;
+                if(previous != nullptr &&
+                    (iState->GetPop() || iState->GetPopNext()))
+                {
+                    // Return to pop event
+                    eState->RemovePrevious(eState->PreviousCount() - 1);
+                    eState->SetCurrent(previous);
 
-                ctx.EventInstance = previous;
-                eState->SetCurrent(previous);
+                    ctx.EventInstance = previous;
+                    eState->SetCurrent(previous);
 
-                HandleEvent(ctx);
-                return;
+                    HandleEvent(ctx);
+                    return;
+                }
+                else if(eState->QueuedCount() > 0)
+                {
+                    // Process the first queued event
+                    auto queued = eState->GetQueued(0);
+                    eState->RemoveQueued(0);
+
+                    // Push current onto previous and replace
+                    eState->AppendPrevious(ctx.EventInstance);
+                    eState->SetCurrent(queued);
+
+                    HandleEvent(ctx.Client, queued);
+                    return;
+                }
             }
-            else if(eState->QueuedCount() > 0)
-            {
-                // Process the first queued event
-                auto queued = eState->GetQueued(0);
-                eState->RemoveQueued(0);
 
-                // Push current onto previous and replace
-                eState->AppendPrevious(ctx.EventInstance);
-                eState->SetCurrent(queued);
-
-                HandleEvent(ctx.Client, queued);
-                return;
-            }
+            // End the sequence
+            EndEvent(ctx.Client);
         }
-
-        // End the sequence
-        EndEvent(ctx.Client);
     }
     else
     {
-        if(eState)
+        if(eState && !ctx.AutoOnly)
         {
             // Push current onto previous
             eState->AppendPrevious(ctx.EventInstance);
@@ -3565,6 +3723,12 @@ bool EventManager::OpenMenu(EventContext& ctx)
             return false;
         }
     }
+    else if(menuType == (int32_t)SVR_CONST.MENU_ITIME)
+    {
+        // Set the negated I-Time ID indicating that the first response
+        // should be ignored as they "ready" message
+        eState->SetITimeID((int8_t)-e->GetShopID());
+    }
     else if(menuType == (int32_t)SVR_CONST.MENU_WEB_GAME)
     {
         if(!HandleWebGame(ctx.Client))
@@ -3584,25 +3748,15 @@ bool EventManager::OpenMenu(EventContext& ctx)
         }
     }
 
-    auto current = eState->GetCurrent();
-    if(current)
-    {
-        int32_t overrideShopID = (int32_t)current->GetShopID();
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_OPEN_MENU);
+    p.WriteS32Little(ctx.EventInstance->GetSourceEntityID());
+    p.WriteS32Little(menuType);
+    p.WriteS32Little(e->GetShopID());
+    p.WriteString16Little(state->GetClientStringEncoding(),
+        sessionID, true);
 
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_OPEN_MENU);
-        p.WriteS32Little(ctx.EventInstance->GetSourceEntityID());
-        p.WriteS32Little(menuType);
-        p.WriteS32Little(overrideShopID != 0 ? overrideShopID : e->GetShopID());
-        p.WriteString16Little(state->GetClientStringEncoding(),
-            sessionID, true);
-
-        ctx.Client->SendPacket(p);
-    }
-    else
-    {
-        EndEvent(ctx.Client);
-    }
+    ctx.Client->SendPacket(p);
 
     return true;
 }
@@ -3621,7 +3775,7 @@ bool EventManager::PerformActions(EventContext& ctx)
 
     actionManager->PerformActions(ctx.Client, actions,
         ctx.EventInstance->GetSourceEntityID(), ctx.CurrentZone,
-        ctx.EventInstance->GetActionGroupID());
+        ctx.EventInstance->GetActionGroupID(), ctx.AutoOnly);
 
     HandleNext(ctx);
 
@@ -3645,6 +3799,99 @@ bool EventManager::Direction(EventContext& ctx)
     return true;
 }
 
+bool EventManager::ITime(EventContext& ctx)
+{
+    auto e = GetEvent<objects::EventITime>(ctx);
+    if(!e)
+    {
+        return false;
+    }
+
+    auto client = ctx.Client;
+    auto eState = client->GetClientState()->GetEventState();
+
+    if(!eState->GetITimeID())
+    {
+        // Start the I-Time menu first and stop here
+        if(RequestMenu(client, (int32_t)SVR_CONST.MENU_ITIME, e->GetITimeID(),
+            ctx.EventInstance->GetSourceEntityID(), true))
+        {
+            eState->SetCurrent(ctx.EventInstance);
+            return true;
+        }
+        else
+        {
+            LOG_ERROR(libcomp::String("Failed to open I-Time menu: %1\n")
+                .Arg(e->GetID()));
+            return false;
+        }
+    }
+
+    // Perform start actions now if specified
+    auto startActionsID = e->GetStartActions();
+    if(!startActionsID.IsEmpty())
+    {
+        auto saInst = PrepareEvent(startActionsID,
+            ctx.EventInstance->GetSourceEntityID());
+        if(saInst)
+        {
+            EventContext ctx2;
+            ctx2.Client = ctx.Client;
+            ctx2.EventInstance = saInst;
+            ctx2.CurrentZone = ctx.CurrentZone;
+            ctx2.AutoOnly = true;
+
+            HandleEvent(ctx2);
+        }
+    }
+
+    bool hasMessage = e->GetMessageID() > 0;
+    bool hasChoices = e->ChoicesCount() > 0;
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITIME_TALK);
+
+    p.WriteS8(hasMessage ? 1 : 0);
+    if(hasMessage)
+    {
+        p.WriteS32Little(e->GetMessageID());
+        p.WriteS32Little(e->GetReactionID());
+    }
+
+    p.WriteS8(hasChoices ? 1 : 0);
+    if(hasChoices)
+    {
+        p.WriteS16Little(e->GetTimeLimit());
+
+        for(size_t i = 0; i < 5; i++)
+        {
+            // Unlike prompts, choice count is limited and any invalid options
+            // do not "bump" the others up
+            auto choice = e->GetChoices(i);
+            if(choice)
+            {
+                auto conditions = choice->GetConditions();
+                if(choice->GetMessageID() == 0 ||
+                    (conditions.size() > 0 && !EvaluateEventConditions(ctx, conditions)))
+                {
+                    ctx.EventInstance->InsertDisabledChoices((uint8_t)i);
+                    choice = nullptr;
+                }
+            }
+
+            p.WriteS32Little(choice ? choice->GetMessageID() : 0);
+        }
+    }
+
+    p.WriteS8(0);   // Has reward, not actually used by the client
+
+    p.WriteS8(e->GiftIDsCount() > 0 ? 1 : 0);   // Prompts for gift
+
+    client->SendPacket(p);
+
+    return true;
+}
+
 bool EventManager::EndEvent(const std::shared_ptr<ChannelClientConnection>& client)
 {
     if(client)
@@ -3655,6 +3902,7 @@ bool EventManager::EndEvent(const std::shared_ptr<ChannelClientConnection>& clie
         eState->SetCurrent(nullptr);
         eState->ClearPrevious();
         eState->ClearQueued();
+        eState->SetITimeID(0);
 
         if(eState->GetGameSession())
         {
@@ -3762,7 +4010,7 @@ bool EventManager::HandleWebGame(const std::shared_ptr<
         gameSession->SetWorldID(character->GetWorldID());
         gameSession->SetWorldCID(state->GetWorldCID());
         gameSession->SetCoins(progress->GetCoins());
-        gameSession->SetMachineID((int32_t)current->GetShopID());
+        gameSession->SetMachineID(state->GetCurrentMenuShopID());
         eState->SetGameSession(gameSession);
 
         libcomp::Packet request;
@@ -3839,4 +4087,51 @@ bool EventManager::TransformEvent(EventContext& ctx,
             zone,
             sqParams) : 0;
     return scriptResult && *scriptResult == 0;
+}
+
+bool EventManager::VerifyITime(EventContext& ctx,
+    std::shared_ptr<objects::Event> e)
+{
+    if(!e)
+    {
+        return false;
+    }
+
+    auto client = ctx.Client;
+    auto state = client ? client->GetClientState() : nullptr;
+    auto eState = state ? state->GetEventState() : nullptr;
+    if(!eState)
+    {
+        // Do not stop non-player events here
+        return true;
+    }
+
+    switch(e->GetEventType())
+    {
+    case objects::Event::EventType_t::ITIME:
+        {
+            auto iTime = std::dynamic_pointer_cast<objects::EventITime>(e);
+            if(!iTime)
+            {
+                // Shouldn't happen
+                return false;
+            }
+            else
+            {
+                // Must be non-negative and match event value
+                return iTime->GetITimeID() > 0 && (!eState->GetITimeID() ||
+                    (uint8_t)iTime->GetITimeID() == eState->GetITimeID());
+            }
+        }
+        break;
+    case objects::Event::EventType_t::FORK:
+    case objects::Event::EventType_t::PERFORM_ACTIONS:
+        // Does not affect I-Time
+        return true;
+    default:
+        // Only valid when I-Time is not active
+        return eState->GetITimeID() == 0;
+    }
+
+    return false;
 }

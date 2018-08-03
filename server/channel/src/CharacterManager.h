@@ -448,6 +448,14 @@ public:
         bool notifyClient = true);
 
     /**
+     * Retrieve the item associated to the client character's CultureData
+     * @param client Pointer to the client connection
+     * @return true if an item was retrieved, false if one was not
+     */
+    bool CultureItemPickup(const std::shared_ptr<
+        channel::ChannelClientConnection>& client);
+
+    /**
      * Filter a set of item drops based on drop rate and luck.
      * @param drops List of pointers to the item drops to determine what
      *  should be "dropped"

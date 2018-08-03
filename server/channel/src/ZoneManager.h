@@ -381,13 +381,20 @@ public:
         const std::shared_ptr<BazaarState>& bState, uint32_t marketID);
 
     /**
-     * Expire and inactivate markets that are no longer active in the specified
-     * zone for associated to the specified bazaar
-     * @param zone Pointer to a zone containing bazaars
-     * @param bState Entity state of the bazaar
+     * Send information about the supplied culture machine state to clients in
+     * the same zone
+     * @param zone Pointer to the zone to send the data to
+     * @param cmState Culture machine state to send data about
      */
-    void ExpireBazaarMarkets(const std::shared_ptr<Zone>& zone,
-        const std::shared_ptr<BazaarState>& bState);
+    void SendCultureMachineData(const std::shared_ptr<Zone>& zone,
+        const std::shared_ptr<CultureMachineState>& cmState);
+
+    /**
+     * Expire and inactivate bazaar markets and culture machines that are no
+     * longer active in the specified zone
+     * @param zone Pointer to a zone
+     */
+    void ExpireRentals(const std::shared_ptr<Zone>& zone);
 
     /**
      * Send a packet to every connection in the zone or all but the client specified

@@ -31,6 +31,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <EventInstance.h>
@@ -53,20 +54,14 @@ bool Parsers::BazaarInteract::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t bazaarEntityID = p.ReadS32Little();
     int32_t bazaarMarketID = p.ReadS32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
     auto eventManager = server->GetEventManager();
 
-    auto instance = eventManager->PrepareEvent("event_bazaar", bazaarEntityID);
-
-    bool success = instance != nullptr;
-    if(success)
-    {
-        instance->SetShopID((uint32_t)bazaarMarketID);
-        success = eventManager->HandleEvent(client, instance);
-    }
-
-    if(!success)
+    if(!eventManager->RequestMenu(client, (int32_t)SVR_CONST.MENU_BAZAAR,
+        bazaarMarketID, bazaarEntityID))
     {
         LOG_ERROR(libcomp::String("Failed to open bazaar market: %1\n")
             .Arg(bazaarMarketID));

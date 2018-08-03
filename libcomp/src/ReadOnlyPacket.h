@@ -633,6 +633,14 @@ public:
     float ReadFloat();
 
     /**
+     * Write a 64-bit double precision number from the packet and advance the
+     * current position in the packet.
+     * @returns Value at the current position in the packet.
+     * @sa WriteDouble
+     */
+    double ReadDouble();
+
+    /**
      * Seek to @em pos bytes from the beginning of the packet. The position
      * specified must be within the range of the data in the packet; otherwise,
      * a @ref PacketException will be thrown. The valid range is 0 bytes to

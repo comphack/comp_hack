@@ -725,6 +725,25 @@ float ReadOnlyPacket::ReadFloat()
     return value;
 }
 
+double ReadOnlyPacket::ReadDouble()
+{
+    // Check if there is enough data left in the ReadOnlypacket to read the value; if
+    // not, throw an exception.
+    if((mPosition + 8) > mSize)
+    {
+        PACKET_EXCEPTION("Attempted to read 8 bytes from the ReadOnlypacket; however, "
+            "this would read past the end of the ReadOnlypacket.", this);
+    }
+
+    // Copy the value into a variable to return and then advance the current
+    // position by the size of the value.
+    double value;
+    memcpy(&value, mData + mPosition, 8);
+    Skip(8);
+
+    return value;
+}
+
 void ReadOnlyPacket::End()
 {
     // Set the current position to the size of the ReadOnlypacket data.

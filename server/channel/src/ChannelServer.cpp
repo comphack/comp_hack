@@ -528,10 +528,20 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_SPIRIT_DEFUSE));
     clientPacketManager->AddParser<Parsers::SearchEntryInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_ENTRY_INFO));
-    clientPacketManager->AddParser<Parsers::HouraiData>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_HOURAI_DATA));
+    clientPacketManager->AddParser<Parsers::ITimeData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITIME_DATA));
+    clientPacketManager->AddParser<Parsers::ITimeTalk>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITIME_TALK));
     clientPacketManager->AddParser<Parsers::CultureData>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_CULTURE_DATA));
+    clientPacketManager->AddParser<Parsers::CultureMachineAccess>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CULTURE_MACHINE_ACCESS));
+    clientPacketManager->AddParser<Parsers::CultureStart>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CULTURE_START));
+    clientPacketManager->AddParser<Parsers::CultureItem>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CULTURE_ITEM));
+    clientPacketManager->AddParser<Parsers::CultureEnd>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_CULTURE_END));
     clientPacketManager->AddParser<Parsers::EquipmentModEdit>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_MOD_EDIT));
     clientPacketManager->AddParser<Parsers::PAttributeDeadline>(

@@ -48,16 +48,26 @@ bool Parsers::ItemDepoRemote::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-
-    server->GetEventManager()->HandleEvent(client, SVR_CONST.EVENT_MENU_ITEM_DEPO, 0);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_DEPO_REMOTE);
-    reply.WriteS32Little(0);
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_ITEM_DEPO_REMOTE);
 
-    connection->SendPacket(reply);
+    if(server->GetEventManager()->RequestMenu(client,
+        (int32_t)SVR_CONST.MENU_ITEM_DEPO))
+    {
+        reply.WriteS32Little(0);    // Success
+    }
+    else
+    {
+        reply.WriteS32Little(-1);   // Failure
+    }
+
+    client->SendPacket(reply);
 
     return true;
 }

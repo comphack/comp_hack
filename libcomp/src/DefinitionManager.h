@@ -50,6 +50,7 @@ class MiBlendData;
 class MiBlendExtData;
 class MiCItemData;
 class MiCorrectTbl;
+class MiCultureItemData;
 class MiCZoneRelationData;
 class MiDevilBookData;
 class MiDevilBoostData;
@@ -137,6 +138,15 @@ public:
      *  null if it does not exist
      */
     const std::shared_ptr<objects::MiBlendExtData> GetBlendExtData(uint32_t id);
+
+    /**
+     * Get the culture item definition corresponding to an ID
+     * @param id Culture item ID to retrieve
+     * @return Pointer to the matching culture item definition, null if it
+     *  does not exist
+     */
+    const std::shared_ptr<objects::MiCultureItemData> GetCultureItemData(
+        uint32_t id);
 
     /**
      * Get the devil book definition corresponding to an ID
@@ -872,6 +882,10 @@ private:
     /// Map of item mixing extension definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiBlendExtData>> mBlendExtData;
+
+    /// Map of culture item definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiCultureItemData>> mCultureItemData;
 
     /// Map of item names to IDs
     std::unordered_map<libcomp::String, uint32_t> mCItemNameLookup;

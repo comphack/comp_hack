@@ -7,7 +7,6 @@
         <member type="list" name="choices">
             <element type="EventChoice*"/>
         </member>
-        <member type="bool" name="playerSource"/>
     </object>
     <object name="EventChoice" baseobject="EventSequence" persistent="false"
         scriptenabled="true">

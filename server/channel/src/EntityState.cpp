@@ -30,6 +30,7 @@
 #include <LootBox.h>
 #include <PlasmaSpawn.h>
 #include <ServerBazaar.h>
+#include <ServerCultureMachineSet.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 
@@ -58,6 +59,14 @@ EntityState<objects::ServerBazaar>::EntityState(
     : mEntity(entity)
 {
     SetEntityType(EntityType_t::BAZAAR);
+}
+
+template<>
+EntityState<objects::ServerCultureMachineSet>::EntityState(
+    const std::shared_ptr<objects::ServerCultureMachineSet>& entity)
+    : mEntity(entity)
+{
+    SetEntityType(EntityType_t::CULTURE_MACHINE);
 }
 
 template<>

@@ -92,6 +92,7 @@
         <member type="CharacterProgress*" name="Progress"/>
         <member type="FriendSettings*" name="FriendSettings"/>
         <member type="DemonQuest*" name="DemonQuest"/>
+        <member type="CultureData*" name="CultureData"/>
     </object>
     <object name="EntityStats" location="world" scriptenabled="true">
         <member type="pref" name="Entity" key="true" unique="true"/>
@@ -163,6 +164,10 @@
             <element type="u8"/>
         </member>
         <member type="s64" name="Coins"/>
+        <member type="map" name="ITimePoints">
+            <key type="s8"/>
+            <value type="s16"/>
+        </member>
     </object>
     <object name="Expertise" location="world" scriptenabled="true">
         <member type="pref" name="Character" key="true" unique="false"/>
@@ -204,5 +209,20 @@
             <element type="ref"/>
         </member>
         <member type="bool" name="PublicToZone" default="true"/>
+    </object>
+    <object name="CultureData" location="world" scriptenabled="true">
+        <member type="pref" name="Character" key="true" unique="true"/>
+        <member type="u32" name="Zone" key="true" unique="false"/>
+        <member type="u32" name="MachineID"/>
+        <member type="Item*" name="Item"/>
+        <member type="u32" name="Expiration"/>
+        <member type="bool" name="Active"/>
+        <member type="array" name="Points" size="5">
+            <element type="u32"/>
+        </member>
+        <member type="array" name="ItemHistory" size="10">
+            <element type="u32"/>
+        </member>
+        <member type="u32" name="ItemCount"/>
     </object>
 </objgen>

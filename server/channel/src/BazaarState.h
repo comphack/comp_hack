@@ -125,19 +125,6 @@ public:
      */
     bool BuyItem(std::shared_ptr<objects::BazaarItem> bItem);
 
-    /**
-     * Get the next market expiration associated to the bazaar in system time
-     * @return Next market expiration in system time
-     */
-    uint32_t GetNextExpiration() const;
-
-    /**
-     * Set the next market expiration associated to the bazaar in system time
-     * from its current markets
-     * @return Next market expiration in system time
-     */
-    uint32_t SetNextExpiration();
-
 private:
     /**
      * Verify if the supplied bazaar market matches the current market
@@ -180,9 +167,6 @@ private:
     /// open market
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::BazaarData>> mCurrentMarkets;
-
-    /// Next market expiration time that will occur
-    uint32_t mNextExpiration;
 
     /// Lock for shared resources
     std::mutex mLock;

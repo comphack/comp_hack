@@ -46,6 +46,7 @@
 #include <ChannelConfig.h>
 #include <CharacterProgress.h>
 #include <Clan.h>
+#include <CultureData.h>
 #include <DemonBox.h>
 #include <DemonPresent.h>
 #include <DemonQuest.h>
@@ -80,10 +81,12 @@
 #include <MiRentalData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
+#include <MiSkillSpecialParams.h>
 #include <MiStatusData.h>
 #include <MiUnionData.h>
 #include <MiUseRestrictionsData.h>
 #include <PlayerExchangeSession.h>
+#include <ServerCultureMachineSet.h>
 #include <ServerZone.h>
 #include <StatusEffect.h>
 #include <WorldSharedConfig.h>
@@ -92,6 +95,7 @@
 #include "ActionManager.h"
 #include "AIState.h"
 #include "ChannelServer.h"
+#include "CultureMachineState.h"
 #include "EventManager.h"
 #include "FusionManager.h"
 #include "ManagerConnection.h"
@@ -2110,6 +2114,197 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
     return true;
 }
 
+bool CharacterManager::CultureItemPickup(const std::shared_ptr<
+    channel::ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+
+    // If an item is set, the operation is valid, expired or not
+    auto cData = character ? character->GetCultureData().Get()
+        : nullptr;
+    auto cItem = cData ? cData->GetItem().Get() : nullptr;
+    if(cItem)
+    {
+        // Expire machine if still active in the zone (it shouldn't be)
+        auto server = mServer.lock();
+        auto definitionManager = server->GetDefinitionManager();
+        auto zoneManager = server->GetZoneManager();
+
+        auto zoneData = server->GetServerDataManager()
+            ->GetZoneData(cData->GetZone(), 0);
+        auto zone = zoneData ? zoneManager->GetGlobalZone(
+            zoneData->GetID(), zoneData->GetDynamicMapID())
+            : nullptr;
+        std::shared_ptr<objects::ServerCultureMachineSet> cmDef;
+        if(zone)
+        {
+            bool matchFound = false;
+            for(auto& pair : zone->GetCultureMachines())
+            {
+                auto cmState = pair.second;
+                if(cmState->GetMachineID() == cData->GetMachineID())
+                {
+                    cmDef = cmState->GetEntity();
+                }
+
+                if(cmState->GetRentalData() == cData)
+                {
+                    cmState->SetRentalData(nullptr);
+                    zoneManager->SendCultureMachineData(zone, cmState);
+                    matchFound = true;
+                }
+            }
+
+            if(matchFound)
+            {
+                // Reset the expirations
+                zoneManager->ExpireRentals(zone);
+            }
+        }
+
+        // Add slots, move the item to the inventory and set the culture
+        // data as inactive
+        auto inventory = character->GetItemBoxes(0).Get();
+        auto freeSlots = GetFreeSlots(client, inventory);
+        if(freeSlots.size() > 0)
+        {
+            size_t slot = *freeSlots.begin();
+
+            cItem->SetItemBox(inventory->GetUUID());
+            cItem->SetBoxSlot((int8_t)slot);
+
+            inventory->SetItems(slot, cItem);
+
+            // Determine how many slots will be added
+            int8_t currentSlots = 0;
+            for(size_t i = 0; i < 5; i++)
+            {
+                if(cItem->GetModSlots(i))
+                {
+                    currentSlots++;
+                }
+            }
+
+            int8_t newSlots = currentSlots;
+            if(!cmDef)
+            {
+                LOG_ERROR(libcomp::String("No culture machine with ID %1"
+                    " found in zone %2\n").Arg(cData->GetMachineID())
+                    .Arg(cData->GetZone()));
+            }
+            else if(newSlots < 5)
+            {
+                uint32_t pointSum = 0;
+                for(uint32_t points : cData->GetPoints())
+                {
+                    pointSum = (uint32_t)(pointSum + points);
+                }
+
+                int16_t pointRank = -1;
+                for(uint32_t ratePoints : cmDef->GetSlotRatePoints())
+                {
+                    if(ratePoints > pointSum)
+                    {
+                        break;
+                    }
+
+                    pointRank++;
+                }
+
+                double slotRate = 1.0;
+                for(uint32_t skillID : definitionManager->GetFunctionIDSkills(
+                    SVR_CONST.SKILL_CULTURE_SLOT_UP))
+                {
+                    if(cState->CurrentSkillsContains(skillID))
+                    {
+                        auto skillData = definitionManager->GetSkillData(skillID);
+                        int32_t boost = skillData ? skillData->GetSpecial()
+                            ->GetSpecialParams(0) : 0;
+                        slotRate = slotRate + ((double)boost * 0.01);
+                    }
+                }
+
+                std::list<uint16_t> rates;
+                if(pointRank >= 0)
+                {
+                    // Slot number that can be added calculates the same
+                    // regardless of how many you start with (which means
+                    // later slots are easier to add if you start with more)
+                    for(size_t i = 0; i < 5; i++)
+                    {
+                        size_t idx = (size_t)((size_t)pointRank + i *
+                            cmDef->SlotRatePointsCount());
+                        uint16_t rate = (uint16_t)floor((double)
+                            cmDef->GetSlotRates(idx) * slotRate);
+                        rates.push_back(rate);
+                    }
+                }
+
+                // Add slots added until one fails
+                int8_t slotsPossible = 0;
+                for(uint16_t rate : rates)
+                {
+                    if(rate &&
+                        (rate >= 10000 || RNG(uint16_t, 1, 10000) <= rate))
+                    {
+                        slotsPossible++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                for(size_t i = (size_t)currentSlots;
+                    i < 5 && slotsPossible > 0; i++)
+                {
+                    cItem->SetModSlots(i, MOD_SLOT_NULL_EFFECT);
+                    newSlots++;
+                    slotsPossible--;
+                }
+            }
+
+            cData->SetActive(false);
+            cData->SetItem(NULLUUID);
+
+            auto dbChanges = libcomp::DatabaseChangeSet::Create();
+            dbChanges->Update(inventory);
+            dbChanges->Update(cItem);
+            dbChanges->Update(cData);
+
+            if(!server->GetWorldDatabase()
+                ->ProcessChangeSet(dbChanges))
+            {
+                client->Kill();
+                return false;
+            }
+
+            SendItemBoxData(client, inventory, { (uint16_t)slot });
+
+            libcomp::Packet notify;
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_CULTURE_RESULT);
+            notify.WriteS32Little((int32_t)cItem->GetType());
+            notify.WriteS8(currentSlots);
+            notify.WriteS8(newSlots);
+
+            client->SendPacket(notify);
+        }
+        else
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+    return true;
+}
+
 std::list<std::shared_ptr<objects::ItemDrop>> CharacterManager::DetermineDrops(
     const std::list<std::shared_ptr<objects::ItemDrop>>& drops,
     int16_t luck, bool minLast)
@@ -3406,6 +3601,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         }
     }
 
+    bool levelup = false;
     int64_t xpDelta = stats->GetXP() + (int64_t)xpGain;
     while(level < levelCap &&
         xpDelta >= (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level])
@@ -3413,6 +3609,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         xpDelta = xpDelta - (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level];
 
         level++;
+        levelup = true;
 
         stats->SetLevel(level);
 
@@ -3520,7 +3717,36 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     reply.WriteS32Little((int32_t)xpGain);
     reply.WriteS32Little(0);    //Unknown
 
-    client->SendPacket(reply);
+    client->QueuePacket(reply);
+
+    if(levelup && !isDemon)
+    {
+        if(demon)
+        {
+            // Send congrats message from demon
+            libcomp::Packet notify;
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_LEVEL_UP_CONGRATS);
+            notify.WriteS64Little(state->GetObjectID(demon->GetUUID()));
+
+            client->QueuePacket(notify);
+        }
+
+        // Add levelup status effects
+        StatusEffectChanges effects;
+        for(auto& pair : SVR_CONST.LEVELUP_STATUSES)
+        {
+            effects[pair.first] = StatusEffectChange(pair.first,
+                pair.second, true);
+        }
+
+        if(effects.size() > 0)
+        {
+            cState->AddStatusEffects(effects, server->GetDefinitionManager());
+        }
+    }
+
+    client->FlushOutgoing();
 
     server->GetWorldDatabase()->QueueUpdate(stats, state->GetAccountUID());
 }
@@ -3985,8 +4211,8 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
             double boostRate = 0.0;
             if(boostItem)
             {
-                auto it = SVR_CONST.SYNTH_ADJUSTMENTS.find(boostItem->GetType());
-                if(it != SVR_CONST.SYNTH_ADJUSTMENTS.end() && it->second[0] == 0)
+                auto it = SVR_CONST.ADJUSTMENT_ITEMS.find(boostItem->GetType());
+                if(it != SVR_CONST.ADJUSTMENT_ITEMS.end() && it->second[0] == 1)
                 {
                     boostRate = (double)it->second[1];
                 }
@@ -4000,7 +4226,7 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
             {
                 int16_t intel = dState->GetINTEL();
                 int16_t luck = dState->GetLUCK();
-                for(auto pair : SVR_CONST.SYNTH_ADJUSTMENTS)
+                for(auto pair : SVR_CONST.ADJUSTMENT_SKILLS)
                 {
                     // Skill adjustments
                     if(pair.second[0] == 1 && dState->CurrentSkillsContains(
@@ -4655,11 +4881,6 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
     auto dState = state->GetDemonState();
     auto zone = state->GetZone();
 
-    if(!zone)
-    {
-        return;
-    }
-
     int32_t cEntityID = cState->GetEntityID();
     int32_t dEntityID = dState->GetEntityID();
 
@@ -4667,7 +4888,7 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
     cancelMap[cEntityID] = cState->CancelStatusEffects(cancelFlags);
     cancelMap[dEntityID] = dState->CancelStatusEffects(cancelFlags);
 
-    if((cancelFlags & EFFECT_CANCEL_ZONEOUT) != 0)
+    if(zone && (cancelFlags & EFFECT_CANCEL_ZONEOUT) != 0)
     {
         // Cancel invalid ride effects
         if(zone->GetDefinition()->GetMountDisabled())

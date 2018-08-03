@@ -53,6 +53,9 @@
         <member type="list" name="Bazaars">
             <element type="ServerBazaar*"/>
         </member>
+        <member type="list" name="CultureMachines">
+            <element type="ServerCultureMachineSet*"/>
+        </member>
         <member type="map" name="PlasmaSpawns">
             <key type="u32"/>
             <value type="PlasmaSpawn*"/>

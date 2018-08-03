@@ -266,10 +266,16 @@ public:
     virtual std::shared_ptr<objects::EntityStats> GetCoreStats();
 
     /**
-     * Get the the entity UUID associated to the entity this state represents.
+     * Get the entity UUID associated to the entity this state represents.
      * @return Entity UUID or null UUID if not specified
      */
     virtual const libobjgen::UUID GetEntityUUID();
+
+    /**
+     * Get the world CID associated to the entity
+     * @return World CID, 0 if not applicable
+     */
+    int32_t GetWorldCID();
 
     /**
      * Get assigned entity as its EnemyBase representation or null

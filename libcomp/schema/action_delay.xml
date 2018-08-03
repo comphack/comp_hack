@@ -8,7 +8,7 @@
             <value>CHARACTER_COOLDOWN</value>
             <value>ACCOUNT_COOLDOWN</value>
         </member>
-        <member type="s32" name="delayID" min="0"/>
+        <member type="s32" name="delayID"/>
         <member type="u32" name="duration"/>
         <member type="list" name="actions">
             <element type="Action*"/>

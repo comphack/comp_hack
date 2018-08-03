@@ -181,7 +181,7 @@ bool Parsers::Synthesize::Parse(libcomp::ManagerPacket *pPacketManager,
                     case objects::PlayerExchangeSession::Type_t::SYNTH_MELEE:
                         expertRank = cState->GetExpertiseRank(definitionManager,
                             EXPERTISE_CHAIN_SWORDSMITH);
-                        for(auto pair : SVR_CONST.SYNTH_ADJUSTMENTS)
+                        for(auto pair : SVR_CONST.ADJUSTMENT_SKILLS)
                         {
                             if(pair.second[0] == 2 &&
                                 dState->CurrentSkillsContains((uint32_t)pair.first))
@@ -199,7 +199,7 @@ bool Parsers::Synthesize::Parse(libcomp::ManagerPacket *pPacketManager,
                     case objects::PlayerExchangeSession::Type_t::SYNTH_GUN:
                         expertRank = cState->GetExpertiseRank(definitionManager,
                             EXPERTISE_CHAIN_ARMS_MAKER);
-                        for(auto pair : SVR_CONST.SYNTH_ADJUSTMENTS)
+                        for(auto pair : SVR_CONST.ADJUSTMENT_SKILLS)
                         {
                             if(pair.second[0] == 3 &&
                                 dState->CurrentSkillsContains((uint32_t)pair.first))

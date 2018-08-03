@@ -70,6 +70,7 @@
     <!-- Events -->
     <include path="event.xml"/>
     <include path="event_direction.xml"/>
+    <include path="event_itime.xml"/>
     <include path="event_message.xml"/>
     <include path="event_openmenu.xml"/>
     <include path="event_performactions.xml"/>
@@ -91,6 +92,7 @@
     <include path="binarydata/cquest.xml"/>
     <include path="binarydata/csounddata.xml"/>
     <include path="binarydata/ctalkmessagedata.xml"/>
+    <include path="binarydata/cultureitemdata.xml"/>
     <include path="binarydata/czonerelationdata.xml"/>
     <include path="binarydata/devilbookdata.xml"/>
     <include path="binarydata/devilboostdata.xml"/>

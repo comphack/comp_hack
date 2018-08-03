@@ -38,6 +38,7 @@
 #include <MiBlendExtData.h>
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
+#include <MiCultureItemData.h>
 #include <MiCZoneRelationData.h>
 #include <MiDamageData.h>
 #include <MiDCategoryData.h>
@@ -119,6 +120,12 @@ const std::shared_ptr<objects::MiBlendExtData>
     DefinitionManager::GetBlendExtData(uint32_t id)
 {
     return GetRecordByID(id, mBlendExtData);
+}
+
+const std::shared_ptr<objects::MiCultureItemData>
+    DefinitionManager::GetCultureItemData(uint32_t id)
+{
+    return GetRecordByID(id, mCultureItemData);
 }
 
 const std::shared_ptr<objects::MiDevilBookData>
@@ -758,6 +765,21 @@ namespace libcomp
             {
                 mCItemNameLookup[name] = id;
             }
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiCultureItemData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiCultureItemData>> records;
+        bool success = LoadBinaryData<objects::MiCultureItemData>(pDataStore,
+            "Shield/CultureItemData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mCultureItemData[record->GetID()] = record;
         }
 
         return success;
@@ -1553,6 +1575,7 @@ bool DefinitionManager::LoadAllData(DataStore *pDataStore)
     success &= LoadData<objects::MiBlendData>(pDataStore);
     success &= LoadData<objects::MiBlendExtData>(pDataStore);
     success &= LoadData<objects::MiCItemData>(pDataStore);
+    success &= LoadData<objects::MiCultureItemData>(pDataStore);
     success &= LoadData<objects::MiDevilData>(pDataStore);
     success &= LoadData<objects::MiDevilBookData>(pDataStore);
     success &= LoadData<objects::MiDevilBoostData>(pDataStore);

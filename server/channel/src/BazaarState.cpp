@@ -47,7 +47,7 @@
 using namespace channel;
 
 BazaarState::BazaarState(const std::shared_ptr<objects::ServerBazaar>& bazaar)
-    : EntityState<objects::ServerBazaar>(bazaar), mNextExpiration(0)
+    : EntityState<objects::ServerBazaar>(bazaar)
 {
 }
 
@@ -135,7 +135,7 @@ bool BazaarState::DropItemFromMarket(ClientState* state, int8_t srcSlot, int64_t
 
     auto eventState = state->GetEventState();
     auto currentEvent = eventState ? eventState->GetCurrent() : nullptr;
-    uint32_t eventMarketID = currentEvent ? currentEvent->GetShopID() : 0;
+    uint32_t eventMarketID = (uint32_t)state->GetCurrentMenuShopID();
 
     auto bState = state->GetBazaarState();
     if(bState && eventMarketID == bazaarData->GetMarketID())
@@ -202,31 +202,6 @@ bool BazaarState::BuyItem(std::shared_ptr<objects::BazaarItem> bItem)
 
     bItem->SetSold(true);
     return true;
-}
-
-uint32_t BazaarState::GetNextExpiration() const
-{
-    return mNextExpiration;
-}
-
-uint32_t BazaarState::SetNextExpiration()
-{
-    mNextExpiration = 0;
-
-    std::lock_guard<std::mutex> lock(mLock);
-    for(auto pair : mCurrentMarkets)
-    {
-        auto market = pair.second;
-        if(market && market->GetState() != objects::BazaarData::State_t::BAZAAR_INACTIVE)
-        {
-            if(mNextExpiration == 0 || mNextExpiration > market->GetExpiration())
-            {
-                mNextExpiration = market->GetExpiration();
-            }
-        }
-    }
-
-    return mNextExpiration;
 }
 
 bool BazaarState::VerifyMarket(const std::shared_ptr<objects::BazaarData>& data)

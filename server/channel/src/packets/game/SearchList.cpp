@@ -136,7 +136,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                     connection);
                 auto state = client->GetClientState();
                 auto current = state->GetEventState()->GetCurrent();
-                int32_t eventZoneID = current ? (int32_t)current->GetShopID() : 0;
+                int32_t eventZoneID = state->GetCurrentMenuShopID();
                 if(eventZoneID != 0)
                 {
                     entries.remove_if([eventZoneID](

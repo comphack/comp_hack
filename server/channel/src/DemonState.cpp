@@ -119,8 +119,8 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
 
     if(compendium1)
     {
-        auto worldData = std::dynamic_pointer_cast<objects::AccountWorldData>(
-            libcomp::PersistentObject::GetObjectByUUID(character->GetAccount()));
+        auto state = ClientState::GetEntityClientState(GetEntityID());
+        auto worldData = state ? state->GetAccountWorldData().Get() : nullptr;
         if(worldData)
         {
             auto devilBook = worldData->GetDevilBook();

@@ -68,7 +68,7 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t price = p.ReadS32Little();
 
     auto currentEvent = state->GetEventState()->GetCurrent();
-    uint32_t marketID = currentEvent ? currentEvent->GetShopID() : 0;
+    uint32_t marketID = (uint32_t)state->GetCurrentMenuShopID();
     auto bState = currentEvent
         ? zone->GetBazaar(currentEvent->GetSourceEntityID()) : nullptr;
 

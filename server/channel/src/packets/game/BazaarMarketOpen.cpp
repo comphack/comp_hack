@@ -67,8 +67,8 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
     auto zone = cState->GetZone();
 
     auto currentEvent = state->GetEventState()->GetCurrent();
-    uint32_t marketID = currentEvent ? currentEvent->GetShopID() : 0;
-    auto bazaar = currentEvent
+    uint32_t marketID = (uint32_t)state->GetCurrentMenuShopID();
+    auto bazaar = currentEvent && zone
         ? zone->GetBazaar(currentEvent->GetSourceEntityID()) : nullptr;
 
     bool success = marketID != 0 && bazaar;
@@ -133,8 +133,8 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
 
         zoneManager->SendBazaarMarketData(zone, bazaar, marketID);
 
-        // Refresh markets in the same bazaar
-        zoneManager->ExpireBazaarMarkets(zone, bazaar);
+        // Refresh markets in the same zone
+        zoneManager->ExpireRentals(zone);
 
         reply.WriteS32Little((int32_t)timeLeft);
         reply.WriteS32Little(0);        // Success

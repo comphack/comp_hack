@@ -13,6 +13,7 @@
             <value>MATERIAL_TANK</value>
             <value>POST</value>
             <value>TIME_TRIAL_REWARD</value>
+            <value>CULTURE_PICKUP</value>
         </member>
     </object>
 </objgen>

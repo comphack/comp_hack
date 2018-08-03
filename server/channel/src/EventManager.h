@@ -92,11 +92,14 @@ public:
      * @param actionGroupID Optional action group ID, set when performing
      *  a "start event" action so any later sets can pick up where the
      *  others left off
+     * @param autoOnly Optional parameter to force an auto-only context,
+     *  regardless of its the client is specified
      * @return true on success, false on failure
      */
     bool HandleEvent(const std::shared_ptr<ChannelClientConnection>& client,
         const libcomp::String& eventID, int32_t sourceEntityID,
-        const std::shared_ptr<Zone>& zone = nullptr, uint32_t actionGroupID = 0);
+        const std::shared_ptr<Zone>& zone = nullptr, uint32_t actionGroupID = 0,
+        bool autoOnly = false);
 
     /**
      * Prepare a new event based upon the supplied ID, relative to an
@@ -109,14 +112,30 @@ public:
         const libcomp::String& eventID, int32_t sourceEntityID);
 
     /**
+     * Request an open menu event be started for the supplied client
+     * @param client Pointer to the client connection
+     * @param menuType Type of menu being opened
+     * @param shopID Optional shop ID of the menu being opened
+     * @param sourceEntityID Optional source of an event to focus on
+     * @param allowInsert If true the menu can be requested with an event
+     *  currently active. If false an an active event causes a failure.
+     * @return true if request was sent to the client, false otherwise
+     */
+    bool RequestMenu(const std::shared_ptr<ChannelClientConnection>& client,
+        int32_t menuType, int32_t shopID = 0, int32_t sourceEntityID = 0,
+        bool allowInsert = false);
+
+    /**
      * React to a response based on the current event of a client
      * @param client Pointer to the client sending the response
      * @param responseID Value representing the player's response
      *  contextual to the current event type
+     * @param objectID Optional object ID selected as part of the client
+     *  response
      * @return true on success, false on failure
      */
     bool HandleResponse(const std::shared_ptr<ChannelClientConnection>& client,
-        int32_t responseID);
+        int32_t responseID, int64_t objectID = -1);
 
     /**
      * Start, update or complete a quest based upon the quest ID and phase
@@ -252,6 +271,7 @@ private:
         std::shared_ptr<ChannelClientConnection> Client;
         std::shared_ptr<Zone> CurrentZone;
         std::shared_ptr<objects::EventInstance> EventInstance;
+        bool AutoOnly = false;
     };
 
     /**
@@ -435,6 +455,13 @@ private:
     bool Direction(EventContext& ctx);
 
     /**
+     * Send the player an I-Time request
+     * @param ctx Execution context of the event
+     * @return true on success, false on failure
+     */
+    bool ITime(EventContext& ctx);
+
+    /**
      * End the current event sequence
      * @param client Pointer to the client the event affects
      * @return true on success, false on failure
@@ -484,7 +511,7 @@ private:
 
                 // Apply the transformation
                 if(scriptResult && *scriptResult == 0 &&
-                    TransformEvent(ctx, engine))
+                    TransformEvent(ctx, engine) && VerifyITime(ctx, ptr))
                 {
                     // Set new event
                     inst->SetEvent(ptr);
@@ -496,7 +523,7 @@ private:
             return nullptr;
         }
 
-        return ptr;
+        return VerifyITime(ctx, ptr) ? ptr : nullptr;
     }
 
     /**
@@ -518,6 +545,15 @@ private:
      */
     bool TransformEvent(EventContext& ctx,
         std::shared_ptr<libcomp::ScriptEngine> engine);
+
+    /**
+     * Verify if the supplied event can be executed in regards to the event
+     * entity's current I-Time state
+     * @param ctx Execution context of the event
+     * @param e Pointer to the event to be executed
+     * @return true if the event can be executed, false if it is not valid
+     */
+    bool VerifyITime(EventContext& ctx, std::shared_ptr<objects::Event> e);
 
     /// Pointer to the channel server.
     std::weak_ptr<ChannelServer> mServer;

@@ -73,11 +73,13 @@ public:
      * @param sourceEntityID ID of the entity performing the actions.
      * @param zone Pointer to the current zone the action is being performed in
      * @param groupID Optional action group ID used for specific action logic
+     * @param autoEventsOnly Optional parameter to force an auto-only context
+     *  when processing events. Does not apply when context switching.
      */
     void PerformActions(const std::shared_ptr<ChannelClientConnection>& client,
         const std::list<std::shared_ptr<objects::Action>>& actions,
         int32_t sourceEntityID, const std::shared_ptr<Zone>& zone = nullptr,
-        uint32_t groupID = 0);
+        uint32_t groupID = 0, bool autoEventsOnly = false);
 
 private:
     struct ActionContext
@@ -87,6 +89,7 @@ private:
         int32_t SourceEntityID = 0;
         uint32_t GroupID = 0;
         std::shared_ptr<Zone> CurrentZone;
+        bool AutoEventsOnly = false;
     };
 
     /**

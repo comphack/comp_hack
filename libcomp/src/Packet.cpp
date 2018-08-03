@@ -426,6 +426,15 @@ void Packet::WriteFloat(float value)
     Skip(4);
 }
 
+void Packet::WriteDouble(double value)
+{
+    // Grow the packet by the size of the value, copy the value into the packet
+    // data, and advance the current packet position by the size of the value.
+    GrowPacket(8);
+    memcpy(mData + mPosition, &value, 8);
+    Skip(8);
+}
+
 void Packet::Clear()
 {
     // Reset the position and size of the packet.

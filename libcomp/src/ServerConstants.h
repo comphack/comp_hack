@@ -71,15 +71,6 @@ struct Data
     /// Demon ID of elemental type: Erthys (アーシーズ)
     uint32_t ELEMENTAL_4_ERTHYS;
 
-    /// COMP shop menu event ID
-    String EVENT_MENU_COMP_SHOP;
-
-    /// Demon depo menu event ID
-    String EVENT_MENU_DEMON_DEPO;
-
-    /// Item depo menu event ID
-    String EVENT_MENU_ITEM_DEPO;
-
     /// Item ID of item type: Macca (マッカ)
     uint32_t ITEM_MACCA;
 
@@ -104,8 +95,26 @@ struct Data
     /// Item ID of item type: Rakutavi's Bloodstone (ラクタヴィの血石)
     uint32_t ITEM_RBLOODSTONE;
 
+    /// Menu ID of a bazaar market
+    uint32_t MENU_BAZAAR;
+
+    /// Menu ID of the COMP shop
+    uint32_t MENU_COMP_SHOP;
+
+    /// Menu ID of a culture machine
+    uint32_t MENU_CULTURE;
+
+    /// Menu ID of the remote demon depo
+    uint32_t MENU_DEMON_DEPO;
+
     /// Menu ID of the demon fusion (kreuz) process
     uint32_t MENU_FUSION_KZ;
+
+    /// Menu ID of the remote item depo
+    uint32_t MENU_ITEM_DEPO;
+
+    /// Menu ID of the I-Time interface
+    uint32_t MENU_ITIME;
 
     /// Menu ID of an item repair (kreuz) shop
     uint32_t MENU_REPAIR_KZ;
@@ -135,11 +144,11 @@ struct Data
     /// Function ID of the character cloaking skills
     uint16_t SKILL_CLOAK;
 
-    /// Function ID cultivate slot mod increasing passives
-    uint16_t SKILL_CULTIVATE_SLOT_UP;
+    /// Function ID culture slot mod increasing passives
+    uint16_t SKILL_CULTURE_SLOT_UP;
 
-    /// Function ID cultivate success increasing passives
-    uint16_t SKILL_CULTIVATE_UP;
+    /// Function ID culture point increasing passives
+    uint16_t SKILL_CULTURE_UP;
 
     /// Function ID for the demonic compendium add skill
     uint16_t SKILL_DCM;
@@ -401,6 +410,12 @@ struct Data
     /// Default zone to move players when no other zone is found
     uint32_t ZONE_DEFAULT;
 
+    /// Item IDs with parameters used for contextual adjustments
+    std::unordered_map<uint32_t, std::array<int32_t, 3>> ADJUSTMENT_ITEMS;
+
+    /// Skill IDs with parameters used for contextual adjustments
+    std::unordered_map<uint32_t, std::array<int32_t, 3>> ADJUSTMENT_SKILLS;
+
     /// Barter cooldown IDs to duration (in seconds)
     std::unordered_map<int32_t, uint32_t> BARTER_COOLDOWNS;
 
@@ -444,6 +459,9 @@ struct Data
     /// Fusion status effect IDs to success boosts
     std::unordered_map<uint32_t, uint8_t> FUSION_BOOST_STATUSES;
 
+    /// Character level up status effect IDs to stack counts
+    std::unordered_map<uint32_t, uint8_t> LEVELUP_STATUSES;
+
     /// Map of the number of completed quests required to gain the
     /// specified tokusei IDs
     std::unordered_map<uint16_t, int32_t> QUEST_BONUS;
@@ -459,9 +477,6 @@ struct Data
     /// Item IDs mapped to success, great success boosts. Items can be equipped
     /// or be part of the fusion.
     std::unordered_map<uint32_t, std::array<uint8_t, 2>> SPIRIT_FUSION_BOOST;
-
-    /// Item/skill IDs with parameters used for synth calculations
-    std::unordered_map<uint32_t, std::array<int32_t, 3>> SYNTH_ADJUSTMENTS;
 
     /// Synth skill IDs for demon crystallization, tarot enchant, soul enchant,
     /// synth melee and synth gun skills

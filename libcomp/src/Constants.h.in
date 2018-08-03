@@ -139,11 +139,17 @@ namespace libcomp
 /// ID of the "Survival" expertise.
 #define EXPERTISE_SURVIVAL (20)
 
+/// ID of the "Creation" expertise.
+#define EXPERTISE_CREATION (31)
+
 /// ID of the "Gun knowledge" expertise.
 #define EXPERTISE_GUN_KNOWLEDGE (34)
 
 /// ID of the "Swordsmith" chain expertise.
 #define EXPERTISE_CHAIN_SWORDSMITH (40)
+
+/// ID of the "Craftmanship" chain expertise.
+#define EXPERTISE_CHAIN_CRAFTMANSHIP (44)
 
 /// ID of the "Arms maker" chain expertise.
 #define EXPERTISE_CHAIN_ARMS_MAKER (46)

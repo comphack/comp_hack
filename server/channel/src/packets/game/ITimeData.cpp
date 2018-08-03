@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/packets/game/HouraiData.cpp
+ * @file server/channel/src/packets/game/ITimeData.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for Club Hourai related information.
+ * @brief Request from the client for the character's I-Time data.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -30,12 +30,15 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <CharacterProgress.h>
+
 // channel Includes
 #include "ChannelClientConnection.h"
 
 using namespace channel;
 
-bool Parsers::HouraiData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ITimeData::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
@@ -46,23 +49,29 @@ bool Parsers::HouraiData::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    /// @todo: implement non-default values
-    
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto progress = character ? character->GetProgress().Get() : nullptr;
+
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_HOURAI_DATA);
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITIME_DATA);
 
-    reply.WriteS8(0);   //Unknown
+    reply.WriteS8(progress ? 0 : -1);
 
-    int8_t unknownCount = 0;
-    reply.WriteS8(unknownCount);
-    for(int8_t i = 0; i < unknownCount; i++)
+    if(progress)
     {
-        // Unknown
-        reply.WriteS8(0);
-        reply.WriteS16Little(0);
+        reply.WriteS8((int8_t)progress->ITimePointsCount());
+        for(auto& pair : progress->GetITimePoints())
+        {
+            reply.WriteS8(pair.first);  // NPC ID
+            reply.WriteS16Little(pair.second);  // Points
+        }
     }
 
-    connection->SendPacket(reply);
+    client->SendPacket(reply);
 
     return true;
 }

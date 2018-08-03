@@ -42,6 +42,7 @@
 #include <CharacterProgress.h>
 #include <Clan.h>
 #include <ClanMember.h>
+#include <CultureData.h>
 #include <DemonBox.h>
 #include <DemonQuest.h>
 #include <EventState.h>
@@ -508,6 +509,20 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             " not be initialized for account: %1\n")
             .Arg(state->GetAccountUID().ToString()));
         return false;
+    }
+
+    // Culture
+    if(!character->GetCultureData().IsNull())
+    {
+        auto cultureData = character->GetCultureData().Get(db);
+        if(!cultureData || (!cultureData->GetItem().IsNull() &&
+            !cultureData->LoadItem(db)))
+        {
+            LOG_ERROR(libcomp::String("CultureData could"
+                " not be initialized for account: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
+            return false;
+        }
     }
 
     // Item boxes and items
@@ -1213,6 +1228,7 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
         dbChanges->Update(character->GetProgress().Get());
         dbChanges->Update(character->GetFriendSettings().Get());
         dbChanges->Update(character->GetDemonQuest().Get());
+        dbChanges->Update(character->GetCultureData().Get());
 
         for(auto itemBox : character->GetItemBoxes())
         {

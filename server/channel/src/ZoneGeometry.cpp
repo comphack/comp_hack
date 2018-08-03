@@ -143,7 +143,7 @@ bool ZoneShape::Collides(const Line& path, Point& point, Line& surface) const
 
         if(intersect && !passThrough)
         {
-            collisions[dist] = std::pair<const Line*, Point>(&surface, point);
+            collisions[dist] = std::pair<const Line*, Point>(&s, point);
         }
     }
 

@@ -261,7 +261,7 @@ ENDIF()
 ADD_LINKER_FLAGS(AUTO /ignore:4099)
 
 # UTF-8 source encoding for MSVC.
-ADD_COMPILER_FLAGS(AUTO /utf-8)
+ADD_COMPILER_FLAGS(AUTO /utf-8 /bigobj)
 
 # Build for Windows 7 and higher.
 # See: https://msdn.microsoft.com/en-us/library/6sehtctf.aspx

@@ -6,6 +6,8 @@
         <member type="s8" name="BoxSlot" default="-1"/>
         <member type="u16" name="AttackSettings"/>
         <member type="u8" name="GrowthType"/>
+        <member type="u8" name="MitamaRank"/>
+        <member type="u8" name="MitamaType"/>
         <member type="s8" name="MagReduction" min="0" max="100"/>
         <member type="s32" name="SoulPoints" min="0" max="100000"/>
         <member type="u16" name="Familiarity" min="0" max="10000"/>
@@ -29,6 +31,9 @@
         </member>
         <member type="array" name="Reunion" size="12">
             <element type="s8"/>
+        </member>
+        <member type="array" name="MitamaReunion" size="96">
+            <element type="u8"/>
         </member>
         <member type="array" name="ForceValues" size="20">
             <element type="s32"/>

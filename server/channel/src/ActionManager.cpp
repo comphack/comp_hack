@@ -67,6 +67,7 @@
 #include <ActionZoneChange.h>
 #include <CharacterProgress.h>
 #include <DemonBox.h>
+#include <DigitalizeState.h>
 #include <DropSet.h>
 #include <Expertise.h>
 #include <LootBox.h>
@@ -1237,7 +1238,7 @@ bool ActionManager::GrantSkills(ActionContext& ctx)
                 {
                     character->SetExpertiseExtension((int8_t)newVal);
 
-                    characterManager->SendExertiseExtension(ctx.Client);
+                    characterManager->SendExpertiseExtension(ctx.Client);
                     server->GetWorldDatabase()->QueueUpdate(character,
                         state->GetAccountUID());
                 }
@@ -1617,8 +1618,46 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
         break;
     case objects::ActionUpdatePoints::PointType_t::DIGITALIZE_POINTS:
         {
-            LOG_ERROR("Attempted to add digitalize points which are not"
-                " supported yet!\n");
+            auto state = ctx.Client->GetClientState();
+            auto cState = state->GetCharacterState();
+            auto character = cState->GetEntity();
+            auto progress = character
+                ? character->GetProgress().Get() : nullptr;
+
+            auto dgState = cState->GetDigitalizeState();
+            if(!dgState)
+            {
+                return false;
+            }
+
+            int32_t points = (int32_t)act->GetValue();
+            if(points < 0)
+            {
+                return false;
+            }
+
+            if(act->GetIsSet())
+            {
+                int32_t existing = progress->GetDigitalizePoints(
+                    dgState->GetRaceID());
+                if(existing > points)
+                {
+                    LOG_ERROR("Attempted to lower digitalize points with"
+                        " direct set action\n");
+                    return false;
+                }
+
+                points = points - existing;
+            }
+
+            std::unordered_map<uint8_t, int32_t> pointMap;
+            pointMap[dgState->GetRaceID()] = points;
+
+            if(!mServer.lock()->GetCharacterManager()->UpdateDigitalizePoints(
+                ctx.Client, pointMap, !act->GetIsSet()))
+            {
+                return false;
+            }
         }
         break;
     case objects::ActionUpdatePoints::PointType_t::SOUL_POINTS:

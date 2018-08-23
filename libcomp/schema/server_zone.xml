@@ -130,6 +130,7 @@
             <value>NORMAL</value>
             <value>TIME_TRIAL</value>
             <value>DEMON_ONLY</value>
+            <value>DIGITALIZE</value>
         </member>
         <member type="set" name="ZonePartialIDs">
             <element type="u32"/>
@@ -138,6 +139,7 @@
         <!-- TIME_TRIAL: Participation time => Rank C => Rank B => Rank A -->
         <!-- DEMON_ONLY: Max time => Rank A (min) => Rank B (min) =>
              Party member reduction (optional) -->
+        <!-- DIGITALIZE: Rank B (max) => Rank A (max) -->
         <member type="list" name="TimePoints">
             <element type="u16"/>
         </member>

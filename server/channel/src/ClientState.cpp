@@ -227,19 +227,30 @@ const libobjgen::UUID ClientState::GetLocalObjectUUID(int32_t objectID)
     return NULLUUID;
 }
 
-bool ClientState::SetObjectID(const libobjgen::UUID& uuid, int64_t objectID)
+bool ClientState::SetObjectID(const libobjgen::UUID& uuid, int64_t objectID,
+    bool allowReset)
 {
     auto uuidStr = uuid.ToString();
 
+    std::lock_guard<std::mutex> lock(mLock);
+
     auto iter = mObjectIDs.find(uuidStr);
-    if(iter == mObjectIDs.end())
+    if(iter != mObjectIDs.end())
     {
-        mObjectIDs[uuidStr] = objectID;
-        mObjectUUIDs[objectID] = uuid;
-        return true;
+        if(allowReset)
+        {
+            mObjectUUIDs.erase(iter->second);
+            mObjectIDs.erase(iter);
+        }
+        else
+        {
+            return false;
+        }
     }
 
-    return false;
+    mObjectIDs[uuidStr] = objectID;
+    mObjectUUIDs[objectID] = uuid;
+    return true;
 }
 
 const libobjgen::UUID ClientState::GetAccountUID() const

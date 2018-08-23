@@ -39,7 +39,9 @@
 #include <InheritedSkill.h>
 #include <MiDCategoryData.h>
 #include <MiDevilBookData.h>
+#include <MiDevilBoostExtraData.h>
 #include <MiDevilData.h>
+#include <MiMitamaReunionSetBonusData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 
@@ -105,6 +107,11 @@ uint16_t DemonState::GetCompendiumCount(uint8_t groupID, bool familyGroup)
 std::list<int32_t> DemonState::GetCompendiumTokuseiIDs() const
 {
     return mCompendiumTokuseiIDs;
+}
+
+std::list<int32_t> DemonState::GetDemonTokuseiIDs() const
+{
+    return mDemonTokuseiIDs;
 }
 
 bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& character,
@@ -220,6 +227,73 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
     mCompendiumRaceCounts = compendiumRaceCounts;
 
     return true;
+}
+
+bool DemonState::UpdateDemonState(libcomp::DefinitionManager* definitionManager)
+{
+    auto demon = GetEntity();
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    mDemonTokuseiIDs.clear();
+
+    if(demon)
+    {
+        bool updated = false;
+
+        std::unordered_map<uint8_t, uint8_t> bonuses;
+        std::set<uint32_t> setBonuses;
+        if(demon->GetMitamaType() && CharacterManager::GetMitamaBonuses(demon,
+            definitionManager, bonuses, setBonuses, false))
+        {
+            auto state = ClientState::GetEntityClientState(GetEntityID());
+            auto cState = state ? state->GetCharacterState() : nullptr;
+            bool exBonus = cState && cState->SkillAvailable(
+                SVR_CONST.MITAMA_SET_BOOST);
+
+            for(auto& pair : definitionManager->GetMitamaReunionSetBonusData())
+            {
+                if(setBonuses.find(pair.first) != setBonuses.end())
+                {
+                    auto boost = exBonus ? pair.second->GetBonusEx()
+                        : pair.second->GetBonus();
+                    for(size_t i = 0; i < boost.size(); )
+                    {
+                        int32_t type = boost[i];
+                        int32_t val = boost[(size_t)(i + 1)];
+                        if(type == -1 && val)
+                        {
+                            mDemonTokuseiIDs.push_back(val);
+                            updated = true;
+                        }
+
+                        i += 2;
+                    }
+                }
+            }
+        }
+
+        for(uint16_t stackID : demon->GetForceStack())
+        {
+            auto exData = stackID
+                ? definitionManager->GetDevilBoostExtraData(stackID) : nullptr;
+            if(exData)
+            {
+                for(int32_t tokuseiID : exData->GetTokusei())
+                {
+                    if(tokuseiID)
+                    {
+                        mDemonTokuseiIDs.push_back(tokuseiID);
+                        updated = true;
+                    }
+                }
+            }
+        }
+
+        return updated;
+    }
+
+    return false;
 }
 
 std::list<std::shared_ptr<objects::InheritedSkill>>

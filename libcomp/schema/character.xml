@@ -168,6 +168,17 @@
             <key type="s8"/>
             <value type="s16"/>
         </member>
+        <member type="map" name="DigitalizeLevels">
+            <key type="u8"/>
+            <value type="s8"/>
+        </member>
+        <member type="map" name="DigitalizePoints">
+            <key type="u8"/>
+            <value type="s32"/>
+        </member>
+        <member type="array" name="DigitalizeAssists" size="256">
+            <element type="u8"/>
+        </member>
     </object>
     <object name="Expertise" location="world" scriptenabled="true">
         <member type="pref" name="Character" key="true" unique="false"/>

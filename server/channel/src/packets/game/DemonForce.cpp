@@ -141,8 +141,7 @@ bool Parsers::DemonForce::Parse(libcomp::ManagerPacket *pPacketManager,
             }
         }
 
-        /// @todo: check increased stack slots from mitama
-        if(toStack &&
+        if(toStack && demon->GetForceStack((size_t)stackSlot) == 0 &&
             devilData->GetGrowth()->GetForceStack() < (stackSlot + 1))
         {
             success = false;

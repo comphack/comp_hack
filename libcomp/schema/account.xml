@@ -50,6 +50,8 @@
         <member type="list" name="Blacklist">
             <element type="string"/>
         </member>
+        <member type="u32" name="ReunionPoints"/>
+        <member type="u32" name="MitamaReunionPoints"/>
 
         <member type="map" name="ActionCooldowns">
             <key type="s32"/>

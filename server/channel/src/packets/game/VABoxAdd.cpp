@@ -90,7 +90,7 @@ bool Parsers::VABoxAdd::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!failure)
     {
         bool removed = false;
-        for(uint32_t removeItemType : SVR_CONST.VA_ADD_ITEM)
+        for(uint32_t removeItemType : SVR_CONST.VA_ADD_ITEMS)
         {
             std::unordered_map<uint32_t, uint32_t> remove;
             remove[removeItemType] = 1;

@@ -92,6 +92,14 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.ELEMENTAL_3_AEROS);
     success &= LoadInteger(constants["ELEMENTAL_4_ERTHYS"],
         sConstants.ELEMENTAL_4_ERTHYS);
+    success &= LoadInteger(constants["MITAMA_1_ARAMITAMA"],
+        sConstants.MITAMA_1_ARAMITAMA);
+    success &= LoadInteger(constants["MITAMA_2_NIGIMITAMA"],
+        sConstants.MITAMA_2_NIGIMITAMA);
+    success &= LoadInteger(constants["MITAMA_3_KUSHIMITAMA"],
+        sConstants.MITAMA_3_KUSHIMITAMA);
+    success &= LoadInteger(constants["MITAMA_4_SAKIMITAMA"],
+        sConstants.MITAMA_4_SAKIMITAMA);
 
     // Load item constants
     success &= LoadInteger(constants["ITEM_MACCA"],
@@ -276,6 +284,8 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.STATUS_DEATH);
     success &= LoadInteger(constants["STATUS_DEMON_QUEST_ACTIVE"],
         sConstants.STATUS_DEMON_QUEST_ACTIVE);
+    success &= LoadInteger(constants["STATUS_DIGITALIZE_COOLDOWN"],
+        sConstants.STATUS_DIGITALIZE_COOLDOWN);
     success &= LoadInteger(constants["STATUS_HIDDEN"],
         sConstants.STATUS_HIDDEN);
     success &= LoadInteger(constants["STATUS_MOUNT"],
@@ -302,18 +312,22 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.VALUABLE_DEVIL_BOOK_V2);
     success &= LoadInteger(constants["VALUABLE_DEMON_FORCE"],
         sConstants.VALUABLE_DEMON_FORCE);
+    success &= LoadInteger(constants["VALUABLE_DIGITALIZE_LV1"],
+        sConstants.VALUABLE_DIGITALIZE_LV1);
+    success &= LoadInteger(constants["VALUABLE_DIGITALIZE_LV2"],
+        sConstants.VALUABLE_DIGITALIZE_LV2);
     success &= LoadInteger(constants["VALUABLE_FUSION_GAUGE"],
         sConstants.VALUABLE_FUSION_GAUGE);
     success &= LoadInteger(constants["VALUABLE_MATERIAL_TANK"],
         sConstants.VALUABLE_MATERIAL_TANK);
 
-    // Load zone constants
+    // Load other constants
+    success &= LoadInteger(constants["MITAMA_SET_BOOST"],
+        sConstants.MITAMA_SET_BOOST);
     success &= LoadInteger(constants["ZONE_DEFAULT"],
         sConstants.ZONE_DEFAULT);
 
     String listStr;
-    success &= LoadString(constants["STATUS_COMP_TUNING"], listStr) &&
-        ToIntegerSet(sConstants.STATUS_COMP_TUNING, listStr.Split(","));
     success &= LoadString(constants["SKILL_TRAESTO_ARCADIA"], listStr) &&
         ToIntegerArray(sConstants.SKILL_TRAESTO_ARCADIA, listStr.Split(","));
     success &= LoadString(constants["SKILL_TRAESTO_DSHINJUKU"], listStr) &&
@@ -324,6 +338,11 @@ bool ServerConstants::Initialize(const String& filePath)
         ToIntegerArray(sConstants.SKILL_TRAESTO_NAKANO_BDOMAIN, listStr.Split(","));
     success &= LoadString(constants["SKILL_TRAESTO_SOUHONZAN"], listStr) &&
         ToIntegerArray(sConstants.SKILL_TRAESTO_SOUHONZAN, listStr.Split(","));
+
+    success &= LoadString(constants["STATUS_COMP_TUNING"], listStr) &&
+        ToIntegerSet(sConstants.STATUS_COMP_TUNING, listStr.Split(","));
+    success &= LoadString(constants["STATUS_DIGITALIZE"], listStr) &&
+        ToIntegerArray(sConstants.STATUS_DIGITALIZE, listStr.Split(","));
 
     if(!success)
     {
@@ -929,6 +948,72 @@ bool ServerConstants::Initialize(const String& filePath)
         return false;
     }
 
+    complexIter = complexConstants.find("REUNION_EXTRACT_ITEMS");
+    if(complexIter != complexConstants.end())
+    {
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
+        {
+            LOG_ERROR("Failed to load REUNION_EXTRACT_ITEMS\n");
+            return false;
+        }
+        else
+        {
+            for(auto elem : strList)
+            {
+                uint32_t id = 0;
+                if(LoadInteger(elem.C(), id))
+                {
+                    sConstants.REUNION_EXTRACT_ITEMS.push_back(id);
+                }
+                else
+                {
+                    LOG_ERROR("Failed to load an entry in"
+                        " REUNION_EXTRACT_ITEMS\n");
+                    return false;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("REUNION_EXTRACT_ITEMS not found\n");
+        return false;
+    }
+
+    complexIter = complexConstants.find("ROLLBACK_PG_ITEMS");
+    if(complexIter != complexConstants.end())
+    {
+        std::list<String> strList;
+        if(!LoadStringList(complexIter->second, strList))
+        {
+            LOG_ERROR("Failed to load ROLLBACK_PG_ITEMS\n");
+            return false;
+        }
+        else
+        {
+            for(auto elem : strList)
+            {
+                uint32_t id = 0;
+                if(LoadInteger(elem.C(), id))
+                {
+                    sConstants.ROLLBACK_PG_ITEMS.push_back(id);
+                }
+                else
+                {
+                    LOG_ERROR("Failed to load an entry in"
+                        " ROLLBACK_PG_ITEMS\n");
+                    return false;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("ROLLBACK_PG_ITEMS not found\n");
+        return false;
+    }
+
     complexIter = complexConstants.find("SPIRIT_FUSION_BOOST");
     if(complexIter != complexConstants.end())
     {
@@ -1099,13 +1184,13 @@ bool ServerConstants::Initialize(const String& filePath)
         return false;
     }
 
-    complexIter = complexConstants.find("VA_ADD_ITEM");
+    complexIter = complexConstants.find("VA_ADD_ITEMS");
     if(complexIter != complexConstants.end())
     {
         std::list<String> strList;
         if(!LoadStringList(complexIter->second, strList))
         {
-            LOG_ERROR("Failed to load VA_ADD_ITEM\n");
+            LOG_ERROR("Failed to load VA_ADD_ITEMS\n");
             return false;
         }
         else
@@ -1115,12 +1200,12 @@ bool ServerConstants::Initialize(const String& filePath)
                 uint32_t entry = 0;
                 if(LoadInteger(elemStr.C(), entry))
                 {
-                    sConstants.VA_ADD_ITEM.insert(entry);
+                    sConstants.VA_ADD_ITEMS.insert(entry);
                 }
                 else
                 {
                     LOG_ERROR("Failed to load an element in"
-                        " VA_ADD_ITEM\n");
+                        " VA_ADD_ITEMS\n");
                     return false;
                 }
             }
@@ -1128,7 +1213,7 @@ bool ServerConstants::Initialize(const String& filePath)
     }
     else
     {
-        LOG_ERROR("VA_ADD_ITEM not found\n");
+        LOG_ERROR("VA_ADD_ITEMS not found\n");
         return false;
     }
 

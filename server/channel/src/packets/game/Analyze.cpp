@@ -162,13 +162,13 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
                     reply.WriteU16Little(forceStack);
                 }
 
-                reply.WriteU8(0);   //Unknown
-                reply.WriteU8(0);   //Mitama type
+                reply.WriteU8(d->GetMitamaRank());
+                reply.WriteU8(d->GetMitamaType());
 
                 // Reunion bonuses (12 * 8 ranks)
                 for(size_t i = 0; i < 96; i++)
                 {
-                    reply.WriteU8(0);
+                    reply.WriteU8(d->GetMitamaReunion(i));
                 }
 
                 // Equipment

@@ -34,6 +34,7 @@
 namespace objects
 {
 class Character;
+class CharacterState;
 class InheritedSkill;
 }
 
@@ -83,6 +84,12 @@ public:
     std::list<int32_t> GetCompendiumTokuseiIDs() const;
 
     /**
+     * Get the set of tokusei effect IDs granted to the current demon
+     * @return List of tokusei effect IDs
+     */
+    std::list<int32_t> GetDemonTokuseiIDs() const;
+
+    /**
      * Update all character relative, demon independent information
      * that pertains to the current partner's state
      * @param character Pointer to the character that owns the demon state
@@ -92,6 +99,15 @@ public:
      */
     bool UpdateSharedState(const std::shared_ptr<objects::Character>& character,
         libcomp::DefinitionManager* definitionManager);
+
+    /**
+     * Update all state information that pertains to the current partner.
+     * Both demon state and character skills can affect this.
+     * @param definitionManager Pointer to the definition manager to use
+     *  when calculating demon data
+     * @return true if an update occurred, false if one did not
+     */
+    bool UpdateDemonState(libcomp::DefinitionManager* definitionManager);
 
     /**
      * Get list of skills currently being learned by affinity ID
@@ -125,6 +141,9 @@ private:
     /// map is refreshed by calling RefreshLearningSkills
     std::unordered_map<uint8_t, std::list<
         std::shared_ptr<objects::InheritedSkill>>> mLearningSkills;
+
+    /// Tokusei effect IDs available due to the demon's current state
+    std::list<int32_t> mDemonTokuseiIDs;
 
     /// Tokusei effect IDs available due to the character's demonic
     /// compendium completion level

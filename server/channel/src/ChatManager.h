@@ -194,6 +194,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to gain digitalize points.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_DigitalizePoints(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to apply a status effect to the client's character or
      * demon.
      * @param client Pointer to the client that sent the command

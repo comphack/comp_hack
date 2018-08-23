@@ -36,12 +36,18 @@
 #include <AccountWorldData.h>
 #include <CalculatedEntityState.h>
 #include <CharacterProgress.h>
+#include <Clan.h>
+#include <DigitalizeState.h>
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
 #include <Expertise.h>
 #include <Item.h>
 #include <MiCategoryData.h>
+#include <MiDCategoryData.h>
+#include <MiDevilBoostExtraData.h>
 #include <MiDevilCrystalData.h>
+#include <MiDevilData.h>
+#include <MiDevilEquipmentItemData.h>
 #include <MiEnchantCharasticData.h>
 #include <MiEnchantData.h>
 #include <MiEquipmentSetData.h>
@@ -50,6 +56,8 @@
 #include <MiExpertData.h>
 #include <MiExpertGrowthTbl.h>
 #include <MiExpertRankData.h>
+#include <MiGrowthData.h>
+#include <MiGuardianAssistData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiItemBasicData.h>
@@ -57,6 +65,7 @@
 #include <MiModifiedEffectData.h>
 #include <MiQuestData.h>
 #include <MiSItemData.h>
+#include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSpecialConditionData.h>
 #include <MiUseRestrictionsData.h>
@@ -80,6 +89,7 @@ namespace libcomp
         {
             Using<ActiveEntityState>();
             Using<objects::Character>();
+            Using<objects::DigitalizeState>();
 
             Sqrat::DerivedClass<CharacterState,
                 ActiveEntityState> binding(mVM, "CharacterState");
@@ -87,6 +97,8 @@ namespace libcomp
                 .Func<std::shared_ptr<objects::Character>
                 (CharacterState::*)()>(
                     "GetEntity", &CharacterState::GetEntity)
+                .Func("GetDigitalizeState",
+                    &CharacterState::GetDigitalizeState)
                 .Func("ActionCooldownActive",
                     &CharacterState::ActionCooldownActive)
                 .Func("RefreshActionCooldowns",
@@ -130,7 +142,218 @@ std::list<int32_t> CharacterState::GetQuestBonusTokuseiIDs() const
     return mQuestBonusTokuseiIDs;
 }
 
-void CharacterState::RecalcEquipState(libcomp::DefinitionManager* definitionManager)
+std::shared_ptr<objects::DigitalizeState>
+    CharacterState::GetDigitalizeState() const
+{
+    return mDigitalizeState;
+}
+
+std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
+    const std::shared_ptr<objects::Demon>& demon,
+    libcomp::DefinitionManager* definitionManager)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto devilData = demon
+        ? definitionManager->GetDevilData(demon->GetType()) : nullptr;
+    if(!devilData)
+    {
+        mDigitalizeState = nullptr;
+        return nullptr;
+    }
+
+    uint8_t raceID = (uint8_t)devilData->GetCategory()->GetRace();
+    mDigitalizeState = std::make_shared<objects::DigitalizeState>();
+    mDigitalizeState->SetDemon(demon);
+    mDigitalizeState->SetRaceID(raceID);
+
+    uint8_t dgAbilty = GetDigitalizeAbilityLevel();
+    uint8_t statRate = (uint8_t)(dgAbilty == 2 ? 30 : 10);
+
+    // Gather active assist values
+    std::list<std::shared_ptr<objects::MiGuardianAssistData>> activeAssists;
+
+    auto character = GetEntity();
+    auto progress = character
+        ? character->GetProgress().Get() : nullptr;
+    if(progress)
+    {
+        auto assists = progress->GetDigitalizeAssists();
+        for(size_t i = 0; i < assists.size(); i++)
+        {
+            uint8_t byte = assists[i];
+            if(byte == 0) continue;
+
+            for(size_t k = 0; k < 8; k++)
+            {
+                if(byte & (1 << k))
+                {
+                    auto assist = definitionManager->GetGuardianAssistData(
+                        (uint32_t)(i * 8 + k));
+                    if(assist && assist->GetRaceID() == raceID)
+                    {
+                        activeAssists.push_back(assist);
+                    }
+                }
+            }
+        }
+    }
+
+    // Adjust assist properties
+    bool skillActives = false, skillPassives = false, skillTraits = false,
+        affinities = false, mitamaSet = false;
+    for(auto assist : activeAssists)
+    {
+        switch(assist->GetType())
+        {
+        case objects::MiGuardianAssistData::Type_t::STAT_RATE:
+            if((statRate + assist->GetValue()) > 100)
+            {
+                statRate = 100;
+            }
+            else
+            {
+                statRate = (uint8_t)(statRate + assist->GetValue());
+            }
+            break;
+        case objects::MiGuardianAssistData::Type_t::ACTIVES:
+            skillActives = true;
+            break;
+        case objects::MiGuardianAssistData::Type_t::PASSIVES:
+            skillPassives = true;
+            break;
+        case objects::MiGuardianAssistData::Type_t::TRAITS:
+            skillTraits = true;
+            break;
+        case objects::MiGuardianAssistData::Type_t::AFFINITIES:
+            affinities = true;
+            break;
+        case objects::MiGuardianAssistData::Type_t::FORCE_STACK:
+            for(uint16_t stackID : demon->GetForceStack())
+            {
+                auto exData = stackID
+                    ? definitionManager->GetDevilBoostExtraData(stackID)
+                    : nullptr;
+                if(exData)
+                {
+                    for(int32_t tokuseiID : exData->GetTokusei())
+                    {
+                        if(tokuseiID)
+                        {
+                            mDigitalizeState->AppendTokuseiIDs(tokuseiID);
+                        }
+                    }
+                }
+            }
+            break;
+        case objects::MiGuardianAssistData::Type_t::MITAMA_SET:
+            mitamaSet = true;
+            break;
+        case objects::MiGuardianAssistData::Type_t::EXTEND_TIME:
+            mDigitalizeState->SetTimeExtension(
+                mDigitalizeState->GetTimeExtension() + assist->GetValue());
+            break;
+        case objects::MiGuardianAssistData::Type_t::REDUCE_WAIT:
+            mDigitalizeState->SetCooldownReduction(
+                mDigitalizeState->GetCooldownReduction() + assist->GetValue());
+            break;
+        default:
+            break;
+        }
+    }
+
+    // Add skills
+    if(skillActives || skillPassives)
+    {
+        for(uint32_t skillID : demon->GetLearnedSkills())
+        {
+            auto skillData = skillID
+                ? definitionManager->GetSkillData(skillID) : nullptr;
+            if(skillData)
+            {
+                switch(skillData->GetCommon()->GetCategory()
+                    ->GetMainCategory())
+                {
+                case 0:
+                    if(skillPassives)
+                    {
+                        mDigitalizeState->InsertActiveSkills(skillID);
+                    }
+                    break;
+                case 1:
+                    if(skillActives)
+                    {
+                        mDigitalizeState->InsertPassiveSkills(skillID);
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+    }
+
+    if(skillTraits)
+    {
+        for(uint32_t skillID : CharacterManager::GetTraitSkills(demon,
+            devilData, definitionManager))
+        {
+            mDigitalizeState->InsertPassiveSkills(skillID);
+        }
+    }
+
+    // Calculate and add stats
+    mDigitalizeState->SetStatRate(statRate);
+
+    int8_t demonLvl = demon->GetCoreStats()->GetLevel();
+    auto demonStats = CharacterManager::GetDemonBaseStats(devilData,
+        definitionManager, demon->GetGrowthType(), demonLvl);
+
+    CharacterManager::AdjustDemonBaseStats(demon, demonStats, true, true);
+    CharacterManager::AdjustMitamaStats(demon, demonStats, definitionManager,
+        0, 0, mitamaSet);
+
+    // Add base stats and HP/MP
+    for(uint8_t i = (size_t)CorrectTbl::STR; i <= (uint8_t)CorrectTbl::MP_MAX; i++)
+    {
+        mDigitalizeState->SetCorrectValues(i, (int16_t)(
+            (double)statRate * 0.01 * (double)demonStats[(CorrectTbl)i]));
+    }
+
+    if(affinities)
+    {
+        // Add affinities
+        for(uint8_t i = (size_t)CorrectTbl::RES_DEFAULT;
+            i <= (uint8_t)CorrectTbl::NRA_MAGIC; i++)
+        {
+            mDigitalizeState->SetCorrectValues(i, demonStats[(CorrectTbl)i]);
+        }
+    }
+
+    return mDigitalizeState;
+}
+
+uint8_t CharacterState::GetDigitalizeAbilityLevel()
+{
+    auto character = GetEntity();
+
+    if(CharacterManager::HasValuable(character,
+        SVR_CONST.VALUABLE_DIGITALIZE_LV2))
+    {
+        return 2;
+    }
+    else if(CharacterManager::HasValuable(character,
+        SVR_CONST.VALUABLE_DIGITALIZE_LV1))
+    {
+        return 1;
+    }
+
+    // Digitalize not unlocked
+    return 0;
+}
+
+void CharacterState::RecalcEquipState(
+    libcomp::DefinitionManager* definitionManager)
 {
     auto character = GetEntity();
     if(!character)
@@ -613,6 +836,165 @@ bool CharacterState::RecalcDisabledSkills(
     SetDisabledSkills(disabledSkills);
 
     return newSkillDisabled || disabledSkills.size() != currentDisabledSkills.size();
+}
+
+uint8_t CharacterState::RecalculateStats(
+    libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
+{
+    uint8_t result = 0;
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto c = GetEntity();
+    auto cs = GetCoreStats();
+
+    bool selfState = calcState == nullptr;
+    if(selfState)
+    {
+        calcState = GetCalculatedState();
+
+        // Calculate current skills, only matters if calculating
+        // for the default entity state
+        auto previousSkills = GetCurrentSkills();
+        SetCurrentSkills(GetAllSkills(definitionManager, true));
+
+        bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
+        if(!skillsChanged)
+        {
+            for(uint32_t skillID : previousSkills)
+            {
+                if(!CurrentSkillsContains(skillID))
+                {
+                    skillsChanged = true;
+                    break;
+                }
+            }
+        }
+        result = skillsChanged ? ENTITY_CALC_SKILL : 0x00;
+
+        // Remove any switch skills no longer available
+        RemoveInactiveSwitchSkills();
+    }
+
+    auto stats = CharacterManager::GetCharacterBaseStats(cs);
+    if(selfState && !mInitialCalc)
+    {
+        SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
+        SetCombatRunSpeed(stats[CorrectTbl::MOVE2]);
+        mInitialCalc = true;
+    }
+
+    // Adjust base stats based on digitalize
+    auto dgState = mDigitalizeState;
+    if(dgState)
+    {
+        for(auto& pair : dgState->GetCorrectValues())
+        {
+            stats[(CorrectTbl)pair.first] = (int16_t)(
+                stats[(CorrectTbl)pair.first] + pair.second);
+        }
+    }
+
+    // Calculate based on adjustments
+    std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
+    std::list<std::shared_ptr<objects::MiCorrectTbl>> nraTbls;
+    for(auto equip : c->GetEquippedItems())
+    {
+        if(!equip.IsNull() && equip->GetDurability() > 0)
+        {
+            uint32_t basicEffect = equip->GetBasicEffect();
+            auto itemData = definitionManager->GetItemData(
+                basicEffect ? basicEffect : equip->GetType());
+            for(auto ct : itemData->GetCommon()->GetCorrectTbl())
+            {
+                if((uint8_t)ct->GetID() >= (uint8_t)CorrectTbl::NRA_WEAPON &&
+                    (uint8_t)ct->GetID() <= (uint8_t)CorrectTbl::NRA_MAGIC)
+                {
+                    nraTbls.push_back(ct);
+                }
+                else
+                {
+                    correctTbls.push_back(ct);
+                }
+            }
+        }
+    }
+
+    GetAdditionalCorrectTbls(definitionManager, calcState, correctTbls);
+
+    UpdateNRAChances(stats, calcState, nraTbls);
+    AdjustStats(correctTbls, stats, calcState, true);
+    BaseStatsCalculated(definitionManager, calcState, stats, correctTbls);
+
+    CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), false);
+
+    AdjustStats(correctTbls, stats, calcState, false);
+
+    if(selfState)
+    {
+        return result | CompareAndResetStats(stats);
+    }
+    else
+    {
+        for(auto statPair : stats)
+        {
+            calcState->SetCorrectTbl((size_t)statPair.first, statPair.second);
+        }
+
+        return result;
+    }
+}
+
+std::set<uint32_t> CharacterState::GetAllSkills(
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
+{
+    std::set<uint32_t> skillIDs;
+    
+    auto character = GetEntity();
+    if(character)
+    {
+        skillIDs = character->GetLearnedSkills();
+
+        auto clan = character->GetClan().Get();
+        if(clan)
+        {
+            int8_t clanLevel = clan->GetLevel();
+            for(int8_t i = 0; i < clanLevel; i++)
+            {
+                for(uint32_t clanSkillID :
+                    SVR_CONST.CLAN_LEVEL_SKILLS[(size_t)i])
+                {
+                    skillIDs.insert(clanSkillID);
+                }
+            }
+        }
+
+        if(includeTokusei)
+        {
+            for(uint32_t skillID : GetEffectiveTokuseiSkills(
+                definitionManager))
+            {
+                skillIDs.insert(skillID);
+            }
+        }
+    }
+
+    auto dgState = mDigitalizeState;
+    if(dgState)
+    {
+        for(uint32_t skillID : dgState->GetActiveSkills())
+        {
+            skillIDs.insert(skillID);
+        }
+
+        for(uint32_t skillID : dgState->GetPassiveSkills())
+        {
+            skillIDs.insert(skillID);
+        }
+    }
+
+    return skillIDs;
 }
 
 void CharacterState::BaseStatsCalculated(

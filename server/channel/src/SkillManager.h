@@ -416,6 +416,17 @@ private:
         const std::shared_ptr<Zone>& zone);
 
     /**
+     * Increase digitalize experience points for the supplied source's party
+     * based upon defeated enemies. Points are granted at a flat rate and
+     * unlike XP are not shared with other parties that dealt damage.
+     * @param enemies List of pointers to enemies that have been killed
+     * @param zone Pointer ot the zone where the enemies were killed
+     */
+    void HandleDigitalizeXP(const std::shared_ptr<ActiveEntityState> source,
+        const std::list<std::shared_ptr<ActiveEntityState>>& enemies,
+        const std::shared_ptr<Zone>& zone);
+
+    /**
      * Handle all logic related to defeating an enemy encounter through combat
      * or talk skill outcome. Enemy despawn does not count as a defeat and should
      * be handled separately. If the encounter is not actually defeated, nothing
@@ -719,7 +730,43 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
-     * Execute the a skill that always adds a specific status effect after the
+     * Execute a skill that results in digitalizing the player character.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Digitalize(
+        const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a skill that forces the cancellation of all targets hit.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool DigitalizeBreak(
+        const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a digitalize state cancellation skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool DigitalizeCancel(
+        const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a skill that always adds a specific status effect after the
      * skill's execution.
      * @param activated Pointer to the activated ability instance
      * @param ctx Special execution state for the skill

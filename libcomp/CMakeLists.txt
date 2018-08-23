@@ -301,6 +301,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/aidata.xml
     schema/binarydata/blenddata.xml
     schema/binarydata/ceventmessagedata.xml
+    schema/binarydata/chouraidata.xml
     schema/binarydata/cicondata.xml
     schema/binarydata/citemdata.xml
     schema/binarydata/cmessagedata.xml
@@ -327,8 +328,10 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/exchangedata.xml
     schema/binarydata/expertdata.xml
     schema/binarydata/fusiondata.xml
+    schema/binarydata/guardiandata.xml
     schema/binarydata/hnpcdata.xml
     schema/binarydata/itemdata.xml
+    schema/binarydata/mitamadata.xml
     schema/binarydata/modificationdata.xml
     schema/binarydata/npcbarterdata.xml
     schema/binarydata/onpcdata.xml
@@ -653,6 +656,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiCategoryData.cpp
     MiCEventMessageData.cpp
     MiCEventMessageData.h
+    MiCHouraiData.cpp
+    MiCHouraiData.h
     MiCItemBaseData.cpp
     MiCItemBaseData.h
     MiCItemData.cpp
@@ -787,6 +792,16 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiFindInfo.h
     MiGrowthData.cpp
     MiGrowthData.h
+    MiGuardianAssistData.cpp
+    MiGuardianAssistData.h
+    MiGuardianLevelData.cpp
+    MiGuardianLevelData.h
+    MiGuardianLevelDataEntry.cpp
+    MiGuardianLevelDataEntry.h
+    MiGuardianSpecialData.cpp
+    MiGuardianSpecialData.h
+    MiGuardianUnlockData.cpp
+    MiGuardianUnlockData.h
     MiHNPCAppearanceData.cpp
     MiHNPCAppearanceData.h
     MiHNPCBasicData.cpp
@@ -799,6 +814,12 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiItemPvPData.cpp
     MiKnockBackData.cpp
     MiKnockBackData.h
+    MiMitamaReunionBonusData.cpp
+    MiMitamaReunionBonusData.h
+    MiMitamaReunionSetBonusData.cpp
+    MiMitamaReunionSetBonusData.h
+    MiMitamaUnionBonusData.cpp
+    MiMitamaUnionBonusData.h
     MiModificationData.cpp
     MiModificationData.h
     MiModificationExtEffectData.cpp

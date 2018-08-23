@@ -111,6 +111,7 @@ bool Parsers::DemonForceStack::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(success)
     {
+        dState->UpdateDemonState(definitionManager);
         server->GetTokuseiManager()->Recalculate(state->GetCharacterState(),
             true, std::set<int32_t>{ dState->GetEntityID() });
         server->GetCharacterManager()->RecalculateStats(dState, client);

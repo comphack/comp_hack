@@ -382,11 +382,11 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
 
             lossRate = lossRate * lossRateScale;
 
-            item1Min = (uint16_t)ceil((float)item1Min * item1MinScale);
-            item2Min = (uint16_t)ceil((float)item2Min * item2MinScale);
+            item1Min = (uint16_t)floor((float)item1Min * item1MinScale);
+            item2Min = (uint16_t)floor((float)item2Min * item2MinScale);
 
-            item1Max = (uint16_t)ceil((float)item1Max * item1MaxScale);
-            item2Max = (uint16_t)ceil((float)item2Max * item2MaxScale);
+            item1Max = (uint16_t)floor((float)item1Max * item1MaxScale);
+            item2Max = (uint16_t)floor((float)item2Max * item2MaxScale);
         }
 
         // Apply expertise boosts
@@ -430,6 +430,7 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
                     newItem = existing;
                     updateItems[newItem] = (uint16_t)(
                         newItem->GetStackSize() + itemCount);
+                    break;
                 }
             }
 

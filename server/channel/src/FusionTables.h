@@ -42,6 +42,11 @@ extern uint8_t FUSION_RACE_MAP[35][34];
 // index in SVR_CONST (ex: SVR_CONST.ELEMENTAL_1_FLAEMIS).
 extern int8_t FUSION_ELEMENTAL_ADJUST[34][4];
 
+// Elemental to elemental fusion table that results in either no
+// valid fusion (-1) or a mitama type represented by its corresponding
+// mitama index value.
+extern int8_t FUSION_ELEMENTAL_MITAMA[4][4];
+
 // Bonus success rates granted by an individual component of two
 // way fusion based upon level range (min level in first column)
 // and familiarity rank starting at rank +1 (4001 points).
@@ -64,5 +69,9 @@ extern uint8_t TRIFUSION_FAMILY_MAP[7][7][8];
 // type values. Each row corresponds to their respective affinity
 // value - 1.
 extern uint8_t INHERITENCE_SKILL_MAP[21][21];
+
+// Point values assigned to each normal reunion rank 0-9 used for
+// point extraction and injection.
+extern uint16_t REUNION_RANK_POINTS[10];
 
 #endif // SERVER_CHANNEL_SRC_FUSIONTABLES_H

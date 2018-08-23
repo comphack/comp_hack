@@ -589,6 +589,7 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
     }
 
     const uint8_t eRace = (uint8_t)objects::MiDCategoryData::Race_t::ELEMENTAL;
+    const uint8_t mRace = (uint8_t)objects::MiDCategoryData::Race_t::MITAMA;
 
     if(triFusion)
     {
@@ -978,9 +979,16 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
 
         if(race1 == race2)
         {
-            /// @todo: support mitama result fusions
-            LOG_ERROR("Mitama fusion is not supported yet\n");
-            return 0;
+            // Two (differing) elementals result in a mitama
+            size_t eIdx1 = GetElementalIndex(baseDemonType1, found1);
+            size_t eIdx2 = GetElementalIndex(baseDemonType2, found2);
+            if(!found1 || !found2)
+            {
+                return 0;
+            }
+
+            return GetMitamaType((size_t)
+                FUSION_ELEMENTAL_MITAMA[eIdx1][eIdx2]);
         }
 
         uint32_t demonType = 0, elementalType = 0;
@@ -1009,6 +1017,46 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
         }
 
         return result;
+    }
+    else if(race1 == mRace || race2 == mRace)
+    {
+        // Mitama source fusion
+
+        if(race1 == race2)
+        {
+            // Cannot fuse two mitamas
+            return 0;
+        }
+
+        std::shared_ptr<objects::Demon> demon;
+        uint32_t mitamaType = 0;
+        if(race1 == mRace)
+        {
+            mitamaType = baseDemonType1;
+            demon = demon2;
+        }
+        else
+        {
+            mitamaType = baseDemonType2;
+            demon = demon1;
+        }
+
+        // Ensure the non-mitama demon has the minimum reunion
+        // rank total
+        if(server->GetCharacterManager()->GetReunionRankTotal(demon) < 48)
+        {
+            return 0;
+        }
+
+        // Double check to make sure the mitama type is valid
+        GetMitamaIndex(mitamaType, found1);
+        if(!found1)
+        {
+            return 0;
+        }
+
+        auto def = definitionManager->GetDevilData(demon->GetType());
+        return def ? def->GetUnionData()->GetMitamaFusionID() : 0;
     }
     else
     {
@@ -1180,6 +1228,8 @@ int8_t FusionManager::ProcessFusion(
     auto demonData = definitionManager->GetDevilData(resultDemonType);
     double baseLevel = (double)demonData->GetGrowth()->GetBaseLevel();
 
+    bool mitamaFusion = characterManager->IsMitamaDemon(demonData);
+
     // Costs get paid regardless of outcome
     bool paymentSuccess = true;
     if(costItemType == 0 || costItemType == SVR_CONST.ITEM_MACCA)
@@ -1189,6 +1239,11 @@ int8_t FusionManager::ProcessFusion(
         {
             // Tri-Fusion macca cost
             maccaCost = (uint32_t)floor(1.5 * pow(baseLevel, 2));
+        }
+        else if(mitamaFusion)
+        {
+            // Set cost
+            maccaCost = 50000;
         }
         else
         {
@@ -1211,6 +1266,11 @@ int8_t FusionManager::ProcessFusion(
 
             // Tri-Fusion kreuz fusion also costs one bloodstone
             itemCost[SVR_CONST.ITEM_RBLOODSTONE] = 1;
+        }
+        else if(mitamaFusion)
+        {
+            // Set cost
+            kreuzCost = 2500;
         }
         else
         {
@@ -1426,108 +1486,153 @@ int8_t FusionManager::ProcessFusion(
         }
     }
 
-    // Create the new demon
-    resultDemon = characterManager->GenerateDemon(demonData,
-        familiarity);
-
-    // Determine skill inheritance
-    auto inheritRestrictions = demonData->GetGrowth()->
-        GetInheritanceRestrictions();
-    std::map<uint32_t, std::shared_ptr<objects::MiSkillData>> inherited;
-    std::unordered_map<uint32_t, int32_t> inheritedSkillCounts;
-    for(auto source : { demon1, demon2, demon3 })
-    {
-        if(source)
-        {
-            for(auto learned : source->GetLearnedSkills())
-            {
-                if(learned == 0) continue;
-
-                auto lData = definitionManager->GetSkillData(learned);
-
-                // Check inheritance flags for valid skills
-                auto r = lData->GetAcquisition()->GetInheritanceRestriction();
-                if((inheritRestrictions & (uint16_t)(1 << r)) == 0) continue;
-
-                inherited[learned] = lData;
-
-                if(inheritedSkillCounts.find(learned) == inheritedSkillCounts.end())
-                {
-                    inheritedSkillCounts[learned] = 1;
-                }
-                else
-                {
-                    inheritedSkillCounts[learned]++;
-                }
-            }
-        }
-    }
-
-    // Remove skills the result demon already knows
-    for(auto skillID : demonData->GetGrowth()->GetSkills())
-    {
-        inherited.erase(skillID);
-    }
-
-    // Correct the COMP
-    auto comp = character->GetCOMP().Get();
-
-    resultDemon->SetDemonBox(comp->GetUUID());
-    resultDemon->SetBoxSlot(newSlot);
-    comp->SetDemons((size_t)newSlot, resultDemon);
-
-    // Prepare the updates and generate the inherited skills
     auto changes = libcomp::DatabaseChangeSet::Create(
         character->GetAccount());
-    changes->Insert(resultDemon);
-    changes->Insert(resultDemon->GetCoreStats().Get());
-
-    uint8_t iType = demonData->GetGrowth()->GetInheritanceType();
-    if(iType <= 21)
+    if(mitamaFusion)
     {
-        for(auto iPair : inherited)
+        // Perform mitama process on existing demon
+        auto mitama = demon1;
+
+        bool found = false;
+        size_t mitamaIdx = GetMitamaIndex(mitama->GetType(), found);
+        if(!found)
         {
-            // Add inherited skills, double or triple if two or
-            // three sources learned it respectively
-            uint8_t affinity = iPair.second->GetCommon()->GetAffinity();
-            uint8_t baseValue = INHERITENCE_SKILL_MAP
-                [(size_t)(affinity - 1)][iType];
-            int32_t multiplier = inheritedSkillCounts[iPair.first] * 100;
-
-            int16_t progress = (int16_t)(baseValue * multiplier);
-            if(progress > MAX_INHERIT_SKILL)
+            mitama = demon2;
+            mitamaIdx = GetMitamaIndex(mitama->GetType(), found);
+            if(!found)
             {
-                progress = MAX_INHERIT_SKILL;
+                // Shouldn't happen
+                return -1;
             }
-
-            auto iSkill = libcomp::PersistentObject::New<
-                objects::InheritedSkill>(true);
-            iSkill->SetSkill(iPair.first);
-            iSkill->SetProgress(progress);
-            iSkill->SetDemon(resultDemon->GetUUID());
-            resultDemon->AppendInheritedSkills(iSkill);
-
-            changes->Insert(iSkill);
         }
+
+        auto nonMitama = mitama == demon1 ? demon2 : demon1;
+
+        auto growthData = demonData->GetGrowth();
+        if(!characterManager->MitamaDemon(client, state->GetObjectID(
+            nonMitama->GetUUID()), growthData->GetGrowthType(),
+            (uint8_t)(mitamaIdx + 1)))
+        {
+            return -1;
+        }
+
+        // Clear all reunion values
+        for(size_t i = 0; i < nonMitama->ReunionCount(); i++)
+        {
+            nonMitama->SetReunion(i, 0);
+        }
+
+        for(size_t i = 0; i < nonMitama->MitamaReunionCount(); i++)
+        {
+            nonMitama->SetMitamaReunion(i, 0);
+        }
+
+        characterManager->CalculateDemonBaseStats(nonMitama);
+
+        resultDemon = nonMitama;
     }
-
-    state->SetObjectID(resultDemon->GetUUID(),
-        server->GetNextObjectID());
-
-    changes->Update(comp);
-    characterManager->DeleteDemon(demon1, changes);
-    characterManager->DeleteDemon(demon2, changes);
-
-    if(demon3)
+    else
     {
-        characterManager->DeleteDemon(demon3, changes);
+        // Create the new demon
+        resultDemon = characterManager->GenerateDemon(demonData,
+            familiarity);
+
+        // Determine skill inheritance
+        auto inheritRestrictions = demonData->GetGrowth()->
+            GetInheritanceRestrictions();
+        std::map<uint32_t, std::shared_ptr<objects::MiSkillData>> inherited;
+        std::unordered_map<uint32_t, int32_t> inheritedSkillCounts;
+        for(auto source : { demon1, demon2, demon3 })
+        {
+            if(source)
+            {
+                for(auto learned : source->GetLearnedSkills())
+                {
+                    if(learned == 0) continue;
+
+                    auto lData = definitionManager->GetSkillData(learned);
+
+                    // Check inheritance flags for valid skills
+                    auto r = lData->GetAcquisition()->GetInheritanceRestriction();
+                    if((inheritRestrictions & (uint16_t)(1 << r)) == 0) continue;
+
+                    inherited[learned] = lData;
+
+                    if(inheritedSkillCounts.find(learned) == inheritedSkillCounts.end())
+                    {
+                        inheritedSkillCounts[learned] = 1;
+                    }
+                    else
+                    {
+                        inheritedSkillCounts[learned]++;
+                    }
+                }
+            }
+        }
+
+        // Remove skills the result demon already knows
+        for(auto skillID : demonData->GetGrowth()->GetSkills())
+        {
+            inherited.erase(skillID);
+        }
+
+        // Correct the COMP
+        auto comp = character->GetCOMP().Get();
+
+        resultDemon->SetDemonBox(comp->GetUUID());
+        resultDemon->SetBoxSlot(newSlot);
+        comp->SetDemons((size_t)newSlot, resultDemon);
+
+        // Prepare the updates and generate the inherited skills
+        changes->Insert(resultDemon);
+        changes->Insert(resultDemon->GetCoreStats().Get());
+
+        uint8_t iType = demonData->GetGrowth()->GetInheritanceType();
+        if(iType <= 21)
+        {
+            for(auto iPair : inherited)
+            {
+                // Add inherited skills, double or triple if two or
+                // three sources learned it respectively
+                uint8_t affinity = iPair.second->GetCommon()->GetAffinity();
+                uint8_t baseValue = INHERITENCE_SKILL_MAP
+                    [(size_t)(affinity - 1)][iType];
+                int32_t multiplier = inheritedSkillCounts[iPair.first] * 100;
+
+                int16_t progress = (int16_t)(baseValue * multiplier);
+                if(progress > MAX_INHERIT_SKILL)
+                {
+                    progress = MAX_INHERIT_SKILL;
+                }
+
+                auto iSkill = libcomp::PersistentObject::New<
+                    objects::InheritedSkill>(true);
+                iSkill->SetSkill(iPair.first);
+                iSkill->SetProgress(progress);
+                iSkill->SetDemon(resultDemon->GetUUID());
+                resultDemon->AppendInheritedSkills(iSkill);
+
+                changes->Insert(iSkill);
+            }
+        }
+
+        changes->Update(comp);
     }
 
-    // Send the new COMP slot info
+    // Register the object ID, reset if its already there
+    state->SetObjectID(resultDemon->GetUUID(),
+        server->GetNextObjectID(), true);
+
+    // Delete the demons and send the new COMP slot info
     for(auto demon : { demon1, demon2, demon3 })
     {
         if(demon)
         {
+            if(demon != resultDemon)
+            {
+                characterManager->DeleteDemon(demon, changes);
+            }
+
             auto it = dMap.find(demon);
             if(it != dMap.end())
             {
@@ -1595,6 +1700,19 @@ uint32_t FusionManager::GetElementalType(size_t elementalIndex) const
     return elementalIndex < 4 ? FUSION_ELEMENTAL_TYPES[elementalIndex] : 0;
 }
 
+uint32_t FusionManager::GetMitamaType(size_t mitamaIndex) const
+{
+    const static uint32_t FUSION_MITAMA_TYPES[] =
+        {
+            SVR_CONST.MITAMA_1_ARAMITAMA,
+            SVR_CONST.MITAMA_2_NIGIMITAMA,
+            SVR_CONST.MITAMA_3_KUSHIMITAMA,
+            SVR_CONST.MITAMA_4_SAKIMITAMA
+        };
+
+    return mitamaIndex < 4 ? FUSION_MITAMA_TYPES[mitamaIndex] : 0;
+}
+
 uint32_t FusionManager::GetElementalFuseResult(uint32_t elementalType,
     uint8_t otherRace, uint32_t otherType, bool adjustMinRank)
 {
@@ -1647,6 +1765,22 @@ size_t FusionManager::GetElementalIndex(uint32_t elemType, bool& found)
     for(size_t i = 0; i < 4; i++)
     {
         if(GetElementalType(i) == elemType)
+        {
+            found = true;
+            return i;
+        }
+    }
+
+    return 0;
+}
+
+size_t FusionManager::GetMitamaIndex(uint32_t mitamaType, bool& found)
+{
+    found = false;
+
+    for(size_t i = 0; i < 4; i++)
+    {
+        if(GetMitamaType(i) == mitamaType)
         {
             found = true;
             return i;

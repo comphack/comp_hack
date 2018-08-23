@@ -36,12 +36,12 @@
 #include <CalculatedEntityState.h>
 #include <Clan.h>
 #include <ClientCostAdjustment.h>
+#include <DigitalizeState.h>
 #include <EnchantSetData.h>
 #include <Expertise.h>
 #include <Item.h>
 #include <MiCategoryData.h>
 #include <MiDCategoryData.h>
-#include <MiDevilBoostExtraData.h>
 #include <MiDevilCrystalData.h>
 #include <MiDevilData.h>
 #include <MiEnchantCharasticData.h>
@@ -973,8 +973,7 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
     case EntityType_t::CHARACTER:
         {
             auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
-            auto character = cState->GetEntity();
-            auto cs = cState->GetCoreStats();
+            int8_t lvl = cState->GetLevel();
 
             // Default to tokusei from equipment
             tokuseiIDs = cState->GetEquipmentTokuseiIDs();
@@ -997,8 +996,8 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
                 if(conditionType == 1)
                 {
                     // Level check
-                    add = (p1 == 0 || (int16_t)cs->GetLevel() >= p1) &&
-                        (p2 == 0 || (int16_t)cs->GetLevel() <= p2);
+                    add = (p1 == 0 || (int16_t)lvl >= p1) &&
+                        (p2 == 0 || (int16_t)lvl <= p2);
                 }
                 else if(conditionType == 2)
                 {
@@ -1023,6 +1022,16 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
                     }
                 }
             }
+
+            // Add digitalize tokusei
+            auto dgState = cState->GetDigitalizeState();
+            if(dgState)
+            {
+                for(int32_t tokuseiID : dgState->GetTokuseiIDs())
+                {
+                    tokuseiIDs.push_back(tokuseiID);
+                }
+            }
         }
         break;
     case EntityType_t::PARTNER_DEMON:
@@ -1031,24 +1040,10 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
             auto demon = dState->GetEntity();
             if(demon)
             {
-                tokuseiIDs = dState->GetCompendiumTokuseiIDs();
-
-                // Add demon force stacks
-                for(uint16_t stackID : demon->GetForceStack())
+                tokuseiIDs = dState->GetDemonTokuseiIDs();
+                for(int32_t tokuseiID : dState->GetCompendiumTokuseiIDs())
                 {
-                    auto exData = stackID
-                        ? definitionManager->GetDevilBoostExtraData(stackID)
-                        : nullptr;
-                    if(exData)
-                    {
-                        for(int32_t tokuseiID : exData->GetTokusei())
-                        {
-                            if(tokuseiID)
-                            {
-                                tokuseiIDs.push_back(tokuseiID);
-                            }
-                        }
-                    }
+                    tokuseiIDs.push_back(tokuseiID);
                 }
             }
 
@@ -1228,7 +1223,19 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         break;
     case TokuseiConditionType::DIGITALIZED:
         // Entity is a character and is digitalized
-        /// @todo: implement once digitalization is supported
+        if(numericCompare ||
+            eState->GetEntityType() != EntityType_t::CHARACTER)
+        {
+            return false;
+        }
+        else
+        {
+            auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
+
+            bool digitalized = cState->GetDigitalizeState() != nullptr;
+            return digitalized == (condition->GetComparator() ==
+                objects::TokuseiCondition::Comparator_t::EQUALS);
+        }
         return false;
         break;
     case TokuseiConditionType::EQUIPPED_WEAPON_TYPE:
@@ -1362,6 +1369,7 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
     case TokuseiConditionType::PARTNER_FAMILY:
     case TokuseiConditionType::PARTNER_RACE:
     case TokuseiConditionType::PARTNER_FAMILIARITY:
+    case TokuseiConditionType::PARTNER_MITAMA:
         isPartnerCondition = true;
         break;
     default:
@@ -1389,9 +1397,16 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
         return false;
     }
 
-    if(condition->GetType() == TokuseiConditionType::PARTNER_FAMILIARITY)
+    switch(condition->GetType())
     {
+    case TokuseiConditionType::PARTNER_FAMILIARITY:
         return Compare((int32_t)partner->GetFamiliarity(), condition, true);
+        break;
+    case TokuseiConditionType::PARTNER_MITAMA:
+        return Compare((int32_t)partner->GetMitamaType(), condition, true);
+        break;
+    default:
+        break;
     }
 
     if(!demonData || numericCompare)
@@ -1448,14 +1463,10 @@ double TokuseiManager::CalculateAttributeValue(ActiveEntityState* eState, int32_
                 bool includeBase = attributes->GetMultiplierType() !=
                     objects::TokuseiAttributes::MultiplierType_t::LEVEL;
 
-                auto cs = eState->GetCoreStats();
-                if(cs)
+                result = (double)(result * (double)eState->GetLevel());
+                if(includeBase)
                 {
-                    result = (double)(result * (double)cs->GetLevel());
-                    if(includeBase)
-                    {
-                        result = (double)(result * (double)base);
-                    }
+                    result = (double)(result * (double)base);
                 }
             }
             break;
@@ -1524,6 +1535,24 @@ double TokuseiManager::CalculateAttributeValue(ActiveEntityState* eState, int32_
                 }
 
                 result = (double)(result * (double)memberCount);
+            }
+            break;
+        case objects::TokuseiAttributes::MultiplierType_t::HP_LTE:
+            // If the entity's current HP percentage is less than or equal to
+            // the precision value, multiply the value by X / 100%
+            {
+                result = value;
+
+                auto cs = eState->GetCoreStats();
+                if(cs)
+                {
+                    uint8_t currentValue = (uint8_t)floor((float)cs->GetHP() /
+                        (float)eState->GetMaxHP() * 100.f);
+                    if(currentValue <= precision)
+                    {
+                        result = (int32_t)(value * ((double)multValue * 0.01));
+                    }
+                }
             }
             break;
         case objects::TokuseiAttributes::MultiplierType_t::DEMON_BOOK_DIVIDE:

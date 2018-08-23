@@ -190,4 +190,26 @@
             <value type="u32"/>
         </member>
     </object>
+    <object name="DigitalizeState" scriptenabled="true" persistent="false">
+        <member type="Demon*" name="Demon"/>
+        <member type="u8" name="RaceID"/>
+        <member type="u8" name="StatRate"/>
+        <member type="map" name="CorrectValues">
+            <key type="u8"/>
+            <value type="s16"/>
+        </member>
+        <member type="set" name="ActiveSkills">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="PassiveSkills">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="TokuseiIDs">
+            <element type="s32"/>
+        </member>
+
+        <member type="s32" name="TimeExtension"/>
+        <member type="s32" name="CooldownReduction"/>
+        <member type="bool" name="TimeLimited" default="true"/>
+    </object>
 </objgen>

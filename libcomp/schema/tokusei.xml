@@ -18,6 +18,7 @@
             <value>PARTNER_FAMILY</value>
             <value>PARTNER_RACE</value>
             <value>PARTNER_FAMILIARITY</value>
+            <value>PARTNER_MITAMA</value>
 
             <!-- Party -->
             <value>PARTY_DEMON_TYPE</value>
@@ -50,6 +51,7 @@
             <value>DEMON_RACE</value>
             <value>DEMON_TITLE</value>
             <value>DEMON_PARTNER_MATCH</value>
+            <value>ENEMY_DIGITALIZED</value>
             <value>ENEMY_EQUIPPED</value>
             <value>ENEMY_FACTION</value>
             <value>ENEMY_GENDER</value>
@@ -65,6 +67,7 @@
             <value>CORRECT_TABLE_DIVIDE</value>
             <value>BASE_AND_LEVEL</value>
             <value>PARTY_SIZE</value>
+            <value>HP_LTE</value>
 
             <!-- Custom multipliers -->
             <value>DEMON_BOOK_DIVIDE</value>

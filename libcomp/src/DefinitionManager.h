@@ -48,6 +48,7 @@ class EnchantSpecialData;
 class MiAIData;
 class MiBlendData;
 class MiBlendExtData;
+class MiCHouraiData;
 class MiCItemData;
 class MiCorrectTbl;
 class MiCultureItemData;
@@ -68,8 +69,15 @@ class MiEnchantData;
 class MiEquipmentSetData;
 class MiExchangeData;
 class MiExpertData;
+class MiGuardianAssistData;
+class MiGuardianLevelData;
+class MiGuardianSpecialData;
+class MiGuardianUnlockData;
 class MiHNPCData;
 class MiItemData;
+class MiMitamaReunionBonusData;
+class MiMitamaReunionSetBonusData;
+class MiMitamaUnionBonusData;
 class MiModificationData;
 class MiModificationExtEffectData;
 class MiModificationExtRecipeData;
@@ -138,6 +146,13 @@ public:
      *  null if it does not exist
      */
     const std::shared_ptr<objects::MiBlendExtData> GetBlendExtData(uint32_t id);
+
+    /**
+     * Get the client-side hourai NPC definitions by ID
+     * @return Map of client-side hourai NPC definitions by ID
+     */
+    std::unordered_map<int8_t,
+        std::shared_ptr<objects::MiCHouraiData>> GetCHouraiData();
 
     /**
      * Get the culture item definition corresponding to an ID
@@ -389,6 +404,48 @@ public:
         uint8_t raceID);
 
     /**
+     * Get the guardian assist information corresponding to an ID
+     * @param id Guardian assist ID to retrieve
+     * @return Pointer to the matching guardian assist information, null
+     *  if it does not exist
+     */
+    const std::shared_ptr<objects::MiGuardianAssistData> GetGuardianAssistData(
+        uint32_t id);
+
+    /**
+     * Get all guardian race IDs with defined level information
+     * @return Set of all guardian race IDs
+     */
+    const std::set<uint8_t> GetGuardianRaceIDs();
+
+    /**
+     * Get the guardian level information corresponding to an ID
+     * @param id Guardian level ID to retrieve
+     * @return Pointer to the matching guardian level information, null
+     *  if it does not exist
+     */
+    const std::shared_ptr<objects::MiGuardianLevelData> GetGuardianLevelData(
+        uint32_t id);
+
+    /**
+     * Get the guardian special information corresponding to an ID
+     * @param id Guardian special ID to retrieve
+     * @return Pointer to the matching guardian special information, null
+     *  if it does not exist
+     */
+    const std::shared_ptr<objects::MiGuardianSpecialData> GetGuardianSpecialData(
+        uint32_t id);
+
+    /**
+     * Get the guardian unlock information corresponding to an ID
+     * @param id Guardian unlock ID to retrieve
+     * @return Pointer to the matching guardian unlock information, null
+     *  if it does not exist
+     */
+    const std::shared_ptr<objects::MiGuardianUnlockData> GetGuardianUnlockData(
+        uint32_t id);
+
+    /**
      * Get the human NPC definition corresponding to an ID
      * @param id Human NPC ID to retrieve
      * @return Pointer to the matching human NPC definition, null if it does
@@ -412,6 +469,32 @@ public:
      */
     const std::shared_ptr<objects::MiItemData> GetItemData(
         const libcomp::String& name);
+
+    /**
+     * Get the mitama reunion bonus definition corresponding to an ID
+     * @param id Mitama reunion bonus ID to retrieve
+     * @return Pointer to the matching mitama reunion bonus definition,
+     *  null if it does not exist
+     */
+    const std::shared_ptr<objects::MiMitamaReunionBonusData>
+        GetMitamaReunionBonusData(uint32_t id);
+
+    /**
+     * Get all mitama reunion set bonus definitions by ID
+     * @return Mitama reunion set bonus definitions by ID
+     */
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiMitamaReunionSetBonusData>>
+        GetMitamaReunionSetBonusData();
+
+    /**
+     * Get the mitama union bonus definition corresponding to an ID
+     * @param id Mitama union bonus ID to retrieve
+     * @return Pointer to the matching mitama union bonus definition,
+     *  null if it does not exist
+     */
+    const std::shared_ptr<objects::MiMitamaUnionBonusData>
+        GetMitamaUnionBonusData(uint32_t id);
 
     /**
      * Get the item modification definition corresponding to an ID
@@ -883,6 +966,10 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiBlendExtData>> mBlendExtData;
 
+    /// Map of client-side hourai NPC definitions by ID
+    std::unordered_map<int8_t,
+        std::shared_ptr<objects::MiCHouraiData>> mCHouraiData;
+
     /// Map of culture item definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiCultureItemData>> mCultureItemData;
@@ -984,6 +1071,22 @@ private:
     std::unordered_map<uint8_t,
         std::list<std::pair<uint8_t, uint32_t>>> mFusionRanges;
 
+    /// Map of digitalize "guardian assist" information by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiGuardianAssistData>> mGuardianAssistData;
+
+    /// Map of digitalize "guardian level" information by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiGuardianLevelData>> mGuardianLevelData;
+
+    /// Map of digitalize "guardian special" information by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiGuardianSpecialData>> mGuardianSpecialData;
+
+    /// Map of digitalize "guardian unlock" information by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiGuardianUnlockData>> mGuardianUnlockData;
+
     /// Map of human NPC definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiHNPCData>> mHNPCData;
@@ -991,6 +1094,18 @@ private:
     /// Map of item definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiItemData>> mItemData;
+
+    /// Map of mitama reunion bonus definitions by ID
+    std::unordered_map<uint32_t, std::shared_ptr<
+        objects::MiMitamaReunionBonusData>> mMitamaReunionBonusData;
+
+    /// Map of mitama reunion set bonus definitions by ID
+    std::unordered_map<uint32_t, std::shared_ptr<
+        objects::MiMitamaReunionSetBonusData>> mMitamaReunionSetBonusData;
+
+    /// Map of mitama union bonus definitions by ID
+    std::unordered_map<uint32_t, std::shared_ptr<
+        objects::MiMitamaUnionBonusData>> mMitamaUnionBonusData;
 
     /// Map of item modification definitions by ID
     std::unordered_map<uint32_t,

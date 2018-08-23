@@ -81,6 +81,7 @@
     <include path="binarydata/aidata.xml"/>
     <include path="binarydata/blenddata.xml"/>
     <include path="binarydata/ceventmessagedata.xml"/>
+    <include path="binarydata/chouraidata.xml"/>
     <include path="binarydata/cicondata.xml"/>
     <include path="binarydata/citemdata.xml"/>
     <include path="binarydata/cmessagedata.xml"/>
@@ -107,8 +108,10 @@
     <include path="binarydata/exchangedata.xml"/>
     <include path="binarydata/expertdata.xml"/>
     <include path="binarydata/fusiondata.xml"/>
+    <include path="binarydata/guardiandata.xml"/>
     <include path="binarydata/hnpcdata.xml"/>
     <include path="binarydata/itemdata.xml"/>
+    <include path="binarydata/mitamadata.xml"/>
     <include path="binarydata/modificationdata.xml"/>
     <include path="binarydata/npcbarterdata.xml"/>
     <include path="binarydata/onpcdata.xml"/>

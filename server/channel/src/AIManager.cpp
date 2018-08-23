@@ -820,7 +820,7 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
             return nullptr;
         }
 
-        int32_t aggroLevelLimit = eState->GetCoreStats()->GetLevel() +
+        int32_t aggroLevelLimit = eState->GetLevel() +
             aiState->GetAIData()->GetAggroLevelLimit();
 
         // Get aggro values, default to 2000 units and 80 degree FoV angle (in radians)
@@ -855,8 +855,7 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
                 filtered.remove_if([aggroLevelLimit](
                     const std::shared_ptr<ActiveEntityState>& entity)
                     {
-                        auto cs = entity->GetCoreStats();
-                        return !cs || (int32_t)cs->GetLevel() > aggroLevelLimit;
+                        return entity->GetLevel() > aggroLevelLimit;
                     });
             }
 

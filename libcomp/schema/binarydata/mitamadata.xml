@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiMitamaReunionBonusData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="s32" name="type"/>
+        <member type="s32" name="value"/>
+    </object>
+    <object name="MiMitamaReunionSetBonusData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="4" name="mitamaRequirements">
+            <element type="s32"/>
+        </member>
+        <member type="array" size="8" name="bonus">
+            <element type="s32"/>
+        </member>
+        <member type="string" name="bonusDescription"/>
+        <member type="array" size="8" name="bonusEx">
+            <element type="s32"/>
+        </member>
+        <member type="string" name="bonusExDescription"/>
+    </object>
+    <object name="MiMitamaUnionBonusData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="6" name="bonus">
+            <element type="s32"/>
+        </member>
+        <member type="string" name="description"/>
+    </object>
+</objgen>

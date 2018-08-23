@@ -105,6 +105,15 @@ public:
     void EndExchange(const std::shared_ptr<
         channel::ChannelClientConnection>& client);
 
+    /**
+     * Get the mitama index of the supplied type that matches the
+     * FusionTables entries
+     * @param mitamaType Demon type to calculate
+     * @param found Output parameter indicating if the index was found
+     * @return Mitama index for the supplied type
+     */
+    size_t GetMitamaIndex(uint32_t mitamaType, bool& found);
+
 private:
     /**
      * Perform a two-way or tri-fusion based upon the supplied demon IDs
@@ -156,6 +165,13 @@ private:
      * @return Type ID of the result demon
      */
     uint32_t GetElementalType(size_t elementalIndex) const;
+
+    /**
+     * Get the demon type ID associated to a mitama index from the manager
+     * @param mitamaIndex Mitama index to retrieve
+     * @return Type ID of the result demon
+     */
+    uint32_t GetMitamaType(size_t mitamaIndex) const;
 
     /**
      * Get the demon type ID associated to an elemental to non-elemental fusion

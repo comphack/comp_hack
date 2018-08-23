@@ -1,10 +1,11 @@
 /**
- * @file server/channel/src/packets/game/ITimeData.cpp
+ * @file server/channel/src/packets/game/ReunionPoints.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Request from the client for the character's I-Time data.
+ * @brief Request from the client to retrieve the current account world
+ *  level reunion and mitama reunion conversion points.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -27,54 +28,46 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <DefinitionManager.h>
-#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // object Includes
-#include <CharacterProgress.h>
+#include <AccountWorldData.h>
 
 // channel Includes
 #include "ChannelServer.h"
 
 using namespace channel;
 
-bool Parsers::ITimeData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ReunionPoints::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    if(p.Size() != 0)
+    (void)pPacketManager;
+
+    if(p.Size() != 4)
     {
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto definitionManager = server->GetDefinitionManager();
+    int32_t unknown = p.ReadS32Little();
+    (void)unknown;  // Always 0
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character ? character->GetProgress().Get() : nullptr;
+    auto awd = state->GetAccountWorldData().Get();
 
     libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITIME_DATA);
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_REUNION_POINTS);
+    reply.WriteS32Little(0);    // Unknown
+    reply.WriteS32Little(awd ? 0 : -1);
 
-    reply.WriteS8(progress ? 0 : -1);
-
-    if(progress)
+    if(awd)
     {
-        auto houraiData = definitionManager->GetCHouraiData();
-
-        reply.WriteS8((int8_t)houraiData.size());
-        for(auto& pair : houraiData)
-        {
-            reply.WriteS8(pair.first);
-            reply.WriteS16Little(progress->GetITimePoints(pair.first));
-        }
+        reply.WriteS32Little((int32_t)awd->GetReunionPoints());
+        reply.WriteS32Little((int32_t)awd->GetMitamaReunionPoints());
     }
 
     client->SendPacket(reply);

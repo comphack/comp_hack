@@ -5,7 +5,7 @@
  * @author HACKfrost
  *
  * @brief Request from the client for the current player's digitalize
- *  assist information.
+ *  assist skills.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -31,6 +31,9 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <CharacterProgress.h>
+
 // channel Includes
 #include "ChannelClientConnection.h"
 
@@ -48,20 +51,28 @@ bool Parsers::DigitalizeAssist::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     int32_t unknown = p.ReadS32Little();
-    (void)unknown;
+    (void)unknown;  // Always 0
 
-    /// @todo: implement non-default values
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto progress = character ? character->GetProgress().Get() : nullptr;
     
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DIGITALIZE_ASSIST);
     reply.WriteS32Little(0);    // Unknown
-    reply.WriteS32Little(0);    // Unknown
-    
-    // Unknown 256 character string
-    reply.WriteS16Little(256);
-    reply.WriteBlank(256);
+    reply.WriteS32Little(progress ? 0 : -1);
 
-    connection->SendPacket(reply);
+    if(progress)
+    {
+        auto assist = progress->GetDigitalizeAssists();
+        reply.WriteS16Little((int16_t)assist.size());
+        reply.WriteArray(&assist, (uint32_t)assist.size());
+    }
+
+    client->SendPacket(reply);
 
     return true;
 }

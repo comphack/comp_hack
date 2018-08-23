@@ -137,6 +137,19 @@
 </section><!-- FusionGaugeBonus -->
 
 <section>
+<title>DigitalizePointBonus</title>
+<para><emphasis role="strong">Type:</emphasis> float</para>
+<para><emphasis role="strong">Default:</emphasis> 0.0</para>
+<para>Sets the additional digitalize XP percentage gained when killing an enemy or completing a digitalize dungeon (ex: 0.5 would grant 150%). Does not affect individual boosts players have.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DigitalizePointBonus">5.0</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DigitalizePointBonus -->
+
+<section>
 <title>GlobalDropSetIDs</title>
 <para><emphasis role="strong">Type:</emphasis> set of integers</para>
 <para><emphasis role="strong">Default:</emphasis> empty</para>

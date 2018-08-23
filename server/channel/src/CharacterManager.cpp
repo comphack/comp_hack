@@ -50,6 +50,7 @@
 #include <DemonBox.h>
 #include <DemonPresent.h>
 #include <DemonQuest.h>
+#include <DigitalizeState.h>
 #include <EnchantSpecialData.h>
 #include <Expertise.h>
 #include <InheritedSkill.h>
@@ -65,6 +66,7 @@
 #include <MiDevilBattleData.h>
 #include <MiDevilCrystalData.h>
 #include <MiDevilData.h>
+#include <MiDevilEquipmentItemData.h>
 #include <MiDevilFamiliarityData.h>
 #include <MiDevilLVUpData.h>
 #include <MiDevilLVUpRateData.h>
@@ -74,8 +76,15 @@
 #include <MiExpertData.h>
 #include <MiExpertGrowthTbl.h>
 #include <MiGrowthData.h>
+#include <MiGuardianAssistData.h>
+#include <MiGuardianLevelData.h>
+#include <MiGuardianLevelDataEntry.h>
+#include <MiGuardianUnlockData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
+#include <MiMitamaReunionBonusData.h>
+#include <MiMitamaReunionSetBonusData.h>
+#include <MiMitamaUnionBonusData.h>
 #include <MiNPCBasicData.h>
 #include <MiPossessionData.h>
 #include <MiRentalData.h>
@@ -443,6 +452,9 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
 
     GetEntityStatsPacketData(reply, ds, dState, 0);
 
+    uint32_t dgCdTime = 0;
+    const uint32_t dgCdStatus = SVR_CONST.STATUS_DIGITALIZE_COOLDOWN;
+
     auto statusEffects = dState->GetCurrentStatusEffectStates();
 
     reply.WriteU32Little(static_cast<uint32_t>(statusEffects.size()));
@@ -451,6 +463,11 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
         reply.WriteU32Little(ePair.first->GetEffect());
         reply.WriteS32Little((int32_t)ePair.second);
         reply.WriteU8(ePair.first->GetStack());
+
+        if(ePair.first->GetEffect() == dgCdStatus)
+        {
+            dgCdTime = ePair.first->GetExpiration();
+        }
     }
 
     // Learned skill count will always be static
@@ -514,13 +531,13 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
 
     reply.WriteU16Little(d->GetForceStackPending());
 
-    reply.WriteU8(0);   // Unknown
-    reply.WriteU8(0);   // Mitama type
+    reply.WriteU8(d->GetMitamaRank());
+    reply.WriteU8(d->GetMitamaType());
 
     // Reunion bonuses (12 * 8 ranks)
     for(size_t i = 0; i < 96; i++)
     {
-        reply.WriteU8(0);
+        reply.WriteU8(d->GetMitamaReunion(i));
     }
 
     // Equipment
@@ -539,8 +556,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
         }
     }
 
-    // Effect length in seconds
-    reply.WriteS32Little(0);
+    reply.WriteS32Little(ChannelServer::GetExpirationInSeconds(dgCdTime));
 
     client->SendPacket(reply);
 
@@ -707,13 +723,13 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
 
     reply.WriteU16Little(d->GetForceStackPending());
 
-    reply.WriteU8(0);   // Unknown
-    reply.WriteU8(0);   // Mitama type
+    reply.WriteU8(d->GetMitamaRank());
+    reply.WriteU8(d->GetMitamaType());
 
     // Reunion bonuses (12 * 8 ranks)
     for(size_t i = 0; i < 96; i++)
     {
-        reply.WriteU8(0);
+        reply.WriteU8(d->GetMitamaReunion(i));
     }
 
     // Equipment
@@ -732,8 +748,36 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
         }
     }
 
-    // Effect length in seconds remaining
-    reply.WriteS32Little(0);
+    uint32_t dgCdTime = 0;
+    const uint32_t dgCdStatus = SVR_CONST.STATUS_DIGITALIZE_COOLDOWN;
+    if(!isSummoned)
+    {
+        // Get effect from demon directly
+        UpdateStatusEffects(d, state->GetAccountUID(), true);
+
+        for(auto effect : d->GetStatusEffects())
+        {
+            if(effect->GetEffect() == dgCdStatus)
+            {
+                dgCdTime = effect->GetExpiration();
+                break;
+            }
+        }
+    }
+    else
+    {
+        // Get effect from demon state
+        for(auto& pair : dState->GetCurrentStatusEffectStates())
+        {
+            if(pair.first->GetEffect() == dgCdStatus)
+            {
+                dgCdTime = pair.first->GetExpiration();
+                break;
+            }
+        }
+    }
+
+    reply.WriteS32Little(ChannelServer::GetExpirationInSeconds(dgCdTime));
 
     client->SendPacket(reply);
 }
@@ -1017,6 +1061,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     character->SetActiveDemon(demon);
     dState->SetEntity(demon, def);
     dState->RefreshLearningSkills(0, definitionManager);
+    dState->UpdateDemonState(definitionManager);
 
     // Mark that the demon state has not been fully summoned yet so
     // the summon effect only displays once
@@ -1188,6 +1233,7 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     UpdateStatusEffects(dState, true);
     dState->SetEntity(nullptr, nullptr);
     dState->RefreshLearningSkills(0, definitionManager);
+    dState->UpdateDemonState(definitionManager);
 
     character->SetActiveDemon(NULLUUID);
 
@@ -3252,6 +3298,78 @@ bool CharacterManager::ReunionDemon(
     return success;
 }
 
+uint16_t CharacterManager::GetReunionRankTotal(
+    const std::shared_ptr<objects::Demon> demon)
+{
+    uint16_t rTotal = 0;
+    for(int8_t rank : demon->GetReunion())
+    {
+        // Ranks max at non-expanded cap
+        if(rank > 8)
+        {
+            rank = 8;
+        }
+
+        rTotal = (uint16_t)(rTotal + rank);
+    }
+
+    // Set default growth rank to 1 if no points were placed in it
+    auto definitionManager = mServer.lock()->GetDefinitionManager();
+    auto demonData = definitionManager->GetDevilData(demon->GetType());
+    auto defaultGrowthType = demonData ? definitionManager
+        ->GetDevilLVUpRateData(demonData->GetGrowth()->GetGrowthType())
+        : nullptr;
+    if(defaultGrowthType && defaultGrowthType->GetGroupID() > 0 && demon
+        ->GetReunion((size_t)(defaultGrowthType->GetGroupID() - 1)) == 0)
+    {
+        rTotal++;
+    }
+
+    return rTotal;
+}
+
+bool CharacterManager::MitamaDemon(const std::shared_ptr<
+    ChannelClientConnection> client, int64_t demonID, uint8_t growthType,
+    uint8_t mitamaType)
+{
+    auto state = client->GetClientState();
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto demon = std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
+    auto demonData = demon
+        ? definitionManager->GetDevilData(demon->GetType()) : nullptr;
+
+    bool success = false;
+    if(demonData && demonData->GetUnionData()->GetMitamaFusionID())
+    {
+        // Calculate mitama rank based on sum of reunion ranks over 48 / 4
+        uint16_t rTotal = GetReunionRankTotal(demon);
+        if(rTotal >= 48)
+        {
+            int8_t mRank = (int8_t)floor((rTotal - 48) / 4);
+
+            demon->SetGrowthType(growthType);
+            demon->SetType(demonData->GetUnionData()->GetMitamaFusionID());
+            demon->SetMitamaRank((uint8_t)mRank);
+            demon->SetMitamaType(mitamaType);
+
+            success = true;
+        }
+    }
+
+    return success;
+}
+
+bool CharacterManager::IsMitamaDemon(const std::shared_ptr<
+    objects::MiDevilData>& devilData) const
+{
+    return devilData &&
+        (devilData->GetUnionData()->GetFusionOptions() & 0x08) != 0;
+}
+
 int8_t CharacterManager::GetFamiliarityRank(uint16_t familiarity)
 {
     if(familiarity <= 1000)
@@ -3761,12 +3879,12 @@ void CharacterManager::LevelUp(const std::shared_ptr<
 
     auto state = client->GetClientState();
     auto eState = state->GetEntityState(entityID);
-    if(nullptr == eState)
+    auto stats = eState ? eState->GetCoreStats() : 0;
+    if(!eState || !stats)
     {
         return;
     }
 
-    auto stats = eState->GetCoreStats();
     uint64_t xpGain = 0;
     for(int8_t i = stats->GetLevel(); i < level; i++)
     {
@@ -4004,6 +4122,7 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
     {
         //Expertises can be used as multipliers and conditions, always recalc
         cState->RecalcDisabledSkills(definitionManager);
+        state->GetDemonState()->UpdateDemonState(definitionManager);
         RecalculateTokuseiAndStats(cState, client);
     }
 }
@@ -4025,7 +4144,7 @@ int32_t CharacterManager::GetMaxExpertisePoints(const std::shared_ptr<
     return maxPoints;
 }
 
-void CharacterManager::SendExertiseExtension(const std::shared_ptr<
+void CharacterManager::SendExpertiseExtension(const std::shared_ptr<
     channel::ChannelClientConnection>& client)
 {
     auto state = client->GetClientState();
@@ -4054,17 +4173,20 @@ void CharacterManager::UpdateSkillPoints(const std::shared_ptr<
         character->SetPoints(character->GetPoints() + points);
 
         libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_POINT_UPDATE);
+        p.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_SKILL_POINT_UPDATE);
         p.WriteS32Little(character->GetPoints());
 
         client->SendPacket(p);
 
-        mServer.lock()->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+        mServer.lock()->GetWorldDatabase()->QueueUpdate(character,
+            state->GetAccountUID());
     }
 }
 
-bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientConnection>& client,
-    int32_t entityID, uint32_t skillID)
+bool CharacterManager::LearnSkill(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int32_t entityID,
+    uint32_t skillID)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -4156,6 +4278,11 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<channel::ChannelClientCo
         client->SendPacket(reply);
 
         server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+
+        if(skillID == SVR_CONST.MITAMA_SET_BOOST)
+        {
+            dState->UpdateDemonState(definitionManager);
+        }
 
         RecalculateTokuseiAndStats(eState, client);
     }
@@ -4473,15 +4600,50 @@ bool CharacterManager::AddRemoveValuable(const std::shared_ptr<
         auto server = mServer.lock();
         server->GetWorldDatabase()->QueueUpdate(progress, state->GetAccountUID());
 
-        // If valuable is the V2 compendium, recalc boosts for demon
         if(valuableID == SVR_CONST.VALUABLE_DEVIL_BOOK_V1 ||
             valuableID == SVR_CONST.VALUABLE_DEVIL_BOOK_V2)
         {
+            // Enable/disable compendium boosts
             auto dState = state->GetDemonState();
             auto definitionManager = server->GetDefinitionManager();
             if(dState->UpdateSharedState(character, definitionManager))
             {
                 server->GetTokuseiManager()->Recalculate(cState, true);
+            }
+        }
+        else if(!remove &&
+            (valuableID == SVR_CONST.VALUABLE_DIGITALIZE_LV1 ||
+            valuableID == SVR_CONST.VALUABLE_DIGITALIZE_LV2))
+        {
+            // Learn digitalize skills and set default levels
+            // (do not reset if removed)
+            auto definitionManager = server->GetDefinitionManager();
+
+            for(uint16_t fid : { SVR_CONST.SKILL_DIGITALIZE,
+                SVR_CONST.SKILL_DIGITALIZE_CANCEL})
+            {
+                for(uint32_t skillID : definitionManager->GetFunctionIDSkills(
+                    fid))
+                {
+                    LearnSkill(client, cState->GetEntityID(), skillID);
+                }
+            }
+
+            std::unordered_map<uint8_t, int32_t> lvlUp;
+            for(uint8_t raceID : definitionManager->GetGuardianRaceIDs())
+            {
+                // No unlock information exists for auto-enabled races
+                auto unlock = definitionManager->GetGuardianUnlockData(raceID);
+                if(!unlock && progress->GetDigitalizeLevels(raceID) == 0)
+                {
+                    // Initialize only
+                    lvlUp[raceID] = 0;
+                }
+            }
+
+            if(lvlUp.size() > 0)
+            {
+                UpdateDigitalizePoints(client, lvlUp, false);
             }
         }
     }
@@ -4699,6 +4861,68 @@ void CharacterManager::SendDevilBook(const std::shared_ptr<
 }
 
 bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<
+    objects::Demon>& demon, const libobjgen::UUID& accountUID,
+    bool queueSave)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    std::list<libcomp::ObjectReference<objects::StatusEffect>> updated;
+    std::list<std::shared_ptr<objects::StatusEffect>> removed;
+
+    uint32_t now = (uint32_t)std::time(0);
+    for(auto effect : demon->GetStatusEffects())
+    {
+        auto se = definitionManager->GetStatusData(effect->GetEffect());
+
+        auto cancel = se->GetCancel();
+        switch (cancel->GetDurationType())
+        {
+        case objects::MiCancelData::DurationType_t::MS:
+        case objects::MiCancelData::DurationType_t::MS_SET:
+        case objects::MiCancelData::DurationType_t::NONE:
+            // Time does not decrease while not summoned
+            updated.push_back(effect);
+            break;
+        default:
+            if(!effect->GetIsConstant() && effect->GetExpiration() <= now)
+            {
+                removed.push_back(effect.Get());
+            }
+            else
+            {
+                updated.push_back(effect);
+            }
+            break;
+        }
+    }
+
+    if(removed.size() > 0)
+    {
+        auto changes = libcomp::DatabaseChangeSet::Create(accountUID);
+
+        demon->SetStatusEffects(updated);
+        changes->Update(demon);
+
+        for(auto remove : removed)
+        {
+            changes->Delete(remove);
+        }
+
+        if(queueSave)
+        {
+            return server->GetWorldDatabase()->QueueChangeSet(changes);
+        }
+        else
+        {
+            return server->GetWorldDatabase()->ProcessChangeSet(changes);
+        }
+    }
+
+    return true;
+}
+
+bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<
     ActiveEntityState>& eState, bool queueSave)
 {
     auto cState = std::dynamic_pointer_cast<CharacterState>(eState);
@@ -4806,6 +5030,11 @@ bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<
     if(removed.size() > 0)
     {
         eState->ExpireStatusEffects(removed);
+    }
+    else if(updated.size() == 0 && previous.size() == 0)
+    {
+        // Nothing to do
+        return true;
     }
 
     if(cState)
@@ -5239,6 +5468,396 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
     return true;
 }
 
+bool CharacterManager::UpdateDigitalizePoints(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::unordered_map<uint8_t, int32_t>& pointMap, bool allowAdjust,
+    bool validate)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto progress = character ? character->GetProgress().Get() : nullptr;
+    if(!progress)
+    {
+        return false;
+    }
+
+    auto startingLevels = progress->GetDigitalizeLevels();
+    auto validRaceIDs = definitionManager->GetGuardianRaceIDs();
+
+    bool validExists = false;
+
+    std::set<uint8_t> pointsUpdated;
+    std::set<uint8_t> levelUpdated;
+    for(auto& pair : pointMap)
+    {
+        uint8_t raceID = pair.first;
+
+        if(validRaceIDs.find(raceID) == validRaceIDs.end()) continue;
+
+        int8_t lvl = progress->GetDigitalizeLevels(raceID);
+        int32_t points = progress->GetDigitalizePoints(raceID);
+
+        if(!lvl)
+        {
+            // Make sure its unlocked or unlockable
+            auto unlockData = definitionManager->GetGuardianUnlockData(raceID);
+            if(unlockData && validate)
+            {
+                bool unlockable = true;
+                for(size_t i = 0; i < unlockData->RequirementsCount(); )
+                {
+                    uint8_t r = unlockData->GetRequirements(i);
+                    uint8_t l = unlockData->GetRequirements((size_t)(i + 1));
+
+                    if(r && progress->GetDigitalizeLevels(r) < (int8_t)l)
+                    {
+                        unlockable = false;
+                        break;
+                    }
+
+                    i += 2;
+                }
+
+                if(!unlockable) continue;
+            }
+
+            lvl = 1;
+            progress->SetDigitalizeLevels(raceID, lvl);
+            pointsUpdated.insert(raceID);
+            levelUpdated.insert(raceID);
+        }
+
+        validExists = true;
+
+        if(lvl < 10 && pair.second > 0)
+        {
+            int32_t addPoints = pair.second;
+            if(allowAdjust)
+            {
+                double rateAdjust = 1.0 + (server->GetTokuseiManager()
+                    ->GetAspectSum(cState,
+                        TokuseiAspectType::DIGITALIZE_POINT_RATE) * 0.01);
+
+                addPoints = (int32_t)((double)addPoints * rateAdjust);
+
+                if(addPoints <= 0) continue;
+            }
+
+            int32_t newPoints = points + addPoints;
+
+            auto levelData = definitionManager->GetGuardianLevelData(raceID);
+            auto currentLevel = levelData->GetLevels((size_t)lvl);
+            while(currentLevel &&
+                newPoints >= (int32_t)currentLevel->GetNextXP())
+            {
+                newPoints = newPoints - (int32_t)currentLevel->GetNextXP();
+
+                lvl++;
+                progress->SetDigitalizeLevels(raceID, lvl);
+                currentLevel = levelData->GetLevels((size_t)lvl);
+
+                levelUpdated.insert(raceID);
+
+                if(lvl == 10)
+                {
+                    newPoints = 0;
+                    break;
+                }
+            }
+
+            if(!currentLevel)
+            {
+                // Shouldn't happen but just in case the level data is not
+                // valid, do not blindly add points forever
+                newPoints = 0;
+            }
+
+            progress->SetDigitalizePoints(raceID, newPoints);
+            pointsUpdated.insert(raceID);
+        }
+    }
+
+    if(levelUpdated.size() > 0)
+    {
+        // Unlock any new races affected
+        for(uint8_t raceID : validRaceIDs)
+        {
+            auto unlockData = progress->GetDigitalizeLevels(raceID) == 0
+                ? definitionManager->GetGuardianUnlockData(raceID) : nullptr;
+            if(unlockData)
+            {
+                bool unlockable = true;
+                for(size_t i = 0; i < unlockData->RequirementsCount(); )
+                {
+                    uint8_t r = unlockData->GetRequirements(i);
+                    uint8_t l = unlockData->GetRequirements((size_t)(i + 1));
+
+                    if(r && progress->GetDigitalizeLevels(r) < (int8_t)l)
+                    {
+                        unlockable = false;
+                        break;
+                    }
+
+                    i += 2;
+                }
+
+                if(unlockable)
+                {
+                    progress->SetDigitalizeLevels(raceID, 1);
+                    pointsUpdated.insert(raceID);
+                    levelUpdated.insert(raceID);
+                }
+            }
+        }
+
+        // Learn any digitalize extend skills not available
+        for(uint8_t raceID : levelUpdated)
+        {
+            auto levelData = definitionManager->GetGuardianLevelData(raceID);
+            int8_t lvl = progress->GetDigitalizeLevels((size_t)raceID);
+            for(size_t i = 1; i <= (size_t)lvl; i++)
+            {
+                auto currentLevel = levelData->GetLevels(i);
+                uint32_t skillID = currentLevel->GetExtendSkillID();
+                if(skillID && skillID != static_cast<uint32_t>(-1) &&
+                    !character->LearnedSkillsContains(skillID))
+                {
+                    LearnSkill(client, cState->GetEntityID(), skillID);
+                }
+            }
+        }
+    }
+
+    if(pointsUpdated.size() > 0 || levelUpdated.size() > 0)
+    {
+        if(pointsUpdated.size() > 0)
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_DIGITALIZE_POINTS_UPDATE);
+
+            p.WriteS32Little((int32_t)pointsUpdated.size());
+            for(uint8_t raceID : pointsUpdated)
+            {
+                int8_t lvl = progress->GetDigitalizeLevels(raceID);
+                int32_t points = progress->GetDigitalizePoints(raceID);
+
+                p.WriteU8(raceID);
+                p.WriteS8(lvl);
+                p.WriteS32Little(points);
+            }
+
+            client->QueuePacket(p);
+        }
+
+        if(levelUpdated.size() > 0)
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_DIGITALIZE_LEVEL_UP);
+            p.WriteS32Little(cState->GetEntityID());
+
+            p.WriteS32Little((int32_t)pointsUpdated.size());
+            for(uint8_t raceID : levelUpdated)
+            {
+                int8_t lvl = progress->GetDigitalizeLevels(raceID);
+
+                auto it = startingLevels.find(raceID);
+                int8_t previousLvl = it != startingLevels.end()
+                    ? it->second : (int8_t)0;
+
+                p.WriteU8(raceID);
+                p.WriteS8(previousLvl);
+                p.WriteS8(lvl);
+            }
+
+            server->GetZoneManager()->BroadcastPacket(client, p, true);
+        }
+
+        client->FlushOutgoing();
+
+        server->GetWorldDatabase()->QueueUpdate(progress);
+    }
+
+    return validExists;
+}
+
+bool CharacterManager::DigitalizeStart(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::shared_ptr<objects::Demon>& demon)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dgState = cState->GetDigitalizeState();
+    if(dgState)
+    {
+        // Already digitalized, end previous
+        if(!DigitalizeEnd(client))
+        {
+            return false;
+        }
+    }
+
+    auto character = cState->GetEntity();
+    auto comp = character ? character->GetCOMP().Get() : nullptr;
+    if(!demon || !comp || demon->GetDemonBox() != comp->GetUUID())
+    {
+        // Demon is not in the COMP
+        return false;
+    }
+
+    uint8_t dgAbility = cState->GetDigitalizeAbilityLevel();
+    auto zone = cState->GetZone();
+    if(dgAbility == 0 || !zone)
+    {
+        // Digitalize not valid
+        return false;
+    }
+
+    bool dgZone = zone->GetInstanceType() == InstanceType_t::DIGITALIZE;
+    if(!dgZone)
+    {
+        const uint32_t dgCdStatus = SVR_CONST.STATUS_DIGITALIZE_COOLDOWN;
+
+        UpdateStatusEffects(demon, state->GetAccountUID(), true);
+
+        for(auto effect : demon->GetStatusEffects())
+        {
+            if(effect->GetEffect() == dgCdStatus)
+            {
+                // Cooldown is still active
+                return false;
+            }
+        }
+    }
+
+    // Perform valid digitalize
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    dgState = cState->Digitalize(demon, definitionManager);
+    if(!dgState)
+    {
+        return false;
+    }
+
+    uint32_t time = 0;
+    if(!dgZone)
+    {
+        // Determine duration (in milliseconds)
+        time = (uint32_t)(dgAbility == 2 ? 360000 : 180000);
+        time += (uint32_t)(dgState->GetTimeExtension() * 1000);
+
+        double adjust = 1.0 + (server->GetTokuseiManager()->GetAspectSum(
+            cState, TokuseiAspectType::DIGITALIZE_LENGTH) * 0.01);
+        if(adjust != 1.0)
+        {
+            time = (uint32_t)((double)time * adjust);
+        }
+    }
+    else
+    {
+        // Not ACTUALLY infinite but this is the duration used to
+        // communicate infinity
+        time = 604800000;
+        dgState->SetTimeLimited(false);
+    }
+
+    uint32_t statusEffectID = SVR_CONST.STATUS_DIGITALIZE[
+        (size_t)cState->GetGender()];
+
+    StatusEffectChanges effects;
+    effects[statusEffectID] = StatusEffectChange(statusEffectID, 1, true);
+    effects[statusEffectID].Duration = time;
+
+    AddStatusEffectImmediate(client, cState, effects);
+
+    libcomp::Packet p;
+    p.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_DIGITALIZE_START);
+    p.WriteS64Little(state->GetObjectID(demon->GetUUID()));
+    p.WriteS32Little((int32_t)(time / 1000));   // Time in seconds
+
+    client->QueuePacket(p);
+
+    RecalculateTokuseiAndStats(cState, client);
+
+    client->FlushOutgoing();
+
+    return true;
+}
+
+bool CharacterManager::DigitalizeEnd(const std::shared_ptr<
+    channel::ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dgState = cState->GetDigitalizeState();
+    auto zone = cState->GetZone();
+    if(!dgState)
+    {
+        // Not digitalized
+        return false;
+    }
+
+    auto demon = dgState->GetDemon().Get();
+    cState->Digitalize(nullptr, nullptr);
+
+    int32_t time = 0;
+    if(demon && dgState->GetTimeLimited())
+    {
+        // Add cooldown to demon (in seconds)
+        time = 10800;
+        time -= dgState->GetCooldownReduction();
+        if(time > 0)
+        {
+            auto dbChanges = libcomp::DatabaseChangeSet::Create(state
+                ->GetAccountUID());
+
+            auto cd = libcomp::PersistentObject::New<objects::StatusEffect>(
+                true);
+            cd->SetEntity(demon->GetUUID());
+            cd->SetEffect(SVR_CONST.STATUS_DIGITALIZE_COOLDOWN);
+            cd->SetStack(1);
+            cd->SetExpiration((uint32_t)((int32_t)std::time(0) + time));
+            dbChanges->Insert(cd);
+
+            demon->AppendStatusEffects(cd);
+            dbChanges->Update(demon);
+
+            SendDemonBoxData(client, 0, { demon->GetBoxSlot() });
+
+            mServer.lock()->GetWorldDatabase()->QueueChangeSet(dbChanges);
+        }
+    }
+
+    StatusEffectChanges effects;
+    for(uint32_t effectID : SVR_CONST.STATUS_DIGITALIZE)
+    {
+        effects[effectID] = StatusEffectChange(effectID, 0, true);
+    }
+
+    AddStatusEffectImmediate(client, cState, effects);
+
+    libcomp::Packet p;
+    p.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_DIGITALIZE_END);
+    p.WriteS64Little(demon ? state->GetObjectID(demon->GetUUID()) : -1);
+    p.WriteS32Little(time);   // Time in seconds
+
+    client->QueuePacket(p);
+
+    RecalculateTokuseiAndStats(cState, client);
+
+    client->FlushOutgoing();
+
+    return true;
+}
+
 void CharacterManager::UpdateWorldDisplayState(
     const std::set<std::shared_ptr<ActiveEntityState>>& entities)
 {
@@ -5270,7 +5889,7 @@ void CharacterManager::UpdateWorldDisplayState(
 
 void CharacterManager::CalculateCharacterBaseStats(const std::shared_ptr<objects::EntityStats>& cs)
 {
-    auto stats = GetCharacterBaseStatMap(cs);
+    auto stats = GetCharacterBaseStats(cs);
 
     CalculateDependentStats(stats, cs->GetLevel(), false);
 
@@ -5292,53 +5911,103 @@ void CharacterManager::CalculateDemonBaseStats(
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
 
-    uint8_t growthType = 0;
     if(demon)
     {
         ds = demon->GetCoreStats().Get();
         demonData = definitionManager->GetDevilData(demon->GetType());
+    }
+
+    int8_t level = ds->GetLevel();
+    uint8_t growthType = 0;
+    if(demon)
+    {
         growthType = demon->GetGrowthType();
     }
 
-    auto basicData = demonData->GetBasic();
+    auto stats = GetDemonBaseStats(demonData, definitionManager, growthType,
+        level);
+    if(demon)
+    {
+        AdjustDemonBaseStats(demon, stats, true);
+        AdjustMitamaStats(demon, stats, definitionManager, 1, 0);
+    }
+
+    // Apply core stats
+    ds->SetSTR(stats[CorrectTbl::STR]);
+    ds->SetMAGIC(stats[CorrectTbl::MAGIC]);
+    ds->SetVIT(stats[CorrectTbl::VIT]);
+    ds->SetINTEL(stats[CorrectTbl::INT]);
+    ds->SetSPEED(stats[CorrectTbl::SPEED]);
+    ds->SetLUCK(stats[CorrectTbl::LUCK]);
+
+    if(demon)
+    {
+        // Familiarity boost is applied from the base growth type, not the
+        // current growth type
+        auto levelRate = definitionManager->GetDevilLVUpRateData(
+            demonData->GetGrowth()->GetGrowthType());
+        FamiliarityBoostStats(demon->GetFamiliarity(), stats, levelRate);
+    }
+
+    CalculateDependentStats(stats, level, true);
+
+    AdjustStatBounds(stats, demon != nullptr);
+
+    ds->SetMaxHP(stats[CorrectTbl::HP_MAX]);
+    ds->SetMaxMP(stats[CorrectTbl::MP_MAX]);
+    ds->SetCLSR(stats[CorrectTbl::CLSR]);
+    ds->SetLNGR(stats[CorrectTbl::LNGR]);
+    ds->SetSPELL(stats[CorrectTbl::SPELL]);
+    ds->SetSUPPORT(stats[CorrectTbl::SUPPORT]);
+    ds->SetPDEF(stats[CorrectTbl::PDEF]);
+    ds->SetMDEF(stats[CorrectTbl::MDEF]);
+
+    if(setHPMP)
+    {
+        ds->SetHP(stats[CorrectTbl::HP_MAX]);
+        ds->SetMP(stats[CorrectTbl::MP_MAX]);
+    }
+}
+
+libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetDemonBaseStats(
+    const std::shared_ptr<objects::MiDevilData>& demonData)
+{
+    libcomp::EnumMap<CorrectTbl, int16_t> stats;
+
     auto battleData = demonData->GetBattleData();
+    for(size_t i = 0; i < 126; i++)
+    {
+        CorrectTbl tblID = (CorrectTbl)i;
+        stats[tblID] = battleData->GetCorrect((size_t)i);
+    }
+
+    return stats;
+ }
+
+libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetDemonBaseStats(
+    const std::shared_ptr<objects::MiDevilData>& demonData,
+    libcomp::DefinitionManager* definitionManager, uint8_t growthType,
+    int8_t level)
+{
+    auto stats = GetDemonBaseStats(demonData);
 
     if(!growthType)
     {
         growthType = demonData->GetGrowth()->GetGrowthType();
     }
 
+    /* Boost stats using this table
+     * A | 1
+     * A | 5,  9,  13, 17, 21,
+     * B | 25, 29, 33, 37, 41,
+     * C | 45, 49, 53, 57, 61,
+     * D | 65, 69, 73, 77, 81,
+     * D | 85, 89, 93, 97
+     */
     auto baseLevelRate = definitionManager->GetDevilLVUpRateData(growthType);
 
-    int8_t level = ds->GetLevel();
     uint8_t boostLevel = static_cast<uint8_t>((level + 3) / 4);
     uint8_t boostStage = static_cast<uint8_t>((boostLevel - 1) / 5);
-
-	/*
-	 * A | 1
-	 * A | 5,  9,  13, 17, 21,
-	 * B | 25, 29, 33, 37, 41,
-	 * C | 45, 49, 53, 57, 61,
-	 * D | 65, 69, 73, 77, 81,
-	 * D | 85, 89, 93, 97
-	 */
-
-    libcomp::EnumMap<CorrectTbl, int16_t> stats;
-    stats[CorrectTbl::STR] = battleData->GetCorrect((size_t)CorrectTbl::STR);
-    stats[CorrectTbl::MAGIC] = battleData->GetCorrect((size_t)CorrectTbl::MAGIC);
-    stats[CorrectTbl::VIT] = battleData->GetCorrect((size_t)CorrectTbl::VIT);
-    stats[CorrectTbl::INT] = battleData->GetCorrect((size_t)CorrectTbl::INT);
-    stats[CorrectTbl::SPEED] = battleData->GetCorrect((size_t)CorrectTbl::SPEED);
-    stats[CorrectTbl::LUCK] = battleData->GetCorrect((size_t)CorrectTbl::LUCK);
-    stats[CorrectTbl::HP_MAX] = battleData->GetCorrect((size_t)CorrectTbl::HP_MAX);
-    stats[CorrectTbl::MP_MAX] = battleData->GetCorrect((size_t)CorrectTbl::MP_MAX);
-    stats[CorrectTbl::CLSR] = battleData->GetCorrect((size_t)CorrectTbl::CLSR);
-    stats[CorrectTbl::LNGR] = battleData->GetCorrect((size_t)CorrectTbl::LNGR);
-    stats[CorrectTbl::SPELL] = battleData->GetCorrect((size_t)CorrectTbl::SPELL);
-    stats[CorrectTbl::SUPPORT] = battleData->GetCorrect((size_t)CorrectTbl::SUPPORT);
-    stats[CorrectTbl::PDEF] = battleData->GetCorrect((size_t)CorrectTbl::PDEF);
-    stats[CorrectTbl::MDEF] = battleData->GetCorrect((size_t)CorrectTbl::MDEF);
-
     switch(boostStage)
     {
         case 0:
@@ -5368,55 +6037,7 @@ void CharacterManager::CalculateDemonBaseStats(
             break;
     }
 
-    if(demon)
-    {
-        AdjustDemonBaseStats(demon, stats, true);
-    }
-
-    // Apply core stats
-    ds->SetSTR(stats[CorrectTbl::STR]);
-    ds->SetMAGIC(stats[CorrectTbl::MAGIC]);
-    ds->SetVIT(stats[CorrectTbl::VIT]);
-    ds->SetINTEL(stats[CorrectTbl::INT]);
-    ds->SetSPEED(stats[CorrectTbl::SPEED]);
-    ds->SetLUCK(stats[CorrectTbl::LUCK]);
-
-    if(demon)
-    {
-        // Familiarity boost is applied from the base growth type, not the
-        // current growth type
-        auto levelRate = definitionManager->GetDevilLVUpRateData(
-            demonData->GetGrowth()->GetGrowthType());
-        FamiliarityBoostStats(demon->GetFamiliarity(), stats, levelRate);
-    }
-
-    CalculateDependentStats(stats, level, true);
-
-    // Set anything that overflowed as int16_t max
-    for(auto stat : stats)
-    {
-        if(stat.second < 0)
-        {
-            stat.second = 0x7FFF;
-        }
-    }
-
-    AdjustStatBounds(stats, demon != nullptr);
-
-    ds->SetMaxHP(stats[CorrectTbl::HP_MAX]);
-    ds->SetMaxMP(stats[CorrectTbl::MP_MAX]);
-    ds->SetCLSR(stats[CorrectTbl::CLSR]);
-    ds->SetLNGR(stats[CorrectTbl::LNGR]);
-    ds->SetSPELL(stats[CorrectTbl::SPELL]);
-    ds->SetSUPPORT(stats[CorrectTbl::SUPPORT]);
-    ds->SetPDEF(stats[CorrectTbl::PDEF]);
-    ds->SetMDEF(stats[CorrectTbl::MDEF]);
-
-    if(setHPMP)
-    {
-        ds->SetHP(stats[CorrectTbl::HP_MAX]);
-        ds->SetMP(stats[CorrectTbl::MP_MAX]);
-    }
+    return stats;
 }
 
 void CharacterManager::FamiliarityBoostStats(uint16_t familiarity,
@@ -5446,13 +6067,13 @@ void CharacterManager::FamiliarityBoostStats(uint16_t familiarity,
 
 void CharacterManager::AdjustDemonBaseStats(const std::shared_ptr<
     objects::Demon>& demon, libcomp::EnumMap<CorrectTbl, int16_t>& stats,
-    bool baseCalc)
+    bool baseCalc, bool readOnly)
 {
     if(!demon)
     {
         return;
     }
-    else if(baseCalc)
+    else if(baseCalc && !readOnly)
     {
         // Reset base values initialized here
         demon->SetMagReduction(0);
@@ -5511,7 +6132,7 @@ void CharacterManager::AdjustDemonBaseStats(const std::shared_ptr<
                     stats[CorrectTbl::PDEF] + 5 * rBoost);
                 break;
             case 9:     // Ingwaz (イング)
-                if(baseCalc)
+                if(baseCalc && !readOnly)
                 {
                     int32_t reduction = (5 * rBoost);
 
@@ -5570,7 +6191,220 @@ void CharacterManager::AdjustDemonBaseStats(const std::shared_ptr<
     }
 }
 
-libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStatMap(
+void CharacterManager::AdjustMitamaStats(const std::shared_ptr<
+    objects::Demon>& demon, libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    libcomp::DefinitionManager* definitionManager, uint8_t reunionMode,
+    int32_t entityID, bool includeSetBonuses)
+{
+    if(demon && demon->GetMitamaType() > 0)
+    {
+        libcomp::EnumMap<CorrectTbl, std::list<int32_t>> bonusStats;
+
+        // Add rank bonus
+        uint32_t bonusID = (uint32_t)(((demon->GetMitamaType() - 1) * 16) +
+            demon->GetMitamaRank());
+        auto uBonus = definitionManager->GetMitamaUnionBonusData(bonusID);
+        if(uBonus)
+        {
+            for(size_t i = 0; i < uBonus->BonusCount(); )
+            {
+                int32_t type = uBonus->GetBonus(i);
+                int32_t val = uBonus->GetBonus((size_t)(i + 1));
+                if(val)
+                {
+                    bonusStats[(CorrectTbl)type].push_back(val);
+                }
+
+                i += 2;
+            }
+        }
+
+        std::unordered_map<uint8_t, uint8_t> bonuses;
+        std::set<uint32_t> setBonuses;
+        if(GetMitamaBonuses(demon, definitionManager, bonuses, setBonuses,
+            true))
+        {
+            // Add reunion bonuses
+            for(auto& pair : bonuses)
+            {
+                auto rBonus = definitionManager->GetMitamaReunionBonusData(
+                    pair.first);
+                if(rBonus)
+                {
+                    int32_t type = rBonus->GetType();
+                    int32_t val = rBonus->GetValue();
+                    if(val)
+                    {
+                        for(uint8_t i = 0; i < pair.second; i++)
+                        {
+                            bonusStats[(CorrectTbl)type].push_back(val);
+                        }
+                    }
+                }
+            }
+
+            if(setBonuses.size() > 0 && includeSetBonuses)
+            {
+                // Add reunion set bonuses
+                auto state = entityID
+                    ? ClientState::GetEntityClientState(entityID) : nullptr;
+                auto cState = state ? state->GetCharacterState() : nullptr;
+                bool exBonus = cState && cState->SkillAvailable(
+                    SVR_CONST.MITAMA_SET_BOOST);
+                for(auto& pair : definitionManager
+                    ->GetMitamaReunionSetBonusData())
+                {
+                    if(setBonuses.find(pair.first) != setBonuses.end())
+                    {
+                        auto boost = exBonus ? pair.second->GetBonusEx()
+                            : pair.second->GetBonus();
+                        for(size_t i = 0; i < boost.size(); )
+                        {
+                            int32_t type = boost[i];
+                            int32_t val = boost[(size_t)(i + 1)];
+                            if(type >= 0 && val)
+                            {
+                                bonusStats[(CorrectTbl)type].push_back(val);
+                            }
+
+                            i += 2;
+                        }
+                    }
+                }
+            }
+        }
+
+        if(reunionMode > 0)
+        {
+            // Filter only base (1) or non-base (2) stats
+            std::set<uint8_t> removes;
+            for(auto& pair : bonusStats)
+            {
+                bool baseStat = (uint8_t)pair.first <= (uint8_t)CorrectTbl::LUCK;
+                if(baseStat == (reunionMode == 1))
+                {
+                    removes.insert((uint8_t)pair.first);
+                }
+            }
+
+            for(uint8_t remove : removes)
+            {
+                bonusStats.erase((CorrectTbl)remove);
+            }
+        }
+
+        for(auto& pair : bonusStats)
+        {
+            if(stats.find(pair.first) == stats.end())
+            {
+                stats[pair.first] = 0;
+            }
+
+            for(int32_t val : pair.second)
+            {
+                stats[pair.first] = (int16_t)(stats[pair.first] + val);
+            }
+        }
+    }
+}
+
+bool CharacterManager::GetMitamaBonuses(const std::shared_ptr<
+    objects::Demon>& demon, libcomp::DefinitionManager* definitionManager,
+    std::unordered_map<uint8_t, uint8_t>& bonuses,
+    std::set<uint32_t>& setBonuses, bool excludeTokusei)
+{
+    bonuses.clear();
+    setBonuses.clear();
+
+    auto mReunion = demon->GetMitamaReunion();
+
+    std::array<std::array<uint8_t, 4>, 12> mitamaMap;
+    for(size_t i = 0; i < 12; i++)
+    {
+        mitamaMap[i] = { { 0, 0, 0, 0 } };
+    }
+
+    for(size_t i = 0; i < 96; i++)
+    {
+        uint8_t bonus = mReunion[i];
+        if(bonus)
+        {
+            uint8_t rIdx = (uint8_t)(i / 8);
+            uint8_t mIdx = (uint8_t)(bonus / 32);
+            mitamaMap[rIdx][mIdx]++;
+
+            if(bonuses.find(bonus) != bonuses.end())
+            {
+                bonuses[bonus]++;
+            }
+            else
+            {
+                bonuses[bonus] = 1;
+            }
+        }
+    }
+
+    if(bonuses.size() > 0)
+    {
+        for(auto& pair : definitionManager->GetMitamaReunionSetBonusData())
+        {
+            // Four sets exist for each reunion
+            size_t rIdx = (size_t)(pair.first / 4);
+            if(rIdx < 12)
+            {
+                bool active = true;
+
+                auto set = pair.second;
+                for(size_t mIdx = 0; mIdx < 4; mIdx++)
+                {
+                    active &= mitamaMap[rIdx][mIdx] >=
+                        set->GetMitamaRequirements(mIdx);
+                }
+
+                if(active && (excludeTokusei || set->GetBonus(0) >= 0))
+                {
+                    setBonuses.insert(pair.first);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+std::set<uint32_t> CharacterManager::GetTraitSkills(
+    const std::shared_ptr<objects::Demon>& demon,
+    const std::shared_ptr<objects::MiDevilData>& demonData,
+    libcomp::DefinitionManager* definitionManager)
+{
+    std::set<uint32_t> skillIDs;
+
+    auto growth = demonData->GetGrowth();
+    for(size_t i = 0; i < 4; i++)
+    {
+        auto equipment = demon->GetEquippedItems(i).Get();
+        uint32_t traitID = growth->GetTraits(i);
+        if(equipment)
+        {
+            auto equipData = definitionManager->GetDevilEquipmentItemData(
+                equipment->GetType());
+            if(equipData)
+            {
+                skillIDs.insert(equipData->GetSkillID());
+            }
+        }
+        else if(traitID)
+        {
+            skillIDs.insert(traitID);
+        }
+    }
+
+    return skillIDs;
+}
+
+libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStats(
     const std::shared_ptr<objects::EntityStats>& cs)
 {
     libcomp::EnumMap<CorrectTbl, int16_t> stats;
@@ -5724,7 +6558,11 @@ void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& s
             { CorrectTbl::HP_REGEN, 0 },
             { CorrectTbl::MP_REGEN, 0 },
             { CorrectTbl::COOLDOWN_TIME, 5 },
-            { CorrectTbl::CHANT_TIME, 0 }
+            { CorrectTbl::CHANT_TIME, 0 },
+            { CorrectTbl::RATE_PC, 0 },
+            { CorrectTbl::RATE_DEMON, 0 },
+            { CorrectTbl::RATE_PC_TAKEN, 0 },
+            { CorrectTbl::RATE_DEMON_TAKEN, 0 }
         };
     
     static libcomp::EnumMap<CorrectTbl, int16_t> maxStats =
@@ -5889,14 +6727,24 @@ void CharacterManager::GetDemonPacketData(libcomp::Packet& p,
         p.WriteS8(cs->GetLevel());
         p.WriteU8(demon->GetLocked() ? 1 : 0);
 
+        uint32_t dgCdTime = 0;
+        const uint32_t dgCdStatus = SVR_CONST.STATUS_DIGITALIZE_COOLDOWN;
+
+        UpdateStatusEffects(demon, state->GetAccountUID(), true);
+
         size_t statusEffectCount = demon->StatusEffectsCount();
         p.WriteS32Little(static_cast<int32_t>(statusEffectCount));
         for(auto effect : demon->GetStatusEffects())
         {
             p.WriteU32Little(effect->GetEffect());
+
+            if(effect->GetEffect() == dgCdStatus)
+            {
+                dgCdTime = effect->GetExpiration();
+            }
         }
 
-        p.WriteS8(0);   //Unknown
+        p.WriteS8(demon->GetMagReduction());
 
         bool equipped = false;
         for(auto equip : demon->GetEquippedItems())
@@ -5910,8 +6758,7 @@ void CharacterManager::GetDemonPacketData(libcomp::Packet& p,
 
         p.WriteS8(equipped ? 1 : 0);
 
-        //Effect length in seconds
-        p.WriteS32Little(0);
+        p.WriteS32Little(ChannelServer::GetExpirationInSeconds(dgCdTime));
     }
 }
 

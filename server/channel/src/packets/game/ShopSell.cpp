@@ -94,7 +94,8 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
             libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(
                 pair.second)));
         uint32_t amount = pair.first;
-        if(!item || item->GetItemBox() != inventory->GetUUID())
+        if(!item || item->GetItemBox() != inventory->GetUUID() ||
+            inventory->GetItems((size_t)item->GetBoxSlot()).Get() != item)
         {
             // Item/inventory does not match
             SendShopSaleReply(client, shopID, -2, false);

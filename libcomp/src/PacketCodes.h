@@ -267,6 +267,7 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_CASINO_COIN_TOTAL = 0x02FA,   //!< Request for the current character's casino coin total.
     PACKET_TRIFUSION_SOLO = 0x0384, //!< Request to perform a solo tri-fusion.
     PACKET_EQUIPMENT_SPIRIT_DEFUSE = 0x0386,  //!< Request to reverse equipment spirit fusion.
+    PACKET_DEMON_FORCE_END = 0x0389,  //!< Request to complete demon force changes.
     PACKET_SEARCH_ENTRY_INFO = 0x03A3,  //!< Request for the current player's search entries.
     PACKET_ITIME_DATA = 0x03A5,    //!< Request for the current player's I-Time data.
     PACKET_ITIME_TALK = 0x03A9,    //!< Request to start or continue an I-Time conversation.
@@ -277,8 +278,9 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_CULTURE_END = 0x03B6,  //!< Request to end interaction with a culture machine.
     PACKET_EQUIPMENT_MOD_EDIT = 0x03CB,  //!< Request to edit a previously applied equipment modification.
     PACKET_PATTRIBUTE_DEADLINE = 0x03EA, //!< Request for the next punitive attribute deadline.
+    PACKET_MITAMA_REUNION = 0x03F1,   //!< Request to perform a mitama reunion reinforcement.
+    PACKET_MITAMA_RESET = 0x03F3, //!< Request to reset a mitama reunion growth path.
     PACKET_DEMON_DEPO_LIST = 0x03F5,  //!< Request to list the client account's demon depositories.
-    PACKET_DEMON_FORCE_END = 0x0389,  //!< Request to complete demon force changes.
     PACKET_DEMON_EQUIP = 0x03FB, //!< Request to change demon equipment.
     PACKET_BARTER = 0x03FE, //!< Request to process the results of an NPC barter.
     PACKET_QUEST_TITLE = 0x0406,  //!< Request to obtain a quest bonus title.
@@ -287,11 +289,16 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_BLACKLIST_UPDATE = 0x040A,  //!< Request to update the current player's blacklist.
     PACKET_DIGITALIZE_POINTS = 0x0414,  //!< Request for the current player's digitalize point information.
     PACKET_DIGITALIZE_ASSIST = 0x0418,  //!< Request for the current player's digitalize assist information.
+    PACKET_DIGITALIZE_ASSIST_LEARN = 0x041A,    //!< Request to learn a digitalize assist skill.
+    PACKET_DIGITALIZE_ASSIST_REMOVE = 0x041C,   //!< Request to remove an active digitalize assist skill.
     PACKET_VA_BOX = 0x041E, //!< Request to list all VA items in the VA closet.
     PACKET_VA_BOX_ADD = 0x0420, //!< Request to create a VA item and add it to the closet.
     PACKET_VA_BOX_REMOVE = 0x0422,  //!< Request to remove a VA item from the closet.
     PACKET_VA_CHANGE = 0x0424,  //!< Request to change the current character's VA.
     PACKET_VA_BOX_MOVE = 0x0427,    //!< Request to move a VA item in the closet.
+    PACKET_REUNION_POINTS = 0x0432, //!< Request to retrieve the player's reunion conversion points.
+    PACKET_REUNION_EXTRACT = 0x0434,    //!< Request to extract reunion conversion points from a demon.
+    PACKET_REUNION_INJECT = 0x0436, //!< Request to inject reunion conversion points into a demon.
 };
 
 /**
@@ -643,6 +650,8 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_EQUIPMENT_MOD_EDIT = 0x03CC,  //!< Response to the request to edit a previously applied equipment modification.
     PACKET_PATTRIBUTE = 0x03E9,    //!< Currently unused. Notification containing punitive attribute system time information.
     PACKET_PATTRIBUTE_DEADLINE = 0x03EB, //!< Response to the request for the next punitive attribute deadline.
+    PACKET_MITAMA_REUNION = 0x03F2,   //!< Response to the request to perform a mitama reunion reinforcement.
+    PACKET_MITAMA_RESET = 0x03F4, //!< Response to the request to reset a mitama reunion growth path.
     PACKET_DEMON_DEPO_LIST = 0x03F6,  //!< Response to the request to open the demon depo.
     PACKET_DEMON_EQUIP = 0x03FC, //!< Response to the request to change demon equipment.
     PACKET_BARTER = 0x03FF, //!< Response containing the results of an NPC barter.
@@ -650,15 +659,27 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_WORLD_BONUS = 0x0405,  //!< Notification of the client logic adjusting world bonuses.
     PACKET_BLACKLIST = 0x0409,  //!< Response containing the current player's blacklist.
     PACKET_BLACKLIST_UPDATE = 0x040B,  //!< Response to the request to update the current player's blacklist.
+    PACKET_DIGITALIZE_START = 0x0412,   //!< Notification that the player character has activated digitalization.
+    PACKET_DIGITALIZE_END = 0x0413, //!< Notification that the player character has completed digitalization.
     PACKET_DIGITALIZE_POINTS = 0x0415,  //!< Response containing the current player's digitalize point information.
+    PACKET_DIGITALIZE_POINTS_UPDATE = 0x0416,   //!< Notification that the player's digitalize points have updated.
+    PACKET_DIGITALIZE_LEVEL_UP = 0x0417,    //!< Notification that a player's digitalize level has increased.
     PACKET_DIGITALIZE_ASSIST = 0x0419,  //!< Response containing the current player's digitalize assist information.
+    PACKET_DIGITALIZE_ASSIST_LEARN = 0x041B,    //!< Response to the request to learn a digitalize assist skill.
+    PACKET_DIGITALIZE_ASSIST_REMOVE = 0x041D,   //!< Response to the request to remove an active digitalize assist skill.
     PACKET_VA_BOX = 0x041F, //!< Response to the request to list all VA items in the VA closet.
     PACKET_VA_BOX_ADD = 0x0421, //!< Response to the request to create a VA item and add it to the closet.
     PACKET_VA_BOX_REMOVE = 0x0423,  //!< Response to the request to remove a VA item from the closet.
     PACKET_VA_CHANGE = 0x0425,  //!< Reponse to the request to change the current character's VA.
     PACKET_VA_CHANGED = 0x0426, //!< Notification that a character's VA has changed.
     PACKET_VA_BOX_MOVE = 0x0428,    //!< Response to the request to move a VA item in the closet.
+    PACKET_DIGITALIZE_DUNGEON_START = 0x0429,   //!< Notification that the client has entered a digitalize instance.
+    PACKET_DIGITALIZE_DUNGEON_UPDATE = 0x042A,  //!< Message containing the current digitalize instance state.
+    PACKET_DIGITALIZE_DUNGEON_END = 0x042B, //!< Notification that the current digitalize instance has been completed.
     PACKET_ALLY_DATA = 0x0431,  //!< Message containing data about an ally NPC in the zone.
+    PACKET_REUNION_POINTS = 0x0433, //!< Response to the request to retrieve the player's reunion conversion points.
+    PACKET_REUNION_EXTRACT = 0x0435,    //!< Request to extract reunion conversion points from a demon.
+    PACKET_REUNION_INJECT = 0x0437, //!< Request to inject reunion conversion points into a demon.
 };
 
 /**

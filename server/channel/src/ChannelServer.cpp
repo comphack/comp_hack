@@ -526,6 +526,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_TRIFUSION_SOLO));
     clientPacketManager->AddParser<Parsers::EquipmentSpiritDefuse>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_SPIRIT_DEFUSE));
+    clientPacketManager->AddParser<Parsers::DemonForceEnd>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FORCE_END));
     clientPacketManager->AddParser<Parsers::SearchEntryInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_ENTRY_INFO));
     clientPacketManager->AddParser<Parsers::ITimeData>(
@@ -546,10 +548,12 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_MOD_EDIT));
     clientPacketManager->AddParser<Parsers::PAttributeDeadline>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PATTRIBUTE_DEADLINE));
+    clientPacketManager->AddParser<Parsers::MitamaReunion>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_MITAMA_REUNION));
+    clientPacketManager->AddParser<Parsers::MitamaReset>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_MITAMA_RESET));
     clientPacketManager->AddParser<Parsers::DemonDepoList>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_LIST));
-    clientPacketManager->AddParser<Parsers::DemonForceEnd>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FORCE_END));
     clientPacketManager->AddParser<Parsers::DemonEquip>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_EQUIP));
     clientPacketManager->AddParser<Parsers::Barter>(
@@ -566,6 +570,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DIGITALIZE_POINTS));
     clientPacketManager->AddParser<Parsers::DigitalizeAssist>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DIGITALIZE_ASSIST));
+    clientPacketManager->AddParser<Parsers::DigitalizeAssistLearn>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DIGITALIZE_ASSIST_LEARN));
+    clientPacketManager->AddParser<Parsers::DigitalizeAssistRemove>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DIGITALIZE_ASSIST_REMOVE));
     clientPacketManager->AddParser<Parsers::VABox>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_VA_BOX));
     clientPacketManager->AddParser<Parsers::VABoxAdd>(
@@ -576,6 +584,12 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_VA_CHANGE));
     clientPacketManager->AddParser<Parsers::VABoxMove>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_VA_BOX_MOVE));
+    clientPacketManager->AddParser<Parsers::ReunionPoints>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_REUNION_POINTS));
+    clientPacketManager->AddParser<Parsers::ReunionExtract>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_REUNION_EXTRACT));
+    clientPacketManager->AddParser<Parsers::ReunionInject>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_REUNION_INJECT));
 
     // Map the Unsupported packet parser to unsupported packets or packets that
     // the server does not need to react to
@@ -704,6 +718,11 @@ ServerTime ChannelServer::GetServerTime()
 
 int32_t ChannelServer::GetExpirationInSeconds(uint32_t fixedTime, uint32_t relativeTo)
 {
+    if(fixedTime == 0)
+    {
+        return 0;
+    }
+
     if(relativeTo == 0)
     {
         relativeTo = (uint32_t)time(0);

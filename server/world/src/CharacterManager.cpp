@@ -1577,13 +1577,17 @@ bool CharacterManager::RemoveFromClan(std::shared_ptr<objects::CharacterLogin> c
         {
             auto server = mServer.lock();
             auto worldDB = server->GetWorldDatabase();
-            auto character = cLogin->LoadCharacter(worldDB);
-            character->SetClan(NULLUUID);
 
             auto dbChanges = libcomp::DatabaseChangeSet::Create();
             dbChanges->Update(clan);
-            dbChanges->Update(character);
             dbChanges->Delete(member);
+
+            auto character = cLogin->LoadCharacter(worldDB);
+            if(character)
+            {
+                character->SetClan(NULLUUID);
+                dbChanges->Update(character);
+            }
 
             return worldDB->ProcessChangeSet(dbChanges);
         }

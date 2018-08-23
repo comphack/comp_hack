@@ -207,16 +207,6 @@ public:
         std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
     /**
-     * Recalculate the set of skills available ot the entity that are currently
-     * disabled.
-     * @param definitionManager Pointer to the DefinitionManager to use when
-     *  determining skill definitions
-     * @return true if the set of disabled skills has been updated, false if it
-     *  has not
-     */
-    virtual bool RecalcDisabledSkills(libcomp::DefinitionManager* definitionManager);
-
-    /**
      * Check if the entity has the supplied skill learned and not currently
      * disabled.
      * @param skillID ID of the skill to check
@@ -264,6 +254,12 @@ public:
      * @return Pointer to the active entity's core stats
      */
     virtual std::shared_ptr<objects::EntityStats> GetCoreStats();
+
+    /**
+     * Get the current level of the active entity.
+     * @return Active entity's current level
+     */
+    virtual int8_t GetLevel();
 
     /**
      * Get the entity UUID associated to the entity this state represents.
@@ -627,6 +623,10 @@ public:
         int32_t& tUpkeep, std::set<uint32_t>& added, std::set<uint32_t>& updated,
         std::set<uint32_t>& removed);
 
+    /**
+     * Clear or reset any active skill upkeep costs timer
+     * @return true if an upkeep is active, false if there is no active upkeep
+     */
     bool ResetUpkeep();
 
     /**
@@ -1030,11 +1030,29 @@ public:
         return mEntity ? mEntity->GetCoreStats().Get() : nullptr;
     }
 
-    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
-        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
+    virtual int8_t GetLevel()
+    {
+        auto cs = GetCoreStats();
+        return cs ? cs->GetLevel() : 0;
+    }
 
-    virtual std::set<uint32_t> GetAllSkills(libcomp::DefinitionManager* definitionManager,
-        bool includeTokusei);
+    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
+        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr)
+    {
+        (void)definitionManager;
+        (void)calcState;
+
+        return 0;
+    }
+
+    virtual std::set<uint32_t> GetAllSkills(
+        libcomp::DefinitionManager* definitionManager, bool includeTokusei)
+    {
+        (void)definitionManager;
+        (void)includeTokusei;
+
+        return std::set<uint32_t>{};
+    }
 
     virtual uint8_t GetLNCType();
 

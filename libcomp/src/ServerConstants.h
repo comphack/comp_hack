@@ -128,6 +128,21 @@ struct Data
     /// Menu ID of the web-game interface
     uint32_t MENU_WEB_GAME;
 
+    /// Demon ID of mitama type: Aramitama (アラミタマ)
+    uint32_t MITAMA_1_ARAMITAMA;
+
+    /// Demon ID of mitama type: Nigimitama (ニギミタマ)
+    uint32_t MITAMA_2_NIGIMITAMA;
+
+    /// Demon ID of mitama type: Kushimitama (クシミタマ)
+    uint32_t MITAMA_3_KUSHIMITAMA;
+
+    /// Demon ID of mitama type: Sakimitama (サキミタマ)
+    uint32_t MITAMA_4_SAKIMITAMA;
+
+    /// Skill ID of the mitama set effect boosting passive
+    uint32_t MITAMA_SET_BOOST;
+
     /// Function ID of absolute damage dealing skills
     uint16_t SKILL_ABS_DAMAGE;
 
@@ -368,6 +383,12 @@ struct Data
     /// Status effect ID indicating an active demon quest expiration
     uint32_t STATUS_DEMON_QUEST_ACTIVE;
 
+    /// Status effect IDs for the male and female digitalized states
+    std::array<uint32_t, 2> STATUS_DIGITALIZE;
+
+    /// Status effect ID of the post digitalize cooldown state
+    uint32_t STATUS_DIGITALIZE_COOLDOWN;
+
     /// Status effect ID of (demon solo used) entity hide effect
     uint32_t STATUS_HIDDEN;
 
@@ -400,6 +421,12 @@ struct Data
 
     /// Valuable ID of the demon force enabling item
     uint16_t VALUABLE_DEMON_FORCE;
+
+    /// Valuable ID of the level 1 digitalize novice item
+    uint16_t VALUABLE_DIGITALIZE_LV1;
+
+    /// Valuable ID of the level 2 digitalize artisan item
+    uint16_t VALUABLE_DIGITALIZE_LV2;
 
     /// Valuable ID of the fusion gauge enabling item
     uint16_t VALUABLE_FUSION_GAUGE;
@@ -474,6 +501,12 @@ struct Data
     /// Index 3) MiSynthesisData
     std::array<std::list<uint32_t>, 4> RATE_SCALING_ITEMS;
 
+    /// List of reunion point extraction items in priority order
+    std::list<uint32_t> REUNION_EXTRACT_ITEMS;
+
+    /// List of digitalize assist removal items in priority order
+    std::list<uint32_t> ROLLBACK_PG_ITEMS;
+
     /// Item IDs mapped to success, great success boosts. Items can be equipped
     /// or be part of the fusion.
     std::unordered_map<uint32_t, std::array<uint8_t, 2>> SPIRIT_FUSION_BOOST;
@@ -491,7 +524,7 @@ struct Data
     std::array<std::array<uint32_t, 6>, 6> TRIFUSION_SPECIAL_ELEMENTAL;
 
     /// Item IDs that allow creation of VA items from a normal one
-    std::set<uint32_t> VA_ADD_ITEM;
+    std::set<uint32_t> VA_ADD_ITEMS;
 };
 
 public:

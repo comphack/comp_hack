@@ -41,6 +41,7 @@
 #include <ActivatedAbility.h>
 #include <ChannelConfig.h>
 #include <Character.h>
+#include <CharacterProgress.h>
 #include <Event.h>
 #include <EventInstance.h>
 #include <EventState.h>
@@ -87,6 +88,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["coin"] = &ChatManager::GMCommand_Coin;
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
+    mGMands["dxp"] = &ChatManager::GMCommand_DigitalizePoints;
     mGMands["effect"] = &ChatManager::GMCommand_Effect;
     mGMands["enchant"] = &ChatManager::GMCommand_Enchant;
     mGMands["enemy"] = &ChatManager::GMCommand_Enemy;
@@ -603,6 +605,48 @@ bool ChatManager::GMCommand_Crash(const std::shared_ptr<
     abort();
 }
 
+bool ChatManager::GMCommand_DigitalizePoints(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    uint8_t raceID;
+    int32_t points;
+    if(!GetIntegerArg(raceID, argsCopy) || !GetIntegerArg(points, argsCopy))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "@dxp requires a demon race ID and digitalize XP");
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    if(!definitionManager->GetGuardianLevelData(raceID))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Invalid digitalize demon race ID");
+    }
+    
+    if(points < 0)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Invalid digitalize XP supplied");
+    }
+
+    std::unordered_map<uint8_t, int32_t> pointMap;
+    pointMap[raceID] = points;
+
+    server->GetCharacterManager()->UpdateDigitalizePoints(client, pointMap,
+        false, false);
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Effect(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -975,7 +1019,7 @@ bool ChatManager::GMCommand_ExpertiseExtend(const std::shared_ptr<
 
             character->SetExpertiseExtension(newVal);
 
-            characterManager->SendExertiseExtension(client);
+            characterManager->SendExpertiseExtension(client);
             server->GetWorldDatabase()->QueueUpdate(character,
                 state->GetAccountUID());
         }
@@ -1314,6 +1358,10 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
         { "crash", {
             "@crash",
             "Causes the server to crash for testing the database.",
+        } },
+        { "dxp", {
+            "@dxp RACEID POINTS",
+            "Gain digitalize XP for the specified demon race ID."
         } },
         { "effect", {
             "@effect ID [+]STACK [DEMON]",
@@ -1941,32 +1989,21 @@ bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
     if(isDemon)
     {
         auto dState = state->GetDemonState();
-        auto cs = dState->GetCoreStats();
-        if(cs)
-        {
-            entityID = dState->GetEntityID();
-            currentLevel = cs->GetLevel();
-        }
-        else
+
+        if(!dState->GetEntity())
         {
             return SendChatMessage(client,
                 ChatType_t::CHAT_SELF, "No demon summoned");
         }
+
+        entityID = dState->GetEntityID();
+        currentLevel = dState->GetLevel();
     }
     else
     {
         auto cState = state->GetCharacterState();
-        auto cs = cState->GetCoreStats();
-        if(cs)
-        {
-            entityID = cState->GetEntityID();
-            currentLevel = cs->GetLevel();
-        }
-        else
-        {
-            // Really shouldn't ever happen
-            return false;
-        }
+        entityID = cState->GetEntityID();
+        currentLevel = cState->GetLevel();
     }
 
     if(lvl == -1 && lvl != 99)

@@ -110,7 +110,7 @@ void LobbyLogin(std::shared_ptr<WorldServer> server,
         if(!accountManager->LobbyLogin(login))
         {
             LOG_ERROR(libcomp::String("Failed to login character '%1'. "
-                "Here is the state of the login object now:\n").Arg(
+                "Here is the state of the login object now: %2\n").Arg(
                 account->GetUsername()).Arg(login->GetXml()));
             ok = false;
         }

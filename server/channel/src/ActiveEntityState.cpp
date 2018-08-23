@@ -49,7 +49,6 @@
 #include <MiCategoryData.h>
 #include <MiCorrectTbl.h>
 #include <MiDevilBattleData.h>
-#include <MiDevilEquipmentItemData.h>
 #include <MiDevilData.h>
 #include <MiDoTDamageData.h>
 #include <MiEffectData.h>
@@ -1985,12 +1984,6 @@ uint8_t ActiveEntityState::RecalculateStats(libcomp::DefinitionManager* definiti
     return 0;
 }
 
-bool ActiveEntityState::RecalcDisabledSkills(libcomp::DefinitionManager* definitionManager)
-{
-    (void)definitionManager;
-    return false;
-}
-
 std::set<uint32_t> ActiveEntityState::GetAllSkills(
     libcomp::DefinitionManager* definitionManager, bool includeTokusei)
 {
@@ -2012,6 +2005,11 @@ int8_t ActiveEntityState::GetGender()
 std::shared_ptr<objects::EntityStats> ActiveEntityState::GetCoreStats()
 {
     return nullptr;
+}
+
+int8_t ActiveEntityState::GetLevel()
+{
+    return 0;
 }
 
 bool ActiveEntityState::Ready(bool ignoreDisplayState)
@@ -2248,41 +2246,6 @@ std::shared_ptr<objects::EnemyBase>
 }
 
 template<>
-std::set<uint32_t> ActiveEntityStateImp<objects::Character>::GetAllSkills(
-    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
-{
-    std::set<uint32_t> skillIDs;
-    
-    if(mEntity)
-    {
-        skillIDs = mEntity->GetLearnedSkills();
-
-        auto clan = mEntity->GetClan().Get();
-        if(clan)
-        {
-            int8_t clanLevel = clan->GetLevel();
-            for(int8_t i = 0; i < clanLevel; i++)
-            {
-                for(uint32_t clanSkillID : SVR_CONST.CLAN_LEVEL_SKILLS[(size_t)i])
-                {
-                    skillIDs.insert(clanSkillID);
-                }
-            }
-        }
-
-        if(includeTokusei)
-        {
-            for(uint32_t skillID : GetEffectiveTokuseiSkills(definitionManager))
-            {
-                skillIDs.insert(skillID);
-            }
-        }
-    }
-
-    return skillIDs;
-}
-
-template<>
 std::set<uint32_t> ActiveEntityStateImp<objects::Demon>::GetAllSkills(
     libcomp::DefinitionManager* definitionManager, bool includeTokusei)
 {
@@ -2299,25 +2262,10 @@ std::set<uint32_t> ActiveEntityStateImp<objects::Demon>::GetAllSkills(
         }
 
         auto demonData = GetDevilData();
-
-        auto growth = demonData->GetGrowth();
-        for(size_t i = 0; i < 4; i++)
+        for(uint32_t skillID : CharacterManager::GetTraitSkills(mEntity,
+            demonData, definitionManager))
         {
-            auto equipment = mEntity->GetEquippedItems(i).Get();
-            uint32_t traitID = growth->GetTraits(i);
-            if(equipment)
-            {
-                auto equipData = definitionManager->GetDevilEquipmentItemData(
-                    equipment->GetType());
-                if(equipData)
-                {
-                    skillIDs.insert(equipData->GetSkillID());
-                }
-            }
-            else if(traitID)
-            {
-                skillIDs.insert(traitID);
-            }
+            skillIDs.insert(skillID);
         }
 
         if(includeTokusei)
@@ -2349,108 +2297,12 @@ std::set<uint32_t> ActiveEntityStateImp<objects::Ally>::GetAllSkills(
 }
 
 template<>
-uint8_t ActiveEntityStateImp<objects::Character>::RecalculateStats(
-    libcomp::DefinitionManager* definitionManager,
-    std::shared_ptr<objects::CalculatedEntityState> calcState)
-{
-    uint8_t result = 0;
-
-    std::lock_guard<std::mutex> lock(mLock);
-
-    auto c = GetEntity();
-    auto cs = c->GetCoreStats().Get();
-
-    bool selfState = calcState == nullptr;
-    if(selfState)
-    {
-        calcState = GetCalculatedState();
-
-        // Calculate current skills, only matters if calculating
-        // for the default entity state
-        auto previousSkills = GetCurrentSkills();
-        SetCurrentSkills(GetAllSkills(definitionManager, true));
-
-        bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
-        if(!skillsChanged)
-        {
-            for(uint32_t skillID : previousSkills)
-            {
-                if(!CurrentSkillsContains(skillID))
-                {
-                    skillsChanged = true;
-                    break;
-                }
-            }
-        }
-        result = skillsChanged ? ENTITY_CALC_SKILL : 0x00;
-
-        // Remove any switch skills no longer available
-        RemoveInactiveSwitchSkills();
-    }
-
-    auto stats = CharacterManager::GetCharacterBaseStatMap(cs);
-    if(selfState && !mInitialCalc)
-    {
-        SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
-        SetCombatRunSpeed(stats[CorrectTbl::MOVE2]);
-        mInitialCalc = true;
-    }
-
-    // Calculate based on adjustments
-    std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
-    std::list<std::shared_ptr<objects::MiCorrectTbl>> nraTbls;
-    for(auto equip : c->GetEquippedItems())
-    {
-        if(!equip.IsNull() && equip->GetDurability() > 0)
-        {
-            uint32_t basicEffect = equip->GetBasicEffect();
-            auto itemData = definitionManager->GetItemData(
-                basicEffect ? basicEffect : equip->GetType());
-            for(auto ct : itemData->GetCommon()->GetCorrectTbl())
-            {
-                if((uint8_t)ct->GetID() >= (uint8_t)CorrectTbl::NRA_WEAPON &&
-                    (uint8_t)ct->GetID() <= (uint8_t)CorrectTbl::NRA_MAGIC)
-                {
-                    nraTbls.push_back(ct);
-                }
-                else
-                {
-                    correctTbls.push_back(ct);
-                }
-            }
-        }
-    }
-
-    GetAdditionalCorrectTbls(definitionManager, calcState, correctTbls);
-
-    UpdateNRAChances(stats, calcState, nraTbls);
-    AdjustStats(correctTbls, stats, calcState, true);
-    BaseStatsCalculated(definitionManager, calcState, stats, correctTbls);
-
-    CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), false);
-
-    AdjustStats(correctTbls, stats, calcState, false);
-
-    if(selfState)
-    {
-        return result | CompareAndResetStats(stats);
-    }
-    else
-    {
-        for(auto statPair : stats)
-        {
-            calcState->SetCorrectTbl((size_t)statPair.first, statPair.second);
-        }
-
-        return result;
-    }
-}
-
-template<>
 uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
+    std::lock_guard<std::mutex> lock(mLock);
+
     if(!mEntity)
     {
         return true;
@@ -2483,8 +2335,6 @@ uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
         }
     }
 
-    std::lock_guard<std::mutex> lock(mLock);
-
     auto cs = GetCoreStats();
     auto devilData = GetDevilData();
     if(!cs || !devilData)
@@ -2492,14 +2342,7 @@ uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
         return true;
     }
 
-    auto battleData = devilData->GetBattleData();
-
-    libcomp::EnumMap<CorrectTbl, int16_t> stats;
-    for(size_t i = 0; i < 126; i++)
-    {
-        CorrectTbl tblID = (CorrectTbl)i;
-        stats[tblID] = battleData->GetCorrect((size_t)i);
-    }
+    auto stats = CharacterManager::GetDemonBaseStats(devilData);
 
     // Non-dependent stats will not change from growth calculation
     stats[CorrectTbl::STR] = cs->GetSTR();
@@ -2509,7 +2352,10 @@ uint8_t ActiveEntityStateImp<objects::Demon>::RecalculateStats(
     stats[CorrectTbl::SPEED] = cs->GetSPEED();
     stats[CorrectTbl::LUCK] = cs->GetLUCK();
 
-    CharacterManager::AdjustDemonBaseStats(GetEntity(), stats, false);
+    CharacterManager::AdjustDemonBaseStats(mEntity, stats, false);
+
+    CharacterManager::AdjustMitamaStats(mEntity, stats, definitionManager,
+        2, GetEntityID());
 
     auto levelRate = definitionManager->GetDevilLVUpRateData(
         devilData->GetGrowth()->GetGrowthType());
@@ -2524,6 +2370,8 @@ uint8_t ActiveEntityStateImp<objects::Enemy>::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
+    std::lock_guard<std::mutex> lock(mLock);
+
     if(!mEntity)
     {
         return true;
@@ -2537,6 +2385,8 @@ uint8_t ActiveEntityStateImp<objects::Ally>::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
+    std::lock_guard<std::mutex> lock(mLock);
+
     if(!mEntity)
     {
         return true;
@@ -2645,7 +2495,7 @@ const std::set<CorrectTbl> BASE_STATS =
     };
 
 // The following are all percentage representations that always apply values
-// as a numeric increase or decrease
+// as a numeric increase or decrease when represented as a normal percentage
 const std::set<CorrectTbl> FORCE_NUMERIC =
     {
         CorrectTbl::RES_DEFAULT,
@@ -2752,7 +2602,7 @@ void ActiveEntityState::AdjustStats(
             }
         }
 
-        if(effectiveType && FORCE_NUMERIC.find(tblID) != FORCE_NUMERIC.end())
+        if(effectiveType == 1 && FORCE_NUMERIC.find(tblID) != FORCE_NUMERIC.end())
         {
             effectiveType = 0;
         }
@@ -2880,7 +2730,7 @@ void ActiveEntityState::AdjustStats(
         }
     }
 
-    // Loop through and apply percent sums (in 2 layers
+    // Loop through and apply percent sums (in 2 layers)
     for(auto percentLayer : percentSums)
     {
         for(auto ctPair : percentLayer)
@@ -3169,8 +3019,6 @@ uint8_t ActiveEntityState::RecalculateEnemyStats(
             mAIState->ResetSkillsMapped();
         }
     }
-
-    std::lock_guard<std::mutex> lock(mLock);
 
     auto cs = GetCoreStats();
     auto devilData = GetDevilData();

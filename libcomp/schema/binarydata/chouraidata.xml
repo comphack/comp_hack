@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCHouraiData" persistent="false">
+        <member type="s8" name="ID" pad="3"/>
+        <member type="string" name="name" pad="8"/>
+        <member type="u32" name="npcID"/>
+    </object>
+</objgen>

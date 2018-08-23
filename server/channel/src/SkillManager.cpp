@@ -47,6 +47,7 @@
 #include <CalculatedEntityState.h>
 #include <ChannelConfig.h>
 #include <CharacterProgress.h>
+#include <DigitalizeState.h>
 #include <DropSet.h>
 #include <InheritedSkill.h>
 #include <Item.h>
@@ -67,6 +68,7 @@
 #include <MiCostTbl.h>
 #include <MiDamageData.h>
 #include <MiDCategoryData.h>
+#include <MiDevilBattleData.h>
 #include <MiDevilBookData.h>
 #include <MiDevilData.h>
 #include <MiDevilFamiliarityData.h>
@@ -80,6 +82,9 @@
 #include <MiExpertGrowthTbl.h>
 #include <MiExpertRankData.h>
 #include <MiGrowthData.h>
+#include <MiGuardianLevelData.h>
+#include <MiGuardianLevelDataEntry.h>
+#include <MiGuardianSpecialData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiKnockBackData.h>
@@ -250,6 +255,9 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
     mSkillFunctions[SVR_CONST.SKILL_CAMEO] = &SkillManager::Cameo;
     mSkillFunctions[SVR_CONST.SKILL_CLOAK] = &SkillManager::Cloak;
     mSkillFunctions[SVR_CONST.SKILL_DCM] = &SkillManager::DCM;
+    mSkillFunctions[SVR_CONST.SKILL_DIGITALIZE] = &SkillManager::Digitalize;
+    mSkillFunctions[SVR_CONST.SKILL_DIGITALIZE_BREAK] = &SkillManager::DigitalizeBreak;
+    mSkillFunctions[SVR_CONST.SKILL_DIGITALIZE_CANCEL] = &SkillManager::DigitalizeCancel;
     mSkillFunctions[SVR_CONST.SKILL_EQUIP_ITEM] = &SkillManager::EquipItem;
     mSkillFunctions[SVR_CONST.SKILL_EXPERT_FORGET_ALL] = &SkillManager::ForgetAllExpertiseSkills;
     mSkillFunctions[SVR_CONST.SKILL_FAM_UP] = &SkillManager::FamiliarityUp;
@@ -289,9 +297,6 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
     // SVR_CONST.SKILL_DESPAWN
     // SVR_CONST.SKILL_DESUMMON
     // SVR_CONST.SKILL_DIASPORA_QUAKE
-    // SVR_CONST.SKILL_DIGITALIZE
-    // SVR_CONST.SKILL_DIGITALIZE_BREAK
-    // SVR_CONST.SKILL_DIGITALIZE_CANCEL
     // SVR_CONST.SKILL_ESTOMA
     // SVR_CONST.SKILL_LIBERAMA
     // SVR_CONST.SKILL_MINION_DESPAWN
@@ -798,8 +803,8 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                 }
             }
 
-            auto cs = targetEntity->GetCoreStats();
-            if(cs && cs->GetLevel() > source->GetCoreStats()->GetLevel())
+            int8_t targetLvl = targetEntity->GetLevel();
+            if(targetLvl > source->GetLevel())
             {
                 SendFailure(activated, client,
                     (uint8_t)SkillErrorCodes_t::TALK_LEVEL);
@@ -810,8 +815,8 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
             {
                 // No FID, talk skills use level requirements in the params
                 auto params = skillData->GetSpecial()->GetSpecialParams();
-                if((params[0] && params[0] > (int32_t)cs->GetLevel()) ||
-                    (params[1] && params[1] < (int32_t)cs->GetLevel()))
+                if((params[0] && params[0] > (int32_t)targetLvl) ||
+                    (params[1] && params[1] < (int32_t)targetLvl))
                 {
                     SendFailure(activated, client,
                         (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
@@ -1391,6 +1396,10 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
 
                 itemCosts[SVR_CONST.ITEM_MAGNETITE] = fusionData->GetMagCost();
             }
+        }
+        else if(pSkill->FunctionID == SVR_CONST.SKILL_DIGITALIZE)
+        {
+            /// @todo: calculate mag cost
         }
         else if(pSkill->FunctionID == SVR_CONST.SKILL_GEM_COST)
         {
@@ -3456,6 +3465,19 @@ bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEnt
     case TokuseiSkillConditionType::SKILL_EXPERTISE:
         // Current skill is the specified expertise type
         return ((int32_t)skill.ExpertiseType == condition->GetValue()) == !negate;
+    case TokuseiSkillConditionType::ENEMY_DIGITALIZED:
+        // Enemy is digitalized (must be a character)
+        if(!otherState)
+        {
+            // Error
+            return false;
+        }
+        else
+        {
+            auto cState = std::dynamic_pointer_cast<CharacterState>(otherState);
+            return (cState && cState->GetDigitalizeState()) == !negate;
+        }
+        break;
     case TokuseiSkillConditionType::ENEMY_EQUIPPED:
         // Enemy has the specified item equipped (must be a character)
         if(!otherState)
@@ -4239,9 +4261,16 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             std::shared_ptr<ActiveEntityState>> lStates;
         std::unordered_map<uint32_t, int32_t> questKills;
         std::unordered_map<uint32_t, uint32_t> encounterGroups;
+        std::list<std::shared_ptr<ActiveEntityState>> dgEnemies;
         for(auto eState : enemiesKilled)
         {
             auto eBase = eState->GetEnemyBase();
+            auto enemyData = eState->GetDevilData();
+
+            if(enemyData->GetBattleData()->GetDigitalizeXP())
+            {
+                dgEnemies.push_back(eState);
+            }
 
             if(eState->GetEntityType() == EntityType_t::ALLY &&
                 eBase->GetEncounterID() == 0)
@@ -4269,7 +4298,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 
             zone->AddLootBox(lState);
 
-            uint32_t dType = eState->GetDevilData()->GetBasic()->GetID();
+            uint32_t dType = enemyData->GetBasic()->GetID();
             if(sourceState && sourceState->QuestTargetEnemiesContains(dType))
             {
                 if(questKills.find(dType) == questKills.end())
@@ -4472,6 +4501,11 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 HandleKillXP(enemy, zone);
             }
         }
+
+        if(dgEnemies.size() > 0)
+        {
+            HandleDigitalizeXP(source, dgEnemies, zone);
+        }
     }
 }
 
@@ -4651,6 +4685,60 @@ void SkillManager::HandleKillXP(const std::shared_ptr<objects::Enemy>& enemy,
     }
 }
 
+void SkillManager::HandleDigitalizeXP(
+    const std::shared_ptr<ActiveEntityState> source,
+    const std::list<std::shared_ptr<ActiveEntityState>>& enemies,
+    const std::shared_ptr<Zone>& zone)
+{
+    // Grant digitalize XP to all players in the source's party that
+    // have a digitalized character
+    auto server = mServer.lock();
+    auto managerConnection = server->GetManagerConnection();
+
+    auto client = managerConnection->GetEntityClient(source->GetEntityID());
+    if(!client)
+    {
+        // Not a player entity/not connected
+        return;
+    }
+
+    auto characterManager = server->GetCharacterManager();
+    float globalDXPBonus = server->GetWorldSharedConfig()
+        ->GetDigitalizePointBonus();
+
+    // Sum points gained from all enemies
+    int32_t dxp = 0;
+    for(auto enemy : enemies)
+    {
+        dxp = (int32_t)(dxp + (int32_t)enemy->GetDevilData()
+            ->GetBattleData()->GetDigitalizeXP());
+    }
+
+    // Apply global XP bonus
+    dxp = (int32_t)((double)dxp * (double)(1.f + globalDXPBonus));
+
+    for(auto c : managerConnection->GetPartyConnections(client, true, false))
+    {
+        auto state = c->GetClientState();
+
+        // Only party members in the same zone get points
+        if(state != client->GetClientState() && state->GetZone() != zone)
+        {
+            continue;
+        }
+
+        auto dgState = state->GetCharacterState()->GetDigitalizeState();
+        uint8_t raceID = dgState ? dgState->GetRaceID() : 0;
+        if(raceID)
+        {
+            std::unordered_map<uint8_t, int32_t> points;
+            points[raceID] = dxp;
+
+            characterManager->UpdateDigitalizePoints(c, points, true);
+        }
+    }
+}
+
 void SkillManager::HandleEncounterDefeat(const std::shared_ptr<
     ActiveEntityState> source, const std::shared_ptr<Zone>& zone,
     const std::unordered_map<uint32_t, uint32_t>& encounterGroups)
@@ -4786,7 +4874,8 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
 {
     auto eState = std::dynamic_pointer_cast<EnemyState>(
         target.EntityState);
-    if(!eState)
+    auto enemy = eState ? eState->GetEntity() : nullptr;
+    if(!enemy)
     {
         return false;
     }
@@ -4798,10 +4887,8 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
     int8_t talkFearSuccess = talkDamage->GetSuccessFear();
     int8_t talkFearFailure = talkDamage->GetFailureFear();
 
-    auto enemy = eState->GetEntity();
     auto spawn = enemy->GetSpawnSource();
-    if(enemy->GetCoreStats()->GetLevel() >
-        source->GetCoreStats()->GetLevel())
+    if(enemy->GetCoreStats()->GetLevel() > source->GetLevel())
     {
         // Enemies that are a higher level cannot be negotiated with
         return false;
@@ -5430,21 +5517,17 @@ void SkillManager::HandleFusionGauge(
         bool higherLevel = false;
         bool skillHit = false;
 
-        auto cs = source->GetCoreStats();
-        if(cs)
+        int8_t lvl = source->GetLevel();
+        for(auto& target : pSkill->Targets)
         {
-            int8_t lvl = cs->GetLevel();
-            for(auto& target : pSkill->Targets)
+            if(target.EntityState != source && !target.GuardModifier &&
+                !target.HitAvoided && !target.HitAbsorb)
             {
-                if(target.EntityState != source && !target.GuardModifier &&
-                    !target.HitAvoided && !target.HitAbsorb)
+                skillHit = true;
+                if(target.EntityState->GetLevel() > lvl)
                 {
-                    skillHit = true;
-                    if(target.EntityState->GetCoreStats()->GetLevel() > lvl)
-                    {
-                        higherLevel = true;
-                        break;
-                    }
+                    higherLevel = true;
+                    break;
                 }
             }
         }
@@ -5584,8 +5667,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 (int32_t)ct[(size_t)CorrectTbl::SPEED] +
                 (int32_t)ct[(size_t)CorrectTbl::LUCK];
 
-            auto cs = source->GetCoreStats();
-            double levelMod = (double)(cs ? cs->GetLevel() : 0) / 100.0;
+            double levelMod = (double)source->GetLevel() / 100.0;
 
             int32_t mod = (int32_t)(levelMod * (double)statSum *
                 (5.0 * (double)mod1));
@@ -6823,7 +6905,8 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(
         activated->GetSourceEntity());
 
-    uint64_t currentTime = activated->GetExecutionTime();
+    uint64_t currentTime = executed
+        ? activated->GetExecutionTime() : ChannelServer::GetServerTime();
 
     uint8_t execCount = activated->GetExecuteCount();
     if(executed)
@@ -7113,6 +7196,199 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
+}
+
+bool SkillManager::Digitalize(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    if(!client)
+    {
+        SendFailure(activated, nullptr);
+        return false;
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto demonID = activated->GetActivationObjectID();
+    auto demon = demonID > 0 ? std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state
+            ->GetObjectUUID(demonID))) : nullptr;
+    if(!demon)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+        return false;
+    }
+
+    uint8_t dgAbility = cState->GetDigitalizeAbilityLevel();
+    if(dgAbility == 0)
+    {
+        // Digitalize not enabled
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto demonData = definitionManager->GetDevilData(demon->GetType());
+    if(characterManager->IsMitamaDemon(demonData) && dgAbility < 2)
+    {
+        // Mitama demon not valid
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    // If the demon ID or base ID are enabled, the
+    std::set<uint32_t> demonIDs;
+    demonIDs.insert(demonData->GetBasic()->GetID());
+    demonIDs.insert(demonData->GetUnionData()->GetBaseDemonID());
+
+    uint8_t raceID = (uint8_t)demonData->GetCategory()->GetRace();
+
+    bool valid = false;
+    auto levelData = definitionManager->GetGuardianLevelData(raceID);
+    auto progress = cState->GetEntity()->GetProgress().Get();
+    if(levelData)
+    {
+        uint8_t lvl = (uint8_t)(progress
+            ? progress->GetDigitalizeLevels(raceID) : 0);
+        for(uint8_t i = 1; i <= lvl; i++)
+        {
+            for(uint32_t dID : levelData->GetLevels(i)->GetDemonIDs())
+            {
+                if(demonIDs.find(dID) != demonIDs.end())
+                {
+                    valid = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if(!valid)
+    {
+        // Not found yet, check special unlocks
+        for(uint32_t dID : demonIDs)
+        {
+            auto specialData = definitionManager->GetGuardianSpecialData(
+                dID);
+            if(specialData)
+            {
+                auto reqs = specialData->GetRequirements();
+                for(size_t i = 0; i < reqs.size(); )
+                {
+                    uint8_t rID = reqs[i];
+                    if(rID > 0)
+                    {
+                        uint8_t val = reqs[(size_t)(i + 1)];
+                        uint8_t lvl = (uint8_t)(progress
+                            ? progress->GetDigitalizeLevels(rID) : 0);
+                        if(val <= lvl)
+                        {
+                            valid = true;
+                            break;
+                        }
+
+                        i += 2;
+                    }
+                }
+            }
+        }
+    }
+
+    if(!valid)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+        return false;
+    }
+
+    if(!ProcessSkillResult(activated, ctx) ||
+        !server->GetCharacterManager()->DigitalizeStart(client, demon))
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    return true;
+}
+
+bool SkillManager::DigitalizeBreak(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    auto pSkill = GetProcessingSkill(activated, ctx);
+    if(ProcessSkillResult(activated, ctx))
+    {
+        auto characterManager = mServer.lock()->GetCharacterManager();
+        for(auto& target : pSkill->Targets)
+        {
+            if(target.EntityState != source && !target.HitAbsorb &&
+                !target.HitAvoided)
+            {
+                characterManager->DigitalizeEnd(client);
+            }
+        }
+    }
+    else
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    return true;
+}
+
+bool SkillManager::DigitalizeCancel(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    if(!client)
+    {
+        SendFailure(activated, nullptr);
+        return false;
+    }
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    if(cState->GetDigitalizeState() && ProcessSkillResult(activated, ctx))
+    {
+        if(!mServer.lock()->GetCharacterManager()->DigitalizeEnd(client))
+        {
+            LOG_ERROR(libcomp::String("Digitalize cancellation failed: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
+        }
+    }
+    else
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC_USE);
+        return false;
+    }
+
+    return true;
 }
 
 bool SkillManager::DirectStatus(const std::shared_ptr<objects::ActivatedAbility>& activated,
@@ -7520,6 +7796,7 @@ bool SkillManager::ForgetAllExpertiseSkills(
     character->SetLearnedSkills(learnedSkills);
 
     cState->RecalcDisabledSkills(definitionManager);
+    state->GetDemonState()->UpdateDemonState(definitionManager);
     server->GetCharacterManager()->RecalculateTokuseiAndStats(cState, client);
 
     server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
@@ -8133,8 +8410,7 @@ bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>&
             (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
         return false;
     }
-    else if(demon->GetCoreStats()->GetLevel() >
-        cState->GetCoreStats()->GetLevel())
+    else if(demon->GetCoreStats()->GetLevel() > cState->GetLevel())
     {
         // Allow if special status effects exist
         bool allow = false;

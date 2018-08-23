@@ -1368,6 +1368,14 @@ int8_t FUSION_ELEMENTAL_ADJUST[34][4] =
     { 0, 0, 0, 0 }      // TYRANT
 };
 
+int8_t FUSION_ELEMENTAL_MITAMA[4][4] =
+{
+    { -1, 3, 0, 2 }, // x FLAEMIS
+    { 3, -1, 2, 0 }, // x AQUANS
+    { 0, 2, -1, 1 }, // x AEROS
+    { 2, 0, 1, -1 }  // x ERTHYS
+};
+
 uint8_t FUSION_FAMILIARITY_BONUS[5][5] =
 {
     { 1, 0, 0, 1, 3 },
@@ -1794,3 +1802,5 @@ uint8_t INHERITENCE_SKILL_MAP[21][21] =
 { 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 100, 63, 63 },    // SPECIAL
 { 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15 }      // SUICIDE
 };
+
+uint16_t REUNION_RANK_POINTS[10] = { 0, 0, 1, 4, 10, 20, 40, 105, 320, 0 };

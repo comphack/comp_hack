@@ -239,6 +239,8 @@ PACKET_PARSER_DECL(CultureItem);            // 0x03B2
 PACKET_PARSER_DECL(CultureEnd);             // 0x03B6
 PACKET_PARSER_DECL(EquipmentModEdit);       // 0x03CB
 PACKET_PARSER_DECL(PAttributeDeadline);     // 0x03EA
+PACKET_PARSER_DECL(MitamaReunion);          // 0x03F1
+PACKET_PARSER_DECL(MitamaReset);            // 0x03F3
 PACKET_PARSER_DECL(DemonDepoList);          // 0x03F5
 PACKET_PARSER_DECL(DemonEquip);             // 0x03FB
 PACKET_PARSER_DECL(Barter);                 // 0x03FE
@@ -248,11 +250,16 @@ PACKET_PARSER_DECL(Blacklist);              // 0x0408
 PACKET_PARSER_DECL(BlacklistUpdate);        // 0x040A
 PACKET_PARSER_DECL(DigitalizePoints);       // 0x0414
 PACKET_PARSER_DECL(DigitalizeAssist);       // 0x0418
+PACKET_PARSER_DECL(DigitalizeAssistLearn);  // 0x041A
+PACKET_PARSER_DECL(DigitalizeAssistRemove); // 0x041C
 PACKET_PARSER_DECL(VABox);                  // 0x041E
 PACKET_PARSER_DECL(VABoxAdd);               // 0x0420
 PACKET_PARSER_DECL(VABoxRemove);            // 0x0422
 PACKET_PARSER_DECL(VAChange);               // 0x0424
 PACKET_PARSER_DECL(VABoxMove);              // 0x0427
+PACKET_PARSER_DECL(ReunionPoints);          // 0x0432
+PACKET_PARSER_DECL(ReunionExtract);         // 0x0434
+PACKET_PARSER_DECL(ReunionInject);          // 0x0436
 
 PACKET_PARSER_DECL(SetWorldInfo);        // 0x1002
 PACKET_PARSER_DECL(SetOtherChannelInfo); // 0x1003

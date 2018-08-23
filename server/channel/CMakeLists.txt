@@ -138,6 +138,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ClientCostAdjustment.cpp
     ClientStateObject.h
     ClientStateObject.cpp
+    DigitalizeState.h
+    DigitalizeState.cpp
     EventInstance.h
     EventInstance.cpp
     EventState.h
@@ -363,6 +365,8 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/CultureEnd.cpp             # 0x03B6
     src/packets/game/EquipmentModEdit.cpp       # 0x03CB
     src/packets/game/PAttributeDeadline.cpp     # 0x03EA
+    src/packets/game/MitamaReunion.cpp          # 0x03F1
+    src/packets/game/MitamaReset.cpp            # 0x03F3
     src/packets/game/DemonDepoList.cpp          # 0x03F5
     src/packets/game/DemonEquip.cpp             # 0x03FB
     src/packets/game/Barter.cpp                 # 0x03FE
@@ -372,11 +376,16 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/BlacklistUpdate.cpp        # 0x040A
     src/packets/game/DigitalizePoints.cpp       # 0x0414
     src/packets/game/DigitalizeAssist.cpp       # 0x0418
+    src/packets/game/DigitalizeAssistLearn.cpp  # 0x041A
+    src/packets/game/DigitalizeAssistRemove.cpp # 0x041C
     src/packets/game/VABox.cpp                  # 0x041E
     src/packets/game/VABoxAdd.cpp               # 0x0420
     src/packets/game/VABoxRemove.cpp            # 0x0422
     src/packets/game/VAChange.cpp               # 0x0424
     src/packets/game/VABoxMove.cpp              # 0x0427
+    src/packets/game/ReunionPoints.cpp          # 0x0432
+    src/packets/game/ReunionExtract.cpp         # 0x0434
+    src/packets/game/ReunionInject.cpp          # 0x0436
 
     #Internal packets
     src/packets/internal/SetWorldInfo.cpp          # 0x1002

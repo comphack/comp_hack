@@ -36,6 +36,7 @@
 #include <MiAIData.h>
 #include <MiBlendData.h>
 #include <MiBlendExtData.h>
+#include <MiCHouraiData.h>
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 #include <MiCultureItemData.h>
@@ -63,9 +64,16 @@
 #include <MiExpertData.h>
 #include <MiExpertRankData.h>
 #include <MiGrowthData.h>
+#include <MiGuardianAssistData.h>
+#include <MiGuardianLevelData.h>
+#include <MiGuardianSpecialData.h>
+#include <MiGuardianUnlockData.h>
 #include <MiHNPCBasicData.h>
 #include <MiHNPCData.h>
 #include <MiItemData.h>
+#include <MiMitamaReunionBonusData.h>
+#include <MiMitamaReunionSetBonusData.h>
+#include <MiMitamaUnionBonusData.h>
 #include <MiModificationData.h>
 #include <MiModificationExtEffectData.h>
 #include <MiModificationExtRecipeData.h>
@@ -120,6 +128,12 @@ const std::shared_ptr<objects::MiBlendExtData>
     DefinitionManager::GetBlendExtData(uint32_t id)
 {
     return GetRecordByID(id, mBlendExtData);
+}
+
+std::unordered_map<int8_t, std::shared_ptr<objects::MiCHouraiData>>
+    DefinitionManager::GetCHouraiData()
+{
+    return mCHouraiData;
 }
 
 const std::shared_ptr<objects::MiCultureItemData>
@@ -380,6 +394,41 @@ const std::list<std::pair<uint8_t, uint32_t>>
     return std::list<std::pair<uint8_t, uint32_t>>();
 }
 
+const std::shared_ptr<objects::MiGuardianAssistData>
+    DefinitionManager::GetGuardianAssistData(uint32_t id)
+{
+    return GetRecordByID(id, mGuardianAssistData);
+}
+
+const std::set<uint8_t> DefinitionManager::GetGuardianRaceIDs()
+{
+    std::set<uint8_t> raceIDs;
+    for(auto& pair : mGuardianLevelData)
+    {
+        raceIDs.insert((uint8_t)pair.first);
+    }
+
+    return raceIDs;
+}
+
+const std::shared_ptr<objects::MiGuardianLevelData> 
+    DefinitionManager::GetGuardianLevelData(uint32_t id)
+{
+    return GetRecordByID(id, mGuardianLevelData);
+}
+
+const std::shared_ptr<objects::MiGuardianSpecialData> 
+    DefinitionManager::GetGuardianSpecialData(uint32_t id)
+{
+    return GetRecordByID(id, mGuardianSpecialData);
+}
+
+const std::shared_ptr<objects::MiGuardianUnlockData> 
+    DefinitionManager::GetGuardianUnlockData(uint32_t id)
+{
+    return GetRecordByID(id, mGuardianUnlockData);
+}
+
 const std::shared_ptr<objects::MiHNPCData>
     DefinitionManager::GetHNPCData(uint32_t id)
 {
@@ -390,6 +439,25 @@ const std::shared_ptr<objects::MiItemData>
     DefinitionManager::GetItemData(uint32_t id)
 {
     return GetRecordByID(id, mItemData);
+}
+
+const std::shared_ptr<objects::MiMitamaReunionBonusData>
+    DefinitionManager::GetMitamaReunionBonusData(uint32_t id)
+{
+    return GetRecordByID(id, mMitamaReunionBonusData);
+}
+
+std::unordered_map<uint32_t,
+    std::shared_ptr<objects::MiMitamaReunionSetBonusData>>
+    DefinitionManager::GetMitamaReunionSetBonusData()
+{
+    return mMitamaReunionSetBonusData;
+}
+
+const std::shared_ptr<objects::MiMitamaUnionBonusData>
+    DefinitionManager::GetMitamaUnionBonusData(uint32_t id)
+{
+    return GetRecordByID(id, mMitamaUnionBonusData);
 }
 
 const std::shared_ptr<objects::MiModificationData>
@@ -745,6 +813,21 @@ namespace libcomp
         for(auto record : records)
         {
             mBlendExtData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiCHouraiData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiCHouraiData>> records;
+        bool success = LoadBinaryData<objects::MiCHouraiData>(pDataStore,
+            "Shield/CHouraiData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mCHouraiData[record->GetID()] = record;
         }
 
         return success;
@@ -1182,6 +1265,66 @@ namespace libcomp
     }
 
     template <>
+    bool DefinitionManager::LoadData<objects::MiGuardianAssistData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiGuardianAssistData>> records;
+        bool success = LoadBinaryData<objects::MiGuardianAssistData>(
+            pDataStore, "Shield/GuardianAssistData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mGuardianAssistData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiGuardianLevelData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiGuardianLevelData>> records;
+        bool success = LoadBinaryData<objects::MiGuardianLevelData>(pDataStore,
+            "Shield/GuardianLevelData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mGuardianLevelData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiGuardianSpecialData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiGuardianSpecialData>> records;
+        bool success = LoadBinaryData<objects::MiGuardianSpecialData>(
+            pDataStore, "Shield/GuardianSpecialData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mGuardianSpecialData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiGuardianUnlockData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiGuardianUnlockData>> records;
+        bool success = LoadBinaryData<objects::MiGuardianUnlockData>(
+            pDataStore, "Shield/GuardianUnlockData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mGuardianUnlockData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
     bool DefinitionManager::LoadData<objects::MiHNPCData>(
         gsl::not_null<DataStore*> pDataStore)
     {
@@ -1206,6 +1349,51 @@ namespace libcomp
         for(auto record : records)
         {
             mItemData[record->GetCommon()->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiMitamaReunionBonusData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiMitamaReunionBonusData>> records;
+        bool success = LoadBinaryData<objects::MiMitamaReunionBonusData>(
+            pDataStore, "Shield/MitamaReunionBonusData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mMitamaReunionBonusData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiMitamaReunionSetBonusData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiMitamaReunionSetBonusData>> records;
+        bool success = LoadBinaryData<objects::MiMitamaReunionSetBonusData>(
+            pDataStore, "Shield/MitamaReunionSetBonusData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mMitamaReunionSetBonusData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
+    bool DefinitionManager::LoadData<objects::MiMitamaUnionBonusData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiMitamaUnionBonusData>> records;
+        bool success = LoadBinaryData<objects::MiMitamaUnionBonusData>(
+            pDataStore,"Shield/MitamaUnionBonusData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mMitamaUnionBonusData[record->GetID()] = record;
         }
 
         return success;
@@ -1574,6 +1762,7 @@ bool DefinitionManager::LoadAllData(DataStore *pDataStore)
     success &= LoadData<objects::MiAIData>(pDataStore);
     success &= LoadData<objects::MiBlendData>(pDataStore);
     success &= LoadData<objects::MiBlendExtData>(pDataStore);
+    success &= LoadData<objects::MiCHouraiData>(pDataStore);
     success &= LoadData<objects::MiCItemData>(pDataStore);
     success &= LoadData<objects::MiCultureItemData>(pDataStore);
     success &= LoadData<objects::MiDevilData>(pDataStore);
@@ -1593,8 +1782,15 @@ bool DefinitionManager::LoadAllData(DataStore *pDataStore)
     success &= LoadData<objects::MiEquipmentSetData>(pDataStore);
     success &= LoadData<objects::MiExchangeData>(pDataStore);
     success &= LoadData<objects::MiExpertData>(pDataStore);
+    success &= LoadData<objects::MiGuardianAssistData>(pDataStore);
+    success &= LoadData<objects::MiGuardianLevelData>(pDataStore);
+    success &= LoadData<objects::MiGuardianSpecialData>(pDataStore);
+    success &= LoadData<objects::MiGuardianUnlockData>(pDataStore);
     success &= LoadData<objects::MiHNPCData>(pDataStore);
     success &= LoadData<objects::MiItemData>(pDataStore);
+    success &= LoadData<objects::MiMitamaReunionBonusData>(pDataStore);
+    success &= LoadData<objects::MiMitamaReunionSetBonusData>(pDataStore);
+    success &= LoadData<objects::MiMitamaUnionBonusData>(pDataStore);
     success &= LoadData<objects::MiModificationData>(pDataStore);
     success &= LoadData<objects::MiModificationExtEffectData>(pDataStore);
     success &= LoadData<objects::MiModificationExtRecipeData>(pDataStore);

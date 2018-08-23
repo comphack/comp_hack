@@ -46,6 +46,7 @@
 #include <DemonBox.h>
 #include <DemonQuest.h>
 #include <DemonQuestReward.h>
+#include <DigitalizeState.h>
 #include <DropSet.h>
 #include <EventChoice.h>
 #include <EventCondition.h>
@@ -228,9 +229,6 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
 
     if(nullptr == current)
     {
-        LOG_ERROR(libcomp::String("Option selected for unknown event: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
-
         // End the event in case the client thinks something is actually happening
         EndEvent(client);
         return false;
@@ -1184,10 +1182,9 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         else
         {
             // Character level compares to [value 1] (and [value 2])
-            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
-            auto stats = character->GetCoreStats();
+            auto cState = client->GetClientState()->GetCharacterState();
 
-            return Compare(stats->GetLevel(), condition->GetValue1(),
+            return Compare(cState->GetLevel(), condition->GetValue1(),
                 condition->GetValue2(), compareMode, EventCompareMode::GTE,
                 EVENT_COMPARE_NUMERIC2);
         }
@@ -3518,7 +3515,11 @@ void EventManager::HandleNext(EventContext& ctx)
         }
     }
 
-    if(nextEventID.IsEmpty())
+    // If there is no next event (or event is menu which does not support
+    // normal "next" progression) either repeat previous or process next
+    // queued event
+    if(nextEventID.IsEmpty() ||
+        event->GetEventType() == objects::Event::EventType_t::OPEN_MENU)
     {
         if(!ctx.AutoOnly)
         {
@@ -3569,7 +3570,7 @@ void EventManager::HandleNext(EventContext& ctx)
 
         HandleEvent(ctx.Client, nextEventID,
             ctx.EventInstance->GetSourceEntityID(), ctx.CurrentZone,
-            ctx.EventInstance->GetActionGroupID());
+            ctx.EventInstance->GetActionGroupID(), ctx.AutoOnly);
     }
 }
 

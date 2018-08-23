@@ -24,6 +24,11 @@
     <constant name="MENU_TRIFUSION">179</constant>
     <constant name="MENU_TRIFUSION_KZ">801</constant>
     <constant name="MENU_WEB_GAME">764</constant>
+    <constant name="MITAMA_1_ARAMITAMA">624</constant>
+    <constant name="MITAMA_2_NIGIMITAMA">623</constant>
+    <constant name="MITAMA_3_KUSHIMITAMA">622</constant>
+    <constant name="MITAMA_4_SAKIMITAMA">621</constant>
+    <constant name="MITAMA_SET_BOOST">5133</constant>
 
     <!-- Skill Function IDs -->
     <constant name="SKILL_ESTOMA">100</constant>
@@ -102,6 +107,8 @@
     <constant name="STATUS_COMP_TUNING">816,817</constant>
     <constant name="STATUS_DEATH">32</constant>
     <constant name="STATUS_DEMON_QUEST_ACTIVE">1030</constant>
+    <constant name="STATUS_DIGITALIZE">905,907</constant>
+    <constant name="STATUS_DIGITALIZE_COOLDOWN">906</constant>
     <constant name="STATUS_HIDDEN">143</constant>
     <constant name="STATUS_MOUNT">801</constant>
     <constant name="STATUS_MOUNT_SUPER">1183</constant>
@@ -113,6 +120,8 @@
     <constant name="VALUABLE_DEVIL_BOOK_V1">250</constant>
     <constant name="VALUABLE_DEVIL_BOOK_V2">251</constant>
     <constant name="VALUABLE_DEMON_FORCE">230</constant>
+    <constant name="VALUABLE_DIGITALIZE_LV1">686</constant>
+    <constant name="VALUABLE_DIGITALIZE_LV2">687</constant>
     <constant name="VALUABLE_FUSION_GAUGE">238</constant>
     <constant name="VALUABLE_MATERIAL_TANK">239</constant>
     <constant name="ZONE_DEFAULT">90105</constant>
@@ -1236,6 +1245,17 @@
         <!-- MiSynthesisData -->
         <element>42009,42011,42012,42021,42010,42023,42025,42026,42028</element>
     </constant>
+    <constant name="REUNION_EXTRACT_ITEMS">
+        <!-- Format: item ID (listed in priority order) -->
+        <element>38128</element>
+        <element>38127</element>
+        <element>38126</element>
+    </constant>
+    <constant name="ROLLBACK_PG_ITEMS">
+        <!-- Format: item ID (listed in priority order) -->
+        <element>21852</element>
+        <element>21851</element>
+    </constant>
     <constant name="SPIRIT_FUSION_BOOST">
         <!-- Format: item ID => success boost, great success boost -->
         <!-- Contains items that are client hard-coded and from MiUnionItemsHelperData -->
@@ -1352,7 +1372,7 @@
         <element>582,584,9,1,0,128</element>
         <element>583,584,12,106,60,1145</element>
     </constant>
-    <constant name="VA_ADD_ITEM">
+    <constant name="VA_ADD_ITEMS">
         <!-- Format: item ID -->
         <element>21936</element>
         <element>21937</element>

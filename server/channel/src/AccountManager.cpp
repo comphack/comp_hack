@@ -158,6 +158,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
         state->Register();
 
         dState->UpdateSharedState(character.Get(), definitionManager);
+        dState->UpdateDemonState(definitionManager);
 
         // Recalculating the character will recalculate the partner too
         server->GetTokuseiManager()->Recalculate(cState, true,
@@ -267,6 +268,13 @@ void AccountManager::Logout(const std::shared_ptr<
         {
             // Pending demon quest must be rejected
             server->GetEventManager()->EndDemonQuest(client);
+        }
+
+        auto dgState = cState->GetDigitalizeState();
+        if(dgState)
+        {
+            // Active digitalize must be completed
+            server->GetCharacterManager()->DigitalizeEnd(client);
         }
 
         if(!LogoutCharacter(state))

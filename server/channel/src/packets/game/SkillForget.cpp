@@ -88,6 +88,7 @@ bool Parsers::SkillForget::Parse(libcomp::ManagerPacket *pPacketManager,
         character->RemoveLearnedSkills(skillID);
 
         cState->RecalcDisabledSkills(definitionManager);
+        state->GetDemonState()->UpdateDemonState(definitionManager);
         server->GetCharacterManager()->RecalculateTokuseiAndStats(cState, client);
 
         server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());

@@ -44,6 +44,7 @@
 #include <Ally.h>
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
+#include <DigitalizeState.h>
 #include <Enemy.h>
 #include <EntityStats.h>
 #include <Item.h>
@@ -79,6 +80,7 @@
 #include <SpawnLocation.h>
 #include <SpawnLocationGroup.h>
 #include <SpawnRestriction.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "ActionManager.h"
@@ -605,10 +607,26 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     server->GetTokuseiManager()->RecalculateParty(state->GetParty());
 
-    // End any previous instance specific data if leaving
-    if(currentInstance && currentInstance != nextInstance)
+    if(currentInstance != nextInstance)
     {
-        EndInstanceTimer(currentInstance, client, false, true);
+        // End any previous instance specific data if leaving
+        if(currentInstance)
+        {
+            EndInstanceTimer(currentInstance, client, false, true);
+        }
+
+        // If entering or exiting a digitalize instance, end any
+        // current digitalize session
+        for(auto inst : { currentInstance, nextInstance })
+        {
+            auto variant = inst ? inst->GetVariant() : nullptr;
+            if(variant &&
+                variant->GetInstanceType() == InstanceType_t::DIGITALIZE)
+            {
+                server->GetCharacterManager()->DigitalizeEnd(client);
+                break;
+            }
+        }
     }
 
     if(!nextInstance && currentZone)
@@ -1821,6 +1839,12 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
     auto characterManager = server->GetCharacterManager();
     auto tokuseiManager = server->GetTokuseiManager();
 
+    const static std::set<uint32_t> dgStatusEffectIDs =
+        {
+            SVR_CONST.STATUS_DIGITALIZE[0],
+            SVR_CONST.STATUS_DIGITALIZE[1]
+        };
+
     std::list<libcomp::Packet> zonePackets;
     std::set<uint32_t> added, updated, removed;
     std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
@@ -1927,6 +1951,21 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
             }
 
             statusRemoved.insert(entity);
+
+            // If a digitalize status was removed, update the client state
+            for(uint32_t effectID : dgStatusEffectIDs)
+            {
+                if(removed.find(effectID) != removed.end())
+                {
+                    auto client = server->GetManagerConnection()
+                        ->GetEntityClient(entity->GetEntityID());
+                    if(client)
+                    {
+                        characterManager->DigitalizeEnd(client);
+                    }
+                    break;
+                }
+            }
         }
     }
 
@@ -1968,6 +2007,7 @@ void ZoneManager::HandleSpecialInstancePopulate(
         switch(instVariant->GetInstanceType())
         {
         case InstanceType_t::TIME_TRIAL:
+        case InstanceType_t::DIGITALIZE:
             {
                 SendInstanceTimer(instance, client, true);
             }
@@ -3075,6 +3115,17 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
             }
         }
         break;
+    case InstanceType_t::DIGITALIZE:
+        {
+            // Timer counts up, set start time only
+            std::lock_guard<std::mutex> lock(mLock);
+            if(instance->GetTimerStart() == 0)
+            {
+                uint64_t now = ChannelServer::GetServerTime();
+                instance->SetTimerStart(now);
+            }
+        }
+        break;
     case InstanceType_t::NORMAL:
     default:
         {
@@ -3215,6 +3266,22 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
             }
         }
         break;
+    case InstanceType_t::DIGITALIZE:
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            if(!instance->GetTimerStop())
+            {
+                uint64_t now = ChannelServer::GetServerTime();
+                instance->SetTimerStop(now);
+
+                // Complete timer
+                for(auto client : instance->GetConnections())
+                {
+                    EndInstanceTimer(instance, client, true);
+                }
+            }
+        }
+        break;
     case InstanceType_t::NORMAL:
     default:
         {
@@ -3271,7 +3338,7 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
 void ZoneManager::SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instance,
     const std::shared_ptr<ChannelClientConnection>& client, bool queue)
 {
-    if(!instance || !instance->GetTimerStart())
+    if(!instance || !instance->GetTimerStart() || instance->GetTimerStop())
     {
         return;
     }
@@ -3315,6 +3382,28 @@ void ZoneManager::SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
             p.WriteS32Little((int32_t)instance->GetTimerID());
         }
         break;
+    case InstanceType_t::DIGITALIZE:
+        {
+            uint64_t now = ChannelServer::GetServerTime();
+            float elapsed = (float)(((double)now -
+                (double)instance->GetTimerStart()) / 1000000.0);
+
+            if(client && !client->GetClientState()->GetInstanceTimerActive())
+            {
+                p.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_DIGITALIZE_DUNGEON_START);
+            }
+            else
+            {
+                p.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_DIGITALIZE_DUNGEON_UPDATE);
+            }
+
+            p.WriteU32Little(instVariant->GetSubID());
+            p.WriteFloat(elapsed);
+            p.WriteS8(0);
+        }
+        break;
     case InstanceType_t::NORMAL:
     default:
         {
@@ -3336,9 +3425,9 @@ void ZoneManager::SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
         }
     }
 
+    std::list<std::shared_ptr<ChannelClientConnection>> connections;
     if(timeMap.size() > 0)
     {
-        std::list<std::shared_ptr<ChannelClientConnection>> connections;
         if(client)
         {
             connections.push_back(client);
@@ -3361,11 +3450,20 @@ void ZoneManager::SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
         {
             client->SendPacket(p);
         }
+
+        connections.push_back(client);
     }
     else
     {
-        auto connections = instance->GetConnections();
+        connections = instance->GetConnections();
         ChannelClientConnection::BroadcastPacket(connections, p);
+    }
+
+    // Set the instance timers as active
+    for(auto c : connections)
+    {
+        auto state = c->GetClientState();
+        state->SetInstanceTimerActive(true);
     }
 }
 
@@ -3724,6 +3822,76 @@ void ZoneManager::EndInstanceTimer(
             notify.WriteS32Little(spGain);
         }
         break;
+    case InstanceType_t::DIGITALIZE:
+        {
+            // A player successfully completed the instance if they're in it
+            // when the timer stops whether they're alive or not
+            bool success = zone->GetInstance() == instance &&
+                instance->GetTimerStop();
+            if(isSuccess != success)
+            {
+                return;
+            }
+
+            float elapsed = 0.f;
+            int8_t result = 0;
+            if(success)
+            {
+                elapsed = (float)(((double)instance->GetTimerStop() -
+                    (double)instance->GetTimerStart()) / 1000000.0);
+
+                uint16_t rankB = instVariant->GetTimePoints(0);
+                uint16_t rankA = instVariant->GetTimePoints(1);
+
+                if(elapsed <= (float)rankA)
+                {
+                    // Rank A
+                    result = 0;
+
+                    auto dgState = state->GetCharacterState()->GetDigitalizeState();
+                    uint8_t raceID = dgState ? dgState->GetRaceID() : 0;
+                    if(raceID)
+                    {
+                        // Only rank A grants points
+                        int32_t gain = (int32_t)instVariant->GetFixedReward();
+                        int32_t rewardModifier = instVariant->GetRewardModifier();
+                        if(rewardModifier)
+                        {
+                            float globalDXPBonus = mServer.lock()
+                                ->GetWorldSharedConfig()->GetDigitalizePointBonus();
+                            float timePercent = elapsed / (float)rankA;
+
+                            gain = gain + (int32_t)ceil((double)
+                                (rankA * rewardModifier) * (double)timePercent *
+                                (1.0 + globalDXPBonus));
+                        }
+
+                        std::unordered_map<uint8_t, int32_t> points;
+                        points[raceID] = gain;
+
+                        mServer.lock()->GetCharacterManager()
+                            ->UpdateDigitalizePoints(client, points, true);
+                    }
+                }
+                else if(elapsed <= (float)rankB)
+                {
+                    // Rank B
+                    result = 1;
+                }
+                else
+                {
+                    // Rank C
+                    result = 2;
+                }
+            }
+
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_DIGITALIZE_DUNGEON_END);
+            notify.WriteU32Little(instVariant->GetSubID());
+            notify.WriteFloat(elapsed);
+            notify.WriteS8(result);
+        }
+        break;
     case InstanceType_t::NORMAL:
     default:
         {
@@ -3751,6 +3919,8 @@ void ZoneManager::EndInstanceTimer(
     {
         client->SendPacket(notify);
     }
+
+    client->GetClientState()->SetInstanceTimerActive(false);
 }
 
 bool ZoneManager::TriggerZoneActions(const std::shared_ptr<Zone>& zone,

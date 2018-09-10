@@ -1096,6 +1096,55 @@ bool ServerConstants::Initialize(const String& filePath)
         return false;
     }
 
+    complexIter = complexConstants.find("TEAM_VALUABLES");
+    if(complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        if(!LoadKeyValueStrings(complexIter->second, map))
+        {
+            LOG_ERROR("Failed to load TEAM_VALUABLES\n");
+            return false;
+        }
+
+        for(auto pair : map)
+        {
+            int8_t key;
+            if(!LoadInteger(pair.first, key))
+            {
+                LOG_ERROR("Failed to load TEAM_VALUABLES key\n");
+                return false;
+            }
+            else if(sConstants.TEAM_VALUABLES.find(key) !=
+                sConstants.TEAM_VALUABLES.end())
+            {
+                LOG_ERROR("Duplicate TEAM_VALUABLES key encountered\n");
+                return false;
+            }
+            else
+            {
+                if(!pair.second.empty())
+                {
+                    for(uint16_t p : ToIntegerRange<uint16_t>(pair.second,
+                        success))
+                    {
+                        sConstants.TEAM_VALUABLES[key].push_back(p);
+                    }
+
+                    if(!success)
+                    {
+                        LOG_ERROR("Failed to load an element in TEAM_VALUABLES\n");
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG_ERROR("TEAM_VALUABLES not found\n");
+        return false;
+    }
+
     complexIter = complexConstants.find("TRIFUSION_SPECIAL_DARK");
     if(complexIter != complexConstants.end())
     {

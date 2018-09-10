@@ -48,6 +48,7 @@ class ActionSpawn;
 class Ally;
 class Loot;
 class LootBox;
+class PvPBase;
 class ServerNPC;
 class ServerObject;
 class ServerZone;
@@ -66,6 +67,7 @@ class ZoneInstance;
 typedef ActiveEntityStateImp<objects::Ally> AllyState;
 typedef EntityState<objects::LootBox> LootBoxState;
 typedef EntityState<objects::ServerNPC> NPCState;
+typedef EntityState<objects::PvPBase> PvPBaseState;
 typedef EntityState<objects::ServerObject> ServerObjectState;
 
 typedef objects::ServerZoneInstanceVariant::InstanceType_t InstanceType_t;
@@ -233,6 +235,12 @@ public:
     void AddPlasma(const std::shared_ptr<PlasmaState>& plasma);
 
     /**
+     * Add a PvP base to the zone
+     * @param base Pointer to the PvP base to add
+     */
+    void AddPvPBase(const std::shared_ptr<PvPBaseState>& base);
+
+    /**
      * Get all client connections in the zone mapped by world CID
      * @return Map of all client connections in the zone by world CID
      */
@@ -360,6 +368,29 @@ public:
     bool ClaimBossBox(int32_t id, int32_t looterID);
 
     /**
+     * Update the occupier (or owner) information of a PvP base in the zone
+     * @param baseID Entity ID of the base in the zone
+     * @param occupierID Entity ID of the occupier (or owner)
+     * @param complete true if the occupier is canceling the request or
+     *  has occupied it long enough to become the owner, false if the base
+     *  occupation should start
+     * @param occupyStartTime Optional parameter that needs to be specified
+     *  when attempting to complete the occupation
+     * @return Error code resulting from an invalid request or 0 upon success
+     */
+    int32_t OccupyPvPBase(int32_t baseID, int32_t occupierID, bool complete,
+        uint64_t occupyStartTime = 0);
+
+    /**
+     * Update the bonus count on a PvP base
+     * @param baseID Entity ID of the base in the zone
+     * @param occupyStartTime Server timestamp of when the base was occupied.
+     *  If this time does not match, the bonus will not update.
+     * @return New bonus count or 0 if it did not update
+     */
+    uint16_t IncreasePvPBaseBonus(int32_t baseID, uint64_t occupyStartTime);
+
+    /**
      * Get an NPC instance by it's ID.
      * @param id Instance ID of the NPC.
      * @return Pointer to the NPC instance.
@@ -385,6 +416,19 @@ public:
      */
     const std::unordered_map<uint32_t,
         std::shared_ptr<PlasmaState>> GetPlasma() const;
+
+    /**
+     * Get a PvP base instance by it's ID.
+     * @param id Instance ID of the PvP base.
+     * @return Pointer to the PvP base instance.
+     */
+    std::shared_ptr<PvPBaseState> GetPvPBase(int32_t id);
+
+    /**
+     * Get all PvP base instances in the zone
+     * @return List of all PvP base instances in the zone
+     */
+    const std::list<std::shared_ptr<PvPBaseState>> GetPvPBases() const;
 
     /**
      * Get an object instance by it's ID.
@@ -723,6 +767,9 @@ private:
 
     /// Map of plasma states by definition ID
     std::unordered_map<uint32_t, std::shared_ptr<PlasmaState>> mPlasma;
+
+    /// List of pointers to PvP bases instantiated for the zone
+    std::list<std::shared_ptr<PvPBaseState>> mPvPBases;
 
     /// Map of entities in the zone by their ID
     std::unordered_map<int32_t, std::shared_ptr<objects::EntityStateObject>> mAllEntities;

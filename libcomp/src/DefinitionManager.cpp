@@ -66,6 +66,7 @@
 #include <MiGrowthData.h>
 #include <MiGuardianAssistData.h>
 #include <MiGuardianLevelData.h>
+#include <MiGuardianLevelDataEntry.h>
 #include <MiGuardianSpecialData.h>
 #include <MiGuardianUnlockData.h>
 #include <MiHNPCBasicData.h>
@@ -405,7 +406,11 @@ const std::set<uint8_t> DefinitionManager::GetGuardianRaceIDs()
     std::set<uint8_t> raceIDs;
     for(auto& pair : mGuardianLevelData)
     {
-        raceIDs.insert((uint8_t)pair.first);
+        // "Level 0" entry uses XP field as an enabled flag
+        if(pair.second->GetLevels(0)->GetNextXP() > 0)
+        {
+            raceIDs.insert((uint8_t)pair.first);
+        }
     }
 
     return raceIDs;

@@ -61,7 +61,8 @@ public:
      *  instance when it is created
      */
     ZoneInstance(uint32_t id, const std::shared_ptr<
-        objects::ServerZoneInstance>& definition, std::set<int32_t>& accessCIDs);
+        objects::ServerZoneInstance>& definition,
+        const std::set<int32_t>& accessCIDs);
 
     /**
      * Explicitly defined copy constructor necessary due to removal
@@ -103,6 +104,13 @@ public:
      * @return Pointer to the zone in the instance
      */
     std::shared_ptr<Zone> GetZone(uint32_t zoneID, uint32_t dynamicMapID);
+
+    /**
+     * Get a zone in the instance by its unique ID
+     * @param uniqueID Unique ID of the zone in the instance
+     * @return Pointer to the zone in the instance
+     */
+    std::shared_ptr<Zone> GetZone(uint32_t uniqueID);
 
     /**
      * Get all client connections in all zones in the instance

@@ -27,11 +27,13 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
-#include "ChannelClientConnection.h"
+#include "ChannelServer.h"
+#include "CharacterManager.h"
 
 using namespace channel;
 
@@ -39,44 +41,18 @@ bool Parsers::PvPCharacterInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    (void)pPacketManager;
-
     if(p.Size() != 0)
     {
         return false;
     }
 
-    /// @todo: implement non-default values
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PVP_CHARACTER_INFO);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
 
-    reply.WriteS32Little(0);    //Unknown
-    reply.WriteS32Little(0);    //Unknown
-    reply.WriteS8(0);    //Unknown
-    reply.WriteS8(0);    //Unknown
-    reply.WriteS32Little(0);    //Unknown
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
 
-    for(int i = 0; i < 2; i++)
-    {
-        reply.WriteS32Little(0);    //Unknown
-        reply.WriteS32Little(0);    //Unknown
-        reply.WriteS32Little(0);    //Unknown
-    }
-
-    reply.WriteS32Little(0);    //Unknown
-    reply.WriteS32Little(0);    //Unknown
-    reply.WriteS32Little(0);    //Unknown
-
-    int32_t unknownCount = 0;
-    reply.WriteS32Little(unknownCount);
-    for(int32_t i = 0; i < unknownCount; i++)
-    {
-        reply.WriteS8(0);    //Unknown
-        reply.WriteS32Little(0);    //Unknown
-    }
-
-    connection->SendPacket(reply);
+    server->GetCharacterManager()->SendPvPCharacterInfo(client);
 
     return true;
 }

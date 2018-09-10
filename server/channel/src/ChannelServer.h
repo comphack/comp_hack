@@ -66,6 +66,7 @@ class CharacterManager;
 class ChatManager;
 class EventManager;
 class FusionManager;
+class MatchManager;
 class SkillManager;
 class TokuseiManager;
 class ZoneManager;
@@ -252,6 +253,12 @@ public:
      * @return Pointer to the FusionManager
      */
     FusionManager* GetFusionManager() const;
+
+    /**
+     * Get a pointer to the match manager.
+     * @return Pointer to the MatchManager
+     */
+    MatchManager* GetMatchManager() const;
 
     /**
      * Get a pointer to the skill manager.
@@ -494,6 +501,9 @@ protected:
 
     /// Pointer to the Fusion Manager.
     FusionManager *mFusionManager;
+
+    /// Pointer to the Match Manager.
+    MatchManager *mMatchManager;
 
     /// Pointer to the Skill Manager.
     SkillManager *mSkillManager;

@@ -142,6 +142,22 @@ public:
         GetZoneInstanceVariantData(uint32_t id);
 
     /**
+     * Get all standard PvP variant IDs associated to a specific PvP type
+     * @param type PvP type
+     * @return Set of all variant IDs associated to the type
+     */
+    std::set<uint32_t> GetStandardPvPVariantIDs(uint8_t type) const;
+
+    /**
+     * Verify if the supplied instance is valid for being a PvP variant
+     * @param instanceID ID of the instance to check
+     * @param definitionManager Pointer to the definition manager to use
+     *  when checking information for the instance zones
+     */
+    bool VerifyPvPInstance(uint32_t instanceID,
+        DefinitionManager* definitionManager);
+
+    /**
      * Get a server zone partial by definition ID
      * @param id Definition ID of a zone partial to retrieve
      * @return Pointer to the server zone partial matching the specified id
@@ -387,6 +403,8 @@ private:
     /// Map of server zone instance variant defintions by definition ID
     std::unordered_map<uint32_t, std::shared_ptr<
         objects::ServerZoneInstanceVariant>> mZoneInstanceVariantData;
+
+    std::unordered_map<uint8_t, std::set<uint32_t>> mStandardPvPVariantIDs;
 
     /// Map of server zone partial defintions by definition ID
     std::unordered_map<uint32_t, std::shared_ptr<

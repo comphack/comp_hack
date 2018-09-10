@@ -34,6 +34,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 #include "PlasmaState.h"
 
 using namespace channel;
@@ -50,23 +51,27 @@ bool Parsers::PlasmaStart::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t plasmaID = p.ReadS32Little();
     int8_t pointID = p.ReadS8();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
+    auto zone = state->GetZone();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
+    auto eventManager = server->GetEventManager();
 
-    auto zone = cState->GetZone();
-    auto pState = std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID));
-
-    std::shared_ptr<PlasmaPoint> point;
+    auto pState = std::dynamic_pointer_cast<PlasmaState>(zone
+        ->GetEntity(plasmaID));
 
     bool success = false;
-    if(pState && pointID)
+    if(pState && pointID && eventManager->StartSystemEvent(client, plasmaID))
     {
-        point = pState->PickPoint((uint32_t)pointID, state->GetWorldCID());
+        auto point = pState->PickPoint((uint32_t)pointID, state->GetWorldCID());
         success = point != nullptr;
+        if(!success)
+        {
+            eventManager->HandleEvent(client, nullptr);
+        }
     }
 
     libcomp::Packet reply;
@@ -75,14 +80,7 @@ bool Parsers::PlasmaStart::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WriteS8(pointID);
     reply.WriteS32Little(success ? 0 : -1);
 
-    client->QueuePacket(reply);
-
-    if(success)
-    {
-        characterManager->SetStatusIcon(client, 4);
-    }
-
-    client->FlushOutgoing();
+    client->SendPacket(reply);
 
     return true;
 }

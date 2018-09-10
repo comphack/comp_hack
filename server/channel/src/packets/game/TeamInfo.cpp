@@ -27,8 +27,12 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ErrorCodes.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+
+// object Includes
+#include <Team.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
@@ -46,18 +50,44 @@ bool Parsers::TeamInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    /// @todo: implement non-default values
+    int32_t teamID = p.ReadS32Little();
 
-    int32_t unknown = p.ReadS32Little();
-    (void)unknown;
-    
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
+    auto state = client->GetClientState();
+    auto team = state->GetTeam();
+
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_INFO);
 
-    reply.WriteS32Little(-1);   //Unknown
-    reply.WriteS8((int8_t)0xF7);    //Unknown
+    if(team && team->GetID() == teamID)
+    {
+        reply.WriteS32Little(teamID);
+        reply.WriteS8((int8_t)TeamErrorCodes_t::SUCCESS);
 
-    connection->SendPacket(reply);
+        reply.WriteS32Little(team->GetLeaderCID());
+        reply.WriteS8(team->GetType());
+
+        // It seems there was more planned for teams at one point but the
+        // client does not respond to any of the following fields
+        reply.WriteS8(0);
+        reply.WriteS8(0);
+        reply.WriteS8(0);
+        reply.WriteS8(0);
+        reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+            "", true);
+        reply.WriteS32Little(0);
+        reply.WriteS8(0);
+
+        reply.WriteS8((int8_t)team->MemberIDsCount());
+    }
+    else
+    {
+        reply.WriteS32Little(teamID);
+        reply.WriteS8((int8_t)TeamErrorCodes_t::INVALID_TEAM);
+    }
+
+    client->SendPacket(reply);
 
     return true;
 }

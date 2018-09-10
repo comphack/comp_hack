@@ -254,16 +254,38 @@ std::shared_ptr<PlasmaPoint> PlasmaState::SetPickResult(uint32_t pointID,
 {
     std::lock_guard<std::mutex> lock(mLock);
 
-    auto it = mPoints.find(pointID);
-    if(it == mPoints.end())
+    std::shared_ptr<PlasmaPoint> point;
+    if(pointID)
     {
-        return nullptr;
-    }
+        // Get specific point
+        auto it = mPoints.find(pointID);
+        if(it == mPoints.end())
+        {
+            return nullptr;
+        }
 
-    auto point = it->second;
-    if(point->mLooterID != looterID)
+        point = it->second;
+        if(point->mLooterID != looterID)
+        {
+            return nullptr;
+        }
+    }
+    else
     {
-        return nullptr;
+        // Get current point
+        for(auto& pair : mPoints)
+        {
+            if(pair.second->mLooterID == looterID)
+            {
+                point = pair.second;
+                break;
+            }
+        }
+
+        if(!point)
+        {
+            return nullptr;
+        }
     }
 
     // The result is a relative distance from the center of the "minigame"
@@ -275,7 +297,7 @@ std::shared_ptr<PlasmaPoint> PlasmaState::SetPickResult(uint32_t pointID,
         point->mHideTime = (uint64_t)(ChannelServer::GetServerTime() +
             120000000);
 
-        mPointHides[pointID] = point->mHideTime;
+        mPointHides[point->GetID()] = point->mHideTime;
     }
     else
     {

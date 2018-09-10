@@ -112,6 +112,25 @@ public:
         const libcomp::String& eventID, int32_t sourceEntityID);
 
     /**
+     * Start a placeholder "system" event that does not end until explicitly
+     * requested. Useful for certain actions that lock the player in place until
+     * they automatically complete.
+     * @param client Pointer to the client the event affects
+     * @param sourceEntityID Optional source of an event to focus on
+     * @return true if the event was started, false if it could not
+     */
+    bool StartSystemEvent(const std::shared_ptr<ChannelClientConnection>& client,
+        int32_t sourceEntityID);
+
+    /**
+     * Stop the client's current event and return the source entity ID if
+     * one existed
+     * @param client Pointer to the client
+     * @return Source entity ID of the interrupted event
+     */
+    int32_t InterruptEvent(const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
      * Request an open menu event be started for the supplied client
      * @param client Pointer to the client connection
      * @param menuType Type of menu being opened
@@ -281,6 +300,13 @@ private:
      * @return true on success, false on failure
      */
     bool HandleEvent(EventContext& ctx);
+
+    /**
+     * Set the overhead status icon of the client entity to indicate they are
+     * involved in an event
+     * @param client Pointer to the client connection
+     */
+    void SetEventStatus(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Evaluate each of the valid condition sets required to start a quest

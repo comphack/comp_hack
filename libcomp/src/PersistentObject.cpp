@@ -55,6 +55,7 @@
 #include "Item.h"
 #include "ItemBox.h"
 #include "PostItem.h"
+#include "PvPData.h"
 #include "Quest.h"
 #include "RegisteredChannel.h"
 #include "RegisteredWorld.h"
@@ -454,6 +455,9 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::PostItem), objects::PostItem::GetMetadata(),
         []() {  return (PersistentObject*)new objects::PostItem(); });
+
+    RegisterType(typeid(objects::PvPData), objects::PvPData::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::PvPData(); });
 
     RegisterType(typeid(objects::Quest), objects::Quest::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Quest(); });

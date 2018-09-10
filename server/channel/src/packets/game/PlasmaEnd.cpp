@@ -28,15 +28,12 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
 #include "ChannelServer.h"
-#include "CharacterManager.h"
-#include "PlasmaState.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -53,41 +50,13 @@ bool Parsers::PlasmaEnd::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t plasmaID = p.ReadS32Little();
     int8_t pointID = p.ReadS8();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto zoneManager = server->GetZoneManager();
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
 
-    auto zone = cState->GetZone();
-    auto pState = std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID));
-
-    libcomp::Packet notify;
-    notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_END);
-    notify.WriteS32Little(plasmaID);
-    notify.WriteS8(pointID);
-    notify.WriteS32Little(1);    // Failed
-
-    client->QueuePacket(notify);
-
-    characterManager->SetStatusIcon(client, 0);
-
-    // Explicitily fail the result
-    auto point = pState
-        ? pState->SetPickResult((uint32_t)pointID, state->GetWorldCID(), -1)
-        : nullptr;
-
-    if(point)
-    {
-        // Send the failure to the zone
-        notify.Clear();
-        pState->GetPointStatusData(notify, (uint32_t)pointID);
-        zoneManager->BroadcastPacket(client, notify, true);
-    }
-
-    client->FlushOutgoing();
+    server->GetZoneManager()->FailPlasma(client, plasmaID, pointID);
 
     return true;
 }

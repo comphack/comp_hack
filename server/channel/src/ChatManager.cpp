@@ -59,6 +59,7 @@
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
 #include <PostItem.h>
+#include <PvPData.h>
 #include <ReportedPlayer.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
@@ -73,6 +74,7 @@
 #include "ClientState.h"
 #include "EventManager.h"
 #include "ManagerConnection.h"
+#include "MatchManager.h"
 #include "SkillManager.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
@@ -85,6 +87,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["addcp"] = &ChatManager::GMCommand_AddCP;
     mGMands["announce"] = &ChatManager::GMCommand_Announce;
     mGMands["ban"] = &ChatManager::GMCommand_Ban;
+    mGMands["bp"] = &ChatManager::GMCommand_BattlePoints;
     mGMands["coin"] = &ChatManager::GMCommand_Coin;
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
@@ -99,6 +102,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["flag"] = &ChatManager::GMCommand_Flag;
     mGMands["fgauge"] = &ChatManager::GMCommand_FusionGauge;
     mGMands["goto"] = &ChatManager::GMCommand_Goto;
+    mGMands["gp"] = &ChatManager::GMCommand_GradePoints;
     mGMands["help"] = &ChatManager::GMCommand_Help;
     mGMands["homepoint"] = &ChatManager::GMCommand_Homepoint;
     mGMands["instance"] = &ChatManager::GMCommand_Instance;
@@ -109,6 +113,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["license"] = &ChatManager::GMCommand_License;
     mGMands["lnc"] = &ChatManager::GMCommand_LNC;
     mGMands["map"] = &ChatManager::GMCommand_Map;
+    mGMands["penalty"] = &ChatManager::GMCommand_PenaltyReset;
     mGMands["plugin"] = &ChatManager::GMCommand_Plugin;
     mGMands["pos"] = &ChatManager::GMCommand_Position;
     mGMands["post"] = &ChatManager::GMCommand_Post;
@@ -191,6 +196,27 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
                 return false;
             }
             break;
+        case ChatType_t::CHAT_TEAM:
+            visibility = ChatVis_t::CHAT_VIS_TEAM;
+            LOG_INFO(libcomp::String("[Team]:  %1: %2\n").Arg(sentFrom)
+                .Arg(message));
+            if(state->GetTeamID())
+            {
+                relayID = (uint32_t)state->GetTeamID();
+                relayMode = PacketRelayMode_t::RELAY_TEAM;
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Team chat attempted by"
+                    " character not in a team: %1\n").Arg(sentFrom));
+                return false;
+            }
+            break;
+        case ChatType_t::CHAT_VERSUS:
+            visibility = ChatVis_t::CHAT_VIS_VERSUS;
+            LOG_INFO(libcomp::String("[Versus]:  %1: %2\n").Arg(sentFrom)
+                .Arg(message));
+            break;
         case ChatType_t::CHAT_SHOUT:
             visibility = ChatVis_t::CHAT_VIS_ZONE;
             LOG_INFO(libcomp::String("[Shout]:  %1: %2\n").Arg(sentFrom)
@@ -224,7 +250,7 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     if(chatChannel == ChatType_t::CHAT_CLAN)
     {
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_CHAT);
-        p.WriteS32Little(state->GetClanID());
+        p.WriteS32Little((int32_t)relayID);
         p.WriteString16Little(state->GetClientStringEncoding(),
             sentFrom, true);
         p.WriteString16Little(state->GetClientStringEncoding(),
@@ -232,7 +258,12 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     }
     else if(chatChannel == ChatType_t::CHAT_TEAM)
     {
-        /// @todo: team chat
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_CHAT);
+        p.WriteS32Little((int32_t)relayID);
+        p.WriteString16Little(state->GetClientStringEncoding(),
+            sentFrom, true);
+        p.WriteString16Little(state->GetClientStringEncoding(),
+            message, true);
     }
     else
     {
@@ -254,6 +285,33 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             break;
         case ChatVis_t::CHAT_VIS_RANGE:
             zoneManager->SendToRange(client, p, true);
+            break;
+        case ChatVis_t::CHAT_VIS_VERSUS:
+            // Get all characters in the instance in the same faction
+            {
+                std::list<std::shared_ptr<ChannelClientConnection>> vsTeam;
+                auto zone = state->GetZone();
+                auto instance = zone ? zone->GetInstance() : nullptr;
+                if(instance)
+                {
+                    auto cState = state->GetCharacterState();
+                    for(auto c : instance->GetConnections())
+                    {
+                        auto cState2 = c->GetClientState()
+                            ->GetCharacterState();
+                        if(cState->SameFaction(cState2))
+                        {
+                            vsTeam.push_back(c);
+                        }
+                    }
+                }
+                else
+                {
+                    vsTeam.push_back(client);
+                }
+
+                ChannelClientConnection::BroadcastPacket(vsTeam, p);
+            }
             break;
         case ChatVis_t::CHAT_VIS_PARTY:
         case ChatVis_t::CHAT_VIS_CLAN:
@@ -298,6 +356,19 @@ bool ChatManager::SendTellMessage(const std::shared_ptr<
         ->SendPacket(relay);
 
     return true;
+}
+
+bool ChatManager::SendTeamChatMessage(const std::shared_ptr<
+    ChannelClientConnection>& client, const libcomp::String& message,
+    int32_t teamID)
+{
+    auto state = client->GetClientState();
+    if(state->GetTeamID() == teamID)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_TEAM, message);
+    }
+
+    return false;
 }
 
 bool ChatManager::HandleGMand(const std::shared_ptr<
@@ -505,6 +576,44 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
     }
 
     return false;
+}
+
+bool ChatManager::GMCommand_BattlePoints(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    int32_t points;
+
+    if(!GetIntegerArg(points, argsCopy) || points < 0)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@bp requires a positive amount be specified"));
+        return false;
+    }
+
+    auto server = mServer.lock();
+
+    auto pvpData = server->GetMatchManager()->GetPvPData(client);
+    if(!pvpData)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "BP could not be updated");
+    }
+
+    // Hack to bump both to the same value
+    pvpData->SetBP(0);
+    pvpData->SetBPTotal(0);
+
+    server->GetCharacterManager()->UpdateBP(client, (int32_t)points, true);
+
+    return true;
 }
 
 bool ChatManager::GMCommand_Coin(const std::shared_ptr<
@@ -1329,6 +1438,73 @@ bool ChatManager::GMCommand_Goto(const std::shared_ptr<
     }
 }
 
+bool ChatManager::GMCommand_GradePoints(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 950))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    auto targetClient = client;
+    auto targetAccount = client->GetClientState()->GetAccountLogin()
+        ->GetAccount().Get();
+    auto server = mServer.lock();
+
+    int32_t gp = 0;
+    if(!GetIntegerArg(gp, argsCopy) || gp < 0)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@gp requires a positive amount be specified"));
+    }
+
+    libcomp::String name;
+    if(GetStringArg(name, argsCopy))
+    {
+        std::shared_ptr<objects::Character> targetCharacter;
+        if(!GetTargetCharacterAccount(name, false, targetCharacter,
+            targetAccount, targetClient))
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+                "Invalid character name supplied for GP command: %1").Arg(name));
+        }
+    }
+
+    auto pvpData = server->GetMatchManager()->GetPvPData(targetClient);
+    if(!pvpData)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "GP could not be updated");
+    }
+
+    if(gp >= 1000)
+    {
+        gp = gp - 1000;
+        pvpData->SetRanked(true);
+    }
+    else
+    {
+        pvpData->SetRanked(false);
+    }
+
+    if(gp > 2000)
+    {
+        gp = 2000;
+    }
+
+    pvpData->SetGP(gp);
+
+    server->GetCharacterManager()->SendPvPCharacterInfo(targetClient);
+
+    server->GetWorldDatabase()->QueueUpdate(pvpData,
+        targetClient->GetClientState()->GetAccountUID());
+
+    return true;
+}
+
 bool ChatManager::GMCommand_Help(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -1346,6 +1522,11 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
         { "ban", {
             "@ban NAME",
             "Bans the account which owns the character NAME.",
+        } },
+        { "bp", {
+            "@bp POINTS",
+            "Set the current character's Battle Point current",
+            "amount and total accumulated points as well."
         } },
         { "coin", {
             "@coin AMOUNT",
@@ -1422,6 +1603,12 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "character with the given name. If not set, the character",
             "with the given name is moved to the player."
         } },
+        { "gp", {
+            "@gp VALUE [NAME]",
+            "Set the Grade Points on the character NAME or to yourself",
+            "if no NAME is specified. Ranked grades are 1000 points",
+            "higher than the value displayed (ex: 1000 for ranked base)."
+        } },
         { "help", {
             "@help [GMAND]",
             "Lists the GMands supported by the server or prints the",
@@ -1469,6 +1656,11 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
         { "map", {
             "@map ID",
             "Adds map for the player with the given ID.",
+        } },
+        { "penalty", {
+            "@penalty [NAME]",
+            "Remove all PvP penalties on the character NAME or to",
+            "yourself if no NAME is specified."
         } },
         { "plugin", {
             "@plugin ID",
@@ -1746,16 +1938,13 @@ bool ChatManager::GMCommand_Instance(const std::shared_ptr<
     }
 
     auto instance = zoneManager->CreateInstance(client, instanceID, variantID);
-    bool success = instance != nullptr;
+    auto zone = zoneManager->GetInstanceStartingZone(instance);
+    bool success = zone != nullptr;
     if(success)
     {
-        uint32_t firstZoneID = *instDef->ZoneIDsBegin();
-        uint32_t firstDynamicMapID = *instDef->DynamicMapIDsBegin();
-
-        auto zoneDef = server->GetServerDataManager()->GetZoneData(
-            firstZoneID, firstDynamicMapID);
-        success = zoneManager->EnterZone(client, firstZoneID,
-            firstDynamicMapID, zoneDef->GetStartingX(),
+        auto zoneDef = zone->GetDefinition();
+        success = zoneManager->EnterZone(client, zoneDef->GetID(),
+            zoneDef->GetDynamicMapID(), zoneDef->GetStartingX(),
             zoneDef->GetStartingY(), zoneDef->GetStartingRotation());
     }
 
@@ -2102,6 +2291,53 @@ bool ChatManager::GMCommand_Map(const std::shared_ptr<
 
     mServer.lock()->GetCharacterManager()->AddMap(client,
         mapID);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_PenaltyReset(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 400))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    auto state = client->GetClientState();
+
+    auto targetClient = client;
+    auto targetCharacter = state->GetCharacterState()->GetEntity();
+    auto targetAccount = state->GetAccountLogin()->GetAccount().Get();
+
+    libcomp::String name;
+    if(GetStringArg(name, argsCopy))
+    {
+        if(!GetTargetCharacterAccount(name, false, targetCharacter,
+            targetAccount, targetClient))
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Invalid character name supplied for"
+                    " penalty reset command: %1").Arg(name));
+        }
+    }
+
+    auto pvpData = targetCharacter
+        ? targetCharacter->GetPvPData().Get() : nullptr;
+    if(pvpData)
+    {
+        // If the character does not have PvPData already, there is nothing
+        // to do
+        auto server = mServer.lock();
+        pvpData->SetPenaltyCount(0);
+
+        server->GetCharacterManager()->SendPvPCharacterInfo(targetClient);
+
+        server->GetWorldDatabase()->QueueUpdate(pvpData,
+            targetClient->GetClientState()->GetAccountUID());
+    }
 
     return true;
 }

@@ -277,6 +277,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/event_playscene.xml
     schema/event_prompt.xml
     schema/item.xml
+    schema/match.xml
     schema/packet_login.xml
     schema/packet_login_reply.xml
     schema/packet_response_code.xml
@@ -293,6 +294,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/serverconfig.xml
     schema/search.xml
     schema/spawn.xml
+    schema/team.xml
     schema/test.xml
     schema/tokusei.xml
     schema/webgame.xml
@@ -432,6 +434,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     CharacterProgress.cpp
     CultureData.h
     CultureData.cpp
+    PvPData.h
+    PvPData.cpp
     DatabaseConfig.h
     DatabaseConfig.cpp
     DatabaseConfigMariaDB.h
@@ -510,6 +514,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ItemBox.cpp
     ItemDrop.h
     ItemDrop.cpp
+    MatchEntry.h
+    MatchEntry.cpp
     ObjectPosition.h
     ObjectPosition.cpp
     PacketLogin.h
@@ -528,6 +534,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     PlasmaSpawn.cpp
     PostItem.h
     PostItem.cpp
+    PvPMatch.h
+    PvPMatch.cpp
     QmpFile.h
     QmpFile.cpp
     QmpElement.h
@@ -574,6 +582,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ServerZoneInstance.cpp
     ServerZoneInstanceVariant.h
     ServerZoneInstanceVariant.cpp
+    PvPInstanceVariant.h
+    PvPInstanceVariant.cpp
     ServerZonePartial.h
     ServerZonePartial.cpp
     ServerZoneSpot.h
@@ -592,6 +602,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     SpawnLocationGroup.cpp
     SpawnRestriction.h
     SpawnRestriction.cpp
+    Team.h
+    Team.cpp
     TestObject.h
     TestObject.cpp
     TestObjectA.h

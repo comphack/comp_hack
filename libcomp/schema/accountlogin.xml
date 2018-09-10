@@ -23,6 +23,7 @@
         <member type="u32" name="ZoneID"/>
         <member type="u32" name="PartyID"/>
         <member type="s32" name="ClanID"/>
+        <member type="s32" name="TeamID"/>
         <member type="enum" name="Status" underlying="int8_t">
             <value num="0">OFFLINE</value>
             <value num="1">AWAY</value>

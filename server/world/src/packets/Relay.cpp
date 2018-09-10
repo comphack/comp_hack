@@ -217,7 +217,29 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         break;
     case PacketRelayMode_t::RELAY_TEAM:
-        /// @todo: implement team relaying
+        {
+            int32_t teamID = p.ReadS32Little();
+            bool includeSource = p.ReadU8() == 1;
+            
+            auto team = characterManager->GetTeam(teamID);
+            if(team)
+            {
+                for(auto cid : team->GetMemberIDs())
+                {
+                    // Team members
+                    auto targetLogin = characterManager->GetCharacterLogin(cid);
+                    if(targetLogin && (includeSource || cid != sourceCID))
+                    {
+                        targetLogins.push_back(targetLogin);
+                    }
+                }
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Attempted to relay a packet for"
+                    " a team that does not exist: %1\n").Arg(teamID));
+            }
+        }
         break;
     default:
         LOG_ERROR("Invalid relay mode specified\n");

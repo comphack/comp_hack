@@ -10,6 +10,13 @@
         </member>
         <member type="SpawnLocation*" name="SpawnArea"
             nulldefault="true"/>
+        <member type="enum" name="PvPSpawn" underlying="uint8_t">
+            <value>NONE</value>
+            <value>BLUE</value>
+            <value>RED</value>
+            <value>BOTH</value>
+        </member>
+        <member type="u8" name="PvPBaseRank"/>
     </object>
     <object name="ServerZoneTrigger" persistent="false">
         <member type="enum" name="Trigger" underlying="uint8_t">
@@ -19,11 +26,14 @@
             <value>ON_SPAWN</value>
             <value>ON_DEATH</value>
             <value>ON_REVIVAL</value>
+            <value>ON_RESPAWN</value>
             <value>ON_FLAG_SET</value>
             <value>ON_TIME</value>
             <value>ON_SYSTEMTIME</value>
             <value>ON_MOONPHASE</value>
             <value>ON_ACTION_DELAY</value>
+            <value>ON_PVP_START</value>
+            <value>ON_PVP_BASE_CAPTURE</value>
         </member>
         <member type="s32" name="Value"/>
         <member type="list" name="Actions">
@@ -44,6 +54,9 @@
         <member type="bool" name="MountDisabled"/>
         <member type="bool" name="BikeDisabled"/>
         <member type="bool" name="BikeBoostEnabled"/>
+        <member type="set" name="ValidTeamTypes">
+            <element type="s8"/>
+        </member>
         <member type="list" name="NPCs">
             <element type="ServerNPC*"/>
         </member>
@@ -123,12 +136,13 @@
         </member>
     </object>
     <object name="ServerZoneInstanceVariant" persistent="false"
-        scriptenabled="true">
+        scriptenabled="true" inherited-construction="true">
         <member type="u32" name="ID"/>
         <member type="u32" name="SubID"/>
         <member type="enum" name="InstanceType" underlying="uint8_t">
             <value>NORMAL</value>
             <value>TIME_TRIAL</value>
+            <value>PVP</value>
             <value>DEMON_ONLY</value>
             <value>DIGITALIZE</value>
         </member>
@@ -137,6 +151,7 @@
         </member>
         <!-- Contextual time limit for count downs, ranks for count ups -->
         <!-- TIME_TRIAL: Participation time => Rank C => Rank B => Rank A -->
+        <!-- PVP: Match time => start delay => base point interval (optional) -->
         <!-- DEMON_ONLY: Max time => Rank A (min) => Rank B (min) =>
              Party member reduction (optional) -->
         <!-- DIGITALIZE: Rank B (max) => Rank A (max) -->
@@ -146,5 +161,33 @@
         <member type="string" name="TimerExpirationEventID"/>
         <member type="u32" name="FixedReward"/>
         <member type="s32" name="RewardModifier"/>
+    </object>
+    <object name="PvPInstanceVariant" baseobject="ServerZoneInstanceVariant"
+        persistent="false" scriptenabled="true">
+        <member type="enum" name="InstanceType" inherited="true" default="PVP"/>
+        <member type="enum" name="MatchType" underlying="int8_t">
+            <value num="-1">CUSTOM</value>
+            <value num="0">FATE</value>
+            <value num="1">VALHALLA</value>
+        </member>
+        <member type="bool" name="SpecialMode"/>
+        <member type="u8" name="MaxPlayers"/>
+        <member type="u8" name="LimitBlue"/>
+        <member type="u8" name="LimitRed"/>
+        <member type="s32" name="PlayerValue"/>
+        <member type="s32" name="DemonValue"/>
+        <member type="u16" name="MaxPoints"/>
+        <member type="u32" name="DefaultInstanceID"/>
+        <member type="u32" name="XPReward"/>
+        <member type="bool" name="BPWinRequired"/>
+        <member type="float" name="BPKillDeathScale" default="1.0"/>
+        <member type="array" name="PreRankedGP" size="2">
+            <element type="u32"/>
+        </member>
+        <member type="float" name="RankedGPRate" default="1.0"/>
+        <member type="list" name="BaseRanks">
+            <element type="u8"/>
+        </member>
+        <member type="u8" name="BaseSpotType" default="14"/>
     </object>
 </objgen>

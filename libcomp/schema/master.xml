@@ -20,6 +20,7 @@
     <include path="demon.xml"/>
     <include path="enemy.xml"/>
     <include path="item.xml"/>
+    <include path="match.xml"/>
     <include path="party.xml"/>
     <include path="qmp_file.xml"/>
     <include path="registeredchannel.xml"/>
@@ -27,6 +28,7 @@
     <include path="reportedplayer.xml"/>
     <include path="search.xml"/>
     <include path="spawn.xml"/>
+    <include path="team.xml"/>
     <include path="tokusei.xml"/>
     <include path="webgame.xml"/>
 

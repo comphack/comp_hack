@@ -13,6 +13,7 @@
             <value>LOOT_BOX</value>
             <value>PLASMA</value>
             <value>CULTURE_MACHINE</value>
+            <value>PVP_BASE</value>
         </member>
 
         <member type="float" name="CurrentX"/>

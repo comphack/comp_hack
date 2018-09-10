@@ -188,6 +188,9 @@ namespace libcomp
 /// Number of names that can be in the blacklist per account, per world.
 #define MAX_BLACKLIST_COUNT (50)
 
+/// Number of characters that can be on a team at once.
+#define MAX_TEAM_SIZE (50)
+
 /// Number of title entries that can be used to build a custom title.
 #define MAX_TITLE_PARTS (13)
 
@@ -247,6 +250,32 @@ namespace libcomp
 
 /// LNC alignment: Chaos
 #define LNC_CHAOS (4)
+
+/// Client selected revival mode to return to the homepoint
+#define REVIVE_HOMEPOINT (104)
+
+/// Client selected revival mode to respawn at the instance entrance
+/// or last zone in point
+#define REVIVE_INSTANCE_RESPAWN (105)
+
+/// Client selected revival mode to consume an item to revive
+#define REVIVE_ITEM (107)
+
+/// Client selected revival mode to allow ally revival
+#define REVIVE_ACCEPT_REVIVAL (108)
+
+/// Client selected revival mode to reject ally revival
+#define REVIVE_DENY_REVIVAL (109)
+
+/// Client selected revival mode to respawn at the PvP start point
+#define REVIVE_PVP_RESPAWN (596)
+
+/// Client selected revival mode to consume an item to revive in
+/// a demon only instance
+#define REVIVE_DEMON_SOLO_ITEM (664)
+
+/// Client selected revival mode to leave a demon only instance
+#define REVIVE_DEMON_SOLO_QUIT (665)
 
 /// Search data index for the requestor's goal
 #define SEARCH_IDX_GOAL (1)
@@ -329,6 +358,18 @@ namespace libcomp
 /// Indicates that a tarot or soul option has been enabled for an item
 /// that by default cannot have an effect added
 #define ENCHANT_ENABLE_EFFECT (0x7FFF)
+
+/// Minimum number of players needed to start a "Fate" PvP match
+#define PVP_FATE_PLAYER_MIN (12)
+
+/// Maximum number of players allowed to start a "Fate" PvP match
+#define PVP_FATE_PLAYER_MAX (30)
+
+/// Minimum number of players needed to start a "Valhalla" PvP match
+#define PVP_VALHALLA_PLAYER_MIN (6)
+
+/// Maximum number of players allowed to start a "Valhalla" PvP match
+#define PVP_VALHALLA_PLAYER_MAX (10)
 
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {

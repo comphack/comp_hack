@@ -309,6 +309,25 @@ private:
         bool isTarget, const std::shared_ptr<ActiveEntityState>& otherState);
 
     /**
+     * Evaluate TokuseiSkillConditions relative to the current skill and
+     * supplied entities.
+     * @param eState Pointer to the entity the effect applies to
+     * @param conditions List of points to the condition definitions
+     * @param pSkill Pointer to the current skill processing state
+     * @param otherState Pointer to the source entity if a target is being
+     *  calculated or the target in question if the source is being calculated.
+     *  If the skill is still being checked validity, supplying no entity
+     *  for this while calculating against the source is valid.
+     * @return 0 if the conditions evaluate to false, 1 if they evaluate to
+     *  true, 2 if they cannot be evaluated yet as the target state condition
+     *  does not apply
+     */
+    uint8_t EvaluateTokuseiSkillConditions(const std::shared_ptr<ActiveEntityState>& eState,
+        const std::list<std::shared_ptr<objects::TokuseiSkillCondition>>& conditions,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+        bool isTarget, const std::shared_ptr<ActiveEntityState>& otherState);
+
+    /**
      * Evaluate a TokuseiSkillCondition relative to the current skill and
      * supplied entities.
      * @param eState Pointer to the entity the effect applies to
@@ -449,6 +468,13 @@ private:
         channel::ProcessingSkill>& pSkill);
 
     /**
+     * Update all PvP instance recorded statistics if the match is active
+     * @param pSkill Skill processing state of the skill being executed
+     */
+    void UpdatePvPStats(const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill);
+
+    /**
      * Determine if the supplied target should receive any negotation
      * related effects from the skill used and apply them if applicable.
      * @param source Pointer to the state of the source entity
@@ -500,6 +526,13 @@ private:
      */
     void HandleFusionGauge(
         const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+    /**
+     * Interrupt any active events associated to the supplied world CIDs as
+     * a result of being hit by a combat skill
+     * @param worldCIDs List of player world CIDs
+     */
+    void InterruptEvents(const std::set<int32_t>& worldCIDs);
 
     /**
      * Toggle a switch skill, not handled by a special handler.

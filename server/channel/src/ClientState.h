@@ -115,6 +115,19 @@ public:
     std::shared_ptr<BazaarState> GetBazaarState();
 
     /**
+     * Check if the state has a current event associated to it. Auto-only
+     * events do not apply here
+     * @return true if an event exists, false if one does not
+     */
+    bool HasActiveEvent() const;
+
+    /**
+     * Get the source entity ID of the state's current event if it exists
+     * @return Entity ID or 0 if not applicable
+     */
+    int32_t GetEventSourceEntityID() const;
+
+    /**
      * Get the shop ID of the state's current event if it is an
      * "open menu" type
      * @return Shop ID or 0 if not applicable
@@ -209,6 +222,13 @@ public:
      * @return Current character's clan ID
      */
     int32_t GetClanID() const;
+
+    /**
+     * Get the current team ID associated to the logged in
+     * character.
+     * @return Current character's team ID
+     */
+    int32_t GetTeamID() const;
 
     /**
      * Get a current party character representation from the

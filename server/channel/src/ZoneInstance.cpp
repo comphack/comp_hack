@@ -69,7 +69,8 @@ ZoneInstance::ZoneInstance()
 }
 
 ZoneInstance::ZoneInstance(uint32_t id, const std::shared_ptr<
-    objects::ServerZoneInstance>& definition, std::set<int32_t>& accessCIDs)
+    objects::ServerZoneInstance>& definition,
+    const std::set<int32_t>& accessCIDs)
 {
     SetID(id);
     SetDefinition(definition);
@@ -139,6 +140,23 @@ std::shared_ptr<Zone> ZoneInstance::GetZone(uint32_t zoneID,
             if(it2 != it->second.end())
             {
                 return it2->second;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+std::shared_ptr<Zone> ZoneInstance::GetZone(uint32_t uniqueID)
+{
+    auto zones = GetZones();
+    for(auto& zdPair : zones)
+    {
+        for(auto& zPair : zdPair.second)
+        {
+            if(zPair.second->GetID() == uniqueID)
+            {
+                return zPair.second;
             }
         }
     }

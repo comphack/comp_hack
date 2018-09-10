@@ -29,6 +29,7 @@
 // channel Includes
 #include <LootBox.h>
 #include <PlasmaSpawn.h>
+#include <PvPBase.h>
 #include <ServerBazaar.h>
 #include <ServerCultureMachineSet.h>
 #include <ServerNPC.h>
@@ -83,6 +84,14 @@ EntityState<objects::PlasmaSpawn>::EntityState(
     : mEntity(entity)
 {
     SetEntityType(EntityType_t::PLASMA);
+}
+
+template<>
+EntityState<objects::PvPBase>::EntityState(
+    const std::shared_ptr<objects::PvPBase>& entity)
+    : mEntity(entity)
+{
+    SetEntityType(EntityType_t::PVP_BASE);
 }
 
 }

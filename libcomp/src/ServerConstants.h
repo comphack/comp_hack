@@ -515,6 +515,10 @@ struct Data
     /// synth melee and synth gun skills
     std::array<uint32_t, 5> SYNTH_SKILLS;
 
+    /// Map of team types to valuables required to create or participate in
+    /// that type
+    std::unordered_map<int8_t, std::list<uint16_t>> TEAM_VALUABLES;
+
     /// Level ranges to use for TriFusion of 3 "dark" family demons
     std::list<std::pair<uint8_t, uint32_t>> TRIFUSION_SPECIAL_DARK;
 

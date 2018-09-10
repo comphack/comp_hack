@@ -41,6 +41,7 @@
 #include <MiSStatusData.h>
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
+#include <PvPInstanceVariant.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerShop.h>
@@ -253,6 +254,37 @@ const std::shared_ptr<objects::ServerZoneInstanceVariant>
 {
     return GetObjectByID<uint32_t, objects::ServerZoneInstanceVariant>(id,
         mZoneInstanceVariantData);
+}
+
+std::set<uint32_t> ServerDataManager::GetStandardPvPVariantIDs(
+    uint8_t type) const
+{
+    auto it = mStandardPvPVariantIDs.find(type);
+    return it != mStandardPvPVariantIDs.end()
+        ? it->second : std::set<uint32_t>();
+}
+
+bool ServerDataManager::VerifyPvPInstance(uint32_t instanceID,
+    DefinitionManager* definitionManager)
+{
+    auto instanceDef = GetZoneInstanceData(instanceID);
+    if(instanceDef && definitionManager)
+    {
+        for(uint32_t zoneID : instanceDef->GetZoneIDs())
+        {
+            auto zoneDef = definitionManager->GetZoneData(zoneID);
+            if(!zoneDef || zoneDef->GetBasic()->GetType() != 7)
+            {
+                LOG_ERROR(libcomp::String("Instance contains non-PvP zones"
+                    " and cannot be used for PvP: %1\n").Arg(instanceID));
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 const std::shared_ptr<objects::ServerZonePartial>
@@ -804,8 +836,8 @@ namespace libcomp
     {
         (void)definitionManager;
 
-        auto variant = std::shared_ptr<objects::ServerZoneInstanceVariant>(
-            new objects::ServerZoneInstanceVariant);
+        auto variant = objects::ServerZoneInstanceVariant::InheritedConstruction(
+            objNode->Attribute("name"));
         if(!variant->Load(doc, *objNode))
         {
             return false;
@@ -840,8 +872,36 @@ namespace libcomp
                 return false;
             }
             break;
+        case objects::ServerZoneInstanceVariant::InstanceType_t::PVP:
+            if(timeCount != 2 && timeCount != 3)
+            {
+                LOG_ERROR(libcomp::String("PVP zone instance variant"
+                    " encountered without 2 or 3 time points specified: %1\n")
+                    .Arg(id));
+                return false;
+            }
+            break;
         default:
             break;
+        }
+
+        auto pvpVar = std::dynamic_pointer_cast<objects::PvPInstanceVariant>(
+            variant);
+        if(pvpVar)
+        {
+            if(definitionManager && pvpVar->GetDefaultInstanceID() &&
+                !VerifyPvPInstance(pvpVar->GetDefaultInstanceID(),
+                    definitionManager))
+            {
+                return false;
+            }
+
+            if(!pvpVar->GetSpecialMode() && pvpVar->GetMatchType() !=
+                objects::PvPInstanceVariant::MatchType_t::CUSTOM)
+            {
+                mStandardPvPVariantIDs[(uint8_t)pvpVar->GetMatchType()]
+                    .insert(id);
+            }
         }
 
         mZoneInstanceVariantData[id] = variant;

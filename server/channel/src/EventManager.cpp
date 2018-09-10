@@ -168,6 +168,42 @@ std::shared_ptr<objects::EventInstance> EventManager::PrepareEvent(
     }
 }
 
+bool EventManager::StartSystemEvent(const std::shared_ptr<
+    ChannelClientConnection>& client, int32_t sourceEntityID)
+{
+    auto state = client->GetClientState();
+    auto eState = state->GetEventState();
+    if(!eState->GetCurrent())
+    {
+        // Create instance with no event
+        auto instance = std::make_shared<objects::EventInstance>();
+        instance->SetSourceEntityID(sourceEntityID);
+
+        eState->SetCurrent(instance);
+        SetEventStatus(client);
+        return true;
+    }
+
+    return false;
+}
+
+int32_t EventManager::InterruptEvent(const std::shared_ptr<
+    ChannelClientConnection>& client)
+{
+    if(!client)
+    {
+        return 0;
+    }
+
+    auto state = client->GetClientState();
+    auto eState = state->GetEventState();
+    auto current = eState->GetCurrent();
+
+    EndEvent(client);
+
+    return current ? current->GetSourceEntityID() : 0;
+}
+
 bool EventManager::RequestMenu(const std::shared_ptr<
     ChannelClientConnection>& client, int32_t menuType, int32_t shopID,
     int32_t sourceEntityID, bool allowInsert)
@@ -226,15 +262,15 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     auto current = eState->GetCurrent();
+    auto event = current ? current->GetEvent() : nullptr;
 
-    if(nullptr == current)
+    if(nullptr == event)
     {
         // End the event in case the client thinks something is actually happening
         EndEvent(client);
         return false;
     }
 
-    auto event = current->GetEvent();
     auto eventType = event->GetEventType();
     switch(eventType)
     {
@@ -3339,42 +3375,41 @@ bool EventManager::HandleEvent(EventContext& ctx)
     }
     else
     {
-        auto server = mServer.lock();
         auto eventType = event->GetEventType();
         switch(eventType)
         {
             case objects::Event::EventType_t::NPC_MESSAGE:
                 if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(client, 4);
+                    SetEventStatus(client);
                     handled = NPCMessage(ctx);
                 }
                 break;
             case objects::Event::EventType_t::EX_NPC_MESSAGE:
                 if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(client, 4);
+                    SetEventStatus(client);
                     handled = ExNPCMessage(ctx);
                 }
                 break;
             case objects::Event::EventType_t::MULTITALK:
                 if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(client, 4);
+                    SetEventStatus(client);
                     handled = Multitalk(ctx);
                 }
                 break;
             case objects::Event::EventType_t::PROMPT:
                 if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(client, 4);
+                    SetEventStatus(client);
                     handled = Prompt(ctx);
                 }
                 break;
             case objects::Event::EventType_t::PLAY_SCENE:
                 if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(client, 4);
+                    SetEventStatus(client);
                     handled = PlayScene(ctx);
                 }
                 break;
@@ -3384,21 +3419,21 @@ bool EventManager::HandleEvent(EventContext& ctx)
             case objects::Event::EventType_t::OPEN_MENU:
                 if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(client, 4);
+                    SetEventStatus(client);
                     handled = OpenMenu(ctx);
                 }
                 break;
             case objects::Event::EventType_t::DIRECTION:
                 if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(client, 4);
+                    SetEventStatus(client);
                     handled = Direction(ctx);
                 }
                 break;
             case objects::Event::EventType_t::ITIME:
                 if(client)
                 {
-                    server->GetCharacterManager()->SetStatusIcon(client, 4);
+                    SetEventStatus(client);
                     handled = ITime(ctx);
                 }
                 break;
@@ -3421,6 +3456,12 @@ bool EventManager::HandleEvent(EventContext& ctx)
     }
 
     return handled;
+}
+
+void EventManager::SetEventStatus(const std::shared_ptr<
+    ChannelClientConnection>& client)
+{
+    mServer.lock()->GetCharacterManager()->SetStatusIcon(client, 4);
 }
 
 void EventManager::HandleNext(EventContext& ctx)

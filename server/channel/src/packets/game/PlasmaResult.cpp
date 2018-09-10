@@ -34,7 +34,6 @@
 
  // channel Includes
 #include "ChannelServer.h"
-#include "CharacterManager.h"
 #include "EventManager.h"
 #include "PlasmaState.h"
 #include "ZoneManager.h"
@@ -56,13 +55,12 @@ bool Parsers::PlasmaResult::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
+    auto zone = state->GetZone();
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+    auto eventManager = server->GetEventManager();
     auto zoneManager = server->GetZoneManager();
 
-    auto zone = cState->GetZone();
     auto pState = std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID));
 
     auto point = pState
@@ -101,12 +99,13 @@ bool Parsers::PlasmaResult::Parse(libcomp::ManagerPacket *pPacketManager,
 
     client->QueuePacket(notify);
 
-    characterManager->SetStatusIcon(client, 0);
+    // End the system event
+    eventManager->HandleEvent(client, nullptr);
 
     if(!failure)
     {
         // Update demon quest if active
-        server->GetEventManager()->UpdateDemonQuestCount(client,
+        eventManager->UpdateDemonQuestCount(client,
             objects::DemonQuest::Type_t::PLASMA,
             (uint32_t)pState->GetEntity()->GetColor(), 1);
     }

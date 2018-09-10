@@ -10,6 +10,7 @@
             <value>REMOVE</value>
             <value>START_TIMER</value>
             <value>STOP_TIMER</value>
+            <value>TEAM_PVP</value>
         </member>
         <member type="u32" name="variantID"/>
         <member type="u32" name="timerID"/>

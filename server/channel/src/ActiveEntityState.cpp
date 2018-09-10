@@ -140,6 +140,12 @@ int32_t ActiveEntityState::GetWorldCID()
     return state ? state->GetWorldCID() : 0;
 }
 
+bool ActiveEntityState::HasActiveEvent() const
+{
+    auto state = ClientState::GetEntityClientState(GetEntityID());
+    return state && state->HasActiveEvent();
+}
+
 std::shared_ptr<objects::EnemyBase> ActiveEntityState::GetEnemyBase() const
 {
     return nullptr;

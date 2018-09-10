@@ -91,10 +91,12 @@
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSkillSpecialParams.h>
+#include <MiSpotData.h>
 #include <MiStatusData.h>
 #include <MiUnionData.h>
 #include <MiUseRestrictionsData.h>
 #include <PlayerExchangeSession.h>
+#include <PvPData.h>
 #include <ServerCultureMachineSet.h>
 #include <ServerZone.h>
 #include <StatusEffect.h>
@@ -400,8 +402,10 @@ void CharacterManager::SendOtherCharacterData(const std::list<std::shared_ptr<
     reply.WriteU8(c->GetTitlePrioritized() ? 1 : 0);
 
     reply.WriteS8(0);   // Unknown
-    reply.WriteS32(0);  // Unknown
-    reply.WriteS8(0);   // Unknown
+
+    auto pvpData = c->GetPvPData().Get();
+    reply.WriteS32(pvpData ? pvpData->GetGP() : 0);
+    reply.WriteS8(pvpData && pvpData->GetPenaltyCount() ? 1 : 0);
 
     reply.WriteS32((int32_t)c->EquippedVACount());
     for(uint8_t i = 0; i <= MAX_VA_INDEX; i++)
@@ -908,6 +912,287 @@ void CharacterManager::SendEntityStats(std::shared_ptr<
     p.WriteS32Little(eState->GetMaxHP());
 
     server->GetZoneManager()->BroadcastPacket(client, p, includeSelf);
+}
+
+void CharacterManager::ReviveCharacter(std::shared_ptr<
+    ChannelClientConnection> client, int32_t revivalMode)
+{
+    const static int8_t REVIVAL_REVIVE_DONE = -1;
+    const static int8_t REVIVAL_REVIVE_AND_WAIT = 1;    // Waits on -1
+    const static int8_t REVIVAL_REVIVE_NORMAL = 3;
+    const static int8_t REVIVAL_REVIVE_ACCEPT = 4;
+    const static int8_t REVIVAL_REVIVE_DENY = 5;
+    const static int8_t REVIVAL_REVIVE_PVP = 7;
+    const static int8_t REVIVAL_DEMON_ONLY_QUIT = 8;
+
+    auto server = mServer.lock();
+    auto zoneManager = server->GetZoneManager();
+
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    auto zone = state->GetZone();
+
+    auto character = cState->GetEntity();
+    auto characterLevel = cState->GetCoreStats()->GetLevel();
+
+    int8_t responseType1 = -1, responseType2 = -1;
+
+    int64_t xpLoss = 0;
+    uint32_t newZoneID = 0;
+    float newX = 0.f, newY = 0.f, newRot = 0.f;
+    std::unordered_map<std::shared_ptr<ActiveEntityState>,
+        int32_t> hpRestores;
+
+    bool xpLossLevel = characterLevel >= 10 && characterLevel < 99;
+    bool triggerRespawn = false;
+    switch(revivalMode)
+    {
+    case REVIVE_HOMEPOINT:
+        if(character->GetHomepointZone())
+        {
+            responseType1 = REVIVAL_REVIVE_AND_WAIT;
+            responseType2 = REVIVAL_REVIVE_DONE;
+            hpRestores[cState] = cState->GetMaxHP();
+
+            // Adjust XP
+            if(xpLossLevel)
+            {
+                size_t lvlIdx = (size_t)characterLevel;
+                xpLoss = (int64_t)floorl(
+                    (double)libcomp::LEVEL_XP_REQUIREMENTS[lvlIdx] *
+                    (double)(0.01 - (0.00005 * characterLevel)) - 0.01);
+            }
+
+            // Change zone
+            newZoneID = character->GetHomepointZone();
+
+            auto zoneDef = server->GetServerDataManager()->GetZoneData(
+                newZoneID, 0);
+            if(zoneDef)
+            {
+                zoneManager->GetSpotPosition(zoneDef->GetDynamicMapID(),
+                    character->GetHomepointSpotID(), newX, newY, newRot);
+            }
+        }
+        break;
+    case REVIVE_INSTANCE_RESPAWN:
+        {
+            responseType1 = REVIVAL_REVIVE_AND_WAIT;
+            responseType2 = REVIVAL_REVIVE_DONE;
+            hpRestores[cState] = (int32_t)floorl((float)cState
+                ->GetMaxHP() * 0.3f);
+
+            // Adjust XP
+            if(xpLossLevel)
+            {
+                size_t lvlIdx = (size_t)characterLevel;
+                xpLoss = (int64_t)floorl(
+                    (double)libcomp::LEVEL_XP_REQUIREMENTS[lvlIdx] *
+                    (double)(0.02 - (0.00005 * characterLevel)));
+            }
+
+            // Move to entrance unless a zone-in spot overrides it
+            auto zoneDef = zone->GetDefinition();
+            newZoneID = zoneDef->GetID();
+            newX = zoneDef->GetStartingX();
+            newY = zoneDef->GetStartingY();
+            newRot = zoneDef->GetStartingRotation();
+
+            uint32_t spotID = state->GetZoneInSpotID();
+            if(spotID)
+            {
+                auto definitionManager = server->GetDefinitionManager();
+                auto zoneData = definitionManager->GetZoneData(
+                    zoneDef->GetID());
+                auto spots = definitionManager->GetSpotData(zoneDef
+                    ->GetDynamicMapID());
+                auto spotIter = spots.find(spotID);
+                if(spotIter != spots.end())
+                {
+                    Point point = zoneManager->GetRandomSpotPoint(
+                        spotIter->second, zoneData);
+                    newX = point.x;
+                    newY = point.y;
+                    newRot = spotIter->second->GetRotation();
+                }
+            }
+
+            triggerRespawn = true;
+        }
+        break;
+    case REVIVE_ITEM:
+        {
+            std::unordered_map<uint32_t, uint32_t> itemMap;
+            itemMap[SVR_CONST.ITEM_BALM_OF_LIFE] = 1;
+
+            if(AddRemoveItems(client, itemMap, false))
+            {
+                responseType1 = REVIVAL_REVIVE_NORMAL;
+                hpRestores[cState] = cState->GetMaxHP();
+            }
+        }
+        break;
+    case REVIVE_ACCEPT_REVIVAL:
+        {
+            responseType1 = REVIVAL_REVIVE_ACCEPT;
+            state->SetAcceptRevival(true);
+        }
+        break;
+    case REVIVE_DENY_REVIVAL:
+        {
+            responseType1 = REVIVAL_REVIVE_DENY;
+            state->SetAcceptRevival(false);
+        }
+        break;
+    case REVIVE_PVP_RESPAWN:
+        {
+            responseType1 = REVIVAL_REVIVE_PVP;
+            zoneManager->GetPvPStartPosition(client, zone, newX, newY, newRot);
+            newZoneID = zone->GetDefinitionID();
+
+            hpRestores[cState] = cState->GetMaxHP();
+            triggerRespawn = true;
+        }
+        break;
+    case REVIVE_DEMON_SOLO_ITEM:
+        {
+            std::unordered_map<uint32_t, uint32_t> itemMap;
+            itemMap[SVR_CONST.ITEM_BALM_OF_LIFE_DEMON] = 1;
+
+            if(AddRemoveItems(client, itemMap, false))
+            {
+                responseType1 = REVIVAL_REVIVE_NORMAL;
+                hpRestores[dState] = dState->GetMaxHP();
+                hpRestores[cState] = 1;
+            }
+        }
+        break;
+    case REVIVE_DEMON_SOLO_QUIT:
+        {
+            responseType1 = REVIVAL_DEMON_ONLY_QUIT;
+
+            auto zoneDef = zone->GetDefinition();
+            newZoneID = zoneDef->GetGroupID();
+
+            zoneDef = server->GetServerDataManager()
+                ->GetZoneData(newZoneID, 0);
+            if(zoneDef)
+            {
+                newX = zoneDef->GetStartingX();
+                newY = zoneDef->GetStartingY();
+                newRot = zoneDef->GetStartingRotation();
+            }
+            else
+            {
+                newZoneID = 0;
+            }
+        }
+        break;
+    default:
+        LOG_ERROR(libcomp::String("Unknown revival mode requested: %1\n")
+            .Arg(revivalMode));
+        break;
+    }
+
+    bool deathPenaltyDisabled = server->GetWorldSharedConfig()
+        ->GetDeathPenaltyDisabled();
+
+    if(xpLoss > 0 && !deathPenaltyDisabled)
+    {
+        auto cs = character->GetCoreStats().Get();
+        if(xpLoss > cs->GetXP())
+        {
+            xpLoss = cs->GetXP();
+        }
+
+        cs->SetXP(cs->GetXP() - xpLoss);
+    }
+
+    if(hpRestores.size() > 0)
+    {
+        std::set<std::shared_ptr<ActiveEntityState>> displayState;
+
+        for(auto& pair : hpRestores)
+        {
+            if(pair.first->SetHPMP(pair.second, -1, false))
+            {
+                displayState.insert(pair.first);
+
+                // Trigger revival actions
+                zoneManager->TriggerZoneActions(zone, { pair.first },
+                    ZoneTrigger_t::ON_REVIVAL, client);
+            }
+        }
+
+        UpdateWorldDisplayState(displayState);
+
+        state->SetAcceptRevival(false);
+    }
+
+    libcomp::Packet reply;
+    if(hpRestores.size() == 0)
+    {
+        GetEntityRevivalPacket(reply, cState, responseType1);
+        zoneManager->BroadcastPacket(client, reply);
+    }
+    else
+    {
+        for(auto& pair : hpRestores)
+        {
+            reply.Clear();
+            GetEntityRevivalPacket(reply, pair.first, responseType1);
+            zoneManager->BroadcastPacket(zone, reply);
+        }
+
+        // Clear death time-outs if active
+        if(cState->GetDeathTimeOut() || dState->GetDeathTimeOut())
+        {
+            zoneManager->UpdateDeathTimeOut(state, -1);
+        }
+    }
+
+    if(newZoneID)
+    {
+        zoneManager->EnterZone(client, newZoneID, 0, newX, newY, newRot, true);
+
+        // Send the revival info to players in the new zone
+        reply.Clear();
+        GetEntityRevivalPacket(reply, cState, responseType1);
+        zoneManager->BroadcastPacket(client, reply, false);
+
+        // Complete the revival
+        if(responseType2 != -1)
+        {
+            reply.Clear();
+            GetEntityRevivalPacket(reply, cState, responseType2);
+            zoneManager->BroadcastPacket(client, reply);
+        }
+    }
+
+    client->FlushOutgoing();
+
+    for(auto& pair : hpRestores)
+    {
+        // If any entity was revived, check HP based effects
+        server->GetTokuseiManager()->Recalculate(pair.first,
+            std::set<TokuseiConditionType> { TokuseiConditionType::CURRENT_HP });
+    }
+
+    // Lastly fire respawn action in new (or same) zone
+    if(triggerRespawn)
+    {
+        auto newZone = zoneManager->GetCurrentZone(client);
+        if(newZone && ((newZoneID && newZone->GetDefinitionID() == newZoneID) ||
+            (!newZoneID && zone->GetDefinitionID() == newZone->GetDefinitionID())))
+        {
+            for(auto& pair : hpRestores)
+            {
+                zoneManager->TriggerZoneActions(newZone, { pair.first },
+                    ZoneTrigger_t::ON_RESPAWN, client);
+            }
+        }
+    }
 }
 
 bool CharacterManager::GetEntityRevivalPacket(libcomp::Packet& p,
@@ -3650,6 +3935,113 @@ void CharacterManager::SendCoinTotal(const std::shared_ptr<
     }
 }
 
+bool CharacterManager::UpdateBP(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int32_t points, bool isAdjust)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto pvpData = character->GetPvPData().Get();
+    if(!pvpData)
+    {
+        return false;
+    }
+
+    int32_t current = pvpData->GetBP();
+    int32_t newPoints = isAdjust ? current + points : points;
+
+    if(newPoints < 0)
+    {
+        newPoints = 0;
+    }
+
+    if(current != newPoints)
+    {
+        pvpData->SetBP(newPoints);
+        if(newPoints > current)
+        {
+            pvpData->SetBPTotal(pvpData->GetBPTotal() +
+                (newPoints - current));
+        }
+
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BP_UPDATE);
+        p.WriteS32Little(newPoints);
+        p.WriteS32Little(pvpData->GetBPTotal());
+
+        client->SendPacket(p);
+
+        mServer.lock()->GetWorldDatabase()->QueueUpdate(pvpData,
+            state->GetAccountUID());
+    }
+
+    return true;
+}
+
+void CharacterManager::SendPvPCharacterInfo(const std::shared_ptr<
+    channel::ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto pvpData = character ? character->GetPvPData().Get() : nullptr;
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_PVP_CHARACTER_INFO);
+
+    if(pvpData)
+    {
+        reply.WriteS32Little(0);
+        reply.WriteS32Little(pvpData->GetGP());
+        reply.WriteS8(pvpData->GetRanked() ? 1 : 0);
+        reply.WriteS8((int8_t)pvpData->GetPenaltyCount());
+        reply.WriteS32Little(pvpData->GetBP());
+
+        auto stats = pvpData->GetModeStats();
+        for(size_t i = 0; i < 2; i++)
+        {
+            size_t offset = (size_t)(i * 3);
+
+            reply.WriteS32Little(stats[offset]);    // Wins
+            reply.WriteS32Little(stats[(size_t)(offset + 1)]);  // Losses
+            reply.WriteS32Little(stats[(size_t)(offset + 2)]);  // Draws
+        }
+
+        reply.WriteS32Little(pvpData->GetKillTotal());
+        reply.WriteS32Little(pvpData->GetDeathTotal());
+        reply.WriteS32Little(pvpData->GetBPTotal());
+
+        auto trophies = pvpData->GetTrophies();
+
+        int32_t trophyCount = 0;
+        for(int32_t trophy : trophies)
+        {
+            if(trophy > 0)
+            {
+                trophyCount++;
+            }
+        }
+
+        reply.WriteS32Little(trophyCount);
+        for(size_t i = 0; i < trophies.size(); i++)
+        {
+            int32_t trophy = trophies[i];
+            if(trophy > 0)
+            {
+                reply.WriteS8((int8_t)(i + 1));
+                reply.WriteS32Little(trophy);
+            }
+        }
+    }
+    else
+    {
+        reply.WriteBlank(54);
+    }
+
+    client->SendPacket(reply);
+}
+
 void CharacterManager::ExperienceGain(const std::shared_ptr<
     channel::ChannelClientConnection>& client, uint64_t xpGain, int32_t entityID)
 {
@@ -5352,6 +5744,8 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
         std::list<std::shared_ptr<ActiveEntityState>> activatedEnemies;
         for(auto e1 : e1s)
         {
+            if(!e1->Ready()) continue;
+
             for(auto e2 : e2s)
             {
                 if(!e2->Ready()) continue;

@@ -39,6 +39,7 @@
 #include <Loot.h>
 #include <LootBox.h>
 #include <PlasmaState.h>
+#include <PvPBase.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
@@ -462,6 +463,12 @@ void Zone::AddPlasma(const std::shared_ptr<PlasmaState>& plasma)
     RegisterEntityState(plasma);
 }
 
+void Zone::AddPvPBase(const std::shared_ptr<PvPBaseState>& base)
+{
+    mPvPBases.push_back(base);
+    RegisterEntityState(base);
+}
+
 std::unordered_map<int32_t,
     std::shared_ptr<ChannelClientConnection>> Zone::GetConnections()
 {
@@ -613,6 +620,117 @@ bool Zone::ClaimBossBox(int32_t id, int32_t looterID)
     return false;
 }
 
+int32_t Zone::OccupyPvPBase(int32_t baseID, int32_t occupierID, bool complete,
+    uint64_t occupyStartTime)
+{
+    auto bState = GetPvPBase(baseID);
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto state = occupierID > 0
+        ? ClientState::GetEntityClientState(occupierID) : nullptr;
+    auto sZone = state ? state->GetZone() : nullptr;
+    if(!bState || (occupierID > 0 && (!sZone || sZone.get() != this)))
+    {
+        // It seems like there should be other error codes but the
+        // client does not respond differently to any of them
+        return -1;
+    }
+
+    auto base = bState->GetEntity();
+    if(occupierID <= 0)
+    {
+        if(complete)
+        {
+            // Remove occupier
+            base->SetOccupyTime(0);
+            base->SetOccupierID(0);
+            return 0;
+        }
+        else
+        {
+            // Cannot start occupation with no entity
+            return -1;
+        }
+    }
+
+    if(!state)
+    {
+        // Player entity required past this point
+        return -1;
+    }
+
+    int32_t teamID = (int32_t)(state->GetCharacterState()
+        ->GetFactionGroup() - 1);
+    if(teamID != 0 && teamID != 1)
+    {
+        // Not on a PvP team
+        return -1;
+    }
+
+    if(!complete)
+    {
+        // Requesting to start occupation
+        if(base->GetOccupierID())
+        {
+            // Already being occupied
+            return -1;
+        }
+
+        if(base->GetTeam() != 2 && (int32_t)base->GetTeam() == teamID)
+        {
+            // Already owned by the same team
+            return -1;
+        }
+
+        // Occupation valid
+        base->SetOccupyTime(ChannelServer::GetServerTime());
+        base->SetOccupierID(occupierID);
+    }
+    else
+    {
+        // Requesting to finish occupation
+        if(base->GetOccupierID() != occupierID)
+        {
+            // Not the current occupier
+            return -1;
+        }
+
+        if(base->GetOccupyTime() != occupyStartTime)
+        {
+            // Time has been reset
+            return -1;
+        }
+
+        base->SetTeam((int8_t)teamID);
+        base->SetOccupierID(0);
+        base->SetBonusCount(0);
+    }
+
+    return 0;
+}
+
+uint16_t Zone::IncreasePvPBaseBonus(int32_t baseID, uint64_t occupyStartTime)
+{
+    auto bState = GetPvPBase(baseID);
+    if(!bState)
+    {
+        return 0;
+    }
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    auto base = bState->GetEntity();
+    if(base->GetOccupyTime() == occupyStartTime)
+    {
+        uint16_t bCount = (uint16_t)(base->GetBonusCount() + 1);
+        base->SetBonusCount(bCount);
+        return bCount;
+    }
+
+    return 0;
+}
+
 const std::list<std::shared_ptr<NPCState>> Zone::GetNPCs() const
 {
     return mNPCs;
@@ -628,6 +746,16 @@ const std::unordered_map<uint32_t,
     std::shared_ptr<PlasmaState>> Zone::GetPlasma() const
 {
     return mPlasma;
+}
+
+std::shared_ptr<PvPBaseState> Zone::GetPvPBase(int32_t id)
+{
+    return std::dynamic_pointer_cast<PvPBaseState>(GetEntity(id));
+}
+
+const std::list<std::shared_ptr<PvPBaseState>> Zone::GetPvPBases() const
+{
+    return mPvPBases;
 }
 
 const std::list<std::shared_ptr<ServerObjectState>> Zone::GetServerObjects() const

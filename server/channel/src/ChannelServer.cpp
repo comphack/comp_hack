@@ -51,6 +51,7 @@
 #include "ManagerClientPacket.h"
 #include "ManagerConnection.h"
 #include "Packets.h"
+#include "MatchManager.h"
 #include "SkillManager.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
@@ -62,9 +63,10 @@ ChannelServer::ChannelServer(const char *szProgram,
     std::shared_ptr<libcomp::ServerCommandLineParser> commandLine) :
     libcomp::BaseServer(szProgram, config, commandLine), mAccountManager(0),
     mActionManager(0), mAIManager(0), mCharacterManager(0), mChatManager(0),
-    mEventManager(0), mSkillManager(0), mZoneManager(0), mDefinitionManager(0),
-    mServerDataManager(0), mRecalcTimeDependents(false), mMaxEntityID(0),
-    mMaxObjectID(0), mTickRunning(true)
+    mEventManager(0), mFusionManager(0), mMatchManager(0), mSkillManager(0),
+    mZoneManager(0), mDefinitionManager(0), mServerDataManager(0),
+    mRecalcTimeDependents(false), mMaxEntityID(0), mMaxObjectID(0),
+    mTickRunning(true)
 {
 }
 
@@ -127,6 +129,8 @@ bool ChannelServer::Initialize()
         to_underlying(InternalPacketCode_t::PACKET_CLAN_UPDATE));
     internalPacketManager->AddParser<Parsers::WebGame>(
         to_underlying(InternalPacketCode_t::PACKET_WEB_GAME));
+    internalPacketManager->AddParser<Parsers::TeamUpdate>(
+        to_underlying(InternalPacketCode_t::PACKET_TEAM_UPDATE));
 
     //Add the managers to the main worker.
     mMainWorker.AddManager(internalPacketManager);
@@ -380,6 +384,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_END));
     clientPacketManager->AddParser<Parsers::BazaarMarketComment>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_COMMENT));
+    clientPacketManager->AddParser<Parsers::StatusIcon>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_STATUS_ICON));
     clientPacketManager->AddParser<Parsers::MapFlag>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MAP_FLAG));
     clientPacketManager->AddParser<Parsers::Analyze>(
@@ -490,6 +496,16 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_REUNION));
     clientPacketManager->AddParser<Parsers::DemonQuestReject>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_REJECT));
+    clientPacketManager->AddParser<Parsers::PvPConfirm>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_CONFIRM));
+    clientPacketManager->AddParser<Parsers::PvPBaseCapture>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_BASE_CAPTURE));
+    clientPacketManager->AddParser<Parsers::PvPBaseLeave>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_BASE_LEAVE));
+    clientPacketManager->AddParser<Parsers::PvPJoin>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_JOIN));
+    clientPacketManager->AddParser<Parsers::PvPCancel>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_CANCEL));
     clientPacketManager->AddParser<Parsers::PvPCharacterInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_CHARACTER_INFO));
     clientPacketManager->AddParser<Parsers::AutoRecoveryUpdate>(
@@ -502,8 +518,24 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_BIKE_BOOST_OFF));
     clientPacketManager->AddParser<Parsers::BikeDismount>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BIKE_DISMOUNT));
+    clientPacketManager->AddParser<Parsers::TeamForm>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_FORM));
+    clientPacketManager->AddParser<Parsers::TeamInvite>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_INVITE));
+    clientPacketManager->AddParser<Parsers::TeamAnswer>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_ANSWER));
+    clientPacketManager->AddParser<Parsers::TeamKick>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_KICK));
+    clientPacketManager->AddParser<Parsers::TeamLeaderUpdate>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_LEADER_UPDATE));
+    clientPacketManager->AddParser<Parsers::TeamLeave>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_LEAVE));
+    clientPacketManager->AddParser<Parsers::TeamChat>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_CHAT));
     clientPacketManager->AddParser<Parsers::TeamInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_INFO));
+    clientPacketManager->AddParser<Parsers::TeamMemberList>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_MEMBER_LIST));
     clientPacketManager->AddParser<Parsers::EquipmentSpiritFuse>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_SPIRIT_FUSE));
     clientPacketManager->AddParser<Parsers::DemonQuestPending>(
@@ -598,6 +630,10 @@ bool ChannelServer::Initialize()
     clientPacketManager->AddParser<Parsers::Unsupported>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_UNSUPPORTED_0232));
     clientPacketManager->AddParser<Parsers::Unsupported>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_WORLD));
+    clientPacketManager->AddParser<Parsers::Unsupported>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_INFO_UPDATE));
+    clientPacketManager->AddParser<Parsers::Unsupported>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_RECEIVED_PLAYER_DATA));
     clientPacketManager->AddParser<Parsers::Unsupported>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_RECEIVED_LISTS));
@@ -617,6 +653,7 @@ bool ChannelServer::Initialize()
     mChatManager = new ChatManager(channelPtr);
     mEventManager = new EventManager(channelPtr);
     mFusionManager = new FusionManager(channelPtr);
+    mMatchManager = new MatchManager(channelPtr);
     mSkillManager = new SkillManager(channelPtr);
     mSyncManager = new ChannelSyncManager(channelPtr);
 
@@ -703,6 +740,7 @@ ChannelServer::~ChannelServer()
     delete mChatManager;
     delete mEventManager;
     delete mFusionManager;
+    delete mMatchManager;
     delete mSkillManager;
     delete mSyncManager;
 	delete mTokuseiManager;
@@ -950,6 +988,11 @@ EventManager* ChannelServer::GetEventManager() const
 FusionManager* ChannelServer::GetFusionManager() const
 {
     return mFusionManager;
+}
+
+MatchManager* ChannelServer::GetMatchManager() const
+{
+    return mMatchManager;
 }
 
 SkillManager* ChannelServer::GetSkillManager() const

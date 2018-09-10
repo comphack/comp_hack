@@ -1324,6 +1324,33 @@
         <element>5789</element>
         <element>5790</element>
     </constant>
+    <constant name="TEAM_VALUABLES">
+        <!-- Format: team type => valuable IDs -->
+        <pair>
+            <key>0</key>
+            <value>171</value>
+        </pair>
+        <pair>
+            <key>2</key>
+            <value>173,174</value>
+        </pair>
+        <pair>
+            <key>3</key>
+            <value>173,175</value>
+        </pair>
+        <pair>
+            <key>10</key>
+            <value>694</value>
+        </pair>
+        <pair>
+            <key>11</key>
+            <value>694</value>
+        </pair>
+        <pair>
+            <key>12</key>
+            <value>694</value>
+        </pair>
+    </constant>
     <constant name="TRIFUSION_SPECIAL_DARK">
         <!-- Format: min level => demon type -->
         <pair>

@@ -144,7 +144,8 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(
+        pPacketManager->GetServer());
 
     bool connectionsFound = false;
     uint8_t mode = p.ReadU8();
@@ -153,7 +154,7 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         ->GatherWorldTargetClients(p, connectionsFound);
     if(!connectionsFound)
     {
-        LOG_ERROR("Connections not found for CharacterLogin.\n");
+        LOG_ERROR("Connections not found for PartyUpdate.\n");
         return false;
     }
 

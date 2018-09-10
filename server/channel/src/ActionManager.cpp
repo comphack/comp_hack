@@ -81,6 +81,7 @@
 #include <ObjectPosition.h>
 #include <Party.h>
 #include <PostItem.h>
+#include <PvPInstanceStats.h>
 #include <Quest.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
@@ -94,6 +95,7 @@
 #include "CharacterManager.h"
 #include "EventManager.h"
 #include "ManagerConnection.h"
+#include "MatchManager.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
 
@@ -1587,9 +1589,16 @@ bool ActionManager::UpdateLNC(ActionContext& ctx)
 
 bool ActionManager::UpdatePoints(ActionContext& ctx)
 {
-    auto act = GetAction<objects::ActionUpdatePoints>(ctx, true);
+    auto act = GetAction<objects::ActionUpdatePoints>(ctx, false);
     if(!act)
     {
+        return false;
+    }
+
+    if(!ctx.Client && act->GetPointType() !=
+        objects::ActionUpdatePoints::PointType_t::PVP_VALUE)
+    {
+        LOG_ERROR("Attempted to set non-player entity points\n");
         return false;
     }
 
@@ -1669,7 +1678,7 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
     case objects::ActionUpdatePoints::PointType_t::COINS:
         {
             mServer.lock()->GetCharacterManager()->UpdateCoinTotal(
-                ctx.Client, (int64_t)act->GetValue(), !act->GetIsSet());
+                ctx.Client, act->GetValue(), !act->GetIsSet());
         }
         break;
     case objects::ActionUpdatePoints::PointType_t::ITIME:
@@ -1730,6 +1739,62 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
         {
             LOG_ERROR("Invalid I-Time ID specified for UpdatePoints action\n");
             return false;
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::BP:
+        {
+            mServer.lock()->GetCharacterManager()->UpdateBP(
+                ctx.Client, (int32_t)act->GetValue(), !act->GetIsSet());
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::PVP_VALUE:
+        {
+            auto instance = ctx.CurrentZone->GetInstance();
+            auto pvpStats = instance ? instance->GetPvPStats() : nullptr;
+            if(pvpStats)
+            {
+                int32_t val = pvpStats->GetEntityValues(ctx.SourceEntityID);
+
+                if(act->GetIsSet())
+                {
+                    val = (int32_t)act->GetValue();
+                }
+                else
+                {
+                    val += (int32_t)act->GetValue();
+                }
+
+                pvpStats->SetEntityValues(ctx.SourceEntityID, val);
+            }
+            else
+            {
+                return false;
+            }
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::PVP_POINTS:
+        {
+            auto state = ctx.Client->GetClientState();
+            auto cState = state->GetCharacterState();
+
+            auto instance = ctx.CurrentZone->GetInstance();
+            if(!MatchManager::PvPActive(instance) || act->GetIsSet())
+            {
+                return false;
+            }
+
+            // Make sure the entity belongs to a PvP team faction group
+            int32_t factionGroup = cState->GetFactionGroup();
+            if(MatchManager::InPvPTeam(cState))
+            {
+                auto matchManager = mServer.lock()->GetMatchManager();
+                if(!matchManager->UpdatePvPPoints(instance->GetID(),
+                    cState->GetEntityID(), -1, (uint8_t)(factionGroup - 1),
+                    (int32_t)act->GetValue(), false))
+                {
+                    return false;
+                }
+            }
         }
         break;
     default:
@@ -1961,17 +2026,12 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
     case objects::ActionZoneInstance::Mode_t::JOIN:
         {
             auto instance = zoneManager->GetInstanceAccess(ctx.Client);
-            auto def = instance ? instance->GetDefinition() : nullptr;
-            if(instance && (act->GetInstanceID() == 0 ||
-                def->GetID() == act->GetInstanceID()))
+            auto zone = zoneManager->GetInstanceStartingZone(instance);
+            if(zone)
             {
-                uint32_t firstZoneID = *def->ZoneIDsBegin();
-                uint32_t firstDynamicMapID = *def->DynamicMapIDsBegin();
-
-                auto zoneDef = server->GetServerDataManager()->GetZoneData(
-                    firstZoneID, firstDynamicMapID);
-                return zoneManager->EnterZone(ctx.Client, firstZoneID,
-                    firstDynamicMapID, zoneDef->GetStartingX(),
+                auto zoneDef = zone->GetDefinition();
+                return zoneManager->EnterZone(ctx.Client, zoneDef->GetID(),
+                    zoneDef->GetDynamicMapID(), zoneDef->GetStartingX(),
                     zoneDef->GetStartingY(), zoneDef->GetStartingRotation());
             }
 
@@ -2076,6 +2136,13 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
             }
 
             return zoneManager->StopInstanceTimer(instance);
+        }
+        break;
+    case objects::ActionZoneInstance::Mode_t::TEAM_PVP:
+        {
+            auto matchManager = server->GetMatchManager();
+            return matchManager->RequestTeamPvPMatch(ctx.Client,
+                act->GetVariantID(), act->GetInstanceID());
         }
         break;
     default:

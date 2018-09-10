@@ -157,6 +157,7 @@ PACKET_PARSER_DECL(SkillForget);            // 0x0186
 PACKET_PARSER_DECL(BazaarMarketEnd);        // 0x0188
 PACKET_PARSER_DECL(BazaarMarketComment);    // 0x018B
 PACKET_PARSER_DECL(DemonAISet);             // 0x0181
+PACKET_PARSER_DECL(StatusIcon);             // 0x0194
 PACKET_PARSER_DECL(MapFlag);                // 0x0197
 PACKET_PARSER_DECL(DemonCompendium);        // 0x019B
 PACKET_PARSER_DECL(ItemRepairMax);          // 0x019F
@@ -210,13 +211,26 @@ PACKET_PARSER_DECL(DemonQuestActive);       // 0x022F
 PACKET_PARSER_DECL(DemonLock);              // 0x0233
 PACKET_PARSER_DECL(DemonReunion);           // 0x0235
 PACKET_PARSER_DECL(DemonQuestReject);       // 0x023A
+PACKET_PARSER_DECL(PvPConfirm);             // 0x023E
+PACKET_PARSER_DECL(PvPBaseCapture);         // 0x0242
+PACKET_PARSER_DECL(PvPBaseLeave);           // 0x0247
+PACKET_PARSER_DECL(PvPJoin);                // 0x0249
+PACKET_PARSER_DECL(PvPCancel);              // 0x024B
 PACKET_PARSER_DECL(PvPCharacterInfo);       // 0x024D
 PACKET_PARSER_DECL(AutoRecoveryUpdate);     // 0x025A
 PACKET_PARSER_DECL(ItemMix);                // 0x025D
 PACKET_PARSER_DECL(BikeBoostOn);            // 0x0260
 PACKET_PARSER_DECL(BikeBoostOff);           // 0x0262
 PACKET_PARSER_DECL(BikeDismount);           // 0x0264
+PACKET_PARSER_DECL(TeamForm);               // 0x0267
+PACKET_PARSER_DECL(TeamInvite);             // 0x0269
+PACKET_PARSER_DECL(TeamAnswer);             // 0x026C
+PACKET_PARSER_DECL(TeamKick);               // 0x0270
+PACKET_PARSER_DECL(TeamLeaderUpdate);       // 0x0273
+PACKET_PARSER_DECL(TeamLeave);              // 0x0276
+PACKET_PARSER_DECL(TeamChat);               // 0x0279
 PACKET_PARSER_DECL(TeamInfo);               // 0x027B
+PACKET_PARSER_DECL(TeamMemberList);         // 0x027D
 PACKET_PARSER_DECL(EquipmentSpiritFuse);    // 0x0287
 PACKET_PARSER_DECL(DemonQuestPending);      // 0x028F
 PACKET_PARSER_DECL(ItemDepoRemote);         // 0x0296
@@ -272,6 +286,7 @@ PACKET_PARSER_DECL(FriendsUpdate);       // 0x1009
 PACKET_PARSER_DECL(PartyUpdate);         // 0x100A
 PACKET_PARSER_DECL(ClanUpdate);          // 0x100B
 PACKET_PARSER_DECL(WebGame);             // 0x100C
+PACKET_PARSER_DECL(TeamUpdate);          // 0x100D
 
 } // namespace Parsers
 

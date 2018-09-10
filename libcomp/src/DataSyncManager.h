@@ -132,14 +132,14 @@ public:
      * Helper function for updating a record useful for ObjectConfig's
      * UpdateHandler property.
      * @param type Type name of the object being removed
-     * @param record Pointer to the record being updated
+     * @param obj Pointer to the record being updated
      * @param isRemove true if the change is a remove, false if it is
      *  an insert or an update
      * @param source Identifier for the server sending the updates
      * @return true if the update was performed without issue
      */
     template<class D, class T> int8_t Update(const libcomp::String& type,
-       const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+        const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
         const libcomp::String& source)
     {
         if(std::is_base_of<DataSyncManager, D>::value)
@@ -149,6 +149,24 @@ public:
         }
 
         return SYNC_FAILED;
+    }
+
+    /**
+     * Helper function for performing a post record update operation useful
+     * for ObjectConfig's SyncCompleteHandler property.
+     * @param type Type name of the object being removed
+     * @param objs List of pointers to the records being updated and a flag
+     *  indicating if the object was being removed
+     * @param source Identifier for the server sending the updates
+     */
+    template<class D, class T> void SyncComplete(const libcomp::String& type,
+        const std::list<std::pair<std::shared_ptr<libcomp::Object>, bool>>& objs,
+        const libcomp::String& source)
+    {
+        if(std::is_base_of<DataSyncManager, D>::value)
+        {
+            ((D*)this)->template SyncComplete<T>(type, objs, source);
+        }
     }
 
 protected:
@@ -214,13 +232,24 @@ protected:
         /// Parameters are as follows:
         /// 1) Object type name
         /// 2) Pointer to the object record
-        /// 3) Indicator that the update is actually a rmove
+        /// 3) Indicator that the update is actually a remove
         /// 4) Identification string for the server sending an update
         /// The return value should use the codes in this header
         /// This is not necessary when the object type is persistent.
         std::function<int8_t(DataSyncManager&, const libcomp::String&,
             const std::shared_ptr<libcomp::Object>&, bool,
             const libcomp::String&)> UpdateHandler;
+
+        /// Optional pointer to the function to use when the the complete
+        /// record set has been synched.
+        /// Parameters are as follows:
+        /// 1) Object type name
+        /// 2) List of pointers to the object record and flags that indicate
+        ///    if the record was removed
+        /// 3) Identification string for the server sending an update
+        std::function<void(DataSyncManager&, const libcomp::String&,
+            const std::list<std::pair<std::shared_ptr<libcomp::Object>, bool>>&,
+            const libcomp::String&)> SyncCompleteHandler;
 
         /// Pointer to the function to use when creating a new record of
         /// the specified type

@@ -274,6 +274,13 @@ public:
     int32_t GetWorldCID();
 
     /**
+     * Check if the entity is associated to a current event. Auto-only
+     * events do not apply here. This affects both types of player entities.
+     * @return true if an event exists, false if one does not
+     */
+    bool HasActiveEvent() const;
+
+    /**
      * Get assigned entity as its EnemyBase representation or null
      * if it does not apply.
      * @return Pointer to the EnemyBase object

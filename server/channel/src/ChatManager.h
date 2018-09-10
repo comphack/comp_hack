@@ -54,6 +54,7 @@ enum ChatType_t : uint16_t
     CHAT_TELL = 46,
     CHAT_SELF = 47,
     CHAT_CLAN = 48,
+    CHAT_VERSUS = 597,
     CHAT_TEAM = 714,
 };
 
@@ -68,6 +69,7 @@ enum ChatVis_t : uint16_t
     CHAT_VIS_ZONE,
     CHAT_VIS_RANGE,
     CHAT_VIS_CLAN,
+    CHAT_VIS_VERSUS,
     CHAT_VIS_TEAM,
 };
 
@@ -110,6 +112,18 @@ public:
     bool SendTellMessage(const std::shared_ptr<
         ChannelClientConnection>& client, const libcomp::String& message,
         const libcomp::String& targetName);
+
+    /**
+     * Send a chat message to the client's team.
+     * @param client Pointer to the client that sent the message
+     * @param message Message to send
+     * @param teamID ID of the team the client belongs to. If it does not
+     *  match, the message will not be sent.
+     * @return true if the message was handled properly, else false
+     */
+    bool SendTeamChatMessage(const std::shared_ptr<
+        ChannelClientConnection>& client, const libcomp::String& message,
+        int32_t teamID);
 
     /**
      * Determine if a message being sent should be handled as a GMand.
@@ -160,6 +174,16 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Ban(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to update the client's Battle Points (BP).
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_BattlePoints(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
@@ -307,6 +331,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to update a specific player's Grade Points (GP).
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_GradePoints(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to display help for other commands.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
@@ -404,6 +438,16 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Map(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to reset a specific player's PvP penalties.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_PenaltyReset(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 

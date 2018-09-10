@@ -48,10 +48,12 @@
 #include <InheritedSkill.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <PvPData.h>
 #include <Quest.h>
 #include <StatusEffect.h>
 #include <WebGameSession.h>
 #include <WorldConfig.h>
+#include <WorldSharedConfig.h>
 
 // world Includes
 #include "AccountManager.h"
@@ -142,8 +144,11 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
     if(lastLogin && today > lastLogin)
     {
         // This is the character's first login of the day, increase
-        // their login points and mark COMP demons with quests
+        // their login points, mark COMP demons with quests and drop GP
         auto stats = character->LoadCoreStats(worldDB);
+
+        // Count any time before today as one day
+        uint32_t daysSinceLogin = ((today - lastLogin) / (24 * 60 * 60)) + 1;
 
         if(!character->GetCOMP().IsNull())
         {
@@ -180,6 +185,26 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
         {
             progress->SetDemonQuestDaily(0);
             worldChanges->Update(progress);
+        }
+
+        int32_t gpLoss = (int32_t)std::dynamic_pointer_cast<
+            objects::WorldConfig>(server->GetConfig())->GetWorldSharedConfig()
+            ->GetDailyGPLoss();
+        if(gpLoss)
+        {
+            // A set number of points is lost every day
+            gpLoss = gpLoss * (int32_t)daysSinceLogin;
+
+            auto pvpData = character->LoadPvPData(worldDB);
+            if(pvpData)
+            {
+                int32_t gp = pvpData->GetGP();
+                if(gp > 0)
+                {
+                    pvpData->SetGP(gp < gpLoss ? 0 : (gp - gpLoss));
+                    worldChanges->Update(pvpData);
+                }
+            }
         }
 
         if(stats->GetLevel() > 0)
@@ -311,7 +336,8 @@ std::shared_ptr<objects::AccountLogin> AccountManager::LogoutUser(
             auto syncManager = server->GetWorldSyncManager();
 
             characterManager->PartyLeave(cLogin, nullptr, true);
-            syncManager->CleanUpCharacterLogin(cLogin->GetWorldCID());
+            characterManager->TeamLeave(cLogin);
+            syncManager->CleanUpCharacterLogin(cLogin->GetWorldCID(), true);
 
             // Notify existing players
             std::list<std::shared_ptr<objects::CharacterLogin>> cLogOuts;
@@ -863,5 +889,7 @@ void AccountManager::Cleanup(const std::shared_ptr<objects::AccountLogin>& login
     // Leave the character once loaded but drop other data referenced by it
     Cleanup<objects::FriendSettings>(cLogin->GetCharacter()
         ->GetFriendSettings().Get());
+    Cleanup<objects::PvPData>(cLogin->GetCharacter()
+        ->GetPvPData().Get());
     Cleanup<objects::Account>(login->GetAccount().Get());
 }

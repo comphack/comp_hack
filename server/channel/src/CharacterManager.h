@@ -173,6 +173,15 @@ public:
         bool includeSelf = true);
 
     /**
+     * Revive the client's character (or demon) in a specific way
+     * @param client Pointer to the client connection
+     * @param revivalMode Specific revival mode to use. Types are listed
+     *  in constants.
+     */
+    void ReviveCharacter(std::shared_ptr<
+        ChannelClientConnection> client, int32_t revivalMode);
+
+    /**
      * Write a revival action notification packet.
      * @param p Packet to write the data to
      * @param entity Entity that has had a revival action performed
@@ -748,6 +757,24 @@ public:
      */
     void SendCoinTotal(const std::shared_ptr<
         channel::ChannelClientConnection>& client, bool isUpdate);
+
+    /**
+     * Update the player's current BP total.
+     * @param client Pointer to the client connection
+     * @param points Set or adjusted BP value to update
+     * @param isAdjust true if the point value should be added to the current
+     *  value, false if it should replace the curent value
+     */
+    bool UpdateBP(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int32_t points,
+        bool isAdjust);
+
+    /**
+     * Send the client character's current PvP information.
+     * @param client Pointer to the client connection
+     */
+    void SendPvPCharacterInfo(const std::shared_ptr<
+        channel::ChannelClientConnection>& client);
 
     /**
      * Update the client's character or demon's experience and level

@@ -9,6 +9,9 @@
             <value>DIGITALIZE_POINTS</value>
             <value>COINS</value>
             <value>ITIME</value>
+            <value>BP</value>
+            <value>PVP_VALUE</value>
+            <value>PVP_POINTS</value>
         </member>
         <member type="s64" name="value"/>
         <member type="s8" name="iTimeID"/>

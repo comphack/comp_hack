@@ -130,6 +130,22 @@ std::shared_ptr<BazaarState> ClientState::GetBazaarState()
     return nullptr;
 }
 
+bool ClientState::HasActiveEvent() const
+{
+    auto eState = GetEventState();
+    auto current = eState ? eState->GetCurrent() : nullptr;
+
+    return current != nullptr;
+}
+
+int32_t ClientState::GetEventSourceEntityID() const
+{
+    auto eState = GetEventState();
+    auto current = eState ? eState->GetCurrent() : nullptr;
+
+    return current ? current->GetSourceEntityID() : 0;
+}
+
 int32_t ClientState::GetCurrentMenuShopID() const
 {
     auto eState = GetEventState();
@@ -283,6 +299,11 @@ uint32_t ClientState::GetPartyID() const
 int32_t ClientState::GetClanID() const
 {
     return GetAccountLogin()->GetCharacterLogin()->GetClanID();
+}
+
+int32_t ClientState::GetTeamID() const
+{
+    return GetAccountLogin()->GetCharacterLogin()->GetTeamID();
 }
 
 std::shared_ptr<objects::PartyCharacter> ClientState::GetPartyCharacter(

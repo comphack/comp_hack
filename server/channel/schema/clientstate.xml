@@ -7,6 +7,7 @@
         <member type="bool" name="AcceptRevival"/>
         <member type="bool" name="BikeBoosting"/>
         <member type="bool" name="InstanceTimerActive"/>
+        <member type="u32" name="LastZoneID"/>
         <member type="u32" name="ZoneInSpotID"/>
         <member type="AccountLogin*" name="AccountLogin"/>
         <member type="AccountWorldData*" name="AccountWorldData"/>
@@ -14,6 +15,8 @@
         <member type="PlayerExchangeSession*" name="ExchangeSession"
             nulldefault="true"/>
         <member type="Party*" name="Party" nulldefault="true"/>
+        <member type="Team*" name="Team" nulldefault="true"/>
+        <member type="PvPMatch*" name="PvPMatch" nulldefault="true"/>
         <member type="s8" name="StatusIcon"/>
         <member type="set" name="QuestTargetEnemies">
             <element type="u32"/>

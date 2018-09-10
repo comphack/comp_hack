@@ -100,6 +100,18 @@ public:
         const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
         const libcomp::String& source);
 
+    /**
+     * Server specific handler for an operation following explicit types of
+     * non-persistent records being synced.
+     * @param type Type name of the object being updated
+     * @param objs List of pointers to the records being updated and a flag
+     *  indicating if the object was being removed
+     * @param source Source server identifier
+     */
+    template<class T> void SyncComplete(const libcomp::String& type,
+        const std::list<std::pair<std::shared_ptr<libcomp::Object>, bool>>& objs,
+        const libcomp::String& source);
+
 private:
     /// Map of all search entries on the world server by type
     libcomp::EnumMap<objects::SearchEntry::Type_t,

@@ -141,6 +141,8 @@ void WorldServer::FinishInitialize()
         InternalPacketCode_t::PACKET_CLAN_UPDATE));
     packetManager->AddParser<Parsers::WebGame>(
         to_underlying(InternalPacketCode_t::PACKET_WEB_GAME));
+    packetManager->AddParser<Parsers::TeamUpdate>(
+        to_underlying(InternalPacketCode_t::PACKET_TEAM_UPDATE));
 
     // Add the managers to the generic workers.
     for(auto worker : mWorkers)
@@ -434,7 +436,11 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
             connectionID++));
 
         // Register the channel connection with the sync manager
-        const std::set<std::string> channelSyncTypes = { "SearchEntry" };
+        const std::set<std::string> channelSyncTypes = {
+                "MatchEntry",
+                "PvPMatch",
+                "SearchEntry"
+            };
 
         if(AssignMessageQueue(connection) &&
             mSyncManager->RegisterConnection(connection, channelSyncTypes))

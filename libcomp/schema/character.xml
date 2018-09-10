@@ -93,6 +93,7 @@
         <member type="FriendSettings*" name="FriendSettings"/>
         <member type="DemonQuest*" name="DemonQuest"/>
         <member type="CultureData*" name="CultureData"/>
+        <member type="PvPData*" name="PvPData"/>
     </object>
     <object name="EntityStats" location="world" scriptenabled="true">
         <member type="pref" name="Entity" key="true" unique="true"/>
@@ -235,5 +236,21 @@
             <element type="u32"/>
         </member>
         <member type="u32" name="ItemCount"/>
+    </object>
+    <object name="PvPData" location="world" scriptenabled="true">
+        <member type="pref" name="Character" key="true" unique="true"/>
+        <member type="s32" name="BP"/>
+        <member type="s32" name="GP" min="0" max="2000"/>
+        <member type="bool" name="Ranked"/>
+        <member type="s32" name="KillTotal"/>
+        <member type="s32" name="DeathTotal"/>
+        <member type="s32" name="BPTotal"/>
+        <member type="array" name="ModeStats" size="6">
+            <element type="s32"/>
+        </member>
+        <member type="array" name="Trophies" size="31">
+            <element type="s32"/>
+        </member>
+        <member type="u8" name="PenaltyCount"/>
     </object>
 </objgen>

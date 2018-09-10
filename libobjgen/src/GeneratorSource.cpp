@@ -416,7 +416,7 @@ std::string GeneratorSource::Generate(const MetaObject& obj)
             ss << code;
             ss << Tab(2) << "if(!status)" << std::endl;
             ss << Tab(2) << "{" << std::endl;
-            ss << Tab(3) << "LOG_ERROR(\"Failed to load memeber '"
+            ss << Tab(3) << "LOG_ERROR(\"Failed to load member '"
             << var->GetName() << "' for object '" << obj.GetName()
                 << "'\\n\");" << std::endl;
             ss << Tab(2) << "}" << std::endl;

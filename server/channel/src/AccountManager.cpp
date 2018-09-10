@@ -55,6 +55,8 @@
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiPossessionData.h>
+#include <PvPData.h>
+#include <PvPMatch.h>
 #include <Quest.h>
 #include <ServerZone.h>
 
@@ -64,6 +66,7 @@
 #include "CharacterManager.h"
 #include "EventManager.h"
 #include "ManagerConnection.h"
+#include "MatchManager.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
 
@@ -275,6 +278,14 @@ void AccountManager::Logout(const std::shared_ptr<
         {
             // Active digitalize must be completed
             server->GetCharacterManager()->DigitalizeEnd(client);
+        }
+
+        auto pvpMatch = state->GetPvPMatch();
+        if(pvpMatch)
+        {
+            // Reject any pending PvP matches
+            server->GetMatchManager()->PvPInviteReply(client,
+                pvpMatch->GetID(), false);
         }
 
         if(!LogoutCharacter(state))
@@ -531,6 +542,16 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 .Arg(state->GetAccountUID().ToString()));
             return false;
         }
+    }
+
+    // PvP
+    if(!character->GetPvPData().IsNull() &&
+        !character->LoadPvPData(db))
+    {
+        LOG_ERROR(libcomp::String("PvPData could"
+            " not be initialized for account: %1\n")
+            .Arg(state->GetAccountUID().ToString()));
+        return false;
     }
 
     // Item boxes and items

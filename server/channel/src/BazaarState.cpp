@@ -134,7 +134,6 @@ bool BazaarState::DropItemFromMarket(ClientState* state, int8_t srcSlot, int64_t
     }
 
     auto eventState = state->GetEventState();
-    auto currentEvent = eventState ? eventState->GetCurrent() : nullptr;
     uint32_t eventMarketID = (uint32_t)state->GetCurrentMenuShopID();
 
     auto bState = state->GetBazaarState();

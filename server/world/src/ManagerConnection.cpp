@@ -161,6 +161,7 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
                         auto cLogin = logOut->GetCharacterLogin();
 
                         characterManager->PartyLeave(cLogin, nullptr, true);
+                        characterManager->TeamLeave(cLogin);
 
                         flushSyncData |= syncManager->CleanUpCharacterLogin(
                             cLogin->GetWorldCID());

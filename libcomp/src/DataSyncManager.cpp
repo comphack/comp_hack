@@ -136,194 +136,233 @@ bool DataSyncManager::SyncIncoming(libcomp::ReadOnlyPacket& p,
         return false;
     }
 
-    std::lock_guard<std::mutex> lock(mLock);
+    std::list<std::pair<std::shared_ptr<libcomp::Object>, bool>> completed;
 
-    String lType(p.ReadString16Little(libcomp::Convert::ENCODING_UTF8,
-        true));
-
-    std::string type(lType.C());
-
-    auto configIter = mRegisteredTypes.find(type);
-    if(configIter == mRegisteredTypes.end())
+    std::shared_ptr<libcomp::DataSyncManager::ObjectConfig> config;
     {
-        LOG_WARNING(libcomp::String("Ignoring sync request for unregistered"
-            " type: %1\n").Arg(lType));
-        return true;
-    }
+        std::lock_guard<std::mutex> lock(mLock);
 
-    bool isPersistent = false;
-    auto typeHash = PersistentObject::GetTypeHashByName(type, isPersistent);
+        String lType(p.ReadString16Little(libcomp::Convert::ENCODING_UTF8,
+            true));
+
+        std::string type(lType.C());
+
+        auto configIter = mRegisteredTypes.find(type);
+        if(configIter == mRegisteredTypes.end())
+        {
+            LOG_WARNING(libcomp::String("Ignoring sync request for"
+                " unregistered type: %1\n").Arg(lType));
+            return true;
+        }
+
+        config = configIter->second;
+
+        bool isPersistent = false;
+        auto typeHash = PersistentObject::GetTypeHashByName(type,
+            isPersistent);
     
-    if(!isPersistent)
-    {
-        if(!configIter->second->BuildHandler)
+        if(!isPersistent)
         {
-            LOG_ERROR(libcomp::String("Non-persistent object type without a"
-                " registered build handler encountered: %1\n").Arg(type));
-            return false;
-        }
-        else if(!configIter->second->UpdateHandler)
-        {
-            LOG_ERROR(libcomp::String("Object type without a registered"
-                " update handler encountered: %1\n").Arg(type));
-            return false;
-        }
-    }
-
-    if(p.Left() < 4)
-    {
-        return false;
-    }
-
-    // Read updates
-    uint16_t recordsCount = p.ReadU16Little();
-
-    std::list<std::shared_ptr<libcomp::Object>> records;
-    if(isPersistent)
-    {
-        // Load by UUID
-        for(uint16_t k = 0; k < recordsCount; k++)
-        {
-            String uidStr(p.ReadString16Little(libcomp::Convert::ENCODING_UTF8,
-                true));
-
-            libobjgen::UUID uid(uidStr.C());
-            if(!uid.IsNull())
+            if(!config->BuildHandler)
             {
-                auto obj = PersistentObject::LoadObjectByUUID(typeHash,
-                    mRegisteredTypes[type]->DB, uid, true);
-                if(obj)
-                {
-                    records.push_back(obj);
-                }
-            }
-            else
-            {
-                // Skip null UIDs
-                LOG_ERROR(libcomp::String("Null UID encountered for"
-                    " updated sync record of type: %1\n").Arg(type));
-            }
-        }
-    }
-    else
-    {
-        // Load from datastream
-        for(uint16_t k = 0; k < recordsCount; k++)
-        {
-            auto obj = configIter->second->BuildHandler(*this);
-            if(!obj->LoadPacket(p, false))
-            {
-                LOG_ERROR(libcomp::String("Invalid update data stream received"
-                    " from non-persistent object of type: %1\n").Arg(type));
+                LOG_ERROR(libcomp::String("Non-persistent object type without"
+                    " a registered build handler encountered: %1\n")
+                    .Arg(type));
                 return false;
             }
-
-            records.push_back(obj);
-        }
-    }
-
-    if(configIter->second->UpdateHandler)
-    {
-        for(auto obj : records)
-        {
-            int8_t result = configIter->second->UpdateHandler(*this, lType,
-                obj, false, source);
-            if(result == SYNC_UPDATED)
+            else if(!config->UpdateHandler && !config->SyncCompleteHandler)
             {
-                if(configIter->second->ServerOwned)
-                {
-                    // Queue up to report to the other server(s)
-                    mOutboundUpdates[type].insert(obj);
-                }
-            }
-            else if(result == SYNC_FAILED)
-            {
-                LOG_ERROR(libcomp::String("Failed to sync update of record"
-                    " of type: %1\n").Arg(type));
-            }
-        }
-    }
-
-    if(p.Left() < 2)
-    {
-        return false;
-    }
-
-    // Read removes
-    recordsCount = p.ReadU16Little();
-
-    records.clear();
-    if(isPersistent)
-    {
-        auto db = configIter->second->DB;
-
-        // Get by UUID and clear from queues if found
-        // If the record is server owned, attempt to load it
-        for(uint16_t k = 0; k < recordsCount; k++)
-        {
-            String uidStr(p.ReadString16Little(libcomp::Convert::ENCODING_UTF8,
-                true));
-
-            libobjgen::UUID uid(uidStr.C());
-            if(!uid.IsNull())
-            {
-                auto obj = configIter->second->ServerOwned && db
-                    ? PersistentObject::LoadObjectByUUID(typeHash, db, uid)
-                    : PersistentObject::GetObjectByUUID(uid);
-                if(obj)
-                {
-                    // Remove from the queues
-                    mOutboundUpdates[type].erase(obj);
-                    mOutboundRemoves[type].erase(obj);
-
-                    records.push_back(obj);
-                }
-            }
-            else
-            {
-                // Skip null UIDs
-                LOG_ERROR(libcomp::String("Null UID encountered for"
-                    " removed sync record of type: %1\n").Arg(type));
-            }
-        }
-    }
-    else
-    {
-        // Load from datastream
-        for(uint16_t k = 0; k < recordsCount; k++)
-        {
-            auto obj = configIter->second->BuildHandler(*this);
-            if(!obj->LoadPacket(p, false))
-            {
-                LOG_ERROR(libcomp::String("Invalid remove data stream received"
-                    " from non-persistent object of type: %1\n").Arg(type));
+                LOG_ERROR(libcomp::String("Object type without a registered"
+                    " update or sync complete handler encountered: %1\n")
+                    .Arg(type));
                 return false;
             }
+        }
 
-            records.push_back(obj);
+        if(p.Left() < 4)
+        {
+            return false;
+        }
+
+        // Read updates
+        uint16_t recordsCount = p.ReadU16Little();
+
+        std::list<std::shared_ptr<libcomp::Object>> records;
+        if(isPersistent)
+        {
+            // Load by UUID
+            for(uint16_t k = 0; k < recordsCount; k++)
+            {
+                String uidStr(p.ReadString16Little(
+                    libcomp::Convert::ENCODING_UTF8, true));
+
+                libobjgen::UUID uid(uidStr.C());
+                if(!uid.IsNull())
+                {
+                    auto obj = PersistentObject::LoadObjectByUUID(typeHash,
+                        mRegisteredTypes[type]->DB, uid, true);
+                    if(obj)
+                    {
+                        records.push_back(obj);
+                    }
+                }
+                else
+                {
+                    // Skip null UIDs
+                    LOG_ERROR(libcomp::String("Null UID encountered for"
+                        " updated sync record of type: %1\n").Arg(type));
+                }
+            }
+        }
+        else
+        {
+            // Load from datastream
+            for(uint16_t k = 0; k < recordsCount; k++)
+            {
+                auto obj = config->BuildHandler(*this);
+                if(!obj->LoadPacket(p, false))
+                {
+                    LOG_ERROR(libcomp::String("Invalid update data stream"
+                        " received from non-persistent object of type: %1\n")
+                        .Arg(type));
+                    return false;
+                }
+
+                records.push_back(obj);
+            }
+        }
+
+        bool customHandler = config->UpdateHandler != nullptr;
+        bool completeHandler = config->SyncCompleteHandler != nullptr;
+        if(customHandler || completeHandler)
+        {
+            for(auto obj : records)
+            {
+                bool complete = true;
+                if(customHandler)
+                {
+                    int8_t result = config->UpdateHandler(*this, lType, obj,
+                        false, source);
+                    if(result == SYNC_UPDATED)
+                    {
+                        if(config->ServerOwned)
+                        {
+                            // Queue up to report to the other server(s)
+                            mOutboundUpdates[type].insert(obj);
+                        }
+                    }
+                    else if(result == SYNC_FAILED)
+                    {
+                        LOG_ERROR(libcomp::String("Failed to sync update of"
+                            " record of type: %1\n").Arg(type));
+                        complete = false;
+                    }
+                }
+
+                if(complete && completeHandler)
+                {
+                    completed.push_back(std::make_pair(obj, false));
+                }
+            }
+        }
+
+        if(p.Left() < 2)
+        {
+            return false;
+        }
+
+        // Read removes
+        recordsCount = p.ReadU16Little();
+
+        records.clear();
+        if(isPersistent)
+        {
+            auto db = config->DB;
+
+            // Get by UUID and clear from queues if found
+            // If the record is server owned, attempt to load it
+            for(uint16_t k = 0; k < recordsCount; k++)
+            {
+                String uidStr(p.ReadString16Little(
+                    libcomp::Convert::ENCODING_UTF8, true));
+
+                libobjgen::UUID uid(uidStr.C());
+                if(!uid.IsNull())
+                {
+                    auto obj = config->ServerOwned && db
+                        ? PersistentObject::LoadObjectByUUID(typeHash, db, uid)
+                        : PersistentObject::GetObjectByUUID(uid);
+                    if(obj)
+                    {
+                        // Remove from the queues
+                        mOutboundUpdates[type].erase(obj);
+                        mOutboundRemoves[type].erase(obj);
+
+                        records.push_back(obj);
+                    }
+                }
+                else
+                {
+                    // Skip null UIDs
+                    LOG_ERROR(libcomp::String("Null UID encountered for"
+                        " removed sync record of type: %1\n").Arg(type));
+                }
+            }
+        }
+        else
+        {
+            // Load from datastream
+            for(uint16_t k = 0; k < recordsCount; k++)
+            {
+                auto obj = config->BuildHandler(*this);
+                if(!obj->LoadPacket(p, false))
+                {
+                    LOG_ERROR(libcomp::String("Invalid remove data stream"
+                        " received from non-persistent object of type: %1\n")
+                        .Arg(type));
+                    return false;
+                }
+
+                records.push_back(obj);
+            }
+        }
+
+        if(customHandler || completeHandler)
+        {
+            for(auto obj : records)
+            {
+                bool complete = true;
+                if(customHandler)
+                {
+                    int8_t result = config->UpdateHandler(*this, lType, obj,
+                        true, source);
+                    if(result == SYNC_UPDATED)
+                    {
+                        if(config->ServerOwned)
+                        {
+                            // Queue up to report to the other server(s)
+                            mOutboundRemoves[type].insert(obj);
+                        }
+                    }
+                    else if(result == SYNC_FAILED)
+                    {
+                        LOG_ERROR(libcomp::String("Failed to sync removal of"
+                            " record of type: %1\n").Arg(type));
+                        complete = false;
+                    }
+                }
+
+                if(complete && completeHandler)
+                {
+                    completed.push_back(std::make_pair(obj, true));
+                }
+            }
         }
     }
 
-    if(configIter->second->UpdateHandler)
+    if(config->SyncCompleteHandler)
     {
-        for(auto obj : records)
-        {
-            int8_t result = configIter->second->UpdateHandler(*this, lType,
-                obj, true, source);
-            if(result == SYNC_UPDATED)
-            {
-                if(configIter->second->ServerOwned)
-                {
-                    // Queue up to report to the other server(s)
-                    mOutboundRemoves[type].insert(obj);
-                }
-            }
-            else if(result == SYNC_FAILED)
-            {
-                LOG_ERROR(libcomp::String("Failed to sync removal of record"
-                    " of type: %1\n").Arg(type));
-            }
-        }
+        config->SyncCompleteHandler(*this, config->Name, completed, source);
     }
 
     return true;

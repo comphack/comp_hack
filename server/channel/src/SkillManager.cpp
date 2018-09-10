@@ -105,6 +105,8 @@
 #include <MiTargetData.h>
 #include <MiUnionData.h>
 #include <Party.h>
+#include <PvPInstanceStats.h>
+#include <PvPPlayerStats.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
 #include <Spawn.h>
@@ -121,6 +123,7 @@
 #include "CharacterManager.h"
 #include "EventManager.h"
 #include "ManagerConnection.h"
+#include "MatchManager.h"
 #include "TokuseiManager.h"
 #include "Zone.h"
 #include "ZoneInstance.h"
@@ -201,6 +204,7 @@ public:
     std::unordered_map<int32_t, uint16_t> OffenseValues;
     bool IsItemSkill = false;
     bool Reflected = false;
+    bool InPvP = false;
 
     std::shared_ptr<Zone> CurrentZone;
     std::shared_ptr<ActiveEntityState> EffectiveSource;
@@ -241,6 +245,7 @@ public:
     bool HitAbsorb = false;
     bool CanHitstun = false;
     bool CanKnockback = false;
+    bool AutoProtect = false;
     uint16_t GuardModifier = 0;
 
     uint8_t EffectCancellations = 0;
@@ -1585,7 +1590,21 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
             {
                 auto bullets = character->GetEquippedItems((size_t)
                     objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
-                if(!bullets || bullets->GetStackSize() < bulletCost)
+                if(bullets && bullets->GetRentalExpiration())
+                {
+                    // If the bullets are time limited and active, cost
+                    // becomes 0. If they are not active, the cost cannot
+                    // be paid.
+                    if(bullets->GetRentalExpiration() > (uint32_t)std::time(0))
+                    {
+                        bulletCost = 0;
+                    }
+                    else
+                    {
+                        canPay = false;
+                    }
+                }
+                else if(!bullets || bullets->GetStackSize() < bulletCost)
                 {
                     canPay = false;
                 }
@@ -1994,7 +2013,6 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     }
 
     // Filter out invalid effective targets (including the primary target)
-    /// @todo: implement a more complex faction system for PvP etc
     auto validType = skillRange->GetValidType();
     switch(validType)
     {
@@ -3020,6 +3038,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     std::set<std::shared_ptr<ActiveEntityState>> revived;
     std::set<std::shared_ptr<ActiveEntityState>> killed;
     std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+    std::set<int32_t> interruptEvent;
 
     bool playerSkill = false;
     switch(source->GetEntityType())
@@ -3072,25 +3091,43 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             targetKilled = true;
         }
 
-        if(playerEntity && (targetRevived || targetKilled ||
-            triggers.find(TokuseiConditionType::CURRENT_HP) != triggers.end() ||
-            triggers.find(TokuseiConditionType::CURRENT_MP) != triggers.end()))
+        if(playerEntity)
         {
-            displayStateModified.insert(eState);
+            // If a player entity is hit by a combat skill while in an event,
+            // whether it did damage or not, interrupt the event
+            if(skill.Definition->GetBasic()->GetCombatSkill() &&
+                eState->HasActiveEvent())
+            {
+                interruptEvent.insert(eState->GetWorldCID());
+            }
+
+            if(targetRevived || targetKilled ||
+                triggers.find(TokuseiConditionType::CURRENT_HP) != triggers.end() ||
+                triggers.find(TokuseiConditionType::CURRENT_MP) != triggers.end())
+            {
+                displayStateModified.insert(eState);
+            }
         }
     }
 
     // Process all additional effects
+    if(interruptEvent.size() > 0)
+    {
+        InterruptEvents(interruptEvent);
+    }
 
     if(playerSkill)
     {
         HandleFusionGauge(pSkill);
     }
 
-    // Update durability
-    for(auto entity : durabilityHit)
+    // Update durability (ignore for PvP)
+    if(!pSkill->InPvP)
     {
-        HandleDurabilityDamage(entity, pSkill);
+        for(auto entity : durabilityHit)
+        {
+            HandleDurabilityDamage(entity, pSkill);
+        }
     }
 
     // Update inherited skills
@@ -3104,7 +3141,6 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     // Report each revived entity
     if(revived.size() > 0)
     {
-        bool demonOnlyInst = zone->GetInstanceType() == InstanceType_t::DEMON_ONLY;
         for(auto entity : revived)
         {
             libcomp::Packet p;
@@ -3113,25 +3149,27 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 zoneManager->BroadcastPacket(zone, p);
             }
 
-            // If in a demon only instance, clear the death time-out
-            if(demonOnlyInst && partnerDemons.find(entity) != partnerDemons.end())
+            // Clear the death time-out if one exists
+            if(entity->GetDeathTimeOut())
             {
-                auto demonCState = ClientState::GetEntityClientState(
+                auto entityCState = ClientState::GetEntityClientState(
                     entity->GetEntityID());
-                zoneManager->UpdateDeathTimeOut(demonCState, -1);
+                zoneManager->UpdateDeathTimeOut(entityCState, -1);
             }
         }
 
-        // Trigger revival actions
-        if(zone->RevivalTriggersCount() > 0)
+        // Trigger revival actions (but not respawn)
+        auto reviveTriggers = zoneManager->GetZoneTriggers(zone,
+            ZoneTrigger_t::ON_REVIVAL);
+        if(reviveTriggers.size() > 0)
         {
             auto managerConnection = server->GetManagerConnection();
             for(auto entity : revived)
             {
                 auto client = managerConnection->GetEntityClient(entity
                     ->GetEntityID());
-                zoneManager->TriggerZoneActions(zone, { entity },
-                    ZoneTrigger_t::ON_DEATH, client);
+                zoneManager->HandleZoneTriggers(zone, reviveTriggers, entity,
+                    client);
             }
         }
     }
@@ -3173,6 +3211,8 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
     skill->EffectiveDependencyType = skillData->GetBasic()->GetDependencyType();
     skill->EffectiveSource = source;
     skill->CurrentZone = source->GetZone();
+    skill->InPvP = skill->CurrentZone &&
+        skill->CurrentZone->GetInstanceType() == InstanceType_t::PVP;
     skill->IsItemSkill = skillData->GetBasic()->GetFamily() == 2 ||
         skillData->GetBasic()->GetFamily() == 6;
     skill->FunctionID = skillData->GetDamage()->GetFunctionID();
@@ -3361,27 +3401,22 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
             auto tokusei = definitionManager->GetTokuseiData(pair.first);
             if(tokusei)
             {
-                bool add = true;
-                bool canAdd = true;
-                for(auto condition : tokusei->GetSkillConditions())
+                switch(EvaluateTokuseiSkillConditions(eState, tokusei
+                    ->GetSkillConditions(), pSkill, isTarget, otherState))
                 {
-                    canAdd &= condition->GetTargetCondition() == isTarget;
-                    if(!canAdd || !EvaluateTokuseiSkillCondition(eState,
-                        condition, pSkill, otherState))
-                    {
-                        add = false;
-                        break;
-                    }
-                }
-
-                if(add)
-                {
+                case 1:
+                    // Conditions passed
                     effectiveTokusei[tokusei->GetID()] = pair.second;
                     modified = true;
-                }
-                else if(canAdd)
-                {
+                    break;
+                case 2:
+                    // Conditions cannot be evaluated
                     stillPendingSkillTokusei[tokusei->GetID()] = pair.second;
+                    break;
+                case 0:
+                default:
+                    // Conditions did not pass
+                    break;
                 }
             }
         }
@@ -3412,7 +3447,71 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
     return calcState;
 }
 
-bool SkillManager::EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEntityState>& eState,
+uint8_t SkillManager::EvaluateTokuseiSkillConditions(
+    const std::shared_ptr<ActiveEntityState>& eState,
+    const std::list<std::shared_ptr<objects::TokuseiSkillCondition>>& conditions,
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+    bool isTarget, const std::shared_ptr<ActiveEntityState>& otherState)
+{
+    // Just like non-skill conditions, compare singular (and) and option group
+    // (or) conditions and only return 0 if the entire clause evaluates to
+    // true. If at any point an invalid target condition is encountered, the
+    // conditions cannot be evaluated until this changes.
+    std::unordered_map<uint8_t, bool> optionGroups;
+    for(auto condition : conditions)
+    {
+        if(condition->GetTargetCondition() != isTarget)
+        {
+            // Cannot be determined right now
+            return 2;
+        }
+
+        bool result = false;
+
+        // If the option group has already had a condition pass, skip it
+        uint8_t optionGroupID = condition->GetOptionGroupID();
+        if(optionGroupID != 0)
+        {
+            if(optionGroups.find(optionGroupID) == optionGroups.end())
+            {
+                optionGroups[optionGroupID] = false;
+            }
+            else
+            {
+                result = optionGroups[optionGroupID];
+            }
+        }
+
+        if(!result)
+        {
+            result = EvaluateTokuseiSkillCondition(eState, condition, pSkill,
+                otherState);
+            if(optionGroupID != 0)
+            {
+                optionGroups[optionGroupID] |= result;
+            }
+            else if(!result)
+            {
+                // Standalone did not pass
+                return 0;
+            }
+        }
+    }
+
+    for(auto pair : optionGroups)
+    {
+        if(!pair.second)
+        {
+            // Option group did not pass
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+bool SkillManager::EvaluateTokuseiSkillCondition(
+    const std::shared_ptr<ActiveEntityState>& eState,
     const std::shared_ptr<objects::TokuseiSkillCondition>& condition,
     const std::shared_ptr<ProcessingSkill>& pSkill,
     const std::shared_ptr<ActiveEntityState>& otherState)
@@ -4137,6 +4236,9 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
     int32_t sourceDemonFType = sourceDevilData
         ? sourceDevilData->GetFamiliarity()->GetFamiliarityType() : 0;
 
+    auto deathTriggers = zoneManager->GetZoneTriggers(zone,
+        ZoneTrigger_t::ON_DEATH);
+
     std::unordered_map<int32_t, int32_t> adjustments;
     std::list<std::shared_ptr<ActiveEntityState>> enemiesKilled;
     std::list<std::shared_ptr<ActiveEntityState>> partnerDemonsKilled;
@@ -4176,12 +4278,12 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         }
 
         // Trigger death actions (before zone removal)
-        if(zone->DeathTriggersCount() > 0)
+        if(deathTriggers.size() > 0)
         {
             auto client = managerConnection->GetEntityClient(entity
                 ->GetEntityID());
-            zoneManager->TriggerZoneActions(zone, { entity },
-                ZoneTrigger_t::ON_DEATH, client);
+            zoneManager->HandleZoneTriggers(zone, deathTriggers, entity,
+                client);
         }
 
         if(demonData)
@@ -4228,15 +4330,50 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         }
     }
 
-    if(zone->GetInstanceType() == InstanceType_t::DEMON_ONLY)
+    switch(zone->GetInstanceType())
     {
-        // Start demon only instnace death time-outs
+    case InstanceType_t::PVP:
+        // Increase by PvP values and set auto-revive time-out
+        {
+            bool playerSource = source->GetEntityType() ==
+                EntityType_t::CHARACTER ||
+                source->GetEntityType() == EntityType_t::PARTNER_DEMON;
+            
+            auto instance = zone->GetInstance();
+            auto pvpStats = instance->GetPvPStats();
+            auto matchManager = server->GetMatchManager();
+
+            for(auto entity : killed)
+            {
+                if(playerSource)
+                {
+                    int32_t val = pvpStats->GetEntityValues(entity
+                        ->GetEntityID());
+                    if(val)
+                    {
+                        matchManager->UpdatePvPPoints(instance->GetID(),
+                            source, entity, val);
+                    }
+                }
+
+                if(entity->GetEntityType() == EntityType_t::CHARACTER)
+                {
+                    matchManager->PlayerKilled(entity, instance);
+                }
+            }
+        }
+        break;
+    case InstanceType_t::DEMON_ONLY:
+        // Start demon only instance death time-outs
         for(auto dState : partnerDemonsKilled)
         {
             auto demonCState = ClientState::GetEntityClientState(
                 dState->GetEntityID());
             zoneManager->UpdateDeathTimeOut(demonCState, 60);
         }
+        break;
+    default:
+        break;
     }
 
     if(enemiesKilled.size() > 0)
@@ -4788,6 +4925,10 @@ bool SkillManager::ApplyZoneSpecificEffects(const std::shared_ptr<
     bool changed = false;
     switch(pSkill->CurrentZone->GetInstanceType())
     {
+    case InstanceType_t::PVP:
+        // Update end of match stats
+        UpdatePvPStats(pSkill);
+        break;
     case InstanceType_t::DEMON_ONLY:
         {
             // If a partner demon was killed or revived, mirror the effect on
@@ -4866,6 +5007,230 @@ bool SkillManager::ApplyZoneSpecificEffects(const std::shared_ptr<
     }
 
     return changed;
+}
+
+void SkillManager::UpdatePvPStats(const std::shared_ptr<
+    channel::ProcessingSkill>& pSkill)
+{
+    auto instance = pSkill->CurrentZone->GetInstance();
+    auto pvpStats = instance ? instance->GetPvPStats() : nullptr;
+    if(!MatchManager::PvPActive(instance))
+    {
+        return;
+    }
+
+    bool sourceIsDemon = false;
+    int32_t sourceID = pSkill->EffectiveSource->GetEntityID();
+    if(pSkill->EffectiveSource->GetEntityType() == EntityType_t::PARTNER_DEMON)
+    {
+        auto state = ClientState::GetEntityClientState(sourceID);
+        if(state)
+        {
+            sourceID = state->GetCharacterState()->GetEntityID();
+            sourceIsDemon = true;
+        }
+    }
+
+    auto definitionManager = mServer.lock()->GetDefinitionManager();
+
+    bool firstDamageSet = pvpStats->FirstDamageCount() != 0;
+
+    std::unordered_map<int32_t, int32_t> damageDealt;
+    std::unordered_map<int32_t, int32_t> damageDealtMax;
+    std::set<int32_t> killed;
+    std::set<int32_t> demonsKilled;
+    std::set<int32_t> othersKilled;
+    int32_t gStatus = 0;
+    std::unordered_map<int32_t, int32_t> bStatus;
+    for(auto& target : pSkill->Targets)
+    {
+        if(target.IndirectTarget) continue;
+
+        bool targetIsDemon = false;
+        int32_t entityID = target.EntityState->GetEntityID();
+        if(target.EntityState->GetEntityType() == EntityType_t::PARTNER_DEMON)
+        {
+            auto state = ClientState::GetEntityClientState(entityID);
+            if(state)
+            {
+                entityID = state->GetCharacterState()->GetEntityID();
+                targetIsDemon = true;
+            }
+        }
+
+        if(target.Flags1 & FLAG1_LETHAL)
+        {
+            if(targetIsDemon)
+            {
+                demonsKilled.insert(entityID);
+            }
+            else
+            {
+                killed.insert(entityID);
+            }
+
+            // Killing your own entities count as deaths, not kills
+            if(entityID != sourceID)
+            {
+                othersKilled.insert(entityID);
+            }
+        }
+
+        for(auto& sPair : target.AddedStatuses)
+        {
+            auto& change = sPair.second;
+            if(change.Stack)
+            {
+                auto effect = definitionManager->GetStatusData(change.Type);
+                switch(effect->GetCommon()->GetCategory()->GetMainCategory())
+                {
+                case 0: // Bad status
+                    if(bStatus.find(entityID) != bStatus.end())
+                    {
+                        bStatus[entityID]++;
+                    }
+                    else
+                    {
+                        bStatus[entityID] = 1;
+                    }
+                    break;
+                case 1: // Good status
+                    gStatus++;
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+
+        if(target.EntityState != pSkill->EffectiveSource &&
+            (target.Damage1Type == DAMAGE_TYPE_GENERIC ||
+            target.Damage2Type == DAMAGE_TYPE_GENERIC))
+        {
+            int32_t damage = target.Damage1 + target.Damage2;
+            if(!firstDamageSet)
+            {
+                pvpStats->InsertFirstDamage(sourceID);
+                pvpStats->InsertFirstDamageTaken(entityID);
+            }
+
+            auto it = damageDealtMax.find(entityID);
+            if(it == damageDealtMax.end())
+            {
+                damageDealtMax[entityID] = 0;
+                it = damageDealtMax.find(entityID);
+            }
+
+            if(it->second < damage)
+            {
+                it->second = damage;
+            }
+
+            if(damageDealt.find(entityID) != damageDealt.end())
+            {
+                damageDealt[entityID] += damage;
+            }
+            else
+            {
+                damageDealt[entityID] = damage;
+            }
+        }
+    }
+
+    // Update source stats
+    auto stats = pvpStats->GetPlayerStats(sourceID);
+    if(stats)
+    {
+        if(sourceIsDemon)
+        {
+            stats->SetDemonKills((uint16_t)(stats->GetDemonKills() +
+                othersKilled.size()));
+        }
+        else
+        {
+            stats->SetKills((uint16_t)(stats->GetKills() +
+                othersKilled.size()));
+        }
+
+        stats->SetGoodStatus((uint16_t)(stats->GetGoodStatus() + gStatus));
+
+        int32_t maxDamage = stats->GetDamageMax();
+        for(auto& dPair : damageDealtMax)
+        {
+            if(maxDamage < dPair.second)
+            {
+                maxDamage = dPair.second;
+            }
+        }
+        stats->SetDamageMax(maxDamage);
+
+        int32_t damageSum = stats->GetDamageSum();
+        for(auto& dPair : damageDealt)
+        {
+            damageSum += dPair.second;
+        }
+        stats->SetDamageSum(damageSum);
+
+        for(auto& sPair : bStatus)
+        {
+            stats->SetBadStatus((uint16_t)(stats->GetBadStatus() +
+                sPair.second));
+        }
+    }
+
+    // Update target deaths
+    for(int32_t kill : killed)
+    {
+        stats = pvpStats->GetPlayerStats(kill);
+        if(stats)
+        {
+            stats->SetDeaths((uint16_t)(stats->GetDeaths() + 1));
+        }
+    }
+
+    // Update target demon deaths
+    for(int32_t kill : demonsKilled)
+    {
+        stats = pvpStats->GetPlayerStats(kill);
+        if(stats)
+        {
+            stats->SetDemonDeaths((uint16_t)(stats->GetDemonDeaths() + 1));
+        }
+    }
+
+    // Update target damage max
+    for(auto& pair : damageDealtMax)
+    {
+        stats = pvpStats->GetPlayerStats(pair.first);
+        if(stats)
+        {
+            if(stats->GetDamageMaxTaken() < pair.second)
+            {
+                stats->SetDamageMaxTaken(pair.second);
+            }
+        }
+    }
+
+    // Update target damage sum
+    for(auto& pair : damageDealt)
+    {
+        stats = pvpStats->GetPlayerStats(pair.first);
+        if(stats)
+        {
+            stats->SetDamageSumTaken(stats->GetDamageSum() + pair.second);
+        }
+    }
+
+    // Update target bad status taken
+    for(auto& sPair : bStatus)
+    {
+        stats = pvpStats->GetPlayerStats(sPair.first);
+        if(stats)
+        {
+            stats->SetBadStatusTaken((uint16_t)(stats->GetBadStatusTaken() +
+                sPair.second));
+        }
+    }
 }
 
 bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
@@ -5548,6 +5913,44 @@ void SkillManager::HandleFusionGauge(
     }
 }
 
+void SkillManager::InterruptEvents(const std::set<int32_t>& worldCIDs)
+{
+    auto server = mServer.lock();
+    auto eventManager = server->GetEventManager();
+    auto managerConnection = server->GetManagerConnection();
+    for(int32_t worldCID : worldCIDs)
+    {
+        int32_t sourceEntityID = 0;
+
+        auto client = managerConnection->GetEntityClient(worldCID, true);
+        auto zone = client ? client->GetClientState()->GetZone() : nullptr;
+        if(client)
+        {
+            sourceEntityID = eventManager->InterruptEvent(client);
+        }
+
+        auto eState = (sourceEntityID && zone)
+            ? zone->GetEntity(sourceEntityID) : nullptr;
+        if(eState)
+        {
+            switch(eState->GetEntityType())
+            {
+            case EntityType_t::PLASMA:
+                // Fail the plasma event
+                server->GetZoneManager()->FailPlasma(client, sourceEntityID);
+                break;
+            case EntityType_t::PVP_BASE:
+                // End occupy attempt
+                server->GetMatchManager()->LeaveBase(client, sourceEntityID);
+                break;
+            default:
+                // Nothing more needs to be done
+                break;
+            }
+        }
+    }
+}
+
 bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnection> client,
     std::shared_ptr<objects::ActivatedAbility> activated,
     const std::shared_ptr<SkillExecutionContext>& ctx)
@@ -5670,11 +6073,11 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
             double levelMod = (double)source->GetLevel() / 100.0;
 
             int32_t mod = (int32_t)(levelMod * (double)statSum *
-                (5.0 * (double)mod1));
+                ((double)mod1 / 20.0));
             mod1 = (uint16_t)(mod > 1000 ? 1000 : mod);
 
             mod = (int32_t)(levelMod * (double)statSum *
-                (5.0 * (double)mod2));
+                ((double)mod2 / 20.0));
             mod2 = (uint16_t)(mod > 1000 ? 1000 : mod);
         }
         else if(skill.FunctionID == SVR_CONST.SKILL_HP_DEPENDENT)
@@ -5818,7 +6221,13 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
 
                 float resist = (float)
                     (targetState->GetCorrectTbl((size_t)resistCorrectType) * 0.01);
-                if(target.HitAbsorb)
+                if(target.AutoProtect)
+                {
+                    // Always resist with min damage
+                    minDamageLevel = 3;
+                    resist = 99.9f;
+                }
+                else if(target.HitAbsorb)
                 {
                     // Resistance is not applied during absorption
                     resist = 0;
@@ -6495,6 +6904,12 @@ SkillTargetResult* SkillManager::GetSelfTarget(const std::shared_ptr<ActiveEntit
 bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
 {
     uint8_t resultIdx = GetNRAResult(target, skill, skill.EffectiveAffinity);
+    if(resultIdx && skill.InPvP)
+    {
+        target.AutoProtect = true;
+        return false;
+    }
+
     switch(resultIdx)
     {
     case NRA_NULL:

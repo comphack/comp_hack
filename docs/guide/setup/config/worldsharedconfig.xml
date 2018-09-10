@@ -214,4 +214,43 @@
 
 </section><!-- BikeBoostHide -->
 
+<section>
+<title>PvPQueueWait</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 120</para>
+<para>Amount of time in seconds that must pass before a queued PvP match goes from player count requirements met to sending invites.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="PvPQueueWait">5</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- PvPQueueWait -->
+
+<section>
+<title>PvPGhosts</title>
+<para><emphasis role="strong">Type:</emphasis> array of two integers</para>
+<para><emphasis role="strong">Default:</emphasis> 0</para>
+<para>Set of two values that can be specified to artifically inflate the number of players waiting in the Fate (first) and Valhalla (second) PvP queues to allow for smaller matches. These numbers will not decrease the maximum size if more players are waiting.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="PvPGhosts"><element>10</element><element>4</element></member>]]></para>
+</section><!-- Example -->
+
+</section><!-- PvPGhosts -->
+
+<section>
+<title>DailyGPLoss</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 3</para>
+<para>Indicates the number of PvP Grade Points points lost every day since the player's last login to guarantee active players are top rank only.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DailyGPLoss">0</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DailyGPLoss -->
+
 </section>

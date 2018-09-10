@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include <Constants.h>
+#include <ErrorCodes.h>
 #include <Log.h>
 #include <PacketCodes.h>
 
@@ -36,9 +37,11 @@
 #include <ClanMember.h>
 #include <EntityStats.h>
 #include <FriendSettings.h>
+#include <MatchEntry.h>
 
 // world Includes
 #include "WorldServer.h"
+#include "WorldSyncManager.h"
 
 using namespace world;
 
@@ -51,6 +54,7 @@ CharacterManager::CharacterManager(const std::weak_ptr<WorldServer>& server)
     mMaxCID = 0;
     mMaxPartyID = 0;
     mMaxClanID = 0;
+    mMaxTeamID = 0;
 }
 
 std::shared_ptr<objects::CharacterLogin> CharacterManager::RegisterCharacter(
@@ -313,6 +317,19 @@ std::list<std::shared_ptr<objects::CharacterLogin>>
         }
     }
 
+    if(relatedTypes & RELATED_TEAM)
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        auto it = mTeams.find(cLogin->GetTeamID());
+        if(it != mTeams.end())
+        {
+            for(auto worldCID : it->second->GetMemberIDs())
+            {
+                targetCIDs.push_back(worldCID);
+            }
+        }
+    }
+
     std::list<std::shared_ptr<objects::CharacterLogin>> cLogins;
     for(auto targetUUID : targetUUIDs)
     {
@@ -441,6 +458,7 @@ bool CharacterManager::AddToParty(std::shared_ptr<objects::PartyCharacter> membe
     auto cid = member->GetWorldCID();
     auto login = GetCharacterLogin(cid);
 
+    bool success = false;
     if(login)
     {
         std::lock_guard<std::mutex> lock(mLock);
@@ -453,11 +471,17 @@ bool CharacterManager::AddToParty(std::shared_ptr<objects::PartyCharacter> membe
             it->second->InsertMemberIDs(cid);
             mPartyCharacters[cid] = member;
 
-            return true;
+            success = true;
         }
     }
 
-    return false;
+    if(success && partyID && login->GetTeamID())
+    {
+        // When joining a party, all teams must be left
+        TeamLeave(login);
+    }
+
+    return success;
 }
 
 bool CharacterManager::PartyJoin(std::shared_ptr<objects::PartyCharacter> member,
@@ -602,6 +626,11 @@ void CharacterManager::PartyLeave(std::shared_ptr<objects::CharacterLogin> cLogi
 {
     uint32_t partyID = cLogin->GetPartyID();
     auto party = GetParty(partyID);
+    if(!party && !requestConnection)
+    {
+        return;
+    }
+
     auto partyLogins = GetRelatedCharacterLogins(cLogin, RELATED_PARTY);
 
     uint16_t responseCode = 201;    // Failure
@@ -1509,25 +1538,415 @@ void CharacterManager::SendClanMemberInfo(std::shared_ptr<objects::CharacterLogi
     }
 }
 
+std::shared_ptr<objects::Team> CharacterManager::GetTeam(int32_t teamID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mTeams.find(teamID);
+    return it != mTeams.end() ? it->second : nullptr;
+}
+
+int32_t CharacterManager::AddToTeam(int32_t worldCID, int32_t teamID)
+{
+    auto login = GetCharacterLogin(worldCID);
+    if(!login)
+    {
+        return 0;
+    }
+
+    if(login->GetTeamID())
+    {
+        return teamID == 0 ? login->GetTeamID() : 0;
+    }
+
+    if(teamID)
+    {
+        // Add to existing team
+        auto team = GetTeam(teamID);
+
+        std::lock_guard<std::mutex> lock(mLock);
+        if(!team || team->MemberIDsCount() >= MAX_TEAM_SIZE)
+        {
+            // Cannot add to team
+            return 0;
+        }
+
+        login->SetTeamID(teamID);
+        team->InsertMemberIDs(worldCID);
+    }
+    else
+    {
+        // Create new team
+        std::lock_guard<std::mutex> lock(mLock);
+
+        teamID = ++mMaxTeamID;
+        login->SetTeamID(teamID);
+
+        auto team = std::make_shared<objects::Team>();
+        team->SetID(teamID);
+        team->SetLeaderCID(worldCID);
+        team->InsertMemberIDs(worldCID);
+        mTeams[teamID] = team;
+    }
+
+    return teamID;
+}
+
+bool CharacterManager::TeamJoin(int32_t worldCID, int32_t teamID,
+    std::shared_ptr<libcomp::TcpConnection> sourceConnection)
+{
+    int8_t errorCode = (int8_t)TeamErrorCodes_t::GENERIC_ERROR;
+
+    auto team = GetTeam(teamID);
+    auto cLogin = GetCharacterLogin(worldCID);
+    if(!team)
+    {
+        errorCode = (int8_t)TeamErrorCodes_t::INVALID_TEAM;
+    }
+    else if(cLogin && AddToTeam(worldCID, teamID))
+    {
+        errorCode = (int8_t)TeamErrorCodes_t::SUCCESS;
+    }
+
+    libcomp::Packet relay;
+    WorldServer::GetRelayPacket(relay, worldCID);
+    relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_ANSWER);
+    relay.WriteS32Little(teamID);
+    relay.WriteS8(1);   // Accepted
+    relay.WriteS8(errorCode);
+
+    sourceConnection->QueuePacket(relay);
+
+    if(errorCode == (int8_t)TeamErrorCodes_t::SUCCESS)
+    {
+        SendTeamInfo(teamID);
+
+        // Tell everyone in the team, including the character who just joined
+        // that the join has happened
+        relay.Clear();
+        auto cidOffset = WorldServer::GetRelayPacket(relay);
+        relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_MEMBER_ADD);
+        relay.WriteS32Little(teamID);
+        relay.WriteS32Little(worldCID);
+        relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+            cLogin->GetCharacter()->GetName(), true);
+
+        SendToRelatedCharacters(relay, worldCID, cidOffset, RELATED_TEAM, true);
+    }
+
+    sourceConnection->FlushOutgoing();
+
+    return errorCode == (int8_t)TeamErrorCodes_t::SUCCESS;
+}
+
+void CharacterManager::TeamLeave(std::shared_ptr<objects::CharacterLogin> cLogin)
+{
+    int32_t teamID = cLogin->GetTeamID();
+    auto team = GetTeam(teamID);
+    if(!team)
+    {
+        return;
+    }
+
+    auto teamLogins = GetRelatedCharacterLogins(cLogin, RELATED_TEAM);
+
+    int8_t errorCode = (int8_t)TeamErrorCodes_t::GENERIC_ERROR;
+    if(RemoveFromTeam(cLogin, teamID))
+    {
+        errorCode = (int8_t)TeamErrorCodes_t::SUCCESS;
+        cLogin->SetTeamID(0);
+    }
+
+    libcomp::Packet relay;
+    auto cidOffset = WorldServer::GetRelayPacket(relay);
+    relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_LEAVE);
+    relay.WriteS32Little(teamID);
+    relay.WriteS8(errorCode);
+
+    SendToCharacters(relay, { cLogin }, cidOffset);
+
+    if(errorCode == (int8_t)TeamErrorCodes_t::SUCCESS)
+    {
+        std::list<int32_t> includeCIDs = { cLogin->GetWorldCID() };
+        SendTeamInfo(teamID, includeCIDs);
+
+        relay.Clear();
+        cidOffset = WorldServer::GetRelayPacket(relay);
+        relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_LEFT);
+        relay.WriteS32Little(teamID);
+        relay.WriteS32Little(cLogin->GetWorldCID());
+
+        SendToCharacters(relay, teamLogins, cidOffset);
+
+        auto memberIDs = team->GetMemberIDs();
+        if(memberIDs.size() == 0)
+        {
+            // Cannot exist with no members
+            TeamDisband(teamID, cLogin->GetWorldCID());
+        }
+        else if(cLogin->GetWorldCID() == team->GetLeaderCID())
+        {
+            // If the leader left, take the next person who joined
+            TeamLeaderUpdate(team->GetID(), 0, nullptr, *memberIDs.begin());
+        }
+    }
+}
+
+void CharacterManager::TeamDisband(int32_t teamID, int32_t sourceCID)
+{
+    (void)sourceCID;
+
+    auto team = GetTeam(teamID);
+
+    bool success = true;
+
+    std::list<std::shared_ptr<objects::CharacterLogin>> teamLogins;
+    if(teamID)
+    {
+        for(auto cid : team->GetMemberIDs())
+        {
+            auto login = GetCharacterLogin(cid);
+            if(login)
+            {
+                teamLogins.push_back(login);
+
+                if(RemoveFromTeam(login, teamID))
+                {
+                    login->SetTeamID(0);
+                }
+                else
+                {
+                    success = false;
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        success = false;
+    }
+
+    if(success)
+    {
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            mTeams.erase(teamID);
+        }
+
+        std::list<int32_t> includeCIDs;
+        for(auto login : teamLogins)
+        {
+            includeCIDs.push_back(login->GetWorldCID());
+        }
+
+        SendTeamInfo(teamID, includeCIDs);
+
+        libcomp::Packet relay;
+        auto cidOffset = WorldServer::GetRelayPacket(relay);
+        relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_DISBAND);
+
+        SendToCharacters(relay, teamLogins, cidOffset);
+    }
+}
+
+void CharacterManager::TeamLeaderUpdate(int32_t teamID, int32_t sourceCID,
+    std::shared_ptr<libcomp::TcpConnection> requestConnection,
+    int32_t targetCID)
+{
+    auto team = GetTeam(teamID);
+
+    int8_t errorCode = (int8_t)TeamErrorCodes_t::GENERIC_ERROR;
+    if(team)
+    {
+        auto cLogin = sourceCID ? GetCharacterLogin(sourceCID) : nullptr;
+        if(sourceCID && (!cLogin || cLogin->GetTeamID() != teamID))
+        {
+            errorCode = (int8_t)TeamErrorCodes_t::INVALID_TEAM;
+        }
+        else if(cLogin && team->GetLeaderCID() != cLogin->GetWorldCID())
+        {
+            errorCode = (int8_t)TeamErrorCodes_t::LEADER_REQUIRED;
+        }
+        else if(!team->MemberIDsContains(targetCID))
+        {
+            errorCode = (int8_t)TeamErrorCodes_t::INVALID_TARGET;
+        }
+        else
+        {
+            team->SetLeaderCID(targetCID);
+            errorCode = (int8_t)TeamErrorCodes_t::SUCCESS;
+        }
+    }
+
+    if(requestConnection)
+    {
+        libcomp::Packet relay;
+        WorldServer::GetRelayPacket(relay, sourceCID);
+        relay.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_TEAM_LEADER_UPDATE);
+        relay.WriteS32Little(teamID);
+        relay.WriteS8(errorCode);
+
+        requestConnection->QueuePacket(relay);
+    }
+
+    if(errorCode == (int8_t)TeamErrorCodes_t::SUCCESS)
+    {
+        SendTeamInfo(teamID);
+
+        libcomp::Packet relay;
+        auto cidOffset = WorldServer::GetRelayPacket(relay);
+        relay.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_TEAM_LEADER_UPDATED);
+        relay.WriteS32Little(teamID);
+        relay.WriteS32Little(targetCID);
+
+        std::list<std::shared_ptr<objects::CharacterLogin>> teamLogins;
+        for(auto cid : team->GetMemberIDs())
+        {
+            teamLogins.push_back(GetCharacterLogin(cid));
+        }
+
+        SendToCharacters(relay, teamLogins, cidOffset);
+    }
+
+    if(requestConnection)
+    {
+        requestConnection->FlushOutgoing();
+    }
+}
+
+void CharacterManager::TeamKick(std::shared_ptr<objects::CharacterLogin> cLogin,
+    int32_t targetCID, int32_t teamID,
+    std::shared_ptr<libcomp::TcpConnection> requestConnection)
+{
+    auto team = GetTeam(cLogin->GetTeamID());
+    auto teamLogins = GetRelatedCharacterLogins(cLogin, RELATED_TEAM);
+
+    int8_t errorCode = (int8_t)TeamErrorCodes_t::GENERIC_ERROR;
+    if(team)
+    {
+        if(cLogin->GetTeamID() != teamID)
+        {
+            errorCode = (int8_t)TeamErrorCodes_t::INVALID_TEAM;
+        }
+        else if(team->GetLeaderCID() != cLogin->GetWorldCID())
+        {
+            errorCode = (int8_t)TeamErrorCodes_t::LEADER_REQUIRED;
+        }
+        else if(!team->MemberIDsContains(targetCID))
+        {
+            errorCode = (int8_t)TeamErrorCodes_t::INVALID_TARGET;
+        }
+        else
+        {
+            auto targetLogin = GetCharacterLogin(targetCID);
+            if(targetLogin && RemoveFromTeam(targetLogin, teamID))
+            {
+                targetLogin->SetTeamID(0);
+                errorCode = (int8_t)TeamErrorCodes_t::SUCCESS;
+            }
+        }
+    }
+
+    if(requestConnection)
+    {
+        libcomp::Packet relay;
+        WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
+        relay.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_TEAM_KICK);
+        relay.WriteS32Little(teamID);
+        relay.WriteS8(errorCode);
+        relay.WriteS32Little(targetCID);
+
+        requestConnection->QueuePacket(relay);
+    }
+
+    if(errorCode == (int8_t)TeamErrorCodes_t::SUCCESS)
+    {
+        std::list<int32_t> includeCIDs = { targetCID };
+        SendTeamInfo(team->GetID(), includeCIDs);
+
+        if(team->MemberIDsCount() <= 1)
+        {
+            TeamDisband(team->GetID());
+        }
+
+        libcomp::Packet relay;
+        auto cidOffset = WorldServer::GetRelayPacket(relay);
+        relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_KICKED);
+        relay.WriteS32Little(teamID);
+        relay.WriteS32Little(targetCID);
+
+        SendToCharacters(relay, teamLogins, cidOffset);
+    }
+}
+
+void CharacterManager::SendTeamInfo(int32_t teamID, const std::list<int32_t>& cids)
+{
+    libcomp::Packet request;
+    request.WritePacketCode(InternalPacketCode_t::PACKET_TEAM_UPDATE);
+    request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_UPDATE);
+    request.WriteS32Little(teamID);
+
+    std::list<std::shared_ptr<objects::CharacterLogin>> logins;
+    for(auto cid : cids)
+    {
+        logins.push_back(GetCharacterLogin(cid));
+    }
+
+    auto team = GetTeam(teamID);
+    if(team)
+    {
+        request.WriteU8(1); // Team set
+        team->SavePacket(request);
+
+        for(auto cid : team->GetMemberIDs())
+        {
+            logins.push_back(GetCharacterLogin(cid));
+        }
+    }
+    else
+    {
+        request.WriteU8(0); // Team not set
+    }
+
+    SendToCharacters(request, logins, 1);
+}
+
 uint32_t CharacterManager::CreateParty(std::shared_ptr<objects::PartyCharacter> member)
 {
     auto cid = member->GetWorldCID();
     auto login = GetCharacterLogin(cid);
 
-    std::lock_guard<std::mutex> lock(mLock);
-    uint32_t partyID = login->GetPartyID();
-    if(!partyID)
+    uint32_t partyID = 0;
+    if(!login)
     {
-        mParties[0]->RemoveMemberIDs(cid);
-        partyID = ++mMaxPartyID;
-        login->SetPartyID(partyID);
+        return 0;
+    }
+    else
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        partyID = login->GetPartyID();
+        if(!partyID)
+        {
+            mParties[0]->RemoveMemberIDs(cid);
+            partyID = ++mMaxPartyID;
+            login->SetPartyID(partyID);
 
-        auto party = std::make_shared<objects::Party>();
-        party->SetID(partyID);
-        party->SetLeaderCID(cid);
-        party->InsertMemberIDs(cid);
-        mParties[partyID] = party;
-        mPartyCharacters[cid] = member;
+            auto party = std::make_shared<objects::Party>();
+            party->SetID(partyID);
+            party->SetLeaderCID(cid);
+            party->InsertMemberIDs(cid);
+            mParties[partyID] = party;
+            mPartyCharacters[cid] = member;
+        }
+    }
+
+    if(partyID && login->GetTeamID())
+    {
+        // When creating a party, all teams must be left
+        TeamLeave(login);
     }
 
     return partyID;
@@ -1594,4 +2013,34 @@ bool CharacterManager::RemoveFromClan(std::shared_ptr<objects::CharacterLogin> c
     }
 
     return false;
+}
+
+bool CharacterManager::RemoveFromTeam(std::shared_ptr<
+    objects::CharacterLogin> cLogin, int32_t teamID)
+{
+    bool success = false;
+
+    auto cid = cLogin->GetWorldCID();
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        auto it = mTeams.find(teamID);
+        if(it != mTeams.end() && it->second->MemberIDsContains(cid))
+        {
+            it->second->RemoveMemberIDs(cid);
+            success = true;
+        }
+    }
+
+    if(success)
+    {
+        // If a match entry exists, remove it
+        auto syncManager = mServer.lock()->GetWorldSyncManager();
+        auto entry = syncManager->GetMatchEntry(cid);
+        if(entry && syncManager->RemoveRecord(entry, "MatchEntry"))
+        {
+            syncManager->SyncOutgoing();
+        }
+    }
+
+    return success;
 }

@@ -32,9 +32,14 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <MatchEntry.h>
+#include <PvPMatch.h>
+
 // channel Includes
 #include "ChannelServer.h"
 #include "ManagerConnection.h"
+#include "MatchManager.h"
 
 using namespace channel;
 
@@ -58,8 +63,7 @@ bool ChannelSyncManager::Initialize()
     auto worldDB = server->GetWorldDatabase();
 
     // Build the configs
-    auto cfg = std::make_shared<ObjectConfig>(
-        "SearchEntry", false);
+    auto cfg = std::make_shared<ObjectConfig>("SearchEntry", false);
     cfg->BuildHandler = &DataSyncManager::New<objects::SearchEntry>;
     cfg->UpdateHandler = &DataSyncManager::Update<ChannelSyncManager,
         objects::SearchEntry>;
@@ -74,11 +78,27 @@ bool ChannelSyncManager::Initialize()
 
     mRegisteredTypes["CharacterProgress"] = cfg;
 
+    cfg = std::make_shared<ObjectConfig>("MatchEntry", false);
+    cfg->BuildHandler = &DataSyncManager::New<objects::MatchEntry>;
+    cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
+        ChannelSyncManager, objects::MatchEntry>;
+
+    mRegisteredTypes["MatchEntry"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("PvPMatch", false);
+    cfg->BuildHandler = &DataSyncManager::New<objects::PvPMatch>;
+    cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
+        ChannelSyncManager, objects::PvPMatch>;
+
+    mRegisteredTypes["PvPMatch"] = cfg;
+
     // Add the world connection
     const std::set<std::string> worldTypes =
         {
             "Account",
             "CharacterProgress",
+            "MatchEntry",
+            "PvPMatch",
             "SearchEntry"
         };
 
@@ -271,5 +291,54 @@ int8_t ChannelSyncManager::Update<objects::SearchEntry>(const libcomp::String& t
     }
 
     return success ? SYNC_UPDATED : SYNC_FAILED;
+}
+
+template<>
+void ChannelSyncManager::SyncComplete<objects::MatchEntry>(
+    const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
+    libcomp::Object>, bool>>& objs, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    std::list<std::shared_ptr<objects::MatchEntry>> updates;
+    std::list<std::shared_ptr<objects::MatchEntry>> removes;
+    for(auto& objPair : objs)
+    {
+        auto entry = std::dynamic_pointer_cast<objects::MatchEntry>(
+            objPair.first);
+        if(objPair.second)
+        {
+            removes.push_back(entry);
+        }
+        else
+        {
+            updates.push_back(entry);
+        }
+    }
+
+    mServer.lock()->GetMatchManager()->UpdateMatchEntries(updates, removes);
+}
+
+template<>
+void ChannelSyncManager::SyncComplete<objects::PvPMatch>(
+    const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
+    libcomp::Object>, bool>>& objs, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    std::list<std::shared_ptr<objects::PvPMatch>> matches;
+    for(auto& objPair : objs)
+    {
+        auto match = std::dynamic_pointer_cast<objects::PvPMatch>(
+            objPair.first);
+        if(!objPair.second)
+        {
+            matches.push_back(match);
+        }
+    }
+
+    mServer.lock()->GetMatchManager()->UpdatePvPMatches(matches);
 }
 }

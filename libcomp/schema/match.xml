@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="PvPMatch" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="s8" name="Type"/>
+        <member type="bool" name="NoQueue"/>
+        <member type="list" name="BlueMemberIDs">
+            <element type="s32"/>
+        </member>
+        <member type="list" name="RedMemberIDs">
+            <element type="s32"/>
+        </member>
+        <member type="u32" name="ReadyTime"/>
+        <member type="u8" name="ChannelID"/>
+        <member type="u32" name="InstanceDefinitionID"/>
+        <member type="u32" name="VariantID"/>
+        <member type="u32" name="InstanceID"/>
+    </object>
+    <object name="MatchEntry" persistent="false">
+        <member type="s32" name="WorldCID"/>
+        <member type="s32" name="OwnerCID"/>
+        <member type="s32" name="TeamID"/>
+        <member type="u32" name="MatchID"/>
+        <member type="enum" name="MatchType" underlying="uint8_t">
+            <value>PVP_FATE</value>
+            <value>PVP_VALHALLA</value>
+        </member>
+        <member type="u32" name="EntryTime"/>
+        <member type="u32" name="ReadyTime"/>
+    </object>
+</objgen>

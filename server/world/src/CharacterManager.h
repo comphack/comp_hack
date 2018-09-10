@@ -36,6 +36,7 @@
 #include <ClanInfo.h>
 #include <Party.h>
 #include <PartyCharacter.h>
+#include <Team.h>
 
 /// Related characters should be retrieved from the friends list
 const uint8_t RELATED_FRIENDS = 0x01;
@@ -45,6 +46,9 @@ const uint8_t RELATED_PARTY = 0x02;
 
 /// Related characters should be retrieved from the same clan
 const uint8_t RELATED_CLAN = 0x04;
+
+/// Related characters should be retrieved from the same team
+const uint8_t RELATED_TEAM = 0x08;
 
 namespace libcomp
 {
@@ -399,6 +403,82 @@ public:
      */
     void RecalculateClanLevel(int32_t clanID, bool sendUpdate = true);
 
+    /**
+     * Get an active team by ID
+     * @param teamID ID of the team to retrieve
+     * @return Pointer to the active team
+     */
+    std::shared_ptr<objects::Team> GetTeam(int32_t teamID);
+
+    /**
+     * Add a character to the specified team
+     * @param worldCID World CID of the character to add
+     * @param teamID ID of the team to add the character to
+     * @return ID of the team the character was added to
+     */
+    int32_t AddToTeam(int32_t worldCID, int32_t teamID);
+
+    /**
+     * Attempt to have a character join the specified team
+     * @param worldCID World CID of the character to add
+     * @param teamID ID of the team to add the character to
+     * @param sourceConnection Connection associated to the character
+     *  joining the team
+     * @return true on success, false on failure
+     */
+    bool TeamJoin(int32_t worldCID, int32_t teamID,
+        std::shared_ptr<libcomp::TcpConnection> sourceConnection);
+
+    /**
+     * Attempt to have a character leave their current team. All
+     * necessary packet communication is handled within.
+     * @param cLogin Pointer to the CharacterLogin representation of
+     *  the character leaving
+     */
+    void TeamLeave(std::shared_ptr<objects::CharacterLogin> cLogin);
+
+    /**
+     * Attempt to disband the specified team. All necessary packet
+     * communication is handled within.
+     * @param teamID ID of the team to disband
+     * @param sourceCID Optional ID of character who is disbanding the team
+     */
+    void TeamDisband(int32_t teamID, int32_t sourceCID = 0);
+
+    /**
+     * Attempt to set the leader of the specified team. All necessary packet
+     * communication is handled within.
+     * @param teamID ID of the team to update
+     * @param sourceCID Optional ID of character who is setting the leader
+     * @param requestConnection Optional parameter for the connection
+     *  that sent the request
+     * @param targetCID CID of the new leader to set
+     */
+    void TeamLeaderUpdate(int32_t teamID, int32_t sourceCID,
+        std::shared_ptr<libcomp::TcpConnection> requestConnection,
+        int32_t targetCID);
+
+    /**
+     * Attempt to kick a player from a team. All necessary packet
+     * communication is handled within.
+     * @param cLogin CharacterLogin of the character who sent the request
+     * @param targetCID CID of the character being kicked
+     * @param teamID ID of the team to update
+     * @param requestConnection Optional parameter for the connection
+     *  that sent the request
+     */
+    void TeamKick(std::shared_ptr<objects::CharacterLogin> cLogin,
+        int32_t targetCID, int32_t teamID, std::shared_ptr<
+        libcomp::TcpConnection> requestConnection);
+
+    /**
+     * Send base level info about the specified team ID to every member to
+     * act as a refresh for any team info.
+     * @param teamID ID of the team to update
+     * @param cids Additional CIDs to send to, useful when removing members
+     */
+    void SendTeamInfo(int32_t teamID, const std::list<int32_t>& cids = {});
+
 private:
     /**
      * Create a new party and set the supplied member as the leader
@@ -424,6 +504,15 @@ private:
      */
     bool RemoveFromClan(std::shared_ptr<objects::CharacterLogin> cLogin,
         int32_t clanID);
+
+    /**
+     * Remove the supplied CharacterLogin from their current team
+     * @param cLogin CharacterLogin to remove
+     * @param teamID ID of the team to remove the member from
+     * @return true on success, false if they were not in the team
+     */
+    bool RemoveFromTeam(std::shared_ptr<objects::CharacterLogin> cLogin,
+        int32_t teamID);
 
     /// Pointer back to theworld server this belongs to
     std::weak_ptr<WorldServer> mServer;
@@ -451,6 +540,8 @@ private:
     /// Map of clan UUIDs to clan ID assigned when loaded on the server.
     std::unordered_map<libcomp::String, int32_t> mClanMap;
 
+    std::unordered_map<int32_t, std::shared_ptr<objects::Team>> mTeams;
+
     /// Highest CID registered for a logged in character
     int32_t mMaxCID;
 
@@ -459,6 +550,8 @@ private:
 
     /// Highest clan ID registered with the server
     int32_t mMaxClanID;
+
+    int32_t mMaxTeamID;
 
     /// Server lock for shared resources
     std::mutex mLock;

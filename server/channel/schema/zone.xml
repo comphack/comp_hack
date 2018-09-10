@@ -5,10 +5,7 @@
         <member type="ServerZone*" name="Definition"
             nulldefault="true"/>
         <member type="bool" name="Invalid"/>
-        <member type="list" name="ZoneInTriggers">
-            <element type="ServerZoneTrigger*"/>
-        </member>
-        <member type="list" name="ZoneOutTriggers">
+        <member type="list" name="ZoneChangeTriggers">
             <element type="ServerZoneTrigger*"/>
         </member>
         <member type="list" name="SpawnTriggers">
@@ -17,7 +14,7 @@
         <member type="list" name="DeathTriggers">
             <element type="ServerZoneTrigger*"/>
         </member>
-        <member type="list" name="RevivalTriggers">
+        <member type="list" name="MiscTriggers">
             <element type="ServerZoneTrigger*"/>
         </member>
         <member type="list" name="FlagSetTriggers">
@@ -60,5 +57,59 @@
         <member type="u64" name="TimerExpire"/>
         <member type="string" name="TimerExpirationEventID"/>
         <member type="float" name="XPMultiplier"/>
+        <member type="PvPInstanceStats*" name="PvPStats"
+            nulldefault="true"/>
+    </object>
+    <object name="PvPBase" scriptenabled="true" persistent="false">
+        <member type="s8" name="Team" default="2"/>
+        <member type="s32" name="OwnerID"/>
+        <member type="u8" name="Rank"/>
+        <member type="u8" name="Speed"/>
+        <member type="u16" name="BonusCount"/>
+        <member type="u64" name="OccupyTime"/>
+        <member type="s32" name="OccupierID"/>
+    </object>
+    <object name="PvPInstanceStats" scriptenabled="true" persistent="false">
+        <member type="PvPMatch*" name="Match" nulldefault="true"/>
+        <member type="map" name="EntityValues">
+            <key type="s32"/>
+            <value type="s32"/>
+        </member>
+        <member type="map" name="PlayerStats">
+            <key type="s32"/>
+            <value type="PvPPlayerStats*"/>
+        </member>
+        <member type="array" name="Points" size="2">
+            <element type="u16"/>
+        </member>
+        <member type="set" name="FirstDamage">
+            <element type="s32"/>
+        </member>
+        <member type="set" name="FirstDamageTaken">
+            <element type="s32"/>
+        </member>
+        <member type="s32" name="BaseFirstOwner"/>
+    </object>
+    <object name="PvPPlayerStats" scriptenabled="true" persistent="false">
+        <member type="Character*" name="Character"/>
+        <member type="s32" name="EntityID"/>
+        <member type="s32" name="WorldCID"/>
+        <member type="u16" name="Kills"/>
+        <member type="u16" name="Deaths"/>
+        <member type="u16" name="DemonKills"/>
+        <member type="u16" name="DemonDeaths"/>
+        <member type="s32" name="DamageMax"/>
+        <member type="s32" name="DamageMaxTaken"/>
+        <member type="s32" name="DamageSum"/>
+        <member type="s32" name="DamageSumTaken"/>
+        <member type="u16" name="GoodStatus"/>
+        <member type="u16" name="BadStatus"/>
+        <member type="u16" name="BadStatusTaken"/>
+        <member type="u16" name="BasePoints"/>
+        <member type="u16" name="BaseBonusPoints"/>
+        <member type="set" name="Trophies">
+            <element type="s8"/>
+        </member>
+        <member type="float" name="TrophyBoost"/>
     </object>
 </objgen>

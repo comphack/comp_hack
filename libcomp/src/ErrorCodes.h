@@ -132,4 +132,36 @@ enum class EntrustErrorCodes_t : int32_t
     INVALID_DEMON_TARGET = -9,  //!< Demon is not a valid target
 };
 
+/**
+ * Error codes used for team actions by the game client.
+ */
+enum class TeamErrorCodes_t : int8_t
+{
+    SUCCESS = 0,    //!< No error
+    GENERIC_ERROR = -1, //!< Unspecified error
+    LEADER_REQUIRED = -3,   //!< Leader required update attempted by non-leader
+    INVALID_TARGET  = -4,   //!< Target is invalid
+    NO_TEAM = -5,   //!< No current team exists
+    TEAM_OVER = -6, //!< Requested team no longer exists
+    INVALID_TARGET_STATE = -7,  //!< Target is not in a valid team request state
+    MATCH_ACTIVE = -8,  //!< A match is currently active and the operation is not allowed
+    INVALID_TEAM = -9,  //!< Requested team is not valid
+    TEAM_FULL = -10,    //!< Requested team is full
+    AWAITING_ENTRY = -11,   //!< Request invalid due to match entry queue
+    PENALTY_ACTIVE = -12,   //!< Request invalid due to too many PvP penalties
+    MODE_REQUIREMENTS = -13,    //!< Mode requirements are not met
+    MATCH_ACTIVE_REJECT = -14,  //!< Target is in an active match and the operation is not allowed
+    AWAITING_ENTRY_REJECT = -15,    //!< Requested target invalid due to match entry queue
+    PENALTY_ACTIVE_REJECT = -16,    //!< Requested target invalid due to too many PvP penalties
+    MODE_REQUIREMENTS_REJECT = -17, //!< Requested target mode requirements are not met
+    TARGET_IN_PARTY = -19,  //!< Target is in a party and cannot join a team
+    TARGET_DIASPORA_INVALID = -20,  //!< Target cannot enter a disapora team right now
+    TARGET_VALUABLE_MISSING = -21,  //!< Target is missing a valuable required to be in the team
+    TARGET_COOLDOWN_20H = -22,  //!< Target team cooldown has not completed
+    IN_PARTY = -24, //!< Party exists and team cannot be formed
+    VALUABLE_MISSING = -25, //!< Valuable required is missing to form the team
+    COOLDOWN_20H = -27, //!< Team cooldown has not completed
+    ZONE_INVALID = -28, //!< Zone the requestor is in does not support the team type
+};
+
 #endif // LIBCOMP_SRC_ERRORCODES_H

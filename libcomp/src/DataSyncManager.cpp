@@ -31,8 +31,30 @@
 #include "Packet.h"
 #include "PacketCodes.h"
 #include "PersistentObject.h"
+#include "ScriptEngine.h"
 
 using namespace libcomp;
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<DataSyncManager>()
+    {
+        if(!BindingExists("DataSyncManager", true))
+        {
+            Sqrat::Class<DataSyncManager,
+                Sqrat::NoConstructor<DataSyncManager>> binding(mVM, "DataSyncManager");
+            binding
+                .Func("UpdateRecord", &DataSyncManager::UpdateRecord)
+                .Func("RemoveRecord", &DataSyncManager::RemoveRecord)
+                .Func("SyncOutgoing", &DataSyncManager::SyncOutgoing);
+
+            Bind<DataSyncManager>("DataSyncManager", binding);
+        }
+
+        return *this;
+    }
+}
 
 DataSyncManager::DataSyncManager()
 {

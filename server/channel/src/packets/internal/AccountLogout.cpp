@@ -109,12 +109,7 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(normalDisconnect)
     {
-        libcomp::Packet request;
-        request.WritePacketCode(
-            ChannelToClientPacketCode_t::PACKET_LOGOUT);
-        request.WriteU32Little(
-            (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
-        client->SendPacket(request, true);
+        server->GetAccountManager()->RequestDisconnect(client);
     }
 
     return true;

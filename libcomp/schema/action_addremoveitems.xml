@@ -4,8 +4,9 @@
         scriptenabled="true">
         <member type="enum" name="actionType" inherited="true" default="ADD_REMOVE_ITEMS"/>
         <member type="bool" name="notify"/>
+        <member type="bool" name="fromDropSet"/>
         <member type="map" name="items">
-            <key type="u32"/>   <!-- Item Type -->
+            <key type="u32"/>   <!-- Item Type/Dropset ID -->
             <value type="s32"/> <!-- Quantity -->
         </member>
         <member type="enum" name="mode" underlying="uint8_t">
@@ -14,6 +15,7 @@
             <value>POST</value>
             <value>TIME_TRIAL_REWARD</value>
             <value>CULTURE_PICKUP</value>
+            <value>DESTINY_BOX</value>
         </member>
     </object>
 </objgen>

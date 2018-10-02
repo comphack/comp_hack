@@ -47,6 +47,18 @@ namespace channel
 {
 
 class ChannelServer;
+class ZoneInstance;
+
+/**
+ * Possible results from an ActionRunScript action returned from the script
+ * being executed.
+ */
+enum ActionRunScriptResult_t : int8_t
+{
+    SUCCESS = 0, //!< No error
+    FAIL = -1,  //!< Generic failure
+    LOG_OFF = -2    //!< Not a failure but log off the client
+};
 
 /**
  * Class to manage actions when triggering a spot or interacting with
@@ -259,6 +271,13 @@ private:
     bool Delay(ActionContext& ctx);
 
     /**
+     * Execute a custom script to perform various types of actions.
+     * @param ctx ActionContext for the executing source information.
+     * @retval false The action list should stop after this action.
+     */
+    bool RunScript(ActionContext& ctx);
+
+    /**
      * Move the current time trial results to the record set.
      * @param ctx ActionContext for the executing source information.
      * @param rewardItem Item obtained from the time trial
@@ -275,11 +294,19 @@ private:
      * @param ctx ActionContext for the executing source information.
      * @param requireClient Check that the client is on the context if supplied
      *  and fail if it is not
+     * @param requireZone Check that the action is taking place with a current
+     *  zone. Nearly all actions require a zone.
      * @return true on success, false on failure
      */
     template <class T>
-    std::shared_ptr<T> GetAction(ActionContext& ctx, bool requireClient)
+    std::shared_ptr<T> GetAction(ActionContext& ctx, bool requireClient,
+        bool requireZone = true)
     {
+        if(requireZone && !VerifyZone(ctx, typeid(T).name()))
+        {
+            return nullptr;
+        }
+
         if(requireClient && !VerifyClient(ctx, typeid(T).name()))
         {
             return nullptr;
@@ -326,6 +353,15 @@ private:
      * @return true if the client exists, false if it does not
      */
     bool VerifyClient(ActionContext& ctx, const libcomp::String& typeName);
+
+    /**
+     * Verify that a zone is on the context and print an error message
+     * if one is not.
+     * @param ctx ActionContext for the executing source information
+     * @param typeName Name of the action type being verified
+     * @return true if a zone exists, false if it does not
+     */
+    bool VerifyZone(ActionContext& ctx, const libcomp::String& typeName);
 
     /**
      * Prepare the transformation script from the action on the supplied

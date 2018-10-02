@@ -43,7 +43,9 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "ManagerConnection.h"
+#include "MatchManager.h"
 #include "TokuseiManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 
@@ -71,6 +73,12 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         LOG_ERROR("Connections not found for TeamUpdate.\n");
         return false;
+    }
+
+    if(clients.size() == 0)
+    {
+        // Nothing to do
+        return true;
     }
 
     switch((InternalPacketAction_t)mode)
@@ -105,6 +113,47 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                         ->SetTeamID(0);
                     state->SetTeam(nullptr);
                 }
+            }
+
+            server->GetZoneManager()->UpdateTrackedTeam(team);
+        }
+        break;
+    case InternalPacketAction_t::PACKET_ACTION_TEAM_ZIOTITE:
+        {
+            // Ziotite updated
+            int32_t teamID = p.ReadS32Little();
+
+            if(p.Left() < 5)
+            {
+                LOG_ERROR(libcomp::String("Missing ziotite parameter"
+                    " for command %1\n").Arg(mode));
+                return false;
+            }
+
+            int32_t sZiotite = p.ReadS32Little();
+            int8_t lZiotite = p.ReadS8();
+
+            std::shared_ptr<objects::Team> team;
+            for(auto client : clients)
+            {
+                auto state = client->GetClientState();
+                auto t = state->GetTeam();
+                if(t && t->GetID() == teamID)
+                {
+                    team = t;
+                    break;
+                }
+            }
+
+            if(team)
+            {
+                server->GetMatchManager()->UpdateZiotite(team, sZiotite,
+                    lZiotite);
+            }
+            else
+            {
+                LOG_ERROR("Update ziotite request received from the world"
+                    " for team with no connected members");
             }
         }
         break;

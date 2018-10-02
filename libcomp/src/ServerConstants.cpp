@@ -140,6 +140,8 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.MENU_TRIFUSION);
     success &= LoadInteger(constants["MENU_TRIFUSION_KZ"],
         sConstants.MENU_TRIFUSION_KZ);
+    success &= LoadInteger(constants["MENU_UB_RANKING"],
+        sConstants.MENU_UB_RANKING);
     success &= LoadInteger(constants["MENU_WEB_GAME"],
         sConstants.MENU_WEB_GAME);
 
@@ -282,12 +284,12 @@ bool ServerConstants::Initialize(const String& filePath)
         sConstants.STATUS_CLOAK);
     success &= LoadInteger(constants["STATUS_DEATH"],
         sConstants.STATUS_DEATH);
+    success &= LoadInteger(constants["STATUS_DEMON_ONLY"],
+        sConstants.STATUS_DEMON_ONLY);
     success &= LoadInteger(constants["STATUS_DEMON_QUEST_ACTIVE"],
         sConstants.STATUS_DEMON_QUEST_ACTIVE);
     success &= LoadInteger(constants["STATUS_DIGITALIZE_COOLDOWN"],
         sConstants.STATUS_DIGITALIZE_COOLDOWN);
-    success &= LoadInteger(constants["STATUS_HIDDEN"],
-        sConstants.STATUS_HIDDEN);
     success &= LoadInteger(constants["STATUS_MOUNT"],
         sConstants.STATUS_MOUNT);
     success &= LoadInteger(constants["STATUS_MOUNT_SUPER"],
@@ -1093,6 +1095,23 @@ bool ServerConstants::Initialize(const String& filePath)
     else
     {
         LOG_ERROR("SYNTH_SKILLS not found\n");
+        return false;
+    }
+
+    complexIter = complexConstants.find("TEAM_STATUS_COOLDOWN");
+    if(complexIter != complexConstants.end())
+    {
+        std::unordered_map<std::string, std::string> map;
+        if(!LoadKeyValueStrings(complexIter->second, map) ||
+            !LoadIntegerMap(map, sConstants.TEAM_STATUS_COOLDOWN))
+        {
+            LOG_ERROR("Failed to load TEAM_STATUS_COOLDOWN\n");
+            return false;
+        }
+    }
+    else
+    {
+        LOG_ERROR("TEAM_STATUS_COOLDOWN not found\n");
         return false;
     }
 

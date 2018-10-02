@@ -41,6 +41,7 @@ class DefinitionManager;
 namespace objects
 {
 class DigitalizeState;
+class EventCounter;
 class Item;
 class MiGuardianAssistData;
 class MiSpecialConditionData;
@@ -173,6 +174,13 @@ public:
      */
     bool ActionCooldownActive(int32_t cooldownID, bool accountLevel,
         bool refresh = true);
+
+    /**
+     * Get the event counter assigned to the character with a specified type
+     * @param type Event type to retrieve
+     * @return Pointer to the event counter associated to the type
+     */
+    std::shared_ptr<objects::EventCounter> GetEventCounter(int32_t type);
 
     /**
      * Refresh the action cooldowns for the character or associated account.

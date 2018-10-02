@@ -43,9 +43,15 @@
             <value>LEVEL_MULTIPLY</value>
         </member>
         <member type="float" name="Multiplier" default="1.0"/>
+        <member type="s32" name="CooldownRestrict"/>
     </object>
     <object name="DropSet" persistent="false">
         <member type="u32" name="ID"/>
+        <member type="enum" name="Type" underlying="uint8_t">
+            <value>NORMAL</value>
+            <value>DESTINY</value>
+        </member>
+        <member type="u32" name="MutexID"/>
         <member type="u32" name="GiftBoxID"/>
         <member type="list" name="Drops">
             <element type="ItemDrop*"/>

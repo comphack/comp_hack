@@ -489,7 +489,7 @@ bool CharacterManager::PartyJoin(std::shared_ptr<objects::PartyCharacter> member
     std::shared_ptr<libcomp::TcpConnection> sourceConnection)
 {
     bool newParty = false;
-    uint16_t responseCode = 201;  // Not available
+    uint16_t responseCode = (uint16_t)PartyErrorCodes_t::INVALID_OR_OFFLINE;
     std::shared_ptr<objects::CharacterLogin> targetLogin;
     if(!targetName.IsEmpty())
     {
@@ -500,6 +500,7 @@ bool CharacterManager::PartyJoin(std::shared_ptr<objects::PartyCharacter> member
             auto targetMember = GetPartyMember(targetLogin->GetWorldCID());
             if(targetMember)
             {
+                bool valid = true;
                 if(partyID == 0)
                 {
                     partyID = CreateParty(targetMember);
@@ -508,12 +509,13 @@ bool CharacterManager::PartyJoin(std::shared_ptr<objects::PartyCharacter> member
                 else if(GetCharacterLogin(
                     targetMember->GetWorldCID())->GetPartyID() != partyID)
                 {
-                    responseCode = 202; // In a different party
+                    responseCode = (uint16_t)PartyErrorCodes_t::IN_PARTY;
+                    valid = false;
                 }
 
-                if(responseCode != 202 && AddToParty(member, partyID))
+                if(valid && AddToParty(member, partyID))
                 {
-                    responseCode = 200; // Success
+                    responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
                 }
             }
             else if(partyID == 0)
@@ -552,73 +554,76 @@ bool CharacterManager::PartyJoin(std::shared_ptr<objects::PartyCharacter> member
         // Rejoining from login
         if(AddToParty(member, partyID))
         {
-            responseCode = 200; // Success
+            responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
         }
     }
 
-    if(responseCode == 200)
+    if(responseCode == (uint16_t)PartyErrorCodes_t::SUCCESS)
     {
-        SendPartyInfo(partyID);
-
-        auto cLogin = GetCharacterLogin(member->GetWorldCID());
-        auto party = GetParty(partyID);
-        auto partyMemberIDs = party->GetMemberIDs();
-
-        // All members
-        libcomp::Packet request;
-        request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
-        request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_ADD);
-        request.WriteU32Little(partyID);
-        request.WriteU8((uint8_t)partyMemberIDs.size());
-        for(auto cid : partyMemberIDs)
-        {
-            auto login = GetCharacterLogin(cid);
-            auto partyMember = GetPartyMember(cid);
-            partyMember->SavePacket(request, false);
-            request.WriteU32Little(login->GetZoneID());
-            request.WriteU8(party->GetLeaderCID() == cid ? 1 : 0);
-        }
-
-        if(newParty)
-        {
-            // Send everyone to everyone
-            SendToRelatedCharacters(request, member->GetWorldCID(),
-                1, RELATED_PARTY, true);
-        }
-        else
-        {
-            // Send everyone to the new member
-            ConvertToTargetCIDPacket(request, 1, 1);
-            request.WriteS32Little(member->GetWorldCID());
-            sourceConnection->SendPacket(request);
-
-            // Send new member to everyone else
-            request.Clear();
-            request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
-            request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_ADD);
-            request.WriteU32Little(partyID);
-            request.WriteU8(1);
-            member->SavePacket(request, false);
-            request.WriteU32Little(cLogin->GetZoneID());
-            request.WriteU8(0);
-
-            SendToRelatedCharacters(request, member->GetWorldCID(),
-                1, RELATED_PARTY);
-        }
-
-        libcomp::Packet relay;
-        auto cidOffset = WorldServer::GetRelayPacket(relay);
-        relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DROP_RULE_SET);
-        relay.WriteU8((uint8_t)party->GetDropRule());
-
-        // Send to everyone if the party is new
-        SendToRelatedCharacters(relay, member->GetWorldCID(),
-            cidOffset, newParty ? RELATED_PARTY : 0, true);
+        SendNewPartyMember(member, partyID, newParty, sourceConnection);
     }
 
     sourceConnection->FlushOutgoing();
 
-    return responseCode == 200;
+    return responseCode == (uint16_t)PartyErrorCodes_t::SUCCESS;
+}
+
+bool CharacterManager::PartyRecruit(
+    std::shared_ptr<objects::PartyCharacter> member,
+    const libcomp::String targetName, uint32_t partyID,
+    std::shared_ptr<libcomp::TcpConnection> sourceConnection)
+{
+    bool newParty = false;
+    uint16_t responseCode = (uint16_t)PartyErrorCodes_t::INVALID_OR_OFFLINE;
+    std::shared_ptr<objects::PartyCharacter> targetMember;
+    if(!targetName.IsEmpty())
+    {
+        // Recruit request response
+        auto targetLogin = GetCharacterLogin(targetName);
+        if(targetLogin && targetLogin->GetChannelID() >= 0)
+        {
+            targetMember = GetPartyMember(targetLogin->GetWorldCID());
+            if(targetMember)
+            {
+                bool valid = true;
+                if(partyID == 0)
+                {
+                    partyID = CreateParty(member);
+                    newParty = true;
+                }
+                else if(GetCharacterLogin(
+                    member->GetWorldCID())->GetPartyID() != partyID)
+                {
+                    responseCode = (uint16_t)PartyErrorCodes_t::INVALID_PARTY;
+                    valid = false;
+                }
+
+                if(valid && AddToParty(targetMember, partyID))
+                {
+                    responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
+                }
+            }
+        }
+
+        libcomp::Packet relay;
+        WorldServer::GetRelayPacket(relay, member->GetWorldCID());
+        relay.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_PARTY_RECRUIT);
+        relay.WriteString16Little(libcomp::Convert::Encoding_t::
+            ENCODING_CP932, targetName, true);
+        relay.WriteU16Little(responseCode);
+
+        sourceConnection->QueuePacket(relay);
+    }
+
+    if(responseCode == (uint16_t)PartyErrorCodes_t::SUCCESS)
+    {
+        SendNewPartyMember(targetMember, partyID, newParty, sourceConnection);
+    }
+
+    sourceConnection->FlushOutgoing();
+
+    return responseCode == (uint16_t)PartyErrorCodes_t::SUCCESS;
 }
 
 void CharacterManager::PartyLeave(std::shared_ptr<objects::CharacterLogin> cLogin,
@@ -633,10 +638,10 @@ void CharacterManager::PartyLeave(std::shared_ptr<objects::CharacterLogin> cLogi
 
     auto partyLogins = GetRelatedCharacterLogins(cLogin, RELATED_PARTY);
 
-    uint16_t responseCode = 201;    // Failure
+    uint16_t responseCode = (uint16_t)PartyErrorCodes_t::GENERIC_ERROR;
     if(RemoveFromParty(cLogin, partyID))
     {
-        responseCode = 200; // Success
+        responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
         if(!tempLeave)
         {
             cLogin->SetPartyID(0);
@@ -653,7 +658,7 @@ void CharacterManager::PartyLeave(std::shared_ptr<objects::CharacterLogin> cLogi
         requestConnection->QueuePacket(relay);
     }
 
-    if(responseCode == 200)
+    if(responseCode == (uint16_t)PartyErrorCodes_t::SUCCESS)
     {
         std::list<int32_t> includeCIDs = { cLogin->GetWorldCID() };
         SendPartyInfo(party->GetID(), includeCIDs);
@@ -692,7 +697,7 @@ void CharacterManager::PartyDisband(uint32_t partyID, int32_t sourceCID,
 {
     auto party = GetParty(partyID);
 
-    uint16_t responseCode = 200;    // Success
+    uint16_t responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
     std::list<std::shared_ptr<objects::CharacterLogin>> partyLogins;
 
     if(partyID)
@@ -710,7 +715,7 @@ void CharacterManager::PartyDisband(uint32_t partyID, int32_t sourceCID,
                 }
                 else
                 {
-                    responseCode = 201; // Failure
+                    responseCode = (uint16_t)PartyErrorCodes_t::GENERIC_ERROR;
                     break;
                 }
             }
@@ -718,7 +723,7 @@ void CharacterManager::PartyDisband(uint32_t partyID, int32_t sourceCID,
     }
     else
     {
-        responseCode = 201; // Failure
+        responseCode = (uint16_t)PartyErrorCodes_t::NO_PARTY;
     }
 
     if(requestConnection)
@@ -731,7 +736,7 @@ void CharacterManager::PartyDisband(uint32_t partyID, int32_t sourceCID,
         requestConnection->QueuePacket(relay);
     }
 
-    if(responseCode == 200)
+    if(responseCode == (uint16_t)PartyErrorCodes_t::SUCCESS)
     {
         {
             std::lock_guard<std::mutex> lock(mLock);
@@ -764,11 +769,11 @@ void CharacterManager::PartyLeaderUpdate(uint32_t partyID, int32_t sourceCID,
 {
     auto party = GetParty(partyID);
 
-    uint16_t responseCode = 201;    // Failure
+    uint16_t responseCode = (uint16_t)PartyErrorCodes_t::GENERIC_ERROR;
     if(party->MemberIDsContains(targetCID))
     {
         party->SetLeaderCID(targetCID);
-        responseCode = 200; // Success
+        responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
     }
 
     if(requestConnection)
@@ -781,7 +786,7 @@ void CharacterManager::PartyLeaderUpdate(uint32_t partyID, int32_t sourceCID,
         requestConnection->QueuePacket(relay);
     }
 
-    if(responseCode == 200)
+    if(responseCode == (uint16_t)PartyErrorCodes_t::SUCCESS)
     {
         SendPartyInfo(partyID);
 
@@ -1545,6 +1550,21 @@ std::shared_ptr<objects::Team> CharacterManager::GetTeam(int32_t teamID)
     return it != mTeams.end() ? it->second : nullptr;
 }
 
+size_t CharacterManager::GetTeamMaxSize(int8_t category) const
+{
+    switch((objects::Team::Category_t)category)
+    {
+    case objects::Team::Category_t::PVP:
+        return MAX_TEAM_SIZE_PVP;
+    case objects::Team::Category_t::DIASPORA:
+        return MAX_TEAM_SIZE_DIASPORA;
+    case objects::Team::Category_t::CATHEDRAL:
+        return MAX_TEAM_SIZE_CATHEDRAL;
+    default:
+        return 1;
+    }
+}
+
 int32_t CharacterManager::AddToTeam(int32_t worldCID, int32_t teamID)
 {
     auto login = GetCharacterLogin(worldCID);
@@ -1564,7 +1584,8 @@ int32_t CharacterManager::AddToTeam(int32_t worldCID, int32_t teamID)
         auto team = GetTeam(teamID);
 
         std::lock_guard<std::mutex> lock(mLock);
-        if(!team || team->MemberIDsCount() >= MAX_TEAM_SIZE)
+        if(!team || team->MemberIDsCount() >=
+            GetTeamMaxSize((int8_t)team->GetCategory()))
         {
             // Cannot add to team
             return 0;
@@ -1618,8 +1639,6 @@ bool CharacterManager::TeamJoin(int32_t worldCID, int32_t teamID,
 
     if(errorCode == (int8_t)TeamErrorCodes_t::SUCCESS)
     {
-        SendTeamInfo(teamID);
-
         // Tell everyone in the team, including the character who just joined
         // that the join has happened
         relay.Clear();
@@ -1631,6 +1650,10 @@ bool CharacterManager::TeamJoin(int32_t worldCID, int32_t teamID,
             cLogin->GetCharacter()->GetName(), true);
 
         SendToRelatedCharacters(relay, worldCID, cidOffset, RELATED_TEAM, true);
+
+        SendTeamInfo(teamID);
+
+        TeamZiotiteUpdate(teamID);
     }
 
     sourceConnection->FlushOutgoing();
@@ -1682,16 +1705,21 @@ void CharacterManager::TeamLeave(std::shared_ptr<objects::CharacterLogin> cLogin
         {
             // Cannot exist with no members
             TeamDisband(teamID, cLogin->GetWorldCID());
+            return;
         }
         else if(cLogin->GetWorldCID() == team->GetLeaderCID())
         {
             // If the leader left, take the next person who joined
             TeamLeaderUpdate(team->GetID(), 0, nullptr, *memberIDs.begin());
         }
+
+        // Send the new ziotite count
+        TeamZiotiteUpdate(team->GetID());
     }
 }
 
-void CharacterManager::TeamDisband(int32_t teamID, int32_t sourceCID)
+void CharacterManager::TeamDisband(int32_t teamID, int32_t sourceCID,
+    bool toDiaspora)
 {
     (void)sourceCID;
 
@@ -1740,6 +1768,18 @@ void CharacterManager::TeamDisband(int32_t teamID, int32_t sourceCID)
         }
 
         SendTeamInfo(teamID, includeCIDs);
+
+        if(toDiaspora)
+        {
+            libcomp::Packet relay;
+            auto cidOffset = WorldServer::GetRelayPacket(relay);
+            relay.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_DIASPORA_TEAM_READY);
+            relay.WriteS32Little(team->GetID());
+            relay.WriteS8((int8_t)team->GetType());
+
+            SendToCharacters(relay, teamLogins, cidOffset);
+        }
 
         libcomp::Packet relay;
         auto cidOffset = WorldServer::GetRelayPacket(relay);
@@ -1879,7 +1919,85 @@ void CharacterManager::TeamKick(std::shared_ptr<objects::CharacterLogin> cLogin,
         relay.WriteS32Little(targetCID);
 
         SendToCharacters(relay, teamLogins, cidOffset);
+
+        // Send the new ziotite count
+        TeamZiotiteUpdate(team->GetID());
     }
+}
+
+bool CharacterManager::TeamZiotiteUpdate(int32_t teamID,
+    const std::shared_ptr<objects::CharacterLogin>& source,
+    int32_t sZiotite, int8_t lZiotite)
+{
+    auto team = GetTeam(teamID);
+    if(!team || (source && source->GetTeamID() != teamID))
+    {
+        LOG_ERROR(libcomp::String("Ziotite could not be updated"
+            " for invalid team from character: %1\n").Arg(source
+                ? source->GetCharacter().GetUUID().ToString() : "NONE"));
+        return false;
+    }
+
+    int32_t newSAmount = 0;
+    int8_t newLAmount = 0;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        newSAmount = team->GetSmallZiotite() + sZiotite;
+        newLAmount = (int8_t)(team->GetLargeZiotite() + lZiotite);
+
+        // Let the channel handle this check for spending
+        if(newSAmount < 0)
+        {
+            newSAmount = 0;
+        }
+
+        if(newLAmount < 0)
+        {
+            newLAmount = 0;
+        }
+
+        // Apply limits
+        if(newLAmount > 3)
+        {
+            newLAmount = 3;
+        }
+
+        int32_t sLimit = (int32_t)(team->MemberIDsCount() * 10000);
+        if(newSAmount > sLimit)
+        {
+            newSAmount = sLimit;
+        }
+
+        if((sZiotite || lZiotite) &&
+            newSAmount == team->GetSmallZiotite() &&
+            newLAmount == team->GetLargeZiotite())
+        {
+            // No update
+            return false;
+        }
+
+        team->SetSmallZiotite(newSAmount);
+        team->SetLargeZiotite(newLAmount);
+    }
+
+    // Send the ziotite update directly
+    std::list<std::shared_ptr<objects::CharacterLogin>> logins;
+    for(auto cid : team->GetMemberIDs())
+    {
+        logins.push_back(GetCharacterLogin(cid));
+    }
+
+    libcomp::Packet request;
+    request.WritePacketCode(InternalPacketCode_t::PACKET_TEAM_UPDATE);
+    request.WriteU8((uint8_t)
+        InternalPacketAction_t::PACKET_ACTION_TEAM_ZIOTITE);
+    request.WriteS32Little(teamID);
+    request.WriteS32Little(newSAmount);
+    request.WriteS8(newLAmount);
+
+    SendToCharacters(request, logins, 1);
+
+    return true;
 }
 
 void CharacterManager::SendTeamInfo(int32_t teamID, const std::list<int32_t>& cids)
@@ -1950,6 +2068,68 @@ uint32_t CharacterManager::CreateParty(std::shared_ptr<objects::PartyCharacter> 
     }
 
     return partyID;
+}
+
+void CharacterManager::SendNewPartyMember(
+    std::shared_ptr<objects::PartyCharacter> member, uint32_t partyID,
+    bool newParty, std::shared_ptr<libcomp::TcpConnection> sourceConnection)
+{
+    SendPartyInfo(partyID);
+
+    auto cLogin = GetCharacterLogin(member->GetWorldCID());
+    auto party = GetParty(partyID);
+    auto partyMemberIDs = party->GetMemberIDs();
+
+    // All members
+    libcomp::Packet request;
+    request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
+    request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_ADD);
+    request.WriteU32Little(partyID);
+    request.WriteU8((uint8_t)partyMemberIDs.size());
+    for(auto cid : partyMemberIDs)
+    {
+        auto login = GetCharacterLogin(cid);
+        auto partyMember = GetPartyMember(cid);
+        partyMember->SavePacket(request, false);
+        request.WriteU32Little(login->GetZoneID());
+        request.WriteU8(party->GetLeaderCID() == cid ? 1 : 0);
+    }
+
+    if(newParty)
+    {
+        // Send everyone to everyone
+        SendToRelatedCharacters(request, member->GetWorldCID(),
+            1, RELATED_PARTY, true);
+    }
+    else
+    {
+        // Send everyone to the new member
+        ConvertToTargetCIDPacket(request, 1, 1);
+        request.WriteS32Little(member->GetWorldCID());
+        sourceConnection->SendPacket(request);
+
+        // Send new member to everyone else
+        request.Clear();
+        request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
+        request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_ADD);
+        request.WriteU32Little(partyID);
+        request.WriteU8(1);
+        member->SavePacket(request, false);
+        request.WriteU32Little(cLogin->GetZoneID());
+        request.WriteU8(0);
+
+        SendToRelatedCharacters(request, member->GetWorldCID(),
+            1, RELATED_PARTY);
+    }
+
+    libcomp::Packet relay;
+    auto cidOffset = WorldServer::GetRelayPacket(relay);
+    relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DROP_RULE_SET);
+    relay.WriteU8((uint8_t)party->GetDropRule());
+
+    // Send to everyone if the party is new
+    SendToRelatedCharacters(relay, member->GetWorldCID(),
+        cidOffset, newParty ? RELATED_PARTY : 0, true);
 }
 
 bool CharacterManager::RemoveFromParty(std::shared_ptr<objects::CharacterLogin> cLogin,

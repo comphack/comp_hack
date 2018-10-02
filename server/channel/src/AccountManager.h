@@ -118,6 +118,14 @@ public:
         bool delay = false);
 
     /**
+     * Request that a client disconnect from the server. Typically used
+     * following an initial logout request from the client.
+     * @param client Pointer to the client connection
+     */
+    void RequestDisconnect(const std::shared_ptr<
+        channel::ChannelClientConnection>& client);
+
+    /**
      * Authenticate an account by its connection.
      * @param client Pointer to the client connection
      */

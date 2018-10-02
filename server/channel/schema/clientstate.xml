@@ -16,11 +16,22 @@
             nulldefault="true"/>
         <member type="Party*" name="Party" nulldefault="true"/>
         <member type="Team*" name="Team" nulldefault="true"/>
-        <member type="PvPMatch*" name="PvPMatch" nulldefault="true"/>
+        <member type="Match*" name="PendingMatch" nulldefault="true"/>
         <member type="s8" name="StatusIcon"/>
+        <member type="map" name="EventCounters">
+            <key type="s32"/>
+            <value type="EventCounter*"/>
+        </member>
         <member type="set" name="QuestTargetEnemies">
             <element type="u32"/>
         </member>
+        <member type="array" name="UltimateBattleData" size="2">
+            <element type="UBResult*"/>
+        </member>
+        <member type="array" name="PentalphaData" size="2">
+            <element type="PentalphaEntry*"/>
+        </member>
+        <member type="s32" name="InstanceBethel"/>
     </object>
     <object name="ClientCostAdjustment" persistent="false">
         <member type="u8" name="Category"/>

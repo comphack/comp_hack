@@ -152,27 +152,30 @@ bool TokuseiManager::Initialize()
 
         if(tPair.second->SkillConditionsCount() > 0)
         {
-            // Make sure skill state conditions do not have a mix of target and source types
-            // and only use equals/not equals comparisons
-            bool skillTargetCondition = false;
-            bool skillSourceCondition = false;
-            for(auto condition : tPair.second->GetSkillConditions())
+            // Make sure skill state conditions do not have a mix of target and
+            // source types and only use equals/not equals comparisons
+            for(auto conditionList : { tPair.second->GetSkillConditions(),
+                tPair.second->GetSkillTargetConditions() })
             {
-                skillTargetCondition |= condition->GetTargetCondition();
-                skillSourceCondition |= !condition->GetTargetCondition();
-
-                if(condition->GetComparator() != objects::TokuseiCondition::Comparator_t::EQUALS &&
-                    condition->GetComparator() != objects::TokuseiCondition::Comparator_t::NOT_EQUAL)
+                for(auto condition : conditionList)
                 {
-                    LOG_ERROR(libcomp::String("Skill tokusei conditions can only compare"
-                        " simple equals/not equal conditions: %1\n").Arg(tPair.first));
-                    return false;
+                    if(condition->GetComparator() !=
+                        objects::TokuseiCondition::Comparator_t::EQUALS &&
+                        condition->GetComparator() !=
+                        objects::TokuseiCondition::Comparator_t::NOT_EQUAL)
+                    {
+                        LOG_ERROR(libcomp::String("Skill tokusei conditions"
+                            " can only compare simple equals/not equal"
+                            " conditions: %1\n").Arg(tPair.first));
+                        return false;
+                    }
                 }
             }
 
-            if(skillTargetCondition && skillSourceCondition)
+            if(tPair.second->SkillConditionsCount() &&
+                tPair.second->SkillTargetConditionsCount())
             {
-                LOG_ERROR(libcomp::String("Skill tokusei encounterd with a both"
+                LOG_ERROR(libcomp::String("Skill tokusei encountered with both"
                     " source and target conditions: %1\n").Arg(tPair.first));
                 return false;
             }
@@ -619,7 +622,8 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
 
             if(add)
             {
-                bool skillTokusei = tokusei->SkillConditionsCount() > 0;
+                bool skillTokusei = tokusei->SkillConditionsCount() > 0 ||
+                    tokusei->SkillTargetConditionsCount() > 0;
 
                 std::unordered_map<int32_t, uint16_t>* map = 0;
                 switch(tokusei->GetTargetType())

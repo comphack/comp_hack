@@ -91,12 +91,12 @@ bool Parsers::TeamForm::Parse(libcomp::ManagerPacket *pPacketManager,
     auto zone = state->GetZone();
 
     int8_t errorCode = (int8_t)TeamErrorCodes_t::GENERIC_ERROR;
-    if(type >= (int8_t)objects::Team::Category_t::LNC)
+    if(type >= (int8_t)objects::Team::Category_t::CATHEDRAL)
     {
         // LNC needs to match
         int8_t lncAdjust = (int8_t)(cState->GetLNCType() / 2);
         if(lncAdjust ==
-            (int8_t)(type - (int8_t)objects::Team::Category_t::LNC))
+            (int8_t)(type - (int8_t)objects::Team::Category_t::CATHEDRAL))
         {
             errorCode = (int8_t)TeamErrorCodes_t::SUCCESS;
         }
@@ -113,7 +113,7 @@ bool Parsers::TeamForm::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             errorCode = (int8_t)TeamErrorCodes_t::AWAITING_ENTRY;
         }
-        else if(state->GetPvPMatch())
+        else if(state->GetPendingMatch())
         {
             errorCode = (int8_t)TeamErrorCodes_t::MATCH_ACTIVE;
         }
@@ -144,6 +144,15 @@ bool Parsers::TeamForm::Parse(libcomp::ManagerPacket *pPacketManager,
         else if(!zone || !zone->GetDefinition()->ValidTeamTypesContains(type))
         {
             errorCode = (int8_t)TeamErrorCodes_t::ZONE_INVALID;
+        }
+        else
+        {
+            auto it2 = SVR_CONST.TEAM_STATUS_COOLDOWN.find(type);
+            if(it2 != SVR_CONST.TEAM_STATUS_COOLDOWN.end() &&
+                cState->StatusEffectActive(it2->second))
+            {
+                errorCode = (int8_t)TeamErrorCodes_t::COOLDOWN_20H;
+            }
         }
     }
 

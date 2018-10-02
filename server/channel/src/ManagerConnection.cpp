@@ -240,6 +240,23 @@ const std::shared_ptr<ChannelClientConnection>
 }
 
 std::list<std::shared_ptr<ChannelClientConnection>>
+    ManagerConnection::GetEntityClients(std::set<int32_t> ids, bool worldID)
+{
+    std::list<std::shared_ptr<ChannelClientConnection>> results;
+
+    for(int32_t id : ids)
+    {
+        auto client = GetEntityClient(id, worldID);
+        if(client)
+        {
+            results.push_back(client);
+        }
+    }
+
+    return results;
+}
+
+std::list<std::shared_ptr<ChannelClientConnection>>
     ManagerConnection::GatherWorldTargetClients(libcomp::ReadOnlyPacket& p, bool& success)
 {
     std::list<std::shared_ptr<ChannelClientConnection>> results;
@@ -253,20 +270,13 @@ std::list<std::shared_ptr<ChannelClientConnection>>
 
     uint16_t cidCount = p.ReadU16Little();
 
-    std::list<int32_t> cids;
+    std::set<int32_t> cids;
     for(uint16_t i = 0; i < cidCount; i++)
     {
-        cids.push_back(p.ReadS32Little());
+        cids.insert(p.ReadS32Little());
     }
 
-    for(int32_t cid : cids)
-    {
-        auto client = GetEntityClient(cid, true);
-        if(client)
-        {
-            results.push_back(client);
-        }
-    }
+    results = GetEntityClients(cids, true);
 
     success = true;
     return results;
@@ -288,9 +298,8 @@ std::list<std::shared_ptr<ChannelClientConnection>>
     if(party)
     {
         auto sourceZone = state->GetZone();
-        for(auto memberID : party->GetMemberIDs())
+        for(auto memberClient : GetEntityClients(party->GetMemberIDs(), true))
         {
-            auto memberClient = GetEntityClient(memberID, true);
             if(memberClient && memberClient != client)
             {
                 auto memberState = memberClient->GetClientState();

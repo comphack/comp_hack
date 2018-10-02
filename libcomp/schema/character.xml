@@ -169,6 +169,10 @@
             <key type="s8"/>
             <value type="s16"/>
         </member>
+        <member type="array" name="Bethel" size="5">
+            <element type="s32"/>
+        </member>
+        <member type="s32" name="Cowrie"/>
         <member type="map" name="DigitalizeLevels">
             <key type="u8"/>
             <value type="s8"/>
@@ -252,5 +256,25 @@
             <element type="s32"/>
         </member>
         <member type="u8" name="PenaltyCount"/>
+    </object>
+    <object name="PentalphaEntry" location="world" scriptenabled="true">
+        <member type="pref" name="Character" key="true" unique="false"/>
+        <member type="pref" name="Match" key="true" unique="false"/>
+        <member type="u8" name="Team" max="4"/>
+        <member type="s32" name="Bethel"/>
+        <member type="s32" name="Cowrie"/>
+        <member type="array" name="Points" size="5">
+            <element type="s32"/>
+        </member>
+        <member type="bool" name="Active"/>
+    </object>
+    <object name="EventCounter" location="world" scriptenabled="true">
+        <member type="pref" name="Character" key="true" unique="false"/>
+        <member type="pref" name="RelatedTo" key="true" unique="false"/>
+        <member type="s32" name="Type" key="true" unique="false"/>
+        <member type="s32" name="Counter"/>
+        <member type="s32" name="PreExpireType"/>
+        <member type="bool" name="GroupCounter" key="true" unique="false"/>
+        <member type="u32" name="Timestamp"/>
     </object>
 </objgen>

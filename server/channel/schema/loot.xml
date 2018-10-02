@@ -21,5 +21,13 @@
     <object name="Loot" persistent="false">
         <member type="u32" name="Type"/>
         <member type="u16" name="Count"/>
+        <member type="s32" name="CooldownRestrict"/>
+    </object>
+    <object name="DestinyBox" scriptenabled="true" persistent="false">
+        <member type="s32" name="OwnerCID"/>
+        <member type="list" name="Loot">
+            <element type="Loot*"/>
+        </member>
+        <member type="u8" name="NextPosition"/>
     </object>
 </objgen>

@@ -23,6 +23,7 @@
     <constant name="MENU_REPAIR_KZ">765</constant>
     <constant name="MENU_TRIFUSION">179</constant>
     <constant name="MENU_TRIFUSION_KZ">801</constant>
+    <constant name="MENU_UB_RANKING">803</constant>
     <constant name="MENU_WEB_GAME">764</constant>
     <constant name="MITAMA_1_ARAMITAMA">624</constant>
     <constant name="MITAMA_2_NIGIMITAMA">623</constant>
@@ -106,10 +107,10 @@
     <constant name="STATUS_CLOAK">903</constant>
     <constant name="STATUS_COMP_TUNING">816,817</constant>
     <constant name="STATUS_DEATH">32</constant>
+    <constant name="STATUS_DEMON_ONLY">143</constant>
     <constant name="STATUS_DEMON_QUEST_ACTIVE">1030</constant>
     <constant name="STATUS_DIGITALIZE">905,907</constant>
     <constant name="STATUS_DIGITALIZE_COOLDOWN">906</constant>
-    <constant name="STATUS_HIDDEN">143</constant>
     <constant name="STATUS_MOUNT">801</constant>
     <constant name="STATUS_MOUNT_SUPER">1183</constant>
     <constant name="STATUS_SLEEP">3</constant>
@@ -130,6 +131,7 @@
     <constant name="ADJUSTMENT_ITEMS">
         <!-- Format: item ID => function, 2 contextual params -->
         <!-- Function 1: Enchantment success, param 3 = 1 stops crystal loss -->
+        <!-- Function 2: Destiny box reward assist (ChanceItemData), can choose and item count -->
         <pair>
             <key>395</key>
             <value>1,10,1</value>
@@ -153,6 +155,18 @@
         <pair>
             <key>1056</key>
             <value>1,15,0</value>
+        </pair>
+        <pair>
+            <key>21616</key>
+            <value>2,0,9</value>
+        </pair>
+        <pair>
+            <key>21617</key>
+            <value>2,0,4</value>
+        </pair>
+        <pair>
+            <key>21618</key>
+            <value>2,1,1</value>
         </pair>
     </constant>
     <constant name="ADJUSTMENT_SKILLS">
@@ -1349,6 +1363,17 @@
         <pair>
             <key>12</key>
             <value>694</value>
+        </pair>
+    </constant>
+    <constant name="TEAM_STATUS_COOLDOWN">
+        <!-- Format: team type => status effect ID -->
+        <pair>
+            <key>2</key>
+            <value>2034</value>
+        </pair>
+        <pair>
+            <key>3</key>
+            <value>2038</value>
         </pair>
     </constant>
     <constant name="TRIFUSION_SPECIAL_DARK">

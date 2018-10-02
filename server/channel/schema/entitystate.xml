@@ -14,6 +14,7 @@
             <value>PLASMA</value>
             <value>CULTURE_MACHINE</value>
             <value>PVP_BASE</value>
+            <value>DIASPORA_BASE</value>
         </member>
 
         <member type="float" name="CurrentX"/>
@@ -79,11 +80,13 @@
             <value>AWAITING_SUMMON</value>
             <value>DATA_NOT_SENT</value>
             <value>DATA_SENT</value>
+            <value>UB_SPECTATE</value>
             <value>ACTIVE</value>
             <!-- Below states are still active but cannot be interacted with -->
             <value>MOUNT</value>
             <value>BIKE_BOOST</value>
         </member>
+        <member type="s32" name="KillValue"/>
 
         <member type="float" name="OriginX"/>
         <member type="float" name="OriginY"/>

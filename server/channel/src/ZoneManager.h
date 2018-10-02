@@ -117,6 +117,17 @@ public:
         uint32_t dynamicMapID);
 
     /**
+     * Get a zone by definition ID, dynamic map ID and (optionally)
+     * instance ID
+     * @param zoneID Definition ID of a zone to retrieve
+     * @param dynamicMapID Dynamic Map ID of the zone to retrieve
+     * @param instanceID Instance ID of a zone to retrieve
+     * @return Pointer to the zone associated to the supplied IDs
+     */
+    std::shared_ptr<Zone> GetExistingZone(uint32_t zoneID,
+        uint32_t dynamicMapID, uint32_t instanceID = 0);
+
+    /**
      * Perform all zone entry setup and related actions for a player
      * associated to the supplied client using the default starting point
      * @param client Client connection for the player entering the zone
@@ -159,24 +170,6 @@ public:
      */
     void LeaveZone(const std::shared_ptr<ChannelClientConnection>& client,
         bool logOut, uint32_t newZoneID = 0, uint32_t newDynamicMapID = 0);
-
-    /**
-     * Create a zone instance with access granted for the client's current
-     * party
-     * @param client Client connection to create a zone instance for
-     * @param instanceID Definition ID of the instance to create
-     * @param variantID Optional ID of a variant definition to assign to
-     *  the instance
-     * @param timerID Optional ID of a timer to assign to the instance that
-     *  will be started when the first player enters
-     * @param timerExpirationEventID Optional ID of the event to execute if
-     *  the timer expires
-     * @return Pointer to the new zone instance, null if it failed to create
-     */
-    std::shared_ptr<ZoneInstance> CreateInstance(const std::shared_ptr<
-        ChannelClientConnection>& client, uint32_t instanceID,
-        uint32_t variantID = 0, uint32_t timerID = 0,
-        libcomp::String timerExpirationEventID = "");
 
     /**
      * Create a zone instance with access granted for the supplied CIDs
@@ -227,7 +220,7 @@ public:
      * @param instance Pointer ot the instance to get the zone from
      * @param zoneID Zone definition ID to get
      * @param dynamicMapID Zone dynamic map ID to get
-     * @return Pointer to the zone, null if it failed to creat
+     * @return Pointer to the zone, null if it failed to create
      */
     std::shared_ptr<Zone> GetInstanceZone(const std::shared_ptr<
         ZoneInstance>& instance, uint32_t zoneID, uint32_t dynamicMapID);
@@ -241,19 +234,40 @@ public:
         ZoneInstance>& instance);
 
     /**
-     * Get the coordinates of a PvP starting point in the supplied zone for
+     * Get the coordinates of a match starting point in the supplied zone for
      * the client
-     * @param client Pointer to the client connection where PvP data will
-     *  be retrieved from
+     * @param client Pointer to the client connection entering the match
      * @param zone Pointer to the zone the client is in
      * @param x Output parameter containing the starting position x coord
      * @param y Output parameter containing the starting position y coord
      * @param rot Output parameter containing the starting position rotation
      * @return true if the spot was found, false if it was not
      */
-    bool GetPvPStartPosition(const std::shared_ptr<
+    bool GetMatchStartPosition(const std::shared_ptr<
         ChannelClientConnection>& client, const std::shared_ptr<Zone>& zone,
         float& x, float& y, float& rot);
+
+    /**
+     * Move the supplied client to the starting zone of the instance they
+     * are entering
+     * @param client Pointer to the client connection entering the instance
+     * @param instance Pointer to the instance the client is entering
+     * @param diasporaEnter Optional indicator required to be set if the client
+     *  is entering a Diaspora instance as it's entrance criteria is unique
+     * @return true if the move was successful, false if it was not
+     */
+    bool MoveToStartingZone(
+        const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<ZoneInstance>& instance,
+        bool diasporaEnter = false);
+
+    /**
+     * Move the supplied client to the lobby zone of the zone they are
+     * currently in
+     * @param client Pointer to the client connection to move
+     * @return true if the move was successful, false if it was not
+     */
+    bool MoveToLobby(const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Send data about entities that exist in a zone to a new connection and
@@ -568,11 +582,26 @@ public:
     bool StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instance);
 
     /**
-     * Stop the timer currently assigned to the supplied zone instance
+     * Extend the timer currently assigned to the supplied zone instance.
+     * Only certain variants are valid. If the timer is successfully extended,
+     * the already assigned expiration event ID will be used
      * @param instance Pointer to a zone instance
+     * @param seconds Number of seconds the timer will be extended by
      * @return false if an error occurred
      */
-    bool StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instance);
+    bool ExtendInstanceTimer(const std::shared_ptr<ZoneInstance>& instance,
+        uint32_t seconds);
+
+    /**
+     * Stop the timer currently assigned to the supplied zone instance
+     * @param instance Pointer to a zone instance
+     * @param stopTime Explicit stop time to use instead of the current
+     *  server time. This is useful for making sure the stop time does
+     *  not undershoot the actual expiration
+     * @return false if an error occurred
+     */
+    bool StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instance,
+        uint64_t stopTime = false);
 
     /**
      * Send the timer currently assigned to the supplied zone instance to
@@ -583,10 +612,12 @@ public:
      *  sent the information.
      * @param queue true if the message should be queued, false if
      *  it should send right away
+     * @param extension Optional parameter to include as a one time "extension"
+     *  already added to the timer sent for certain packets
      */
     void SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instance,
         const std::shared_ptr<ChannelClientConnection>& client = nullptr,
-        bool queue = false);
+        bool queue = false, uint32_t extension = 0);
 
     /**
      * Update the death time-out associated to the client and handle
@@ -630,6 +661,64 @@ public:
     void EndInstanceTimer(const std::shared_ptr<ZoneInstance>& instance,
         const std::shared_ptr<ChannelClientConnection>& client,
         bool isSuccess, bool queue = false);
+
+    /**
+     * Update any zone specific entity tracking/state information and if
+     * the zone is marked for tracking and fall back to team tracking only
+     * if the whole zone should not be tracked. An example of a tracked
+     * zone is a Diaspora instance zone.
+     * @param zone Pointer to a zone to track
+     * @param team Optional pointer to the team to track if the zone is not
+     *  being tracked in itself
+     * @return true if the zone (or team) tracking was updated successfully,
+     *  false if it did not apply
+     */
+    bool UpdateTrackedZone(const std::shared_ptr<Zone>& zone,
+        const std::shared_ptr<objects::Team>& team = nullptr);
+
+    /**
+     * Update any team specific entity tracking/state information
+     * @param team Pointer to the team being tracked
+     * @param zone Optional pointer to the only zone the tracking information
+     *  should be updated for
+     * @return true if the team tracking was updated successfully, false if
+     *  it did not apply
+     */
+    bool UpdateTrackedTeam(const std::shared_ptr<objects::Team>& team,
+        const std::shared_ptr<Zone>& zone = nullptr);
+
+    /**
+     * Update the loot assigned to the destiny box assigned to a specific
+     * world CID
+     * @param instance Pointer to the instance the box belongs to
+     * @param worldCID World CID that has access to the box
+     * @param add List of pointers to loot to add
+     * @param remove Optional set of slots to clear before adding loot
+     * @return true if the updates occurred, false if they did not
+     */
+    bool UpdateDestinyBox(const std::shared_ptr<ZoneInstance>& instance,
+        int32_t worldCID, const std::list<std::shared_ptr<objects::Loot>>& add,
+        std::set<uint8_t> remove = {});
+
+    /**
+     * Send the current state of the destiny box a client has access to
+     * @param client Pointer to the client connection
+     * @param eventMenu true if the box is being viewed via the lotto event
+     *  menu, false if it is being viewed normally
+     * @param queue If true the packet will be queued instead of sent directly
+     */
+    void SendDestinyBox(const std::shared_ptr<ChannelClientConnection>& client,
+        bool eventMenu, bool queue = false);
+
+    /**
+     * Perform any updates related to multi-zone bosses being killed
+     * @param zone Pointer to the zone the bosses were killed in
+     * @param sourceState Pointer to the state of the player that killed the
+     *  bosses
+     * @param types List of enemy types for the bosses that
+     */
+    void MultiZoneBossKilled(const std::shared_ptr<Zone>& zone,
+        ClientState* sourceState, const std::list<uint32_t>& types);
 
     /**
      * Trigger specific zone actions for the specified zone for a set of
@@ -844,6 +933,26 @@ private:
         const std::shared_ptr<Zone>& zone, bool queue = false);
 
     /**
+     * Schedule the expiration of a zone instance timer
+     * @param instance Pointer to the zone instance with a timer set
+     */
+    void ScheduleTimerExpiration(const std::shared_ptr<ZoneInstance>& instance);
+
+    /**
+     * Determine if the supplied boss EnemyState is valid to add to a
+     * multi-zone boss group
+     * @param enemyState Pointer to the boss EnemyState
+     * @return true if the boss can be added, false if it cannot
+     */
+    bool ValidateBossGroup(const std::shared_ptr<EnemyState>& enemyState);
+
+    /**
+     * Send the current multi-zone boss statuses in the supplied group
+     * @param groupID Multi-zone boss group to update
+     */
+    void SendMultiZoneBossStatus(uint32_t groupID);
+
+    /**
      * Perform all necessary despawns for the supplied zone.
      * @param zone Pointer to zone do perform despawns for
      */
@@ -885,25 +994,14 @@ private:
         uint32_t currentInstanceID = 0);
 
     /**
-     * Get a zone by zone definition ID that belongs to an instance. If
-     * the zone does not exist, it will be created and added to the instance.
-     * @param instance Pointer to the instance the zone will be retrieved
-     *  from or created for
-     * @param zoneID Zone definition ID to get a zone for
-     * @param dynamicMapID Dynamic Map ID of the zone to to get a zone for
-     * @return Pointer to the new or existing zone
-     */
-    std::shared_ptr<Zone> GetInstanceZoneInternal(
-        std::shared_ptr<ZoneInstance> instance, uint32_t zoneID,
-        uint32_t dynamicMapID);
-
-    /**
      * Create a new zone based off of the supplied definition
      * @param definition Pointer to a zone definition
+     * @param instance Optional pointer to the instance the zone will belong to
      * @return Pointer to a new zone
      */
     std::shared_ptr<Zone> CreateZone(
-        const std::shared_ptr<objects::ServerZone>& definition);
+        const std::shared_ptr<objects::ServerZone>& definition,
+        const std::shared_ptr<ZoneInstance>& instance = nullptr);
 
     /**
      * All all PvP bases defined in a zone from the variant
@@ -912,6 +1010,31 @@ private:
      */
     void AddPvPBases(const std::shared_ptr<Zone>& zone,
         const std::shared_ptr<objects::PvPInstanceVariant>& variant);
+
+    /**
+     * All all Diaspora bases defined in a zone from the variant
+     * @param zone Pointer to the zone
+     */
+    void AddDiasporaBases(const std::shared_ptr<Zone>& zone);
+
+    /**
+     * Determine if the suppplied client has access to enter a restricted
+     * zone
+     * @param client Pointer to the client attempting to enter the zone
+     * @param zone Pointer to the restricted zone
+     */
+    bool CanEnterRestrictedZone(
+        const std::shared_ptr<ChannelClientConnection>& client,
+        const std::shared_ptr<Zone>& zone);
+
+    /**
+     * Remove and clean up all zone information for a specific zone
+     * @param zone Pointer to the zone
+     * @param freezeOnly If true, the zone will only be frozen and removed
+     *  from all affected cache data members, if false it will be fully
+     *  removed
+     */
+    void RemoveZone(const std::shared_ptr<Zone>& zone, bool freezeOnly);
 
     /**
      * Remove a zone instance by unique ID if no characters have access
@@ -941,6 +1064,14 @@ private:
     bool RegisterTimeRestrictions(const std::shared_ptr<Zone>& zone,
         const std::shared_ptr<objects::ServerZone>& definition);
 
+    /**
+     * Gather all world clock representations of the supplied time triggers
+     * @param triggers List of pointers to time triggers
+     * @return List of world clock representations
+     */
+    std::list<WorldClockTime> GetTriggerTimes(
+        const std::list<std::shared_ptr<objects::ServerZoneTrigger>>& triggers);
+
     /// Map of zones by unique ID
     std::unordered_map<uint32_t, std::shared_ptr<Zone>> mZones;
 
@@ -968,11 +1099,18 @@ private:
     /// corresponding binary definitions
     std::unordered_map<uint32_t, std::shared_ptr<DynamicMap>> mDynamicMaps;
 
+    /// Map of global boss group IDs to zones in that group on the server
+    std::unordered_map<uint32_t, std::set<uint32_t>> mGlobalBossZones;
+
     /// Set of all zones that should be considered active when
     /// updating states. When a zone is removed from this set but
     /// not removed entirely, its AI etc will be frozen until a player
     /// enters the zone again.
     std::set<uint32_t> mActiveZones;
+
+    /// Set of IDs for all zones that are both active and configured for
+    /// team, full zone or boss tracking
+    std::set<uint32_t> mActiveTrackedZones;
 
     /// Set of all zone IDs, active or not, that have had a time restricted
     /// update performed on them. This can be thought of as temporarily
@@ -987,6 +1125,13 @@ private:
     /// Map of times bound to zone IDs to register with the world for world
     /// time triggering
     std::map<WorldClockTime, std::set<uint32_t>> mSpawnTimeRestrictZones;
+
+    /// List of zone-detached global time triggers that fire independent of
+    /// any zone
+    std::list<std::shared_ptr<objects::ServerZoneTrigger>> mGlobalTimeTriggers;
+
+    /// Next server time that tracked zones will be refreshed during
+    ServerTime mTrackingRefresh;
 
     /// Next available zone unique ID
     uint32_t mNextZoneID;

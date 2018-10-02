@@ -51,6 +51,7 @@
 #include <ActionGrantXP.h>
 #include <ActionPlayBGM.h>
 #include <ActionPlaySoundEffect.h>
+#include <ActionRunScript.h>
 #include <ActionSetHomepoint.h>
 #include <ActionSetNPCState.h>
 #include <ActionSpawn.h>
@@ -67,9 +68,11 @@
 #include <ActionZoneChange.h>
 #include <CharacterProgress.h>
 #include <DemonBox.h>
+#include <DestinyBox.h>
 #include <DigitalizeState.h>
 #include <DropSet.h>
 #include <Expertise.h>
+#include <Loot.h>
 #include <LootBox.h>
 #include <MiCategoryData.h>
 #include <MiItemData.h>
@@ -80,6 +83,8 @@
 #include <MiZoneData.h>
 #include <ObjectPosition.h>
 #include <Party.h>
+#include <PentalphaEntry.h>
+#include <PentalphaMatch.h>
 #include <PostItem.h>
 #include <PvPInstanceStats.h>
 #include <Quest.h>
@@ -88,10 +93,12 @@
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
 #include <ServerZoneTrigger.h>
+#include <Team.h>
 
 // channel Includes
 #include "AccountManager.h"
 #include "ChannelServer.h"
+#include "ChannelSyncManager.h"
 #include "CharacterManager.h"
 #include "EventManager.h"
 #include "ManagerConnection.h"
@@ -150,6 +157,8 @@ ActionManager::ActionManager(const std::weak_ptr<ChannelServer>& server)
         &ActionManager::CreateLoot;
     mActionHandlers[objects::Action::ActionType_t::DELAY] =
         &ActionManager::Delay;
+    mActionHandlers[objects::Action::ActionType_t::RUN_SCRIPT] =
+        &ActionManager::RunScript;
 }
 
 ActionManager::~ActionManager()
@@ -178,14 +187,7 @@ void ActionManager::PerformActions(
             ->GetCurrentZone(ctx.Client);
     }
 
-    if(!ctx.CurrentZone)
-    {
-        LOG_ERROR("Configurable actions cannot be performed"
-            " without supplying a curent zone or source connection\n");
-        return;
-    }
-
-    if(!ctx.Client && sourceEntityID)
+    if(!ctx.Client && ctx.CurrentZone && sourceEntityID)
     {
         // Add the client of the source if they are still in the zone
         auto sourceClient = mServer.lock()->GetManagerConnection()
@@ -212,14 +214,51 @@ void ActionManager::PerformActions(
         }
         else
         {
+            bool failure = false;
+
             auto srcCtx = action->GetSourceContext();
-            if(srcCtx != objects::Action::SourceContext_t::SOURCE)
+            if(srcCtx == objects::Action::SourceContext_t::ENEMIES)
+            {
+                // Execute once per enemy in the zone or instance and quit
+                // afterwards if any fail
+                std::list<std::shared_ptr<Zone>> zones;
+                switch(action->GetLocation())
+                {
+                case objects::Action::Location_t::INSTANCE:
+                    {
+                        auto instance = ctx.CurrentZone->GetInstance();
+                        if(instance)
+                        {
+                            zones = instance->GetZones();
+                        }
+                    }
+                    break;
+                case objects::Action::Location_t::ZONE:
+                default:
+                    // All others should be treated like just the zone
+                    zones.push_back(ctx.CurrentZone);
+                    break;
+                }
+
+                for(auto z : zones)
+                {
+                    for(auto enemy : z->GetEnemies())
+                    {
+                        ActionContext copyCtx = ctx;
+                        copyCtx.Client = nullptr;
+                        copyCtx.SourceEntityID = enemy->GetEntityID();
+                        copyCtx.AutoEventsOnly = false;
+
+                        failure |= !it->second(*this, copyCtx);
+                    }
+                }
+            }
+            else if(srcCtx != objects::Action::SourceContext_t::SOURCE)
             {
                 auto connectionManager = mServer.lock()->GetManagerConnection();
 
                 // Execute once per source context character and quit afterwards
                 // if any fail
-                bool failure = false;
                 bool preFiltered = false;
 
                 std::set<int32_t> worldCIDs;
@@ -230,18 +269,13 @@ void ActionManager::PerformActions(
                     switch(action->GetLocation())
                     {
                     case objects::Action::Location_t::INSTANCE:
+                        if(ctx.CurrentZone)
                         {
                             std::list<std::shared_ptr<Zone>> zones;
                             auto instance = ctx.CurrentZone->GetInstance();
                             if(instance)
                             {
-                                for(auto zPair1 : instance->GetZones())
-                                {
-                                    for(auto zPair2 : zPair1.second)
-                                    {
-                                        zones.push_back(zPair2.second);
-                                    }
-                                }
+                                zones = instance->GetZones();
                             }
 
                             for(auto z : zones)
@@ -258,12 +292,15 @@ void ActionManager::PerformActions(
                         }
                         break;
                     case objects::Action::Location_t::ZONE:
-                        for(auto conn : ctx.CurrentZone->GetConnectionList())
+                        if(ctx.CurrentZone)
                         {
-                            auto state = conn->GetClientState();
-                            if(state)
+                            for(auto conn : ctx.CurrentZone->GetConnectionList())
                             {
-                                worldCIDs.insert(state->GetWorldCID());
+                                auto state = conn->GetClientState();
+                                if(state)
+                                {
+                                    worldCIDs.insert(state->GetWorldCID());
+                                }
                             }
                         }
                         break;
@@ -287,9 +324,11 @@ void ActionManager::PerformActions(
                     preFiltered = true;
                     break;
                 case objects::Action::SourceContext_t::PARTY:
+                case objects::Action::SourceContext_t::TEAM:
                     {
-                        auto sourceClient = client ? client : connectionManager
-                            ->GetEntityClient(sourceEntityID, false);
+                        auto sourceClient = ctx.Client
+                            ? ctx.Client : connectionManager->GetEntityClient(
+                                sourceEntityID, false);
                         if(!sourceClient)
                         {
                             failure = true;
@@ -297,13 +336,31 @@ void ActionManager::PerformActions(
                         }
 
                         auto state = sourceClient->GetClientState();
-                        auto party = state->GetParty();
-                        if(party)
+                        switch(srcCtx)
                         {
-                            worldCIDs = party->GetMemberIDs();
+                        case objects::Action::SourceContext_t::PARTY:
+                            {
+                                auto party = state->GetParty();
+                                if(party)
+                                {
+                                    worldCIDs = party->GetMemberIDs();
+                                }
+                            }
+                            break;
+                        case objects::Action::SourceContext_t::TEAM:
+                            {
+                                auto team = state->GetTeam();
+                                if(team)
+                                {
+                                    worldCIDs = team->GetMemberIDs();
+                                }
+                            }
+                            break;
+                        default:
+                            break;
                         }
 
-                        // Always include self in party
+                        // Always include self in group
                         worldCIDs.insert(state->GetWorldCID());
                     }
                     break;
@@ -327,7 +384,7 @@ void ActionManager::PerformActions(
                     if(!preFiltered)
                     {
                         auto ctxZone = ctx.CurrentZone;
-                        auto ctxInst = ctxZone->GetInstance();
+                        auto ctxInst = ctxZone ? ctxZone->GetInstance() : nullptr;
                         switch(action->GetLocation())
                         {
                         case objects::Action::Location_t::INSTANCE:
@@ -375,13 +432,13 @@ void ActionManager::PerformActions(
                         }
                     }
                 }
-
-                if(failure)
-                {
-                    break;
-                }
             }
-            else if(!it->second(*this, ctx) && action->GetStopOnFailure())
+            else
+            {
+                failure = !it->second(*this, ctx);
+            }
+
+            if(failure && action->GetStopOnFailure())
             {
                 if(!action->GetOnFailureEvent().IsEmpty())
                 {
@@ -395,13 +452,6 @@ void ActionManager::PerformActions(
                         .Arg((int32_t)action->GetActionType()));
                 }
 
-                break;
-            }
-            else if(!ctx.CurrentZone)
-            {
-                LOG_DEBUG(libcomp::String("Quitting mid-action execution"
-                    " following removal of the context zone from action"
-                    " type: %1.\n").Arg((int32_t)action->GetActionType()));
                 break;
             }
         }
@@ -443,7 +493,7 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
     float y = act->GetDestinationY();
     float rotation = act->GetDestinationRotation();
 
-    auto currentInstance = ctx.CurrentZone ? ctx.CurrentZone->GetInstance() : nullptr;
+    auto currentInstance = ctx.CurrentZone->GetInstance();
 
     uint32_t spotID = act->GetSpotID();
     if(!zoneID && !spotID)
@@ -603,10 +653,61 @@ bool ActionManager::AddRemoveItems(ActionContext& ctx)
         {
             removes[itemPair.first] = (uint32_t)(-itemPair.second);
         }
-        else if(itemPair.second > 0)
+        else if(itemPair.second > 0 ||
+            (act->GetFromDropSet() && itemPair.second == 0))
         {
             adds[itemPair.first] = (uint32_t)itemPair.second;
         }
+    }
+
+    if(act->GetFromDropSet())
+    {
+        // Keys are actually drop set IDs and values are the maximum number of
+        // drops that can pull from the set, removes are not valid
+        if(removes.size() > 0)
+        {
+            LOG_ERROR("Attempted to remove items via drop set based action\n");
+            return false;
+        }
+
+        auto serverDataManager = server->GetServerDataManager();
+
+        std::unordered_map<uint32_t, uint32_t> dropItems;
+        for(auto& pair : adds)
+        {
+            auto dropSet = serverDataManager->GetDropSetData(pair.first);
+            if(dropSet)
+            {
+                // Value of 0 does not require or limit the number of drops
+                auto drops = characterManager->DetermineDrops(dropSet
+                    ->GetDrops(), 0, pair.second != 0);
+                auto loot = characterManager->CreateLootFromDrops(drops);
+
+                // Limit drop count
+                if(pair.second > 0)
+                {
+                    while(loot.size() > (size_t)pair.second)
+                    {
+                        loot.pop_back();
+                    }
+                }
+
+                for(auto l : loot)
+                {
+                    if(dropItems.find(l->GetType()) != dropItems.end())
+                    {
+                        dropItems[l->GetType()] = (uint32_t)(
+                            dropItems[l->GetType()] + l->GetCount());
+                    }
+                    else
+                    {
+                        dropItems[l->GetType()] = (uint32_t)l->GetCount();
+                    }
+                }
+            }
+        }
+
+        adds = dropItems;
     }
 
     switch(act->GetMode())
@@ -810,6 +911,110 @@ bool ActionManager::AddRemoveItems(ActionContext& ctx)
         break;
     case objects::ActionAddRemoveItems::Mode_t::CULTURE_PICKUP:
         return characterManager->CultureItemPickup(ctx.Client);
+    case objects::ActionAddRemoveItems::Mode_t::DESTINY_BOX:
+        // Generate loot from items and add to player's box or remove from
+        // player's box and put in inventory
+        {
+            int32_t worldCID = ctx.Client->GetClientState()->GetWorldCID();
+            auto instance = ctx.CurrentZone->GetInstance();
+            auto dBox = instance ? instance->GetDestinyBox(worldCID) : nullptr;
+            if(!dBox)
+            {
+                return false;
+            }
+
+            size_t boxSize = dBox->LootCount();
+
+            // Removes are either clear requests (key 0) or requests to
+            // move the inventory (1 based indexes) with a value specifying
+            // how many sequential slots will be affected
+            std::unordered_map<uint32_t, uint32_t> toInventory;
+            std::set<uint8_t> removeSlots;
+            for(auto& pair : removes)
+            {
+                bool removing = false;
+
+                size_t startingSlot = 0;
+                if(pair.first == 0)
+                {
+                    // Remove backwards starting at position before next
+                    // and don't add to inventory
+                    startingSlot = (size_t)((dBox->GetNextPosition() +
+                        boxSize - 1) % boxSize);
+                    removing = true;
+                }
+                else
+                {
+                    // Move to inventory (wrap if past max slot)
+                    startingSlot = (size_t)((pair.first - 1) % boxSize);
+                }
+
+                size_t slot = startingSlot;
+                for(uint32_t i = 0; i < pair.second && (i == 0 ||
+                    slot != startingSlot); i++)
+                {
+                    auto l = dBox->GetLoot(slot);
+                    if(l && !removing)
+                    {
+                        if(toInventory.find(l->GetType()) != toInventory.end())
+                        {
+                            toInventory[l->GetType()] = (uint32_t)(
+                                toInventory[l->GetType()] + l->GetCount());
+                        }
+                        else
+                        {
+                            toInventory[l->GetType()] = (uint32_t)l->GetCount();
+                        }
+                    }
+
+                    removeSlots.insert((uint8_t)slot);
+
+                    if(removing)
+                    {
+                        if(slot == 0)
+                        {
+                            // Wrap back to the end
+                            slot = (boxSize - 1);
+                        }
+                        else
+                        {
+                            slot--;
+                        }
+                    }
+                    else
+                    {
+                        slot++;
+                        if(slot >= boxSize)
+                        {
+                            // Wrap back to start
+                            slot = 0;
+                        }
+                    }
+                }
+            }
+
+            std::list<std::shared_ptr<objects::Loot>> loot;
+            for(auto& pair : adds)
+            {
+                auto l = std::make_shared<objects::Loot>();
+                l->SetType(pair.first);
+                l->SetCount((uint16_t)pair.second);
+
+                loot.push_back(l);
+            }
+
+            if(toInventory.size() > 0)
+            {
+                // Do not fail from running out of inventory space here
+                characterManager->AddRemoveItems(ctx.Client, toInventory,
+                    true);
+            }
+
+            // Adds must succeed
+            return server->GetZoneManager()->UpdateDestinyBox(instance,
+                worldCID, loot, removeSlots) || loot.size() == 0;
+        }
+        break;
     default:
         return false;
     }
@@ -1596,7 +1801,7 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
     }
 
     if(!ctx.Client && act->GetPointType() !=
-        objects::ActionUpdatePoints::PointType_t::PVP_VALUE)
+        objects::ActionUpdatePoints::PointType_t::KILL_VALUE)
     {
         LOG_ERROR("Attempted to set non-player entity points\n");
         return false;
@@ -1682,7 +1887,7 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
         }
         break;
     case objects::ActionUpdatePoints::PointType_t::ITIME:
-        if(act->GetITimeID() > 0)
+        if(act->GetModifier() > 0)
         {
             auto state = ctx.Client->GetClientState();
             auto cState = state->GetCharacterState();
@@ -1691,7 +1896,8 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                 ? character->GetProgress().Get() : nullptr;
             if(progress)
             {
-                int16_t oldVal = progress->GetITimePoints(act->GetITimeID());
+                int8_t iTimeID = act->GetModifier();
+                int16_t oldVal = progress->GetITimePoints(iTimeID);
                 int16_t val = (int16_t)act->GetValue();
                 if(!act->GetIsSet())
                 {
@@ -1708,21 +1914,20 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                     if(val >= 0)
                     {
                         // Set value normally
-                        progress->SetITimePoints(act->GetITimeID(), val);
+                        progress->SetITimePoints(iTimeID, val);
                     }
                     else
                     {
                         // Reset entry
-                        progress->RemoveITimePoints(act->GetITimeID());
+                        progress->RemoveITimePoints(iTimeID);
                         val = 0;
                     }
 
                     libcomp::Packet p;
                     p.WritePacketCode(
                         ChannelToClientPacketCode_t::PACKET_ITIME_UPDATE);
-                    p.WriteS8(act->GetITimeID());
-                    p.WriteS16Little(progress->GetITimePoints(act
-                        ->GetITimeID()));
+                    p.WriteS8(iTimeID);
+                    p.WriteS16Little(val);
 
                     ctx.Client->SendPacket(p);
 
@@ -1747,13 +1952,12 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                 ctx.Client, (int32_t)act->GetValue(), !act->GetIsSet());
         }
         break;
-    case objects::ActionUpdatePoints::PointType_t::PVP_VALUE:
+    case objects::ActionUpdatePoints::PointType_t::KILL_VALUE:
         {
-            auto instance = ctx.CurrentZone->GetInstance();
-            auto pvpStats = instance ? instance->GetPvPStats() : nullptr;
-            if(pvpStats)
+            auto eState = ctx.CurrentZone->GetActiveEntity(ctx.SourceEntityID);
+            if(eState)
             {
-                int32_t val = pvpStats->GetEntityValues(ctx.SourceEntityID);
+                int32_t val = eState->GetKillValue();
 
                 if(act->GetIsSet())
                 {
@@ -1764,7 +1968,7 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                     val += (int32_t)act->GetValue();
                 }
 
-                pvpStats->SetEntityValues(ctx.SourceEntityID, val);
+                eState->SetKillValue(val);
             }
             else
             {
@@ -1795,6 +1999,141 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                     return false;
                 }
             }
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::COWRIE:
+        {
+            return mServer.lock()->GetCharacterManager()->UpdateCowrieBethel(
+                ctx.Client, (int32_t)act->GetValue(), { { 0, 0, 0, 0, 0 } });
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::UB_POINTS:
+        {
+            return mServer.lock()->GetMatchManager()->UpdateUBPoints(
+                ctx.Client, (int32_t)act->GetValue());
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::BETHEL:
+        {
+            // Modifier required for team/bethel type specification
+            auto server = mServer.lock();
+
+            auto pEntry = server->GetMatchManager()->LoadPentalphaData(
+                ctx.Client, 0x01);
+            if(act->GetIsSet())
+            {
+                // Update points independent of entry (non-adjustable)
+                std::array<int32_t, 5> bethel = { { 0, 0, 0, 0, 0 } };
+                bethel[(size_t)act->GetModifier()] = (int32_t)act->GetValue();
+
+                return server->GetCharacterManager()->UpdateCowrieBethel(
+                    ctx.Client, 0, bethel);
+            }
+            else if(!pEntry)
+            {
+                // Everything past this point requires an active entry
+                return false;
+            }
+            else
+            {
+                auto currentMatch = server->GetMatchManager()
+                    ->GetPentalphaMatch(false);
+                if(!currentMatch || pEntry->GetMatch() != currentMatch->GetUUID())
+                {
+                    // Not in the current match
+                    return false;
+                }
+
+                auto zone = ctx.CurrentZone;
+                auto instance = zone ? zone->GetInstance() : nullptr;
+
+                int32_t oldBethel = pEntry->GetBethel();
+                auto oldVals = pEntry->GetPoints();
+                auto newVals = oldVals;
+                if(act->GetValue())
+                {
+                    // Request to update points for current match (no removal)
+                    int32_t bethel = (int32_t)act->GetValue();
+
+                    pEntry->SetBethel(oldBethel + bethel);
+                    newVals[pEntry->GetTeam()] = bethel +
+                        oldVals[pEntry->GetTeam()];
+                }
+                else if(!instance ||
+                    zone->GetInstanceType() != InstanceType_t::PENTALPHA)
+                {
+                    // Nothing to do
+                    return true;
+                }
+                else
+                {
+                    // Request to pull all bethel from the client state, add
+                    // the points to the current team and subtract from the
+                    // team matching the instance sub ID
+                    auto state = ctx.Client->GetClientState();
+                    int32_t bethel = state->GetInstanceBethel();
+                    size_t otherIdx = (size_t)instance->GetVariant()
+                        ->GetSubID();
+
+                    pEntry->SetBethel(oldBethel + bethel);
+                    newVals[pEntry->GetTeam()] = oldVals[pEntry->GetTeam()] +
+                        bethel;
+                    newVals[otherIdx] = oldVals[otherIdx] - bethel;
+                    state->SetInstanceBethel(0);
+
+                    // Get the final amount
+                    bethel = server->GetCharacterManager()
+                        ->UpdateBethel(ctx.Client, bethel, true);
+
+                    libcomp::Packet p;
+                    p.WritePacketCode(
+                        ChannelToClientPacketCode_t::PACKET_PENTALPHA_END);
+                    p.WriteS32Little((int32_t)pEntry->GetTeam());
+                    p.WriteS32Little(bethel);
+                    p.WriteU32Little(0);   // Unknown
+
+                    ctx.Client->SendPacket(p);
+                }
+
+                pEntry->SetPoints(newVals);
+                if(pEntry->Update(server->GetWorldDatabase()))
+                {
+                    auto syncManager = server->GetChannelSyncManager();
+                    syncManager->UpdateRecord(pEntry, "PentalphaEntry");
+                    syncManager->SyncOutgoing();
+                }
+                else
+                {
+                    // Rollback
+                    pEntry->SetBethel(oldBethel);
+                    pEntry->SetPoints(oldVals);
+                    return false;
+                }
+            }
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::ZIOTITE:
+        {
+            // Setting/increasing small ziotite by the value and large ziotite
+            // by the modifier
+            auto state = ctx.Client->GetClientState();
+            auto team = state->GetTeam();
+            if(!team)
+            {
+                // Not in a team
+                return false;
+            }
+
+            int32_t sZiotite = (int32_t)act->GetValue();
+            int8_t lZiotite = act->GetModifier();
+            if(act->GetIsSet())
+            {
+                sZiotite = sZiotite - team->GetSmallZiotite();
+                lZiotite = (int8_t)(lZiotite - team->GetLargeZiotite());
+            }
+
+            return mServer.lock()->GetMatchManager()->UpdateZiotite(team,
+                sZiotite, lZiotite, state->GetWorldCID());
         }
         break;
     default:
@@ -1963,6 +2302,84 @@ bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
             }
         }
         break;
+    case objects::ActionUpdateZoneFlags::Type_t::TOKUSEI:
+    case objects::ActionUpdateZoneFlags::Type_t::PARTNER_TOKUSEI:
+        // Set tokusei on the entity that clear when they leave the instance or
+        // change global zones
+        {
+            auto eState = ctx.CurrentZone->GetActiveEntity(ctx.SourceEntityID);
+            if(eState && act->GetType() ==
+                objects::ActionUpdateZoneFlags::Type_t::PARTNER_TOKUSEI)
+            {
+                auto state = ClientState::GetEntityClientState(eState
+                    ->GetEntityID());
+                eState = state ? state->GetDemonState() : nullptr;
+            }
+
+            if(!eState)
+            {
+                // Entity is required
+                return false;
+            }
+
+            switch(act->GetSetMode())
+            {
+            case objects::ActionUpdateZoneFlags::SetMode_t::UPDATE:
+                for(auto pair : act->GetFlagStates())
+                {
+                    if(pair.second == 0)
+                    {
+                        eState->RemoveAdditionalTokusei(pair.first);
+                    }
+                    else if(pair.second > 0)
+                    {
+                        eState->SetAdditionalTokusei(pair.first,
+                            (uint16_t)pair.second);
+                    }
+                }
+                break;
+            case objects::ActionUpdateZoneFlags::SetMode_t::INCREMENT:
+            case objects::ActionUpdateZoneFlags::SetMode_t::DECREMENT:
+                {
+                    bool incr = act->GetSetMode() ==
+                        objects::ActionUpdateZoneFlags::SetMode_t::INCREMENT;
+
+                    int32_t val;
+                    for(auto pair : act->GetFlagStates())
+                    {
+                        val = (int32_t)eState->GetAdditionalTokusei(pair.first);
+                        val = val + (incr ? pair.second : -pair.second);
+                        if(val <= 0)
+                        {
+                            eState->RemoveAdditionalTokusei(pair.first);
+                        }
+                        else
+                        {
+                            eState->SetAdditionalTokusei(pair.first,
+                                (uint16_t)val);
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+
+            // If the entity is a partner demon, calculate tokusei from the
+            // character instead
+            if(eState->GetEntityType() == EntityType_t::PARTNER_DEMON)
+            {
+                auto state = ClientState::GetEntityClientState(
+                    eState->GetEntityID());
+                if(state)
+                {
+                    eState = state->GetCharacterState();
+                }
+            }
+
+            mServer.lock()->GetTokuseiManager()->Recalculate(eState, true);
+        }
+        break;
     }
 
     if(act->GetType() == objects::ActionUpdateZoneFlags::Type_t::ZONE &&
@@ -2008,6 +2425,8 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
     switch(act->GetMode())
     {
     case objects::ActionZoneInstance::Mode_t::CREATE:
+    case objects::ActionZoneInstance::Mode_t::TEAM_JOIN:
+    case objects::ActionZoneInstance::Mode_t::CLAN_JOIN:
         {
             auto serverDataManager = server->GetServerDataManager();
             auto instDef = serverDataManager->GetZoneInstanceData(
@@ -2019,23 +2438,136 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
                 return false;
             }
 
-            return zoneManager->CreateInstance(ctx.Client,
-                act->GetInstanceID(), act->GetVariantID(), act->GetTimerID(),
-                act->GetTimerExpirationEventID()) != nullptr;
+            auto state = ctx.Client->GetClientState();
+
+            bool moveNow = false;
+            std::set<int32_t> accessCIDs = { state->GetWorldCID() };
+            switch(act->GetMode())
+            {
+            case objects::ActionZoneInstance::Mode_t::TEAM_JOIN:
+                // Grant access to the team in the zone and join right away
+                {
+                    auto team = state->GetTeam();
+                    if(team)
+                    {
+                        accessCIDs = team->GetMemberIDs();
+                        accessCIDs.insert(state->GetWorldCID());
+                    }
+
+                    moveNow = true;
+                }
+                break;
+            case objects::ActionZoneInstance::Mode_t::CLAN_JOIN:
+                // Grant access to the clan in the zone and join right away
+                {
+                    auto character = state->GetCharacterState()->GetEntity();
+                    auto clanUID = character
+                        ? character->GetClan().GetUUID() : NULLUUID;
+                    if(clanUID != NULLUUID)
+                    {
+                        for(auto& cPair : ctx.CurrentZone->GetConnections())
+                        {
+                            auto oState = cPair.second->GetClientState();
+                            character = oState->GetCharacterState()
+                                ->GetEntity();
+                            if(character &&
+                                character->GetClan().GetUUID() == clanUID)
+                            {
+                                accessCIDs.insert(oState->GetWorldCID());
+                            }
+                        }
+                    }
+
+                    moveNow = true;
+                }
+                break;
+            case objects::ActionZoneInstance::Mode_t::CREATE:
+            default:
+                // Grant access to all party members (or self if no party)
+                {
+                    auto party = state->GetParty();
+                    if(party)
+                    {
+                        accessCIDs = party->GetMemberIDs();
+                        accessCIDs.insert(state->GetWorldCID());
+                    }
+                }
+                break;
+            }
+
+            if(moveNow)
+            {
+                // Filter down to just characters in the zone
+                std::set<int32_t> remove;
+                for(int32_t cid : accessCIDs)
+                {
+                    auto otherState = ClientState::GetEntityClientState(cid,
+                        true);
+                    if(cid != state->GetWorldCID() && (!otherState ||
+                        otherState->GetZone() != ctx.CurrentZone))
+                    {
+                        remove.insert(cid);
+                    }
+                }
+
+                for(int32_t cid : remove)
+                {
+                    accessCIDs.erase(cid);
+                }
+            }
+
+            auto instance = zoneManager->CreateInstance(act->GetInstanceID(),
+                accessCIDs, act->GetVariantID(), act->GetTimerID(),
+                act->GetTimerExpirationEventID());
+            if(instance && moveNow)
+            {
+                // Move all players, kicking all players not in the source
+                // player's team or not in the set from their current teams
+                auto team = state->GetTeam();
+                auto managerConnection = server->GetManagerConnection();
+                auto matchManager = server->GetMatchManager();
+                auto clients = managerConnection->GetEntityClients(accessCIDs,
+                    true);
+                for(auto client : clients)
+                {
+                    auto oState = client->GetClientState();
+                    auto t = oState->GetTeam();
+                    if(t && t != team)
+                    {
+                        matchManager->LeaveTeam(client, t->GetID());
+                    }
+                }
+
+                if(team)
+                {
+                    for(auto client : managerConnection->GetEntityClients(team
+                        ->GetMemberIDs(), true))
+                    {
+                        auto oState = client->GetClientState();
+                        if(accessCIDs.find(oState->GetWorldCID()) ==
+                            accessCIDs.end())
+                        {
+                            matchManager->LeaveTeam(client, team->GetID());
+                        }
+                    }
+                }
+
+                if(instance)
+                {
+                    for(auto client : clients)
+                    {
+                        zoneManager->MoveToStartingZone(client, instance);
+                    }
+                }
+            }
+
+            return instance != nullptr;
         }
     case objects::ActionZoneInstance::Mode_t::JOIN:
         {
             auto instance = zoneManager->GetInstanceAccess(ctx.Client);
-            auto zone = zoneManager->GetInstanceStartingZone(instance);
-            if(zone)
-            {
-                auto zoneDef = zone->GetDefinition();
-                return zoneManager->EnterZone(ctx.Client, zoneDef->GetID(),
-                    zoneDef->GetDynamicMapID(), zoneDef->GetStartingX(),
-                    zoneDef->GetStartingY(), zoneDef->GetStartingRotation());
-            }
-
-            return false;
+            return instance && zoneManager->MoveToStartingZone(ctx.Client,
+                instance);
         }
         break;
     case objects::ActionZoneInstance::Mode_t::REMOVE:
@@ -2093,6 +2625,7 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
                     timerID);
                 if(timeLimitDef)
                 {
+                    instance->SetTimerID(timerID);
                     instance->SetTimeLimitData(timeLimitDef);
                     instance->SetTimerExpirationEventID(
                         act->GetTimerExpirationEventID());
@@ -2310,7 +2843,7 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
 
 bool ActionManager::Delay(ActionContext& ctx)
 {
-    auto act = GetAction<objects::ActionDelay>(ctx, false);
+    auto act = GetAction<objects::ActionDelay>(ctx, false, false);
     if(!act)
     {
         return false;
@@ -2357,6 +2890,19 @@ bool ActionManager::Delay(ActionContext& ctx)
                     ctx.GroupID);
         }
     }
+    else if(act->GetType() == objects::ActionDelay::Type_t::TIMER_EXTEND)
+    {
+        auto instance = ctx.CurrentZone->GetInstance();
+        if(!instance || (act->GetDelayID() > 0 &&
+            instance->GetTimerID() != (uint32_t)act->GetDelayID()))
+        {
+            // No valid timer found
+            return false;
+        }
+
+        return mServer.lock()->GetZoneManager()->ExtendInstanceTimer(
+            instance, (uint32_t)act->GetDuration());
+    }
     else if(act->GetDelayID())
     {
         uint32_t sysTime = act->GetDuration()
@@ -2386,6 +2932,16 @@ bool ActionManager::Delay(ActionContext& ctx)
                 {
                     character->RemoveActionCooldowns(act->GetDelayID());
                 }
+
+                // If any are invoke cooldowns, send the updated times
+                if(act->GetDelayID() == COOLDOWN_INVOKE_LAW ||
+                    act->GetDelayID() == COOLDOWN_INVOKE_NEUTRAL ||
+                    act->GetDelayID() == COOLDOWN_INVOKE_CHAOS ||
+                    act->GetDelayID() == COOLDOWN_INVOKE_WAIT)
+                {
+                    mServer.lock()->GetCharacterManager()->SendInvokeStatus(
+                        ctx.Client, true);
+                }
             }
             break;
         case objects::ActionDelay::Type_t::ACCOUNT_COOLDOWN:
@@ -2411,6 +2967,99 @@ bool ActionManager::Delay(ActionContext& ctx)
         default:
             break;
         }
+    }
+
+    return true;
+}
+
+bool ActionManager::RunScript(ActionContext& ctx)
+{
+    auto act = GetAction<objects::ActionRunScript>(ctx, false, false);
+    if(!act)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
+
+    auto script = serverDataManager->GetScript(act->GetScriptID());
+    if(script && script->Type.ToLower() == "actioncustom")
+    {
+        auto engine = std::make_shared<libcomp::ScriptEngine>();
+
+        // Bind some defaults
+        engine->Using<ChannelServer>();
+        engine->Using<CharacterState>();
+        engine->Using<DemonState>();
+        engine->Using<EnemyState>();
+        engine->Using<Zone>();
+        engine->Using<libcomp::Randomizer>();
+
+        // Bind the results enum
+        {
+            Sqrat::Enumeration e(engine->GetVM());
+            e.Const("SUCCESS", (int32_t)ActionRunScriptResult_t::SUCCESS);
+            e.Const("FAIL", (int32_t)ActionRunScriptResult_t::FAIL);
+            e.Const("LOG_OFF", (int32_t)ActionRunScriptResult_t::LOG_OFF);
+
+            Sqrat::ConstTable(engine->GetVM()).Enum("Result_t", e);
+        }
+
+        if(!engine->Eval(script->Source))
+        {
+            return false;
+        }
+
+        Sqrat::Array sqParams(engine->GetVM());
+        for(libcomp::String p : act->GetParams())
+        {
+            sqParams.Append(p);
+        }
+
+        int32_t sourceEntityID = ctx.SourceEntityID;
+        auto zone = ctx.CurrentZone;
+        auto source = zone ? zone->GetActiveEntity(sourceEntityID) : nullptr;
+
+        auto client = ctx.Client;
+        auto state = client ? client->GetClientState() : nullptr;
+        if(!state)
+        {
+            state = ClientState::GetEntityClientState(sourceEntityID);
+        }
+
+        Sqrat::Function f(Sqrat::RootTable(engine->GetVM()), "run");
+        auto scriptResult = !f.IsNull()
+            ? f.Evaluate<int32_t>(
+                source,
+                state ? state->GetCharacterState() : nullptr,
+                state ? state->GetDemonState() : nullptr,
+                zone,
+                server,
+                sqParams) : 0;
+
+        if(scriptResult)
+        {
+            switch((ActionRunScriptResult_t)*scriptResult)
+            {
+            case ActionRunScriptResult_t::SUCCESS:
+                return true;
+            case ActionRunScriptResult_t::LOG_OFF:
+                {
+                    server->GetAccountManager()->RequestDisconnect(client);
+
+                    // Close in case the client ignores it
+                    client->Close();
+
+                    return true;
+                }
+            default:
+                // Failure
+                break;
+            }
+        }
+
+        return false;
     }
 
     return true;
@@ -2484,6 +3133,19 @@ bool ActionManager::VerifyClient(ActionContext& ctx,
     return true;
 }
 
+bool ActionManager::VerifyZone(ActionContext& ctx,
+    const libcomp::String& typeName)
+{
+    if(!ctx.CurrentZone)
+    {
+        LOG_ERROR(libcomp::String("Attempted to execute a %1 with no"
+            " current zone\n").Arg(typeName));
+        return false;
+    }
+
+    return true;
+}
+
 bool ActionManager::PrepareTransformScript(ActionContext& ctx,
     std::shared_ptr<libcomp::ScriptEngine> engine)
 {
@@ -2525,7 +3187,7 @@ bool ActionManager::TransformAction(ActionContext& ctx,
 
     int32_t sourceEntityID = ctx.SourceEntityID;
     auto zone = ctx.CurrentZone;
-    auto source = zone->GetActiveEntity(sourceEntityID);
+    auto source = zone ? zone->GetActiveEntity(sourceEntityID) : nullptr;
 
     auto client = ctx.Client;
     auto state = client ? client->GetClientState() : nullptr;

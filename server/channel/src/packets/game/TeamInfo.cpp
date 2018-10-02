@@ -73,12 +73,11 @@ bool Parsers::TeamInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteS8(0);
         reply.WriteS8(0);
         reply.WriteS8(0);
-        reply.WriteS8(0);
         reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
             "", true);
-        reply.WriteS32Little(0);
-        reply.WriteS8(0);
 
+        reply.WriteS32Little(team->GetSmallZiotite());
+        reply.WriteS8(team->GetLargeZiotite());
         reply.WriteS8((int8_t)team->MemberIDsCount());
     }
     else

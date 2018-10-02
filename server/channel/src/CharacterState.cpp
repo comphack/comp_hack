@@ -40,6 +40,7 @@
 #include <DigitalizeState.h>
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
+#include <EventCounter.h>
 #include <Expertise.h>
 #include <Item.h>
 #include <MiCategoryData.h>
@@ -91,14 +92,16 @@ namespace libcomp
             Using<objects::Character>();
             Using<objects::DigitalizeState>();
 
-            Sqrat::DerivedClass<CharacterState,
-                ActiveEntityState> binding(mVM, "CharacterState");
+            Sqrat::DerivedClass<CharacterState, ActiveEntityState,
+                Sqrat::NoConstructor<CharacterState>> binding(mVM, "CharacterState");
             binding
                 .Func<std::shared_ptr<objects::Character>
                 (CharacterState::*)()>(
                     "GetEntity", &CharacterState::GetEntity)
                 .Func("GetDigitalizeState",
                     &CharacterState::GetDigitalizeState)
+                .Func("GetEventCounter",
+                    &CharacterState::GetEventCounter)
                 .Func("ActionCooldownActive",
                     &CharacterState::ActionCooldownActive)
                 .Func("RefreshActionCooldowns",
@@ -723,6 +726,13 @@ bool CharacterState::ActionCooldownActive(int32_t cooldownID,
         auto character = GetEntity();
         return character && character->ActionCooldownsKeyExists(cooldownID);
     }
+}
+
+std::shared_ptr<objects::EventCounter> CharacterState::GetEventCounter(
+    int32_t type)
+{
+    auto state = ClientState::GetEntityClientState(GetEntityID());
+    return state ? state->GetEventCounters(type).Get() : nullptr;
 }
 
 void CharacterState::RefreshActionCooldowns(bool accountLevel, uint32_t time)

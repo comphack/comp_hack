@@ -75,6 +75,7 @@ class MiGuardianSpecialData;
 class MiGuardianUnlockData;
 class MiHNPCData;
 class MiItemData;
+class MiMissionData;
 class MiMitamaReunionBonusData;
 class MiMitamaReunionSetBonusData;
 class MiMitamaUnionBonusData;
@@ -97,6 +98,7 @@ class MiSynthesisData;
 class MiTimeLimitData;
 class MiTitleData;
 class MiTriUnionSpecialData;
+class MiUraFieldTowerData;
 class MiWarpPointData;
 class MiZoneData;
 class QmpFile;
@@ -471,6 +473,14 @@ public:
         const libcomp::String& name);
 
     /**
+     * Get the mission definition corresponding to an ID
+     * @param id Mission ID to retrieve
+     * @return Pointer to the matching mission definition, null if it does
+     *  not exist
+     */
+    const std::shared_ptr<objects::MiMissionData> GetMissionData(uint32_t id);
+
+    /**
      * Get the mitama reunion bonus definition corresponding to an ID
      * @param id Mitama reunion bonus ID to retrieve
      * @return Pointer to the matching mitama reunion bonus definition,
@@ -701,6 +711,15 @@ public:
      */
     const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
         GetTriUnionSpecialData(uint32_t sourceDemonTypeID);
+
+    /**
+     * Get the (Diaspora) ura field tower corresponding to an ID
+     * @param id Ura field tower ID to retrieve
+     * @return Pointer to the matching ura field tower information, null
+     *  if it does not exist
+     */
+    const std::shared_ptr<objects::MiUraFieldTowerData> GetUraFieldTowerData(
+        uint32_t dungeonID, uint32_t id);
 
     /**
      * Get the warp point corresponding to an ID
@@ -1095,6 +1114,10 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiItemData>> mItemData;
 
+    /// Map of mission definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiMissionData>> mMissionData;
+
     /// Map of mitama reunion bonus definitions by ID
     std::unordered_map<uint32_t, std::shared_ptr<
         objects::MiMitamaReunionBonusData>> mMitamaReunionBonusData;
@@ -1200,6 +1223,10 @@ private:
     /// Map of source demon IDs to special fusions they belong to
     std::unordered_map<uint32_t,
         std::list<uint32_t>> mTriUnionSpecialDataBySourceID;
+
+    /// Map of (Diaspora) ura field tower definitions by dungeon ID, then ID
+    std::unordered_map<uint32_t, std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiUraFieldTowerData>>> mUraFieldTowerData;
 
     /// Map of warp point definitions by ID
     std::unordered_map<uint32_t,

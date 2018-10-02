@@ -38,7 +38,6 @@
     </object>
     <object name="TokuseiSkillCondition" persistent="false" baseobject="TokuseiCondition">
         <member type="enum" name="Type" inherited="true" default="SKILL_STATE"/>
-        <member type="bool" name="TargetCondition" default="false"/>
         <member type="enum" name="SkillConditionType" underlying="int8_t">
             <value>ANY_SKILL</value>
             <value>EXPLICIT_SKILL</value>
@@ -56,6 +55,7 @@
             <value>ENEMY_FACTION</value>
             <value>ENEMY_GENDER</value>
             <value>ENEMY_LNC</value>
+            <value>ENEMY_TOKUSEI</value>
         </member>
     </object>
     <object name="TokuseiAttributes" persistent="false">
@@ -97,6 +97,7 @@
 
             <!-- Skill Processing -->
             <value>AFFINITY_CAP_MAX</value>
+            <value>BARRIER</value>
             <value>CLENCH_CHANCE</value>
             <value>CLENCH_REFLECT_CHANCE</value>
             <value>DAMAGE_DEALT</value>
@@ -155,6 +156,9 @@
             <element type="TokuseiCondition*"/>
         </member>
         <member type="list" name="SkillConditions">
+            <element type="TokuseiSkillCondition*"/>
+        </member>
+        <member type="list" name="SkillTargetConditions">
             <element type="TokuseiSkillCondition*"/>
         </member>
         <member type="list" name="CorrectValues">

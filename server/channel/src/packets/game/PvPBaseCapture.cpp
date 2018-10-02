@@ -54,7 +54,7 @@ bool Parsers::PvPBaseCapture::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
         ->GetServer());
 
-    server->GetMatchManager()->CaptureBase(client, baseID);
+    server->GetMatchManager()->StartPvPBaseCapture(client, baseID);
 
     return true;
 }

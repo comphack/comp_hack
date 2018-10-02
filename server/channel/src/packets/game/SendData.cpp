@@ -136,7 +136,7 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
                 // Can't discern any information about the logout zone
                 zoneID = 0;
             }
-            else if(!zoneData->GetGlobal())
+            else if(!zoneData->GetGlobal() || zoneData->GetRestricted())
             {
                 // Determine which public zone to go to instead, defaulting
                 // to the lobby matching the group ID

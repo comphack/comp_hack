@@ -137,6 +137,19 @@
 </section><!-- FusionGaugeBonus -->
 
 <section>
+<title>BethelBonus</title>
+<para><emphasis role="strong">Type:</emphasis> float</para>
+<para><emphasis role="strong">Default:</emphasis> 0.0</para>
+<para>Sets the additional bethel percentage gained during a Pentalpha match.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="BethelBonus">10.0</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- BethelBonus -->
+
+<section>
 <title>DigitalizePointBonus</title>
 <para><emphasis role="strong">Type:</emphasis> float</para>
 <para><emphasis role="strong">Default:</emphasis> 0.0</para>
@@ -148,19 +161,6 @@
 </section><!-- Example -->
 
 </section><!-- DigitalizePointBonus -->
-
-<section>
-<title>GlobalDropSetIDs</title>
-<para><emphasis role="strong">Type:</emphasis> set of integers</para>
-<para><emphasis role="strong">Default:</emphasis> empty</para>
-<para>Set of drop set IDs to mix into all drops being calculated from killing an enemy.</para>
-
-<section>
-<title>Example</title>
-<para><![CDATA[<member name="GlobalDropSetIDs"><element>999</element></member>]]></para>
-</section><!-- Example -->
-
-</section><!-- GlobalDropSetIDs -->
 
 <section>
 <title>EnabledDemonQuests</title>

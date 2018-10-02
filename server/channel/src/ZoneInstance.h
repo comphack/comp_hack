@@ -35,6 +35,7 @@
 
 namespace objects
 {
+class DestinyBox;
 class ServerZoneInstance;
 }
 
@@ -50,11 +51,6 @@ class ZoneInstance : public objects::ZoneInstanceObject
 public:
     /**
      * Create a new zone instance.
-     */
-    ZoneInstance();
-
-    /**
-     * Create a new zone instance.
      * @param id Unique server ID of the zone instance
      * @param definition Pointer to the ServerZoneInstance definition
      * @param accessCIDs Set of world CIDs for characters with access to the
@@ -63,14 +59,6 @@ public:
     ZoneInstance(uint32_t id, const std::shared_ptr<
         objects::ServerZoneInstance>& definition,
         const std::set<int32_t>& accessCIDs);
-
-    /**
-     * Explicitly defined copy constructor necessary due to removal
-     * of implicit constructor from non-copyable mutex member. This should
-     * never actually be used.
-     * @param other The other instance to copy
-     */
-    ZoneInstance(const ZoneInstance& other);
 
     /**
      * Clean up the zone instance.
@@ -92,10 +80,9 @@ public:
 
     /**
      * Get all zones in the instance
-     * @return Map of zones in the instance by zone ID then dynamic map ID
+     * @return List of zones in the instance
      */
-    std::unordered_map<uint32_t,
-        std::unordered_map<uint32_t, std::shared_ptr<Zone>>> GetZones() const;
+    std::list<std::shared_ptr<Zone>> GetZones();
 
     /**
      * Get a zone in the instance by zone ID and dynamic map ID
@@ -163,6 +150,29 @@ public:
      *  if it affects the entire instance
      */
     void SetFlagState(int32_t key, int32_t value, int32_t worldCID);
+
+    /**
+     * Get the destiny box the supplied world CID character has access
+     * to which can be an individual or shared box
+     * @param worldCID World CID of the character who has access to the box
+     * @return Pointer to the destiny box the character has access to or
+     *  null if none exists
+     */
+    std::shared_ptr<objects::DestinyBox> GetDestinyBox(int32_t worldCID);
+
+    /**
+     * Update the loot assigned to the destiny box assigned to a specific
+     * world CID
+     * @param worldCID World CID that has access to the box
+     * @param add List of pointers to loot to add
+     * @param remove Optional set of slots to clear before adding loot
+     * @return Map of all loot that was removed upon request from the box
+     *  by slot they were removed from
+     */
+    std::unordered_map<uint8_t, std::shared_ptr<objects::Loot>>
+        UpdateDestinyBox(int32_t worldCID, uint8_t& newNext,
+        const std::list<std::shared_ptr<objects::Loot>>& add,
+        const std::set<uint8_t>& remove);
 
 private:
     /// General use flags and associated values used for event sequences etc

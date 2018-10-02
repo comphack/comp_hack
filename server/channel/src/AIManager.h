@@ -173,7 +173,7 @@ private:
      * @param functionName Name of the script function to execute
      * @param now Current timestamp of the server
      * @param result Output parameter to store the script return result in
-     * @result true if the function exists and returned a result, false if it did not
+     * @return true if the function exists and returned a result, false if it did not
      */
     template<class T> bool ExecuteScriptFunction(const std::shared_ptr<
         ActiveEntityState>& eState, const libcomp::String& functionName, uint64_t now,

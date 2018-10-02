@@ -45,6 +45,7 @@
 #include <CultureData.h>
 #include <DemonBox.h>
 #include <DemonQuest.h>
+#include <EventCounter.h>
 #include <EventState.h>
 #include <Expertise.h>
 #include <FriendSettings.h>
@@ -280,12 +281,11 @@ void AccountManager::Logout(const std::shared_ptr<
             server->GetCharacterManager()->DigitalizeEnd(client);
         }
 
-        auto pvpMatch = state->GetPvPMatch();
-        if(pvpMatch)
+        auto match = state->GetPendingMatch();
+        if(match)
         {
-            // Reject any pending PvP matches
-            server->GetMatchManager()->PvPInviteReply(client,
-                pvpMatch->GetID(), false);
+            // Cleanup any pending matches
+            server->GetMatchManager()->CleanupPendingMatch(client);
         }
 
         if(!LogoutCharacter(state))
@@ -308,6 +308,18 @@ void AccountManager::Logout(const std::shared_ptr<
         server->GetTokuseiManager()->RemoveTrackingEntities(
             state->GetWorldCID());
     }
+}
+
+void AccountManager::RequestDisconnect(const std::shared_ptr<
+    channel::ChannelClientConnection>& client)
+{
+    libcomp::Packet request;
+    request.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_LOGOUT);
+    request.WriteU32Little(
+        (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+
+    client->SendPacket(request, true);
 }
 
 void AccountManager::Authenticate(const std::shared_ptr<
@@ -878,6 +890,26 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 " not be initialized for account: %1\n")
                 .Arg(state->GetAccountUID().ToString()));
             return false;
+        }
+    }
+
+    // Event counters
+    for(auto counter : objects::EventCounter::LoadEventCounterListByCharacter(
+        db, character->GetUUID()))
+    {
+        // Ignore entries that are no longer valid
+        if(!counter->GetType()) continue;
+
+        if(state->EventCountersKeyExists(counter->GetType()))
+        {
+            LOG_ERROR(libcomp::String("Duplicate event counter encountered"
+                " on character %1: %2\n").Arg(counter->GetType())
+                .Arg(character->GetUUID().ToString()));
+            return false;
+        }
+        else
+        {
+            state->SetEventCounters(counter->GetType(), counter);
         }
     }
 

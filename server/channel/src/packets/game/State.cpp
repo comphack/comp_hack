@@ -59,10 +59,14 @@ void SendStateData(std::shared_ptr<ChannelServer> server,
 
     characterManager->SendAutoRecovery(client);
 
+    characterManager->SendInvokeStatus(client, false, true);
+
     characterManager->SetStatusIcon(client);
 
     tokuseiManager->SendCostAdjustments(cState->GetEntityID(),
         client);
+
+    characterManager->SendCowrieBethel(client);
 
     // If we're already in a party, send party member info to rejoin
     // the existing one if possible

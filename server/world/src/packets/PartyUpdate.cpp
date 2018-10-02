@@ -28,6 +28,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ErrorCodes.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
@@ -53,22 +54,22 @@ void PartyInvite(std::shared_ptr<WorldServer> server,
     auto cLogin = characterManager->GetCharacterLogin(member->GetName());
     auto targetLogin = characterManager->GetCharacterLogin(targetName);
 
-    uint16_t responseCode = 201;  // Not available
+    uint16_t responseCode = (uint16_t)PartyErrorCodes_t::INVALID_OR_OFFLINE;
     if(cLogin && targetLogin && targetLogin->GetChannelID() >= 0)
     {
         auto party = cLogin->GetPartyID()
             ? characterManager->GetParty(cLogin->GetPartyID()) : nullptr;
         if(party && party->GetLeaderCID() != cLogin->GetWorldCID())
         {
-            responseCode = 208;  // Not the leader
+            responseCode = (uint16_t)PartyErrorCodes_t::LEADER_REQUIRED;
         }
         else if(party && party->MemberIDsCount() >= MAX_PARTY_SIZE)
         {
-            responseCode = 207;  // Already full
+            responseCode = (uint16_t)PartyErrorCodes_t::PARTY_FULL;
         }
         else if(targetLogin->GetPartyID() != 0)
         {
-            responseCode = 202;  // Already in a party
+            responseCode = (uint16_t)PartyErrorCodes_t::IN_PARTY;
         }
         else
         {
@@ -85,7 +86,7 @@ void PartyInvite(std::shared_ptr<WorldServer> server,
 
                 channel->SendPacket(relay);
 
-                responseCode = 200; // Success
+                responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
             }
         }
     }
@@ -122,7 +123,6 @@ void PartyCancel(std::shared_ptr<WorldServer> server,
     }
 }
 
-
 void PartyDropRule(std::shared_ptr<WorldServer> server,
     std::shared_ptr<libcomp::TcpConnection> requestConnection,
     std::shared_ptr<objects::CharacterLogin> cLogin, uint8_t rule)
@@ -130,10 +130,10 @@ void PartyDropRule(std::shared_ptr<WorldServer> server,
     auto characterManager = server->GetCharacterManager();
     auto party = characterManager->GetParty(cLogin->GetPartyID());
 
-    uint16_t responseCode = 201;    // Failure
+    uint16_t responseCode = (uint16_t)PartyErrorCodes_t::GENERIC_ERROR;
     if(party && party->SetDropRule((objects::Party::DropRule_t)rule))
     {
-        responseCode = 200; // Success
+        responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
     }
     
     libcomp::Packet relay;
@@ -143,7 +143,7 @@ void PartyDropRule(std::shared_ptr<WorldServer> server,
 
     requestConnection->QueuePacket(relay);
 
-    if(responseCode == 200)
+    if(responseCode == (uint16_t)PartyErrorCodes_t::SUCCESS)
     {
         server->GetCharacterManager()->SendPartyInfo(party->GetID());
 
@@ -157,6 +157,63 @@ void PartyDropRule(std::shared_ptr<WorldServer> server,
     }
 
     requestConnection->FlushOutgoing();
+}
+
+void PartyRecruitJoin(std::shared_ptr<WorldServer> server,
+    std::shared_ptr<libcomp::TcpConnection> requestConnection,
+    std::shared_ptr<objects::PartyCharacter> member, const libcomp::String targetName)
+{
+    auto characterManager = server->GetCharacterManager();
+    auto cLogin = characterManager->GetCharacterLogin(member->GetName());
+    auto targetLogin = characterManager->GetCharacterLogin(targetName);
+
+    uint16_t responseCode = (uint16_t)PartyErrorCodes_t::INVALID_OR_OFFLINE;
+    if(cLogin && targetLogin && targetLogin->GetChannelID() >= 0)
+    {
+        auto party = targetLogin->GetPartyID()
+            ? characterManager->GetParty(targetLogin->GetPartyID()) : nullptr;
+        if(party && party->MemberIDsCount() >= MAX_PARTY_SIZE)
+        {
+            responseCode = (uint16_t)PartyErrorCodes_t::PARTY_FULL;
+        }
+        else if(cLogin->GetPartyID() != 0)
+        {
+            responseCode = (uint16_t)PartyErrorCodes_t::IN_PARTY;
+        }
+        else if(party && targetLogin->GetWorldCID() != party->GetLeaderCID())
+        {
+            responseCode = (uint16_t)PartyErrorCodes_t::LEADER_REQUIRED;
+        }
+        else
+        {
+            characterManager->AddToParty(member, 0);
+            auto channel = server->GetChannelConnectionByID(targetLogin
+                ->GetChannelID());
+            if(channel)
+            {
+                libcomp::Packet relay;
+                WorldServer::GetRelayPacket(relay, targetLogin->GetWorldCID());
+                relay.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_PARTY_RECRUIT_REPLIED);
+                relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+                    member->GetName(), true);
+                relay.WriteU32Little(party ? party->GetID() : 0);
+
+                channel->SendPacket(relay);
+
+                responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
+            }
+        }
+    }
+
+    libcomp::Packet relay;
+    WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
+    relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_RECRUIT_REPLY);
+    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+        targetName, true);
+    relay.WriteU16Little(responseCode);
+
+    requestConnection->SendPacket(relay);
 }
 
 bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -177,6 +234,10 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     case InternalPacketAction_t::PACKET_ACTION_YN_REQUEST:
     case InternalPacketAction_t::PACKET_ACTION_RESPONSE_YES:
         {
+            bool request = (InternalPacketAction_t)mode ==
+                InternalPacketAction_t::PACKET_ACTION_YN_REQUEST;
+            bool isRecruit = p.ReadU8() == 1;
+
             auto member = std::make_shared<objects::PartyCharacter>();
             if(!member->LoadPacket(p, false))
             {
@@ -195,22 +256,38 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             libcomp::String targetName = p.ReadString16Little(
                 libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
 
-            if((InternalPacketAction_t)mode == InternalPacketAction_t::PACKET_ACTION_YN_REQUEST)
+            if(request)
             {
-                // Party invite
-                PartyInvite(server, connection, member, targetName);
+                if(!isRecruit)
+                {
+                    PartyInvite(server, connection, member, targetName);
+                }
+                else
+                {
+                    PartyRecruitJoin(server, connection, member, targetName);
+                }
             }
             else
             {
                 // Party invite accept
                 if(p.Left() != 4)
                 {
-                    LOG_ERROR("Missing party ID parameter for party invite accept command\n");
+                    LOG_ERROR("Missing party ID parameter for party invite"
+                        " accept command\n");
                     return false;
                 }
 
                 uint32_t partyID = p.ReadU32Little();
-                server->GetCharacterManager()->PartyJoin(member, targetName, partyID, connection);
+                if(!isRecruit)
+                {
+                    server->GetCharacterManager()->PartyJoin(member,
+                        targetName, partyID, connection);
+                }
+                else
+                {
+                    server->GetCharacterManager()->PartyRecruit(member,
+                        targetName, partyID, connection);
+                }
             }
             
             return true;

@@ -249,6 +249,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/action_homepoint.xml
     schema/action_playbgm.xml
     schema/action_playsoundeffect.xml
+    schema/action_runscript.xml
     schema/action_setnpcstate.xml
     schema/action_spawn.xml
     schema/action_specialdirection.xml
@@ -297,6 +298,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/team.xml
     schema/test.xml
     schema/tokusei.xml
+    schema/ultimatebattle.xml
     schema/webgame.xml
 
     # BinaryData Files
@@ -333,6 +335,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/guardiandata.xml
     schema/binarydata/hnpcdata.xml
     schema/binarydata/itemdata.xml
+    schema/binarydata/missiondata.xml
     schema/binarydata/mitamadata.xml
     schema/binarydata/modificationdata.xml
     schema/binarydata/npcbarterdata.xml
@@ -347,6 +350,7 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/binarydata/statusdata.xml
     schema/binarydata/timelimitdata.xml
     schema/binarydata/triunionspecialdata.xml
+    schema/binarydata/urafieldtowerdata.xml
     schema/binarydata/warppointdata.xml
     schema/binarydata/zonedata.xml
 )
@@ -390,6 +394,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ActionPlayBGM.cpp
     ActionPlaySoundEffect.h
     ActionPlaySoundEffect.cpp
+    ActionRunScript.h
+    ActionRunScript.cpp
     ActionSetHomepoint.h
     ActionSetHomepoint.cpp
     ActionSetNPCState.h
@@ -444,6 +450,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     DatabaseConfigSQLite3.cpp
     EntityStats.h
     EntityStats.cpp
+    EventCounter.h
+    EventCounter.cpp
     Item.h
     Item.cpp
     Demon.h
@@ -514,6 +522,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ItemBox.cpp
     ItemDrop.h
     ItemDrop.cpp
+    Match.h
+    Match.cpp
     MatchEntry.h
     MatchEntry.cpp
     ObjectPosition.h
@@ -530,6 +540,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     PartyCharacter.cpp
     PartyMember.h
     PartyMember.cpp
+    PentalphaEntry.h
+    PentalphaEntry.cpp
+    PentalphaMatch.h
+    PentalphaMatch.cpp
     PlasmaSpawn.h
     PlasmaSpawn.cpp
     PostItem.h
@@ -626,6 +640,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     TokuseiCorrectTbl.cpp
     TokuseiSkillCondition.h
     TokuseiSkillCondition.cpp
+    UBTournament.h
+    UBTournament.cpp
+    UBResult.h
+    UBResult.cpp
     WebGameSession.h
     WebGameSession.cpp
     WorldSharedConfig.h
@@ -826,6 +844,10 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiItemPvPData.cpp
     MiKnockBackData.cpp
     MiKnockBackData.h
+    MiMissionData.h
+    MiMissionData.cpp
+    MiMissionExit.h
+    MiMissionExit.cpp
     MiMitamaReunionBonusData.cpp
     MiMitamaReunionBonusData.h
     MiMitamaReunionSetBonusData.cpp
@@ -920,6 +942,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiTriUnionSpecialData.h
     MiUnionData.cpp
     MiUnionData.h
+    MiUraFieldTowerData.h
+    MiUraFieldTowerData.cpp
     MiUseRestrictionsData.h
     MiUseRestrictionsData.cpp
     MiSpotData.h

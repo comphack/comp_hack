@@ -88,7 +88,8 @@ namespace libcomp
             // Active entities can rotate or stop directly from the script
             // but movement must be handled via the AIManager
             Sqrat::DerivedClass<ActiveEntityState,
-                objects::ActiveEntityStateObject> binding(mVM, "ActiveEntityState");
+                objects::ActiveEntityStateObject,
+                Sqrat::NoConstructor<ActiveEntityState>> binding(mVM, "ActiveEntityState");
             binding
                 .Func("GetZone", &ActiveEntityState::GetZone)
                 .Func("Rotate", &ActiveEntityState::Rotate)
@@ -115,11 +116,6 @@ ActiveEntityState::ActiveEntityState() : mCurrentZone(0),
     mCloaked(false), mLastRefresh(0), mNextRegenSync(0), mNextUpkeep(0),
     mNextActivatedAbilityID(1)
 {
-}
-
-ActiveEntityState::ActiveEntityState(const ActiveEntityState& other)
-{
-    (void)other;
 }
 
 int16_t ActiveEntityState::GetCorrectValue(CorrectTbl tableID,
@@ -1665,7 +1661,7 @@ void ActiveEntityState::RemoveStatusEffects(const std::set<uint32_t>& effectType
     }
 
     if(GetIsHidden() &&
-        mStatusEffects.find(SVR_CONST.STATUS_HIDDEN) == mStatusEffects.end())
+        mStatusEffects.find(SVR_CONST.STATUS_DEMON_ONLY) == mStatusEffects.end())
     {
         SetIsHidden(false);
     }
@@ -1811,7 +1807,7 @@ void ActiveEntityState::ActivateStatusEffect(
         }
     }
 
-    if(!GetIsHidden() && effect->GetEffect() == SVR_CONST.STATUS_HIDDEN)
+    if(!GetIsHidden() && effect->GetEffect() == SVR_CONST.STATUS_DEMON_ONLY)
     {
         SetIsHidden(true);
     }

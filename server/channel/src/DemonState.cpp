@@ -60,8 +60,8 @@ namespace libcomp
             Using<ActiveEntityState>();
             Using<objects::Demon>();
 
-            Sqrat::DerivedClass<DemonState,
-                ActiveEntityState> binding(mVM, "DemonState");
+            Sqrat::DerivedClass<DemonState, ActiveEntityState,
+                Sqrat::NoConstructor<DemonState>> binding(mVM, "DemonState");
             binding
                 .Func<std::shared_ptr<objects::Demon>
                 (DemonState::*)()>(
@@ -77,11 +77,6 @@ namespace libcomp
 DemonState::DemonState()
 {
     mCompendiumCount = 0;
-}
-
-DemonState::DemonState(const DemonState& other)
-{
-    (void)other;
 }
 
 uint16_t DemonState::GetCompendiumCount(uint8_t groupID, bool familyGroup)

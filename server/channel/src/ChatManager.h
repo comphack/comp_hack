@@ -188,6 +188,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to update the client's bethel directly.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Bethel(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to set the total casino coins the character has
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command
@@ -204,6 +214,27 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_Contract(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to view a world level or view/change a character level
+     * counter
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Counter(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to update the client's current cowrie.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Cowrie(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 
@@ -668,6 +699,16 @@ private:
      * @return true if the command was handled properly, else false
      */
     bool GMCommand_WorldTime(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
+     * GM command to update the client's team's ziotite.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Ziotite(const std::shared_ptr<
         channel::ChannelClientConnection>& client,
         const std::list<libcomp::String>& args);
 

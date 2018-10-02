@@ -437,9 +437,15 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
 
         // Register the channel connection with the sync manager
         const std::set<std::string> channelSyncTypes = {
+                "EventCounter",
+                "Match",
                 "MatchEntry",
+                "PentalphaEntry",
+                "PentalphaMatch",
                 "PvPMatch",
-                "SearchEntry"
+                "SearchEntry",
+                "UBResult",
+                "UBTournament"
             };
 
         if(AssignMessageQueue(connection) &&

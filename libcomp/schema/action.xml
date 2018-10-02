@@ -26,11 +26,14 @@
             <value>SPAWN</value>
             <value>CREATE_LOOT</value>
             <value>DELAY</value>
+            <value>RUN_SCRIPT</value>
         </member>
         <member type="enum" name="sourceContext" default="SOURCE">
             <value>SOURCE</value>
             <value>PARTY</value>
+            <value>TEAM</value>
             <value>ALL</value>
+            <value>ENEMIES</value>
         </member>
         <member type="enum" name="location" default="ZONE">
             <value>WORLD</value>

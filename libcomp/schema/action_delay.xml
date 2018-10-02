@@ -7,6 +7,7 @@
             <value>ACTION_DELAY</value>
             <value>CHARACTER_COOLDOWN</value>
             <value>ACCOUNT_COOLDOWN</value>
+            <value>TIMER_EXTEND</value>
         </member>
         <member type="s32" name="delayID"/>
         <member type="u32" name="duration"/>

@@ -72,6 +72,7 @@
 #include <MiHNPCBasicData.h>
 #include <MiHNPCData.h>
 #include <MiItemData.h>
+#include <MiMissionData.h>
 #include <MiMitamaReunionBonusData.h>
 #include <MiMitamaReunionSetBonusData.h>
 #include <MiMitamaUnionBonusData.h>
@@ -98,6 +99,7 @@
 #include <MiTriUnionSpecialData.h>
 #include <MiWarpPointData.h>
 #include <MiUnionData.h>
+#include <MiUraFieldTowerData.h>
 #include <MiZoneData.h>
 #include <MiZoneBasicData.h>
 #include <QmpFile.h>
@@ -446,6 +448,12 @@ const std::shared_ptr<objects::MiItemData>
     return GetRecordByID(id, mItemData);
 }
 
+const std::shared_ptr<objects::MiMissionData>
+    DefinitionManager::GetMissionData(uint32_t id)
+{
+    return GetRecordByID(id, mMissionData);
+}
+
 const std::shared_ptr<objects::MiMitamaReunionBonusData>
     DefinitionManager::GetMitamaReunionBonusData(uint32_t id)
 {
@@ -684,6 +692,18 @@ const std::list<std::shared_ptr<objects::MiTriUnionSpecialData>>
     result.unique();
 
     return result;
+}
+
+const std::shared_ptr<objects::MiUraFieldTowerData>
+    DefinitionManager::GetUraFieldTowerData(uint32_t dungeonID, uint32_t id)
+{
+    auto it = mUraFieldTowerData.find(dungeonID);
+    if(it != mUraFieldTowerData.end())
+    {
+        return GetRecordByID(id, it->second);
+    }
+
+    return nullptr;
 }
 
 const std::shared_ptr<objects::MiWarpPointData>
@@ -1360,6 +1380,21 @@ namespace libcomp
     }
 
     template <>
+    bool DefinitionManager::LoadData<objects::MiMissionData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiMissionData>> records;
+        bool success = LoadBinaryData<objects::MiMissionData>(pDataStore,
+            "Shield/MissionData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mMissionData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
     bool DefinitionManager::LoadData<objects::MiMitamaReunionBonusData>(
         gsl::not_null<DataStore*> pDataStore)
     {
@@ -1729,6 +1764,21 @@ namespace libcomp
     }
 
     template <>
+    bool DefinitionManager::LoadData<objects::MiUraFieldTowerData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiUraFieldTowerData>> records;
+        bool success = LoadBinaryData<objects::MiUraFieldTowerData>(pDataStore,
+            "Shield/UraFieldTowerData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mUraFieldTowerData[record->GetDungeonID()][record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
     bool DefinitionManager::LoadData<objects::MiWarpPointData>(
         gsl::not_null<DataStore*> pDataStore)
     {
@@ -1793,6 +1843,7 @@ bool DefinitionManager::LoadAllData(DataStore *pDataStore)
     success &= LoadData<objects::MiGuardianUnlockData>(pDataStore);
     success &= LoadData<objects::MiHNPCData>(pDataStore);
     success &= LoadData<objects::MiItemData>(pDataStore);
+    success &= LoadData<objects::MiMissionData>(pDataStore);
     success &= LoadData<objects::MiMitamaReunionBonusData>(pDataStore);
     success &= LoadData<objects::MiMitamaReunionSetBonusData>(pDataStore);
     success &= LoadData<objects::MiMitamaUnionBonusData>(pDataStore);
@@ -1813,6 +1864,7 @@ bool DefinitionManager::LoadAllData(DataStore *pDataStore)
     success &= LoadData<objects::MiTimeLimitData>(pDataStore);
     success &= LoadData<objects::MiTitleData>(pDataStore);
     success &= LoadData<objects::MiTriUnionSpecialData>(pDataStore);
+    success &= LoadData<objects::MiUraFieldTowerData>(pDataStore);
     success &= LoadData<objects::MiWarpPointData>(pDataStore);
     success &= LoadData<objects::MiZoneData>(pDataStore);
 

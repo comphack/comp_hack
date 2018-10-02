@@ -35,6 +35,7 @@
 #include <ServerConstants.h>
 
 // object Includes
+#include <CharacterProgress.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <MiItemData.h>
@@ -65,6 +66,9 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     int64_t coinAdjust = 0;
     std::unordered_map<uint32_t, int32_t> itemAdjustments;
 
+    bool includesBethel = false;
+    std::array<int32_t, 5> bethelAdjustments = { { 0, 0, 0, 0, 0 } };
+
     bool failed = barterData == nullptr;
     if(!failed)
     {
@@ -91,8 +95,17 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 spAdjust = (int32_t)(spAdjust - itemData->GetSubtype());
                 break;
             case objects::MiNPCBarterItemData::Type_t::BETHEL:
-                LOG_ERROR("Bethel bartering not yet supported\n");
-                failed = true;
+                includesBethel = true;
+                if(itemData->GetSubtype() < 1 || itemData->GetSubtype() > 5)
+                {
+                    failed = true;
+                }
+                else
+                {
+                    size_t bethelType = (size_t)(itemData->GetSubtype() - 1);
+                    bethelAdjustments[bethelType] = (int32_t)(
+                        bethelAdjustments[bethelType] - itemData->GetAmount());
+                }
                 break;
             case objects::MiNPCBarterItemData::Type_t::COIN:
                 {
@@ -123,6 +136,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     std::list<int32_t> pluginIDs;
     std::set<uint16_t> oneTimeValuables;
     std::unordered_map<int32_t, uint32_t> cooldowns;
+    std::unordered_map<int32_t, int32_t> eCounters;
     if(!failed)
     {
         for(auto itemData : barterData->GetResultItems())
@@ -162,14 +176,25 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 spAdjust = (int32_t)(spAdjust + itemData->GetSubtype());
                 break;
             case objects::MiNPCBarterItemData::Type_t::EVENT_COUNTER:
-                /// @todo: for now just don't set event counter
+                // Negate for system types
+                eCounters[-itemData->GetSubtype()] = itemData->GetAmount();
                 break;
             case objects::MiNPCBarterItemData::Type_t::COOLDOWN:
                 // Calculate the cooldown(s) below (negate for system types)
                 cooldowns[-itemData->GetSubtype()] = 0;
                 break;
             case objects::MiNPCBarterItemData::Type_t::BETHEL:
-                /// @todo: for now just don't receive bethel
+                includesBethel = true;
+                if(itemData->GetSubtype() < 1 || itemData->GetSubtype() > 5)
+                {
+                    failed = true;
+                }
+                else
+                {
+                    size_t bethelType = (size_t)(itemData->GetSubtype() - 1);
+                    bethelAdjustments[bethelType] = (int32_t)(
+                        bethelAdjustments[bethelType] + itemData->GetAmount());
+                }
                 break;
             case objects::MiNPCBarterItemData::Type_t::SKILL_CHARACTER:
                 characterSkills.push_back(itemData->GetSubtype());
@@ -229,6 +254,23 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 LOG_ERROR(libcomp::String("Attempted to execute barter"
                     " with active action cooldown type %1: %2\n")
                     .Arg(-pair.first).Arg(state->GetAccountUID().ToString()));
+                failed = true;
+                break;
+            }
+        }
+    }
+
+    if(includesBethel)
+    {
+        auto progress = character->GetProgress().Get();
+        for(size_t i = 0; i < 5; i++)
+        {
+            if(bethelAdjustments[i] < 0 &&
+                (progress->GetBethel(i) + bethelAdjustments[i]) < 0)
+            {
+                LOG_ERROR(libcomp::String("Attempted to execute barter"
+                    " without enough bethel: %1\n")
+                    .Arg(state->GetAccountUID().ToString()));
                 failed = true;
                 break;
             }
@@ -327,11 +369,18 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             }
         }
 
+        // Attempt to pay/convert bethel first
+        if(includesBethel)
+        {
+            failed |= !characterManager->UpdateCowrieBethel(client, 0,
+                bethelAdjustments);
+        }
+
         // Update items first as they're the only thing that can actually
         // fail past this point when everything is working right
         if(!failed && (stackAdjustItems.size() > 0 || insertItems.size() > 0))
         {
-            failed = !characterManager->UpdateItems(client, false,
+            failed |= !characterManager->UpdateItems(client, false,
                 insertItems, stackAdjustItems);
         }
 
@@ -397,6 +446,15 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 {
                     server->GetWorldDatabase()->QueueUpdate(character,
                         state->GetAccountUID());
+                }
+            }
+
+            if(!failed)
+            {
+                for(auto& pair : eCounters)
+                {
+                    failed |= characterManager->UpdateEventCounter(client,
+                        pair.first, pair.second, true);
                 }
             }
         }

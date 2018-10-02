@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiMissionExit" persistent="false" scriptenabled="true">
+        <member type="string" name="name" length="36"/>
+        <member type="u32" name="zoneGroup"/>
+        <member type="u32" name="zoneID"/>
+        <member type="float" name="x"/>
+        <member type="float" name="y"/>
+        <member type="float" name="rotation"/>
+    </object>
+    <object name="MiMissionData" persistent="false" scriptenabled="true">
+        <member type="u32" name="ID"/>
+        <member type="s32" name="duration"/>
+        <member type="array" size="8" name="instanceIDs">
+            <element type="u32"/>
+        </member>
+        <member type="array" size="4" name="exits">
+            <element type="MiMissionExit*"/>
+        </member>
+        <member type="string" name="description"/>
+        <member type="s32" name="timerType"/>
+    </object>
+</objgen>

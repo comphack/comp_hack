@@ -48,12 +48,15 @@
 #include "DemonBox.h"
 #include "DemonQuest.h"
 #include "EntityStats.h"
+#include "EventCounter.h"
 #include "Expertise.h"
 #include "FriendSettings.h"
 #include "Hotbar.h"
 #include "InheritedSkill.h"
 #include "Item.h"
 #include "ItemBox.h"
+#include "PentalphaEntry.h"
+#include "PentalphaMatch.h"
 #include "PostItem.h"
 #include "PvPData.h"
 #include "Quest.h"
@@ -61,6 +64,8 @@
 #include "RegisteredWorld.h"
 #include "ReportedPlayer.h"
 #include "StatusEffect.h"
+#include "UBResult.h"
+#include "UBTournament.h"
 
 using namespace libcomp;
 
@@ -384,6 +389,7 @@ namespace libcomp
                 .Func("Insert", &PersistentObject::Insert)
                 .Func("Update", &PersistentObject::Update)
                 .Func("Delete", &PersistentObject::Delete)
+                .StaticFunc("Register", &PersistentObject::Register)
                 .StaticFunc<std::list<std::shared_ptr<PersistentObject>> (*)(size_t, const std::shared_ptr<Database>&)>("LoadObjects", &PersistentObject::LoadObjects)
                 .StaticFunc<size_t (*)(const std::string&)>("GetTypeHashByName", &PersistentObject::GetTypeHashByName)
                 ; // Last call to binding
@@ -435,6 +441,9 @@ bool PersistentObject::Initialize()
     RegisterType(typeid(objects::EntityStats), objects::EntityStats::GetMetadata(),
         []() {  return (PersistentObject*)new objects::EntityStats(); });
 
+    RegisterType(typeid(objects::EventCounter), objects::EventCounter::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::EventCounter(); });
+
     RegisterType(typeid(objects::Expertise), objects::Expertise::GetMetadata(),
         []() {  return (PersistentObject*)new objects::Expertise(); });
 
@@ -452,6 +461,12 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::ItemBox), objects::ItemBox::GetMetadata(),
         []() {  return (PersistentObject*)new objects::ItemBox(); });
+
+    RegisterType(typeid(objects::PentalphaEntry), objects::PentalphaEntry::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::PentalphaEntry(); });
+
+    RegisterType(typeid(objects::PentalphaMatch), objects::PentalphaMatch::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::PentalphaMatch(); });
 
     RegisterType(typeid(objects::PostItem), objects::PostItem::GetMetadata(),
         []() {  return (PersistentObject*)new objects::PostItem(); });
@@ -473,6 +488,12 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::StatusEffect), objects::StatusEffect::GetMetadata(),
         []() {  return (PersistentObject*)new objects::StatusEffect(); });
+
+    RegisterType(typeid(objects::UBResult), objects::UBResult::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::UBResult(); });
+
+    RegisterType(typeid(objects::UBTournament), objects::UBTournament::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::UBTournament(); });
 
     return !sInitializationFailed;
 }

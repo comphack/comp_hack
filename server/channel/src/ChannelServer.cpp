@@ -32,6 +32,7 @@
 #include <ManagerSystem.h>
 #include <MessageTick.h>
 #include <PacketCodes.h>
+#include <ScriptEngine.h>
 #include <ServerDataManager.h>
 
 // object Includes
@@ -57,6 +58,39 @@
 #include "ZoneManager.h"
 
 using namespace channel;
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<ChannelServer>()
+    {
+        if(!BindingExists("ChannelServer", true))
+        {
+            Import("database");
+
+            Using<ChannelSyncManager>();
+            Using<MatchManager>();
+            Using<WorldClock>();
+            Using<ZoneManager>();
+
+            Sqrat::Class<ChannelServer,
+                Sqrat::NoConstructor<ChannelServer>> binding(mVM, "ChannelServer");
+            binding
+                .Func("GetWorldClockTime", &ChannelServer::GetWorldClockTime)
+                .Func("GetWorldDatabase", &ChannelServer::GetWorldDatabase)
+                .Func("GetLobbyDatabase", &ChannelServer::GetLobbyDatabase)
+                .Func("GetChannelSyncManager", &ChannelServer::GetChannelSyncManager)
+                .Func("GetMatchManager", &ChannelServer::GetMatchManager)
+                .Func("GetZoneManager", &ChannelServer::GetZoneManager)
+                .StaticFunc("GetServerTime", &ChannelServer::GetServerTime)
+                .StaticFunc("GetExpirationInSeconds", &ChannelServer::GetExpirationInSeconds);
+
+            Bind<ChannelServer>("ChannelServer", binding);
+        }
+
+        return *this;
+    }
+}
 
 ChannelServer::ChannelServer(const char *szProgram,
     std::shared_ptr<objects::ServerConfig> config,
@@ -384,6 +418,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_END));
     clientPacketManager->AddParser<Parsers::BazaarMarketComment>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BAZAAR_MARKET_COMMENT));
+    clientPacketManager->AddParser<Parsers::PartyRecruitReply>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_RECRUIT_REPLY));
+    clientPacketManager->AddParser<Parsers::PartyRecruit>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_RECRUIT));
     clientPacketManager->AddParser<Parsers::StatusIcon>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_STATUS_ICON));
     clientPacketManager->AddParser<Parsers::MapFlag>(
@@ -420,6 +458,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DUNGEON_RECORDS));
     clientPacketManager->AddParser<Parsers::Analyze>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ANALYZE_DUNGEON_RECORDS));
+    clientPacketManager->AddParser<Parsers::ItemPromo>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_PROMO));
     clientPacketManager->AddParser<Parsers::TriFusionJoin>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_TRIFUSION_JOIN));
     clientPacketManager->AddParser<Parsers::TriFusionDemonUpdate>(
@@ -542,6 +582,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_QUEST_PENDING));
     clientPacketManager->AddParser<Parsers::ItemDepoRemote>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_ITEM_DEPO_REMOTE));
+    clientPacketManager->AddParser<Parsers::DiasporaBaseCapture>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DIASPORA_BASE_CAPTURE));
+    clientPacketManager->AddParser<Parsers::DiasporaEnter>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DIASPORA_ENTER));
     clientPacketManager->AddParser<Parsers::DemonDepoRemote>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_DEPO_REMOTE));
     clientPacketManager->AddParser<Parsers::CommonSwitchUpdate>(
@@ -560,6 +604,16 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_SPIRIT_DEFUSE));
     clientPacketManager->AddParser<Parsers::DemonForceEnd>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_FORCE_END));
+    clientPacketManager->AddParser<Parsers::UBSpectatePlayer>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_UB_SPECTATE_PLAYER));
+    clientPacketManager->AddParser<Parsers::UBProceed>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_UB_PROCEED));
+    clientPacketManager->AddParser<Parsers::UBLeave>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_UB_LEAVE));
+    clientPacketManager->AddParser<Parsers::UBLottoCancel>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_UB_LOTTO_CANCEL));
+    clientPacketManager->AddParser<Parsers::UBLottoJoin>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_UB_LOTTO_JOIN));
     clientPacketManager->AddParser<Parsers::SearchEntryInfo>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_SEARCH_ENTRY_INFO));
     clientPacketManager->AddParser<Parsers::ITimeData>(
@@ -580,6 +634,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_EQUIPMENT_MOD_EDIT));
     clientPacketManager->AddParser<Parsers::PAttributeDeadline>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_PATTRIBUTE_DEADLINE));
+    clientPacketManager->AddParser<Parsers::MissionLeave>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_MISSION_LEAVE));
     clientPacketManager->AddParser<Parsers::MitamaReunion>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_MITAMA_REUNION));
     clientPacketManager->AddParser<Parsers::MitamaReset>(
@@ -590,6 +646,8 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_DEMON_EQUIP));
     clientPacketManager->AddParser<Parsers::Barter>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BARTER));
+    clientPacketManager->AddParser<Parsers::PentalphaData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PENTALPHA_DATA));
     clientPacketManager->AddParser<Parsers::QuestTitle>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_QUEST_TITLE));
     clientPacketManager->AddParser<Parsers::ReportPlayer>(
@@ -598,6 +656,10 @@ bool ChannelServer::Initialize()
         to_underlying(ClientToChannelPacketCode_t::PACKET_BLACKLIST));
     clientPacketManager->AddParser<Parsers::BlacklistUpdate>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_BLACKLIST_UPDATE));
+    clientPacketManager->AddParser<Parsers::DestinyBoxData>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DESTINY_BOX_DATA));
+    clientPacketManager->AddParser<Parsers::DestinyLotto>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_DESTINY_LOTTO));
     clientPacketManager->AddParser<Parsers::DigitalizePoints>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_DIGITALIZE_POINTS));
     clientPacketManager->AddParser<Parsers::DigitalizeAssist>(
@@ -626,13 +688,7 @@ bool ChannelServer::Initialize()
     // Map the Unsupported packet parser to unsupported packets or packets that
     // the server does not need to react to
     clientPacketManager->AddParser<Parsers::Unsupported>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_PARTY_MEMBER_UPDATE));
-    clientPacketManager->AddParser<Parsers::Unsupported>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_UNSUPPORTED_0232));
-    clientPacketManager->AddParser<Parsers::Unsupported>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_PVP_WORLD));
-    clientPacketManager->AddParser<Parsers::Unsupported>(
-        to_underlying(ClientToChannelPacketCode_t::PACKET_TEAM_INFO_UPDATE));
+        to_underlying(ClientToChannelPacketCode_t::PACKET_PLAYER_SETTINGS));
     clientPacketManager->AddParser<Parsers::Unsupported>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_RECEIVED_PLAYER_DATA));
     clientPacketManager->AddParser<Parsers::Unsupported>(

@@ -31,10 +31,18 @@
 #include <Log.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ScriptEngine.h>
 
 // object Includes
+#include <Account.h>
+#include <EventCounter.h>
+#include <Match.h>
 #include <MatchEntry.h>
+#include <PentalphaEntry.h>
+#include <PentalphaMatch.h>
 #include <PvPMatch.h>
+#include <UBResult.h>
+#include <UBTournament.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -43,8 +51,34 @@
 
 using namespace channel;
 
-ChannelSyncManager::ChannelSyncManager()
+namespace libcomp
 {
+    template<>
+    ScriptEngine& ScriptEngine::Using<ChannelSyncManager>()
+    {
+        if(!BindingExists("ChannelSyncManager", true))
+        {
+            Using<DataSyncManager>();
+            Using<objects::Account>();
+            Using<objects::EventCounter>();
+            Using<objects::Match>();
+            Using<objects::MatchEntry>();
+            Using<objects::PentalphaEntry>();
+            Using<objects::PentalphaMatch>();
+            Using<objects::PvPMatch>();
+            Using<objects::UBResult>();
+            Using<objects::UBTournament>();
+
+            Sqrat::DerivedClass<ChannelSyncManager, DataSyncManager,
+                Sqrat::NoConstructor<ChannelSyncManager>> binding(mVM, "ChannelSyncManager");
+            binding
+                .Func("GetWorldEventCounter", &ChannelSyncManager::GetWorldEventCounter);
+
+            Bind<ChannelSyncManager>("ChannelSyncManager", binding);
+        }
+
+        return *this;
+    }
 }
 
 ChannelSyncManager::ChannelSyncManager(const std::weak_ptr<
@@ -78,12 +112,33 @@ bool ChannelSyncManager::Initialize()
 
     mRegisteredTypes["CharacterProgress"] = cfg;
 
+    cfg = std::make_shared<ObjectConfig>("Match", false);
+    cfg->BuildHandler = &DataSyncManager::New<objects::Match>;
+
+    mRegisteredTypes["Match"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("EventCounter", false, worldDB);
+    cfg->UpdateHandler = &DataSyncManager::Update<ChannelSyncManager,
+        objects::EventCounter>;
+
+    mRegisteredTypes["EventCounter"] = cfg;
+
     cfg = std::make_shared<ObjectConfig>("MatchEntry", false);
     cfg->BuildHandler = &DataSyncManager::New<objects::MatchEntry>;
     cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
         ChannelSyncManager, objects::MatchEntry>;
 
     mRegisteredTypes["MatchEntry"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("PentalphaEntry", false, worldDB);
+
+    mRegisteredTypes["PentalphaEntry"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("PentalphaMatch", false, worldDB);
+    cfg->UpdateHandler = &DataSyncManager::Update<ChannelSyncManager,
+        objects::PentalphaMatch>;
+
+    mRegisteredTypes["PentalphaMatch"] = cfg;
 
     cfg = std::make_shared<ObjectConfig>("PvPMatch", false);
     cfg->BuildHandler = &DataSyncManager::New<objects::PvPMatch>;
@@ -92,14 +147,39 @@ bool ChannelSyncManager::Initialize()
 
     mRegisteredTypes["PvPMatch"] = cfg;
 
+    cfg = std::make_shared<ObjectConfig>("UBResult", false, worldDB);
+    cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
+        ChannelSyncManager, objects::UBResult>;
+
+    mRegisteredTypes["UBResult"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("UBTournament", false, worldDB);
+    cfg->UpdateHandler = &DataSyncManager::Update<ChannelSyncManager,
+        objects::UBTournament>;
+
+    mRegisteredTypes["UBTournament"] = cfg;
+
+    // Load all current group counters
+    for(auto c : objects::EventCounter::LoadEventCounterListByGroupCounter(
+        worldDB, true))
+    {
+        mEventCounters[c->GetType()] = c;
+    }
+
     // Add the world connection
     const std::set<std::string> worldTypes =
         {
             "Account",
             "CharacterProgress",
+            "EventCounter",
+            "Match",
             "MatchEntry",
+            "PentalphaEntry",
+            "PentalphaMatch",
             "PvPMatch",
-            "SearchEntry"
+            "SearchEntry",
+            "UBResult",
+            "UBTournament"
         };
 
     auto worldConnection = server->GetManagerConnection()
@@ -108,18 +188,29 @@ bool ChannelSyncManager::Initialize()
 }
 
 libcomp::EnumMap<objects::SearchEntry::Type_t,
-    std::list<std::shared_ptr<objects::SearchEntry>>> ChannelSyncManager::GetSearchEntries() const
+    std::list<std::shared_ptr<objects::SearchEntry>>>
+    ChannelSyncManager::GetSearchEntries() const
 {
     return mSearchEntries;
 }
 
-std::list<std::shared_ptr<objects::SearchEntry>> ChannelSyncManager::GetSearchEntries(
+std::list<std::shared_ptr<objects::SearchEntry>>
+    ChannelSyncManager::GetSearchEntries(
     objects::SearchEntry::Type_t type)
 {
     std::lock_guard<std::mutex> lock(mLock);
 
     auto it = mSearchEntries.find(type);
-    return it != mSearchEntries.end() ? it->second : std::list<std::shared_ptr<objects::SearchEntry>>();
+    return it != mSearchEntries.end()
+        ? it->second : std::list<std::shared_ptr<objects::SearchEntry>>();
+}
+
+std::shared_ptr<objects::EventCounter>
+    ChannelSyncManager::GetWorldEventCounter(int32_t type)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mEventCounters.find(type);
+    return it != mEventCounters.end() ? it->second : nullptr;
 }
 
 namespace channel
@@ -294,6 +385,92 @@ int8_t ChannelSyncManager::Update<objects::SearchEntry>(const libcomp::String& t
 }
 
 template<>
+int8_t ChannelSyncManager::Update<objects::EventCounter>(
+    const libcomp::String& type, const std::shared_ptr<libcomp::Object>& obj,
+    bool isRemove, const libcomp::String& source)
+{
+    (void)type;
+    (void)isRemove;
+    (void)source;
+
+    auto eCounter = std::dynamic_pointer_cast<objects::EventCounter>(obj);
+    if(!eCounter->GetCharacter().IsNull())
+    {
+        auto character = std::dynamic_pointer_cast<objects::Character>(
+            libcomp::PersistentObject::GetObjectByUUID(eCounter
+                ->GetCharacter()));
+        auto account = character ? std::dynamic_pointer_cast<objects::Account>(
+            libcomp::PersistentObject::GetObjectByUUID(character
+                ->GetAccount())) : nullptr;
+        if(account)
+        {
+            auto server = mServer.lock();
+            auto client = server->GetManagerConnection()->GetClientConnection(
+                account->GetUsername());
+            if(client)
+            {
+                auto state = client->GetClientState();
+                if(eCounter->GetPreExpireType())
+                {
+                    // Expired, clear if its still set
+                    if(state->GetEventCounters(eCounter
+                        ->GetPreExpireType()).Get() == eCounter)
+                    {
+                        state->SetEventCounters(eCounter
+                            ->GetPreExpireType(), NULLUUID);
+                    }
+                }
+                else
+                {
+                    // Update state
+                    state->SetEventCounters(eCounter->GetType(), eCounter);
+                }
+            }
+        }
+    }
+    else
+    {
+        // Update world counters
+        if(eCounter->GetPreExpireType())
+        {
+            mEventCounters.erase(eCounter->GetPreExpireType());
+        }
+        else
+        {
+            mEventCounters[eCounter->GetType()] = eCounter;
+        }
+    }
+
+    return SYNC_UPDATED;
+}
+
+template<>
+int8_t ChannelSyncManager::Update<objects::PentalphaMatch>(
+    const libcomp::String& type, const std::shared_ptr<libcomp::Object>& obj,
+    bool isRemove, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    auto matchManager = mServer.lock()->GetMatchManager();
+
+    auto match = std::dynamic_pointer_cast<objects::PentalphaMatch>(obj);
+    if(matchManager->GetPentalphaMatch(false) == match)
+    {
+        // Remove current match
+        matchManager->UpdatePentalphaMatch(nullptr);
+    }
+
+    if(!isRemove && !match->GetEndTime())
+    {
+        // Set new match
+        matchManager->UpdatePentalphaMatch(match);
+    }
+
+    return SYNC_UPDATED;
+}
+
+template<>
 void ChannelSyncManager::SyncComplete<objects::MatchEntry>(
     const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
     libcomp::Object>, bool>>& objs, const libcomp::String& source)
@@ -340,5 +517,52 @@ void ChannelSyncManager::SyncComplete<objects::PvPMatch>(
     }
 
     mServer.lock()->GetMatchManager()->UpdatePvPMatches(matches);
+}
+
+template<>
+void ChannelSyncManager::SyncComplete<objects::UBResult>(
+    const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
+    libcomp::Object>, bool>>& objs, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    std::list<std::shared_ptr<objects::UBResult>> updates;
+    for(auto& objPair : objs)
+    {
+        auto result = std::dynamic_pointer_cast<objects::UBResult>(
+            objPair.first);
+        if(!objPair.second)
+        {
+            updates.push_back(result);
+        }
+    }
+
+    mServer.lock()->GetMatchManager()->UpdateUBRankings(updates);
+}
+
+template<>
+int8_t ChannelSyncManager::Update<objects::UBTournament>(
+    const libcomp::String& type, const std::shared_ptr<libcomp::Object>& obj,
+    bool isRemove, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    auto matchManager = mServer.lock()->GetMatchManager();
+
+    auto tournament = std::dynamic_pointer_cast<objects::UBTournament>(obj);
+    if(!isRemove && !tournament->GetEndTime())
+    {
+        // Set new tournament
+        matchManager->UpdateUBTournament(tournament);
+    }
+    else if(matchManager->GetUBTournament() == tournament)
+    {
+        // Remove current tournament
+        matchManager->UpdateUBTournament(nullptr);
+    }
+
+    return SYNC_UPDATED;
 }
 }

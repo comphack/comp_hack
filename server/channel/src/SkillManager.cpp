@@ -109,12 +109,14 @@
 #include <PvPPlayerStats.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
+#include <ServerZonePartial.h>
 #include <Spawn.h>
 #include <SpawnGroup.h>
 #include <SpawnLocationGroup.h>
 #include <Tokusei.h>
 #include <TokuseiCondition.h>
 #include <TokuseiSkillCondition.h>
+#include <UBMatch.h>
 #include <WorldSharedConfig.h>
 
 // channel Includes
@@ -240,7 +242,7 @@ public:
     StatusEffectChanges AddedStatuses;
     std::set<uint32_t> CancelledStatuses;
     bool HitAvoided = false;
-    uint8_t HitNull = 0;    // 0: None, 1: Physical, 2: Magic
+    uint8_t HitNull = 0;    // 0: None, 1: Physical, 2: Magic, 3: Barrier
     uint8_t HitReflect = 0; // 0: None, 1: Physical, 2: Magic
     bool HitAbsorb = false;
     bool CanHitstun = false;
@@ -1063,6 +1065,30 @@ bool SkillManager::SkillRestricted(const std::shared_ptr<ActiveEntityState> sour
     if(IsTalkSkill(skillData, true) && source->StatusRestrictTalkCount() > 0)
     {
         return true;
+    }
+
+    // Player entities can by restricted by bases in the zone
+    auto zone = source->GetZone();
+    if(zone && (source->GetEntityType() == EntityType_t::CHARACTER ||
+        source->GetEntityType() == EntityType_t::PARTNER_DEMON))
+    {
+        auto restricted = zone->GetBaseRestrictedActionTypes();
+        if(restricted.size() > 0)
+        {
+            int8_t actionType = (int8_t)skillData->GetBasic()->GetActionType();
+            if(restricted.find(actionType) != restricted.end())
+            {
+                return true;
+            }
+
+            // Check if an item skill is being used
+            if(restricted.find(-1) != restricted.end() &&
+                (skillData->GetBasic()->GetFamily() == 2 ||
+                skillData->GetBasic()->GetFamily() == 6))
+            {
+                return true;
+            }
+        }
     }
 
     switch(skillData->GetBasic()->GetFamily())
@@ -2238,6 +2264,10 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             case 2:
                 target.Flags1 |= FLAG1_BLOCK_MAGIC;
                 break;
+            case 3:
+                target.Flags2 |= FLAG2_BARRIER;
+                target.Damage1Type = DAMAGE_TYPE_GENERIC;
+                break;
             default:
                 break;
             }
@@ -3040,6 +3070,11 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
     std::set<int32_t> interruptEvent;
 
+    // Determine if the zone or specific teams need to be tracked
+    bool trackZone = false;
+    bool diaspora = zone->GetInstanceType() == InstanceType_t::DIASPORA;
+    std::set<std::shared_ptr<objects::Team>> trackedTeams;
+
     bool playerSkill = false;
     switch(source->GetEntityType())
     {
@@ -3101,6 +3136,31 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 interruptEvent.insert(eState->GetWorldCID());
             }
 
+            // If alive state changed for a character and they are in a tracked
+            // zone, notify the rest of the players/teammates
+            if((targetRevived || targetKilled) &&
+                eState->GetEntityType() == EntityType_t::CHARACTER &&
+                zone->GetDefinition()->GetTrackTeam())
+            {
+                if(diaspora)
+                {
+                    // Track entire zone
+                    trackZone = true;
+                }
+                else
+                {
+                    // Track just the teams
+                    auto state = ClientState::GetEntityClientState(
+                        eState->GetEntityID());
+                    auto team = state ? state->GetTeam() : nullptr;
+                    if(team)
+                    {
+                        trackedTeams.insert(team);
+                    }
+                }
+            }
+
+            // Be sure to update the party display state
             if(targetRevived || targetKilled ||
                 triggers.find(TokuseiConditionType::CURRENT_HP) != triggers.end() ||
                 triggers.find(TokuseiConditionType::CURRENT_MP) != triggers.end())
@@ -3185,6 +3245,19 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     {
         characterManager->UpdateWorldDisplayState(
             displayStateModified);
+    }
+
+    // Report tracking updates
+    if(trackZone)
+    {
+        zoneManager->UpdateTrackedZone(zone);
+    }
+    else
+    {
+        for(auto team : trackedTeams)
+        {
+            zoneManager->UpdateTrackedTeam(team);
+        }
     }
 }
 
@@ -3394,6 +3467,7 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
 
         auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
         auto pendingSkillTokusei = calcState->GetPendingSkillTokuseiFinal();
+        auto aspects = calcState->GetExistingTokuseiAspects();
 
         bool modified = false;
         for(auto pair : pendingSkillTokusei)
@@ -3401,22 +3475,27 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
             auto tokusei = definitionManager->GetTokuseiData(pair.first);
             if(tokusei)
             {
-                switch(EvaluateTokuseiSkillConditions(eState, tokusei
-                    ->GetSkillConditions(), pSkill, isTarget, otherState))
+                auto sourceConditions = tokusei->GetSkillConditions();
+                auto targetConditions = tokusei->GetSkillTargetConditions();
+                if((sourceConditions.size() > 0 && isTarget) ||
+                    (targetConditions.size() > 0 && !isTarget))
                 {
-                case 1:
-                    // Conditions passed
+                    stillPendingSkillTokusei[tokusei->GetID()] = pair.second;
+                    continue;
+                }
+
+                auto& conditions = isTarget
+                    ? targetConditions : sourceConditions;
+                if(EvaluateTokuseiSkillConditions(eState, conditions, pSkill,
+                    otherState))
+                {
                     effectiveTokusei[tokusei->GetID()] = pair.second;
                     modified = true;
-                    break;
-                case 2:
-                    // Conditions cannot be evaluated
-                    stillPendingSkillTokusei[tokusei->GetID()] = pair.second;
-                    break;
-                case 0:
-                default:
-                    // Conditions did not pass
-                    break;
+
+                    for(auto aspect : tokusei->GetAspects())
+                    {
+                        aspects.insert((int8_t)aspect->GetType());
+                    }
                 }
             }
         }
@@ -3424,8 +3503,6 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
         if(modified)
         {
             // If the tokusei set was modified, calculate skill specific stats
-            auto aspects = calcState->GetExistingTokuseiAspects();
-
             calcState = std::make_shared<objects::CalculatedEntityState>();
             calcState->SetExistingTokuseiAspects(aspects);
             calcState->SetEffectiveTokusei(effectiveTokusei);
@@ -3447,11 +3524,11 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
     return calcState;
 }
 
-uint8_t SkillManager::EvaluateTokuseiSkillConditions(
+bool SkillManager::EvaluateTokuseiSkillConditions(
     const std::shared_ptr<ActiveEntityState>& eState,
     const std::list<std::shared_ptr<objects::TokuseiSkillCondition>>& conditions,
     const std::shared_ptr<channel::ProcessingSkill>& pSkill,
-    bool isTarget, const std::shared_ptr<ActiveEntityState>& otherState)
+    const std::shared_ptr<ActiveEntityState>& otherState)
 {
     // Just like non-skill conditions, compare singular (and) and option group
     // (or) conditions and only return 0 if the entire clause evaluates to
@@ -3460,12 +3537,6 @@ uint8_t SkillManager::EvaluateTokuseiSkillConditions(
     std::unordered_map<uint8_t, bool> optionGroups;
     for(auto condition : conditions)
     {
-        if(condition->GetTargetCondition() != isTarget)
-        {
-            // Cannot be determined right now
-            return 2;
-        }
-
         bool result = false;
 
         // If the option group has already had a condition pass, skip it
@@ -3493,7 +3564,7 @@ uint8_t SkillManager::EvaluateTokuseiSkillConditions(
             else if(!result)
             {
                 // Standalone did not pass
-                return 0;
+                return false;
             }
         }
     }
@@ -3503,11 +3574,11 @@ uint8_t SkillManager::EvaluateTokuseiSkillConditions(
         if(!pair.second)
         {
             // Option group did not pass
-            return 0;
+            return false;
         }
     }
 
-    return 1;
+    return true;
 }
 
 bool SkillManager::EvaluateTokuseiSkillCondition(
@@ -3644,6 +3715,11 @@ bool SkillManager::EvaluateTokuseiSkillCondition(
         // Enemy's LNC matches the specified type (can be any target type)
         return otherState &&
             (otherState->IsLNCType((uint8_t)condition->GetValue(), false) == !negate);
+    case TokuseiSkillConditionType::ENEMY_TOKUSEI:
+        // Enemy has a tokusei matching the specified type (tokusei cannot be
+        // skill granted like the one being checked)
+        return otherState && (otherState->GetCalculatedState()
+            ->EffectiveTokuseiFinalKeyExists(condition->GetValue()) == !negate);
     default:
         break;
     }
@@ -4236,12 +4312,41 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
     int32_t sourceDemonFType = sourceDevilData
         ? sourceDevilData->GetFamiliarity()->GetFamiliarityType() : 0;
 
+    bool playerSource = source->GetEntityType() == EntityType_t::CHARACTER ||
+        source->GetEntityType() == EntityType_t::PARTNER_DEMON;
+    auto instance = zone->GetInstance();
+
+    auto sourceClient = playerSource ? managerConnection->GetEntityClient(
+        source->GetEntityID()) : nullptr;
+    auto sourceState = sourceClient ? sourceClient->GetClientState()
+        : nullptr;
+
+    // Source cooldowns can affect restricted drops as well as invoke points
+    std::set<int32_t> sourceCooldowns;
+    if(sourceState)
+    {
+        // Only pull character level cooldowns
+        auto cState = sourceState->GetCharacterState();
+        auto character = cState->GetEntity();
+        if(character)
+        {
+            cState->RefreshActionCooldowns(false);
+            for(auto& pair : character->GetActionCooldowns())
+            {
+                sourceCooldowns.insert(pair.first);
+            }
+        }
+    }
+
     auto deathTriggers = zoneManager->GetZoneTriggers(zone,
         ZoneTrigger_t::ON_DEATH);
 
     std::unordered_map<int32_t, int32_t> adjustments;
     std::list<std::shared_ptr<ActiveEntityState>> enemiesKilled;
     std::list<std::shared_ptr<ActiveEntityState>> partnerDemonsKilled;
+    std::list<std::shared_ptr<ActiveEntityState>> playersKilled;
+    libcomp::EnumMap<objects::Spawn::KillValueType_t,
+        std::list<std::shared_ptr<ActiveEntityState>>> killValues;
     for(auto entity : killed)
     {
         // Remove all opponents
@@ -4260,6 +4365,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         switch(entity->GetEntityType())
         {
         case EntityType_t::CHARACTER:
+            playersKilled.push_back(entity);
             characterManager->CancelMount(
                 ClientState::GetEntityClientState(entity->GetEntityID()));
             break;
@@ -4268,13 +4374,26 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             partnerDeath = true;
             break;
         case EntityType_t::ENEMY:
-            enemiesKilled.push_back(entity);
-            break;
         case EntityType_t::ALLY:
             enemiesKilled.push_back(entity);
             break;
         default:
             break;
+        }
+
+        int32_t killVal = entity->GetKillValue();
+        if(killVal)
+        {
+            auto type = objects::Spawn::KillValueType_t::INHERITED;
+
+            auto eBase = entity->GetEnemyBase();
+            auto spawn = eBase ? eBase->GetSpawnSource() : nullptr;
+            if(spawn)
+            {
+                type = spawn->GetKillValueType();
+            }
+
+            killValues[type].push_back(entity);
         }
 
         // Trigger death actions (before zone removal)
@@ -4335,31 +4454,23 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
     case InstanceType_t::PVP:
         // Increase by PvP values and set auto-revive time-out
         {
-            bool playerSource = source->GetEntityType() ==
-                EntityType_t::CHARACTER ||
-                source->GetEntityType() == EntityType_t::PARTNER_DEMON;
-            
-            auto instance = zone->GetInstance();
-            auto pvpStats = instance->GetPvPStats();
             auto matchManager = server->GetMatchManager();
 
-            for(auto entity : killed)
+            if(playerSource)
             {
-                if(playerSource)
+                // Reward points to player entities that get a kill
+                // (including self)
+                for(auto entity : killValues[objects::Spawn::KillValueType_t::
+                    INHERITED])
                 {
-                    int32_t val = pvpStats->GetEntityValues(entity
-                        ->GetEntityID());
-                    if(val)
-                    {
-                        matchManager->UpdatePvPPoints(instance->GetID(),
-                            source, entity, val);
-                    }
+                    matchManager->UpdatePvPPoints(instance->GetID(),
+                        source, entity, entity->GetKillValue());
                 }
+            }
 
-                if(entity->GetEntityType() == EntityType_t::CHARACTER)
-                {
-                    matchManager->PlayerKilled(entity, instance);
-                }
+            for(auto entity : playersKilled)
+            {
+                matchManager->PlayerKilled(entity, instance);
             }
         }
         break;
@@ -4371,18 +4482,35 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 dState->GetEntityID());
             zoneManager->UpdateDeathTimeOut(demonCState, 60);
         }
+
+        // Convert inherited kill values to SP
+        for(auto entity : killValues[objects::Spawn::KillValueType_t::
+            INHERITED])
+        {
+            killValues[objects::Spawn::KillValueType_t::SOUL_POINTS]
+                .push_back(entity);
+        }
+        break;
+    case InstanceType_t::PENTALPHA:
+        // Convert inherited kill values to bethel
+        for(auto entity : killValues[objects::Spawn::KillValueType_t::
+            INHERITED])
+        {
+            killValues[objects::Spawn::KillValueType_t::BETHEL]
+                .push_back(entity);
+        }
         break;
     default:
         break;
     }
 
+    // Inherited kill values must be handled by variant types above
+    killValues.erase(objects::Spawn::KillValueType_t::INHERITED);
+
+    auto ubMatch = zone->GetUBMatch();
+
     if(enemiesKilled.size() > 0)
     {
-        auto sourceClient = managerConnection->GetEntityClient(
-            source->GetEntityID());
-        auto sourceState = sourceClient ? sourceClient->GetClientState()
-            : nullptr;
-
         // Gather all enemy entity IDs
         std::list<int32_t> enemyIDs;
         for(auto eState : enemiesKilled)
@@ -4399,6 +4527,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         std::unordered_map<uint32_t, int32_t> questKills;
         std::unordered_map<uint32_t, uint32_t> encounterGroups;
         std::list<std::shared_ptr<ActiveEntityState>> dgEnemies;
+        std::list<uint32_t> multiZoneBosses;
         for(auto eState : enemiesKilled)
         {
             auto eBase = eState->GetEnemyBase();
@@ -4407,6 +4536,22 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             if(enemyData->GetBattleData()->GetDigitalizeXP())
             {
                 dgEnemies.push_back(eState);
+            }
+
+            auto spawn = eBase->GetSpawnSource();
+            if(spawn)
+            {
+                if(spawn->GetBossGroup())
+                {
+                    multiZoneBosses.push_back(eBase->GetType());
+                }
+
+                // Add recently killed here as any source counts as a kill
+                if(ubMatch && spawn->GetKillValueType() ==
+                    objects::Spawn::KillValueType_t::UB_POINTS)
+                {
+                    ubMatch->AppendRecentlyKilled(spawn);
+                }
             }
 
             if(eState->GetEntityType() == EntityType_t::ALLY &&
@@ -4489,22 +4634,15 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 
             auto enemy = std::dynamic_pointer_cast<objects::Enemy>(eBase);
 
-            auto drops = GetItemDrops(spawn);
-
             // Create loot based off drops and send if any was added
-            bool lootable = false;
-            if((!enemy || enemy->DamageSourcesCount() == 0) &&
-                characterManager->CreateLootFromDrops(lootBody, drops, luck))
-            {
-                // Anyone can loot non-enemy bodies or the bodies of enemies
-                // not damage by a player
-                lootable = true;
-            }
-            else if(enemy &&
-                characterManager->CreateLootFromDrops(lootBody, drops, luck))
+            std::set<int32_t> validLooterIDs;
+            bool timedAdjust = false;
+
+            // Anyone can loot non-enemy bodies or the bodies of enemies
+            // not damage by a player
+            if(enemy && enemy->DamageSourcesCount() > 0)
             {
                 // Only certain players can loot enemy bodies
-                std::set<int32_t> validLooterIDs;
                 if(sourceState)
                 {
                     // Include skill source if a player entity
@@ -4525,7 +4663,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                     }
                 }
 
-                bool timedAdjust = true;
+                timedAdjust = true;
                 if(sourceParty)
                 {
                     switch(sourceParty->GetDropRule())
@@ -4571,20 +4709,51 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                         break;
                     }
                 }
+            }
 
+            auto drops = GetItemDrops(spawn, zone);
+
+            if(validLooterIDs.size() > 0)
+            {
                 lootBody->SetValidLooterIDs(validLooterIDs);
-                lootable = true;
 
-                if(timedAdjust && validLooterIDs.size() > 0)
+                if(timedAdjust)
                 {
                     // The last 60 seconds are fair game for everyone
                     uint64_t delayedlootTime = (uint64_t)(now + 60000000);
                     delayedLootEntityIDs[delayedlootTime].push_back(lootEntityID);
                 }
+
+                // Remove cooldown restricted drops
+                std::set<int32_t> invalid;
+                for(auto& pair : drops)
+                {
+                    for(auto loot : pair.second)
+                    {
+                        int32_t cd = loot->GetCooldownRestrict();
+                        if(cd)
+                        {
+                            if(sourceCooldowns.find(cd) == sourceCooldowns.end())
+                            {
+                                invalid.insert(cd);
+                            }
+                        }
+                    }
+
+                    pair.second.remove_if([invalid](
+                        const std::shared_ptr<objects::ItemDrop>& drop)
+                        {
+                            return invalid.find(drop->GetCooldownRestrict()) !=
+                                invalid.end();
+                        });
+                }
             }
 
+            auto nDrops = drops[(uint8_t)objects::DropSet::Type_t::NORMAL];
+            auto dDrops = drops[(uint8_t)objects::DropSet::Type_t::DESTINY];
+
             uint64_t lootTime = 0;
-            if(lootable)
+            if(characterManager->CreateLootFromDrops(lootBody, nDrops, luck))
             {
                 // Bodies remain lootable for 120 seconds with loot
                 lootTime = (uint64_t)(now + 120000000);
@@ -4603,6 +4772,21 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 zoneManager->SendLootBoxData(firstClient, lState, eState,
                     true, true);
             }
+
+            if(dDrops.size() > 0 && instance && sourceState)
+            {
+                // Add zero or one item from the destiny drops to the box
+                dDrops = characterManager->DetermineDrops(dDrops, 0, false);
+
+                if(dDrops.size() > 0)
+                {
+                    dDrops = { libcomp::Randomizer::GetEntry(dDrops) };
+
+                    auto loot = characterManager->CreateLootFromDrops(dDrops);
+                    zoneManager->UpdateDestinyBox(instance, sourceState
+                        ->GetWorldCID(), loot);
+                }
+            }
         }
 
         for(auto pair : lootTimeEntityIDs)
@@ -4613,6 +4797,12 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         for(auto pair : delayedLootEntityIDs)
         {
             ScheduleFreeLoot(pair.first, zone, pair.second, sourcePartyMembers);
+        }
+
+        if(multiZoneBosses.size() > 0)
+        {
+            zoneManager->MultiZoneBossKilled(zone, sourceState,
+                multiZoneBosses);
         }
 
         // Update quest kill counts (ignore for demon only zones)
@@ -4642,6 +4832,86 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         if(dgEnemies.size() > 0)
         {
             HandleDigitalizeXP(source, dgEnemies, zone);
+        }
+
+        // Update invoke values for active cooldowns
+        if(sourceClient)
+        {
+            // Should only be one at a time but account for more just in case
+            for(int32_t invokeID : { COOLDOWN_INVOKE_LAW,
+                COOLDOWN_INVOKE_NEUTRAL, COOLDOWN_INVOKE_CHAOS })
+            {
+                if(sourceCooldowns.find(invokeID) != sourceCooldowns.end())
+                {
+                    characterManager->UpdateEventCounter(sourceClient,
+                        invokeID, (int32_t)enemiesKilled.size());
+                }
+            }
+        }
+    }
+
+    // Handle additional kill values
+    if(sourceClient)
+    {
+        for(auto& pair : killValues)
+        {
+            int32_t valSum = 0;
+            for(auto entity : pair.second)
+            {
+                if(entity->GetKillValue() > 0)
+                {
+                    valSum += entity->GetKillValue();
+                }
+            }
+
+            if(valSum == 0) continue;
+
+            switch(pair.first)
+            {
+            case objects::Spawn::KillValueType_t::SOUL_POINTS:
+                characterManager->UpdateSoulPoints(sourceClient, valSum, true,
+                    true);
+                break;
+            case objects::Spawn::KillValueType_t::BETHEL:
+                // If in an active Pentalpha instance, bethel is "held" until
+                // the timer expires. Otherwise it is given right away. Both
+                // require active Pentalpha entries to actually do anything.
+                {
+                    float globalBonus = server->GetWorldSharedConfig()
+                        ->GetBethelBonus();
+                    if(globalBonus != 0.f)
+                    {
+                        valSum = (int32_t)((double)valSum * (double)(1.f +
+                            globalBonus));
+                    }
+
+                    if(zone->GetInstanceType() == InstanceType_t::PENTALPHA &&
+                        instance->GetTimerStart() && !instance->GetTimerStop())
+                    {
+                        sourceState->SetInstanceBethel(valSum +
+                            sourceState->GetInstanceBethel());
+                    }
+                    else
+                    {
+                        characterManager->UpdateBethel(sourceClient, valSum,
+                            true);
+                    }
+                }
+                break;
+            case objects::Spawn::KillValueType_t::UB_POINTS:
+                server->GetMatchManager()->UpdateUBPoints(sourceClient,
+                    valSum);
+                break;
+            case objects::Spawn::KillValueType_t::ZIOTITE:
+                // Ziotite can only be granted to a team
+                server->GetMatchManager()->UpdateZiotite(sourceState
+                    ->GetTeam(), valSum, 0, sourceState->GetWorldCID());
+                break;
+            case objects::Spawn::KillValueType_t::INHERITED:
+            default:
+                // Should have been handled above by the instance variant
+                break;
+            }
         }
     }
 }
@@ -5544,8 +5814,10 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
                     lBox->SetType(objects::LootBox::Type_t::GIFT_BOX);
                     lBox->SetEnemy(enemy);
 
-                    auto drops = GetItemDrops(enemy->GetSpawnSource(), true);
-                    characterManager->CreateLootFromDrops(lBox, drops,
+                    auto drops = GetItemDrops(enemy->GetSpawnSource(), zone,
+                        true);
+                    auto gifts = drops[(uint8_t)objects::DropSet::Type_t::NORMAL];
+                    characterManager->CreateLootFromDrops(lBox, gifts,
                         source->GetLUCK(), true);
                 }
                 break;
@@ -6120,6 +6392,18 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
     {
         if(target.HitAvoided) continue;
 
+        auto targetState = GetCalculatedState(target.EntityState, pSkill, true,
+            source);
+        if(skill.Definition->GetBasic()->GetCombatSkill() && (mod1 || mod2) &&
+            GetEntityRate(source, targetState, true) == 0)
+        {
+            // Combat skills that deal damage display "impossible" if a 0%
+            // entity rate taken exists
+            target.Flags2 |= FLAG2_IMPOSSIBLE;
+            target.Damage1Type = DAMAGE_TYPE_GENERIC;
+            continue;
+        }
+
         float targetModMultiplier = 1.f;
         if(fidTargetAdjusted)
         {
@@ -6184,7 +6468,6 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 targetModMultiplier);
         }
 
-        auto targetState = GetCalculatedState(target.EntityState, pSkill, true, source);
         bool effectiveHeal = isHeal || target.HitAbsorb;
 
         int8_t minDamageLevel = -1;
@@ -6913,21 +7196,32 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
     switch(resultIdx)
     {
     case NRA_NULL:
-        switch(skill.EffectiveDependencyType)
         {
-        case 0:
-        case 1:
-        case 6:
-        case 9:
-        case 10:
-        case 12:
-            target.HitNull = 1;	// Physical null
-            break;
-        default:
-            target.HitNull = 2; // Magic null
-            break;
+            if(target.CalcState->ExistingTokuseiAspectsContains(
+                (int8_t)TokuseiAspectType::BARRIER))
+            {
+                target.HitNull = 3; // Barrier
+            }
+            else
+            {
+                switch(skill.EffectiveDependencyType)
+                {
+                case 0:
+                case 1:
+                case 6:
+                case 9:
+                case 10:
+                case 12:
+                    target.HitNull = 1; // Physical null
+                    break;
+                default:
+                    target.HitNull = 2; // Magic null
+                    break;
+                }
+            }
+
+            target.HitAvoided = true;
         }
-        target.HitAvoided = true;
         return false;
     case NRA_REFLECT:
         switch(skill.EffectiveDependencyType)
@@ -7005,7 +7299,6 @@ uint8_t SkillManager::GetNRAResult(SkillTargetResult& target, ProcessingSkill& s
 
     // Check NRA chances (absorb in affinity order, reflect in affinity
     // order, then null in affinity order)
-    auto calcState = skill.TargetCalcStates[target.EntityState->GetEntityID()];
     for(auto nraIdx : { NRA_ABSORB, NRA_REFLECT, NRA_NULL })
     {
         for(CorrectTbl affinity : affinities)
@@ -7018,7 +7311,7 @@ uint8_t SkillManager::GetNRAResult(SkillTargetResult& target, ProcessingSkill& s
 
             // If no shield exists, check natural chances
             int16_t chance = target.EntityState->GetNRAChance((uint8_t)nraIdx,
-                affinity, calcState);
+                affinity, target.CalcState);
             if(chance >= 100 || (chance > 0 && RNG(int16_t, 1, 100) <= chance))
             {
                 return (uint8_t)nraIdx;
@@ -7041,10 +7334,12 @@ uint8_t SkillManager::CalculateStatusEffectStack(int8_t minStack, int8_t maxStac
         : (uint8_t)RNG(uint16_t, (uint16_t)minStack, (uint16_t)maxStack);
 }
 
-std::list<std::shared_ptr<objects::ItemDrop>> SkillManager::GetItemDrops(
-    const std::shared_ptr<objects::Spawn>& spawn, bool giftMode) const
+std::unordered_map<uint8_t, std::list<std::shared_ptr<objects::ItemDrop>>>
+    SkillManager::GetItemDrops(const std::shared_ptr<objects::Spawn>& spawn,
+    const std::shared_ptr<Zone>& zone, bool giftMode) const
 {
-    std::list<std::shared_ptr<objects::ItemDrop>> drops;
+    std::unordered_map<uint8_t,
+        std::list<std::shared_ptr<objects::ItemDrop>>> drops;
     if(!spawn)
     {
         return drops;
@@ -7059,7 +7354,7 @@ std::list<std::shared_ptr<objects::ItemDrop>> SkillManager::GetItemDrops(
     {
         for(auto drop : spawn->GetGifts())
         {
-            drops.push_back(drop);
+            drops[(uint8_t)objects::DropSet::Type_t::NORMAL].push_back(drop);
         }
 
         for(uint32_t dropSetID : spawn->GetGiftSetIDs())
@@ -7071,28 +7366,78 @@ std::list<std::shared_ptr<objects::ItemDrop>> SkillManager::GetItemDrops(
     {
         for(auto drop : spawn->GetDrops())
         {
-            drops.push_back(drop);
+            drops[(uint8_t)objects::DropSet::Type_t::NORMAL].push_back(drop);
         }
 
         for(uint32_t dropSetID : spawn->GetDropSetIDs())
         {
             dropSetIDs.push_back(dropSetID);
         }
-    }
 
-    // Add global drops
-    auto sharedConfig = server->GetWorldSharedConfig();
-    for(uint32_t dropSetID : sharedConfig->GetGlobalDropSetIDs())
-    {
-        dropSetIDs.push_back(dropSetID);
+        // Add global drops
+        auto globalDef = serverDataManager->GetZonePartialData(0);
+        if(globalDef)
+        {
+            for(uint32_t dropSetID : globalDef->GetDropSetIDs())
+            {
+                dropSetIDs.push_back(dropSetID);
+            }
+        }
+
+        // Add zone drops
+        for(uint32_t dropSetID : zone->GetDefinition()->GetDropSetIDs())
+        {
+            dropSetIDs.push_back(dropSetID);
+        }
     }
 
     // Get drops from drop sets
+    std::unordered_map<uint32_t, std::shared_ptr<objects::DropSet>> defs;
+    std::unordered_map<uint32_t, std::set<uint32_t>> mutexIDs;
     for(uint32_t dropSetID : dropSetIDs)
     {
         auto dropSet = serverDataManager->GetDropSetData(dropSetID);
         if(dropSet)
         {
+            defs[dropSetID] = dropSet;
+            if(dropSet->GetMutexID())
+            {
+                mutexIDs[dropSet->GetMutexID()].insert(dropSetID);
+            }
+        }
+    }
+
+    if(mutexIDs.size() > 0)
+    {
+        for(auto& pair : mutexIDs)
+        {
+            if(pair.second.size() > 1)
+            {
+                // There can only be one at a time
+                uint32_t dropSetID = libcomp::Randomizer::GetEntry(
+                    pair.second);
+                pair.second.clear();
+                pair.second.insert(dropSetID);
+            }
+        }
+    }
+    
+    for(uint32_t dropSetID : dropSetIDs)
+    {
+        auto dropSet = defs[dropSetID];
+        if(dropSet)
+        {
+            if(dropSet->GetMutexID())
+            {
+                auto it = mutexIDs[dropSet->GetMutexID()].find(dropSetID);
+                if(it == mutexIDs[dropSet->GetMutexID()].end())
+                {
+                    // Not randomly selected mutex set
+                    continue;
+                }
+            }
+
+            uint8_t type = (uint8_t)dropSet->GetType();
             for(auto drop : dropSet->GetDrops())
             {
                 switch(drop->GetType())
@@ -7110,11 +7455,11 @@ std::list<std::shared_ptr<objects::ItemDrop>> SkillManager::GetItemDrops(
                         copy->SetMinStack((uint16_t)((float)min * multiplier));
                         copy->SetMaxStack((uint16_t)((float)max * multiplier));
 
-                        drops.push_back(copy);
+                        drops[type].push_back(copy);
                     }
                     break;
                 case objects::ItemDrop::Type_t::NORMAL:
-                    drops.push_back(drop);
+                    drops[type].push_back(drop);
                     break;
                 }
             }

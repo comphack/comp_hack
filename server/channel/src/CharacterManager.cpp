@@ -52,6 +52,7 @@
 #include <DemonQuest.h>
 #include <DigitalizeState.h>
 #include <EnchantSpecialData.h>
+#include <EventCounter.h>
 #include <Expertise.h>
 #include <InheritedSkill.h>
 #include <Item.h>
@@ -96,6 +97,7 @@
 #include <MiUnionData.h>
 #include <MiUseRestrictionsData.h>
 #include <PlayerExchangeSession.h>
+#include <PentalphaEntry.h>
 #include <PvPData.h>
 #include <ServerCultureMachineSet.h>
 #include <ServerZone.h>
@@ -106,10 +108,12 @@
 #include "ActionManager.h"
 #include "AIState.h"
 #include "ChannelServer.h"
+#include "ChannelSyncManager.h"
 #include "CultureMachineState.h"
 #include "EventManager.h"
 #include "FusionManager.h"
 #include "ManagerConnection.h"
+#include "MatchManager.h"
 #include "SkillManager.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
@@ -1048,7 +1052,7 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
     case REVIVE_PVP_RESPAWN:
         {
             responseType1 = REVIVAL_REVIVE_PVP;
-            zoneManager->GetPvPStartPosition(client, zone, newX, newY, newRot);
+            zoneManager->GetMatchStartPosition(client, zone, newX, newY, newRot);
             newZoneID = zone->GetDefinitionID();
 
             hpRestores[cState] = cState->GetMaxHP();
@@ -1069,6 +1073,8 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
         }
         break;
     case REVIVE_DEMON_SOLO_QUIT:
+    case REVIVE_DIASPORA_QUIT:
+    case REVIVE_UB_QUIT:
         {
             responseType1 = REVIVAL_DEMON_ONLY_QUIT;
 
@@ -1126,6 +1132,7 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
         }
 
         UpdateWorldDisplayState(displayState);
+        zoneManager->UpdateTrackedZone(zone, state->GetTeam());
 
         state->SetAcceptRevival(false);
     }
@@ -2678,71 +2685,8 @@ std::list<std::shared_ptr<objects::ItemDrop>> CharacterManager::DetermineDrops(
 bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBox>& box,
     const std::list<std::shared_ptr<objects::ItemDrop>>& drops, int16_t luck, bool minLast)
 {
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-
-    // Loop through the drops and sum up stacks
-    std::unordered_map<uint32_t, uint32_t> itemStacks;
-    for(auto drop : DetermineDrops(drops, luck, minLast))
-    {
-        uint16_t minStack = drop->GetMinStack();
-        uint16_t maxStack = drop->GetMaxStack();
-
-        // The drop rate is affected by luck but the stack size is not
-        uint16_t stackSize = RNG(uint16_t, minStack, maxStack);
-
-        auto it = itemStacks.find(drop->GetItemType());
-        if(it != itemStacks.end())
-        {
-            it->second = (uint32_t)(it->second + stackSize);
-        }
-        else
-        {
-            itemStacks[drop->GetItemType()] = (uint32_t)stackSize;
-        }
-    }
-
-    // Loop back through and create the items with the combined stacks
-    std::set<uint32_t> addedItems;
-    std::list<std::shared_ptr<objects::Loot>> lootItems;
-    for(auto drop : drops)
-    {
-        auto it = itemStacks.find(drop->GetItemType());
-        if(it != itemStacks.end() &&
-            addedItems.find(drop->GetItemType()) == addedItems.end())
-        {
-            auto itemDef = definitionManager->GetItemData(
-                drop->GetItemType());
-
-            addedItems.insert(drop->GetItemType());
-
-            uint32_t stackSize = it->second;
-            uint16_t maxStackSize = itemDef->GetPossession()->GetStackSize();
-            uint16_t stackCount = (uint8_t)ceill((double)stackSize /
-                (double)maxStackSize);
-
-            for(uint16_t i = 0; i < stackCount &&
-                lootItems.size() < box->LootCount(); i++)
-            {
-                uint16_t stack = stackSize <= (uint32_t)maxStackSize
-                    ? (uint16_t)stackSize : maxStackSize;
-                stackSize = (uint32_t)(stackSize - (uint32_t)stack);
-
-                auto loot = std::make_shared<objects::Loot>();
-                loot->SetType(drop->GetItemType());
-                loot->SetCount(stack);
-                lootItems.push_back(loot);
-            }
-
-            if(lootItems.size() == 12)
-            {
-                break;
-            }
-
-            // Remove it from the set so its not generated twice
-            itemStacks.erase(it);
-        }
-    }
+    auto dSet = DetermineDrops(drops, luck, minLast);
+    auto lootItems = CreateLootFromDrops(dSet);
 
     bool added = false;
     if(lootItems.size() > 0)
@@ -2766,11 +2710,86 @@ bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBo
     return added;
 }
 
+std::list<std::shared_ptr<objects::Loot>> CharacterManager::CreateLootFromDrops(
+    const std::list<std::shared_ptr<objects::ItemDrop>>& drops)
+{
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    // Loop through the drops and sum up stacks
+    // Drops can be restricted by active cooldown so make sure not to combine
+    // two stacks with differing cooldown restrictions
+    std::unordered_map<uint32_t,
+        std::unordered_map<int32_t, uint32_t>> itemStacks;
+    for(auto drop : drops)
+    {
+        uint16_t minStack = drop->GetMinStack();
+        uint16_t maxStack = drop->GetMaxStack();
+
+        // The drop rate is affected by luck but the stack size is not
+        uint16_t stackSize = RNG(uint16_t, minStack, maxStack);
+
+        int32_t rGroup = drop->GetCooldownRestrict();
+
+        auto& subset = itemStacks[drop->GetItemType()];
+        auto it = subset.find(rGroup);
+        if(it != subset.end())
+        {
+            it->second = (uint32_t)(it->second + stackSize);
+        }
+        else
+        {
+            subset[rGroup] = (uint32_t)stackSize;
+        }
+    }
+
+    // Loop back through and create the items with the combined stacks
+    std::list<std::shared_ptr<objects::Loot>> lootItems;
+    for(auto drop : drops)
+    {
+        int32_t rGroup = drop->GetCooldownRestrict();
+
+        auto& subset = itemStacks[drop->GetItemType()];
+
+        auto it = subset.find(rGroup);
+        if(it != subset.end())
+        {
+            auto itemDef = definitionManager->GetItemData(
+                drop->GetItemType());
+
+            uint32_t stackSize = it->second;
+            uint16_t maxStackSize = itemDef->GetPossession()->GetStackSize();
+            uint16_t stackCount = (uint8_t)ceill((double)stackSize /
+                (double)maxStackSize);
+
+            for(uint16_t i = 0; i < stackCount; i++)
+            {
+                uint16_t stack = stackSize <= (uint32_t)maxStackSize
+                    ? (uint16_t)stackSize : maxStackSize;
+                stackSize = (uint32_t)(stackSize - (uint32_t)stack);
+
+                auto loot = std::make_shared<objects::Loot>();
+                loot->SetType(drop->GetItemType());
+                loot->SetCount(stack);
+                loot->SetCooldownRestrict(rGroup);
+                lootItems.push_back(loot);
+            }
+
+            // Remove it from the set so its not generated twice
+            subset.erase(it);
+        }
+    }
+
+    return lootItems;
+}
+
 void CharacterManager::SendLootItemData(const std::list<std::shared_ptr<
     ChannelClientConnection>>& clients, const std::shared_ptr<LootBoxState>& lState,
     bool queue)
 {
     auto lootBox = lState->GetEntity();
+
+    std::unordered_map<uint32_t, int32_t> restrictions;
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_ITEM_DATA);
@@ -2784,13 +2803,24 @@ void CharacterManager::SendLootItemData(const std::list<std::shared_ptr<
         {
             p.WriteU32Little(loot->GetType());
             p.WriteU16Little(loot->GetCount());
+
+            if(loot->GetCooldownRestrict())
+            {
+                restrictions[p.Size()] = loot->GetCooldownRestrict();
+                p.WriteS8(0);   // Set restricted access later
+            }
+            else
+            {
+                // Not restricted
+                p.WriteS8(3);
+            }
         }
         else
         {
             p.WriteU32Little(static_cast<uint32_t>(-1));
             p.WriteU16Little(0);
+            p.WriteS8(0);
         }
-        p.WriteS8(3);
     }
 
     for(auto client : clients)
@@ -2805,6 +2835,24 @@ void CharacterManager::SendLootItemData(const std::list<std::shared_ptr<
             p.WriteS32Little(cState->GetEntityID());
             p.Seek(10);
             p.WriteFloat(state->ToClientTime(lootBox->GetLootTime()));
+
+            if(restrictions.size() > 0)
+            {
+                cState->RefreshActionCooldowns(false);
+                for(auto& pair : restrictions)
+                {
+                    p.Seek(pair.first);
+                    if(cState->ActionCooldownActive(pair.second, false,
+                        false))
+                    {
+                        p.WriteS8(3);   // Lootable
+                    }
+                    else
+                    {
+                        p.WriteS8(0);   // Restricted
+                    }
+                }
+            }
 
             if(queue)
             {
@@ -4042,6 +4090,162 @@ void CharacterManager::SendPvPCharacterInfo(const std::shared_ptr<
     client->SendPacket(reply);
 }
 
+int32_t CharacterManager::UpdateBethel(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int32_t bethel, bool adjust)
+{
+    auto server = mServer.lock();
+    auto entry = server->GetMatchManager()->LoadPentalphaData(client, 0x01);
+    if(entry && entry->GetActive())
+    {
+        int32_t val = bethel;
+        if(adjust)
+        {
+            auto state = client->GetClientState();
+            auto cState = state->GetCharacterState();
+            double rateAdjust = 1.0 + (server->GetTokuseiManager()
+                ->GetAspectSum(cState, TokuseiAspectType::BETHEL_RATE) * 0.01);
+
+            val = (int32_t)((double)val * rateAdjust);
+        }
+
+        std::array<int32_t, 5> allBethel = { { 0, 0, 0, 0, 0 } };
+        allBethel[(size_t)entry->GetTeam()] = val;
+        if(UpdateCowrieBethel(client, 0, allBethel))
+        {
+            return val;
+        }
+    }
+
+    return 0;
+}
+
+bool CharacterManager::UpdateCowrieBethel(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int32_t cowrie,
+    const std::array<int32_t, 5>& bethel)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto progress = character ? character->GetProgress().Get() : nullptr;
+    if(progress)
+    {
+        if(cowrie)
+        {
+            int32_t newCowrie = progress->GetCowrie() + cowrie;
+            if(newCowrie < 0)
+            {
+                newCowrie = 0;
+            }
+
+            progress->SetCowrie(newCowrie);
+        }
+
+        bool bethelUpdated = false;
+        auto newBethel = progress->GetBethel();
+        for(size_t i = 0; i < 5; i++)
+        {
+            if(bethel[i])
+            {
+                newBethel[i] += bethel[i];
+                if(newBethel[i] < 0)
+                {
+                    newBethel[i] = 0;
+                }
+
+                bethelUpdated = true;
+            }
+        }
+
+        if(bethelUpdated)
+        {
+            progress->SetBethel(newBethel);
+        }
+
+        if(cowrie || bethelUpdated)
+        {
+            SendCowrieBethel(client);
+
+            mServer.lock()->GetWorldDatabase()->QueueUpdate(progress);
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void CharacterManager::SendCowrieBethel(const std::shared_ptr<
+    channel::ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto progress = character ? character->GetProgress().Get() : nullptr;
+    if(progress)
+    {
+        libcomp::Packet reply;
+        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COWRIE_BETHEL);
+        for(int32_t bethel : progress->GetBethel())
+        {
+            reply.WriteS32Little(bethel);
+        }
+        reply.WriteS32Little(progress->GetCowrie());
+
+        client->SendPacket(reply);
+    }
+}
+
+bool CharacterManager::UpdateEventCounter(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int32_t type, int32_t value,
+    bool noSync)
+{
+    auto state = client->GetClientState();
+
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+
+    auto eCounter = state->GetEventCounters(type).Get();
+    if(!eCounter)
+    {
+        // Create a new one
+        auto characterUID = state->GetCharacterState()->GetEntityUUID();
+        if(characterUID == NULLUUID)
+        {
+            return false;
+        }
+
+        eCounter = libcomp::PersistentObject::New<objects::EventCounter>(true);
+        eCounter->SetCharacter(characterUID);
+        eCounter->SetType(type);
+        eCounter->SetCounter(value);
+        eCounter->SetTimestamp((uint32_t)std::time(0));
+
+        state->SetEventCounters(type, eCounter);
+
+        dbChanges->Insert(eCounter);
+    }
+    else
+    {
+        eCounter->SetCounter(eCounter->GetCounter() + value);
+
+        dbChanges->Update(eCounter);
+    }
+
+    auto server = mServer.lock();
+    if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
+    {
+        return false;
+    }
+
+    if(!noSync)
+    {
+        server->GetChannelSyncManager()->UpdateRecord(eCounter,
+            "EventCounter");
+        server->GetChannelSyncManager()->SyncOutgoing();
+    }
+
+    return true;
+}
+
 void CharacterManager::ExperienceGain(const std::shared_ptr<
     channel::ChannelClientConnection>& client, uint64_t xpGain, int32_t entityID)
 {
@@ -5250,6 +5454,59 @@ void CharacterManager::SendDevilBook(const std::shared_ptr<
     reply.WriteArray(&devilBook, (uint32_t)devilBook.size());
 
     client->SendPacket(reply);
+}
+
+void CharacterManager::SendInvokeStatus(const std::shared_ptr<
+    ChannelClientConnection>& client, bool force, bool queue)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    if(!character)
+    {
+        return;
+    }
+
+    cState->RefreshActionCooldowns(false);
+
+    // Take the first active one found (default to neutral for "wait" only)
+    int32_t active = COOLDOWN_INVOKE_NEUTRAL;
+    for(int32_t invokeID : { COOLDOWN_INVOKE_LAW,
+        COOLDOWN_INVOKE_NEUTRAL, COOLDOWN_INVOKE_CHAOS })
+    {
+        if(cState->ActionCooldownActive(invokeID, false, false))
+        {
+            active = invokeID;
+            break;
+        }
+    }
+
+    uint32_t systemTime = (uint32_t)std::time(0);
+    int32_t invokeLeft = ChannelServer::GetExpirationInSeconds(
+        character->GetActionCooldowns(active), systemTime);
+    int32_t waitLeft = ChannelServer::GetExpirationInSeconds(
+        character->GetActionCooldowns(COOLDOWN_INVOKE_WAIT), systemTime);
+
+    if(!force && !invokeLeft && !waitLeft)
+    {
+        return;
+    }
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PATTRIBUTE);
+    p.WriteS8((int8_t)((active + 1) * -1));   // PAttribute ID
+    p.WriteS32Little(invokeLeft);
+    p.WriteS32Little(waitLeft);
+    p.WriteS32Little(mServer.lock()->GetPAttributeDeadline());
+
+    if(queue)
+    {
+        client->QueuePacket(p);
+    }
+    else
+    {
+        client->SendPacket(p);
+    }
 }
 
 bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<

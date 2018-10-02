@@ -39,7 +39,9 @@ namespace objects
 {
 class Character;
 class MatchEntry;
+class PentalphaMatch;
 class PvPMatch;
+class UBTournament;
 }
 
 namespace world
@@ -204,6 +206,37 @@ private:
     std::unordered_map<int32_t, std::list<std::shared_ptr<
         objects::MatchEntry>>> GetMatchEntryTeams(uint8_t type);
 
+    /**
+     * End the supplied PentalphaMatch by properly updating all participating
+     * players and closing out their match entries
+     * @param match Pointer to the PentalphaMatch to end
+     * @return true if the match and all related entries were updated properly
+     */
+    bool EndMatch(const std::shared_ptr<objects::PentalphaMatch>& match);
+
+    /**
+     * Recalculate all rankings for a spectific UBTournament
+     * @param tournamentUID UID of the tournament to recalculate
+     * @return true if the rankings were updated, false if an error occurred
+     */
+    bool RecalculateTournamentRankings(const libobjgen::UUID& tournamentUID);
+
+    /**
+     * Recalculate all tournament independent UBResult rankings
+     * @return true if the rankings were updated, false if an error occurred
+     */
+    bool RecalculateUBRankings();
+
+    /**
+     * End the supplied UBTournament by properly updating the rankings and
+     * send the results to the channels
+     * @param tournament Pointer to the UBTournament to end
+     * @return true if the tournament and all related entries were updated
+     *  properly
+     */
+    bool EndTournament(
+        const std::shared_ptr<objects::UBTournament>& tournament);
+
     /// List of all search entries registered with the server
     std::list<std::shared_ptr<objects::SearchEntry>> mSearchEntries;
 
@@ -216,9 +249,20 @@ private:
     std::unordered_map<int32_t,
         std::shared_ptr<objects::MatchEntry>> mMatchEntries;
 
+    /// Pointer to the currently active pentalpha match
+    std::shared_ptr<objects::PentalphaMatch> mPentalphaMatch;
+
+    /// Pointer to the currently active UB tournament
+    std::shared_ptr<objects::UBTournament> mUBTournament;
+
     /// System timestamps for pending PvP ready times indexed by solo entries
     /// (0) or team (1) then PVP type
     std::array<std::array<uint32_t, 2>, 2> mPvPReadyTimes;
+
+    /// Lowest points required to cause a recalculation of the current top
+    /// 10 UB total score, top total points and top all time points (in that
+    /// index order)
+    std::array<uint32_t, 3> mUBRecalcMin;
 
     /// Next match ID to use for any matches prepared by the server
     uint32_t mNextMatchID;

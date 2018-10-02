@@ -140,6 +140,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ClientCostAdjustment.cpp
     ClientStateObject.h
     ClientStateObject.cpp
+    DiasporaBase.h
+    DiasporaBase.cpp
     DigitalizeState.h
     DigitalizeState.cpp
     EventInstance.h
@@ -150,6 +152,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     Loot.cpp
     LootBox.h
     LootBox.cpp
+    DestinyBox.h
+    DestinyBox.cpp
     PlayerExchangeSession.h
     PlayerExchangeSession.cpp
     PvPBase.h
@@ -160,6 +164,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     PvPInstanceStats.cpp
     TriFusionHostSession.h
     TriFusionHostSession.cpp
+    UBMatch.h
+    UBMatch.cpp
     ZoneInstanceObject.h
     ZoneInstanceObject.cpp
     ZoneObject.h
@@ -286,11 +292,13 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/Warp.cpp                   # 0x016A
     src/packets/game/SkillExecuteInstant.cpp    # 0x016C
     src/packets/game/SyncCharacter.cpp          # 0x017E
+    src/packets/game/DemonAISet.cpp             # 0x0181
     src/packets/game/BazaarInteract.cpp         # 0x0184
     src/packets/game/SkillForget.cpp            # 0x0186
     src/packets/game/BazaarMarketEnd.cpp        # 0x0188
     src/packets/game/BazaarMarketComment.cpp    # 0x018B
-    src/packets/game/DemonAISet.cpp             # 0x0181
+    src/packets/game/PartyRecruitReply.cpp      # 0x018F
+    src/packets/game/PartyRecruit.cpp           # 0x0192
     src/packets/game/StatusIcon.cpp             # 0x0194
     src/packets/game/MapFlag.cpp                # 0x0197
     src/packets/game/DemonCompendium.cpp        # 0x019B
@@ -307,6 +315,7 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/EnchantItem.cpp            # 0x01BE
     src/packets/game/Enchant.cpp                # 0x01C1
     src/packets/game/DungeonRecords.cpp         # 0x01C4
+    src/packets/game/ItemPromo.cpp              # 0x01C9
     src/packets/game/TriFusionJoin.cpp          # 0x01CD
     src/packets/game/TriFusionDemonUpdate.cpp   # 0x01D0
     src/packets/game/TriFusionRewardUpdate.cpp  # 0x01D3
@@ -368,6 +377,8 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/EquipmentSpiritFuse.cpp    # 0x0287
     src/packets/game/DemonQuestPending.cpp      # 0x028F
     src/packets/game/ItemDepoRemote.cpp         # 0x0296
+    src/packets/game/DiasporaBaseCapture.cpp    # 0x02C4
+    src/packets/game/DiasporaEnter.cpp          # 0x02C7
     src/packets/game/DemonDepoRemote.cpp        # 0x02EF
     src/packets/game/CommonSwitchUpdate.cpp     # 0x02F2
     src/packets/game/CommonSwitchInfo.cpp       # 0x02F4
@@ -377,6 +388,11 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/TriFusionSolo.cpp          # 0x0384
     src/packets/game/EquipmentSpiritDefuse.cpp  # 0x0386
     src/packets/game/DemonForceEnd.cpp          # 0x0389
+    src/packets/game/UBSpectatePlayer.cpp       # 0x038F
+    src/packets/game/UBProceed.cpp              # 0x0392
+    src/packets/game/UBLeave.cpp                # 0x0394
+    src/packets/game/UBLottoCancel.cpp          # 0x0398
+    src/packets/game/UBLottoJoin.cpp            # 0x039A
     src/packets/game/SearchEntryInfo.cpp        # 0x03A3
     src/packets/game/ITimeData.cpp              # 0x03A5
     src/packets/game/ITimeTalk.cpp              # 0x03A9
@@ -387,15 +403,19 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/CultureEnd.cpp             # 0x03B6
     src/packets/game/EquipmentModEdit.cpp       # 0x03CB
     src/packets/game/PAttributeDeadline.cpp     # 0x03EA
+    src/packets/game/MissionLeave.cpp           # 0x03ED
     src/packets/game/MitamaReunion.cpp          # 0x03F1
     src/packets/game/MitamaReset.cpp            # 0x03F3
     src/packets/game/DemonDepoList.cpp          # 0x03F5
     src/packets/game/DemonEquip.cpp             # 0x03FB
     src/packets/game/Barter.cpp                 # 0x03FE
+    src/packets/game/PentalphaData.cpp          # 0x0400
     src/packets/game/QuestTitle.cpp             # 0x0406
     src/packets/game/ReportPlayer.cpp           # 0x0407
     src/packets/game/Blacklist.cpp              # 0x0408
     src/packets/game/BlacklistUpdate.cpp        # 0x040A
+    src/packets/game/DestinyBoxData.cpp         # 0x040D
+    src/packets/game/DestinyLotto.cpp           # 0x0410
     src/packets/game/DigitalizePoints.cpp       # 0x0414
     src/packets/game/DigitalizeAssist.cpp       # 0x0418
     src/packets/game/DigitalizeAssistLearn.cpp  # 0x041A

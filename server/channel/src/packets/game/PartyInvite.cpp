@@ -27,17 +27,13 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <ErrorCodes.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
-// objects Includes
-#include <AccountLogin.h>
-#include <CharacterLogin.h>
-
 // channel Includes
 #include "ChannelServer.h"
-#include "ManagerConnection.h"
 
 using namespace channel;
 
@@ -67,6 +63,7 @@ bool Parsers::PartyInvite::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::Packet request;
         request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
         request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_YN_REQUEST);
+        request.WriteU8(0); // Not from recruit
         member->SavePacket(request, false);
         request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
             targetName, true);
@@ -79,7 +76,7 @@ bool Parsers::PartyInvite::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_INVITE);
         reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
             targetName, true);
-        reply.WriteU16Little(201);  // Offline
+        reply.WriteU16Little((uint16_t)PartyErrorCodes_t::INVALID_OR_OFFLINE);
         client->SendPacket(reply);
     }
 

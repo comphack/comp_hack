@@ -123,7 +123,7 @@ public:
      * (CHANNEL state) this is ignored.
      * @param username Username for account to check.
      * @param key Session key that has expired.
-     * @result true if the session was expired, false if it was not
+     * @return true if the session was expired, false if it was not
      */
     bool ExpireSession(const libcomp::String& username,
         uint32_t key);

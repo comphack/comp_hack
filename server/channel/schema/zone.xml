@@ -4,6 +4,7 @@
         <member type="u32" name="ID"/>
         <member type="ServerZone*" name="Definition"
             nulldefault="true"/>
+        <member type="Match*" name="Match" nulldefault="true"/>
         <member type="bool" name="Invalid"/>
         <member type="list" name="ZoneChangeTriggers">
             <element type="ServerZoneTrigger*"/>
@@ -49,6 +50,7 @@
         <member type="set" name="OriginalAccessCIDs">
             <element type="s32"/>
         </member>
+        <member type="Match*" name="Match" nulldefault="true"/>
         <member type="u32" name="TimerID"/>
         <member type="MiTimeLimitData*" name="TimeLimitData"
             nulldefault="true"/>
@@ -57,6 +59,10 @@
         <member type="u64" name="TimerExpire"/>
         <member type="string" name="TimerExpirationEventID"/>
         <member type="float" name="XPMultiplier"/>
+        <member type="map" name="DestinyBoxes">
+            <key type="s32"/>
+            <value type="DestinyBox*"/>
+        </member>
         <member type="PvPInstanceStats*" name="PvPStats"
             nulldefault="true"/>
     </object>
@@ -71,10 +77,6 @@
     </object>
     <object name="PvPInstanceStats" scriptenabled="true" persistent="false">
         <member type="PvPMatch*" name="Match" nulldefault="true"/>
-        <member type="map" name="EntityValues">
-            <key type="s32"/>
-            <value type="s32"/>
-        </member>
         <member type="map" name="PlayerStats">
             <key type="s32"/>
             <value type="PvPPlayerStats*"/>
@@ -111,5 +113,63 @@
             <element type="s8"/>
         </member>
         <member type="float" name="TrophyBoost"/>
+    </object>
+    <object name="DiasporaBase" scriptenabled="true" persistent="false">
+        <member type="MiUraFieldTowerData*" name="Definition"/>
+        <member type="ServerObject*" name="BoundObject"/>
+        <member type="bool" name="Captured"/>
+        <member type="u64" name="ResetTime"/>
+    </object>
+    <object name="UBMatch" baseobject="Match" persistent="false"
+        scriptenabled="true">
+        <member type="enum" name="Type" inherited="true" default="ULTIMATE_BATTLE"/>
+        <member type="u32" name="SubType" min="1"/>
+        <member type="enum" name="Category" underlying="int8_t">
+            <value>UB</value>
+            <value>UA</value>
+        </member>
+        <member type="enum" name="State" underlying="int8_t">
+            <value num="0">PREMATCH</value>
+            <value num="1">READY</value>
+            <value num="2">ROUND</value>
+            <value num="3">PREROUND</value>
+            <value num="4">COMPLETE</value>
+        </member>
+        <member type="s32" name="Result"/>
+        <member type="map" name="PendingEntries">
+            <key type="s32"/>
+            <value type="MatchEntry*"/>
+        </member>
+        <member type="set" name="SpectatorIDs">
+            <element type="s32"/>
+        </member>
+        <member type="u8" name="QueueDuration"/>
+        <member type="u8" name="AnnounceDuration"/>
+        <member type="u16" name="ReadyDuration"/>
+        <member type="map" name="Points">
+            <key type="s32"/>
+            <value type="s32"/>
+        </member>
+        <member type="map" name="Coins">
+            <key type="s32"/>
+            <value type="s32"/>
+        </member>
+        <member type="list" name="RecentlyKilled">
+            <element type="Spawn*"/>
+        </member>
+        <member type="float" name="KillValueDecay" default="0.75" min="0.0" max="1.0"/>
+        <member type="u32" name="PhaseBoss"/>
+        <member type="u32" name="PreviousGauge"/>
+        <member type="u32" name="Gauge"/>
+        <member type="u32" name="DarkLimit"/>
+        <member type="float" name="GaugeScale" default="1.0" min="0.0"/>
+        <member type="u32" name="GaugeDecay"/>
+        <member type="float" name="GaugeDecayScale" default="1.0" min="0.0"/>
+        <member type="u32" name="CoinLimit" default="150000"/>
+        <member type="u64" name="TimerStart"/>
+        <member type="u64" name="TimerExpire"/>
+        <member type="string" name="TimerEventID"/>
+        <member type="u64" name="NextTick"/>
+        <member type="u64" name="PreviousTick"/>
     </object>
 </objgen>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiUraFieldTowerData" persistent="false" scriptenabled="true">
+        <member type="u32" name="dungeonID"/>
+        <member type="u32" name="ID"/>
+        <member type="u32" name="letter"/>
+        <member type="string" name="name" encoding="cp932" length="32"/>
+        <member type="u32" name="captureItem"/>
+        <member type="u32" name="captureDuration" pad="8"/>
+        <member type="u32" name="unk1"/>
+        <member type="u32" name="unk2"/>
+        <member type="s32" name="sealedActionType"/>
+        <member type="float" name="unk3"/>
+    </object>
+</objgen>

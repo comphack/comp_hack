@@ -53,14 +53,6 @@ public:
     DemonState();
 
     /**
-     * Explicitly defined copy constructor necessary due to removal
-     * of implicit constructor from non-copyable mutex member. This should
-     * never actually be used.
-     * @param other The other state to copy
-     */
-    DemonState(const DemonState& other);
-
-    /**
      * Clean up the demon state.
      */
     virtual ~DemonState() { }

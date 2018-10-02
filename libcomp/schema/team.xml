@@ -9,8 +9,10 @@
         <member type="s8" name="Type"/>
         <member type="enum" name="Category" underlying="int8_t">
             <value num="0">PVP</value>
-            <value num="3">COOP</value>
-            <value num="10">LNC</value>
+            <value num="3">DIASPORA</value>
+            <value num="10">CATHEDRAL</value>
         </member>
+        <member type="s32" name="SmallZiotite"/>
+        <member type="s8" name="LargeZiotite"/>
     </object>
 </objgen>

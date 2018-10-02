@@ -35,6 +35,7 @@
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "MatchManager.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
 
@@ -95,7 +96,8 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto dState = std::dynamic_pointer_cast<DemonState>(eState);
     auto zone = dState ? dState->GetZone() : nullptr;
-    if(dState && zone && dState->GetDisplayState() < ActiveDisplayState_t::ACTIVE)
+    if (dState && zone && !MatchManager::SpectatingMatch(client, zone) &&
+        dState->GetDisplayState() <= ActiveDisplayState_t::DATA_SENT)
     {
         // If a demon is being placed, it will have already been described to the
         // the client by this point so create and show it now.

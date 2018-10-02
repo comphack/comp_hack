@@ -27,6 +27,7 @@
 #include "EntityState.h"
 
 // channel Includes
+#include <DiasporaBase.h>
 #include <LootBox.h>
 #include <PlasmaSpawn.h>
 #include <PvPBase.h>
@@ -37,6 +38,14 @@
 
 namespace channel
 {
+
+template<>
+EntityState<objects::DiasporaBase>::EntityState(
+    const std::shared_ptr<objects::DiasporaBase>& entity)
+    : mEntity(entity)
+{
+    SetEntityType(EntityType_t::DIASPORA_BASE);
+}
 
 template<>
 EntityState<objects::ServerObject>::EntityState(

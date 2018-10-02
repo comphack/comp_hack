@@ -4,9 +4,13 @@
         <member type="u32" name="ID"/>
         <member type="u32" name="EnemyType"/>
         <member type="u32" name="VariantType"/>
-        <member type="bool" name="IsAlly"/>
+        <member type="enum" name="Category" underlying="uint8_t">
+            <value>ENEMY</value>
+            <value>BOSS</value>
+            <value>ALLY</value>
+        </member>
+        <member type="u8" name="BossGroup" max="3"/>
         <member type="s32" name="FactionGroup" min="0"/>
-        <member type="bool" name="IsBoss"/>
         <member type="list" name="Drops">
             <element type="ItemDrop*"/>
         </member>
@@ -21,6 +25,15 @@
         </member>
         <member type="s8" name="Level" default="-1"/>
         <member type="s64" name="XP" default="-1"/>
+
+        <member type="s32" name="KillValue" min="0"/>
+        <member type="enum" name="KillValueType" underlying="uint8_t">
+            <value>INHERITED</value>
+            <value>SOUL_POINTS</value>
+            <value>BETHEL</value>
+            <value>UB_POINTS</value>
+            <value>ZIOTITE</value>
+        </member>
 
         <member type="u8" name="Aggression" default="100"/>
         <member type="string" name="AIScriptID"/>

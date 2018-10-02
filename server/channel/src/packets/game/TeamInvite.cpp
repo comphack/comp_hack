@@ -97,6 +97,7 @@ bool Parsers::TeamInvite::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     int8_t errorCode = (int8_t)TeamErrorCodes_t::GENERIC_ERROR;
+    int8_t targetError = (int8_t)TeamErrorCodes_t::SUCCESS;
     if(!team || teamID != team->GetID())
     {
         errorCode = (int8_t)TeamErrorCodes_t::INVALID_TEAM;
@@ -107,7 +108,7 @@ bool Parsers::TeamInvite::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else if(!targetCState->IsAlive())
     {
-        errorCode = (int8_t)TeamErrorCodes_t::INVALID_TARGET_STATE;
+        targetError = (int8_t)TeamErrorCodes_t::INVALID_TARGET_STATE;
     }
     else
     {
@@ -128,9 +129,10 @@ bool Parsers::TeamInvite::Parse(libcomp::ManagerPacket *pPacketManager,
             }
         }
 
-        if(!hasValuables)
+        if(!hasValuables &&
+            team->GetCategory() != objects::Team::Category_t::CATHEDRAL)
         {
-            errorCode = (int8_t)TeamErrorCodes_t::VALUABLE_MISSING;
+            targetError = (int8_t)TeamErrorCodes_t::TARGET_VALUABLE_MISSING;
         }
         else if(targetState->GetParty())
         {
@@ -148,17 +150,25 @@ bool Parsers::TeamInvite::Parse(libcomp::ManagerPacket *pPacketManager,
             {
                 errorCode = (int8_t)TeamErrorCodes_t::AWAITING_ENTRY_REJECT;
             }
-            else if(targetState->GetPvPMatch())
+            else if(targetState->GetPendingMatch())
             {
                 errorCode = (int8_t)TeamErrorCodes_t::MATCH_ACTIVE_REJECT;
             }
         }
+        else
+        {
+            auto it2 = SVR_CONST.TEAM_STATUS_COOLDOWN.find(team->GetType());
+            if(it2 != SVR_CONST.TEAM_STATUS_COOLDOWN.end() &&
+                targetCState->StatusEffectActive(it2->second))
+            {
+                targetError = (int8_t)TeamErrorCodes_t::TARGET_COOLDOWN_20H;
+            }
+        }
     }
 
-    if(errorCode == (int8_t)TeamErrorCodes_t::SUCCESS)
+    if(errorCode == (int8_t)TeamErrorCodes_t::SUCCESS &&
+        targetError == (int8_t)TeamErrorCodes_t::SUCCESS)
     {
-        auto member = state->GetPartyCharacter(true);
-
         libcomp::Packet request;
         request.WritePacketCode(InternalPacketCode_t::PACKET_TEAM_UPDATE);
         request.WriteU8((int8_t)
@@ -173,12 +183,36 @@ bool Parsers::TeamInvite::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
+        bool relayError = false;
+        if(targetError != (int8_t)TeamErrorCodes_t::GENERIC_ERROR)
+        {
+            // Simulate response for things we can check here
+            errorCode = (int8_t)TeamErrorCodes_t::SUCCESS;
+            relayError = true;
+        }
+
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_INVITE);
         reply.WriteS32Little(teamID);
         reply.WriteS8(errorCode);
 
-        client->SendPacket(reply);
+        client->QueuePacket(reply);
+
+        if(relayError)
+        {
+            reply.Clear();
+            reply.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_TEAM_ANSWERED);
+            reply.WriteS32Little(teamID);
+            reply.WriteS8(targetError);
+            reply.WriteString16Little(state->GetClientStringEncoding(),
+                targetName, true);
+            reply.WriteS8(team->GetType());
+
+            client->QueuePacket(reply);
+        }
+
+        client->FlushOutgoing();
     }
 
     return true;

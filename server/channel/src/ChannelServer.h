@@ -458,6 +458,7 @@ protected:
     /// 1) Spawn activation/deactivation
     /// 2) Tokusei active timespans
     /// 3) Zone event trigger
+    /// 4) Global zone event trigger
     std::map<WorldClockTime, std::set<uint8_t>> mWorldClockEvents;
 
     /// Pointer to the manager in charge of connection messages.

@@ -58,7 +58,7 @@ bool Parsers::PvPConfirm::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        server->GetMatchManager()->RejectMatch(client);
+        server->GetMatchManager()->RejectPvPMatch(client);
     }
 
     return true;

@@ -118,6 +118,24 @@ enum class SkillErrorCodes_t : uint8_t
 };
 
 /**
+ * Error codes used for party actions by the game client.
+ */
+enum class PartyErrorCodes_t : uint16_t
+{
+    GENERIC_ERROR = 199,    //!< Generic system error
+    SUCCESS = 200,  //!< No error
+    INVALID_OR_OFFLINE = 201,   //!< Target character either does not exist or is offline
+    IN_PARTY = 202, //!< Player is already in a party
+    INVALID_PARTY = 203,    //!< Request for invalid party received
+    NO_LEADER = 204,    //!< Party does not have a leader (not sure why this would happen)
+    NO_PARTY = 205, //!< Player is not in a party
+    INVALID_MEMBER = 206,   //!< Party member being requested is invalid
+    PARTY_FULL = 207,   //!< Party is full and cannot be joined or invited to
+    LEADER_REQUIRED = 208,  //!< Leader required update attempted by non-leader
+    INVALID_TARGET  = 209,   //!< Target is invalid
+};
+
+/**
  * Error codes used for player interaction "entrust" actions by the game client.
  */
 enum class EntrustErrorCodes_t : int32_t

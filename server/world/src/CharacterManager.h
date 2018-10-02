@@ -233,7 +233,7 @@ public:
     /**
      * Attempt to have a party member join the specified party
      * @param member Pointer to the party member that will join. All
-     * necessary packet communication is handled within.
+     *  necessary packet communication is handled within.
      * @param targetName Name of a character that sent a join request,
      *  can be left blank if joining directly
      * @param partyID ID of the party to add the member to
@@ -242,6 +242,21 @@ public:
      * @return true on success, false on failure
      */
     bool PartyJoin(std::shared_ptr<objects::PartyCharacter> member,
+        const libcomp::String targetName, uint32_t partyID,
+        std::shared_ptr<libcomp::TcpConnection> sourceConnection);
+
+    /**
+     * Attempt to have a party member join the specified party via
+     * a recruit request (which is the inverse of a join request)
+     * @param member Pointer to the party member that will join. All
+     *  necessary packet communication is handled within.
+     * @param targetName Name of a character that sent a recruit request
+     * @param partyID ID of the party to add the member to
+     * @param sourceConnection Connection associated to the member
+     *  joining the party
+     * @return true on success, false on failure
+     */
+    bool PartyRecruit(std::shared_ptr<objects::PartyCharacter> member,
         const libcomp::String targetName, uint32_t partyID,
         std::shared_ptr<libcomp::TcpConnection> sourceConnection);
 
@@ -411,6 +426,13 @@ public:
     std::shared_ptr<objects::Team> GetTeam(int32_t teamID);
 
     /**
+     * Get the maximum team size for a specific team category
+     * @param category Team category that groups together types
+     * @return Maximum number of team members the team can have
+     */
+    size_t GetTeamMaxSize(int8_t category) const;
+
+    /**
      * Add a character to the specified team
      * @param worldCID World CID of the character to add
      * @param teamID ID of the team to add the character to
@@ -442,8 +464,11 @@ public:
      * communication is handled within.
      * @param teamID ID of the team to disband
      * @param sourceCID Optional ID of character who is disbanding the team
+     * @param toDiaspora If true the team is being converted into a Diaspora
+     *  team and should be notified as part of this
      */
-    void TeamDisband(int32_t teamID, int32_t sourceCID = 0);
+    void TeamDisband(int32_t teamID, int32_t sourceCID = 0,
+        bool toDiaspora = false);
 
     /**
      * Attempt to set the leader of the specified team. All necessary packet
@@ -472,6 +497,19 @@ public:
         libcomp::TcpConnection> requestConnection);
 
     /**
+     * Update the small and large ziotite values and refresh the related
+     * channels. If no values are supplied, the teams will just be refreshed.
+     * @param teamID ID of the team to update
+     * @param source Pointer to the player performing the update
+     * @param sZiotite Amount of small ziotite to add
+     * @param lZiotite Amount of large ziotite to add
+     * @return true if the update was valid, false if it was not
+     */
+    bool TeamZiotiteUpdate(int32_t teamID,
+        const std::shared_ptr<objects::CharacterLogin>& source = nullptr,
+        int32_t sZiotite = 0, int8_t lZiotite = 0);
+
+    /**
      * Send base level info about the specified team ID to every member to
      * act as a refresh for any team info.
      * @param teamID ID of the team to update
@@ -486,6 +524,19 @@ private:
      * @return The ID of a the new party, 0 upon failure
      */
     uint32_t CreateParty(std::shared_ptr<objects::PartyCharacter> member);
+
+    /**
+     * Send new party member ifnormation to the current players in the party
+     * @param member Pointer to the new party member
+     * @param partyID ID of the party
+     * @param newParty true if the party was just created, false if it already
+     *  existed
+     * @param sourceConnection Optional parameter for the connection
+     *  that sent the request
+     */
+    void SendNewPartyMember(std::shared_ptr<objects::PartyCharacter> member,
+        uint32_t partyID, bool newParty,
+        std::shared_ptr<libcomp::TcpConnection> sourceConnection);
 
     /**
      * Remove the supplied CharacterLogin from their current party
@@ -551,6 +602,7 @@ private:
     /// Highest clan ID registered with the server
     int32_t mMaxClanID;
 
+    /// Highest team ID registered with the server
     int32_t mMaxTeamID;
 
     /// Server lock for shared resources

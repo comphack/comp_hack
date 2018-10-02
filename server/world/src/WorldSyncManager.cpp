@@ -40,8 +40,14 @@
 #include <Character.h>
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
+#include <EventCounter.h>
+#include <Match.h>
 #include <MatchEntry.h>
+#include <PentalphaEntry.h>
+#include <PentalphaMatch.h>
 #include <PvPMatch.h>
+#include <UBResult.h>
+#include <UBTournament.h>
 #include <WorldConfig.h>
 #include <WorldSharedConfig.h>
 
@@ -57,6 +63,7 @@ WorldSyncManager::WorldSyncManager(const std::weak_ptr<
 {
     mPvPReadyTimes[0] = { { 0, 0 } };
     mPvPReadyTimes[1] = { { 0, 0 } };
+    mUBRecalcMin = { { 0, 0, 0 } };
 }
 
 WorldSyncManager::~WorldSyncManager()
@@ -95,6 +102,19 @@ bool WorldSyncManager::Initialize()
 
     mRegisteredTypes["CharacterProgress"] = cfg;
 
+    cfg = std::make_shared<ObjectConfig>("EventCounter", true, worldDB);
+    cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
+        WorldSyncManager, objects::EventCounter>;
+
+    mRegisteredTypes["EventCounter"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("Match", true);
+    cfg->BuildHandler = &DataSyncManager::New<objects::Match>;
+    cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
+        WorldSyncManager, objects::Match>;
+
+    mRegisteredTypes["Match"] = cfg;
+
     cfg = std::make_shared<ObjectConfig>("MatchEntry", true);
     cfg->BuildHandler = &DataSyncManager::New<objects::MatchEntry>;
     cfg->UpdateHandler = &DataSyncManager::Update<WorldSyncManager,
@@ -104,6 +124,18 @@ bool WorldSyncManager::Initialize()
 
     mRegisteredTypes["MatchEntry"] = cfg;
 
+    cfg = std::make_shared<ObjectConfig>("PentalphaEntry", true, worldDB);
+    cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
+        WorldSyncManager, objects::PentalphaEntry>;
+
+    mRegisteredTypes["PentalphaEntry"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("PentalphaMatch", true, worldDB);
+    cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
+        WorldSyncManager, objects::PentalphaMatch>;
+
+    mRegisteredTypes["PentalphaMatch"] = cfg;
+
     cfg = std::make_shared<ObjectConfig>("PvPMatch", true);
     cfg->BuildHandler = &DataSyncManager::New<objects::PvPMatch>;
     cfg->UpdateHandler = &DataSyncManager::Update<WorldSyncManager,
@@ -112,6 +144,111 @@ bool WorldSyncManager::Initialize()
         WorldSyncManager, objects::PvPMatch>;
 
     mRegisteredTypes["PvPMatch"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("UBResult", true, worldDB);
+    cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
+        WorldSyncManager, objects::UBResult>;
+
+    mRegisteredTypes["UBResult"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("UBTournament", true, worldDB);
+    cfg->UpdateHandler = &DataSyncManager::Update<WorldSyncManager,
+        objects::UBTournament>;
+    cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
+        WorldSyncManager, objects::UBTournament>;
+
+    mRegisteredTypes["UBTournament"] = cfg;
+
+    bool sync = false;
+
+    // Get the current Pentalpha match if one exists
+    std::list<std::shared_ptr<objects::PentalphaMatch>> activeMatches;
+    for(auto match : libcomp::PersistentObject::LoadAll<
+        objects::PentalphaMatch>(worldDB))
+    {
+        if(!match->GetEndTime())
+        {
+            activeMatches.push_back(match);
+        }
+    }
+
+    if(activeMatches.size() > 1)
+    {
+        LOG_WARNING("Multiple active Pentalpha matches found. Ending"
+            " all but the newest entry.\n");
+
+        activeMatches.sort([](
+            const std::shared_ptr<objects::PentalphaMatch>& a,
+            const std::shared_ptr<objects::PentalphaMatch>& b)
+            {
+                return a->GetStartTime() < b->GetStartTime();
+            });
+
+        mPentalphaMatch = activeMatches.back();
+        activeMatches.pop_back();
+
+        for(auto match : activeMatches)
+        {
+            if(!EndMatch(match))
+            {
+                return false;
+            }
+        }
+
+        sync = true;
+    }
+    else if(activeMatches.size() > 0)
+    {
+        mPentalphaMatch = activeMatches.front();
+    }
+
+    // Get the current UB tournament if one exists
+    std::list<std::shared_ptr<objects::UBTournament>> activeTournaments;
+    for(auto match : libcomp::PersistentObject::LoadAll<
+        objects::UBTournament>(worldDB))
+    {
+        if(!match->GetEndTime())
+        {
+            activeTournaments.push_back(match);
+        }
+    }
+
+    if(activeTournaments.size() > 1)
+    {
+        LOG_WARNING("Multiple active Ultimate Battle tournaments found. Ending"
+            " all but the newest entry.\n");
+
+        activeTournaments.sort([](
+            const std::shared_ptr<objects::UBTournament>& a,
+            const std::shared_ptr<objects::UBTournament>& b)
+            {
+                return a->GetStartTime() < b->GetStartTime();
+            });
+
+        mUBTournament = activeTournaments.back();
+        activeTournaments.pop_back();
+
+        for(auto tournament : activeTournaments)
+        {
+            if(!EndTournament(tournament))
+            {
+                return false;
+            }
+        }
+
+        sync = true;
+    }
+    else if(activeTournaments.size() > 0)
+    {
+        mUBTournament = activeTournaments.front();
+    }
+
+    sync |= RecalculateUBRankings();
+
+    if(sync)
+    {
+        SyncOutgoing();
+    }
 
     return true;
 }
@@ -231,6 +368,47 @@ int8_t WorldSyncManager::Update<objects::CharacterProgress>(
 }
 
 template<>
+void WorldSyncManager::SyncComplete<objects::Match>(
+    const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
+    libcomp::Object>, bool>>& objs, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    for(auto& objPair : objs)
+    {
+        auto match = std::dynamic_pointer_cast<objects::Match>(objPair.first);
+
+        if(!objPair.second)
+        {
+            if(match->GetType() == objects::Match::Type_t::DIASPORA)
+            {
+                // Disband all related teams and notify the players that they
+                // are ready to be moved
+                auto characterManager = mServer.lock()->GetCharacterManager();
+
+                std::set<int32_t> teamIDs;
+                for(int32_t cid : match->GetMemberIDs())
+                {
+                    auto cLogin = characterManager->GetCharacterLogin(cid);
+                    if(cLogin)
+                    {
+                        teamIDs.insert(cLogin->GetTeamID());
+                    }
+                }
+
+                teamIDs.erase(0);
+
+                for(int32_t teamID : teamIDs)
+                {
+                    characterManager->TeamDisband(teamID, 0, true);
+                }
+            }
+        }
+    }
+}
+
+template<>
 int8_t WorldSyncManager::Update<objects::MatchEntry>(const libcomp::String& type,
     const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
     const libcomp::String& source)
@@ -324,6 +502,288 @@ void WorldSyncManager::SyncComplete<objects::MatchEntry>(
 }
 
 template<>
+void WorldSyncManager::SyncComplete<objects::EventCounter>(
+    const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
+    libcomp::Object>, bool>>& objs, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    std::set<int32_t> eventTypes;
+    for(auto& objPair : objs)
+    {
+        auto eCounter = std::dynamic_pointer_cast<objects::EventCounter>(
+            objPair.first);
+
+        // Pull both current and expired types to correct the total
+        eventTypes.insert(eCounter->GetType());
+        eventTypes.insert(eCounter->GetPreExpireType());
+    }
+
+    eventTypes.erase(0);
+
+    if(eventTypes.size() > 0)
+    {
+        std::set<std::shared_ptr<objects::EventCounter>> updates;
+        std::set<std::shared_ptr<objects::EventCounter>> deletes;
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+
+            auto server = mServer.lock();
+            auto worldDB = server->GetWorldDatabase();
+
+            auto dbChanges = libcomp::DatabaseChangeSet::Create();
+
+            for(int32_t t : eventTypes)
+            {
+                int32_t sum = 0;
+                std::shared_ptr<objects::EventCounter> gCounter;
+
+                for(auto e : objects::EventCounter::LoadEventCounterListByType(
+                    worldDB, t))
+                {
+                    if(e->GetCharacter().IsNull())
+                    {
+                        if(!gCounter)
+                        {
+                            // Group master found
+                            gCounter = e;
+                        }
+                        else
+                        {
+                            // Delete duplicate
+                            dbChanges->Delete(e);
+                            deletes.insert(e);
+                        }
+                    }
+                    else
+                    {
+                        sum += e->GetCounter();
+
+                        if(e->GetGroupCounter())
+                        {
+                            // Character counters cannot be group counters
+                            e->SetGroupCounter(false);
+
+                            dbChanges->Update(e);
+
+                            updates.insert(gCounter);
+                        }
+                    }
+                }
+
+                if(!gCounter)
+                {
+                    gCounter = libcomp::PersistentObject::New<
+                        objects::EventCounter>(true);
+                    gCounter->SetType(t);
+                    gCounter->SetCounter(sum);
+                    gCounter->SetGroupCounter(true);
+                    gCounter->SetTimestamp((uint32_t)std::time(0));
+
+                    dbChanges->Insert(gCounter);
+
+                    updates.insert(gCounter);
+                }
+                else if(gCounter->GetCounter() != sum)
+                {
+                    gCounter->SetCounter(sum);
+
+                    dbChanges->Update(gCounter);
+
+                    updates.insert(gCounter);
+                }
+            }
+
+            worldDB->ProcessChangeSet(dbChanges);
+        }
+
+        for(auto r : updates)
+        {
+            UpdateRecord(r, "EventCounter");
+        }
+
+        for(auto r : deletes)
+        {
+            RemoveRecord(r, "EventCounter");
+        }
+    }
+}
+
+template<>
+void WorldSyncManager::SyncComplete<objects::PentalphaEntry>(
+    const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
+    libcomp::Object>, bool>>& objs, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    auto match = mPentalphaMatch;
+    if(match)
+    {
+        bool recalc = false;
+        for(auto& objPair : objs)
+        {
+            auto entry = std::dynamic_pointer_cast<objects::PentalphaEntry>(
+                objPair.first);
+            if(entry->GetMatch() == match->GetUUID())
+            {
+                recalc = true;
+                break;
+            }
+        }
+
+        if(recalc)
+        {
+            // Recalculate points for the match
+            auto db = mServer.lock()->GetWorldDatabase();
+            std::array<int32_t, 5> points = { { 0, 0, 0, 0, 0 } };
+            {
+                std::lock_guard<std::mutex> lock(mLock);
+                for(auto entry : objects::PentalphaEntry::
+                    LoadPentalphaEntryListByMatch(db, match->GetUUID()))
+                {
+                    for(size_t i = 0; i < 5; i++)
+                    {
+                        points[i] = entry->GetPoints(i) + points[i];
+                    }
+                }
+
+                match->SetPoints(points);
+            }
+
+            if(match->Update(db))
+            {
+                UpdateRecord(match, "PentalphaMatch");
+            }
+        }
+    }
+}
+
+template<>
+void WorldSyncManager::SyncComplete<objects::PentalphaMatch>(
+    const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
+    libcomp::Object>, bool>>& objs, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    for(auto& objPair : objs)
+    {
+        auto match = std::dynamic_pointer_cast<objects::PentalphaMatch>(
+            objPair.first);
+
+        if(!objPair.second && match->GetEndTime() && !source.IsEmpty())
+        {
+            EndMatch(match);
+        }
+    }
+}
+
+template<>
+void WorldSyncManager::SyncComplete<objects::UBResult>(
+    const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
+    libcomp::Object>, bool>>& objs, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    bool recalcRank = false;
+    bool recalcTournament = false;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        for(auto& objPair : objs)
+        {
+            auto result = std::dynamic_pointer_cast<objects::UBResult>(
+                objPair.first);
+            if(result->GetTournament().IsNull())
+            {
+                if(result->GetPoints() >= mUBRecalcMin[1] ||
+                    result->GetTopPoints() >= mUBRecalcMin[2] ||
+                    result->GetRanked())
+                {
+                    recalcRank = true;
+                }
+            }
+            else if(result->GetPoints() >= mUBRecalcMin[0] ||
+                result->GetTournamentRank())
+            {
+                recalcTournament = true;
+            }
+        }
+    }
+
+    if(recalcRank)
+    {
+        RecalculateUBRankings();
+    }
+
+    if(recalcTournament)
+    {
+        auto tournament = mUBTournament;
+        if(tournament)
+        {
+            RecalculateTournamentRankings(tournament->GetUUID());
+        }
+    }
+}
+
+template<>
+int8_t WorldSyncManager::Update<objects::UBTournament>(
+    const libcomp::String& type, const std::shared_ptr<libcomp::Object>& obj,
+    bool isRemove, const libcomp::String& source)
+{
+    (void)type;
+    (void)obj;
+    (void)isRemove;
+    (void)source;
+
+    // Let all changes through
+    return SYNC_UPDATED;
+}
+
+template<>
+void WorldSyncManager::SyncComplete<objects::UBTournament>(
+    const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
+    libcomp::Object>, bool>>& objs, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        if(mUBTournament && mUBTournament->GetEndTime())
+        {
+            mUBTournament = nullptr;
+            mUBRecalcMin = { { 0, 0, 0 } };
+        }
+    }
+
+    for(auto& objPair : objs)
+    {
+        auto tournament = std::dynamic_pointer_cast<objects::UBTournament>(
+            objPair.first);
+
+        bool recalc = false;
+        if(!objPair.second && tournament->GetEndTime() && !source.IsEmpty())
+        {
+            EndTournament(tournament);
+        }
+        else if(!tournament->GetEndTime())
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            mUBTournament = tournament;
+            recalc = true;
+        }
+
+        if(recalc)
+        {
+            RecalculateTournamentRankings(tournament->GetUUID());
+        }
+    }
+}
+
+template<>
 int8_t WorldSyncManager::Update<objects::PvPMatch>(const libcomp::String& type,
     const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
     const libcomp::String& source)
@@ -357,7 +817,7 @@ void WorldSyncManager::SyncComplete<objects::PvPMatch>(
         {
             // Channel is requesting a custom match, set it up and let it
             // sync back
-            CreatePvPMatch(match->GetType(), match);
+            CreatePvPMatch((int8_t)match->GetType(), match);
         }
     }
 }
@@ -625,6 +1085,22 @@ void WorldSyncManager::SyncExistingChannelRecords(const std::shared_ptr<
 
     QueueOutgoing("MatchEntry", connection, records, blank);
 
+    if(mPentalphaMatch)
+    {
+        records.clear();
+        records.insert(mPentalphaMatch);
+
+        QueueOutgoing("PentalphaMatch", connection, records, blank);
+    }
+
+    if(mUBTournament)
+    {
+        records.clear();
+        records.insert(mUBTournament);
+
+        QueueOutgoing("UBTournament", connection, records, blank);
+    }
+
     connection->FlushOutgoing();
 }
 
@@ -708,6 +1184,7 @@ void WorldSyncManager::StartPvPMatch(uint32_t time, uint8_t type)
                 int32_t cid = libcomp::Randomizer::GetEntry(cids);
                 cids.erase(cid);
 
+                match->InsertMemberIDs(cid);
                 if(i % 2 == 0)
                 {
                     match->AppendBlueMemberIDs(cid);
@@ -819,6 +1296,7 @@ void WorldSyncManager::StartTeamPvPMatch(uint32_t time, uint8_t type)
 
                     cids.insert(entry->GetWorldCID());
 
+                    match->InsertMemberIDs(entry->GetWorldCID());
                     if(i % 2 == 0)
                     {
                         match->AppendBlueMemberIDs(entry->GetWorldCID());
@@ -1072,7 +1550,7 @@ std::shared_ptr<objects::PvPMatch> WorldSyncManager::CreatePvPMatch(
 
     auto match = existing ? existing : std::make_shared<objects::PvPMatch>();
     match->SetID(matchID);
-    match->SetType(type);
+    match->SetType((objects::Match::Type_t)type);
     match->SetReadyTime(matchReady);
 
     uint8_t channelID = 0;
@@ -1105,4 +1583,365 @@ std::unordered_map<int32_t, std::list<std::shared_ptr<
     }
 
     return entryTeams;
+}
+
+bool WorldSyncManager::EndMatch(const std::shared_ptr<
+    objects::PentalphaMatch>& match)
+{
+    auto server = mServer.lock();
+    auto db = server->GetWorldDatabase();
+
+    if(!match->GetEndTime())
+    {
+        match->SetEndTime((uint32_t)std::time(0));
+    }
+
+    // Rank teams
+    std::list<std::pair<size_t, int32_t>> ranks;
+    for(size_t i = 0; i < 5; i++)
+    {
+        ranks.push_back(std::make_pair(i, match->GetPoints(i)));
+    }
+    
+    ranks.sort([](
+        const std::pair<size_t, int32_t>& a,
+        const std::pair<size_t, int32_t>& b)
+        {
+            return a.second > b.second;
+        });
+
+    int32_t pointsFirst = 0;
+    int32_t pointsSecond = 0;
+
+    uint8_t bestRank = 1;
+    while(ranks.size() > 0)
+    {
+        auto top = ranks.back();
+
+        if(ranks.size() == 5)
+        {
+            pointsFirst = top.second;
+        }
+        else if(ranks.size() == 4)
+        {
+            pointsSecond = top.second;
+        }
+
+        ranks.pop_back();
+
+        match->SetRankings(top.first, bestRank);
+        if(ranks.back().second != top.second)
+        {
+            bestRank++;
+        }
+    }
+
+    double cowrieGain = pointsFirst > 0
+        ? ((double)(pointsFirst - pointsSecond) / (double)pointsFirst) * 10.0
+        : 0.0;
+
+    // Apply limits
+    if(cowrieGain < 100.0)
+    {
+        cowrieGain = 100.0;
+    }
+    else if(cowrieGain > 2000.0)
+    {
+        cowrieGain = 2000.0;
+    }
+
+    auto entries = objects::PentalphaEntry::LoadPentalphaEntryListByMatch(
+        db, match->GetUUID());
+
+    int32_t winningBethel = 0;
+    for(auto entry : entries)
+    {
+        if(match->GetRankings(entry->GetTeam()) == 1)
+        {
+            winningBethel += entry->GetBethel();
+        }
+    }
+
+    auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
+
+    std::set<std::shared_ptr<libcomp::Object>> progresses;
+    for(auto entry : entries)
+    {
+        if(!entry->GetActive()) continue;
+
+        if(match->GetRankings(entry->GetTeam()) == 1)
+        {
+            // Player was on winning team
+            auto progress = objects::CharacterProgress::
+                LoadCharacterProgressByCharacter(db, entry->GetCharacter());
+            if(!progress)
+            {
+                return false;
+            }
+
+            int32_t cowrieGained = (int32_t)cowrieGain;
+            if(winningBethel > 0)
+            {
+                cowrieGained = (int32_t)(cowrieGain * (1.0 +
+                    (double)entry->GetBethel() / (double)winningBethel));
+            }
+
+            entry->SetCowrie(cowrieGained);
+
+            auto expl = std::make_shared<libcomp::DBExplicitUpdate>(progress);
+            expl->Add<int32_t>("Cowrie", cowrieGained);
+            opChangeset->AddOperation(expl);
+
+            progresses.insert(progress);
+        }
+
+        entry->SetActive(false);
+        opChangeset->Update(entry);
+    }
+
+    if(entries.size() > 0)
+    {
+        opChangeset->Update(match);
+    }
+    else
+    {
+        // No one participated so it can be deleted
+        opChangeset->Delete(match);
+    }
+
+    if(!db->ProcessChangeSet(opChangeset))
+    {
+        return false;
+    }
+    
+    if(entries.size() > 0)
+    {
+        UpdateRecord(match, "PentalphaMatch");
+
+        for(auto entry : entries)
+        {
+            UpdateRecord(entry, "PentalphaEntry");
+        }
+
+        for(auto progress : progresses)
+        {
+            UpdateRecord(progress, "CharacterProgress");
+        }
+    }
+    else
+    {
+        RemoveRecord(match, "PentalphaMatch");
+    }
+
+    return true;
+}
+
+bool WorldSyncManager::RecalculateTournamentRankings(
+    const libobjgen::UUID& tournamentUID)
+{
+    auto server = mServer.lock();
+
+    auto results = objects::UBResult::LoadUBResultListByTournament(
+        server->GetWorldDatabase(), tournamentUID);
+    
+    results.sort([](
+        const std::shared_ptr<objects::UBResult>& a,
+        const std::shared_ptr<objects::UBResult>& b)
+        {
+            return a->GetPoints() > b->GetPoints();
+        });
+
+    std::list<std::shared_ptr<objects::UBResult>> updated;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+
+        mUBRecalcMin[0] = 0;
+
+        size_t idx = 0;
+        uint8_t rank = 0;
+        int32_t points = -1;
+        for(auto result : results)
+        {
+            if(rank <= 10 && points != (int32_t)result->GetPoints())
+            {
+                rank = (uint8_t)(rank + 1);
+                points = (int32_t)result->GetPoints();
+            }
+
+            if(rank <= 10)
+            {
+                if(result->GetTournamentRank() != rank)
+                {
+                    result->SetTournamentRank(rank);
+                    updated.push_back(result);
+                }
+            }
+            else if(result->GetTournamentRank())
+            {
+                result->SetTournamentRank(0);
+                updated.push_back(result);
+            }
+
+            if(idx++ == 10)
+            {
+                mUBRecalcMin[0] = (uint32_t)points;
+            }
+        }
+    }
+
+    if(updated.size() > 0)
+    {
+        auto dbChanges = libcomp::DatabaseChangeSet::Create();
+
+        for(auto update : updated)
+        {
+            dbChanges->Update(update);
+
+            UpdateRecord(update, "UBResult");
+        }
+
+        server->GetWorldDatabase()->ProcessChangeSet(dbChanges);
+    }
+
+    return results.size() > 0;
+}
+
+bool WorldSyncManager::RecalculateUBRankings()
+{
+    auto server = mServer.lock();
+
+    auto results = objects::UBResult::LoadUBResultListByTournament(
+        server->GetWorldDatabase(), NULLUUID);
+
+    std::set<std::shared_ptr<objects::UBResult>> updated;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+
+        mUBRecalcMin[1] = 0;
+        mUBRecalcMin[2] = 0;
+
+        // Calculate all time ranks
+        results.sort([](
+            const std::shared_ptr<objects::UBResult>& a,
+            const std::shared_ptr<objects::UBResult>& b)
+            {
+                return a->GetPoints() > b->GetPoints();
+            });
+
+        size_t idx = 0;
+        uint8_t rank = 0;
+        int32_t points = -1;
+        for(auto result : results)
+        {
+            if(rank <= 10 && points != (int32_t)result->GetPoints())
+            {
+                rank = (uint8_t)(rank + 1);
+                points = (int32_t)result->GetPoints();
+            }
+
+            if(rank <= 10)
+            {
+                if(result->GetAllTimeRank() != rank)
+                {
+                    result->SetAllTimeRank(rank);
+                    updated.insert(result);
+                }
+            }
+            else if(result->GetAllTimeRank())
+            {
+                result->SetAllTimeRank(0);
+                updated.insert(result);
+            }
+
+            if(idx++ == 10)
+            {
+                mUBRecalcMin[1] = (uint32_t)points;
+            }
+        }
+
+        // Calculate top point ranks
+        results.sort([](
+            const std::shared_ptr<objects::UBResult>& a,
+            const std::shared_ptr<objects::UBResult>& b)
+            {
+                return a->GetTopPoints() > b->GetTopPoints();
+            });
+
+        idx = 0;
+        rank = 0;
+        points = -1;
+        for(auto result : results)
+        {
+            if(rank <= 10 && points != (int32_t)result->GetTopPoints())
+            {
+                rank = (uint8_t)(rank + 1);
+                points = (int32_t)result->GetPoints();
+            }
+
+            if(rank <= 10)
+            {
+                if(result->GetTopPointRank() != rank)
+                {
+                    result->SetTopPointRank(rank);
+                    updated.insert(result);
+                }
+            }
+            else if(result->GetTopPointRank())
+            {
+                result->SetTopPointRank(0);
+                updated.insert(result);
+            }
+
+            if(idx++ == 10)
+            {
+                mUBRecalcMin[2] = (uint32_t)points;
+            }
+        }
+    }
+
+    if(updated.size() > 0)
+    {
+        auto dbChanges = libcomp::DatabaseChangeSet::Create();
+
+        for(auto update : updated)
+        {
+            update->SetRanked(update->GetAllTimeRank() ||
+                update->GetTopPointRank());
+
+            dbChanges->Update(update);
+
+            UpdateRecord(update, "UBResult");
+        }
+
+        server->GetWorldDatabase()->ProcessChangeSet(dbChanges);
+
+        return true;
+    }
+
+    return false;
+}
+
+bool WorldSyncManager::EndTournament(
+    const std::shared_ptr<objects::UBTournament>& tournament)
+{
+    if(!tournament->GetEndTime())
+    {
+        tournament->SetEndTime((uint32_t)std::time(0));
+
+        if(!tournament->Update(mServer.lock()->GetWorldDatabase()))
+        {
+            return false;
+        }
+    }
+
+    if(RecalculateTournamentRankings(tournament->GetUUID()))
+    {
+        UpdateRecord(tournament, "UBTournament");
+    }
+    else
+    {
+        RemoveRecord(tournament, "UBTournament");
+    }
+
+    return true;
 }

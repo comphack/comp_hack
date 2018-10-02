@@ -30,6 +30,7 @@
     <include path="spawn.xml"/>
     <include path="team.xml"/>
     <include path="tokusei.xml"/>
+    <include path="ultimatebattle.xml"/>
     <include path="webgame.xml"/>
 
     <!-- Lobby Packets -->
@@ -55,6 +56,7 @@
     <include path="action_homepoint.xml"/>
     <include path="action_playbgm.xml"/>
     <include path="action_playsoundeffect.xml"/>
+    <include path="action_runscript.xml"/>
     <include path="action_setnpcstate.xml"/>
     <include path="action_spawn.xml"/>
     <include path="action_specialdirection.xml"/>
@@ -114,6 +116,7 @@
     <include path="binarydata/hnpcdata.xml"/>
     <include path="binarydata/itemdata.xml"/>
     <include path="binarydata/mitamadata.xml"/>
+    <include path="binarydata/missiondata.xml"/>
     <include path="binarydata/modificationdata.xml"/>
     <include path="binarydata/npcbarterdata.xml"/>
     <include path="binarydata/onpcdata.xml"/>
@@ -128,6 +131,7 @@
     <include path="binarydata/synthesisdata.xml"/>
     <include path="binarydata/timelimitdata.xml"/>
     <include path="binarydata/triunionspecialdata.xml"/>
+    <include path="binarydata/urafieldtowerdata.xml"/>
     <include path="binarydata/warppointdata.xml"/>
     <include path="binarydata/zonedata.xml"/>
 </objgen>

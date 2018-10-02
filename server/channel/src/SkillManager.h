@@ -318,14 +318,12 @@ private:
      *  calculated or the target in question if the source is being calculated.
      *  If the skill is still being checked validity, supplying no entity
      *  for this while calculating against the source is valid.
-     * @return 0 if the conditions evaluate to false, 1 if they evaluate to
-     *  true, 2 if they cannot be evaluated yet as the target state condition
-     *  does not apply
+     * @return Tokusei evaluation result for the current state
      */
-    uint8_t EvaluateTokuseiSkillConditions(const std::shared_ptr<ActiveEntityState>& eState,
+    bool EvaluateTokuseiSkillConditions(const std::shared_ptr<ActiveEntityState>& eState,
         const std::list<std::shared_ptr<objects::TokuseiSkillCondition>>& conditions,
         const std::shared_ptr<channel::ProcessingSkill>& pSkill,
-        bool isTarget, const std::shared_ptr<ActiveEntityState>& otherState);
+        const std::shared_ptr<ActiveEntityState>& otherState);
 
     /**
      * Evaluate a TokuseiSkillCondition relative to the current skill and
@@ -674,12 +672,15 @@ private:
      * and demon family drops.
      * @param spawn Pointer to the spawn information for the enemy which may
      *  or may not exist (ex: GM created enemy)
+     * @param zone Pointer to the zone the entities belong to
      * @param giftMode true if the enemy's negotation gifts should be gathered
      *  instead of their normal drops
-     * @return List of item drops from each different source
+     * @return Map of drop set types to list of item drops from each different
+     *  source
      */
-    std::list<std::shared_ptr<objects::ItemDrop>> GetItemDrops(
-        const std::shared_ptr<objects::Spawn>& spawn, bool giftMode = false) const;
+    std::unordered_map<uint8_t, std::list<std::shared_ptr<objects::ItemDrop>>>
+        GetItemDrops(const std::shared_ptr<objects::Spawn>& spawn,
+            const std::shared_ptr<Zone>& zone, bool giftMode = false) const;
 
     /**
      * Schedule the adjustment of who is a valid looter for one or more loot

@@ -44,22 +44,28 @@
 #include <Ally.h>
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
+#include <DestinyBox.h>
+#include <DiasporaBase.h>
 #include <DigitalizeState.h>
 #include <Enemy.h>
 #include <EntityStats.h>
 #include <Item.h>
 #include <ItemDrop.h>
+#include <Loot.h>
 #include <LootBox.h>
+#include <Match.h>
 #include <MiAIData.h>
 #include <MiDevilData.h>
 #include <MiDynamicMapData.h>
 #include <MiGrowthData.h>
 #include <MiSpotData.h>
 #include <MiTimeLimitData.h>
+#include <MiUraFieldTowerData.h>
 #include <MiZoneData.h>
 #include <MiZoneFileData.h>
 #include <MiONPCData.h>
 #include <Party.h>
+#include <PentalphaEntry.h>
 #include <PlasmaSpawn.h>
 #include <PlayerExchangeSession.h>
 #include <PvPBase.h>
@@ -85,6 +91,7 @@
 #include <SpawnLocationGroup.h>
 #include <SpawnRestriction.h>
 #include <Team.h>
+#include <UBMatch.h>
 #include <WorldSharedConfig.h>
 
 // channel Includes
@@ -92,6 +99,7 @@
 #include "AIManager.h"
 #include "AIState.h"
 #include "ChannelServer.h"
+#include "ChannelSyncManager.h"
 #include "CharacterManager.h"
 #include "CultureMachineState.h"
 #include "EventManager.h"
@@ -107,8 +115,32 @@
 
 using namespace channel;
 
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<ZoneManager>()
+    {
+        if(!BindingExists("ZoneManager", true))
+        {
+            Using<Zone>();
+
+            Sqrat::Class<ZoneManager,
+                Sqrat::NoConstructor<ZoneManager>> binding(mVM, "ZoneManager");
+            binding
+                .Func("GetGlobalZone", &ZoneManager::GetGlobalZone)
+                .Func("GetExistingZone", &ZoneManager::GetExistingZone)
+                .Func("GetInstanceStartingZone", &ZoneManager::GetInstanceStartingZone);
+
+            Bind<ZoneManager>("ZoneManager", binding);
+        }
+
+        return *this;
+    }
+}
+
 ZoneManager::ZoneManager(const std::weak_ptr<ChannelServer>& server)
-    : mNextZoneID(1), mNextZoneInstanceID(1), mServer(server)
+    : mTrackingRefresh(0), mNextZoneID(1), mNextZoneInstanceID(1),
+    mServer(server)
 {
 }
 
@@ -374,22 +406,66 @@ void ZoneManager::InstanceGlobalZones()
     auto server = mServer.lock();
     auto serverDataManager = server->GetServerDataManager();
 
-    auto zoneIDs = serverDataManager->GetAllZoneIDs();
-    for(auto zonePair : zoneIDs)
+    // Gather all global zone definitions
+    std::list<std::shared_ptr<objects::ServerZone>> zoneDefs;
     {
-        uint32_t zoneID = zonePair.first;
-        for(auto dynamicMapID : zonePair.second)
+        std::lock_guard<std::mutex> lock(mLock);
+        for(auto zonePair : serverDataManager->GetAllZoneIDs())
         {
-            auto zoneData = serverDataManager->GetZoneData(zoneID, dynamicMapID, true);
-            if(zoneData->GetGlobal() &&
-                (mGlobalZoneMap.find(zoneID) == mGlobalZoneMap.end() ||
-                mGlobalZoneMap[zoneID].find(dynamicMapID) == mGlobalZoneMap[zoneID].end()))
-            {
-                std::lock_guard<std::mutex> lock(mLock);
+            uint32_t zoneID = zonePair.first;
 
-                auto zone = CreateZone(zoneData);
-                mGlobalZoneMap[zoneID][dynamicMapID] = zone->GetID();
+            auto it = mGlobalZoneMap.find(zoneID);
+            for(uint32_t dynamicMapID : zonePair.second)
+            {
+                auto zoneData = serverDataManager->GetZoneData(zoneID,
+                    dynamicMapID, true);
+                if(zoneData->GetGlobal() && (it == mGlobalZoneMap.end() ||
+                    it->second.find(dynamicMapID) == it->second.end()))
+                {
+                    zoneDefs.push_back(zoneData);
+                }
             }
+        }
+    }
+
+    // Build zones from definitions
+    for(auto zoneData : zoneDefs)
+    {
+        uint32_t zoneID = zoneData->GetID();
+        uint32_t dynamicMapID = zoneData->GetDynamicMapID();
+
+        auto zone = CreateZone(zoneData);
+
+        std::lock_guard<std::mutex> lock(mLock);
+        mGlobalZoneMap[zoneID][dynamicMapID] = zone->GetID();
+        if(zoneData->GetGlobalBossGroup())
+        {
+            mGlobalBossZones[zoneData->GetGlobalBossGroup()].insert(
+                zone->GetID());
+        }
+    }
+
+    // Register the global partial time triggers
+    auto globalDef = serverDataManager->GetZonePartialData(0);
+    if(globalDef)
+    {
+        for(auto trigger : globalDef->GetTriggers())
+        {
+            switch(trigger->GetTrigger())
+            {
+            case ZoneTrigger_t::ON_TIME:
+            case ZoneTrigger_t::ON_SYSTEMTIME:
+            case ZoneTrigger_t::ON_MOONPHASE:
+                mGlobalTimeTriggers.push_back(trigger);
+                break;
+            default:
+                break;
+            }
+        }
+
+        for(auto& t : GetTriggerTimes(mGlobalTimeTriggers))
+        {
+            server->RegisterClockEvent(t, 4, false);
         }
     }
 }
@@ -416,18 +492,32 @@ std::shared_ptr<Zone> ZoneManager::GetCurrentZone(int32_t worldCID)
 std::shared_ptr<Zone> ZoneManager::GetGlobalZone(uint32_t zoneID,
     uint32_t dynamicMapID)
 {
-    std::lock_guard<std::mutex> lock(mLock);
-    auto iter = mGlobalZoneMap.find(zoneID);
-    if(iter != mGlobalZoneMap.end())
-    {
-        auto subIter = iter->second.find(dynamicMapID);
-        if(subIter != iter->second.end())
-        {
-            return mZones[subIter->second];
-        }
-    }
+    return GetExistingZone(zoneID, dynamicMapID, 0);
+}
 
-    return nullptr;
+std::shared_ptr<Zone> ZoneManager::GetExistingZone(uint32_t zoneID,
+    uint32_t dynamicMapID, uint32_t instanceID)
+{
+    if(instanceID)
+    {
+        auto instance = GetInstance(instanceID);
+        return instance ? instance->GetZone(zoneID, dynamicMapID) : nullptr;
+    }
+    else
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        auto iter = mGlobalZoneMap.find(zoneID);
+        if(iter != mGlobalZoneMap.end())
+        {
+            auto subIter = iter->second.find(dynamicMapID);
+            if(subIter != iter->second.end())
+            {
+                return mZones[subIter->second];
+            }
+        }
+
+        return nullptr;
+    }
 }
 
 bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& client,
@@ -459,6 +549,11 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto nextZone = GetZone(zoneID, dynamicMapID, client,
         currentInstance ? currentInstance->GetID() : 0);
     if(nextZone == nullptr)
+    {
+        return false;
+    }
+    else if(nextZone->GetDefinition()->GetRestricted() &&
+        !CanEnterRestrictedZone(client, nextZone))
     {
         return false;
     }
@@ -507,6 +602,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     auto uniqueID = nextZone->GetID();
     auto nextInstance = nextZone->GetInstance();
+    auto zoneDef = nextZone->GetDefinition();
 
     bool firstConnection = false;
     {
@@ -528,10 +624,26 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         }
 
         // Reactive the zone if its not active already
+        bool activateTracking = false;
         if(mActiveZones.find(uniqueID) == mActiveZones.end())
         {
             mActiveZones.insert(uniqueID);
             firstConnection = true;
+
+            if(nextZone->GetInstanceType() == InstanceType_t::DIASPORA ||
+                zoneDef->GetTrackTeam() || zoneDef->GetGlobalBossGroup())
+            {
+                mActiveTrackedZones.insert(uniqueID);
+                activateTracking = true;
+            }
+        }
+
+        // If global boss refreshes are inactive and the player is entering
+        // a zone with a global boss group, set the refresh time to the
+        // next active zone update
+        if(activateTracking && !mTrackingRefresh)
+        {
+            mTrackingRefresh = 1;
         }
     }
 
@@ -548,19 +660,46 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     // Reset state values that do not persist between zones
     state->SetAcceptRevival(false);
+    cState->SetDeathTimeOut(0);
     dState->SetDeathTimeOut(0);
     state->SetZoneInSpotID(0);
 
     auto server = mServer.lock();
     auto ticks = server->GetServerTime();
-    auto zoneDef = nextZone->GetDefinition();
+
+    // Clear any additional zone dependent tokusei if changing instances
+    // or public zones
+    std::unordered_map<std::shared_ptr<ActiveEntityState>,
+        std::set<int32_t>> removeTokusei;
+    if(currentInstance != nextInstance || !currentInstance)
+    {
+        for(auto& pair : cState->GetAdditionalTokusei())
+        {
+            removeTokusei[cState].insert(pair.first);
+        }
+
+        for(auto& pair : dState->GetAdditionalTokusei())
+        {
+            removeTokusei[dState].insert(pair.first);
+        }
+    }
 
     // Bike boosting does not persist between zones
     if(state->GetBikeBoosting())
     {
         state->SetBikeBoosting(false);
+        removeTokusei[cState].insert(SVR_CONST.TOKUSEI_BIKE_BOOST);
+    }
 
-        cState->RemoveAdditionalTokusei(SVR_CONST.TOKUSEI_BIKE_BOOST);
+    if(removeTokusei.size() > 0)
+    {
+        for(auto& pair : removeTokusei)
+        {
+            for(int32_t tokuseiID : pair.second)
+            {
+                pair.first->RemoveAdditionalTokusei(tokuseiID);
+            }
+        }
 
         server->GetTokuseiManager()->Recalculate(cState, true);
     }
@@ -580,7 +719,8 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
                 auto spotIter = dynamicMap->Spots.find(spotPair.first);
 
                 // Filter valid zone-in spots only
-                if(spot->GetType() == 3 && spotIter != dynamicMap->Spots.end())
+                if((spot->GetType() == 3 || spot->GetType() == 16) &&
+                    spotIter != dynamicMap->Spots.end())
                 {
                     if(PointInPolygon(Point(xCoord, yCoord),
                         spotIter->second->Vertices))
@@ -639,9 +779,12 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
             matchEntryExists = !matchManager->CancelQueue(client);
         }
 
-        // Reset faction group to default
+        // Reset values that don't persist between instances
         cState->SetFactionGroup(0);
         dState->SetFactionGroup(0);
+        cState->SetKillValue(0);
+        dState->SetKillValue(0);
+        state->SetInstanceBethel(0);
 
         // If entering or exiting a digitalize instance, end any
         // current digitalize session
@@ -656,6 +799,12 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
             }
         }
     }
+    else if(!nextInstance)
+    {
+        // Kill values do not persist between public zones
+        cState->SetKillValue(0);
+        dState->SetKillValue(0);
+    }
 
     auto team = state->GetTeam();
     if(team)
@@ -667,6 +816,15 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
             !zoneDef->ValidTeamTypesContains(team->GetType()))
         {
             matchManager->LeaveTeam(client, team->GetID());
+            team = nullptr;
+        }
+        else
+        {
+            // Update team tracking (non-team tracking handled elsewhere)
+            if(!UpdateTrackedTeam(team, currentZone))
+            {
+                UpdateTrackedTeam(team, nextZone);
+            }
         }
     }
 
@@ -695,9 +853,10 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     client->QueuePacket(reply);
 
     if(firstConnection && nextInstance &&
-        nextZone->GetInstanceType() != InstanceType_t::PVP)
+        nextZone->GetInstanceType() != InstanceType_t::PVP &&
+        nextZone->GetInstanceType() != InstanceType_t::MISSION)
     {
-        // PvP timer handled elsewhere
+        // Timer start handled elsewhere
         StartInstanceTimer(nextInstance);
     }
 
@@ -807,7 +966,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
             if(zone->GetConnections().size() == 0)
             {
                 // Always "freeze" the zone
-                mActiveZones.erase(uniqueID);
+                RemoveZone(zone, true);
 
                 // If the current zone is global, the next zone is the same
                 // or the next zone is will be on the same instance, keep it
@@ -835,6 +994,13 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                         eState->Stop(now);
                     }
                 }
+
+                // Reset tracking refresh if no other zones are active
+                if(mTrackingRefresh && mActiveTrackedZones.size() == 0)
+                {
+                    // No need to refresh right now
+                    mTrackingRefresh = 0;
+                }
             }
 
             // Refresh the state of the instance being left
@@ -857,14 +1023,30 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
         std::list<int32_t> entityIDs = { characterID, demonID };
         RemoveEntitiesFromZone(zone, entityIDs);
 
-        if(zone->GetInstanceType() == InstanceType_t::PVP &&
-            instanceLeft && zone->GetDefinitionID() != newZoneID)
+        if(instanceLeft && zone->GetDefinitionID() != newZoneID)
         {
-            // Inform other players still in the PvP match
-            auto instance = zone->GetInstance();
-            server->GetMatchManager()->SendPvPLocation(client,
-                instance->GetID(), false);
+            switch(zone->GetInstanceType())
+            {
+            case InstanceType_t::PVP:
+                // Inform other players still in the PvP match
+                server->GetMatchManager()->SendPvPLocation(client,
+                    zone->GetInstance()->GetID(), false);
+                break;
+            case InstanceType_t::DIASPORA:
+                // Inform other players still in the Diaspora match
+                server->GetMatchManager()->SendDiasporaLocation(client,
+                    zone->GetInstance()->GetID(), false);
+                break;
+            default:
+                break;
+            }
         }
+    }
+
+    if(zone->GetUBMatch() && (instanceLeft ||
+        (!zone->GetInstance() && zone->GetDefinitionID() != newZoneID)))
+    {
+        server->GetMatchManager()->LeaveUltimateBattle(client, zone);
     }
 
     if(newZoneID == 0)
@@ -875,6 +1057,9 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
             ZoneTrigger_t::ON_ZONE_OUT, client);
         server->GetTokuseiManager()->RecalculateParty(
             state->GetParty());
+
+        // Update tracking
+        UpdateTrackedZone(zone, state->GetTeam());
     }
     else
     {
@@ -890,6 +1075,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
         characterManager->CancelStatusEffects(client, EFFECT_CANCEL_LOGOUT
             | EFFECT_CANCEL_ZONEOUT);
 
+        std::lock_guard<std::mutex> lock(mLock);
         auto accessIter = mZoneInstanceAccess.find(worldCID);
         if(accessIter != mZoneInstanceAccess.end())
         {
@@ -902,33 +1088,21 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
             }
         }
     }
+    else
+    {
+        // If a pending match bound to the zone being left exists, end it
+        auto match = state->GetPendingMatch();
+        if(match && match->GetZoneDefinitionID() == zone->GetDefinitionID())
+        {
+            server->GetMatchManager()->CleanupPendingMatch(client);
+        }
+    }
 
     // Deactivate and save the updated status effects
     cState->SetStatusEffectsActive(false, definitionManager);
     dState->SetStatusEffectsActive(false, definitionManager);
     characterManager->UpdateStatusEffects(cState, !logOut);
     characterManager->UpdateStatusEffects(dState, !logOut);
-}
-
-std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(const std::shared_ptr<
-    ChannelClientConnection>& client, uint32_t instanceID, uint32_t variantID,
-    uint32_t timerID, libcomp::String timerExpirationEventID)
-{
-    auto state = client->GetClientState();
-
-    std::set<int32_t> accessCIDs = { state->GetWorldCID() };
-
-    auto party = state->GetParty();
-    if(party)
-    {
-        for(auto memberCID : party->GetMemberIDs())
-        {
-            accessCIDs.insert(memberCID);
-        }
-    }
-
-    return CreateInstance(instanceID, accessCIDs, variantID, timerID,
-        timerExpirationEventID);
 }
 
 std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(uint32_t instanceID,
@@ -968,7 +1142,7 @@ std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(uint32_t instanceID,
     std::shared_ptr<objects::MiTimeLimitData> timeData;
     if(timerID)
     {
-        if(variant->GetInstanceType() == InstanceType_t::NORMAL)
+        if(!variant || variant->GetInstanceType() == InstanceType_t::NORMAL)
         {
             timeData = server->GetDefinitionManager()->GetTimeLimitData(
                 timerID);
@@ -991,35 +1165,59 @@ std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(uint32_t instanceID,
     }
 
     // Make the instance
-    std::lock_guard<std::mutex> lock(mLock);
-
-    uint32_t id = mNextZoneInstanceID++;
-
-    auto instance = std::make_shared<ZoneInstance>(id, def, accessCIDs);
-    if(variant)
+    std::shared_ptr<ZoneInstance> instance;
     {
-        instance->SetVariant(variant);
-        instance->SetTimerExpirationEventID(
-            variant->GetTimerExpirationEventID());
+        std::lock_guard<std::mutex> lock(mLock);
+
+        uint32_t id = mNextZoneInstanceID++;
+
+        instance = std::make_shared<ZoneInstance>(id, def, accessCIDs);
+        if(variant)
+        {
+            instance->SetVariant(variant);
+            instance->SetTimerExpirationEventID(
+                variant->GetTimerExpirationEventID());
+
+            // If the variant uses a shared destiny box, make it now
+            instance->GetDestinyBox(0);
+        }
+
+        if(timeData)
+        {
+            instance->SetTimeLimitData(timeData);
+        }
+
+        instance->SetTimerExpirationEventID(timerExpirationEventID);
+        instance->SetTimerID(timerID);
+
+        for(int32_t cid : accessCIDs)
+        {
+            mZoneInstanceAccess[cid] = id;
+        }
+
+        mZoneInstances[id] = instance;
+        LOG_DEBUG(libcomp::String("Creating zone instance: %1 (%2%3)\n")
+            .Arg(id).Arg(def->GetID())
+            .Arg(variantID ? libcomp::String(": %1").Arg(variantID) : ""));
     }
 
-    if(timeData)
+    if(variant && variant->GetInstanceType() == InstanceType_t::DIASPORA)
     {
-        instance->SetTimeLimitData(timeData);
+        // Create a default match and send to the world to disband the team(s)
+        // and relay back the instance enter request
+        auto match = std::make_shared<objects::Match>();
+        match->SetType(objects::Match::Type_t::DIASPORA);
+        match->SetInstanceDefinitionID(instanceID);
+        match->SetInstanceID(instance->GetID());
+        match->SetVariantID(variantID);
+        match->SetMemberIDs(accessCIDs);
+
+        instance->SetMatch(match);
+
+        auto syncManager = server->GetChannelSyncManager();
+        syncManager->UpdateRecord(match, "Match");
+        syncManager->SyncOutgoing();
     }
-
-    instance->SetTimerExpirationEventID(timerExpirationEventID);
-    instance->SetTimerID(timerID);
-
-    for(int32_t cid : accessCIDs)
-    {
-        mZoneInstanceAccess[cid] = id;
-    }
-
-    mZoneInstances[id] = instance;
-    LOG_DEBUG(libcomp::String("Creating zone instance: %1 (%2%3)\n")
-        .Arg(id).Arg(def->GetID())
-        .Arg(variantID ? libcomp::String(": %1").Arg(variantID) : ""));
 
     return instance;
 }
@@ -1082,13 +1280,6 @@ bool ZoneManager::ClearInstanceAccess(uint32_t instanceID)
     return removed;
 }
 
-std::shared_ptr<Zone> ZoneManager::GetInstanceZone(const std::shared_ptr<
-    ZoneInstance>& instance, uint32_t zoneID, uint32_t dynamicMapID)
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    return GetInstanceZoneInternal(instance, zoneID, dynamicMapID);
-}
-
 std::shared_ptr<Zone> ZoneManager::GetInstanceStartingZone(
     const std::shared_ptr<ZoneInstance>& instance)
 {
@@ -1103,13 +1294,12 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceStartingZone(
     return nullptr;
 }
 
-bool ZoneManager::GetPvPStartPosition(const std::shared_ptr<
+bool ZoneManager::GetMatchStartPosition(const std::shared_ptr<
     ChannelClientConnection>& client, const std::shared_ptr<Zone>& zone,
     float& x, float& y, float& rot)
 {
     auto instance = zone ? zone->GetInstance() : nullptr;
-    auto pvpStats = instance ? instance->GetPvPStats() : nullptr;
-    if(!zone || !client || !pvpStats)
+    if(!zone || !client)
     {
         return false;
     }
@@ -1119,22 +1309,70 @@ bool ZoneManager::GetPvPStartPosition(const std::shared_ptr<
     auto state = client->GetClientState();
     int32_t worldCID = state->GetWorldCID();
 
+    bool isPvp = false;
+    int8_t groupIdx = -1;
+    switch(zone->GetInstanceType())
+    {
+    case InstanceType_t::PVP:
+        {
+            auto pvpStats = instance ? instance->GetPvPStats() : nullptr;
+            if(!pvpStats)
+            {
+                return false;
+            }
+
+            auto match = pvpStats->GetMatch();
+            if(match)
+            {
+                for(int32_t memberID : match->GetBlueMemberIDs())
+                {
+                    if(memberID == worldCID)
+                    {
+                        groupIdx = 0;
+                        break;
+                    }
+                }
+
+                for(int32_t memberID : match->GetRedMemberIDs())
+                {
+                    if(memberID == worldCID)
+                    {
+                        groupIdx = 1;
+                        break;
+                    }
+                }
+            }
+
+            isPvp = true;
+        }
+        break;
+    case InstanceType_t::DIASPORA:
+    default:
+        groupIdx = 0;
+        break;
+    }
+
     auto def = zone->GetDefinition();
-    auto match = pvpStats->GetMatch();
 
     // Gather team spots
     std::unordered_map<uint8_t, std::set<uint32_t>> teamSpotIDs;
     for(auto& spotPair : def->GetSpots())
     {
-        switch(spotPair.second->GetPvPSpawn())
+        switch(spotPair.second->GetMatchSpawn())
         {
-        case objects::ServerZoneSpot::PvPSpawn_t::BLUE:
-            teamSpotIDs[0].insert(spotPair.first);
+        case objects::ServerZoneSpot::MatchSpawn_t::PVP_BLUE:
+            if(isPvp)
+            {
+                teamSpotIDs[0].insert(spotPair.first);
+            }
             break;
-        case objects::ServerZoneSpot::PvPSpawn_t::RED:
-            teamSpotIDs[1].insert(spotPair.first);
+        case objects::ServerZoneSpot::MatchSpawn_t::PVP_RED:
+            if(isPvp)
+            {
+                teamSpotIDs[1].insert(spotPair.first);
+            }
             break;
-        case objects::ServerZoneSpot::PvPSpawn_t::BOTH:
+        case objects::ServerZoneSpot::MatchSpawn_t::ALL:
             teamSpotIDs[0].insert(spotPair.first);
             teamSpotIDs[1].insert(spotPair.first);
             break;
@@ -1143,33 +1381,11 @@ bool ZoneManager::GetPvPStartPosition(const std::shared_ptr<
         }
     }
 
-    int8_t teamIdx = -1;
-    if(match)
-    {
-        for(int32_t memberID : match->GetBlueMemberIDs())
-        {
-            if(memberID == worldCID)
-            {
-                teamIdx = 0;
-                break;
-            }
-        }
-
-        for(int32_t memberID : match->GetRedMemberIDs())
-        {
-            if(memberID == worldCID)
-            {
-                teamIdx = 1;
-                break;
-            }
-        }
-    }
-
     // Move to blue spot, red spot or starting/zone-in spot
     uint32_t spotID = 0;
-    if(teamIdx >= 0)
+    if(groupIdx >= 0)
     {
-        spotID = libcomp::Randomizer::GetEntry(teamSpotIDs[(uint8_t)teamIdx]);
+        spotID = libcomp::Randomizer::GetEntry(teamSpotIDs[(uint8_t)groupIdx]);
     }
     else if(state->GetZone() == zone)
     {
@@ -1202,6 +1418,58 @@ bool ZoneManager::GetPvPStartPosition(const std::shared_ptr<
     return true;
 }
 
+bool ZoneManager::MoveToStartingZone(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<ZoneInstance>& instance, bool diasporaEnter)
+{
+    auto zone = GetInstanceStartingZone(instance);
+    if(zone)
+    {
+        auto zoneDef = zone->GetDefinition();
+
+        float x = zoneDef->GetStartingX();
+        float y = zoneDef->GetStartingY();
+        float rot = zoneDef->GetStartingRotation();
+        if(zone->GetInstanceType() == InstanceType_t::DIASPORA)
+        {
+            if(!diasporaEnter)
+            {
+                return false;
+            }
+            else if(!GetMatchStartPosition(client, zone, x, y, rot))
+            {
+                LOG_WARNING("Failed to find the Diaspora instance starting"
+                    " spot. Using the starting coordinates instead.\n");
+            }
+        }
+
+        return EnterZone(client, zoneDef->GetID(),
+            zoneDef->GetDynamicMapID(), x, y, rot);
+    }
+
+    return false;
+}
+
+bool ZoneManager::MoveToLobby(
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto zone = state->GetZone();
+    if(!zone || !zone->GetDefinition()->GetGroupID())
+    {
+        return false;
+    }
+
+    auto lobby = mServer.lock()->GetServerDataManager()->GetZoneData(
+        zone->GetDefinition()->GetGroupID(), 0);
+    if(lobby)
+    {
+        return EnterZone(client, lobby->GetID(), lobby->GetDynamicMapID());
+    }
+
+    return false;
+}
+
 bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
     ChannelClientConnection>& client)
 {
@@ -1221,9 +1489,12 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
 
+    bool spectatingMatch = MatchManager::SpectatingMatch(client,
+        zone);
+
     // Send the new connection entity data to the other clients
     auto otherClients = GetZoneConnections(client, false);
-    if(otherClients.size() > 0)
+    if(otherClients.size() > 0 && !spectatingMatch)
     {
         characterManager->SendOtherCharacterData(otherClients, state);
 
@@ -1241,17 +1512,24 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
 
     HandleSpecialInstancePopulate(client, zone);
 
-    ShowEntityToZone(zone, cState->GetEntityID());
-    characterManager->SendMovementSpeed(client, cState, true);
-
-    if(dState->GetEntity())
+    if(!spectatingMatch)
     {
-        PopEntityForZoneProduction(zone, dState->GetEntityID(), 0);
-        ShowEntityToZone(zone, dState->GetEntityID());
+        ShowEntityToZone(zone, cState->GetEntityID());
+        characterManager->SendMovementSpeed(client, cState, true);
 
-        server->GetTokuseiManager()->SendCostAdjustments(dState->GetEntityID(),
-            client);
-        characterManager->SendMovementSpeed(client, dState, true);
+        if(dState->GetEntity())
+        {
+            PopEntityForZoneProduction(zone, dState->GetEntityID(), 0);
+            ShowEntityToZone(zone, dState->GetEntityID());
+
+            server->GetTokuseiManager()->SendCostAdjustments(dState->GetEntityID(),
+                client);
+            characterManager->SendMovementSpeed(client, dState, true);
+        }
+    }
+    else
+    {
+        ShowEntity(client, cState->GetEntityID());
     }
 
     // Activate status effects
@@ -1378,27 +1656,6 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
 
         client->QueuePacket(p);
         ShowEntity(client, cmState->GetEntityID(), true);
-    }
-
-    for(auto bState : zone->GetPvPBases())
-    {
-        auto base = bState->GetEntity();
-
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PVP_BASE_DATA);
-        p.WriteS32Little(bState->GetEntityID());
-        p.WriteS32Little((int32_t)zone->GetID());
-        p.WriteS32Little((int32_t)zoneDef->GetID());
-        p.WriteFloat(bState->GetCurrentX());
-        p.WriteFloat(bState->GetCurrentY());
-        p.WriteFloat(bState->GetCurrentRotation());
-        p.WriteS8(base->GetTeam());
-        p.WriteU8(base->GetRank());
-        p.WriteU8(base->GetSpeed());
-        p.WriteS8(1);   // Unknown
-
-        client->QueuePacket(p);
-        ShowEntity(client, bState->GetEntityID(), true);
     }
 
     for(auto lState : zone->GetLootBoxes())
@@ -2267,6 +2524,11 @@ void ZoneManager::HandleSpecialInstancePopulate(
     const std::shared_ptr<Zone>& zone)
 {
     auto instance = zone->GetInstance();
+    if(instance)
+    {
+        SendDestinyBox(client, false, true);
+    }
+
     auto instVariant = instance ? instance->GetVariant() : nullptr;
     if(instVariant)
     {
@@ -2276,6 +2538,7 @@ void ZoneManager::HandleSpecialInstancePopulate(
         switch(instVariant->GetInstanceType())
         {
         case InstanceType_t::TIME_TRIAL:
+        case InstanceType_t::MISSION:
         case InstanceType_t::DIGITALIZE:
             {
                 SendInstanceTimer(instance, client, true);
@@ -2289,6 +2552,60 @@ void ZoneManager::HandleSpecialInstancePopulate(
                 /// (along with other things if this is sent earlier)
                 mServer.lock()->GetMatchManager()->EnterPvP(client,
                     instance->GetID());
+
+                for(auto bState : zone->GetPvPBases())
+                {
+                    auto base = bState->GetEntity();
+
+                    libcomp::Packet p;
+                    p.WritePacketCode(
+                        ChannelToClientPacketCode_t::PACKET_PVP_BASE_DATA);
+                    p.WriteS32Little(bState->GetEntityID());
+                    p.WriteS32Little((int32_t)zone->GetID());
+                    p.WriteS32Little((int32_t)zone->GetDefinitionID());
+                    p.WriteFloat(bState->GetCurrentX());
+                    p.WriteFloat(bState->GetCurrentY());
+                    p.WriteFloat(bState->GetCurrentRotation());
+                    p.WriteS8(base->GetTeam());
+                    p.WriteU8(base->GetRank());
+                    p.WriteU8(base->GetSpeed());
+                    p.WriteS8(1);   // Unknown
+
+                    client->QueuePacket(p);
+                    ShowEntity(client, bState->GetEntityID(), true);
+                }
+            }
+            break;
+        case InstanceType_t::DIASPORA:
+            {
+                mServer.lock()->GetMatchManager()->EnterDiaspora(client, zone);
+
+                uint64_t now = ChannelServer::GetServerTime();
+                for(auto bState : zone->GetDiasporaBases())
+                {
+                    auto base = bState->GetEntity();
+                    auto obj = base ? base->GetBoundObject() : nullptr;
+
+                    uint64_t reset = base->GetResetTime();
+                    float timeLeft = reset < now ? 0.f
+                        : (float)((double)(reset - now) / 1000000.0);
+
+                    libcomp::Packet p;
+                    p.WritePacketCode(
+                        ChannelToClientPacketCode_t::PACKET_DIASPORA_BASE_DATA);
+                    p.WriteS32Little(bState->GetEntityID());
+                    p.WriteS32Little((int32_t)zone->GetID());
+                    p.WriteS32Little((int32_t)zone->GetDefinitionID());
+                    p.WriteFloat(bState->GetCurrentX());
+                    p.WriteFloat(bState->GetCurrentY());
+                    p.WriteFloat(bState->GetCurrentRotation());
+                    p.WriteU32Little(obj ? obj->GetID() : 0);
+                    p.WriteU32Little(base->GetDefinition()->GetLetter());
+                    p.WriteFloat(timeLeft);
+
+                    client->QueuePacket(p);
+                    ShowEntity(client, bState->GetEntityID(), true);
+                }
             }
             break;
         case InstanceType_t::DEMON_ONLY:
@@ -2300,8 +2617,8 @@ void ZoneManager::HandleSpecialInstancePopulate(
 
                 // Refresh the demon-only status effect
                 StatusEffectChanges effects;
-                effects[SVR_CONST.STATUS_HIDDEN] = StatusEffectChange(
-                    SVR_CONST.STATUS_HIDDEN, 1, true);
+                effects[SVR_CONST.STATUS_DEMON_ONLY] = StatusEffectChange(
+                    SVR_CONST.STATUS_DEMON_ONLY, 1, true);
                 
                 characterManager->AddStatusEffectImmediate(client, cState,
                     effects);
@@ -2312,6 +2629,10 @@ void ZoneManager::HandleSpecialInstancePopulate(
         default:
             break;
         }
+    }
+    else if(zone->GetUBMatch())
+    {
+        mServer.lock()->GetMatchManager()->EnterUltimateBattle(client, zone);
     }
 }
 
@@ -2407,16 +2728,22 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
 {
     auto eState = std::dynamic_pointer_cast<EnemyState>(
         CreateEnemy(zone, demonID, nullptr, x, y, rot));
+    if(eState)
+    {
+        auto server = mServer.lock();
+        server->GetAIManager()->Prepare(eState, aiType);
+        zone->AddEnemy(eState);
 
-    auto server = mServer.lock();
-    server->GetAIManager()->Prepare(eState, aiType);
-    zone->AddEnemy(eState);
+        TriggerZoneActions(zone, { eState }, ZoneTrigger_t::ON_SPAWN);
 
-    TriggerZoneActions(zone, { eState }, ZoneTrigger_t::ON_SPAWN);
+        SendEnemyData(eState, nullptr, zone, false);
 
-    SendEnemyData(eState, nullptr, zone, false);
-
-    return true;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
@@ -2439,10 +2766,13 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             checking.push_back(p);
         }
 
+        bool enabling = mode == objects::ActionSpawn::Mode_t::ENABLE_GROUP;
+
         std::set<uint32_t> disabledGroupIDs = zone->GetDisabledSpawnGroups();
         for(auto gPair : actionSource->GetSpawnGroupIDs())
         {
-            if(disabledGroupIDs.find(gPair.first) == disabledGroupIDs.end())
+            if(enabling ||
+                disabledGroupIDs.find(gPair.first) == disabledGroupIDs.end())
             {
                 std::pair<bool, std::pair<uint32_t, uint32_t>> p(false,
                     std::pair<uint32_t, uint32_t>(gPair.first, gPair.second));
@@ -2452,7 +2782,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
         // Enable/disable spawn groups and despawn all work a bit different
         // than normal spawns
-        if(mode == objects::ActionSpawn::Mode_t::ENABLE_GROUP ||
+        if(enabling ||
             mode == objects::ActionSpawn::Mode_t::DISABLE_GROUP)
         {
             std::set<uint32_t> groupIDs;
@@ -2465,8 +2795,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                 }
             }
 
-            zone->EnableDisableSpawnGroups(groupIDs,
-                mode == objects::ActionSpawn::Mode_t::ENABLE_GROUP);
+            zone->EnableDisableSpawnGroups(groupIDs, enabling);
             return false;
         }
         else if(mode == objects::ActionSpawn::Mode_t::DESPAWN)
@@ -2803,20 +3132,34 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
                 // Create the entity state
                 auto state = CreateEnemy(zone, spawn->GetEnemyType(), spawn, x, y, rot);
-
-                // Set the spawn information
-                auto eBase = state->GetEnemyBase();
-                eBase->SetSpawnLocation(location);
-                eBase->SetSpawnSpotID(spotID);
-                eBase->SetSpawnGroupID(sgID);
-                eBase->SetSpawnLocationGroupID(slgID);
-
-                eStateGroup->push_back(state);
-
-                // If this is a spread clear the spot ID so we start again.
-                if(isSpread)
+                if(state)
                 {
-                    spotID = 0;
+                    // Set the spawn information
+                    auto eBase = state->GetEnemyBase();
+                    eBase->SetSpawnLocation(location);
+                    eBase->SetSpawnSpotID(spotID);
+                    eBase->SetSpawnGroupID(sgID);
+                    eBase->SetSpawnLocationGroupID(slgID);
+
+                    if(spawn->GetBossGroup() && !ValidateBossGroup(
+                        std::dynamic_pointer_cast<EnemyState>(state)))
+                    {
+                        // Do not fail the whole location
+                        break;
+                    }
+
+                    // If this is a spread clear the spot ID so we start again.
+                    if(isSpread)
+                    {
+                        spotID = 0;
+                    }
+
+                    eStateGroup->push_back(state);
+                }
+                else
+                {
+                    locationFailed = true;
+                    break;
                 }
             }
 
@@ -2858,6 +3201,10 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                     if(eState->GetEntityType() == EntityType_t::ENEMY)
                     {
                         zone->AddEnemy(std::dynamic_pointer_cast<EnemyState>(eState));
+                        if(spawn && spawn->GetBossGroup())
+                        {
+                            SendMultiZoneBossStatus(spawn->GetBossGroup());
+                        }
                     }
                     else
                     {
@@ -3077,6 +3424,16 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
 
     if(nullptr == def)
     {
+        LOG_ERROR(libcomp::String("Attempted to spawn invalid demon: %1\n")
+            .Arg(demonID));
+        return nullptr;
+    }
+    else if(spawn && spawn->GetBossGroup() && !zone->GetDefinition()
+        ->GetGlobalBossGroup())
+    {
+        LOG_ERROR(libcomp::String("Attempted to spawn a multi-zone boss in"
+            " an invalid zone %1: %2\n").Arg(zone->GetDefinitionID())
+            .Arg(spawn->GetID()));
         return nullptr;
     }
 
@@ -3087,31 +3444,31 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
 
     std::shared_ptr<ActiveEntityState> state;
     std::shared_ptr<objects::EnemyBase> eBase;
-    if(!spawn || !spawn->GetIsAlly())
+    if(!spawn || spawn->GetCategory() != objects::Spawn::Category_t::ALLY)
     {
         // Building an enemy
-        auto enemy = std::shared_ptr<objects::Enemy>(new objects::Enemy);
+        auto enemy = std::make_shared<objects::Enemy>();
         enemy->SetCoreStats(stats);
         enemy->SetType(demonID);
         enemy->SetVariantType(spawn ? spawn->GetVariantType() : 0);
         enemy->SetSpawnSource(spawn);
         eBase = enemy;
 
-        auto eState = std::shared_ptr<EnemyState>(new EnemyState);
+        auto eState = std::make_shared<EnemyState>();
         eState->SetEntity(enemy, def);
         state = eState;
     }
     else
     {
         // Building an ally
-        auto ally = std::shared_ptr<objects::Ally>(new objects::Ally);
+        auto ally = std::make_shared<objects::Ally>();
         ally->SetCoreStats(stats);
         ally->SetType(demonID);
         ally->SetVariantType(spawn ? spawn->GetVariantType() : 0);
         ally->SetSpawnSource(spawn);
         eBase = ally;
 
-        auto aState = std::shared_ptr<AllyState>(new AllyState);
+        auto aState = std::make_shared<AllyState>();
         aState->SetEntity(ally, def);
         state = aState;
     }
@@ -3127,6 +3484,7 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
     state->SetCurrentY(y);
     state->SetCurrentRotation(rot);
     state->SetStatusEffectsActive(true, definitionManager);
+    state->SetKillValue(spawn ? spawn->GetKillValue() : 0);
     state->SetZone(zone);
 
     server->GetTokuseiManager()->Recalculate(state);
@@ -3140,9 +3498,20 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
 
 void ZoneManager::UpdateActiveZoneStates()
 {
+    auto serverTime = ChannelServer::GetServerTime();
+
+    bool refreshTracking = false;
     std::list<std::shared_ptr<Zone>> zones;
     {
         std::lock_guard<std::mutex> lock(mLock);
+        if(mTrackingRefresh && serverTime >= mTrackingRefresh)
+        {
+            // Refresh again 10 seconds from now
+            mTrackingRefresh = serverTime +
+                (ServerTime)10000000ULL;
+            refreshTracking = true;
+        }
+
         for(auto uniqueID : mActiveZones)
         {
             zones.push_back(mZones[uniqueID]);
@@ -3159,8 +3528,7 @@ void ZoneManager::UpdateActiveZoneStates()
             worldClock.SystemTime);
     }
 
-    auto serverTime = ChannelServer::GetServerTime();
-    auto aiManager = mServer.lock()->GetAIManager();
+    auto aiManager = server->GetAIManager();
 
     bool isNight = worldClock.IsNight();
 
@@ -3211,6 +3579,64 @@ void ZoneManager::UpdateActiveZoneStates()
         {
             // Spawn next
             UpdateSpawnGroups(zone, false, serverTime);
+        }
+    }
+
+    if(refreshTracking)
+    {
+        // Refresh all tracking zones and boss groups as needed
+        zones.clear();
+        std::set<uint32_t> activeGroups;
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            for(uint32_t uniqueID : mActiveTrackedZones)
+            {
+                zones.push_back(mZones[uniqueID]);
+            }
+
+            for(auto& pair : mGlobalBossZones)
+            {
+                for(auto uniqueID : pair.second)
+                {
+                    if(mActiveZones.find(uniqueID) != mActiveZones.end())
+                    {
+                        activeGroups.insert(pair.first);
+                        break;
+                    }
+                }
+            }
+        }
+
+        for(auto zone : zones)
+        {
+            if(zone->GetInstanceType() == InstanceType_t::DIASPORA)
+            {
+                // Track the entire zone
+                UpdateTrackedZone(zone);
+            }
+            else
+            {
+                // Track teams in the zone
+                std::set<std::shared_ptr<objects::Team>> teams;
+                for(auto client : zone->GetConnectionList())
+                {
+                    auto team = client->GetClientState()->GetTeam();
+                    if(team)
+                    {
+                        teams.insert(team);
+                    }
+                }
+
+                for(auto team : teams)
+                {
+                    UpdateTrackedTeam(team, zone);
+                }
+            }
+        }
+
+        for(uint32_t groupID : activeGroups)
+        {
+            SendMultiZoneBossStatus(groupID);
         }
     }
 }
@@ -3290,49 +3716,79 @@ void ZoneManager::HandleTimedActions(const WorldClock& clock,
         bool moonChange = clock.MoonPhase != lastTrigger.MoonPhase;
         bool moonRoll = clock.MoonPhase < lastTrigger.MoonPhase;
 
+        // Gather and evaluate all time triggers
+        auto triggers = mGlobalTimeTriggers;
         for(auto zone : timeRestrictZones)
         {
             for(auto trigger : zone->GetTimeTriggers())
             {
-                int32_t from = 0;
-                int32_t to = 0;
-                bool rollOver = false;
+                triggers.push_back(trigger);
+            }
+        }
 
-                switch(trigger->GetTrigger())
-                {
-                case objects::ServerZoneTrigger::Trigger_t::ON_TIME:
-                    if(!timeChange) continue;
-                    from = timeFrom;
-                    to = timeTo;
-                    rollOver = timeRoll;
-                    break;
-                case objects::ServerZoneTrigger::Trigger_t::ON_SYSTEMTIME:
-                    if(!sTimeChange) continue;
-                    from = sTimeFrom;
-                    to = sTimeTo;
-                    rollOver = sTimeRoll;
-                    break;
-                case objects::ServerZoneTrigger::Trigger_t::ON_MOONPHASE:
-                    if(!moonChange) continue;
-                    from = lastTrigger.MoonPhase;
-                    to = clock.MoonPhase;
-                    rollOver = moonRoll;
-                    break;
-                default:
-                    break;
-                }
+        std::set<std::shared_ptr<objects::ServerZoneTrigger>> fired;
+        for(auto trigger : triggers)
+        {
+            int32_t from = 0;
+            int32_t to = 0;
+            bool rollOver = false;
 
-                int32_t val = trigger->GetValue();
-                if((!rollOver && from < val && val <= to) ||
-                    (rollOver && (from < val || val <= to)))
+            switch(trigger->GetTrigger())
+            {
+            case ZoneTrigger_t::ON_TIME:
+                if(!timeChange) continue;
+                from = timeFrom;
+                to = timeTo;
+                rollOver = timeRoll;
+                break;
+            case ZoneTrigger_t::ON_SYSTEMTIME:
+                if(!sTimeChange) continue;
+                from = sTimeFrom;
+                to = sTimeTo;
+                rollOver = sTimeRoll;
+                break;
+            case ZoneTrigger_t::ON_MOONPHASE:
+                if(!moonChange) continue;
+                from = lastTrigger.MoonPhase;
+                to = clock.MoonPhase;
+                rollOver = moonRoll;
+                break;
+            default:
+                break;
+            }
+
+            int32_t val = trigger->GetValue();
+            if((!rollOver && from < val && val <= to) ||
+                (rollOver && (from < val || val <= to)))
+            {
+                fired.insert(trigger);
+            }
+        }
+
+        for(auto zone : timeRestrictZones)
+        {
+            for(auto trigger : zone->GetTimeTriggers())
+            {
+                if(fired.find(trigger) != fired.end())
                 {
                     LOG_DEBUG(libcomp::String("Triggering timed actions"
-                        " in zone %2\n").Arg(zone->GetDefinitionID()));
+                        " in zone %1\n").Arg(zone->GetDefinitionID()));
 
                     mServer.lock()->GetActionManager()->PerformActions(nullptr,
                         trigger->GetActions(), 0, zone, 0);
                     updated.insert(zone->GetID());
                 }
+            }
+        }
+
+        // Global triggers always fire after zone specific ones
+        for(auto trigger : mGlobalTimeTriggers)
+        {
+            if(fired.find(trigger) != fired.end())
+            {
+                LOG_DEBUG("Triggering global timed actions\n");
+                mServer.lock()->GetActionManager()->PerformActions(nullptr,
+                    trigger->GetActions(), 0, nullptr, 0);
             }
         }
     }
@@ -3359,7 +3815,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
         : InstanceType_t::NORMAL;
 
     bool sendTimer = false;
-    int32_t scheduleExpiration = 0;
+    bool scheduleExpiration = false;
     switch(instType)
     {
     case InstanceType_t::TIME_TRIAL:
@@ -3375,7 +3831,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
                 instance->SetTimerStart(now);
                 instance->SetTimerExpire(expireTime);
 
-                scheduleExpiration = (int32_t)duration;
+                scheduleExpiration = true;
             }
         }
         break;
@@ -3389,9 +3845,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
                 uint64_t now = ChannelServer::GetServerTime();
                 instance->SetTimerStart(now);
 
-                // Add a 1 second buffer so we don't undershoot client times
-                scheduleExpiration = (int32_t)(
-                    instVariant->GetTimePoints(0) + 1);
+                scheduleExpiration = true;
             }
         }
         break;
@@ -3428,8 +3882,42 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
                 instance->SetTimerStart(now);
                 instance->SetTimerExpire(expireTime);
 
-                // Add a 1 second buffer so we don't undershoot client times
-                scheduleExpiration = (int32_t)(duration + 1);
+                scheduleExpiration = true;
+            }
+        }
+        break;
+    case InstanceType_t::DIASPORA:
+        {
+            // Timer counts down, set start and expire time
+            std::lock_guard<std::mutex> lock(mLock);
+            if(instance->GetTimerStart() == 0)
+            {
+                uint64_t now = ChannelServer::GetServerTime();
+                uint16_t duration = instVariant->GetTimePoints(instance
+                    ->GetMatch()->GetPhase() ? 1 : 0);
+
+                uint64_t expireTime = now + (uint64_t)duration * 1000000ULL;
+                instance->SetTimerStart(now);
+                instance->SetTimerExpire(expireTime);
+
+                scheduleExpiration = sendTimer = true;
+            }
+        }
+        break;
+    case InstanceType_t::MISSION:
+        {
+            // Timer counts down, set start and expire time
+            std::lock_guard<std::mutex> lock(mLock);
+            if(instance->GetTimerStart() == 0)
+            {
+                uint64_t now = ChannelServer::GetServerTime();
+                uint16_t duration = instVariant->GetTimePoints(0);
+
+                uint64_t expireTime = now + (uint64_t)duration * 1000000ULL;
+                instance->SetTimerStart(now);
+                instance->SetTimerExpire(expireTime);
+
+                scheduleExpiration = sendTimer = true;
             }
         }
         break;
@@ -3464,9 +3952,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
                 instance->SetTimerStart(now);
                 instance->SetTimerExpire(expireTime);
 
-                // Add a 1 second buffer so we don't undershoot client times
-                scheduleExpiration = (int32_t)(duration + 1);
-                sendTimer = true;
+                scheduleExpiration = sendTimer = true;
             }
         }
         break;
@@ -3474,21 +3960,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
 
     if(scheduleExpiration)
     {
-        // When the instance timer expires, stop the normal timer and let it
-        // handle all time out events
-        mServer.lock()->GetTimerManager()->ScheduleEventIn(
-            (int)scheduleExpiration, []
-            (ZoneManager* pZoneManager, uint32_t pInstanceID)
-        {
-            auto pInstance = pZoneManager->GetInstance(pInstanceID);
-            if(pInstance && !pInstance->GetTimerStop() &&
-                pInstance->GetTimerExpire() <= ChannelServer::GetServerTime())
-            {
-                LOG_DEBUG(libcomp::String("Expiring instance timer: %1\n")
-                    .Arg(pInstanceID));
-                pZoneManager->StopInstanceTimer(pInstance);
-            }
-        }, this, instance->GetID());
+        ScheduleTimerExpiration(instance);
     }
 
     if(sendTimer)
@@ -3499,7 +3971,51 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
     return true;
 }
 
-bool ZoneManager::StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instance)
+bool ZoneManager::ExtendInstanceTimer(const std::shared_ptr<
+    ZoneInstance>& instance, uint32_t seconds)
+{
+    if(!instance->GetTimerStart() || !instance->GetTimerExpire() ||
+        instance->GetTimerStop())
+    {
+        // The timer must be running
+        return false;
+    }
+
+    auto instVariant = instance->GetVariant();
+    auto instType = instVariant ? instVariant->GetInstanceType()
+        : InstanceType_t::NORMAL;
+
+    switch(instType)
+    {
+    case InstanceType_t::MISSION:
+        {
+            uint64_t expireTime = instance->GetTimerExpire();
+            expireTime = expireTime + (uint64_t)seconds * 1000000ULL;
+
+            instance->SetTimerExpire(expireTime);
+        }
+        break;
+    case InstanceType_t::NORMAL:
+    case InstanceType_t::TIME_TRIAL:
+    case InstanceType_t::PVP:
+    case InstanceType_t::DEMON_ONLY:
+    case InstanceType_t::DIGITALIZE:
+    default:
+        LOG_ERROR("Attempted to extend instance timer of invalid type\n");
+        return false;
+    }
+
+    // Schedule the new expiration
+    ScheduleTimerExpiration(instance);
+
+    // Notify the current players
+    SendInstanceTimer(instance, nullptr, false, seconds);
+
+    return true;
+}
+
+bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
+    ZoneInstance>& instance, uint64_t stopTime)
 {
     if(!instance)
     {
@@ -3510,6 +4026,11 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
     auto instType = instVariant ? instVariant->GetInstanceType()
         : InstanceType_t::NORMAL;
 
+    if(!stopTime)
+    {
+        stopTime = ChannelServer::GetServerTime();
+    }
+
     bool expired = false;
     switch(instType)
     {
@@ -3518,10 +4039,9 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
             std::lock_guard<std::mutex> lock(mLock);
             if(!instance->GetTimerStop())
             {
-                uint64_t now = ChannelServer::GetServerTime();
-                instance->SetTimerStop(now);
+                instance->SetTimerStop(stopTime);
 
-                if(instance->GetTimerExpire() <= now)
+                if(instance->GetTimerExpire() <= stopTime)
                 {
                     // Instance timer expired (client actually handles the
                     // time-out display)
@@ -3546,8 +4066,7 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
                 std::lock_guard<std::mutex> lock(mLock);
                 if(!instance->GetTimerStop())
                 {
-                    uint64_t now = ChannelServer::GetServerTime();
-                    instance->SetTimerStop(now);
+                    instance->SetTimerStop(stopTime);
 
                     end = true;
                 }
@@ -3569,10 +4088,9 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
             std::lock_guard<std::mutex> lock(mLock);
             if(instance->GetTimerExpire() && !instance->GetTimerStop())
             {
-                uint64_t now = ChannelServer::GetServerTime();
-                instance->SetTimerStop(now);
+                instance->SetTimerStop(stopTime);
 
-                if(instance->GetTimerExpire() <= now)
+                if(instance->GetTimerExpire() <= stopTime)
                 {
                     // Instance timer expired
                     instance->SetTimerStop(instance->GetTimerExpire());
@@ -3609,13 +4127,45 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
             }
         }
         break;
+    case InstanceType_t::DIASPORA:
+        {
+            bool nextPhase = false;
+            {
+                std::lock_guard<std::mutex> lock(mLock);
+                if(!instance->GetTimerStop())
+                {
+                    instance->SetTimerStop(stopTime);
+
+                    if(!instance->GetMatch()->GetPhase())
+                    {
+                        nextPhase = true;
+                    }
+                }
+            }
+
+            if(nextPhase)
+            {
+                // Move on to the next phase
+                mServer.lock()->GetMatchManager()->AdvancePhase(
+                    GetInstanceStartingZone(instance), 1, 0);
+            }
+            else
+            {
+                // Complete timer
+                for(auto client : instance->GetConnections())
+                {
+                    EndInstanceTimer(instance, client, true);
+                }
+            }
+        }
+        break;
+    case InstanceType_t::MISSION:
     case InstanceType_t::DIGITALIZE:
         {
             std::lock_guard<std::mutex> lock(mLock);
             if(!instance->GetTimerStop())
             {
-                uint64_t now = ChannelServer::GetServerTime();
-                instance->SetTimerStop(now);
+                instance->SetTimerStop(stopTime);
 
                 // Complete timer
                 for(auto client : instance->GetConnections())
@@ -3639,11 +4189,10 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
                 std::lock_guard<std::mutex> lock(mLock);
                 if(!instance->GetTimerStop())
                 {
-                    uint64_t now = ChannelServer::GetServerTime();
-                    instance->SetTimerStop(now);
+                    instance->SetTimerStop(stopTime);
 
                     stopped = true;
-                    if(instance->GetTimerExpire() <= now)
+                    if(instance->GetTimerExpire() <= stopTime)
                     {
                         instance->SetTimerStop(instance->GetTimerExpire());
                         expired = true;
@@ -3679,9 +4228,10 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
 }
 
 void ZoneManager::SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instance,
-    const std::shared_ptr<ChannelClientConnection>& client, bool queue)
+    const std::shared_ptr<ChannelClientConnection>& client, bool queue,
+    uint32_t extension)
 {
-    if(!instance || !instance->GetTimerStart() || instance->GetTimerStop())
+    if(!instance)
     {
         return;
     }
@@ -3689,6 +4239,7 @@ void ZoneManager::SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
     auto instVariant = instance->GetVariant();
     auto instType = instVariant ? instVariant->GetInstanceType()
         : InstanceType_t::NORMAL;
+    bool timerActive = instance->GetTimerStart() && !instance->GetTimerStop();
 
     libcomp::Packet p;
     RelativeTimeMap timeMap;
@@ -3696,6 +4247,11 @@ void ZoneManager::SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
     switch(instType)
     {
     case InstanceType_t::TIME_TRIAL:
+        if(!timerActive)
+        {
+            return;
+        }
+        else
         {
             p.WritePacketCode(
                 ChannelToClientPacketCode_t::PACKET_TIME_TRIAL_UPDATE);
@@ -3710,6 +4266,11 @@ void ZoneManager::SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
         }
         break;
     case InstanceType_t::DEMON_ONLY:
+        if(!timerActive)
+        {
+            return;
+        }
+        else
         {
             uint64_t now = ChannelServer::GetServerTime();
 
@@ -3725,7 +4286,67 @@ void ZoneManager::SendInstanceTimer(const std::shared_ptr<ZoneInstance>& instanc
             p.WriteS32Little((int32_t)instance->GetTimerID());
         }
         break;
+    case InstanceType_t::DIASPORA:
+        {
+            uint64_t now = ChannelServer::GetServerTime();
+
+            uint64_t expireTime = instance->GetTimerExpire();
+            float timeLeft = expireTime < now ? 0.f
+                : (float)((double)(expireTime - now) / 1000000.0);
+
+            int32_t timerState = 0;
+            if(instance->GetMatch()->GetPhase())
+            {
+                if(instance->GetTimerStop() &&
+                    instance->GetTimerStop() < instance->GetTimerExpire())
+                {
+                    // Success
+                    timerState = 2;
+                }
+                else
+                {
+                    // Running
+                    timerState = 1;
+                }
+            }
+
+            p.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_DIASPORA_TIME);
+            p.WriteS32Little(timerState);
+            p.WriteS32Little(0);    // Timer just started (not used)
+            p.WriteFloat(timeLeft);
+            p.WriteFloat((float)extension);
+        }
+        break;
+    case InstanceType_t::MISSION:
+        {
+            uint8_t timerState = 0;
+            float timeLeft = (float)instVariant->GetTimePoints(0);
+
+            uint64_t expireTime = instance->GetTimerExpire();
+            if(expireTime)
+            {
+                uint64_t now = ChannelServer::GetServerTime();
+
+                timerState = timerActive ? 1 : (instance->GetTimerStop() <
+                    instance->GetTimerExpire() ? 3 : 4);
+                timeLeft = (expireTime && expireTime < now) ? 0.f
+                    : (float)((double)(expireTime - now) / 1000000.0);
+            }
+
+            p.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_MISSION_STATE);
+            p.WriteU32Little(instVariant->GetSubID());
+            p.WriteU8(timerState);
+            p.WriteS32Little((int32_t)timeLeft);
+        }
+        break;
     case InstanceType_t::DIGITALIZE:
+        if(!timerActive)
+        {
+            return;
+        }
+        else
         {
             uint64_t now = ChannelServer::GetServerTime();
             float elapsed = (float)(((double)now -
@@ -4218,6 +4839,33 @@ void ZoneManager::EndInstanceTimer(
             notify.WriteS32Little(spGain);
         }
         break;
+    case InstanceType_t::DIASPORA:
+        {
+            // A player successfully completed the instance if they're in it
+            // when the timer stops, has not expired and is not in phase 0
+            bool success = zone->GetInstance() == instance &&
+                instance->GetTimerStop() &&
+                instance->GetTimerExpire() != instance->GetTimerStop() &&
+                zone->GetMatch()->GetPhase();
+            if(isSuccess != success)
+            {
+                return;
+            }
+
+            if(success)
+            {
+                SendInstanceTimer(instance, client, false);
+            }
+
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_DIASPORA_END);
+            notify.WriteS32Little(success ? 1 : 0);
+        }
+        break;
+    case InstanceType_t::MISSION:
+        // Just send the timer as it displays in all states
+        SendInstanceTimer(instance, client, false);
+        return;
     case InstanceType_t::DIGITALIZE:
         {
             // A player successfully completed the instance if they're in it
@@ -4319,6 +4967,326 @@ void ZoneManager::EndInstanceTimer(
     client->GetClientState()->SetInstanceTimerActive(false);
 }
 
+bool ZoneManager::UpdateTrackedZone(const std::shared_ptr<Zone>& zone,
+    const std::shared_ptr<objects::Team>& team)
+{
+    if(zone->GetInstanceType() == InstanceType_t::DIASPORA)
+    {
+        // Uses a special packet for tracking players which act as team members
+        auto clients = zone->GetConnectionList();
+
+        libcomp::Packet notify;
+        notify.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_DIASPORA_STATUS);
+        notify.WriteU32Little((uint32_t)clients.size());
+
+        for(auto client : clients)
+        {
+            auto state = client->GetClientState();
+            auto cState = state->GetCharacterState();
+
+            notify.WriteU32Little((uint32_t)state->GetWorldCID());
+            notify.WriteFloat(cState->GetDestinationX());
+            notify.WriteFloat(cState->GetDestinationY());
+            notify.WriteS32Little(cState->GetCoreStats()->GetHP());
+        }
+
+        auto bosses = zone->GetBosses();
+        auto boss = bosses.size() > 0 ? bosses.front() : nullptr;
+
+        auto match = zone->GetMatch();
+        if(!match || match->GetPhase() != DIASPORA_PHASE_BOSS)
+        {
+            // Only track bosses during the boss phase
+            boss = nullptr;
+        }
+
+        notify.WriteU32Little(boss ? 1 : 0);
+        if(boss)
+        {
+            auto enemy = boss->GetEntity();
+
+            int32_t capturedBases = 0;
+            auto bases = zone->GetDiasporaBases();
+            for(auto base : bases)
+            {
+                if(base->GetEntity()->GetCaptured())
+                {
+                    capturedBases++;
+                }
+            }
+
+            notify.WriteU32Little(enemy->GetType());
+            notify.WriteS32Little(boss->GetCoreStats()->GetHP());
+            notify.WriteS32Little(boss->GetMaxHP());
+            notify.WriteS32Little(capturedBases);
+            notify.WriteS32Little((int32_t)bases.size());
+        }
+
+        ChannelClientConnection::BroadcastPacket(clients, notify);
+
+        return true;
+    }
+    else if(zone->GetDefinition()->GetTrackTeam() && team)
+    {
+        // Team specified, send just that
+        return UpdateTrackedTeam(team, zone);
+    }
+
+    return false;
+}
+
+bool ZoneManager::UpdateTrackedTeam(const std::shared_ptr<objects::Team>& team,
+    const std::shared_ptr<Zone>& zone)
+{
+    if(!team || (zone && !zone->GetDefinition()->GetTrackTeam()))
+    {
+        // No team or source is not in a trackable zone
+        return false;
+    }
+
+    std::list<std::shared_ptr<ChannelClientConnection>> clients;
+
+    libcomp::Packet notify;
+    notify.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_TEAM_MEMBER_UPDATE);
+    notify.WriteS8((int8_t)team->MemberIDsCount());
+
+    auto managerConnection = mServer.lock()->GetManagerConnection();
+    for(int32_t worldCID : team->GetMemberIDs())
+    {
+        notify.WriteS32Little(worldCID);
+
+        auto client = managerConnection->GetEntityClient(worldCID, true);
+        auto state = client ? client->GetClientState() : nullptr;
+        auto cState = state ? state->GetCharacterState() : nullptr;
+        auto oZone = state ? state->GetZone() : nullptr;
+        if(cState && oZone && oZone->GetDefinition()->GetTrackTeam())
+        {
+            notify.WriteU32Little(oZone->GetDefinitionID());
+            notify.WriteFloat(cState->GetDestinationX());
+            notify.WriteFloat(cState->GetDestinationY());
+            notify.WriteS32Little(cState->GetCoreStats()->GetHP());
+
+            clients.push_back(client);
+        }
+        else
+        {
+            // Not tracked
+            notify.WriteBlank(16);
+        }
+    }
+
+    ChannelClientConnection::BroadcastPacket(clients, notify);
+
+    return true;
+}
+
+bool ZoneManager::UpdateDestinyBox(const std::shared_ptr<ZoneInstance>& instance,
+    int32_t worldCID, const std::list<std::shared_ptr<objects::Loot>>& add,
+    std::set<uint8_t> remove)
+{
+    if(!instance || !worldCID)
+    {
+        // No instance or player source entity
+        return false;
+    }
+
+    auto dBox = instance->GetDestinyBox(worldCID);
+    if(!dBox)
+    {
+        // No box
+        return false;
+    }
+
+    uint8_t newNext = 0;
+    auto results = instance->UpdateDestinyBox(worldCID, newNext, add,
+        remove);
+    if(results.size() == 0)
+    {
+        // Nothing happened
+        return false;
+    }
+
+    // Report results to client(s)
+    std::list<std::shared_ptr<ChannelClientConnection>> clients;
+    if(dBox->GetOwnerCID())
+    {
+        auto client = mServer.lock()->GetManagerConnection()->GetEntityClient(
+            dBox->GetOwnerCID(), true);
+        if(client)
+        {
+            clients.push_back(client);
+        }
+    }
+    else
+    {
+        clients = instance->GetConnections();
+    }
+
+    if(clients.size() > 0)
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_DESTINY_BOX_UPDATE);
+
+        p.WriteS32Little(0);   // Write later
+
+        int32_t updates = 0;
+        for(auto& pair : results)
+        {
+            auto loot = pair.second;
+            if(loot)
+            {
+                // Added/updated
+                p.WriteU8(pair.first);
+                p.WriteU32Little(loot->GetType());
+                p.WriteU16Little(loot->GetCount());
+
+                updates++;
+            }
+        }
+
+        uint32_t removePos = p.Size();
+        p.WriteS32Little(0);   // Write later
+
+        int32_t removes = 0;
+        for(auto& pair : results)
+        {
+            auto loot = pair.second;
+            if(!loot)
+            {
+                // Removed
+                p.WriteU8(pair.first);
+
+                removes++;
+            }
+        }
+
+        p.WriteS32Little((int32_t)newNext);
+
+        // Now rewind and write counts
+        p.Seek(2);
+        p.WriteS32Little(updates);
+
+        p.Seek(removePos);
+        p.WriteS32Little(removes);
+
+        ChannelClientConnection::BroadcastPacket(clients, p);
+    }
+
+    return true;
+}
+
+void ZoneManager::SendDestinyBox(const std::shared_ptr<
+    ChannelClientConnection>& client, bool eventMenu, bool queue)
+{
+    auto state = client->GetClientState();
+    auto zone = state->GetZone();
+    auto instance = zone ? zone->GetInstance() : nullptr;
+    if(!instance)
+    {
+        return;
+    }
+
+    auto dBox = instance->GetDestinyBox(state->GetWorldCID());
+    if(!eventMenu && !dBox)
+    {
+        return;
+    }
+
+    libcomp::Packet p;
+    if(eventMenu)
+    {
+        p.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_DESTINY_BOX_DATA);
+        p.WriteS32Little(dBox != nullptr ? 0 : -1); // Success/failure
+    }
+    else
+    {
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DESTINY_BOX);
+    }
+
+    if(dBox)
+    {
+        int8_t size = (int8_t)dBox->LootCount();
+
+        p.WriteS32Little((int32_t)size);
+
+        int32_t lootSet = 0;
+
+        // Write the lootSet count at the end
+        p.WriteS32Little(0);
+        for(int8_t i = 0; i < size; i++)
+        {
+            auto loot = dBox->GetLoot((size_t)i);
+            if(loot)
+            {
+                p.WriteS8(i);
+                p.WriteU32Little(loot->GetType());
+                p.WriteU16Little(loot->GetCount());
+
+                lootSet++;
+            }
+        }
+
+        if(!eventMenu)
+        {
+            // The next position is only communicated outside of the event
+            p.WriteS32Little((int32_t)dBox->GetNextPosition());
+        }
+
+        p.Seek(eventMenu ? 10 : 6);
+        p.WriteS32Little(lootSet);
+    }
+
+    if(queue)
+    {
+        client->QueuePacket(p);
+    }
+    else
+    {
+        client->SendPacket(p);
+    }
+}
+
+void ZoneManager::MultiZoneBossKilled(const std::shared_ptr<Zone>& zone,
+    ClientState* sourceState, const std::list<uint32_t>& types)
+{
+    uint32_t zoneGroupID = zone->GetDefinition()->GetGlobalBossGroup();
+    if(sourceState)
+    {
+        auto cState = sourceState->GetCharacterState();
+
+        std::list<std::shared_ptr<ChannelClientConnection>> clients;
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            for(auto uniqueID : mGlobalBossZones[zoneGroupID])
+            {
+                auto z = mZones[uniqueID];
+                for(auto c : z->GetConnectionList())
+                {
+                    clients.push_back(c);
+                }
+            }
+        }
+
+        for(uint32_t type : types)
+        {
+            libcomp::Packet p;
+            p.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_MULTIZONE_BOSS_KILLED);
+            p.WriteU32Little(type);
+            p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+                cState->GetEntity()->GetName(), true);
+
+            ChannelClientConnection::BroadcastPacket(clients, p);
+        }
+    }
+
+    SendMultiZoneBossStatus(zoneGroupID);
+}
+
 bool ZoneManager::TriggerZoneActions(const std::shared_ptr<Zone>& zone,
     std::list<std::shared_ptr<ActiveEntityState>> entities,
     ZoneTrigger_t trigger,
@@ -4376,6 +5344,20 @@ std::list<std::shared_ptr<objects::ServerZoneTrigger>>
         {
             return t->GetTrigger() != trigger;
         });
+
+    // Add global triggers to the end of the list if they exist
+    auto globalDef = mServer.lock()->GetServerDataManager()
+        ->GetZonePartialData(0);
+    if(globalDef)
+    {
+        for(auto t : globalDef->GetTriggers())
+        {
+            if(t->GetTrigger() == trigger)
+            {
+                triggers.push_back(t);
+            }
+        }
+    }
 
     return triggers;
 }
@@ -4640,6 +5622,155 @@ std::list<std::shared_ptr<ActiveEntityState>> ZoneManager::GetEntitiesInFoV(
     return results;
 }
 
+void ZoneManager::ScheduleTimerExpiration(const std::shared_ptr<
+    ZoneInstance>& instance)
+{
+    auto instVariant = instance->GetVariant();
+    auto instType = instVariant ? instVariant->GetInstanceType()
+        : InstanceType_t::NORMAL;
+
+    uint64_t expireTime = instance->GetTimerExpire();
+    if(!expireTime)
+    {
+        return;
+    }
+
+    bool padTimer = false;
+    switch(instType)
+    {
+    case InstanceType_t::TIME_TRIAL:
+    case InstanceType_t::DIASPORA:
+    case InstanceType_t::MISSION:
+    case InstanceType_t::DIGITALIZE:
+        // These handle client timing via more accurate packets so no
+        // need to pad them
+        break;
+    case InstanceType_t::PVP:
+    case InstanceType_t::DEMON_ONLY:
+    case InstanceType_t::NORMAL:
+    default:
+        padTimer = true;
+        break;
+    }
+
+    uint64_t now = ChannelServer::GetServerTime();
+    int32_t scheduleIn = (expireTime >= now)
+        ? (int32_t)((expireTime - now) / 1000000ULL) : 0;
+    if(padTimer)
+    {
+        // Add a 1 second buffer so we don't undershoot client times
+        scheduleIn = (int32_t)(scheduleIn + 1);
+    }
+
+    // When the instance timer expires, stop the normal timer and let it
+    // handle all time out events
+    mServer.lock()->GetTimerManager()->ScheduleEventIn((int)scheduleIn, []
+        (ZoneManager* pZoneManager, uint32_t pInstanceID, uint64_t pExpireTime)
+        {
+            auto pInstance = pZoneManager->GetInstance(pInstanceID);
+            if(pInstance && !pInstance->GetTimerStop() &&
+                pInstance->GetTimerExpire() == pExpireTime)
+            {
+                LOG_DEBUG(libcomp::String("Expiring instance timer %1: %2\n")
+                    .Arg(pInstance->GetTimerID()).Arg(pInstanceID));
+                pZoneManager->StopInstanceTimer(pInstance, pExpireTime);
+            }
+        }, this, instance->GetID(), expireTime);
+}
+
+bool ZoneManager::ValidateBossGroup(const std::shared_ptr<
+    EnemyState>& enemyState)
+{
+    bool failed = true;
+
+    auto zone = enemyState ? enemyState->GetZone() : nullptr;
+    if(zone && zone->GetDefinition()->GetGlobalBossGroup())
+    {
+        uint8_t groupID = enemyState->GetEntity()->GetSpawnSource()
+            ->GetBossGroup();
+        uint32_t zoneGroupID = zone->GetDefinition()->GetGlobalBossGroup();
+
+        failed = false;
+
+        std::lock_guard<std::mutex> lock(mLock);
+        for(auto uniqueID : mGlobalBossZones[zoneGroupID])
+        {
+            for(auto boss : mZones[uniqueID]->GetBosses())
+            {
+                auto spawn = boss->GetEntity()->GetSpawnSource();
+                if(spawn->GetBossGroup() == groupID)
+                {
+                    LOG_ERROR(libcomp::String("Failed to spawn duplicate"
+                        " global group boss %1 in zone group %2\n")
+                        .Arg(groupID).Arg(zoneGroupID));
+                    failed = true;
+                    break;
+                }
+                else if(enemyState->GetDevilData() == boss->GetDevilData())
+                {
+                    LOG_ERROR(libcomp::String("Failed to spawn duplicate"
+                        " global group boss type %1 in zone group %2\n")
+                        .Arg(boss->GetEnemyBase()->GetType())
+                        .Arg(zoneGroupID));
+                    failed = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    return !failed;
+}
+
+void ZoneManager::SendMultiZoneBossStatus(uint32_t groupID)
+{
+    uint8_t count = 0;
+    std::array<std::shared_ptr<EnemyState>, 3> bosses;
+    std::list<std::shared_ptr<Zone>> zones;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        for(auto uniqueID : mGlobalBossZones[groupID])
+        {
+            zones.push_back(mZones[uniqueID]);
+            for(auto boss : mZones[uniqueID]->GetBosses())
+            {
+                auto spawn = boss->GetEntity()->GetSpawnSource();
+                bosses[(size_t)(spawn->GetBossGroup() - 1)] = boss;
+                count++;
+            }
+        }
+    }
+
+    if(count)
+    {
+        // Send boss statuses to all players in the zones
+        libcomp::Packet p;
+        p.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_MULTIZONE_BOSS_STATUS);
+        p.WriteS8(3);
+        for(size_t i = 0; i < 3; i++)
+        {
+            auto boss = bosses[i];
+            auto eBase = boss ? boss->GetEnemyBase() : nullptr;
+            auto zone = boss ? boss->GetZone() : nullptr;
+
+            p.WriteS8((int8_t)(i + 1));
+            p.WriteU32Little(eBase ? eBase->GetType() : 0xFFFFFF);
+            p.WriteU32Little(zone ? zone->GetDefinitionID() : 0xFFFFFF);
+            p.WriteFloat(boss ? boss->GetDestinationX() : 0.f);
+            p.WriteFloat(boss ? boss->GetDestinationY() : 0.f);
+            p.WriteS32Little(boss ? boss->GetCoreStats()->GetHP() : 0);
+            p.WriteS32Little(boss ? boss->GetMaxHP() : -1);
+        }
+
+        for(auto zone : zones)
+        {
+            libcomp::Packet copy(p);
+            BroadcastPacket(zone, copy);
+        }
+    }
+}
+
 std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
     uint32_t dynamicMapID, const std::shared_ptr<ChannelClientConnection>& client,
     uint32_t currentInstanceID)
@@ -4655,9 +5786,9 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
 
     std::shared_ptr<Zone> zone;
     {
-        std::lock_guard<std::mutex> lock(mLock);
         if(zoneDefinition->GetGlobal())
         {
+            std::lock_guard<std::mutex> lock(mLock);
             auto iter = mGlobalZoneMap.find(zoneID);
             if(iter != mGlobalZoneMap.end())
             {
@@ -4685,41 +5816,47 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
             // Get or create the zone in the player instance
             auto state = client->GetClientState();
 
-            uint32_t instanceID = currentInstanceID;
-            if(!instanceID)
+            std::shared_ptr<ZoneInstance> instance;
             {
-                auto accessIter = mZoneInstanceAccess.find(state->GetWorldCID());
-                instanceID = accessIter != mZoneInstanceAccess.end()
-                    ? accessIter->second : 0;
+                std::lock_guard<std::mutex> lock(mLock);
+                uint32_t instanceID = currentInstanceID;
+                if(!instanceID)
+                {
+                    auto accessIter = mZoneInstanceAccess.find(state
+                        ->GetWorldCID());
+                    instanceID = accessIter != mZoneInstanceAccess.end()
+                        ? accessIter->second : 0;
+                }
+
+                if(instanceID == 0)
+                {
+                    LOG_ERROR(libcomp::String("Character attempted to enter a"
+                        " zone instance that does not exist: %1\n")
+                        .Arg(state->GetAccountUID().ToString()));
+                    return nullptr;
+                }
+
+                auto instIter = mZoneInstances.find(instanceID);
+                if(instIter == mZoneInstances.end())
+                {
+                    LOG_ERROR(libcomp::String("Character could not be added to"
+                        " the requested instance: %1\n")
+                        .Arg(state->GetAccountUID().ToString()));
+                    return nullptr;
+                }
+
+                instance = instIter->second;
             }
 
-            if(instanceID == 0)
-            {
-                LOG_ERROR(libcomp::String("Character attempted to enter a zone"
-                    " instance that does not exist: %1\n")
-                    .Arg(state->GetAccountUID().ToString()));
-                return nullptr;
-            }
-
-            auto instIter = mZoneInstances.find(instanceID);
-            if(instIter == mZoneInstances.end())
-            {
-                LOG_ERROR(libcomp::String("Character could not be added to the"
-                    " requested instance: %1\n")
-                    .Arg(state->GetAccountUID().ToString()));
-                return nullptr;
-            }
-
-            zone = GetInstanceZoneInternal(instIter->second, zoneID,
-                dynamicMapID);
+            zone = GetInstanceZone(instance, zoneID, dynamicMapID);
         }
     }
 
     return zone;
 }
 
-std::shared_ptr<Zone> ZoneManager::GetInstanceZoneInternal(
-    std::shared_ptr<ZoneInstance> instance, uint32_t zoneID,
+std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
+    const std::shared_ptr<ZoneInstance>& instance, uint32_t zoneID,
     uint32_t dynamicMapID)
 {
     auto zone = instance->GetZone(zoneID, dynamicMapID);
@@ -4760,25 +5897,42 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZoneInternal(
 
     if(zoneDefinition)
     {
-        zone = CreateZone(zoneDefinition);
+        zone = CreateZone(zoneDefinition, instance);
         if(!instance->AddZone(zone))
         {
             LOG_ERROR(libcomp::String("Failed to add zone to"
                 " instance: %1 (%2)\n").Arg(zoneID).Arg(dynamicMapID));
-            zone->Cleanup();
-            mZones.erase(zone->GetID());
-            mActiveZones.erase(zone->GetID());
+
+            std::lock_guard<std::mutex> lock(mLock);
+            RemoveZone(zone, false);
             return nullptr;
         }
 
-        auto pvpVariant = std::dynamic_pointer_cast<
-            objects::PvPInstanceVariant>(instVariant);
-        if(startingZone && pvpVariant)
-        {
-            AddPvPBases(zone, pvpVariant);
-        }
-
         zone->SetInstance(instance);
+        zone->SetMatch(instance->GetMatch());
+
+        // Apply any special instance changes
+        if(instVariant)
+        {
+            switch(instVariant->GetInstanceType())
+            {
+            case InstanceType_t::PVP:
+                {
+                    auto pvpVariant = std::dynamic_pointer_cast<
+                        objects::PvPInstanceVariant>(instVariant);
+                    if(startingZone && pvpVariant)
+                    {
+                        AddPvPBases(zone, pvpVariant);
+                    }
+                }
+                break;
+            case InstanceType_t::DIASPORA:
+                AddDiasporaBases(zone);
+                break;
+            default:
+                break;
+            }
+        }
     }
     else
     {
@@ -4791,7 +5945,8 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZoneInternal(
 }
 
 std::shared_ptr<Zone> ZoneManager::CreateZone(
-    const std::shared_ptr<objects::ServerZone>& definition)
+    const std::shared_ptr<objects::ServerZone>& definition,
+    const std::shared_ptr<ZoneInstance>& instance)
 {
     if(nullptr == definition)
     {
@@ -4805,26 +5960,30 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         .Arg(zoneID != dynamicMapID
             ? libcomp::String(" (%1)").Arg(dynamicMapID) : "");
 
-    uint32_t id = mNextZoneID++;
-
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
     auto zoneData = definitionManager->GetZoneData(zoneID);
 
-    auto zone = std::shared_ptr<Zone>(new Zone(id, definition));
-
-    auto qmpFile = zoneData->GetFile()->GetQmpFile();
-    auto geoIter = !qmpFile.IsEmpty()
-        ? mZoneGeometry.find(qmpFile.C()) : mZoneGeometry.end();
-    if(geoIter != mZoneGeometry.end())
+    std::shared_ptr<Zone> zone;
     {
-        zone->SetGeometry(geoIter->second);
-    }
+        std::lock_guard<std::mutex> lock(mLock);
+        uint32_t id = mNextZoneID++;
 
-    auto it = mDynamicMaps.find(dynamicMapID);
-    if(it != mDynamicMaps.end())
-    {
-        zone->SetDynamicMap(it->second);
+        zone = std::shared_ptr<Zone>(new Zone(id, definition));
+
+        auto qmpFile = zoneData->GetFile()->GetQmpFile();
+        auto geoIter = !qmpFile.IsEmpty()
+            ? mZoneGeometry.find(qmpFile.C()) : mZoneGeometry.end();
+        if(geoIter != mZoneGeometry.end())
+        {
+            zone->SetGeometry(geoIter->second);
+        }
+
+        auto it = mDynamicMaps.find(dynamicMapID);
+        if(it != mDynamicMaps.end())
+        {
+            zone->SetDynamicMap(it->second);
+        }
     }
 
     for(auto npc : definition->GetNPCs())
@@ -4854,8 +6013,29 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         zone->AddNPC(state);
     }
 
+    // If a server object is placed on the same spot ID as a diaspora base,
+    // do not place it as the spot will be bound to it later
+    std::set<uint32_t> diasporaSpots;
+    if(instance && instance->GetVariant() && instance->GetVariant()
+        ->GetInstanceType() == InstanceType_t::DIASPORA)
+    {
+        for(auto& spotPair : definition->GetSpots())
+        {
+            if(spotPair.second->GetMatchBase())
+            {
+                diasporaSpots.insert(spotPair.first);
+            }
+        }
+    }
+
     for(auto obj : definition->GetObjects())
     {
+        if(obj->GetSpotID() &&
+            diasporaSpots.find(obj->GetSpotID()) != diasporaSpots.end())
+        {
+            continue;
+        }
+
         auto copy = std::make_shared<objects::ServerObject>(*obj);
 
         auto state = std::shared_ptr<ServerObjectState>(
@@ -5051,8 +6231,14 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             zone->AppendActionDelayTriggers(trigger);
             zone->InsertActionDelayKeys(trigger->GetValue());
             break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_PHASE:
         case objects::ServerZoneTrigger::Trigger_t::ON_PVP_START:
         case objects::ServerZoneTrigger::Trigger_t::ON_PVP_BASE_CAPTURE:
+        case objects::ServerZoneTrigger::Trigger_t::ON_DIASPORA_BASE_CAPTURE:
+        case objects::ServerZoneTrigger::Trigger_t::ON_DIASPORA_BASE_RESET:
+        case objects::ServerZoneTrigger::Trigger_t::ON_UB_TICK:
+        case objects::ServerZoneTrigger::Trigger_t::ON_UB_GAUGE_OVER:
+        case objects::ServerZoneTrigger::Trigger_t::ON_UB_GAUGE_UNDER:
             zone->AppendMiscTriggers(trigger);
             break;
         case objects::ServerZoneTrigger::Trigger_t::ON_TIME:
@@ -5065,7 +6251,11 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         }
     }
 
-    mZones[id] = zone;
+    // Zone successfully created, register with the manager
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        mZones[zone->GetID()] = zone;
+    }
 
     // Register time restrictions and calculate current state if any exist
     if(RegisterTimeRestrictions(zone, definition))
@@ -5118,9 +6308,9 @@ void ZoneManager::AddPvPBases(const std::shared_ptr<Zone>& zone,
     std::unordered_map<uint8_t, std::set<uint32_t>> rankSpots;
     for(auto& pair : def->GetSpots())
     {
-        if(pair.second->GetPvPBaseRank())
+        if(pair.second->GetMatchBase())
         {
-            rankSpots[pair.second->GetPvPBaseRank()].insert(
+            rankSpots[pair.second->GetMatchBase()].insert(
                 pair.first);
         }
     }
@@ -5211,7 +6401,7 @@ void ZoneManager::AddPvPBases(const std::shared_ptr<Zone>& zone,
 
             bState->SetEntityID(server->GetNextEntityID());
 
-            zone->AddPvPBase(bState);
+            zone->AddBase(bState);
 
             validSpotIDs.erase(spotID);
         }
@@ -5231,6 +6421,186 @@ void ZoneManager::AddPvPBases(const std::shared_ptr<Zone>& zone,
     }
 }
 
+void ZoneManager::AddDiasporaBases(const std::shared_ptr<Zone>& zone)
+{
+    auto instance = zone->GetInstance();
+    auto variant = instance ? instance->GetVariant() : nullptr;
+    if(!variant || variant->GetInstanceType() != InstanceType_t::DIASPORA)
+    {
+        return;
+    }
+
+    auto def = zone->GetDefinition();
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    // Gather objects to bind to the bases (see CreateZone for the other half
+    // of this)
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::ServerObject>> spotObjects;
+    for(auto obj : def->GetObjects())
+    {
+        if(obj->GetSpotID())
+        {
+            spotObjects[obj->GetSpotID()] = obj;
+        }
+    }
+
+    // Pull all spots local and sort by ID as the order they are added to the
+    // zone matters for displaying correctly in the zone
+    std::list<std::shared_ptr<objects::ServerZoneSpot>> baseSpots;
+    for(auto& spotPair : def->GetSpots())
+    {
+        uint8_t matchBase = spotPair.second->GetMatchBase();
+        if(matchBase)
+        {
+            baseSpots.push_back(spotPair.second);
+        }
+    }
+
+    baseSpots.sort([](const std::shared_ptr<objects::ServerZoneSpot>& a,
+        const std::shared_ptr<objects::ServerZoneSpot>& b)
+        {
+            return a->GetID() < b->GetID();
+        });
+
+    std::set<uint32_t> invalidSpotIDs;
+    for(auto spot : baseSpots)
+    {
+        uint32_t spotID = spot->GetID();
+
+        auto towerData = definitionManager->GetUraFieldTowerData(
+            variant->GetSubID(), spot->GetMatchBase());
+
+        float x, y, rot;
+        if(!towerData)
+        {
+            LOG_WARNING(libcomp::String("Invalid Diaspora base encountered"
+                " in zone %1\n").Arg(def->GetID()));
+        }
+        else if(invalidSpotIDs.find(spotID) != invalidSpotIDs.end())
+        {
+            LOG_WARNING(libcomp::String("Diaspora base %1 specified"
+                " multiple times in zone %2\n").Arg(spotID)
+                .Arg(def->GetID()));
+        }
+        else if(GetSpotPosition(def->GetDynamicMapID(), spotID, x, y, rot))
+        {
+            auto dBase = std::make_shared<objects::DiasporaBase>();
+            dBase->SetDefinition(towerData);
+
+            dBase->SetBoundObject(spotObjects[spotID]);
+            if(!dBase->GetBoundObject())
+            {
+                LOG_WARNING(libcomp::String("Diaspora base with no bound"
+                    " server object encountered in zone %1 at spot: %2\n")
+                    .Arg(def->GetID()).Arg(spotID));
+            }
+
+            auto bState = std::make_shared<DiasporaBaseState>(dBase);
+            bState->SetCurrentX(x);
+            bState->SetCurrentY(y);
+            bState->SetCurrentRotation(rot);
+
+            bState->SetEntityID(server->GetNextEntityID());
+
+            zone->AddBase(bState);
+
+            invalidSpotIDs.erase(spotID);
+        }
+        else
+        {
+            LOG_WARNING(libcomp::String("Invalid Diaspora base spot"
+                " %1 encountered in zone %2\n").Arg(spotID)
+                .Arg(def->GetID()));
+        }
+    }
+}
+
+bool ZoneManager::CanEnterRestrictedZone(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<Zone>& zone)
+{
+    if(!zone || !client)
+    {
+        return false;
+    }
+
+    auto state = client->GetClientState();
+    auto def = zone->GetDefinition();
+    if(!def->GetRestricted())
+    {
+        // Not actually restricted
+        return true;
+    }
+
+    auto match = zone->GetMatch();
+    if(match)
+    {
+        // Can enter zone if part of the match
+        if(match->MemberIDsContains(state->GetWorldCID()))
+        {
+            return true;
+        }
+
+        auto ubMatch = std::dynamic_pointer_cast<objects::UBMatch>(match);
+        if(ubMatch && ubMatch->SpectatorIDsContains(state->GetWorldCID()))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    // No explicit restrictions
+    return true;
+}
+
+void ZoneManager::RemoveZone(const std::shared_ptr<Zone>& zone,
+    bool freezeOnly)
+{
+    if(!freezeOnly)
+    {
+        mZones.erase(zone->GetID());
+        zone->Cleanup();
+        mTimeRestrictUpdatedZones.erase(zone->GetID());
+    }
+
+    mActiveZones.erase(zone->GetID());
+    mActiveTrackedZones.erase(zone->GetID());
+
+    if(!freezeOnly)
+    {
+        std::list<WorldClockTime> removeSpawnTimes;
+
+        if(mAllTimeRestrictZones.find(zone->GetID()) !=
+            mAllTimeRestrictZones.end())
+        {
+            for(auto tPair : mSpawnTimeRestrictZones)
+            {
+                tPair.second.erase(zone->GetID());
+                if(tPair.second.size() == 0)
+                {
+                    removeSpawnTimes.push_back(tPair.first);
+                }
+            }
+
+            mAllTimeRestrictZones.erase(zone->GetID());
+        }
+
+        // Clean up any time restrictions
+        if(removeSpawnTimes.size() > 0)
+        {
+            auto server = mServer.lock();
+            for(auto& t : removeSpawnTimes)
+            {
+                server->RegisterClockEvent(t, 1, true);
+            }
+        }
+    }
+}
+
 bool ZoneManager::RemoveInstance(uint32_t instanceID)
 {
     auto instIter = mZoneInstances.find(instanceID);
@@ -5240,22 +6610,17 @@ bool ZoneManager::RemoveInstance(uint32_t instanceID)
     }
 
     auto instance = instIter->second;
-    auto instZones = instance->GetZones();
 
     std::list<std::shared_ptr<Zone>> cleanupZones;
-    for(auto iPair : instZones)
+    for(auto z : instance->GetZones())
     {
-        for(auto zPair : iPair.second)
+        if(z->GetConnections().size() == 0)
         {
-            auto z = zPair.second;
-            if(z->GetConnections().size() == 0)
-            {
-                cleanupZones.push_back(z);
-            }
-            else
-            {
-                return false;
-            }
+            cleanupZones.push_back(z);
+        }
+        else
+        {
+            return false;
         }
     }
 
@@ -5278,38 +6643,9 @@ bool ZoneManager::RemoveInstance(uint32_t instanceID)
 
     mZoneInstances.erase(instance->GetID());
 
-    std::list<WorldClockTime> removeSpawnTimes;
     for(auto z : cleanupZones)
     {
-        z->Cleanup();
-        mZones.erase(z->GetID());
-        mActiveZones.erase(z->GetID());
-        mTimeRestrictUpdatedZones.erase(z->GetID());
-
-        if(mAllTimeRestrictZones.find(z->GetID()) !=
-            mAllTimeRestrictZones.end())
-        {
-            for(auto tPair : mSpawnTimeRestrictZones)
-            {
-                tPair.second.erase(z->GetID());
-                if(tPair.second.size() == 0)
-                {
-                    removeSpawnTimes.push_back(tPair.first);
-                }
-            }
-
-            mAllTimeRestrictZones.erase(z->GetID());
-        }
-    }
-
-    // Clean up any time restrictions
-    if(removeSpawnTimes.size() > 0)
-    {
-        auto server = mServer.lock();
-        for(auto& t : removeSpawnTimes)
-        {
-            server->RegisterClockEvent(t, 1, true);
-        }
+        RemoveZone(z, false);
     }
 
     return true;
@@ -5327,7 +6663,6 @@ bool ZoneManager::RegisterTimeRestrictions(const std::shared_ptr<Zone>& zone,
     const std::shared_ptr<objects::ServerZone>& definition)
 {
     std::list<WorldClockTime> spawnTimes;
-    std::list<WorldClockTime> eventTimes;
 
     // Gather spawn restrictions from spawn groups and plasma
     std::list<std::shared_ptr<objects::SpawnRestriction>> restrictions;
@@ -5487,37 +6822,7 @@ bool ZoneManager::RegisterTimeRestrictions(const std::shared_ptr<Zone>& zone,
     }
 
     // Build event times
-    for(auto trigger : definition->GetTriggers())
-    {
-        switch(trigger->GetTrigger())
-        {
-        case objects::ServerZoneTrigger::Trigger_t::ON_TIME:
-            {
-                WorldClockTime t;
-                t.Hour = (int8_t)(trigger->GetValue() / 100);
-                t.Min = (int8_t)(trigger->GetValue() % 100);
-                eventTimes.push_back(t);
-            }
-            break;
-        case objects::ServerZoneTrigger::Trigger_t::ON_SYSTEMTIME:
-            {
-                WorldClockTime t;
-                t.SystemHour = (int8_t)(trigger->GetValue() / 100);
-                t.SystemMin = (int8_t)(trigger->GetValue() % 100);
-                eventTimes.push_back(t);
-            }
-            break;
-        case objects::ServerZoneTrigger::Trigger_t::ON_MOONPHASE:
-            {
-                WorldClockTime t;
-                t.MoonPhase = (int8_t)trigger->GetValue();
-                eventTimes.push_back(t);
-            }
-            break;
-        default:
-            break;
-        }
-    }
+    auto eventTimes = GetTriggerTimes(definition->GetTriggers());
 
     // Register all times
     if(spawnTimes.size() > 0 || eventTimes.size() > 0)
@@ -5542,4 +6847,43 @@ bool ZoneManager::RegisterTimeRestrictions(const std::shared_ptr<Zone>& zone,
     }
 
     return false;
+}
+
+std::list<WorldClockTime> ZoneManager::GetTriggerTimes(
+    const std::list<std::shared_ptr<objects::ServerZoneTrigger>>& triggers)
+{
+    std::list<WorldClockTime> times;
+    for(auto trigger : triggers)
+    {
+        switch(trigger->GetTrigger())
+        {
+        case objects::ServerZoneTrigger::Trigger_t::ON_TIME:
+            {
+                WorldClockTime t;
+                t.Hour = (int8_t)(trigger->GetValue() / 100);
+                t.Min = (int8_t)(trigger->GetValue() % 100);
+                times.push_back(t);
+            }
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_SYSTEMTIME:
+            {
+                WorldClockTime t;
+                t.SystemHour = (int8_t)(trigger->GetValue() / 100);
+                t.SystemMin = (int8_t)(trigger->GetValue() % 100);
+                times.push_back(t);
+            }
+            break;
+        case objects::ServerZoneTrigger::Trigger_t::ON_MOONPHASE:
+            {
+                WorldClockTime t;
+                t.MoonPhase = (int8_t)trigger->GetValue();
+                times.push_back(t);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    return times;
 }

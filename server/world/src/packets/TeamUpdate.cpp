@@ -67,6 +67,28 @@ void TeamForm(std::shared_ptr<WorldServer> server,
         }
     }
 
+    auto team = characterManager->GetTeam(teamID);
+    if(team)
+    {
+        // Define new team and send update
+        if(type >= (int8_t)objects::Team::Category_t::DIASPORA)
+        {
+            team->SetCategory(objects::Team::Category_t::DIASPORA);
+        }
+        else if(type >= (int8_t)objects::Team::Category_t::CATHEDRAL)
+        {
+            team->SetCategory(objects::Team::Category_t::CATHEDRAL);
+        }
+        else
+        {
+            team->SetCategory(objects::Team::Category_t::PVP);
+        }
+
+        team->SetType(type);
+
+        characterManager->SendTeamInfo(teamID);
+    }
+
     libcomp::Packet reply;
     WorldServer::GetRelayPacket(reply, cLogin->GetWorldCID());
     reply.WritePacketCode(
@@ -77,27 +99,8 @@ void TeamForm(std::shared_ptr<WorldServer> server,
 
     requestConnection->QueuePacket(reply);
 
-    auto team = characterManager->GetTeam(teamID);
     if(team)
     {
-        // Define new team and send update
-        if(type >= (int8_t)objects::Team::Category_t::LNC)
-        {
-            team->SetCategory(objects::Team::Category_t::LNC);
-        }
-        else if(type >= (int8_t)objects::Team::Category_t::COOP)
-        {
-            team->SetCategory(objects::Team::Category_t::COOP);
-        }
-        else
-        {
-            team->SetCategory(objects::Team::Category_t::PVP);
-        }
-
-        team->SetType(type);
-
-        characterManager->SendTeamInfo(teamID);
-
         // Send initial character add notification
         libcomp::Packet relay;
         auto cidOffset = WorldServer::GetRelayPacket(relay);
@@ -146,7 +149,8 @@ void TeamInvite(std::shared_ptr<WorldServer> server,
         {
             errorCode = (int8_t)TeamErrorCodes_t::TARGET_IN_PARTY;
         }
-        else if(team->MemberIDsCount() >= MAX_TEAM_SIZE)
+        else if(team->MemberIDsCount() >=
+            characterManager->GetTeamMaxSize((int8_t)team->GetCategory()))
         {
             errorCode = (int8_t)TeamErrorCodes_t::TEAM_FULL;
         }
@@ -369,6 +373,23 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             int32_t targetCID = p.ReadS32Little();
             characterManager->TeamKick(cLogin, targetCID, teamID, connection);
+        }
+        break;
+    case InternalPacketAction_t::PACKET_ACTION_TEAM_ZIOTITE:
+        {
+            // Update team ziotite
+            if(p.Left() < 5)
+            {
+                LOG_ERROR(libcomp::String("Missing ziotite amount parameters"
+                    " for command %1\n").Arg(mode));
+                return false;
+            }
+
+            int32_t sZiotite = p.ReadS32Little();
+            int8_t lZiotite = p.ReadS8();
+
+            characterManager->TeamZiotiteUpdate(teamID, cLogin, sZiotite,
+                lZiotite);
         }
         break;
     default:

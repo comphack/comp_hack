@@ -8,6 +8,8 @@
             <value>ZONE_CHARACTER</value>
             <value>ZONE_INSTANCE</value>
             <value>ZONE_INSTANCE_CHARACTER</value>
+            <value>TOKUSEI</value>
+            <value>PARTNER_TOKUSEI</value>
         </member>
         <member type="enum" name="setMode" underlying="uint8_t">
             <value>UPDATE</value>

@@ -10,11 +10,15 @@
             <value>COINS</value>
             <value>ITIME</value>
             <value>BP</value>
-            <value>PVP_VALUE</value>
+            <value>KILL_VALUE</value>
             <value>PVP_POINTS</value>
+            <value>UB_POINTS</value>
+            <value>COWRIE</value>
+            <value>BETHEL</value>
+            <value>ZIOTITE</value>
         </member>
         <member type="s64" name="value"/>
-        <member type="s8" name="iTimeID"/>
+        <member type="s8" name="modifier"/>
         <member type="bool" name="isSet"/>
     </object>
 </objgen>

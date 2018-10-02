@@ -171,14 +171,6 @@ public:
     ActiveEntityState();
 
     /**
-     * Explicitly defined copy constructor necessary due to removal
-     * of implicit constructor from non-copyable mutex member. This should
-     * never actually be used.
-     * @param other The other entity to copy
-     */
-    ActiveEntityState(const ActiveEntityState& other);
-
-    /**
      * Get the adjusted correct table value associated to the entity.
      * @param tableID ID of the correct table value to retrieve
      * @param calcState Override CalculatedEntityState to use instead of
@@ -897,7 +889,7 @@ protected:
      * Get the set of skill IDs granted by effective tokusei.
      * @param definitionManager Pointer to the definition manager to use
      *  for tokusei definitions
-     * @result Set of skill IDs granted by effective tokusei
+     * @return Set of skill IDs granted by effective tokusei
      */
     std::set<uint32_t> GetEffectiveTokuseiSkills(
         libcomp::DefinitionManager* definitionManager);

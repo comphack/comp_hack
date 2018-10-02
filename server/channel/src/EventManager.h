@@ -338,10 +338,12 @@ private:
     /**
      * Evaluate a standard event condition
      * @param ctx Execution context of the event
+     * @param source Pointer to the source entity from the context. Can be null
      * @param condition Standard condition to evaluate
      * @return true if standard condition evaluates to true, otherwise false
      */
     bool EvaluateCondition(EventContext& ctx,
+        const std::shared_ptr<ActiveEntityState>& source,
         const std::shared_ptr<objects::EventConditionData>& condition,
         EventCompareMode compareMode = EventCompareMode::DEFAULT_COMPARE);
 

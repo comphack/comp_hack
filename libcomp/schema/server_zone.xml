@@ -10,13 +10,13 @@
         </member>
         <member type="SpawnLocation*" name="SpawnArea"
             nulldefault="true"/>
-        <member type="enum" name="PvPSpawn" underlying="uint8_t">
+        <member type="enum" name="MatchSpawn" underlying="uint8_t">
             <value>NONE</value>
-            <value>BLUE</value>
-            <value>RED</value>
-            <value>BOTH</value>
+            <value>ALL</value>
+            <value>PVP_BLUE</value>
+            <value>PVP_RED</value>
         </member>
-        <member type="u8" name="PvPBaseRank"/>
+        <member type="u8" name="MatchBase"/>
     </object>
     <object name="ServerZoneTrigger" persistent="false">
         <member type="enum" name="Trigger" underlying="uint8_t">
@@ -32,8 +32,14 @@
             <value>ON_SYSTEMTIME</value>
             <value>ON_MOONPHASE</value>
             <value>ON_ACTION_DELAY</value>
+            <value>ON_PHASE</value>
             <value>ON_PVP_START</value>
             <value>ON_PVP_BASE_CAPTURE</value>
+            <value>ON_DIASPORA_BASE_CAPTURE</value>
+            <value>ON_DIASPORA_BASE_RESET</value>
+            <value>ON_UB_TICK</value>
+            <value>ON_UB_GAUGE_OVER</value>
+            <value>ON_UB_GAUGE_UNDER</value>
         </member>
         <member type="s32" name="Value"/>
         <member type="list" name="Actions">
@@ -44,7 +50,9 @@
         <member type="u32" name="ID"/>
         <member type="u32" name="DynamicMapID"/>
         <member type="bool" name="Global"/>
+        <member type="bool" name="Restricted"/>
         <member type="u32" name="GroupID"/>
+        <member type="u32" name="GlobalBossGroup"/>
         <member type="float" name="StartingX"/>
         <member type="float" name="StartingY"/>
         <member type="float" name="StartingRotation"/>
@@ -56,6 +64,10 @@
         <member type="bool" name="BikeBoostEnabled"/>
         <member type="set" name="ValidTeamTypes">
             <element type="s8"/>
+        </member>
+        <member type="bool" name="TrackTeam"/>
+        <member type="set" name="DropSetIDs">
+            <element type="u32"/>
         </member>
         <member type="list" name="NPCs">
             <element type="ServerNPC*"/>
@@ -99,6 +111,9 @@
             <element type="u32"/>
         </member>
         <member type="bool" name="AutoApply" default="true"/>
+        <member type="set" name="DropSetIDs">
+            <element type="u32"/>
+        </member>
         <member type="list" name="NPCs">
             <element type="ServerNPC*"/>
         </member>
@@ -144,16 +159,22 @@
             <value>TIME_TRIAL</value>
             <value>PVP</value>
             <value>DEMON_ONLY</value>
+            <value>DIASPORA</value>
+            <value>MISSION</value>
+            <value>PENTALPHA</value>
             <value>DIGITALIZE</value>
         </member>
         <member type="set" name="ZonePartialIDs">
             <element type="u32"/>
         </member>
-        <!-- Contextual time limit for count downs, ranks for count ups -->
+        <!-- Contextual time limits, rank requirements, etc -->
         <!-- TIME_TRIAL: Participation time => Rank C => Rank B => Rank A -->
         <!-- PVP: Match time => start delay => base point interval (optional) -->
         <!-- DEMON_ONLY: Max time => Rank A (min) => Rank B (min) =>
              Party member reduction (optional) -->
+        <!-- DIASPORA: Pre-phase time => phase time -->
+        <!-- MISSION: Time limit -->
+        <!-- PENTALPHA: No custom time points -->
         <!-- DIGITALIZE: Rank B (max) => Rank A (max) -->
         <member type="list" name="TimePoints">
             <element type="u16"/>
@@ -161,6 +182,8 @@
         <member type="string" name="TimerExpirationEventID"/>
         <member type="u32" name="FixedReward"/>
         <member type="s32" name="RewardModifier"/>
+        <member type="u8" name="DestinyBoxSize" max="100"/>
+        <member type="bool" name="DestinyBoxShared"/>
     </object>
     <object name="PvPInstanceVariant" baseobject="ServerZoneInstanceVariant"
         persistent="false" scriptenabled="true">

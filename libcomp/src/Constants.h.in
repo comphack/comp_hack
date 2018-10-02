@@ -188,8 +188,14 @@ namespace libcomp
 /// Number of names that can be in the blacklist per account, per world.
 #define MAX_BLACKLIST_COUNT (50)
 
-/// Number of characters that can be on a team at once.
-#define MAX_TEAM_SIZE (50)
+/// Number of characters that can be on a PvP Team at once.
+#define MAX_TEAM_SIZE_PVP (50)
+
+/// Number of characters that can be on a Diaspora Team at once.
+#define MAX_TEAM_SIZE_DIASPORA (30)
+
+/// Number of characters that can be on a Cathedral Team at once.
+#define MAX_TEAM_SIZE_CATHEDRAL (10)
 
 /// Number of title entries that can be used to build a custom title.
 #define MAX_TITLE_PARTS (13)
@@ -277,6 +283,12 @@ namespace libcomp
 /// Client selected revival mode to leave a demon only instance
 #define REVIVE_DEMON_SOLO_QUIT (665)
 
+/// Client selected revival mode to leave a Diaspora instance
+#define REVIVE_DIASPORA_QUIT (713)
+
+/// Client selected revival mode to leave a Ultimate Battle
+#define REVIVE_UB_QUIT (714)
+
 /// Search data index for the requestor's goal
 #define SEARCH_IDX_GOAL (1)
 
@@ -359,6 +371,18 @@ namespace libcomp
 /// that by default cannot have an effect added
 #define ENCHANT_ENABLE_EFFECT (0x7FFF)
 
+/// Cooldown ID for the system Invoke law team
+#define COOLDOWN_INVOKE_LAW (-1)
+
+/// Cooldown ID for the system Invoke neutral team
+#define COOLDOWN_INVOKE_NEUTRAL (-2)
+
+/// Cooldown ID for the system Invoke chaos team
+#define COOLDOWN_INVOKE_CHAOS (-3)
+
+/// Cooldown ID for the system Invoke period where no team can be joined
+#define COOLDOWN_INVOKE_WAIT (-4)
+
 /// Minimum number of players needed to start a "Fate" PvP match
 #define PVP_FATE_PLAYER_MIN (12)
 
@@ -370,6 +394,15 @@ namespace libcomp
 
 /// Maximum number of players allowed to start a "Valhalla" PvP match
 #define PVP_VALHALLA_PLAYER_MAX (10)
+
+/// Diaspora phase where bosses spawn
+#define DIASPORA_PHASE_BOSS (4)
+
+/// Diaspora phase that indicates the end of a match
+#define DIASPORA_PHASE_END (5)
+
+/// Ultimate Battle max phase count
+#define UB_PHASE_MAX (5)
 
 /// Experience required to proceed from the indexed level to the next
 const unsigned long long LEVEL_XP_REQUIREMENTS[] = {

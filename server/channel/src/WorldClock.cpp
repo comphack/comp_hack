@@ -29,8 +29,53 @@
 
 // libcomp Includes
 #include <CString.h>
+#include <ScriptEngine.h>
 
 using namespace channel;
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<WorldClockTime>()
+    {
+        if(!BindingExists("WorldClockTime", true))
+        {
+            Sqrat::Class<WorldClockTime> binding(mVM, "WorldClockTime");
+            binding
+                .Var("MoonPhase", &WorldClockTime::MoonPhase)
+                .Var("Hour", &WorldClockTime::Hour)
+                .Var("Min", &WorldClockTime::Min)
+                .Var("SystemHour", &WorldClockTime::SystemHour)
+                .Var("SystemMin", &WorldClockTime::SystemMin);
+
+            Bind<WorldClockTime>("WorldClockTime", binding);
+        }
+
+        return *this;
+    }
+
+    template<>
+    ScriptEngine& ScriptEngine::Using<WorldClock>()
+    {
+        if(!BindingExists("WorldClock", true))
+        {
+            Using<WorldClockTime>();
+
+            Sqrat::DerivedClass<WorldClock,
+                WorldClockTime> binding(mVM, "WorldClock");
+            binding
+                .Var("WeekDay", &WorldClock::WeekDay)
+                .Var("Month", &WorldClock::Month)
+                .Var("Day", &WorldClock::Day)
+                .Var("SystemSec", &WorldClock::SystemSec)
+                .Var("SystemTime", &WorldClock::SystemTime);
+
+            Bind<WorldClock>("WorldClock", binding);
+        }
+
+        return *this;
+    }
+}
 
 WorldClockTime::WorldClockTime() :
     MoonPhase(-1), Hour(-1), Min(-1), SystemHour(-1), SystemMin(-1)

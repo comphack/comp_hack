@@ -86,4 +86,15 @@
         <member type="u32" name="Cost"/>
         <member type="bool" name="Sold"/>
     </object>
+    <object name="PentalphaMatch" location="world" scriptenabled="true">
+        <member type="u32" name="StartTime" key="true" unique="true"/>
+        <member type="u32" name="EndTime" key="true" unique="true"/>
+        <member type="pref" name="Previous"/>
+        <member type="array" name="Points" size="5">
+            <element type="s32"/>
+        </member>
+        <member type="array" name="Rankings" size="5">
+            <element type="u8"/>
+        </member>
+    </object>
 </objgen>

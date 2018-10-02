@@ -69,12 +69,19 @@
             <value>QUEST_PHASE_REQUIREMENTS</value>
             <value>QUESTS_ACTIVE</value>
 
+            <value>BETHEL</value>
             <value>CLAN_HOME</value>
             <value>COMP_DEMON</value>
             <value>COMP_FREE</value>
+            <value>COWRIE</value>
             <value>DEMON_BOOK</value>
+            <value>DESTINY_BOX</value>
+            <value>DIASPORA_BASE</value>
             <value>EXPERTISE_ACTIVE</value>
             <value>EQUIPPED</value>
+            <value>EVENT_COUNTER</value>
+            <value>EVENT_WORLD_COUNTER</value>
+            <value>FACTION_GROUP</value>
             <value>GENDER</value>
             <value>INSTANCE_ACCESS</value>
             <value>INVENTORY_FREE</value>
@@ -88,11 +95,15 @@
             <value>PARTNER_SKILL_LEARNED</value>
             <value>PARTNER_STAT_VALUE</value>
             <value>PARTY_SIZE</value>
+            <value>PENTALPHA_TEAM</value>
             <value>PLUGIN</value>
             <value>SKILL_LEARNED</value>
             <value>SOUL_POINTS</value>
             <value>STAT_VALUE</value>
             <value>STATUS_ACTIVE</value>
+            <value>TEAM_CATEGORY</value>
+            <value>TEAM_SIZE</value>
+            <value>TEAM_TYPE</value>
             <value>TIMESPAN_DATETIME</value>
 
             <!-- Custom flag types -->

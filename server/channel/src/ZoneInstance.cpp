@@ -30,6 +30,7 @@
 #include <Log.h>
 
 // object Includes
+#include <DestinyBox.h>
 #include <MiDCategoryData.h>
 #include <MiDevilData.h>
 #include <MiTimeLimitData.h>
@@ -52,7 +53,8 @@ namespace libcomp
             Using<objects::Demon>();
 
             Sqrat::DerivedClass<ZoneInstance,
-                objects::ZoneInstanceObject> binding(mVM, "ZoneInstance");
+                objects::ZoneInstanceObject,
+                Sqrat::NoConstructor<ZoneInstance>> binding(mVM, "ZoneInstance");
             binding
                 .Func("GetDefinitionID", &ZoneInstance::GetDefinitionID)
                 .Func("GetFlagState", &ZoneInstance::GetFlagStateValue);
@@ -64,10 +66,6 @@ namespace libcomp
     }
 }
 
-ZoneInstance::ZoneInstance()
-{
-}
-
 ZoneInstance::ZoneInstance(uint32_t id, const std::shared_ptr<
     objects::ServerZoneInstance>& definition,
     const std::set<int32_t>& accessCIDs)
@@ -76,11 +74,6 @@ ZoneInstance::ZoneInstance(uint32_t id, const std::shared_ptr<
     SetDefinition(definition);
     SetAccessCIDs(accessCIDs);
     SetOriginalAccessCIDs(accessCIDs);
-}
-
-ZoneInstance::ZoneInstance(const ZoneInstance& other)
-{
-    (void)other;
 }
 
 ZoneInstance::~ZoneInstance()
@@ -117,10 +110,20 @@ bool ZoneInstance::AddZone(const std::shared_ptr<Zone>& zone)
     return false;
 }
 
-std::unordered_map<uint32_t, std::unordered_map<uint32_t,
-    std::shared_ptr<Zone>>> ZoneInstance::GetZones() const
+std::list<std::shared_ptr<Zone>> ZoneInstance::GetZones()
 {
-    return mZones;
+    std::list<std::shared_ptr<Zone>> zones;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto& zdPair : mZones)
+    {
+        for(auto zPair : zdPair.second)
+        {
+            zones.push_back(zPair.second);
+        }
+    }
+
+    return zones;
 }
 
 std::shared_ptr<Zone> ZoneInstance::GetZone(uint32_t zoneID,
@@ -149,15 +152,11 @@ std::shared_ptr<Zone> ZoneInstance::GetZone(uint32_t zoneID,
 
 std::shared_ptr<Zone> ZoneInstance::GetZone(uint32_t uniqueID)
 {
-    auto zones = GetZones();
-    for(auto& zdPair : zones)
+    for(auto zone : GetZones())
     {
-        for(auto& zPair : zdPair.second)
+        if(zone->GetID() == uniqueID)
         {
-            if(zPair.second->GetID() == uniqueID)
-            {
-                return zPair.second;
-            }
+            return zone;
         }
     }
 
@@ -167,20 +166,7 @@ std::shared_ptr<Zone> ZoneInstance::GetZone(uint32_t uniqueID)
 std::list<std::shared_ptr<ChannelClientConnection>> ZoneInstance::GetConnections()
 {
     std::list<std::shared_ptr<ChannelClientConnection>> connections;
-
-    std::list<std::shared_ptr<Zone>> zones;
-    {
-        std::lock_guard<std::mutex> lock(mLock);
-        for(auto& zPair : mZones)
-        {
-            for(auto& zPair2 : zPair.second)
-            {
-                zones.push_back(zPair2.second);
-            }
-        }
-    }
-
-    for(auto zone : zones)
+    for(auto zone : GetZones())
     {
         for(auto connection : zone->GetConnectionList())
         {
@@ -292,4 +278,141 @@ void ZoneInstance::SetFlagState(int32_t key, int32_t value, int32_t worldCID)
 {
     std::lock_guard<std::mutex> lock(mLock);
     mFlagStates[worldCID][key] = value;
+}
+
+std::shared_ptr<objects::DestinyBox> ZoneInstance::GetDestinyBox(
+    int32_t worldCID)
+{
+    // Default to own box
+    auto dBox = GetDestinyBoxes(worldCID);
+    if(!dBox && worldCID)
+    {
+        // Return shared if own box does not exist
+        dBox = GetDestinyBoxes(0);
+    }
+
+    auto variant = GetVariant();
+    if(!dBox && variant)
+    {
+        uint8_t size = variant->GetDestinyBoxSize();
+        if(size)
+        {
+            // Box should exist but does not, create it an allocate slots
+            std::lock_guard<std::mutex> lock(mLock);
+
+            dBox = std::make_shared<objects::DestinyBox>();
+            for(uint8_t i = 0; i < size; i++)
+            {
+                dBox->AppendLoot(nullptr);
+            }
+
+            int32_t ownerCID = variant->GetDestinyBoxShared() ? 0 : worldCID;
+            dBox->SetOwnerCID(ownerCID);
+
+            SetDestinyBoxes(ownerCID, dBox);
+        }
+    }
+
+    return dBox;
+}
+
+std::unordered_map<uint8_t, std::shared_ptr<objects::Loot>>
+    ZoneInstance::UpdateDestinyBox(int32_t worldCID, uint8_t& newNext,
+    const std::list<std::shared_ptr<objects::Loot>> &add,
+    const std::set<uint8_t>& remove)
+{
+    std::unordered_map<uint8_t, std::shared_ptr<objects::Loot>> results;
+
+    newNext = 0;
+
+    auto dBox = GetDestinyBox(worldCID);
+    if(!dBox)
+    {
+        return results;
+    }
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    size_t size = dBox->LootCount();
+
+    // Do removes first (append to end to "shift" forward)
+    for(uint8_t slot : remove)
+    {
+        if(dBox->GetLoot(slot))
+        {
+            dBox->InsertLoot(slot, nullptr);
+            dBox->RemoveLoot((size_t)(slot + 1));
+            results[slot] = nullptr;
+        }
+    }
+
+    // Update the next position
+    newNext = dBox->GetNextPosition();
+    if(remove.size() > 0)
+    {
+        // Always maximize the amount of spaces between next and the first
+        // item that will be overwritten based on the current position
+        size_t seen = 0;
+        while(!dBox->GetLoot(newNext) && seen < size)
+        {
+            uint8_t previous = 0;
+            if(newNext == 0)
+            {
+                previous = (uint8_t)(size - 1);
+            }
+            else
+            {
+                previous = (uint8_t)((size_t)(newNext - 1) % size);
+            }
+
+            if(!dBox->GetLoot(previous))
+            {
+                newNext = previous;
+                seen++;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        if(dBox->GetLoot(newNext))
+        {
+            // Removed elements did not include starting next, jump forward
+            // to the first empty element
+            for(size_t i = 0; i < size; i++)
+            {
+                size_t slot = (size_t)((newNext + i) % size);
+                if(!dBox->GetLoot(slot))
+                {
+                    newNext = (uint8_t)slot;
+                    break;
+                }
+            }
+        }
+        else if(seen == size)
+        {
+            // All removed, reset to start
+            newNext = 0;
+        }
+    }
+
+    // Next do updates
+    for(auto loot : add)
+    {
+        dBox->InsertLoot(newNext, loot);
+        dBox->RemoveLoot((size_t)(newNext + 1));
+        results[newNext] = loot;
+
+        newNext = (uint8_t)(newNext + 1);
+        if(newNext >= (uint8_t)size)
+        {
+            newNext = 0;
+        }
+    }
+
+    // Set the new next position
+    dBox->SetNextPosition(newNext);
+
+    return results;
 }

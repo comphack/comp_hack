@@ -125,6 +125,9 @@ struct Data
     /// Menu ID of the Tri-Fusion (solo) process
     uint32_t MENU_TRIFUSION_KZ;
 
+    /// Menu ID of the Ultimate Battle rankings
+    uint32_t MENU_UB_RANKING;
+
     /// Menu ID of the web-game interface
     uint32_t MENU_WEB_GAME;
 
@@ -380,6 +383,9 @@ struct Data
     /// Status effect ID of instant death
     uint32_t STATUS_DEATH;
 
+    /// Status effect ID of the all character hide effect
+    uint32_t STATUS_DEMON_ONLY;
+
     /// Status effect ID indicating an active demon quest expiration
     uint32_t STATUS_DEMON_QUEST_ACTIVE;
 
@@ -388,9 +394,6 @@ struct Data
 
     /// Status effect ID of the post digitalize cooldown state
     uint32_t STATUS_DIGITALIZE_COOLDOWN;
-
-    /// Status effect ID of (demon solo used) entity hide effect
-    uint32_t STATUS_HIDDEN;
 
     /// Status effect ID of the demon riding mounted state
     uint32_t STATUS_MOUNT;
@@ -514,6 +517,9 @@ struct Data
     /// Synth skill IDs for demon crystallization, tarot enchant, soul enchant,
     /// synth melee and synth gun skills
     std::array<uint32_t, 5> SYNTH_SKILLS;
+
+    /// Map of team types to status effect IDs that represent cooldown times
+    std::unordered_map<int8_t, uint32_t> TEAM_STATUS_COOLDOWN;
 
     /// Map of team types to valuables required to create or participate in
     /// that type

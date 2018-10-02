@@ -135,6 +135,17 @@ public:
         GetEntityClient(int32_t id, bool worldID = false);
 
     /**
+     * Get all client connections associated to the supplied entity IDs.
+     * @param ids Entity IDs or world IDs associated to the client
+     *  state to retrieve
+     * @param worldID true if the IDs are from the world, false if they are
+     *  local entity IDs
+     * @return List of pointers to client connections associated to the IDs
+     */
+    std::list<std::shared_ptr<ChannelClientConnection>>
+        GetEntityClients(std::set<int32_t> ids, bool worldID = false);
+
+    /**
      * Read a list of world CIDs from the supplied packet and convert them
      * to client connections.
      * @param p Packet containing the connection list

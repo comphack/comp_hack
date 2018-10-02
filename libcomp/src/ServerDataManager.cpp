@@ -31,6 +31,9 @@
 #include "Log.h"
 #include "ScriptEngine.h"
 
+// Standard C++11 Includes
+#include <math.h>
+
 // object Includes
 #include <DemonPresent.h>
 #include <DemonQuestReward.h>
@@ -452,7 +455,7 @@ bool ServerDataManager::LoadData(DataStore *pDataStore,
 bool ServerDataManager::ApplyZonePartial(std::shared_ptr<objects::ServerZone> zone,
     uint32_t partialID)
 {
-    if(!zone)
+    if(!zone || !partialID)
     {
         return false;
     }
@@ -475,6 +478,12 @@ bool ServerDataManager::ApplyZonePartial(std::shared_ptr<objects::ServerZone> zo
         LOG_ERROR(libcomp::String("Invalid zone partial ID encountered: %1\n")
             .Arg(partialID));
         return false;
+    }
+
+    // Add dropsets
+    for(uint32_t dropSetID : partial->GetDropSetIDs())
+    {
+        zone->InsertDropSetIDs(dropSetID);
     }
 
     // Build new NPC set
@@ -657,6 +666,15 @@ namespace libcomp
                         .Arg(sPair.second->GetEnemyType()));
                     return false;
                 }
+                else if(sPair.second->GetBossGroup() &&
+                    sPair.second->GetCategory() !=
+                    objects::Spawn::Category_t::BOSS)
+                {
+                    LOG_ERROR(libcomp::String("Invalid spawn boss group"
+                        " encountered in zone %1: %2\n").Arg(zoneStr)
+                        .Arg(sPair.first));
+                    return false;
+                }
             }
         }
 
@@ -718,31 +736,54 @@ namespace libcomp
             return false;
         }
 
-        // Make sure spawns are valid
-        if(definitionManager)
+        if(id == 0)
         {
-            for(auto sPair : prt->GetSpawns())
+            if(prt->DynamicMapIDsCount() || prt->NPCsCount() ||
+                prt->ObjectsCount() || prt->SpawnsCount() ||
+                prt->SpawnGroupsCount() || prt->SpawnLocationGroupsCount() ||
+                prt->SpotsCount())
             {
-                if(definitionManager->GetDevilData(
-                    sPair.second->GetEnemyType()) == nullptr)
+                LOG_WARNING("Direct global partial zone definitions specified"
+                    " but will be ignored\n");
+            }
+        }
+        else
+        {
+            // Make sure spawns are valid
+            if(definitionManager)
+            {
+                for(auto sPair : prt->GetSpawns())
                 {
-                    LOG_ERROR(libcomp::String("Invalid spawn enemy type"
-                        " encountered in zone partial %1: %2\n").Arg(id)
-                        .Arg(sPair.second->GetEnemyType()));
-                    return false;
+                    if(definitionManager->GetDevilData(
+                        sPair.second->GetEnemyType()) == nullptr)
+                    {
+                        LOG_ERROR(libcomp::String("Invalid spawn enemy type"
+                            " encountered in zone partial %1: %2\n").Arg(id)
+                            .Arg(sPair.second->GetEnemyType()));
+                        return false;
+                    }
+                    else if(sPair.second->GetBossGroup() &&
+                        sPair.second->GetCategory() !=
+                        objects::Spawn::Category_t::BOSS)
+                    {
+                        LOG_ERROR(libcomp::String("Invalid spawn boss group"
+                            " encountered in zone paritial %1: %2\n").Arg(id)
+                            .Arg(sPair.first));
+                        return false;
+                    }
+                }
+            }
+
+            if(prt->GetAutoApply())
+            {
+                for(uint32_t dynamicMapID : prt->GetDynamicMapIDs())
+                {
+                    mZonePartialMap[dynamicMapID].insert(id);
                 }
             }
         }
 
         mZonePartialData[id] = prt;
-
-        if(prt->GetAutoApply())
-        {
-            for(uint32_t dynamicMapID : prt->GetDynamicMapIDs())
-            {
-                mZonePartialMap[dynamicMapID].insert(id);
-            }
-        }
 
         return true;
     }
@@ -863,6 +904,15 @@ namespace libcomp
                 return false;
             }
             break;
+        case objects::ServerZoneInstanceVariant::InstanceType_t::PVP:
+            if(timeCount != 2 && timeCount != 3)
+            {
+                LOG_ERROR(libcomp::String("PVP zone instance variant"
+                    " encountered without 2 or 3 time points specified: %1\n")
+                    .Arg(id));
+                return false;
+            }
+            break;
         case objects::ServerZoneInstanceVariant::InstanceType_t::DEMON_ONLY:
             if(timeCount != 3 && timeCount != 4)
             {
@@ -872,11 +922,29 @@ namespace libcomp
                 return false;
             }
             break;
-        case objects::ServerZoneInstanceVariant::InstanceType_t::PVP:
-            if(timeCount != 2 && timeCount != 3)
+        case objects::ServerZoneInstanceVariant::InstanceType_t::DIASPORA:
+            if(timeCount != 2)
             {
-                LOG_ERROR(libcomp::String("PVP zone instance variant"
-                    " encountered without 2 or 3 time points specified: %1\n")
+                LOG_ERROR(libcomp::String("Diaspora zone instance variant"
+                    " encountered without 2 time points specified: %1\n")
+                    .Arg(id));
+                return false;
+            }
+            break;
+        case objects::ServerZoneInstanceVariant::InstanceType_t::MISSION:
+            if(timeCount != 1)
+            {
+                LOG_ERROR(libcomp::String("Mission zone instance variant"
+                    " encountered without time point specified: %1\n")
+                    .Arg(id));
+                return false;
+            }
+            break;
+        case objects::ServerZoneInstanceVariant::InstanceType_t::PENTALPHA:
+            if(variant->GetSubID() >= 5)
+            {
+                LOG_ERROR(libcomp::String("Pentalpha zone instance variant"
+                    " encountered with invalid sub ID: %1\n")
                     .Arg(id));
                 return false;
             }
@@ -1165,6 +1233,16 @@ bool ServerDataManager::LoadScript(const libcomp::String& path,
                 LOG_ERROR(libcomp::String("Transform script encountered"
                     " with reserved function name 'prepare': %1\n")
                     .Arg(script->Name.C()));
+                return false;
+            }
+        }
+        else if(type == "actioncustom")
+        {
+            fDef = root.GetFunction("run");
+            if(fDef.IsNull())
+            {
+                LOG_ERROR(libcomp::String("Custom action script encountered"
+                    " with no 'run' function: %1\n").Arg(script->Name.C()));
                 return false;
             }
         }

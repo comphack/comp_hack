@@ -494,6 +494,14 @@ public:
         bool minLast = false);
 
     /**
+     * Create loot from pre-filtered drops
+     * @param drops List of pointers to item drops
+     * @return List of pointers to converted Loot representations
+     */
+    std::list<std::shared_ptr<objects::Loot>> CreateLootFromDrops(
+        const std::list<std::shared_ptr<objects::ItemDrop>>& drops);
+
+    /**
      * Send the loot item data related to a loot box to one or more clients.
      * @param clients List of clients to send the packet to
      * @param lState Pointer to the entity state of the loot box
@@ -777,6 +785,49 @@ public:
         channel::ChannelClientConnection>& client);
 
     /**
+     * Update the character's bethel value for heir current Pentalpha match
+     * entry
+     * @param client Pointer to the client connection
+     * @param bethel Set or adjusted bethel value to update
+     * @param adjust true if the point value should be adjusted via tokusei
+     * @return Final point value added
+     */
+    int32_t UpdateBethel(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int32_t bethel,
+        bool adjust);
+
+    /**
+     * Update the character's cowrie and bethel values independent of a match
+     * @param client Pointer to the client connection
+     * @param cowrie Amount of cowrie to add
+     * @param bethel Amount of bethel to add to each of the 5 types
+     * @return true if the update succeeded, false if it did not
+     */
+    bool UpdateCowrieBethel(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int32_t cowrie,
+        const std::array<int32_t, 5>& bethel);
+
+    /**
+     * Send the client character's current cowrie and bethel values
+     * @param client Pointer to the client connection
+     */
+    void SendCowrieBethel(const std::shared_ptr<
+        channel::ChannelClientConnection>& client);
+
+    /**
+     * Update or create a character assigned event counter
+     * @param client Pointer to the client connection
+     * @param type Type of event to update
+     * @param value Value to add/assign to the counter
+     * @param noSync Optional parameter to update the counter but
+     *  not sync with the world. Useful for events that are not summed.
+     * @return true if the update succeeded, false if it did not
+     */
+    bool UpdateEventCounter(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int32_t type,
+        int32_t value, bool noSync = false);
+
+    /**
      * Update the client's character or demon's experience and level
      * up if the level threshold is passed.
      * @param client Pointer to the client connection
@@ -987,6 +1038,17 @@ public:
      */
     void SendDevilBook(const std::shared_ptr<
         ChannelClientConnection>& client);
+
+    /**
+     * Send the client character's current Invoke event status
+     * @param client Pointer to the client connection
+     * @param force If true, send the notification whether any cooldowns
+     *  are active or not. If false, only send if a cooldown is active.
+     * @param queue true if the packet should be queued, false if it
+     *  should be sent right away
+     */
+    void SendInvokeStatus(const std::shared_ptr<
+        ChannelClientConnection>& client, bool force, bool queue = false);
 
     /**
      * Update the status effects active on a demon that is not currently

@@ -43,6 +43,7 @@
 #include <Character.h>
 #include <CharacterProgress.h>
 #include <Event.h>
+#include <EventCounter.h>
 #include <EventInstance.h>
 #include <EventState.h>
 #include <Expertise.h>
@@ -58,11 +59,13 @@
 #include <MiSpotData.h>
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
+#include <Party.h>
 #include <PostItem.h>
 #include <PvPData.h>
 #include <ReportedPlayer.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
+#include <Team.h>
 
 // Standard C Includes
 #include <cstdlib>
@@ -70,6 +73,7 @@
 // channel Includes
 #include "AccountManager.h"
 #include "ChannelServer.h"
+#include "ChannelSyncManager.h"
 #include "CharacterManager.h"
 #include "ClientState.h"
 #include "EventManager.h"
@@ -87,9 +91,12 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["addcp"] = &ChatManager::GMCommand_AddCP;
     mGMands["announce"] = &ChatManager::GMCommand_Announce;
     mGMands["ban"] = &ChatManager::GMCommand_Ban;
+    mGMands["bethel"] = &ChatManager::GMCommand_Bethel;
     mGMands["bp"] = &ChatManager::GMCommand_BattlePoints;
     mGMands["coin"] = &ChatManager::GMCommand_Coin;
     mGMands["contract"] = &ChatManager::GMCommand_Contract;
+    mGMands["counter"] = &ChatManager::GMCommand_Counter;
+    mGMands["cowrie"] = &ChatManager::GMCommand_Cowrie;
     mGMands["crash"] = &ChatManager::GMCommand_Crash;
     mGMands["dxp"] = &ChatManager::GMCommand_DigitalizePoints;
     mGMands["effect"] = &ChatManager::GMCommand_Effect;
@@ -136,6 +143,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["version"] = &ChatManager::GMCommand_Version;
     mGMands["worldtime"] = &ChatManager::GMCommand_WorldTime;
     mGMands["xp"] = &ChatManager::GMCommand_XP;
+    mGMands["ziotite"] = &ChatManager::GMCommand_Ziotite;
     mGMands["zone"] = &ChatManager::GMCommand_Zone;
 }
 
@@ -155,6 +163,12 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     }
 
     auto state = client->GetClientState();
+    auto zone = state->GetZone();
+    if(!zone)
+    {
+        return false;
+    }
+
     auto character = state->GetCharacterState()->GetEntity();
     libcomp::String sentFrom = character->GetName();
 
@@ -198,11 +212,16 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             break;
         case ChatType_t::CHAT_TEAM:
             visibility = ChatVis_t::CHAT_VIS_TEAM;
+            relayID = (uint32_t)state->GetTeamID();
             LOG_INFO(libcomp::String("[Team]:  %1: %2\n").Arg(sentFrom)
                 .Arg(message));
-            if(state->GetTeamID())
+            if(zone->GetInstanceType() == InstanceType_t::DIASPORA)
             {
-                relayID = (uint32_t)state->GetTeamID();
+                // Send to the whole zone instead
+                visibility = ChatVis_t::CHAT_VIS_ZONE;
+            }
+            else if(state->GetTeamID())
+            {
                 relayMode = PacketRelayMode_t::RELAY_TEAM;
             }
             else
@@ -236,8 +255,10 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             return false;
     }
 
+    bool relay = relayMode != PacketRelayMode_t::RELAY_FAILURE;
+
     libcomp::Packet p;
-    if(relayMode != PacketRelayMode_t::RELAY_FAILURE)
+    if(relay)
     {
         // Route the message through the world via packet relay
         p.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
@@ -290,7 +311,6 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             // Get all characters in the instance in the same faction
             {
                 std::list<std::shared_ptr<ChannelClientConnection>> vsTeam;
-                auto zone = state->GetZone();
                 auto instance = zone ? zone->GetInstance() : nullptr;
                 if(instance)
                 {
@@ -595,7 +615,6 @@ bool ChatManager::GMCommand_BattlePoints(const std::shared_ptr<
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "@bp requires a positive amount be specified"));
-        return false;
     }
 
     auto server = mServer.lock();
@@ -614,6 +633,47 @@ bool ChatManager::GMCommand_BattlePoints(const std::shared_ptr<
     server->GetCharacterManager()->UpdateBP(client, (int32_t)points, true);
 
     return true;
+}
+
+bool ChatManager::GMCommand_Bethel(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    uint8_t idx;
+    int32_t points;
+
+    if(!GetIntegerArg(idx, argsCopy) || !GetIntegerArg(points, argsCopy) ||
+        idx >= 5 || points < 0)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@bethel requires a valid type index and a positive amount to be"
+            " specified"));
+    }
+
+    auto state = client->GetClientState();
+    auto character = state->GetCharacterState()->GetEntity();
+    auto progress = character ? character->GetProgress().Get() : nullptr;
+    if(progress)
+    {
+        auto server = mServer.lock();
+
+        progress->SetBethel(idx, points);
+
+        server->GetCharacterManager()->SendCowrieBethel(client);
+
+        server->GetWorldDatabase()->QueueUpdate(progress);
+
+        return true;
+    }
+
+    return false;
 }
 
 bool ChatManager::GMCommand_Coin(const std::shared_ptr<
@@ -697,6 +757,120 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
         MAX_FAMILIARITY);
     return demon != nullptr || SendChatMessage(client, ChatType_t::CHAT_SELF,
             "Demon could not be contracted");
+}
+
+bool ChatManager::GMCommand_Counter(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 950))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    int32_t type = 0;
+    if(!GetIntegerArg(type, argsCopy))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "@counter requires a type ID");
+    }
+
+    if(argsCopy.size() > 0)
+    {
+        // View/edit character flag
+        auto targetClient = client;
+        auto targetAccount = client->GetClientState()->GetAccountLogin()
+            ->GetAccount().Get();
+
+        libcomp::String name;
+        if(GetStringArg(name, argsCopy))
+        {
+            std::shared_ptr<objects::Character> targetCharacter;
+            if(!GetTargetCharacterAccount(name, false, targetCharacter,
+                targetAccount, targetClient))
+            {
+                return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                    libcomp::String("Invalid character name supplied for"
+                        " counter command: %1").Arg(name));
+            }
+        }
+
+        if(argsCopy.size() > 0)
+        {
+            // Edit
+            int32_t add = 0;
+            if(!GetIntegerArg(add, argsCopy))
+            {
+                return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                    "@counter requires a value to add");
+            }
+
+            mServer.lock()->GetCharacterManager()->UpdateEventCounter(
+                targetClient, type, add);
+        }
+        else
+        {
+            // View only
+            auto state = targetClient->GetClientState();
+            auto eCounter = state->GetEventCounters(type).Get();
+
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Player: %1; Event type: %2; Counter: %3")
+                .Arg(name).Arg(type)
+                .Arg(eCounter ? eCounter->GetCounter() : 0));
+        }
+    }
+    else
+    {
+        // View world flag
+        auto eCounter = mServer.lock()->GetChannelSyncManager()
+            ->GetWorldEventCounter(type);
+
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("Event type: %1; Counter: %2")
+            .Arg(type).Arg(eCounter ? eCounter->GetCounter() : 0));
+    }
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Cowrie(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    int32_t points;
+    if(!GetIntegerArg(points, argsCopy) || points < 0)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+            "@cowrie requires that a positive amount be specified"));
+    }
+
+    auto state = client->GetClientState();
+    auto character = state->GetCharacterState()->GetEntity();
+    auto progress = character ? character->GetProgress().Get() : nullptr;
+    if(progress)
+    {
+        auto server = mServer.lock();
+
+        progress->SetCowrie(points);
+
+        server->GetCharacterManager()->SendCowrieBethel(client);
+
+        server->GetWorldDatabase()->QueueUpdate(progress);
+
+        return true;
+    }
+
+    return false;
 }
 
 bool ChatManager::GMCommand_Crash(const std::shared_ptr<
@@ -1523,6 +1697,11 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "@ban NAME",
             "Bans the account which owns the character NAME.",
         } },
+        { "bethel",{
+            "@bethel INDEX AMOUNT",
+            "Set the current character's bethel AMOUNT corresponding",
+            "to the supplied INDEX (0-4)."
+        } },
         { "bp", {
             "@bp POINTS",
             "Set the current character's Battle Point current",
@@ -1535,6 +1714,15 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
         { "contract", {
             "@contract ID|NAME",
             "Adds demon given by it's ID or NAME to your COMP.",
+        } },
+        { "counter", {
+            "@counter ID [NAME] [VALUE]",
+            "View a world counter with a specific ID or view/add",
+            "to the VALUE of the counter from character with NAME."
+        } },
+        { "cowrie", {
+            "@cowrie AMOUNT",
+            "Set the current character's cowrie AMOUNT."
         } },
         { "crash", {
             "@crash",
@@ -1781,6 +1969,10 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "Grants the player PTS XP or the demon if DEMON is",
             "set to 'demon'."
         } },
+        { "ziotite",{
+            "@ziotite SMALL LARGE",
+            "Add to the current team's SMALL and LARGE ziotite."
+        } },
         { "zone", {
             "@zone ID",
             "Moves the player to the zone specified by ID.",
@@ -1888,6 +2080,7 @@ bool ChatManager::GMCommand_Instance(const std::shared_ptr<
 
     auto state = client->GetClientState();
     auto currentZone = state->GetZone();
+    auto team = state->GetTeam();
     if(currentZone && currentZone->GetInstance())
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
@@ -1916,7 +2109,11 @@ bool ChatManager::GMCommand_Instance(const std::shared_ptr<
             .Arg(instanceID));
     }
 
+    // Disapora has special rules for how you can enter it
+    bool diaspora = false;
+
     uint32_t variantID = 0;
+    std::shared_ptr<objects::ServerZoneInstanceVariant> variantDef;
     if(argsCopy.size() > 0)
     {
         if(!GetIntegerArg<uint32_t>(variantID, argsCopy))
@@ -1926,7 +2123,7 @@ bool ChatManager::GMCommand_Instance(const std::shared_ptr<
         }
         else
         {
-            auto variantDef = serverDataManager->GetZoneInstanceVariantData(
+            variantDef = serverDataManager->GetZoneInstanceVariantData(
                 variantID);
             if(!variantDef)
             {
@@ -1934,21 +2131,43 @@ bool ChatManager::GMCommand_Instance(const std::shared_ptr<
                     libcomp::String("Invalid variant ID supplied: %1")
                     .Arg(variantID));
             }
+
+            if(variantDef->GetInstanceType() == InstanceType_t::DIASPORA)
+            {
+                diaspora = true;
+                if(!team ||
+                    team->GetCategory() != objects::Team::Category_t::DIASPORA)
+                {
+                    return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                        "Diaspora variant cannot be entered without a team");
+                }
+            }
         }
     }
 
-    auto instance = zoneManager->CreateInstance(client, instanceID, variantID);
-    auto zone = zoneManager->GetInstanceStartingZone(instance);
-    bool success = zone != nullptr;
-    if(success)
+    std::set<int32_t> accessCIDs = { state->GetWorldCID() };
+    if(diaspora)
     {
-        auto zoneDef = zone->GetDefinition();
-        success = zoneManager->EnterZone(client, zoneDef->GetID(),
-            zoneDef->GetDynamicMapID(), zoneDef->GetStartingX(),
-            zoneDef->GetStartingY(), zoneDef->GetStartingRotation());
+        for(auto memberCID : team->GetMemberIDs())
+        {
+            accessCIDs.insert(memberCID);
+        }
+    }
+    else
+    {
+        auto party = state->GetParty();
+        if(party)
+        {
+            for(auto memberCID : party->GetMemberIDs())
+            {
+                accessCIDs.insert(memberCID);
+            }
+        }
     }
 
-    if(!success)
+    auto instance = zoneManager->CreateInstance(instanceID, accessCIDs, variantID);
+    if(!instance ||
+        (!diaspora && !zoneManager->MoveToStartingZone(client, instance)))
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
             libcomp::String("Failed to add to instance: %1").Arg(instanceID));
@@ -2068,7 +2287,8 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
-    auto targetState = cState;
+    auto targetState = state;
+    auto targetCState = cState;
 
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
@@ -2078,7 +2298,7 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
 
     if(GetStringArg(name, argsCopy))
     {
-        targetState = nullptr;
+        targetCState = nullptr;
 
         for(auto zConnection : zoneManager->GetZoneConnections(client, true))
         {
@@ -2087,19 +2307,20 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
 
             if(zCharState->GetEntity()->GetName() == name)
             {
-                targetState = zCharState;
+                targetState = zConnection->GetClientState();
+                targetCState = zCharState;
                 break;
             }
         }
 
-        if(!targetState)
+        if(!targetCState)
         {
             return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
                 "Invalid character name supplied for the current zone: %1").Arg(name));
         }
     }
 
-    if(targetState->SetHPMP(0, -1, false, true))
+    if(targetCState->SetHPMP(0, -1, false, true))
     {
         // Send a generic non-combat damage skill report to kill the target
         libcomp::Packet reply;
@@ -2108,7 +2329,7 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
         reply.WriteU32Little(10);   // Any valid skill ID
         reply.WriteS8(-1);          // No activation ID
         reply.WriteU32Little(1);    // Number of targets
-        reply.WriteS32Little(targetState->GetEntityID());
+        reply.WriteS32Little(targetCState->GetEntityID());
         reply.WriteS32Little(MAX_PLAYER_HP_MP); // Damage 1
         reply.WriteU8(0);           // Damage 1 type (generic)
         reply.WriteS32Little(0);    // Damage 2
@@ -2119,24 +2340,27 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
         zoneManager->BroadcastPacket(client, reply);
 
         // Cancel any pending skill
-        auto activated = targetState->GetActivatedAbility();
+        auto activated = targetCState->GetActivatedAbility();
         if(activated)
         {
-            server->GetSkillManager()->CancelSkill(targetState,
+            server->GetSkillManager()->CancelSkill(targetCState,
                 activated->GetActivationID());
         }
 
         std::set<std::shared_ptr<ActiveEntityState>> entities;
-        entities.insert(targetState);
+        entities.insert(targetCState);
         characterManager->UpdateWorldDisplayState(entities);
 
-        server->GetTokuseiManager()->Recalculate(cState,
+        zoneManager->UpdateTrackedZone(targetState->GetZone(),
+            targetState->GetTeam());
+
+        server->GetTokuseiManager()->Recalculate(targetCState,
             std::set<TokuseiConditionType> { TokuseiConditionType::CURRENT_HP });
 
         auto entityClient = server->GetManagerConnection()->GetEntityClient(
-            targetState->GetEntityID());
-        server->GetZoneManager()->TriggerZoneActions(targetState->GetZone(),
-            { targetState }, ZoneTrigger_t::ON_DEATH, entityClient);
+            targetCState->GetEntityID());
+        zoneManager->TriggerZoneActions(targetCState->GetZone(),
+            { targetCState }, ZoneTrigger_t::ON_DEATH, entityClient);
     }
 
     return true;
@@ -3405,6 +3629,52 @@ bool ChatManager::GMCommand_WorldTime(const std::shared_ptr<
     server->GetManagerConnection()->BroadcastPacketToClients(notify);
 
     return true;
+}
+
+bool ChatManager::GMCommand_Ziotite(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 250))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    int32_t sZiotite;
+    int8_t lZiotite;
+    if(!GetIntegerArg(sZiotite, argsCopy) || !GetIntegerArg(lZiotite, argsCopy))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "@ziotite requires both small and large ziotite values");
+    }
+
+    auto state = client->GetClientState();
+    auto team = state->GetTeam();
+    if(team)
+    {
+        // Snap to 0 if going under
+        if(sZiotite + team->GetSmallZiotite() < 0)
+        {
+            sZiotite = -team->GetSmallZiotite();
+        }
+
+        if(lZiotite + team->GetLargeZiotite() < 0)
+        {
+            lZiotite = (int8_t)(-team->GetLargeZiotite());
+        }
+
+        mServer.lock()->GetMatchManager()->UpdateZiotite(team, sZiotite,
+            lZiotite, state->GetWorldCID());
+
+        return true;
+    }
+    else
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "@ziotite failed. You are not currently in a team");
+    }
 }
 
 bool ChatManager::GMCommand_Zone(const std::shared_ptr<

@@ -43,7 +43,7 @@ matrix:
             name: "comphack/comp_hack"
             description: "Build submitted via Travis CI"
           notification_email: compomega@tutanota.com
-          build_command_prepend: "mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON .. && cov-configure --comptype gcc --compiler gcc-5 --template"
+          build_command_prepend: "mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DUSE_PREBUILT_OBJECTS=ON -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON .. && cov-configure --comptype gcc --compiler gcc-5 --template"
           build_command: "cmake --build ."
           branch_pattern: coverity_scan
       env:
@@ -62,6 +62,10 @@ before_install:
   - if [ ! -f clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz ]; then wget -q http://llvm.org/releases/3.8.0/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz; fi
   - if [ ! -f external-0.1.1-clang.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-18/external-0.1.1-clang.tar.bz2; fi
   - if [ ! -f external-0.1.1-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-18/external-0.1.1-gcc5.tar.bz2; fi
+  - if [ ! -f objgen-clang.tar.bz2 ]; then wget -q https://github.com/comphack/objgen/releases/download/v1.0.0/objgen-clang.tar.bz2; fi
+  - if [ ! -f objgen-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/objgen/releases/download/v1.0.0/objgen-gcc5.tar.bz2; fi
+  - if [ ! -f libobjects-clang.tar.bz2 ]; then wget -q https://github.com/comphack/libobjects/releases/download/v1.0.0/libobjects-clang.tar.bz2; fi
+  - if [ ! -f libobjects-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/libobjects/releases/download/v1.0.0/libobjects-gcc5.tar.bz2; fi
   - ls -lh
   - cd ${ROOT_DIR}
   - sudo apt-get update -q
@@ -78,9 +82,15 @@ before_install:
   - export PATH="/opt/cmake-3.6.1-Linux-x86_64/bin:${PATH}"
   - export LD_LIBRARY_PATH="/opt/cmake-3.6.1-Linux-x86_64/lib"
   - cd ${ROOT_DIR}
-  - if [ "$CXX" == "clang++" ]; then sudo tar xf $CACHE_DIR/external-0.1.1-clang.tar.bz2; fi
-  - if [ "$CXX" != "clang++" ]; then sudo tar xf $CACHE_DIR/external-0.1.1-gcc5.tar.bz2; fi
+  - if [ "$CXX" == "clang++" ]; then tar xf $CACHE_DIR/external-0.1.1-clang.tar.bz2; fi
+  - if [ "$CXX" != "clang++" ]; then tar xf $CACHE_DIR/external-0.1.1-gcc5.tar.bz2; fi
   - mv external-* binaries
+  - if [ "$CXX" == "clang++" ]; then tar xf $CACHE_DIR/objgen-clang.tar.bz2; fi
+  - if [ "$CXX" != "clang++" ]; then tar xf $CACHE_DIR/objgen-gcc5.tar.bz2; fi
+  - mv objgen-* deps/objgen
+  - if [ "$CXX" == "clang++" ]; then tar xf $CACHE_DIR/libobjects-clang.tar.bz2; fi
+  - if [ "$CXX" != "clang++" ]; then tar xf $CACHE_DIR/libobjects-gcc5.tar.bz2; fi
+  - mv libobjects-* deps/libobjects
   - chmod +x binaries/ttvfs/bin/ttvfs_gen
   - if [ "$CXX" != "clang++" ]; then export COVERALLS_ENABLE=ON; fi
   - if [ "$CXX" == "clang++" ]; then cd /opt; fi
@@ -102,7 +112,7 @@ before_script:
 script:
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then jdk_switcher use oraclejdk8 ; fi
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then java -version ; fi
-  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=${SINGLE_OBJGEN} -DUSE_COTIRE=ON -G "${GENERATOR}" .. && cmake --build . --target git-version && cmake --build . ; fi
+  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DUSE_PREBUILT_OBJECTS=ON -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=${SINGLE_OBJGEN} -DUSE_COTIRE=ON -G "${GENERATOR}" .. && cmake --build . --target git-version && cmake --build . ; fi
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target doc ; fi
   - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target guide ; fi
 #  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target test ; fi

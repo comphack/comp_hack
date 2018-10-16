@@ -64,8 +64,8 @@ before_install:
   - if [ ! -f external-0.1.1-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-18/external-0.1.1-gcc5.tar.bz2; fi
   - if [ ! -f objgen-clang.tar.bz2 ]; then wget -q https://github.com/comphack/objgen/releases/download/v1.0.0/objgen-clang.tar.bz2; fi
   - if [ ! -f objgen-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/objgen/releases/download/v1.0.0/objgen-gcc5.tar.bz2; fi
-  - if [ ! -f libobjects-clang.tar.bz2 ]; then wget -q https://github.com/comphack/libobjects/releases/download/v1.0.0/libobjects-clang.tar.bz2; fi
-  - if [ ! -f libobjects-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/libobjects/releases/download/v1.0.0/libobjects-gcc5.tar.bz2; fi
+  - if [ ! -f libobjects-clang.tar.bz2 ]; then wget -q https://github.com/comphack/libobjects/releases/download/v1.0.1/libobjects-clang.tar.bz2; fi
+  - if [ ! -f libobjects-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/libobjects/releases/download/v1.0.1/libobjects-gcc5.tar.bz2; fi
   - ls -lh
   - cd ${ROOT_DIR}
   - sudo apt-get update -q

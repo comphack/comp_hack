@@ -34,6 +34,7 @@
 #include <cmath>
 
 // object Includes
+#include <ActionSpawn.h>
 #include <Ally.h>
 #include <CultureMachineState.h>
 #include <DiasporaBase.h>
@@ -183,6 +184,13 @@ const std::shared_ptr<DynamicMap> Zone::GetDynamicMap() const
 bool Zone::HasRespawns() const
 {
     return mHasRespawns;
+}
+
+bool Zone::HasStaggeredSpawns(uint64_t now)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    return mStaggeredSpawns.size() > 0 &&
+        mStaggeredSpawns.begin()->first <= now;
 }
 
 void Zone::SetDynamicMap(const std::shared_ptr<DynamicMap>& map)
@@ -386,18 +394,26 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
     UnregisterEntityState(entityID);
 }
 
-void Zone::AddAlly(const std::shared_ptr<AllyState>& ally)
+void Zone::AddAlly(const std::shared_ptr<AllyState>& ally,
+    uint64_t staggerTime)
 {
     {
         std::lock_guard<std::mutex> lock(mLock);
-        mAllies.push_back(ally);
+
+        if(!staggerTime)
+        {
+            mAllies.push_back(ally);
+            ally->SetDisplayState(ActiveDisplayState_t::ACTIVE);
+        }
+        else
+        {
+            mStaggeredSpawns[staggerTime].push_back(ally);
+        }
 
         uint32_t spotID = ally->GetEntity()->GetSpawnSpotID();
         uint32_t sgID = ally->GetEntity()->GetSpawnGroupID();
         uint32_t slgID = ally->GetEntity()->GetSpawnLocationGroupID();
         AddSpawnedEntity(ally, spotID, sgID, slgID);
-
-        ally->SetDisplayState(ActiveDisplayState_t::ACTIVE);
     }
 
     RegisterEntityState(ally);
@@ -426,11 +442,21 @@ void Zone::AddCultureMachine(const std::shared_ptr<
     }
 }
 
-void Zone::AddEnemy(const std::shared_ptr<EnemyState>& enemy)
+void Zone::AddEnemy(const std::shared_ptr<EnemyState>& enemy,
+    uint64_t staggerTime)
 {
     {
         std::lock_guard<std::mutex> lock(mLock);
-        mEnemies.push_back(enemy);
+
+        if(!staggerTime)
+        {
+            mEnemies.push_back(enemy);
+            enemy->SetDisplayState(ActiveDisplayState_t::ACTIVE);
+        }
+        else
+        {
+            mStaggeredSpawns[staggerTime].push_back(enemy);
+        }
 
         auto entity = enemy->GetEntity();
 
@@ -450,8 +476,6 @@ void Zone::AddEnemy(const std::shared_ptr<EnemyState>& enemy)
         uint32_t sgID = entity->GetSpawnGroupID();
         uint32_t slgID = entity->GetSpawnLocationGroupID();
         AddSpawnedEntity(enemy, spotID, sgID, slgID);
-
-        enemy->SetDisplayState(ActiveDisplayState_t::ACTIVE);
     }
 
     RegisterEntityState(enemy);
@@ -993,16 +1017,33 @@ void Zone::CreateEncounter(
         }
     }
 
+    bool first = true;
+    uint64_t staggerTime = 0;
     for(auto entity : entities)
     {
+        if(!first && (!spawnSource || !spawnSource->GetNoStagger()))
+        {
+            if(!staggerTime)
+            {
+                staggerTime = ChannelServer::GetServerTime();
+            }
+
+            // Spawn every half second
+            staggerTime = (uint64_t)(staggerTime + 500000);
+        }
+
         if(entity->GetEntityType() == EntityType_t::ENEMY)
         {
-            AddEnemy(std::dynamic_pointer_cast<EnemyState>(entity));
+            AddEnemy(std::dynamic_pointer_cast<EnemyState>(entity),
+                staggerTime);
         }
         else if(entity->GetEntityType() == EntityType_t::ALLY)
         {
-            AddAlly(std::dynamic_pointer_cast<AllyState>(entity));
+            AddAlly(std::dynamic_pointer_cast<AllyState>(entity),
+                staggerTime);
         }
+
+        first = false;
     }
 }
 
@@ -1105,21 +1146,21 @@ bool Zone::UpdateTimedSpawns(const WorldClock& clock,
             initializing, false);
     }
 
-    for(auto pPair : GetDefinition()->GetPlasmaSpawns())
+    for(auto& pPair : mPlasma)
     {
-        auto plasma = pPair.second;
+        auto plasma = pPair.second->GetEntity();
         auto restriction = plasma->GetRestrictions();
         if(restriction)
         {
             if(TimeRestrictionActive(clock, restriction))
             {
                 // Plasma active
-                /// @todo
+                pPair.second->Toggle(true);
             }
             else
             {
                 // Plasma inactive
-                /// @todo
+                pPair.second->Toggle(false);
             }
         }
     }
@@ -1169,6 +1210,47 @@ std::set<uint32_t> Zone::GetRespawnLocations(uint64_t now)
     for(auto p : passed)
     {
         mRespawnTimes.erase(p);
+    }
+
+    return result;
+}
+
+std::list<std::shared_ptr<ActiveEntityState>>
+    Zone::UpdateStaggeredSpawns(uint64_t now)
+{
+    std::list<std::shared_ptr<ActiveEntityState>> result;
+
+    std::set<uint64_t> passed;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto pair : mStaggeredSpawns)
+    {
+        if(pair.first > now) break;
+
+        passed.insert(pair.first);
+
+        for(auto eState : pair.second)
+        {
+            result.push_back(eState);
+
+            if(eState->GetEntityType() == EntityType_t::ENEMY)
+            {
+                mEnemies.push_back(
+                    std::dynamic_pointer_cast<EnemyState>(eState));
+            }
+            else
+            {
+                mAllies.push_back(
+                    std::dynamic_pointer_cast<AllyState>(eState));
+            }
+
+            eState->SetDisplayState(ActiveDisplayState_t::ACTIVE);
+        }
+    }
+
+    for(auto p : passed)
+    {
+        mStaggeredSpawns.erase(p);
     }
 
     return result;
@@ -1371,12 +1453,22 @@ void Zone::Cleanup()
         }
     }
 
+    mAllies.clear();
+    mBases.clear();
+    mBazaars.clear();
+    mBossIDs.clear();
+    mCultureMachines.clear();
+    mEncounters.clear();
+    mEncounterSpawnSources.clear();
     mEnemies.clear();
     mNPCs.clear();
     mObjects.clear();
+    mPlasma.clear();
+    mActors.clear();
     mAllEntities.clear();
     mSpawnGroups.clear();
     mSpawnLocationGroups.clear();
+    mStaggeredSpawns.clear();
 
     mZoneInstance = nullptr;
 

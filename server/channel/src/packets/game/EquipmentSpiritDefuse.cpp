@@ -138,16 +138,14 @@ bool Parsers::EquipmentSpiritDefuse::Parse(libcomp::ManagerPacket *pPacketManage
         // Boost chances from various expertise classes
         double chainBoost = (double)(0.325 *
             (floor(0.1 * cState->GetExpertiseRank(
-                definitionManager, EXPERTISE_CHAIN_SWORDSMITH)) +
+                EXPERTISE_CHAIN_SWORDSMITH, definitionManager)) +
             floor(0.1 * cState->GetExpertiseRank(
-                definitionManager, EXPERTISE_CHAIN_ARMS_MAKER))));
+                EXPERTISE_CHAIN_ARMS_MAKER, definitionManager))));
         double expBoost = (double)(0.2166666 *
             (floor(0.1 * cState->GetExpertiseRank(
-                definitionManager, EXPERTISE_WEAPON_KNOWLEDGE)) +
-            floor(0.1 * cState->GetExpertiseRank(
-                definitionManager, EXPERTISE_GUN_KNOWLEDGE)) +
-            floor(0.1 * cState->GetExpertiseRank(
-                definitionManager, EXPERTISE_SURVIVAL))));
+                EXPERTISE_WEAPON_KNOWLEDGE)) +
+            floor(0.1 * cState->GetExpertiseRank(EXPERTISE_GUN_KNOWLEDGE)) +
+            floor(0.1 * cState->GetExpertiseRank(EXPERTISE_SURVIVAL))));
 
         // Current partner demon can boost success too
         double demonBoost = 1.0;

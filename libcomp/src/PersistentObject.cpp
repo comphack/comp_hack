@@ -58,6 +58,8 @@
 #include "PentalphaEntry.h"
 #include "PentalphaMatch.h"
 #include "PostItem.h"
+#include "Promo.h"
+#include "PromoExchange.h"
 #include "PvPData.h"
 #include "Quest.h"
 #include "RegisteredChannel.h"
@@ -470,6 +472,12 @@ bool PersistentObject::Initialize()
 
     RegisterType(typeid(objects::PostItem), objects::PostItem::GetMetadata(),
         []() {  return (PersistentObject*)new objects::PostItem(); });
+
+    RegisterType(typeid(objects::Promo), objects::Promo::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::Promo(); });
+
+    RegisterType(typeid(objects::PromoExchange), objects::PromoExchange::GetMetadata(),
+        []() {  return (PersistentObject*)new objects::PromoExchange(); });
 
     RegisterType(typeid(objects::PvPData), objects::PvPData::GetMetadata(),
         []() {  return (PersistentObject*)new objects::PvPData(); });

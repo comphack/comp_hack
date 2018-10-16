@@ -136,6 +136,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["spawn"] = &ChatManager::GMCommand_Spawn;
     mGMands["speed"] = &ChatManager::GMCommand_Speed;
     mGMands["spirit"] = &ChatManager::GMCommand_Spirit;
+    mGMands["support"] = &ChatManager::GMCommand_Support;
     mGMands["tickermessage"] = &ChatManager::GMCommand_TickerMessage;
     mGMands["title"] = &ChatManager::GMCommand_Title;
     mGMands["tokusei"] = &ChatManager::GMCommand_Tokusei;
@@ -1933,6 +1934,11 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "EARRING (9), EXTRA (10), BACK (11), TALISMAN (12)",
             "or WEAPON (13)",
         } },
+        { "support", {
+            "@support VALUE",
+            "Show or hide the player character's support display state",
+            "based on VALUE 1 (on) or 0 (off)."
+        } },
         { "tickermessage", {
             "@tickermessage MESSAGE...",
             "Sends the ticker message MESSAGE to all players.",
@@ -3423,6 +3429,36 @@ bool ChatManager::GMCommand_Spirit(const std::shared_ptr<
     return true;
 }
 
+bool ChatManager::GMCommand_Support(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 1))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+    auto character = client->GetClientState()->GetCharacterState()
+        ->GetEntity();
+
+    uint8_t val;
+    if(!GetIntegerArg(val, argsCopy))
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "No value supplied for @support command");
+    }
+
+    character->SetSupportDisplay(val != 0);
+
+    return SendChatMessage(client, ChatType_t::CHAT_SELF,
+        libcomp::String("Support display %1. Changes will be visible the"
+            " next time character data is sent to any player.")
+        .Arg(val != 0 ? "enabled" : "disabled"));
+}
+
 bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
@@ -3439,8 +3475,8 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
 
     if(!GetIntegerArg(mode, argsCopy) || argsCopy.size() < 1)
     {
-        return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-            "Syntax invalid, try @tickermessage <mode> <message>"));
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Syntax invalid, try @tickermessage <mode> <message>");
     }
 
     libcomp::String message = libcomp::String::Join(argsCopy, " ");

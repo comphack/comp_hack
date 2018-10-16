@@ -155,7 +155,7 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     uint8_t expertRank = expertID ?
-        cState->GetExpertiseRank(definitionManager, (uint32_t)expertID) : 0;
+        cState->GetExpertiseRank((uint32_t)expertID, definitionManager) : 0;
     if(success && expertID && (requiredClass * 10 + requiredRank) > expertRank)
     {
         LOG_ERROR(libcomp::String("ItemMix attempted without required"

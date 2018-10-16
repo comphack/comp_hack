@@ -41,6 +41,7 @@
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
 #include <Event.h>
+#include <MiSItemData.h>
 #include <MiSStatusData.h>
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
@@ -48,6 +49,8 @@
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerShop.h>
+#include <ServerShopProduct.h>
+#include <ServerShopTab.h>
 #include <ServerZone.h>
 #include <ServerZoneInstance.h>
 #include <ServerZoneInstanceVariant.h>
@@ -287,6 +290,8 @@ bool ServerDataManager::VerifyPvPInstance(uint32_t instanceID,
         return true;
     }
 
+    LOG_ERROR(libcomp::String("Failed to verify PvP instance: %1\n")
+        .Arg(instanceID));
     return false;
 }
 
@@ -351,53 +356,69 @@ bool ServerDataManager::LoadData(DataStore *pDataStore,
 
     if(definitionManager)
     {
+        // Load definition dependent server definitions from path or file
         if(!failure)
         {
             LOG_DEBUG("Loading demon present server definitions...\n");
-            failure = !LoadObjectsFromFile<objects::DemonPresent>(
-                pDataStore, "/data/demonpresent.xml", definitionManager);
+            failure = !LoadObjects<objects::DemonPresent>(
+                pDataStore, "/data/demonpresent", definitionManager, false,
+                true);
         }
 
         if(!failure)
         {
             LOG_DEBUG("Loading demon quest reward server definitions...\n");
-            failure = !LoadObjectsFromFile<objects::DemonQuestReward>(
-                pDataStore, "/data/demonquestreward.xml", definitionManager);
+            failure = !LoadObjects<objects::DemonQuestReward>(
+                pDataStore, "/data/demonquestreward", definitionManager, false,
+                true);
         }
 
         if(!failure)
         {
             LOG_DEBUG("Loading drop set server definitions...\n");
-            failure = !LoadObjectsFromFile<objects::DropSet>(
-                pDataStore, "/data/dropset.xml", definitionManager);
+            failure = !LoadObjects<objects::DropSet>(
+                pDataStore, "/data/dropset", definitionManager, false,
+                true);
         }
 
         if(!failure)
         {
             LOG_DEBUG("Loading enchant set server definitions...\n");
-            failure = !LoadObjectsFromFile<objects::EnchantSetData>(
-                pDataStore, "/data/enchantset.xml", definitionManager);
+            failure = !LoadObjects<objects::EnchantSetData>(
+                pDataStore, "/data/enchantset", definitionManager, false,
+                true);
         }
 
         if(!failure)
         {
             LOG_DEBUG("Loading enchant special server definitions...\n");
-            failure = !LoadObjectsFromFile<objects::EnchantSpecialData>(
-                pDataStore, "/data/enchantspecial.xml", definitionManager);
+            failure = !LoadObjects<objects::EnchantSpecialData>(
+                pDataStore, "/data/enchantspecial", definitionManager, false,
+                true);
+        }
+
+        if(!failure)
+        {
+            LOG_DEBUG("Loading s-item server definitions...\n");
+            failure = !LoadObjects<objects::MiSItemData>(
+                pDataStore, "/data/sitemextended", definitionManager, false,
+                true);
         }
 
         if(!failure)
         {
             LOG_DEBUG("Loading s-status server definitions...\n");
-            failure = !LoadObjectsFromFile<objects::MiSStatusData>(
-                pDataStore, "/data/sstatus.xml", definitionManager);
+            failure = !LoadObjects<objects::MiSStatusData>(
+                pDataStore, "/data/sstatus", definitionManager, false,
+                true);
         }
 
         if(!failure)
         {
             LOG_DEBUG("Loading tokusei server definitions...\n");
-            failure = !LoadObjects<objects::Tokusei>(pDataStore,
-                "/tokusei", definitionManager, true);
+            failure = !LoadObjects<objects::Tokusei>(
+                pDataStore, "/data/tokusei", definitionManager, false,
+                true);
         }
     }
 
@@ -405,48 +426,51 @@ bool ServerDataManager::LoadData(DataStore *pDataStore,
     {
         LOG_DEBUG("Loading zone server definitions...\n");
         failure = !LoadObjects<objects::ServerZone>(pDataStore, "/zones",
-            definitionManager, false);
+            definitionManager, false, false);
     }
 
     if(!failure)
     {
         LOG_DEBUG("Loading zone partial server definitions...\n");
         failure = !LoadObjects<objects::ServerZonePartial>(pDataStore,
-            "/zones/partial", definitionManager, true);
+            "/zones/partial", definitionManager, true, false);
     }
 
     if(!failure)
     {
         LOG_DEBUG("Loading event server definitions...\n");
         failure = !LoadObjects<objects::Event>(pDataStore, "/events",
-            definitionManager, true);
+            definitionManager, true, false);
     }
 
     if(!failure)
     {
         LOG_DEBUG("Loading zone instance server definitions...\n");
-        failure = !LoadObjectsFromFile<objects::ServerZoneInstance>(
-            pDataStore, "/data/zoneinstance.xml", definitionManager);
+        failure = !LoadObjects<objects::ServerZoneInstance>(
+            pDataStore, "/data/zoneinstance", definitionManager, false,
+            true);
     }
 
     if(!failure)
     {
         LOG_DEBUG("Loading zone instance variant server definitions...\n");
-        failure = !LoadObjectsFromFile<objects::ServerZoneInstanceVariant>(
-            pDataStore, "/data/zoneinstancevariant.xml", definitionManager);
+        failure = !LoadObjects<objects::ServerZoneInstanceVariant>(
+            pDataStore, "/data/zoneinstancevariant", definitionManager,
+            false, true);
     }
 
     if(!failure)
     {
         LOG_DEBUG("Loading shop server definitions...\n");
         failure = !LoadObjects<objects::ServerShop>(pDataStore, "/shops",
-            definitionManager, true);
+            definitionManager, true, false);
     }
 
     if(!failure)
     {
         LOG_DEBUG("Loading server scripts...\n");
-        failure = !LoadScripts(pDataStore, "/scripts", &ServerDataManager::LoadScript);
+        failure = !LoadScripts(pDataStore, "/scripts",
+            &ServerDataManager::LoadScript);
     }
 
     return !failure;
@@ -992,7 +1016,16 @@ namespace libcomp
         uint32_t id = (uint32_t)shop->GetShopID();
         if(mShopData.find(id) != mShopData.end())
         {
-            LOG_ERROR(libcomp::String("Duplicate shop encountered: %1\n").Arg(id));
+            LOG_ERROR(libcomp::String("Duplicate shop encountered: %1\n")
+                .Arg(id));
+            return false;
+        }
+
+        // Tab count cannot exceed max s8, apply lower arbitrary limit
+        if(shop->TabsCount() > 100)
+        {
+            LOG_ERROR(libcomp::String("Shop with more than 100 tabs"
+                " encountered: %1\n").Arg(id));
             return false;
         }
 
@@ -1115,6 +1148,19 @@ namespace libcomp
         }
 
         return definitionManager && definitionManager->RegisterServerSideDefinition(eSpecial);
+    }
+
+    template<>
+    bool ServerDataManager::LoadObject<objects::MiSItemData>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
+    {
+        auto sItem = std::shared_ptr<objects::MiSItemData>(new objects::MiSItemData);
+        if(!sItem->Load(doc, *objNode))
+        {
+            return false;
+        }
+
+        return definitionManager && definitionManager->RegisterServerSideDefinition(sItem);
     }
 
     template<>

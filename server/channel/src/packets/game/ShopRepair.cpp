@@ -62,10 +62,10 @@ bool Parsers::ShopRepair::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     int32_t shopID = p.ReadS32Little();
-    int32_t cacheID = p.ReadS32Little();
+    int32_t trendTime = p.ReadS32Little();
     int64_t itemID = p.ReadS64Little();
     uint32_t pointDelta = p.ReadU32Little();
-    (void)cacheID;
+    (void)trendTime;    // Not used
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();

@@ -38,6 +38,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 
 using namespace channel;
 
@@ -125,6 +126,19 @@ bool Parsers::PostList::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WriteS32Little((int32_t)postItems.size());
 
     connection->SendPacket(reply);
+
+    // Send any post items pending distribution
+    auto distribute = postItems;
+    distribute.remove_if([](
+        const std::shared_ptr<objects::PostItem>& item)
+        {
+            return item->GetDistributionMessageID() == 0;
+        });
+    if(distribute.size() > 0)
+    {
+        server->GetCharacterManager()->NotifyItemDistribution(client,
+            distribute);
+    }
 
     return true;
 }

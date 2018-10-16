@@ -75,7 +75,7 @@ bool Parsers::Logout::Parse(libcomp::ManagerPacket *pPacketManager,
             sendReply = true;
             break;
         case LogoutCode_t::LOGOUT_CODE_CANCEL:
-            // Cancel is not currently supported
+            client->GetClientState()->SetLogoutTimer(0);
             break;
         case LogoutCode_t::LOGOUT_CODE_SWITCH:
             channelIdx = p.ReadU8();

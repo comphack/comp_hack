@@ -205,20 +205,35 @@ void AccountManager::HandleLogoutRequest(const std::shared_ptr<
     {
         case LogoutCode_t::LOGOUT_CODE_QUIT:
             {
-                // No need to tell the world, just disconnect
+                // No need to tell the world, just queue disconnect and request
+                // timer start
                 libcomp::Packet reply;
                 reply.WritePacketCode(
                     ChannelToClientPacketCode_t::PACKET_LOGOUT);
                 reply.WriteU32Little(
                     (uint32_t)LogoutPacketAction_t::LOGOUT_PREPARE);
-                client->QueuePacket(reply);
-
-                reply.Clear();
-                reply.WritePacketCode(
-                    ChannelToClientPacketCode_t::PACKET_LOGOUT);
-                reply.WriteU32Little(
-                    (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
                 client->SendPacket(reply);
+
+                // Countdown for 10 seconds
+                uint64_t timeout = (uint64_t)(ChannelServer::GetServerTime() +
+                    10000000ULL);
+                client->GetClientState()->SetLogoutTimer(timeout);
+                
+                mServer.lock()->GetTimerManager()->ScheduleEventIn(10, []
+                    (std::shared_ptr<channel::ChannelClientConnection> pClient,
+                    uint64_t pTimeout)
+                    {
+                        if(pClient->GetClientState()->GetLogoutTimer() ==
+                            pTimeout)
+                        {
+                            libcomp::Packet p;
+                            p.WritePacketCode(
+                                ChannelToClientPacketCode_t::PACKET_LOGOUT);
+                            p.WriteU32Little((uint32_t)
+                                LogoutPacketAction_t::LOGOUT_DISCONNECT);
+                            pClient->SendPacket(p);
+                        }
+                    }, client, timeout);
             }
             break;
         case LogoutCode_t::LOGOUT_CODE_SWITCH:
@@ -456,8 +471,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         if(!worldData->LoadBazaarData(db))
         {
-            LOG_ERROR(libcomp::String("BazaarData could"
-                " not be initialized for account: %1\n")
+            LOG_ERROR(libcomp::String("BazaarData %1 could"
+                " not be initialized for account: %2\n")
+                .Arg(worldData->GetBazaarData().GetUUID().ToString())
                 .Arg(state->GetAccountUID().ToString()));
             return false;
         }
@@ -484,7 +500,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             if(!bItem.Get())
             {
                 LOG_WARNING(libcomp::String("Clearing invalid"
-                    " BazaarItem saved on BazaarData for account: %1\n")
+                    " BazaarItem %1 saved on BazaarData for account: %2\n")
+                    .Arg(bItem.GetUUID().ToString())
                     .Arg(state->GetAccountUID().ToString()));
                 bazaarData->SetItems(i, NULLUUID);
                 openSlots.insert(i);
@@ -527,8 +544,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     // Progress
     if(!character->LoadProgress(db))
     {
-        LOG_ERROR(libcomp::String("CharacterProgress could"
-            " not be initialized for account: %1\n")
+        LOG_ERROR(libcomp::String("CharacterProgress %1 could"
+            " not be initialized for account: %2\n")
+            .Arg(character->GetProgress().GetUUID().ToString())
             .Arg(state->GetAccountUID().ToString()));
         return false;
     }
@@ -536,8 +554,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     // Friend Settings
     if(!character->LoadFriendSettings(db))
     {
-        LOG_ERROR(libcomp::String("FriendSettings could"
-            " not be initialized for account: %1\n")
+        LOG_ERROR(libcomp::String("FriendSettings %1 could"
+            " not be initialized for account: %2\n")
+            .Arg(character->GetFriendSettings().GetUUID().ToString())
             .Arg(state->GetAccountUID().ToString()));
         return false;
     }
@@ -549,8 +568,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         if(!cultureData || (!cultureData->GetItem().IsNull() &&
             !cultureData->LoadItem(db)))
         {
-            LOG_ERROR(libcomp::String("CultureData could"
-                " not be initialized for account: %1\n")
+            LOG_ERROR(libcomp::String("CultureData %1 could"
+                " not be initialized for account: %2\n")
+                .Arg(character->GetCultureData().GetUUID().ToString())
                 .Arg(state->GetAccountUID().ToString()));
             return false;
         }
@@ -560,8 +580,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     if(!character->GetPvPData().IsNull() &&
         !character->LoadPvPData(db))
     {
-        LOG_ERROR(libcomp::String("PvPData could"
-            " not be initialized for account: %1\n")
+        LOG_ERROR(libcomp::String("PvPData %1 could"
+            " not be initialized for account: %2\n")
+            .Arg(character->GetPvPData().GetUUID().ToString())
             .Arg(state->GetAccountUID().ToString()));
         return false;
     }
@@ -584,8 +605,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
         if(!itemBox.Get(db))
         {
-            LOG_ERROR(libcomp::String("ItemBox could"
-                " not be initialized for account: %1\n")
+            LOG_ERROR(libcomp::String("ItemBox %1 could"
+                " not be initialized for account: %2\n")
+                .Arg(itemBox.GetUUID().ToString())
                 .Arg(state->GetAccountUID().ToString()));
             return false;
         }
@@ -610,7 +632,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             if(!item.Get(db) || item->GetItemBox() != itemBox.GetUUID())
             {
                 LOG_WARNING(libcomp::String("Clearing invalid"
-                    " Item saved on ItemBox for account: %1\n")
+                    " Item %1 saved on ItemBox for account: %2\n")
+                    .Arg(item.GetUUID().ToString())
                     .Arg(state->GetAccountUID().ToString()));
                 itemBox->SetItems(i, NULLUUID);
                 openSlots.insert(i);
@@ -652,23 +675,28 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     }
 
     // Equipment
-    for(auto equip : character->GetEquippedItems())
+    for(size_t i = 0; i < 15; i++)
     {
+        auto equip = character->GetEquippedItems(i);
+
         if(equip.IsNull()) continue;
 
         //If we already have an object ID, it's already loaded
         if(state->GetObjectID(equip.GetUUID()) <= 0)
         {
-            if(!equip.Get(db))
+            if(equip.Get(db))
             {
-                LOG_ERROR(libcomp::String("Equipped Item could"
-                    " not be initialized for account: %1\n")
-                    .Arg(state->GetAccountUID().ToString()));
-                return false;
+                state->SetObjectID(equip->GetUUID(),
+                    server->GetNextObjectID());
             }
-
-            state->SetObjectID(equip->GetUUID(),
-                server->GetNextObjectID());
+            else
+            {
+                LOG_WARNING(libcomp::String("Clearing invalid Equipped"
+                    " Item %1 on character: %2\n")
+                    .Arg(equip.GetUUID().ToString())
+                    .Arg(character->GetUUID().ToString()));
+                character->SetEquippedItems(i, NULLUUID);
+            }
         }
     }
 
@@ -677,8 +705,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         if(!expertise.IsNull() && !expertise.Get(db))
         {
-            LOG_ERROR(libcomp::String("Expertise could"
-                " not be initialized for account: %1\n")
+            LOG_ERROR(libcomp::String("Expertise %1 could"
+                " not be initialized for account: %2\n")
+                .Arg(expertise.GetUUID().ToString())
                 .Arg(state->GetAccountUID().ToString()));
             return false;
         }
@@ -695,7 +724,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 !definitionManager->GetStatusData(effect->GetEffect()))
             {
                 LOG_WARNING(libcomp::String("Removing invalid"
-                    " character StatusEffect saved for account: %1\n")
+                    " character StatusEffect %1 saved for account: %2\n")
+                    .Arg(effect.GetUUID().ToString())
                     .Arg(state->GetAccountUID().ToString()));
                 character->RemoveStatusEffects((size_t)i);
             }
@@ -719,8 +749,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
         if(!box.Get(db))
         {
-            LOG_ERROR(libcomp::String("DemonBox could"
-                " not be initialized for account: %1\n")
+            LOG_ERROR(libcomp::String("DemonBox %1 could"
+                " not be initialized for account: %2\n")
+                .Arg(box.GetUUID().ToString())
                 .Arg(state->GetAccountUID().ToString()));
             return false;
         }
@@ -731,8 +762,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
             if(!demon.Get(db) || !demon->LoadCoreStats(db))
             {
-                LOG_ERROR(libcomp::String("Demon or demon stats could"
-                    " not be initialized for account: %1\n")
+                LOG_ERROR(libcomp::String("Demon or demon stats for %1"
+                    " could not be initialized for account: %2\n")
+                    .Arg(demon.GetUUID().ToString())
                     .Arg(state->GetAccountUID().ToString()));
                 return false;
             }
@@ -751,8 +783,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             {
                 if(!iSkill.Get(db))
                 {
-                    LOG_ERROR(libcomp::String("InheritedSkill could"
-                        " not be initialized for account: %1\n")
+                    LOG_ERROR(libcomp::String("InheritedSkill %1 could"
+                        " not be initialized for account: %2\n")
+                        .Arg(iSkill.GetUUID().ToString())
                         .Arg(state->GetAccountUID().ToString()));
                     return false;
                 }
@@ -774,7 +807,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                         !definitionManager->GetStatusData(effect->GetEffect()))
                     {
                         LOG_WARNING(libcomp::String("Removing invalid"
-                            " demon StatusEffect saved for account: %1\n")
+                            " demon StatusEffect %1 saved for account: %2\n")
+                            .Arg(effect.GetUUID().ToString())
                             .Arg(state->GetAccountUID().ToString()));
                         demon->RemoveStatusEffects((size_t)i);
                     }
@@ -790,7 +824,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 if(!equipment.Get(db))
                 {
                     LOG_WARNING(libcomp::String("Removing invalid"
-                        " demon equipment saved for account: %1\n")
+                        " demon equipment %1 saved for account: %2\n")
+                        .Arg(equipment.GetUUID().ToString())
                         .Arg(state->GetAccountUID().ToString()));
                     demon->SetEquippedItems(i, NULLUUID);
                     continue;
@@ -830,8 +865,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         if(!hotbar.IsNull() && !hotbar.Get(db))
         {
-            LOG_ERROR(libcomp::String("Hotbar could"
-                " not be initialized for account: %1\n")
+            LOG_ERROR(libcomp::String("Hotbar %1 could"
+                " not be initialized for account: %2\n")
+                .Arg(hotbar.GetUUID().ToString())
                 .Arg(state->GetAccountUID().ToString()));
             return false;
         }
@@ -842,8 +878,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         if(!qPair.second.IsNull() && !qPair.second.Get(db))
         {
-            LOG_ERROR(libcomp::String("Quest could"
-                " not be initialized for account: %1\n")
+            LOG_ERROR(libcomp::String("Quest %1 could"
+                " not be initialized for account: %2\n")
+                .Arg(qPair.second.GetUUID().ToString())
                 .Arg(state->GetAccountUID().ToString()));
             return false;
         }
@@ -854,8 +891,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         if(!character->LoadDemonQuest(db))
         {
-            LOG_ERROR(libcomp::String("DemonQuest could"
-                " not be initialized for account: %1\n")
+            LOG_ERROR(libcomp::String("DemonQuest %1 could"
+                " not be initialized for account: %2\n")
+                .Arg(character->GetDemonQuest().GetUUID().ToString())
                 .Arg(state->GetAccountUID().ToString()));
             return false;
         }
@@ -886,8 +924,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
     {
         if(!character->LoadClan(db))
         {
-            LOG_ERROR(libcomp::String("Clan could"
-                " not be initialized for account: %1\n")
+            LOG_ERROR(libcomp::String("Clan %1 could"
+                " not be initialized for account: %2\n")
+                .Arg(character->GetClan().GetUUID().ToString())
                 .Arg(state->GetAccountUID().ToString()));
             return false;
         }
@@ -954,6 +993,15 @@ bool AccountManager::InitializeNewCharacter(std::shared_ptr<
         character->SetCustomTitles(dCharacter->GetCustomTitles());
         character->SetCurrentTitle(dCharacter->GetCurrentTitle());
         character->SetTitlePrioritized(dCharacter->GetTitlePrioritized());
+
+        if(dCharacter->GetSupportDisplay())
+        {
+            // Only set support display flag if the account has GM privs
+            auto account = std::dynamic_pointer_cast<objects::Account>(
+                libcomp::PersistentObject::GetObjectByUUID(character
+                    ->GetAccount()));
+            character->SetSupportDisplay(account && account->GetUserLevel());
+        }
 
         // Set expertise defaults
         for(size_t i = 0; i < dCharacter->ExpertisesCount(); i++)

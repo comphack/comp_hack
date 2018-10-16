@@ -49,8 +49,7 @@ bool Parsers::CompShopList::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    int32_t cacheID = p.ReadS32Little();
-    (void)cacheID;
+    int32_t trendTime = p.ReadS32Little();
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto serverDataManager = server->GetServerDataManager();
@@ -59,7 +58,7 @@ bool Parsers::CompShopList::Parse(libcomp::ManagerPacket *pPacketManager,
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMP_SHOP_LIST);
-    reply.WriteS32Little(1);    /// @todo: change cacheID when trends are working
+    reply.WriteS32Little(trendTime);
 
     if(compShopIDs.size() > 0)
     {

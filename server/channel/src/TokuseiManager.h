@@ -235,6 +235,15 @@ public:
     void RemoveTrackingEntities(int32_t worldCID);
 
     /**
+     * Lower durability on all movement durability decay equipment
+     * @param client Pointer to the client connection
+     * @param distance Movement distance delta used to calculate how much the
+     *  durability will lower by
+     */
+    void UpdateMovementDecay(const std::shared_ptr<
+        ChannelClientConnection>& client, float distance);
+
+    /**
      * Send skill cost adjustments from tokusei for the specified entity to the
      * client
      * @param entityID ID of the entity with cost adjustments
@@ -320,6 +329,9 @@ private:
 
     /// Set of all tokusei with at least one cost adjustment aspect
     std::set<int32_t> mCostAdjustmentTokusei;
+
+    /// Set of all tokusei with at least one movement decay aspect
+    std::set<int32_t> mMoveDecayTokusei;
 
     /// Server lock for time calculation
     std::mutex mTimeLock;

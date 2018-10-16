@@ -154,13 +154,14 @@ public:
     /**
      * Determine the character's current expertise rank for the
      * specified ID. This includes chain expertise calculations.
-     * @param definitionManager Pointer to the definition manager to use
-     *  for determining chain expertise relationships
      * @param expertiseID ID of the expertise to calculate
+     * @param definitionManager Pointer to the definition manager to use
+     *  for determining chain expertise relationships. If null, the expertise
+     *  will be retrieved as a non-chain expertise.
      * @return Rank of the supplied expertise ID
      */
-    uint8_t GetExpertiseRank(libcomp::DefinitionManager* definitionManager,
-        uint32_t expertiseID);
+    uint8_t GetExpertiseRank(uint32_t expertiseID,
+        libcomp::DefinitionManager* definitionManager = nullptr);
 
     /**
      * Determine if the character (or account) has a specific action cooldown

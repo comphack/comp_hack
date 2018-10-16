@@ -617,12 +617,11 @@ public:
         uint32_t id);
 
     /**
-     * Get the s-item definition corresponding to an ID
-     * @param id S-item ID to retrieve
-     * @return Pointer to the matching s-item definition, null if it does
-     *  not exist
+     * Get the s-item tokusei IDs corresponding to an item ID
+     * @param id Item ID to retrieve
+     * @return Set of tokusei mapped to the supplied item ID
      */
-    const std::shared_ptr<objects::MiSItemData> GetSItemData(uint32_t id);
+    std::set<int32_t> GetSItemTokusei(uint32_t id);
 
     /**
      * Get the skill definition corresponding to an ID
@@ -1178,9 +1177,8 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiShopProductData>> mShopProductData;
 
-    /// Map of s-item definitions by ID
-    std::unordered_map<uint32_t,
-        std::shared_ptr<objects::MiSItemData>> mSItemData;
+    /// Map of s-item tokusei IDs by item ID
+    std::unordered_map<uint32_t, std::set<int32_t>> mSItemTokusei;
 
     /// Map of skill definitions by ID
     std::unordered_map<uint32_t,

@@ -86,7 +86,7 @@ bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!expertData) continue;
 
-        uint32_t currentRank = cState->GetExpertiseRank(definitionManager, i);
+        uint32_t currentRank = cState->GetExpertiseRank(i, definitionManager);
 
         uint32_t rank = 0;
         for(auto classData : expertData->GetClassData())

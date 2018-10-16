@@ -127,23 +127,47 @@ namespace libcomp
 /// ID of the "Attack" expertise.
 #define EXPERTISE_ATTACK (0)
 
+/// ID of the "Talk" expertise.
+#define EXPERTISE_TALK (12)
+
+/// ID of the "Intimidate" expertise.
+#define EXPERTISE_INTIMIDATE (13)
+
+/// ID of the "Taunt" expertise.
+#define EXPERTISE_TAUNT (14)
+
+/// ID of the "Summon" expertise.
+#define EXPERTISE_SUMMON (15)
+
 /// ID of the "Fusion" expertise.
 #define EXPERTISE_FUSION (17)
 
 /// ID of the "Demonology" expertise.
 #define EXPERTISE_DEMONOLOGY (18)
 
-/// ID of the "Weapon knowledge" expertise.
+/// ID of the "Weapon Knowledge" expertise.
 #define EXPERTISE_WEAPON_KNOWLEDGE (19)
 
 /// ID of the "Survival" expertise.
 #define EXPERTISE_SURVIVAL (20)
 
+/// ID of the "Psychology" expertise.
+#define EXPERTISE_PSYCHOLOGY (21)
+
+/// ID of the "Medical Sciences" expertise.
+#define EXPERTISE_MEDICAL_SCIENCES (22)
+
+/// ID of the "Crushing Technique" expertise.
+#define EXPERTISE_CRUSH_TECHNIQUE (23)
+
 /// ID of the "Creation" expertise.
 #define EXPERTISE_CREATION (31)
 
-/// ID of the "Gun knowledge" expertise.
+/// ID of the "Gun Knowledge" expertise.
 #define EXPERTISE_GUN_KNOWLEDGE (34)
+
+/// ID of the "Magic Control" expertise.
+#define EXPERTISE_MAGIC_CONTROL (36)
 
 /// ID of the "Swordsmith" chain expertise.
 #define EXPERTISE_CHAIN_SWORDSMITH (40)
@@ -151,11 +175,17 @@ namespace libcomp
 /// ID of the "Craftmanship" chain expertise.
 #define EXPERTISE_CHAIN_CRAFTMANSHIP (44)
 
-/// ID of the "Arms maker" chain expertise.
+/// ID of the "Arms Maker" chain expertise.
 #define EXPERTISE_CHAIN_ARMS_MAKER (46)
 
 /// ID of the "Synthesis" chain expertise.
 #define EXPERTISE_CHAIN_SYNTHESIS (49)
+
+/// ID of the "Curse of the Wretched" chain expertise.
+#define EXPERTISE_CHAIN_COTW (52)
+
+/// ID of the "Magic Bullet" chain expertise.
+#define EXPERTISE_CHAIN_M_BULLET (54)
 
 /// ID of the "Regal Presence" chain expertise.
 #define EXPERTISE_CHAIN_R_PRESENCE (57)

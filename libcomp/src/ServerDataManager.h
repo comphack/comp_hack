@@ -281,12 +281,14 @@ private:
      * @param definitionManager Pointer to the definition manager which
      *  will be loaded with any server side definitions
      * @param recursive If true sub-directories will be loaded from as well
+     * @param fileOrPath If true and no files are found in the path, the path
+     *  will be treated like a file path by appending ".xml"
      * @return true on success, false on failure
      */
     template <class T>
     bool LoadObjects(gsl::not_null<DataStore*> pDataStore,
         const libcomp::String& datastorePath,
-        DefinitionManager* definitionManager, bool recursive)
+        DefinitionManager* definitionManager, bool recursive, bool fileOrPath)
     {
         std::list<libcomp::String> files;
         std::list<libcomp::String> dirs;
@@ -295,16 +297,33 @@ private:
         (void)pDataStore->GetListing(datastorePath, files, dirs, symLinks,
             recursive, true);
 
+        bool loaded = false;
         for(auto path : files)
         {
-            if(path.Matches("^.*\\.xml$") && !LoadObjectsFromFile<T>(
-                pDataStore, path, definitionManager))
+            if(path.Matches("^.*\\.xml$"))
             {
-                return false;
+                if(LoadObjectsFromFile<T>(pDataStore, path,
+                    definitionManager))
+                {
+                    loaded = true;
+                }
+                else
+                {
+                    return false;
+                }
             }
         }
 
-        return true;
+        if(!loaded && fileOrPath)
+        {
+            // Attempt to load single file from modified path
+            return LoadObjectsFromFile<T>(pDataStore, datastorePath + ".xml",
+                definitionManager);
+        }
+        else
+        {
+            return true;
+        }
     }
 
     /**

@@ -7,32 +7,30 @@
             <value>NORMAL</value>
             <value>COMP_SHOP</value>
         </member>
-        <member type="u16" name="Shop1"/>
         <member type="float" name="RepairCostMultiplier"/>
         <member type="float" name="RepairRate"/>
         <member type="bool" name="LNCAdjust"/>
         <member type="float" name="LNCCenter"/>
-        <member type="u8" name="Shop5"/>
+        <member type="float" name="TrendAdjustment" min="0.0" default="0.33"/>
         <member type="list" name="Tabs">
             <element type="ServerShopTab*"/>
         </member>
     </object>
     <object name="ServerShopTab" persistent="false">
         <member type="string" name="Name"/>
-        <member type="u8" name="Tab1"/>
-        <member type="u16" name="Tab2"/>
-        <member type="u16" name="Tab3"/>
+        <member type="u8" name="FilterGroup" max="4"/>
         <member type="list" name="Products">
             <element type="ServerShopProduct*"/>
+        </member>
+        <member type="list" name="Conditions">
+            <element type="EventCondition*"/>
         </member>
     </object>
     <object name="ServerShopProduct" persistent="false">
         <member type="u16" name="ProductID"/>
         <member type="u8" name="MerchantDescription"/>
-        <member type="u8" name="Flags"/>
         <member type="s32" name="BasePrice"/>
-        <member type="list" name="ExtraBytes">
-            <element type="u8"/>
-        </member>
+        <member type="u16" name="MoonRestrict"/>
+        <member type="u8" name="FilterGroups" max="0x0F"/>
     </object>
 </objgen>

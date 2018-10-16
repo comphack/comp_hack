@@ -134,6 +134,13 @@ public:
     std::list<std::shared_ptr<PlasmaPoint>> GetActivePoints();
 
     /**
+     * Enable or disable the the plasma set
+     * @param enable If true the points will be enabled, if false they
+     *  will be disabled and de-pop if active
+     */
+    void Toggle(bool enable);
+
+    /**
      * Check if there is plasma pending a hide or respawn update
      * @param respawn true if points pending respawn should be
      *  retrieved, false if points pending hiding should be
@@ -252,6 +259,9 @@ private:
     /// Map of point IDs to server times when that point should be
     /// hidden to respawn later
     std::unordered_map<uint32_t, uint64_t> mPointHides;
+
+    /// Indicates if the plasma set is disabled and no points will spawn
+    bool mDisabled;
 
     /// Server lock for shared resources
     std::mutex mLock;

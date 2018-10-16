@@ -306,6 +306,8 @@ bool ServerConstants::Initialize(const String& filePath)
     // Load (detached) tokusei constants
     success &= LoadInteger(constants["TOKUSEI_BIKE_BOOST"],
         sConstants.TOKUSEI_BIKE_BOOST);
+    success &= LoadInteger(constants["TOKUSEI_MAGIC_CONTROL_COST"],
+        sConstants.TOKUSEI_MAGIC_CONTROL_COST);
 
     // Load valuable constants
     success &= LoadInteger(constants["VALUABLE_DEVIL_BOOK_V1"],

@@ -27,18 +27,28 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ServerDataManager.h>
 
+// Standard C++11 Includes
+#include <math.h>
+#include <random>
+
 // object Includes
+#include <EventInstance.h>
+#include <EventState.h>
+#include <MiShopProductData.h>
 #include <ServerShop.h>
 #include <ServerShopProduct.h>
 #include <ServerShopTab.h>
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
+#include "EventManager.h"
 
 using namespace channel;
 
@@ -54,65 +64,100 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     int32_t shopID = p.ReadS32Little();
-    int32_t cacheID = p.ReadS32Little();
-    (void)cacheID;
+    int32_t clientTrendTime = p.ReadS32Little();
+    (void)clientTrendTime;
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto shopData = server->GetServerDataManager()->GetShopData((uint32_t)shopID);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+    auto serverDataManager = server->GetServerDataManager();
 
-    if(shopData == nullptr)
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
+
+    auto shopData = serverDataManager->GetShopData((uint32_t)shopID);
+    if(!shopData)
     {
-        LOG_ERROR(libcomp::String("Unknown shop encountered: %1\n").Arg(shopID));
+        LOG_ERROR(libcomp::String("Unknown shop encountered: %1\n")
+            .Arg(shopID));
         return true;
     }
 
-    /// @todo: convert to more friendly explicit format once these are all understood
-    /*// (needs 1 additional byte)
-    const uint8_t FLAG_MULTIPLIER = 1;
+    auto cEvent = client->GetClientState()->GetEventState()->GetCurrent();
 
-    // Product will diplay as new and will also show on the "NEW" tab (if it exists)
-    const uint8_t FLAG_IS_NEW = 2;
+    std::set<uint8_t> disabledTabs;
+    if(cEvent)
+    {
+        // Filter down tabs that are event condition restricted
+        auto eventManager = server->GetEventManager();
+        for(uint8_t i = 0; i < (uint8_t)shopData->TabsCount(); i++)
+        {
+            auto tab = shopData->GetTabs(i);
+            if(tab->ConditionsCount() > 0 && !eventManager
+                ->EvaluateEventConditions(client, tab->GetConditions()))
+            {
+                cEvent->InsertDisabledChoices(i);
+                disabledTabs.insert(i);
+            }
+        }
+    }
 
-    const uint8_t FLAG_UNKNOWN_8 = 8;
+    // Multiple supported product flags listed below
+    // 0x01: Mutiply the base price by an additional byte value (unused)
+    // 0x02-0x10: Product will also show in numbered existing filter group tabs
+    // 0x20: Apparently unsupported (needs 2 additional bytes)
+    // 0x40: Product is only visible during moon phases matching extra bytes
+    // 0x80: Apparently unsupported (needs 2 additional bytes)
 
-    // (needs 2 additional bytes)
-    const uint8_t FLAG_UNKNOWN_32 = 32;
+    // Trends reset every 5 minutes based on the server system time
+    uint32_t trendTime = server->GetWorldClockTime().SystemTime;
+    trendTime = trendTime - (trendTime % 300);
 
-    // Product is only visible during specific moon phases (added as additional bytes)
-    const uint8_t FLAG_MOON_PHASE_RESTRICT = 64;
+    float trendAdjust = shopData->GetTrendAdjustment();
+    if(shopData->GetType() == objects::ServerShop::Type_t::COMP_SHOP)
+    {
+        // COMP shops have no trends
+        trendAdjust = 0.f;
+    }
 
-    // (needs 2 additional bytes)
-    const uint8_t FLAG_UNKNOWN_128 = 128;*/
+    std::unordered_map<uint32_t, std::pair<uint8_t, int32_t>> productTrends;
+
+    // Seed the (repeatable) random number generators for trend calculation
+    std::mt19937 rand, pRand;
+    if(trendAdjust > 0.f)
+    {
+        rand.seed(trendTime);
+        pRand.seed((uint32_t)(trendTime - 300));
+    }
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOP_DATA);
     reply.WriteS32Little(shopID);
-    reply.WriteS32Little(1);    /// @todo: change cacheID when trends are working
+    reply.WriteS32Little((int32_t)trendTime);
 
-    reply.WriteU16Little(shopData->GetShop1());
+    reply.WriteU16Little(0);    // Deprecated ID
     reply.WriteFloat(shopData->GetRepairCostMultiplier());
     reply.WriteFloat(shopData->GetRepairRate());
     reply.WriteU8(shopData->GetLNCAdjust() ? 1 : 0);
     reply.WriteFloat(shopData->GetLNCCenter());
-    reply.WriteU8(shopData->GetShop5());
+    reply.WriteU8(0);   // Deprecated ID/flag
 
-    auto tabs = shopData->GetTabs();
-    reply.WriteS8((int8_t)tabs.size());
-    for(auto tab : tabs)
+    reply.WriteS8((int8_t)(shopData->TabsCount() - disabledTabs.size()));
+    for(uint8_t i = 0; i < (uint8_t)shopData->TabsCount(); i++)
     {
+        auto tab = shopData->GetTabs(i);
+
+        if(disabledTabs.find(i) != disabledTabs.end()) continue;
+
         reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
             tab->GetName(), true);
-        reply.WriteU8(tab->GetTab1());
 
-        if(tab->GetTab1() != 0)
-        {
-            reply.WriteU16Little(tab->GetTab2());
-            if(tab->GetTab2() != 0)
-            {
-                reply.WriteU16Little(tab->GetTab3());
-            }
-        }
+        // There used to be several other flags that were supported here
+        // but they appear to have been disabled. Some required multiple
+        // extra bytes: 2 for 0x3X, 0x5X, 0x9X; 4 for 0x7X, 0xBX, 0xDX;
+        // 6 for 0xFX
+        reply.WriteU8(tab->GetFilterGroup());
 
         auto products = tab->GetProducts();
         reply.WriteU8((uint8_t)products.size());
@@ -120,28 +165,93 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             reply.WriteU16Little(product->GetProductID());
             reply.WriteU8(product->GetMerchantDescription());
-            reply.WriteU8(product->GetFlags());
 
-            /// @todo: implement trends
-            int32_t basePrice = product->GetBasePrice();
+            // Get product flags
+            uint8_t flags = 0;
+            if(product->GetFilterGroups())
+            {
+                flags = (uint8_t)(product->GetFilterGroups() << 1);
+            }
+
+            if(product->GetMoonRestrict() != 0xFFFF)
+            {
+                flags |= 0x40;
+            }
+
+            reply.WriteU8(flags);
+
+            int32_t price = product->GetBasePrice();
             uint8_t trend = 0;
-            if(trend == 0)
+
+            // If the product has already been seen, do not recalculate the
+            // price and trend
+            auto it = productTrends.find(product->GetProductID());
+            if(it == productTrends.end())
             {
-                reply.WriteS32Little(basePrice > 0 ? basePrice : 1);
+                // Calculate price and trend
+                auto pData = definitionManager->GetShopProductData((uint32_t)
+                    product->GetProductID());
+                auto def = pData
+                    ? definitionManager->GetItemData(pData->GetItem())
+                    : nullptr;
+
+                uint8_t pTrend = 0;
+                if(trendAdjust > 0.f && !characterManager->IsCPItem(def))
+                {
+                    std::uniform_int_distribution<uint32_t> dis(0, 1000);
+                    trend = (uint8_t)(dis(rand) % 3);
+                    pTrend = (uint8_t)(dis(pRand) % 3);
+                }
+
+                if(trend == 1)
+                {
+                    // Increased price
+                    price = (int32_t)floor((double)price *
+                        (double)(1.f + trendAdjust + 0.005f));
+                }
+                else if(trend == 2)
+                {
+                    // Decreased price
+                    price = (int32_t)ceil((double)price *
+                        (double)(1.f - trendAdjust));
+                }
+
+                if(!trend)
+                {
+                    if(pTrend == 1)
+                    {
+                        // Decreased to normal
+                        trend = 2;
+                    }
+                    else if(pTrend == 2)
+                    {
+                        // Increased to normal
+                        trend = 1;
+                    }
+                }
+                else if(trend == pTrend)
+                {
+                    // Do not actually send the trend as it has not updated
+                    trend = 0;
+                }
+
+                productTrends[product->GetProductID()] = std::make_pair(trend,
+                    price);
             }
-            else if(trend == 1)
+            else
             {
-                // Increased price
+                // Use already calculated price and trend
+                trend = it->second.first;
+                price = it->second.second;
             }
-            else if(trend == 2)
-            {
-                // Decreased price
-            }
+
+            reply.WriteS32Little(price > 0 ? price : 1);
+
             reply.WriteU8(trend);
 
-            for(auto extra : product->GetExtraBytes())
+            if(product->GetMoonRestrict() != 0xFFFF)
             {
-                reply.WriteU8(extra);
+                reply.WriteU16Little(product->GetMoonRestrict());
             }
         }
     }

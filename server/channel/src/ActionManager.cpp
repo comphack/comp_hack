@@ -79,6 +79,7 @@
 #include <MiPossessionData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSpotData.h>
+#include <MiStatusData.h>
 #include <MiTimeLimitData.h>
 #include <MiZoneData.h>
 #include <ObjectPosition.h>
@@ -94,6 +95,7 @@
 #include <ServerZoneInstance.h>
 #include <ServerZoneTrigger.h>
 #include <Team.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "AccountManager.h"
@@ -1050,54 +1052,91 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
 
     if(effects.size() > 0)
     {
-        std::list<std::shared_ptr<ActiveEntityState>> playerEntities;
+        std::list<std::shared_ptr<ActiveEntityState>> entities;
+        bool playerEntities = true;
         switch(act->GetTargetType())
         {
         case objects::ActionAddRemoveStatus::TargetType_t::CHARACTER:
             if(state)
             {
-                state->GetCharacterState()->AddStatusEffects(effects,
-                    definitionManager);
-                playerEntities.push_back(state->GetCharacterState());
+                entities.push_back(state->GetCharacterState());
             }
             break;
         case objects::ActionAddRemoveStatus::TargetType_t::PARTNER:
             if(state)
             {
-                state->GetDemonState()->AddStatusEffects(effects,
-                    definitionManager);
-                playerEntities.push_back(state->GetDemonState());
+                entities.push_back(state->GetDemonState());
             }
             break;
         case objects::ActionAddRemoveStatus::TargetType_t::CHARACTER_AND_PARTNER:
             if(state)
             {
-                state->GetCharacterState()->AddStatusEffects(effects,
-                    definitionManager);
-                playerEntities.push_back(state->GetCharacterState());
-
-                state->GetDemonState()->AddStatusEffects(effects,
-                    definitionManager);
-                playerEntities.push_back(state->GetDemonState());
+                entities.push_back(state->GetCharacterState());
+                entities.push_back(state->GetDemonState());
             }
             break;
         case objects::ActionAddRemoveStatus::TargetType_t::SOURCE:
             {
-                auto eState = ctx.CurrentZone->GetActiveEntity(ctx.SourceEntityID);
+                auto eState = ctx.CurrentZone->GetActiveEntity(
+                    ctx.SourceEntityID);
                 if(eState)
                 {
-                    eState->AddStatusEffects(effects, definitionManager);
-                    tokuseiManager->Recalculate(eState, true);
+                    entities.push_back(eState);
                 }
+
+                playerEntities = false;
             }
             break;
         }
 
-        if(playerEntities.size() > 0)
+        bool allowNull = act->GetAllowNull() && server->GetWorldSharedConfig()
+            ->GetNRAStatusNull();
+        for(auto eState : entities)
+        {
+            if(allowNull)
+            {
+                // Copy the effects that are not NRA'd
+                StatusEffectChanges activeEffects;
+                for(auto& pair : effects)
+                {
+                    auto statusDef = definitionManager->GetStatusData(
+                        pair.first);
+                    if(statusDef)
+                    {
+                        uint8_t affinity = statusDef->GetCommon()
+                            ->GetAffinity();
+                        CorrectTbl nraType = (CorrectTbl)(affinity +
+                            (uint8_t)CorrectTbl::NRA_DEFAULT);
+                        if(eState->GetNRAChance(NRA_NULL, nraType) > 0 ||
+                            eState->GetNRAChance(NRA_REFLECT, nraType) > 0 ||
+                            eState->GetNRAChance(NRA_ABSORB, nraType) > 0)
+                        {
+                            // Nullified, do not add
+                            continue;
+                        }
+                    }
+
+                    activeEffects[pair.first] = pair.second;
+                }
+
+                eState->AddStatusEffects(activeEffects, definitionManager);
+            }
+            else
+            {
+                eState->AddStatusEffects(effects, definitionManager);
+            }
+
+            if(!playerEntities)
+            {
+                tokuseiManager->Recalculate(eState, true);
+            }
+        }
+
+        if(playerEntities)
         {
             // Recalculate the character and demon
             std::set<int32_t> entityIDs;
-            for(auto eState : playerEntities)
+            for(auto eState : entities)
             {
                 entityIDs.insert(eState->GetEntityID());
             }
@@ -1105,7 +1144,7 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
             tokuseiManager->Recalculate(state->GetCharacterState(), true,
                 entityIDs);
 
-            for(auto eState : playerEntities)
+            for(auto eState : entities)
             {
                 server->GetCharacterManager()->RecalculateStats(eState,
                     ctx.Client);

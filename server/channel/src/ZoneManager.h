@@ -527,6 +527,16 @@ public:
         uint64_t now = 0, std::shared_ptr<objects::ActionSpawn> actionSource = nullptr);
 
     /**
+     * Update the specified zone's staggered spawns, showing them to the
+     * zone if any are ready
+     * @param zone Pointer to the zone
+     * @param now Current server time
+     * @return true if any enemy was spawned, false if no enemy was spawned
+     */
+    bool UpdateStaggeredSpawns(const std::shared_ptr<Zone>& zone,
+        uint64_t now);
+
+    /**
      * Update the specified zone's PlasmaSpawns
      * @param zone Pointer to the zone where the plasma should be updated
      * @param now Current server time

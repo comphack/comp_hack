@@ -88,7 +88,7 @@
         <member type="u8" name="fusionIntro" pad="1"/>
     </object>
     <object name="MiSummonData" persistent="false" scriptenabled="true">
-        <member type="u32" name="summon1" pad="1"/>
+        <member type="u32" name="summonSpeed" pad="1"/>
         <member type="u8" name="magModifier" pad="2"/>
     </object>
     <object name="MiUnionData" persistent="false" scriptenabled="true">

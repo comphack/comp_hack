@@ -3,7 +3,6 @@
     <object name="EventBase" persistent="false" scriptenabled="true">
         <member type="string" name="next"/>
         <member type="string" name="queueNext"/>
-        <member type="string" name="conditionID"/>  <!-- todo: remove after events are merged -->
         <member type="list" name="conditions">
             <element type="EventCondition*"/>
         </member>

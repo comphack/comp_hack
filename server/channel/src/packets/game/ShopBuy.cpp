@@ -34,8 +34,14 @@
 #include <ServerConstants.h>
 #include <ServerDataManager.h>
 
+// Standard C++11 Includes
+#include <math.h>
+#include <random>
+
 // object Includes
 #include <Account.h>
+#include <EventInstance.h>
+#include <EventState.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <MiItemBasicData.h>
@@ -81,22 +87,20 @@ void SendShopPurchaseReply(const std::shared_ptr<ChannelClientConnection> client
 
 void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client,
-    int32_t shopID, int32_t cacheID, int32_t productID, int32_t quantity,
+    int32_t shopID, int32_t clientTrendTime, int32_t productID, int32_t quantity,
     libcomp::String gifteeName, libcomp::String giftMessage)
 {
-    (void)cacheID;
-
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     auto inventory = character->GetItemBoxes(0).Get();
     auto characterManager = server->GetCharacterManager();
-    auto defnitionManager = server->GetDefinitionManager();
+    auto definitionManager = server->GetDefinitionManager();
 
     auto shop = server->GetServerDataManager()->GetShopData((uint32_t)shopID);
-    auto product = defnitionManager->GetShopProductData((uint32_t)productID);
+    auto product = definitionManager->GetShopProductData((uint32_t)productID);
     auto def = product != nullptr
-        ? defnitionManager->GetItemData(product->GetItem()) : nullptr;
+        ? definitionManager->GetItemData(product->GetItem()) : nullptr;
     if(!shop || !product || !def)
     {
         LOG_ERROR(libcomp::String("Invalid shop purchase: shopID=%1, productID=%2\n")
@@ -105,10 +109,28 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         return;
     }
 
-    int32_t price = 0;
-    bool productFound = false;
-    for(auto tab : shop->GetTabs())
+    auto cEvent = client->GetClientState()->GetEventState()->GetCurrent();
+
+    float trendAdjust = shop->GetTrendAdjustment();
+    if(shop->GetType() == objects::ServerShop::Type_t::COMP_SHOP)
     {
+        // COMP shops have no trends
+        trendAdjust = 0.f;
+    }
+
+    // Initially it was thought that the CP cost on MiShopProductData indicated
+    // if the item had a CP cost or not but there are entries that sell for CP
+    // in the UI with a cost of zero here so use the flag on the item instead
+    bool cpPurchase = characterManager->IsCPItem(def);
+
+    int32_t price = 0;
+    std::set<uint32_t> trendOffset;
+    bool productFound = false;
+    for(uint8_t i = 0; i < (uint8_t)shop->TabsCount(); i++)
+    {
+        if(cEvent && cEvent->DisabledChoicesContains(i)) continue;
+
+        auto tab = shop->GetTabs(i);
         for(auto p : tab->GetProducts())
         {
             if(p->GetProductID() == productID)
@@ -116,6 +138,20 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
                 productFound = true;
                 price = p->GetBasePrice();
                 break;
+            }
+            else if(!cpPurchase && trendAdjust > 0.f &&
+                trendOffset.find(p->GetProductID()) == trendOffset.end())
+            {
+                // Increase the trend offset if its a non-CP item so the trend
+                // calculation matches when the data was sent
+                auto p2 = definitionManager->GetShopProductData(
+                    p->GetProductID());
+                auto def2 = p2
+                    ? definitionManager->GetItemData(p2->GetItem()) : nullptr;
+                if(!characterManager->IsCPItem(def2))
+                {
+                    trendOffset.insert(p->GetProductID());
+                }
             }
         }
 
@@ -127,10 +163,63 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
 
     if(!productFound)
     {
-        LOG_ERROR(libcomp::String("Shop '%1' does not contain product '%2'\n")
-            .Arg(shopID).Arg(productID));
+        LOG_ERROR(libcomp::String("Shop '%1' does not currently contain"
+            " product '%2'\n").Arg(shopID).Arg(productID));
         SendShopPurchaseReply(client, shopID, productID, -2, false);
         return;
+    }
+
+    if(!cpPurchase)
+    {
+        // Apply trend adjustment
+        if(trendAdjust > 0.f)
+        {
+            // Snap the trend time to the last one before supplied
+            uint32_t trendTime = (uint32_t)(clientTrendTime -
+                (clientTrendTime % 300));
+
+            // Seed the (repeatable) random number generators for trend
+            // calculation
+            std::mt19937 rand;
+            rand.seed(trendTime);
+
+            std::uniform_int_distribution<uint32_t> dis(0, 1000);
+            for(size_t i = 0; i < trendOffset.size(); i++)
+            {
+                // Offset random trend to match when data was sent
+                dis(rand);
+            }
+
+            uint8_t trend = (uint8_t)(dis(rand) % 3);
+            switch(trend)
+            {
+            case 1:
+                // Increased price
+                price = (int32_t)floor((double)price *
+                    (double)(1.f + trendAdjust + 0.005f));
+                break;
+            case 2:
+                // Decreased price
+                price = (int32_t)ceil((double)price *
+                    (double)(1.f - trendAdjust));
+                break;
+            case 0:
+            default:
+                // No price adjustment
+                break;
+            }
+        }
+
+        // Apply LNC adjust
+        if(shop->GetLNCAdjust())
+        {
+            float lnc = (float)character->GetLNC();
+            float lncCenter = shop->GetLNCCenter();
+            float lncDelta = (float)fabs(lnc - lncCenter);
+
+            price = (int32_t)ceil((float)price * (lncDelta * 0.00002f +
+                (lncCenter ? 0.8f : 0.9f)));
+        }
     }
 
     // Sanity check price
@@ -138,11 +227,6 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
     {
         price = 1;
     }
-
-    // Initially it was thought that the CP cost on MiShopProductData indicated
-    // if the item had a CP cost or not but there are entries that sell for CP
-    // in the UI with a cost of zero here so use the flag on the item instead
-    bool cpPurchase = characterManager->IsCPItem(def);
 
     bool success = false;
     if(!cpPurchase)
@@ -294,7 +378,7 @@ bool Parsers::ShopBuy::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     int32_t shopID = p.ReadS32Little();
-    int32_t cacheID = p.ReadS32Little();
+    int32_t clientTrendTime = p.ReadS32Little();
     int32_t productID = p.ReadS32Little();
     int32_t quantity = p.ReadS32Little();
 
@@ -326,7 +410,7 @@ bool Parsers::ShopBuy::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->QueueWork(HandleShopPurchase, server, client, shopID, cacheID,
+    server->QueueWork(HandleShopPurchase, server, client, shopID, clientTrendTime,
         productID, quantity, gifteeName, giftMessage);
 
     return true;

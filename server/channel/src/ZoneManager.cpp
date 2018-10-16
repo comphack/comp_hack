@@ -2166,13 +2166,14 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<EnemyState>& enemyState,
         return;
     }
 
+    auto eBase = enemyState->GetEnemyBase();
     auto stats = enemyState->GetCoreStats();
     auto zoneData = zone->GetDefinition();
 
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENEMY_DATA);
     p.WriteS32Little(enemyState->GetEntityID());
-    p.WriteS32Little((int32_t)enemyState->GetEntity()->GetType());
+    p.WriteS32Little((int32_t)eBase->GetType());
     p.WriteS32Little(enemyState->GetMaxHP());
     p.WriteS32Little(stats->GetHP());
     p.WriteS8(stats->GetLevel());
@@ -2192,7 +2193,7 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<EnemyState>& enemyState,
         p.WriteU8(ePair.first->GetStack());
     }
 
-    p.WriteU32Little(enemyState->GetEntity()->GetVariantType());
+    p.WriteU32Little(eBase->GetVariantType());
 
     for(auto zClient : clients)
     {
@@ -2205,6 +2206,17 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<EnemyState>& enemyState,
     if(!queue)
     {
         ChannelClientConnection::FlushAllOutgoing(clients);
+    }
+
+    // If we're sending to the whole zone and its a grouped boss, send that
+    // info now too
+    if(!client)
+    {
+        auto spawn = eBase->GetSpawnSource();
+        if(spawn && spawn->GetBossGroup())
+        {
+            SendMultiZoneBossStatus(spawn->GetBossGroup());
+        }
     }
 }
 
@@ -2333,15 +2345,11 @@ void ZoneManager::HandleDespawns(const std::shared_ptr<Zone>& zone)
                     characterManager->AddRemoveOpponent(false,
                         std::dynamic_pointer_cast<EnemyState>(eState),
                         nullptr);
-                    break;
-                case EntityType_t::PLASMA:
-                    /// @todo
+                    zone->RemoveEntity(entityID);
                     break;
                 default:
                     break;
                 }
-
-                zone->RemoveEntity(entityID);
             }
         }
 
@@ -2374,7 +2382,7 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
     std::list<libcomp::Packet> zonePackets;
     std::set<uint32_t> added, updated, removed;
     std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
-    std::set<std::shared_ptr<ActiveEntityState>> statusRemoved;
+    std::set<std::shared_ptr<ActiveEntityState>> recalc;
 
     int32_t hpTDamage, mpTDamage, upkeepCost;
     for(auto entity : effectEntities)
@@ -2411,6 +2419,8 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
             {
                 zonePackets.push_back(p);
             }
+
+            recalc.insert(entity);
         }
 
         bool hpMpRecalc = false;
@@ -2476,7 +2486,7 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
                 zonePackets.push_back(p);
             }
 
-            statusRemoved.insert(entity);
+            recalc.insert(entity);
 
             // If a digitalize status was removed, update the client state
             for(uint32_t effectID : dgStatusEffectIDs)
@@ -2501,14 +2511,14 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
         ChannelClientConnection::BroadcastPackets(zConnections, zonePackets);
     }
 
-    for(auto eState : statusRemoved)
+    for(auto eState : recalc)
     {
         // Make sure T-damage is sent first
-        // Status add/update and world update handled when applying changes
         tokuseiManager->Recalculate(eState, true,
             std::set<int32_t>{ eState->GetEntityID() });
         if(characterManager->RecalculateStats(eState) & ENTITY_CALC_STAT_WORLD)
         {
+            // Do not send twice
             displayStateModified.erase(eState);
         }
     }
@@ -3187,6 +3197,9 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         for(auto& eStateGroup : eStateGroups)
         {
             bool encounterSpawn = !containsSimpleSpawns || eStateGroup != eStateGroups.front();
+
+            bool first = true;
+            uint64_t staggerTime = 0;
             for(auto eState : eStateGroup)
             {
                 auto spawn = eState->GetEnemyBase()->GetSpawnSource();
@@ -3198,18 +3211,30 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
                 if(!encounterSpawn)
                 {
+                    if(!first && !refreshAll &&
+                        (!actionSource || !actionSource->GetNoStagger()))
+                    {
+                        if(!staggerTime)
+                        {
+                            staggerTime = ChannelServer::GetServerTime();
+                        }
+
+                        // Spawn every half second
+                        staggerTime = (uint64_t)(staggerTime + 500000);
+                    }
+
                     if(eState->GetEntityType() == EntityType_t::ENEMY)
                     {
-                        zone->AddEnemy(std::dynamic_pointer_cast<EnemyState>(eState));
-                        if(spawn && spawn->GetBossGroup())
-                        {
-                            SendMultiZoneBossStatus(spawn->GetBossGroup());
-                        }
+                        auto e = std::dynamic_pointer_cast<EnemyState>(eState);
+                        zone->AddEnemy(e, staggerTime);
                     }
                     else
                     {
-                        zone->AddAlly(std::dynamic_pointer_cast<AllyState>(eState));
+                        auto a = std::dynamic_pointer_cast<AllyState>(eState);
+                        zone->AddAlly(a, staggerTime);
                     }
+
+                    first = false;
                 }
             }
 
@@ -3225,15 +3250,18 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         {
             for(auto& eState : eStateGroup)
             {
-                if(eState->GetEntityType() == EntityType_t::ENEMY)
+                if(eState->Ready())
                 {
-                    auto e = std::dynamic_pointer_cast<EnemyState>(eState);
-                    SendEnemyData(e, nullptr, zone, false);
-                }
-                else
-                {
-                    auto a = std::dynamic_pointer_cast<AllyState>(eState);
-                    SendAllyData(a, nullptr, zone, false);
+                    if(eState->GetEntityType() == EntityType_t::ENEMY)
+                    {
+                        auto e = std::dynamic_pointer_cast<EnemyState>(eState);
+                        SendEnemyData(e, nullptr, zone, false);
+                    }
+                    else
+                    {
+                        auto a = std::dynamic_pointer_cast<AllyState>(eState);
+                        SendAllyData(a, nullptr, zone, false);
+                    }
                 }
             }
         }
@@ -3248,6 +3276,27 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
     }
 
     return false;
+}
+
+bool ZoneManager::UpdateStaggeredSpawns(const std::shared_ptr<Zone>& zone,
+    uint64_t now)
+{
+    auto stagger = zone->UpdateStaggeredSpawns(now);
+    for(auto eState : stagger)
+    {
+        if(eState->GetEntityType() == EntityType_t::ENEMY)
+        {
+            auto e = std::dynamic_pointer_cast<EnemyState>(eState);
+            SendEnemyData(e, nullptr, zone, false);
+        }
+        else
+        {
+            auto a = std::dynamic_pointer_cast<AllyState>(eState);
+            SendAllyData(a, nullptr, zone, false);
+        }
+    }
+
+    return stagger.size() > 0;
 }
 
 bool ZoneManager::SelectSpotAndLocation(bool useSpotID, uint32_t& spotID,
@@ -3539,6 +3588,12 @@ void ZoneManager::UpdateActiveZoneStates()
 
         // Update active AI controlled entities
         aiManager->UpdateActiveStates(zone, serverTime, isNight);
+
+        // Update staggered spawns before doing any normal spawns
+        if(zone->HasStaggeredSpawns(serverTime))
+        {
+            UpdateStaggeredSpawns(zone, serverTime);
+        }
 
         if(zone->HasRespawns())
         {
@@ -6234,6 +6289,7 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         case objects::ServerZoneTrigger::Trigger_t::ON_PHASE:
         case objects::ServerZoneTrigger::Trigger_t::ON_PVP_START:
         case objects::ServerZoneTrigger::Trigger_t::ON_PVP_BASE_CAPTURE:
+        case objects::ServerZoneTrigger::Trigger_t::ON_PVP_COMPLETE:
         case objects::ServerZoneTrigger::Trigger_t::ON_DIASPORA_BASE_CAPTURE:
         case objects::ServerZoneTrigger::Trigger_t::ON_DIASPORA_BASE_RESET:
         case objects::ServerZoneTrigger::Trigger_t::ON_UB_TICK:

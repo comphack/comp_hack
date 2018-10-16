@@ -49,6 +49,7 @@
 #include <CharacterProgress.h>
 #include <DigitalizeState.h>
 #include <DropSet.h>
+#include <Expertise.h>
 #include <InheritedSkill.h>
 #include <Item.h>
 #include <ItemBox.h>
@@ -203,6 +204,7 @@ public:
     uint8_t KnowledgeRank = 0;
     uint16_t OffenseValue = 0;
     int32_t AbsoluteDamage = 0;
+    int16_t ChargeReduce = 0;
     std::unordered_map<int32_t, uint16_t> OffenseValues;
     bool IsItemSkill = false;
     bool Reflected = false;
@@ -420,14 +422,31 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     // movement speed
     if(!instantExecution)
     {
-        // If the skill needs to charge, see if any time adjustments exist.
-        // This will never reduce to 0% time so storing the context is not
-        // necessary.
+        // If the skill needs to charge, see if any time adjustments exist
         uint32_t chargeTime = defaultChargeTime;
-        if(chargeTime > 0 && (castBasic->GetAdjustRestrictions() & 0x04) == 0)
+        if(pSkill->FunctionID == SVR_CONST.SKILL_SUMMON_DEMON)
         {
-            int16_t chargeAdjust = source->GetCorrectValue(
-                CorrectTbl::CHANT_TIME, calcState);
+            // Summon charge time is unique from all other skills
+            chargeTime = GetSummonSpeed(pSkill, client);
+            if(!chargeTime)
+            {
+                SendFailure(source, skillID, client);
+                return false;
+            }
+
+            executeNow = false;
+        }
+        else if(chargeTime > 0 &&
+            (castBasic->GetAdjustRestrictions() & 0x04) == 0)
+        {
+            int16_t chargeAdjust = (int16_t)(source->GetCorrectValue(
+                CorrectTbl::CHANT_TIME, calcState) -
+                (pSkill->ChargeReduce / 10));
+            if(chargeAdjust < 0)
+            {
+                chargeAdjust = 0;
+            }
+
             if(chargeAdjust != 100)
             {
                 chargeTime = (uint32_t)ceill(chargeTime *
@@ -1430,7 +1449,40 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
         }
         else if(pSkill->FunctionID == SVR_CONST.SKILL_DIGITALIZE)
         {
-            /// @todo: calculate mag cost
+            auto demon = std::dynamic_pointer_cast<objects::Demon>(
+                libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(
+                activated->GetActivationObjectID())));
+            if(demon == nullptr)
+            {
+                LOG_ERROR("Attempted to digitalize with a demon that does not"
+                    " exist.\n");
+                SendFailure(activated, client,
+                    (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
+                return false;
+            }
+
+            // Calculate MAG cost
+            uint32_t demonType = demon->GetType();
+            auto demonData = server->GetDefinitionManager()->GetDevilData(
+                demonType);
+
+            int16_t characterLNC = character->GetLNC();
+            int16_t demonLNC = demonData->GetBasic()->GetLNC();
+            int8_t level = demon->GetCoreStats()->GetLevel();
+            int8_t dLevel = character->GetProgress()->GetDigitalizeLevels(
+                (uint8_t)demonData->GetCategory()->GetRace());
+            int8_t mRank = (int8_t)(demon->GetMitamaRank() + 1);
+
+            double lncCost = (double)dLevel *
+                pow(characterLNC - demonLNC, 2) * 0.000001;
+            double levelCost = (double)level * pow(mRank, 2) * 0.02;
+            double dLevelCost = pow(dLevel, 2) * (double)mRank * 1.25;
+
+            uint32_t dgCost = (uint32_t)floor(lncCost + levelCost + dLevelCost);
+            if(dgCost)
+            {
+                itemCosts[SVR_CONST.ITEM_MAGNETITE] = dgCost;
+            }
         }
         else if(pSkill->FunctionID == SVR_CONST.SKILL_GEM_COST)
         {
@@ -3307,12 +3359,16 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
         if(cSource)
         {
             skill->ExpertiseRankBoost = cSource->GetExpertiseRank(
-                definitionManager, skill->ExpertiseType);
+                skill->ExpertiseType, definitionManager);
+
+            // Calculate charge reduction before any boost extensions
+            skill->ChargeReduce = (int16_t)(skill->ExpertiseRankBoost * 2);
+
             if(skill->ExpertiseType == EXPERTISE_ATTACK)
             {
                 // Attack expertise gains an extra bonus from regal presence
-                uint8_t boost2 = cSource->GetExpertiseRank(definitionManager,
-                    EXPERTISE_CHAIN_R_PRESENCE);
+                uint8_t boost2 = cSource->GetExpertiseRank(
+                    EXPERTISE_CHAIN_R_PRESENCE, definitionManager);
                 skill->ExpertiseRankBoost = (uint8_t)(skill->ExpertiseRankBoost + boost2);
             }
         }
@@ -3394,7 +3450,6 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
         }
     }
 
-    // Set any dependency type dependent properties
     if(cSource)
     {
         // Set the knowledge rank for critical and durability adjustment
@@ -3403,18 +3458,22 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
         case 0:
         case 9:
         case 12:
-            skill->KnowledgeRank = cSource->GetExpertiseRank(definitionManager,
+            skill->KnowledgeRank = cSource->GetExpertiseRank(
                 EXPERTISE_WEAPON_KNOWLEDGE);
             break;
         case 1:
         case 6:
         case 10:
-            skill->KnowledgeRank = cSource->GetExpertiseRank(definitionManager,
+            skill->KnowledgeRank = cSource->GetExpertiseRank(
                 EXPERTISE_GUN_KNOWLEDGE);
             break;
         default:
             break;
         }
+
+        // Magic control lowers charge time
+        uint8_t mcRank = cSource->GetExpertiseRank(EXPERTISE_MAGIC_CONTROL);
+        skill->ChargeReduce = (int16_t)(skill->ChargeReduce + mcRank * 4);
     }
 
     if(ctx)
@@ -4151,40 +4210,90 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
                 // (this does not take NRA shields into account since nothing
                 // is "consumed" by this)
                 CorrectTbl nraType = (CorrectTbl)(affinity + NRA_OFFSET);
-                if(eState->GetNRAChance(0, nraType, targetCalc) > 0 ||
-                    eState->GetNRAChance(1, nraType, targetCalc) > 0 ||
-                    eState->GetNRAChance(2, nraType, targetCalc) > 0)
+                if(eState->GetNRAChance(NRA_NULL, nraType, targetCalc) > 0 ||
+                    eState->GetNRAChance(NRA_REFLECT, nraType, targetCalc) > 0 ||
+                    eState->GetNRAChance(NRA_ABSORB, nraType, targetCalc) > 0)
                 {
                     continue;
                 }
             }
         }
+        
+        uint8_t statusCategory = statusDef->GetCommon()->GetCategory()
+            ->GetMainCategory();
+        uint8_t statusSubCategory = statusDef->GetCommon()->GetCategory()
+            ->GetSubCategory();
+
+        // Only certain types of status effects can be resisted
+        bool canResist = !isRemove && statusCategory != 1 &&
+            statusSubCategory != 3 && statusSubCategory != 4;
 
         // Effect can be added (or removed), determine success rate
         double successRate = statusPair.second;
 
-        uint8_t statusCategory = statusDef->GetCommon()->GetCategory()
-            ->GetMainCategory();
-        if(statusAdjusts.size() > 0)
+        // Hard 100% success rates cannot be adjusted, only avoided entirely
+        if(successRate < 100.f)
         {
-            // Boost success by direct inflict adjust
-            double rateBoost = 0.0;
-            auto it = statusAdjusts.find((int32_t)effectID);
-            if(it != statusAdjusts.end())
+            // Add affinity boost/2
+            successRate += (double)GetAffinityBoost(source, sourceCalc,
+                (CorrectTbl)(affinity + BOOST_OFFSET)) / 2.0;
+
+            // Boost for certain epertise
+            if((pSkill->ExpertiseType == EXPERTISE_CHAIN_COTW ||
+                pSkill->ExpertiseType == EXPERTISE_CHAIN_M_BULLET) &&
+                pSkill->ExpertiseRankBoost)
             {
-                rateBoost += it->second;
+                // Raise by 1% per rank
+                successRate += (double)(pSkill->ExpertiseRankBoost / 2);
             }
 
-            // Boost success by category inflict adjust (-category - 1)
-            it = statusAdjusts.find((int32_t)(statusCategory * -1) - 1);
-            if(it != statusAdjusts.end())
+            if(successRate > 0.f && canResist)
             {
-                rateBoost += it->second;
+                // Multiply by 100% + -resistance
+                CorrectTbl resistCorrectType = (CorrectTbl)(affinity +
+                    RES_OFFSET);
+
+                double resist = (double)(eState->GetCorrectValue(
+                    resistCorrectType, targetCalc) * 0.01);
+                successRate *= (1.0 + resist * -1.0);
             }
 
-            if(rateBoost != 0.0)
+            if(successRate < 0.f)
             {
-                successRate = successRate * (1.0 + rateBoost * 0.01);
+                // Minimum value for this point is 0%
+                successRate = 0.f;
+            }
+
+            if(statusAdjusts.size() > 0)
+            {
+                // Boost success by direct inflict adjust
+                double rateBoost = 0.0;
+                auto it = statusAdjusts.find((int32_t)effectID);
+                if(it != statusAdjusts.end())
+                {
+                    rateBoost += it->second;
+                }
+
+                // Boost success by category inflict adjust (-category - 1)
+                it = statusAdjusts.find((int32_t)(statusCategory * -1) - 1);
+                if(it != statusAdjusts.end())
+                {
+                    rateBoost += it->second;
+                }
+
+                // Add rate boost directly
+                if(rateBoost > 0.0)
+                {
+                    successRate += rateBoost;
+                }
+            }
+
+            // Add bad status resistance from target
+            if(successRate > 0.f && canResist)
+            {
+                double resist = ((double)eState->GetCorrectValue(
+                    CorrectTbl::RES_STATUS, targetCalc) - 100.0) / 10.0;
+                successRate += resist;
             }
         }
 
@@ -4511,12 +4620,14 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 
     if(enemiesKilled.size() > 0)
     {
-        // Gather all enemy entity IDs
+        // Gather all enemy entity IDs and levels
         std::list<int32_t> enemyIDs;
+        std::list<int8_t> levels;
         for(auto eState : enemiesKilled)
         {
             zone->RemoveEntity(eState->GetEntityID(), 1);
             enemyIDs.push_back(eState->GetEntityID());
+            levels.push_back(eState->GetLevel());
         }
 
         zoneManager->RemoveEntitiesFromZone(zone, enemyIDs, 4, true);
@@ -4832,6 +4943,37 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         if(dgEnemies.size() > 0)
         {
             HandleDigitalizeXP(source, dgEnemies, zone);
+        }
+
+        // Update crushing technique
+        if(source->GetEntityType() == EntityType_t::CHARACTER &&
+            sourceClient)
+        {
+            auto cState = std::dynamic_pointer_cast<CharacterState>(source);
+            auto character = cState ? cState->GetEntity() : nullptr;
+            auto expertise = character ? character->GetExpertises(
+                EXPERTISE_CRUSH_TECHNIQUE).Get() : nullptr;
+            if(expertise && !expertise->GetDisabled())
+            {
+                int8_t lvl = cState->GetLevel();
+                double rate = (double)cState->GetCorrectValue(
+                    CorrectTbl::RATE_EXPERTISE) * 0.01;
+
+                int32_t points = 0;
+                for(int8_t dLvl : levels)
+                {
+                    int32_t up = (int32_t)(3.0 * (double)(5 +
+                        (dLvl / 10 - lvl / 10)) * rate);
+                    points += (5 + (up > 0 ? up : 0));
+                }
+
+                std::list<std::pair<uint8_t, int32_t>> expPoints;
+                expPoints.push_back(std::pair<uint8_t, int32_t>(
+                    EXPERTISE_CRUSH_TECHNIQUE, points));
+
+                characterManager->UpdateExpertisePoints(sourceClient,
+                    expPoints);
+            }
         }
 
         // Update invoke values for active cooldowns
@@ -5549,34 +5691,23 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
         !talkAffFailure && !talkFearSuccess && !talkFearFailure;
 
     int32_t talkType = 0;
+    int8_t expID = 0;
     switch(pSkill->Definition->GetBasic()->GetActionType())
     {
     case objects::MiSkillBasicData::ActionType_t::TALK:
         talkType = 1;
+        expID = EXPERTISE_TALK;
         break;
     case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
         talkType = 2;
+        expID = EXPERTISE_INTIMIDATE;
         break;
     case objects::MiSkillBasicData::ActionType_t::TAUNT:
         talkType = 3;
+        expID = EXPERTISE_TAUNT;
         break;
     default:
         return false;
-    }
-
-    auto calcState = GetCalculatedState(source, pSkill, false, eState);
-
-    double talkSuccess = spawn ? (double)(100 - spawn->GetTalkResist()) : 0.0;
-    if(talkType != 0 && talkSuccess != 0.0)
-    {
-        auto adjust = mServer.lock()->GetTokuseiManager()
-            ->GetAspectMap(source, TokuseiAspectType::TALK_RATE,
-            std::set<int32_t>{ 0, talkType }, calcState);
-
-        for(auto pair : adjust)
-        {
-            talkSuccess += pair.second;
-        }
     }
 
     bool success = false;
@@ -5588,6 +5719,32 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
     }
     else
     {
+        double talkSuccess = spawn
+            ? (double)(100 - spawn->GetTalkResist()) : 0.0;
+
+        auto calcState = GetCalculatedState(source, pSkill, false, eState);
+        if(talkSuccess != 0.0)
+        {
+            auto adjust = mServer.lock()->GetTokuseiManager()
+                ->GetAspectMap(source, TokuseiAspectType::TALK_RATE,
+                std::set<int32_t>{ 0, talkType }, calcState);
+
+            for(auto pair : adjust)
+            {
+                talkSuccess += pair.second;
+            }
+
+            auto cSource = std::dynamic_pointer_cast<CharacterState>(source);
+            if(cSource && talkSuccess < 100.0)
+            {
+                // Boost success based on expertise
+                talkSuccess += (double)(cSource->GetExpertiseRank(
+                    EXPERTISE_DEMONOLOGY) / 10) * 2.0;
+                talkSuccess += (double)(cSource->GetExpertiseRank(
+                    (uint8_t)expID) / 10) * 3.0;
+            }
+        }
+
         success = talkSuccess > 0.0 &&
             RNG(uint16_t, 1, 100) <= (uint16_t)talkSuccess;
         int16_t aff = (int16_t)(talkPoints.first +
@@ -6106,16 +6263,17 @@ void SkillManager::HandleDurabilityDamage(const std::shared_ptr<ActiveEntityStat
             return;
         }
 
-        double survivalRank = (double)cState->GetExpertiseRank(
-            server->GetDefinitionManager(), EXPERTISE_SURVIVAL);
+        double defRank = (double)cState->GetExpertiseRank(EXPERTISE_SURVIVAL) +
+            cState->GetExpertiseRank(EXPERTISE_CHAIN_R_PRESENCE, server
+                ->GetDefinitionManager());
 
         int32_t durabilityLoss = (int32_t)armorDamage;
-        if(survivalRank)
+        if(defRank)
         {
             // Decrease damage to a maximum of approximately 60%
             /// @todo: needs more research
             durabilityLoss = (int32_t)ceil(((double)durabilityLoss - 1.0) *
-                (1.0 + ((0.002 * pow(survivalRank, 2)) - (0.215 * survivalRank)) / 10.0));
+                (1.0 + ((0.002 * pow(defRank, 2)) - (0.215 * defRank)) / 10.0));
         }
 
         std::unordered_map<std::shared_ptr<objects::Item>, int32_t> equipMap;
@@ -6856,6 +7014,27 @@ int16_t SkillManager::GetEntityRate(const std::shared_ptr<ActiveEntityState> eSt
     }
 }
 
+float SkillManager::GetAffinityBoost(
+    const std::shared_ptr<ActiveEntityState> eState,
+    std::shared_ptr<objects::CalculatedEntityState> calcState,
+    CorrectTbl boostType)
+{
+    float aBoost = (float)eState->GetCorrectValue(boostType, calcState);
+    if(aBoost != 0.f)
+    {
+        // Limit boost based on tokusei or 100% by default
+        auto tokuseiManager = mServer.lock()->GetTokuseiManager();
+        double affinityMax = tokuseiManager->GetAspectSum(eState,
+            TokuseiAspectType::AFFINITY_CAP_MAX, calcState);
+        if((double)(aBoost - 100.f) > affinityMax)
+        {
+            aBoost = (float)(100.0 + affinityMax);
+        }
+    }
+
+    return aBoost;
+}
+
 int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
     ActiveEntityState>& source, SkillTargetResult& target,
     const std::shared_ptr<ProcessingSkill>& pSkill, uint16_t mod,
@@ -6889,26 +7068,13 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         float boost = 0.f;
         for(auto boostType : boostTypes)
         {
-            float aBoost = (float)(
-                source->GetCorrectValue(boostType, calcState) * 0.01);
-            if(aBoost != 0.f)
-            {
-                // Limit boost based on tokusei or 100% by default
-                double affinityMax = tokuseiManager->GetAspectSum(source,
-                    TokuseiAspectType::AFFINITY_CAP_MAX, calcState);
-                if((double)(aBoost - 100.f) > affinityMax)
-                {
-                    aBoost = (float)(100.0 + affinityMax);
-                }
-            }
-
-            boost += aBoost;
+            boost += GetAffinityBoost(source, calcState, boostType) * 0.01f;
         }
 
         // -100% boost is the minimum amount allowed
-        if(boost < -100.f)
+        if(boost < -1.f)
         {
-            boost = -100.f;
+            boost = -1.f;
         }
 
         uint16_t def = 0;
@@ -7074,8 +7240,6 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
                     calc = calc * taken;
                 }
             }
-
-            /// @todo: there is more to this calculation
 
             amount = (int32_t)floor(calc);
         }
@@ -7700,21 +7864,28 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
     uint32_t cdTime = pSkill->Definition->GetCondition()->GetCooldownTime();
 
     uint64_t cooldownTime = 0;
-    if(cdTime && (!moreUses || (execCount > 0 && !executed)))
+    if(!moreUses || (execCount > 0 && !executed))
     {
-        // Adjust cooldown time if supported by the skill
-        if((pSkill->Definition->GetCast()->GetBasic()
-            ->GetAdjustRestrictions() & 0x02) == 0)
+        if(cdTime)
         {
-            auto calcState = GetCalculatedState(source, pSkill, false,
-                nullptr);
+            // Adjust cooldown time if supported by the skill
+            if((pSkill->Definition->GetCast()->GetBasic()
+                ->GetAdjustRestrictions() & 0x02) == 0)
+            {
+                auto calcState = GetCalculatedState(source, pSkill, false,
+                    nullptr);
 
-            cdTime = (uint32_t)ceil((double)cdTime *
-                (source->GetCorrectValue(CorrectTbl::COOLDOWN_TIME,
-                    calcState) * 0.01));
+                cdTime = (uint32_t)ceil((double)cdTime *
+                    (source->GetCorrectValue(CorrectTbl::COOLDOWN_TIME,
+                        calcState) * 0.01));
+            }
+
+            cooldownTime = currentTime + (uint64_t)((double)cdTime * 1000);
         }
-
-        cooldownTime = currentTime + (uint64_t)((double)cdTime * 1000);
+        else
+        {
+            cooldownTime = currentTime;
+        }
     }
 
     activated->SetCooldownTime(cooldownTime);
@@ -8786,24 +8957,24 @@ bool SkillManager::Mount(const std::shared_ptr<objects::ActivatedAbility>& activ
 
         auto ring = character->GetEquippedItems((size_t)
             objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING).Get();
-        auto ringData = ring
-            ? definitionManager->GetSItemData(ring->GetType()) : nullptr;
-        auto ringTokusei = ringData
-            ? definitionManager->GetTokuseiData(ringData->GetTokusei(0)) : nullptr;
-
-        bool ringValid = ringTokusei != nullptr;
-        if(ringValid)
+        bool ringValid = false;
+        if(ring)
         {
-            // Make sure the tokusei adds the skill
-            ringValid = false;
-
-            for(auto aspect : ringTokusei->GetAspects())
+            // Make sure the tokusei adds the skill. These items should not
+            // have SI available but check properly just in case
+            uint32_t specialEffect = ring->GetSpecialEffect();
+            for(int32_t tokuseiID : definitionManager->GetSItemTokusei(
+                specialEffect ? specialEffect : ring->GetType()))
             {
-                if(aspect->GetType() == TokuseiAspectType::SKILL_ADD &&
-                    (uint32_t)aspect->GetValue() == activated->GetSkillID())
+                auto tokusei = definitionManager->GetTokuseiData(tokuseiID);
+                for(auto aspect : tokusei->GetAspects())
                 {
-                    ringValid = true;
-                    break;
+                    if(aspect->GetType() == TokuseiAspectType::SKILL_ADD &&
+                        (uint32_t)aspect->GetValue() == activated->GetSkillID())
+                    {
+                        ringValid = true;
+                        break;
+                    }
                 }
             }
         }
@@ -9587,6 +9758,45 @@ void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> 
             ChannelClientConnection::BroadcastPacket(zConnections, p);
         }
     }
+}
+
+uint32_t SkillManager::GetSummonSpeed(
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto state = client ? client->GetClientState() : nullptr;
+    auto cState = state ? state->GetCharacterState() : nullptr;
+    if(!state || pSkill->EffectiveSource != cState)
+    {
+        return 0;
+    }
+
+    auto calcState = GetCalculatedState(cState, pSkill, false, nullptr);
+    auto activated = pSkill->Activated;
+    auto demonID = activated->GetActivationObjectID();
+    auto demon = demonID > 0 ? std::dynamic_pointer_cast<objects::Demon>(
+        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)))
+        : nullptr;
+    if(!demon)
+    {
+        return 0;
+    }
+
+    auto demonData = mServer.lock()->GetDefinitionManager()->GetDevilData(demon
+        ->GetType());
+    if(!demonData)
+    {
+        return 0;
+    }
+
+    uint32_t demonSpeed = demonData->GetSummonData()->GetSummonSpeed();
+    int16_t correctSpeed = cState->GetCorrectValue(CorrectTbl::SUMMON_SPEED,
+        calcState);
+    double speed = (((double)demonSpeed - (double)correctSpeed) /
+        100.0 * 2000.0);
+
+    // Minimum 1ms
+    return (uint32_t)(speed > 0.0 ? speed : 1.0);
 }
 
 bool SkillManager::IsTalkSkill(const std::shared_ptr<

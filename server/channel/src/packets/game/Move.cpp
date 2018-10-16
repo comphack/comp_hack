@@ -39,12 +39,14 @@
 #include <math.h>
 
 // object Includes
+#include <CalculatedEntityState.h>
 #include <WorldSharedConfig.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
 #include "ClientState.h"
+#include "TokuseiManager.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -152,8 +154,6 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     // and kind of irrelavent so mark it right away
     eState->SetCurrentRotation(destRot);
 
-    /// @todo: Fire zone triggers
-
     if(positionCorrected)
     {
         // Sending the move response back to the player can still be
@@ -185,16 +185,50 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         }
     }
 
-    // If a demon is moving while the character is hidden, warp the
-    // character to the destination spot
-    if(eState == state->GetDemonState() &&
-        state->GetCharacterState()->GetIsHidden())
+    float demonX = destX;
+    float demonY = destY;
+    switch(eState->GetEntityType())
     {
-        zoneManager->Warp(client, state->GetCharacterState(),
-            destX, destY, 0.f);
+    case EntityType_t::CHARACTER:
+        // Update movement decay durability
+        if(eState->GetCalculatedState()->ExistingTokuseiAspectsContains(
+            (int8_t)TokuseiAspectType::EQUIP_MOVE_DECAY))
+        {
+            float dSquared = (float)(std::pow((originX - destX), 2)
+                + std::pow((originY - destY), 2));
+            server->GetTokuseiManager()->UpdateMovementDecay(client,
+                std::sqrt(dSquared));
+        }
+
+        if(state->GetDemonState()->Ready())
+        {
+            // Only compare character/demon distance if its summoned
+            demonX = state->GetDemonState()->GetDestinationX();
+            demonY = state->GetDemonState()->GetDestinationY();
+        }
+        break;
+    case EntityType_t::PARTNER_DEMON:
+        // If a demon is moving while the character is hidden, warp the
+        // character to the destination spot
+        if(state->GetCharacterState()->GetIsHidden())
+        {
+            zoneManager->Warp(client, state->GetCharacterState(),
+                destX, destY, 0.f);
+        }
+        break;
+    default:
+        break;
     }
 
-    /// @todo: lower movement durability
+    // Player character and demon being at least 6000 units from one another
+    // (squared here), will cause the demon to warp to the character
+    if(state->GetCharacterState()->GetDistance(demonX, demonY, true) >=
+        36000000.f)
+    {
+        zoneManager->Warp(client, state->GetDemonState(),
+            state->GetCharacterState()->GetDestinationX(),
+            state->GetCharacterState()->GetDestinationY(), 0.f);
+    }
 
     return true;
 }

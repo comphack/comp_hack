@@ -37,6 +37,7 @@
         <member type="Clan*" name="Clan"/>
         <member type="u8" name="CurrentTitle" max="4"/>
         <member type="bool" name="TitlePrioritized"/>
+        <member type="bool" name="SupportDisplay"/>
         <member type="u32" name="FusionGauge"/>
 
         <!-- Collections -->

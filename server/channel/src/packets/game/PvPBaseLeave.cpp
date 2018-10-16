@@ -4,7 +4,9 @@
  *
  * @author HACKfrost
  *
- * @brief Request from the client to stop capturing a PvP base.
+ * @brief Request from the client to stop capturing a PvP base. This packet
+ *  also serves the secondary purpose of being a "match over" indicator that
+ *  sends when the results screen is closed.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -31,10 +33,14 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <Match.h>
+
  // channel Includes
 #include "ChannelServer.h"
 #include "EventManager.h"
 #include "MatchManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 
@@ -56,6 +62,17 @@ bool Parsers::PvPBaseLeave::Parse(libcomp::ManagerPacket *pPacketManager,
 
     int32_t baseID = state->GetEventSourceEntityID();
     server->GetMatchManager()->LeaveBase(client, baseID);
+
+    auto zone = state->GetZone();
+    if(zone && MatchManager::InPvPTeam(state->GetCharacterState()) &&
+        !MatchManager::PvPActive(zone->GetInstance()))
+    {
+        // Match is over and this should be treated like the "end
+        // confirmation" request so trigger complete actions
+        server->GetZoneManager()->TriggerZoneActions(zone,
+            { state->GetCharacterState() }, ZoneTrigger_t::ON_PVP_COMPLETE,
+            client);
+    }
 
     return true;
 }

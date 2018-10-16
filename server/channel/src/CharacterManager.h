@@ -55,6 +55,7 @@ class MiDevilLVUpData;
 class MiDevilLVUpRateData;
 class MiMitamaReunionSetBonusData;
 class MiItemData;
+class PostItem;
 }
 
 typedef objects::MiCorrectTbl::ID_t CorrectTbl;
@@ -865,6 +866,26 @@ public:
         uint16_t rateBoost = 0, float multiplier = -1.0f);
 
     /**
+     * Calculate how many expertise points would be gained for a specific
+     * character, expertise and growth rate. Inactive expertise will always
+     * return 0.
+     * @param cState Pointer to the character state
+     * @param expertiseID ID of the expertise to calculate
+     * @param growthRate Growth rate to apply to the calculation, typically
+     *  from a skill's growth data
+     * @param rateBoost Optional flat value to add to the expertise
+     *  rates for the calculation (before calculating final amount)
+     * @param multiplier Expertise point multiplier, defaults to -1
+     *  to differentiate from explicitly being set to 1. If this is
+     *  not set, the character's expertise acquisition rate will be
+     *  used.
+     * @return Expertise point gain, will never be negative
+     */
+    int32_t CalculateExpertiseGain(const std::shared_ptr<CharacterState>& cState,
+        uint8_t expertiseID, float growthRate,
+        uint16_t rateBoost = 0, float multiplier = -1.0f);
+
+    /**
      * Update a client's character's expertise for a set of expertise IDs.
      * If an expertise is supplied that is not enabled it will still be
      * updated.
@@ -1049,6 +1070,16 @@ public:
      */
     void SendInvokeStatus(const std::shared_ptr<
         ChannelClientConnection>& client, bool force, bool queue = false);
+
+    /**
+     * Send post items not already "distributed" to the client and update
+     * them so they do not send a second time.
+     * @param client Pointer to the client connection
+     * @param post List of post items pending distribution
+     */
+    void NotifyItemDistribution(const std::shared_ptr<
+        ChannelClientConnection>& client,
+        std::list<std::shared_ptr<objects::PostItem>> post);
 
     /**
      * Update the status effects active on a demon that is not currently

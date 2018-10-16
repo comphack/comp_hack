@@ -18,5 +18,6 @@
             <key type="u32"/>   <!-- Status Type -->
             <value type="u32"/> <!-- Explicit Time -->
         </member>
+        <member type="bool" name="allowNull"/>
     </object>
 </objgen>

@@ -641,6 +641,16 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to set the the client character's SupportDisplay flag.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Support(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to set the default ticker message upon login
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command

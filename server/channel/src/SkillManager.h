@@ -578,6 +578,18 @@ private:
         std::shared_ptr<objects::CalculatedEntityState> calcState, bool taken);
 
     /**
+     * Get the specific affinity boost associated to the supplied entity. Max
+     * affinity cap is applied to the value.
+     * @param eState Pointer to the entity
+     * @param calcState Pointer to entity's calculated state
+     * @param boostType CorrectTbl index of the boost type
+     * @return Calculated boost level as a decimal
+     */
+    float GetAffinityBoost(const std::shared_ptr<ActiveEntityState> eState,
+        std::shared_ptr<objects::CalculatedEntityState> calcState,
+        CorrectTbl boostType);
+
+    /**
      * Calculate skill damage or healing using the default formula
      * @param source Pointer to the entity that activated the skill
      * @param target Pointer to the entity that will receive damage
@@ -1013,6 +1025,17 @@ private:
      */
     void SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
         uint8_t mode);
+
+    /**
+     * Determine the summon speed for the supplied client and the targeted
+     * demon in the COMP.
+     * @param pSkill Current skill processing state
+     * @param client Pointer to the client connection
+     * @return Summon charge time in milliseconds, 0 on error
+     */
+    uint32_t GetSummonSpeed(
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+        const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
      * Determine if the supplied skill data will involve talk results either

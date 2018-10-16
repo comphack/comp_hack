@@ -112,8 +112,8 @@ bool Parsers::CultureMachineAccess::Parse(libcomp::ManagerPacket *pPacketManager
         {
             status = STATUS_OTHER;
         }
-        else if(cState->GetExpertiseRank(definitionManager,
-            EXPERTISE_CHAIN_CRAFTMANSHIP) < 10)
+        else if(cState->GetExpertiseRank(EXPERTISE_CHAIN_CRAFTMANSHIP,
+            definitionManager) < 10)
         {
             // Class 1 required to use
             status = STATUS_EXPERT_LOW;

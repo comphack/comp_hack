@@ -284,6 +284,16 @@ public:
     void EndWebGame(const std::shared_ptr<ChannelClientConnection>& client,
         bool notifyWorld);
 
+    /**
+     * Evaluate a list of event conditions for a client
+     * @param client Pointer to the client connection
+     * @param conditions Event conditions to evaluate
+     * @return true if the event conditions evaluate to true, otherwise false
+     */
+    bool EvaluateEventConditions(
+        const std::shared_ptr<ChannelClientConnection>& client,
+        const std::list<std::shared_ptr<objects::EventCondition>>& conditions);
+
 private:
     struct EventContext
     {
@@ -329,7 +339,7 @@ private:
     /**
      * Evaluate a list of event conditions
      * @param ctx Execution context of the event
-     * @param condition Event condition to evaluate
+     * @param conditions Event conditions to evaluate
      * @return true if the event conditions evaluate to true, otherwise false
      */
     bool EvaluateEventConditions(EventContext& ctx,
@@ -338,12 +348,13 @@ private:
     /**
      * Evaluate a standard event condition
      * @param ctx Execution context of the event
-     * @param source Pointer to the source entity from the context. Can be null
+     * @param eState Pointer to the evaluating entity state for the context.
+     *  Can be null
      * @param condition Standard condition to evaluate
      * @return true if standard condition evaluates to true, otherwise false
      */
     bool EvaluateCondition(EventContext& ctx,
-        const std::shared_ptr<ActiveEntityState>& source,
+        const std::shared_ptr<ActiveEntityState>& eState,
         const std::shared_ptr<objects::EventConditionData>& condition,
         EventCompareMode compareMode = EventCompareMode::DEFAULT_COMPARE);
 

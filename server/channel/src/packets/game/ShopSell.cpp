@@ -32,6 +32,7 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ServerConstants.h>
+#include <ServerDataManager.h>
 
 // Standard C++11 Includes
 #include <math.h>
@@ -43,6 +44,7 @@
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiPossessionData.h>
+#include <ServerShop.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -74,16 +76,32 @@ void SendShopSaleReply(const std::shared_ptr<ChannelClientConnection> client,
 
 void HandleShopSale(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client, int32_t shopID,
-    int32_t cacheID, std::list<std::pair<uint32_t, int64_t>> itemsSold)
+    std::list<std::pair<uint32_t, int64_t>> itemsSold)
 {
-    (void)cacheID;
-
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     auto inventory = character->GetItemBoxes(0).Get();
     auto characterManager = server->GetCharacterManager();
-    auto defnitionManager = server->GetDefinitionManager();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto shop = server->GetServerDataManager()->GetShopData((uint32_t)shopID);
+    if(!shop)
+    {
+        // Invalid shop
+        SendShopSaleReply(client, shopID, -2, false);
+        return;
+    }
+
+    float lncAdjust = 1.f;
+    if(shop->GetLNCAdjust())
+    {
+        float lnc = (float)character->GetLNC();
+        float lncCenter = shop->GetLNCCenter();
+        float lncDelta = (float)fabs(lnc - lncCenter);
+
+        lncAdjust = (lncCenter ? 1.2f : 1.1f) - lncDelta * 0.00002f;
+    }
 
     uint64_t saleAmount = 0;
     std::list<std::shared_ptr<objects::Item>> deleteItems;
@@ -110,10 +128,21 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
             return;
         }
 
-        auto def = defnitionManager->GetItemData(item->GetType());
+        auto def = definitionManager->GetItemData(item->GetType());
 
-        saleAmount = (uint64_t)(saleAmount +
-            ((uint64_t)def->GetBasic()->GetSellPrice() * amount));
+        int32_t sellPrice = def->GetBasic()->GetSellPrice();
+
+        // Apply LNC adjust
+        if(lncAdjust != 1.f)
+        {
+            sellPrice = (int32_t)floor((float)sellPrice * lncAdjust);
+            if(sellPrice < 0)
+            {
+                sellPrice = 1;
+            }
+        }
+
+        saleAmount = (uint64_t)(saleAmount + ((uint64_t)sellPrice * amount));
         if(newAmount == 0)
         {
             deleteItems.push_back(item);
@@ -123,7 +152,7 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
             stackAdjustItems[item] = (uint16_t)newAmount;
         }
     }
-    
+
     std::list<int8_t> freeSlots;
     for(int8_t i = 0; i < 50; i++)
     {
@@ -145,7 +174,7 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
     int32_t notes = (int32_t)floorl((double)(saleAmount - (uint64_t)macca) /
         (double)ITEM_MACCA_NOTE_AMOUNT);
 
-    auto maxNoteStack = defnitionManager->GetItemData(SVR_CONST.ITEM_MACCA_NOTE)
+    auto maxNoteStack = definitionManager->GetItemData(SVR_CONST.ITEM_MACCA_NOTE)
         ->GetPossession()->GetStackSize();
     for(auto item : characterManager->GetExistingItems(character,
         SVR_CONST.ITEM_MACCA_NOTE, inventory))
@@ -254,9 +283,11 @@ bool Parsers::ShopSell::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     int32_t shopID = p.ReadS32Little();
-    int32_t cacheID = p.ReadS32Little();
+    int32_t cacheTime = p.ReadS32Little();
     int32_t itemCount = p.ReadS32Little();
     std::list<std::pair<uint32_t, int64_t>> itemsSold;
+
+    (void)cacheTime;    // Not used
 
     if(itemCount < 0 || p.Left() != (uint32_t)(12 * itemCount))
     {
@@ -275,7 +306,7 @@ bool Parsers::ShopSell::Parse(libcomp::ManagerPacket *pPacketManager,
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->QueueWork(HandleShopSale, server, client, shopID, cacheID, itemsSold);
+    server->QueueWork(HandleShopSale, server, client, shopID, itemsSold);
 
     return true;
 }

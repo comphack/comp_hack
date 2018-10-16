@@ -339,6 +339,9 @@ void HandleCultureItem(const std::shared_ptr<ChannelServer> server,
     if(expertPoints)
     {
         // Update expertise points
+        expertPoints = (int32_t)((double)expertPoints *
+            (double)cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01);
+
         std::list<std::pair<uint8_t, int32_t>> expPoints;
         expPoints.push_back(std::pair<uint8_t, int32_t>(
             EXPERTISE_CREATION, expertPoints));

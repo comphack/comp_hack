@@ -580,10 +580,10 @@ const std::shared_ptr<objects::MiShopProductData>
     return GetRecordByID(id, mShopProductData);
 }
 
-const std::shared_ptr<objects::MiSItemData>
-    DefinitionManager::GetSItemData(uint32_t id)
+std::set<int32_t> DefinitionManager::GetSItemTokusei(uint32_t id)
 {
-    return GetRecordByID(id, mSItemData);
+    auto it = mSItemTokusei.find(id);
+    return it != mSItemTokusei.end() ? it->second : std::set<int32_t>();
 }
 
 const std::shared_ptr<objects::MiSkillData>
@@ -1632,13 +1632,12 @@ namespace libcomp
             "Shield/SItemData.sbin", true, 0, records);
         for(auto record : records)
         {
-            // Only store it if a tokusei is set
+            uint32_t itemID = record->GetID();
             for(auto tokuseiID : record->GetTokusei())
             {
                 if(tokuseiID != 0)
                 {
-                    mSItemData[record->GetID()] = record;
-                    break;
+                    mSItemTokusei[itemID].insert(tokuseiID);
                 }
             }
         }
@@ -1923,6 +1922,23 @@ namespace libcomp
 
         mEnchantSpecialData[id] = record;
         mEnchantSpecialLookup[record->GetInputItem()].push_back(id);
+
+        return true;
+    }
+
+    template<>
+    bool DefinitionManager::RegisterServerSideDefinition<objects::MiSItemData>(
+        const std::shared_ptr<objects::MiSItemData>& record)
+    {
+        // Register additional tokusei
+        uint32_t itemID = record->GetID();
+        for(auto tokuseiID : record->GetTokusei())
+        {
+            if(tokuseiID != 0)
+            {
+                mSItemTokusei[itemID].insert(tokuseiID);
+            }
+        }
 
         return true;
     }

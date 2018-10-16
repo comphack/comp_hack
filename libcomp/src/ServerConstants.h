@@ -416,6 +416,10 @@ struct Data
     /// Tokusei ID associated to boosting on a bike
     int32_t TOKUSEI_BIKE_BOOST;
 
+    /// Tokusei ID corresponding to the MP cost reduction passive
+    /// effect associated to the "Magic Control" expertise
+    int32_t TOKUSEI_MAGIC_CONTROL_COST;
+
     /// Valuable ID of the demonic compendium V1
     uint16_t VALUABLE_DEVIL_BOOK_V1;
 

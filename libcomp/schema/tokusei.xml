@@ -134,8 +134,13 @@
             <value>DIGITALIZE_LENGTH</value>
             <value>DIGITALIZE_POINT_RATE</value>
 
+            <!-- Equipment Bound -->
+            <value>EQUIP_MOVE_DECAY</value>
+            <value>EQUIP_DECAY_XP</value>
+
             <!-- Misc -->
             <value>CONSTANT_STATUS</value>
+            <value>DEATH_PENALTY</value>
             <value>SUMMON_STATUS</value>
             <value>SUMMON_SYNC_EXTEND</value>
         </member>

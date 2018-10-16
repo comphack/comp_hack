@@ -911,9 +911,20 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
         return negate != (client && EvaluateQuestCondition(ctx, condition));
     default:
         {
-            auto source = ctx.CurrentZone ? ctx.CurrentZone->GetActiveEntity(
-                ctx.EventInstance->GetSourceEntityID()) : nullptr;
-            return negate != EvaluateCondition(ctx, source, condition,
+            std::shared_ptr<ActiveEntityState> eState;
+            if(client)
+            {
+                // Entity is the character, never the demon
+                eState = client->GetClientState()->GetCharacterState();
+            }
+            else if(ctx.CurrentZone)
+            {
+                // Entity is the "event/action source"
+                eState = ctx.CurrentZone->GetActiveEntity(
+                    ctx.EventInstance->GetSourceEntityID());
+            }
+
+            return negate != EvaluateCondition(ctx, eState, condition,
                 condition->GetCompareMode());
         }
     }
@@ -1203,6 +1214,19 @@ bool EventManager::Compare(int32_t value1, int32_t value2, int32_t value3,
     }
 }
 
+bool EventManager::EvaluateEventConditions(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const std::list<std::shared_ptr<objects::EventCondition>>& conditions)
+{
+    EventContext ctx;
+    ctx.Client = client;
+    ctx.EventInstance = std::make_shared<objects::EventInstance>(); // No event
+    ctx.CurrentZone = client->GetClientState()->GetCharacterState()->GetZone();
+    ctx.AutoOnly = true;
+
+    return EvaluateEventConditions(ctx, conditions);
+}
+
 bool EventManager::EvaluateEventConditions(EventContext& ctx,
     const std::list<std::shared_ptr<objects::EventCondition>>& conditions)
 {
@@ -1218,7 +1242,7 @@ bool EventManager::EvaluateEventConditions(EventContext& ctx,
 }
 
 bool EventManager::EvaluateCondition(EventContext& ctx,
-    const std::shared_ptr<ActiveEntityState>& source,
+    const std::shared_ptr<ActiveEntityState>& eState,
     const std::shared_ptr<objects::EventConditionData>& condition,
     EventCompareMode compareMode)
 {
@@ -1227,19 +1251,19 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
     switch(condition->GetType())
     {
     case objects::EventConditionData::Type_t::LEVEL:
-        if(!source)
+        if(!eState)
         {
             return false;
         }
         else
         {
             // Entity level compares to [value 1] (and [value 2])
-            return Compare(source->GetLevel(), condition->GetValue1(),
+            return Compare(eState->GetLevel(), condition->GetValue1(),
                 condition->GetValue2(), compareMode, EventCompareMode::GTE,
                 EVENT_COMPARE_NUMERIC2);
         }
     case objects::EventConditionData::Type_t::LNC_TYPE:
-        if(!source || (compareMode != EventCompareMode::EQUAL &&
+        if(!eState || (compareMode != EventCompareMode::EQUAL &&
             compareMode != EventCompareMode::DEFAULT_COMPARE))
         {
             return false;
@@ -1247,7 +1271,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         else
         {
             // Entity LNC type matches [value 1]
-            return source->IsLNCType((uint8_t)condition->GetValue1(), false);
+            return eState->IsLNCType((uint8_t)condition->GetValue1(), false);
         }
     case objects::EventConditionData::Type_t::ITEM:
         if(!client)
@@ -1784,7 +1808,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                 compareMode, EventCompareMode::GTE, EVENT_COMPARE_NUMERIC2);
         }
     case objects::EventConditionData::Type_t::DIASPORA_BASE:
-        if(!source || (compareMode != EventCompareMode::EQUAL &&
+        if(!ctx.CurrentZone || (compareMode != EventCompareMode::EQUAL &&
             compareMode != EventCompareMode::DEFAULT_COMPARE))
         {
             return false;
@@ -1793,18 +1817,14 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         {
             // Diaspora base [value 1] compares to [value 2]
             // (1 = capture, 0 = not captured)
-            auto zone = source->GetZone();
-            if(zone)
+            for(auto bState : ctx.CurrentZone->GetDiasporaBases())
             {
-                for(auto bState : zone->GetDiasporaBases())
+                auto base = bState->GetEntity();
+                auto def = base->GetDefinition();
+                if((int32_t)def->GetLetter() == condition->GetValue1())
                 {
-                    auto base = bState->GetEntity();
-                    auto def = base->GetDefinition();
-                    if((int32_t)def->GetLetter() == condition->GetValue1())
-                    {
-                        return base->GetCaptured() == 
-                            (condition->GetValue2() == 1);
-                    }
+                    return base->GetCaptured() == 
+                        (condition->GetValue2() == 1);
                 }
             }
 
@@ -1871,19 +1891,19 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                 0, compareMode, EventCompareMode::GTE, EVENT_COMPARE_NUMERIC);
         }
     case objects::EventCondition::Type_t::FACTION_GROUP:
-        if(!source)
+        if(!eState)
         {
             return false;
         }
         else
         {
             // Entity's faction group compares to [value 1] (and [value 2])
-            return Compare(source->GetFactionGroup(),
+            return Compare(eState->GetFactionGroup(),
                 condition->GetValue1(), condition->GetValue2(),
                 compareMode, EventCompareMode::EQUAL, EVENT_COMPARE_NUMERIC2);
         }
     case objects::EventCondition::Type_t::GENDER:
-        if(!source || (compareMode != EventCompareMode::EQUAL &&
+        if(!eState || (compareMode != EventCompareMode::EQUAL &&
             compareMode != EventCompareMode::DEFAULT_COMPARE))
         {
             return false;
@@ -1891,7 +1911,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         else
         {
             // Entity gender = [value 1]
-            return (int32_t)source->GetGender() == condition->GetValue1();
+            return (int32_t)eState->GetGender() == condition->GetValue1();
         }
     case objects::EventCondition::Type_t::INSTANCE_ACCESS:
         if(!client)
@@ -2104,7 +2124,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             return ((indexVal & shiftVal) == 0) == (condition->GetValue2() == 0);
         }
     case objects::EventCondition::Type_t::SKILL_LEARNED:
-        if(!source)
+        if(!eState)
         {
             return false;
         }
@@ -2113,22 +2133,22 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             // Entity currently knows skill with ID [value 1]
             return (compareMode == EventCompareMode::EQUAL ||
                 compareMode == EventCompareMode::DEFAULT_COMPARE) &&
-                source->CurrentSkillsContains((uint32_t)condition->GetValue1());
+                eState->CurrentSkillsContains((uint32_t)condition->GetValue1());
         }
     case objects::EventCondition::Type_t::STAT_VALUE:
-        if(!source)
+        if(!eState)
         {
             return false;
         }
         else
         {
             // Entity stat at correct index [value 1] compares to [value 2]
-            return Compare((int32_t)source->GetCorrectValue(
+            return Compare((int32_t)eState->GetCorrectValue(
                 (CorrectTbl)condition->GetValue1()), condition->GetValue2(), 0,
                 compareMode, EventCompareMode::GTE, EVENT_COMPARE_NUMERIC);
         }
     case objects::EventCondition::Type_t::STATUS_ACTIVE:
-        if(!source || (compareMode != EventCompareMode::EXISTS &&
+        if(!eState || (compareMode != EventCompareMode::EXISTS &&
             compareMode != EventCompareMode::DEFAULT_COMPARE))
         {
             return false;
@@ -2137,15 +2157,16 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         {
             // Entity ([value 2] = 0) or demon ([value 2] != 0) has status
             // effect [value 1]
-            auto eState = source;
+            auto aState = eState;
             if(condition->GetValue2() == 1)
             {
-                auto state = ClientState::GetEntityClientState(source
+                auto state = ClientState::GetEntityClientState(eState
                     ->GetEntityID());
-                eState = state ? state->GetDemonState() : nullptr;
+                aState = state ? state->GetDemonState() : nullptr;
             }
 
-            return eState && eState->StatusEffectActive((uint32_t)condition->GetValue1());
+            return aState && aState->StatusEffectActive((uint32_t)condition
+                ->GetValue1());
         }
     case objects::EventCondition::Type_t::TEAM_CATEGORY:
         if(!client || (compareMode != EventCompareMode::EQUAL &&
@@ -2469,10 +2490,10 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
         }
     }
 
-    uint8_t ssRank = cState->GetExpertiseRank(definitionManager,
-        EXPERTISE_CHAIN_SWORDSMITH);
-    uint8_t amRank = cState->GetExpertiseRank(definitionManager,
-        EXPERTISE_CHAIN_ARMS_MAKER);
+    uint8_t ssRank = cState->GetExpertiseRank(EXPERTISE_CHAIN_SWORDSMITH,
+        definitionManager);
+    uint8_t amRank = cState->GetExpertiseRank(EXPERTISE_CHAIN_ARMS_MAKER,
+        definitionManager);
 
     // Synth based quests require a skill on that demon that boosts
     // the success

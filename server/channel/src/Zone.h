@@ -162,6 +162,13 @@ public:
     bool HasRespawns() const;
 
     /**
+     * Check if the zone has staggered spawns ready
+     * @param now System time representing the current server time
+     * @return true if the zone has staggered spawns ready
+     */
+    bool HasStaggeredSpawns(uint64_t now);
+
+    /**
      * Add a client connection to the zone and register its world CID
      * @param client Pointer to a client connection to add
      * @return true if the connection was added without error
@@ -187,8 +194,11 @@ public:
     /**
      * Add an ally to the zone
      * @param ally Pointer to the ally to add
+     * @param staggerTime Optional server time specifying when the ally
+     *  should be spawned into the zone. If 0, it will spawn immediately.
      */
-    void AddAlly(const std::shared_ptr<AllyState>& ally);
+    void AddAlly(const std::shared_ptr<AllyState>& ally,
+        uint64_t staggerTime = 0);
 
     /**
      * Add a special zone base base to the zone
@@ -212,8 +222,11 @@ public:
     /**
      * Add an enemy to the zone
      * @param enemy Pointer to the enemy to add
+     * @param staggerTime Optional server time specifying when the enemy
+     *  should be spawned into the zone. If 0, it will spawn immediately.
      */
-    void AddEnemy(const std::shared_ptr<EnemyState>& enemy);
+    void AddEnemy(const std::shared_ptr<EnemyState>& enemy,
+        uint64_t staggerTime = 0);
 
     /**
      * Add a loot body to the zone
@@ -575,6 +588,14 @@ public:
     std::set<uint32_t> GetRespawnLocations(uint64_t now);
 
     /**
+     * Get enemies or allies that should spawn past the supplied server time.
+     * @param now System time representing the current server time
+     * @return List of enemies or allies to spawn
+     */
+    std::list<std::shared_ptr<ActiveEntityState>>
+        UpdateStaggeredSpawns(uint64_t now);
+
+    /**
      * Get the state of a zone flag.
      * @param key Lookup key for the flag
      * @param value Output value for the flag if it exists
@@ -827,6 +848,11 @@ private:
     /// Map of server times to spawn location group IDs that need to be respawned
     /// at that time
     std::map<uint64_t, std::set<uint32_t>> mRespawnTimes;
+
+    /// Map of server times to enemies or allies that exist in the zone but will not
+    /// actually spawn until the time passes
+    std::map<uint64_t,
+        std::list<std::shared_ptr<ActiveEntityState>>> mStaggeredSpawns;
 
     /// Set of entity IDs waiting to despawn. IDs are removed from this set when
     /// the entity is removed from the zone.

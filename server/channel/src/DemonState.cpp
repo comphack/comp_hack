@@ -41,6 +41,7 @@
 #include <MiDevilBookData.h>
 #include <MiDevilBoostExtraData.h>
 #include <MiDevilData.h>
+#include <MiGrowthData.h>
 #include <MiMitamaReunionSetBonusData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
@@ -231,18 +232,20 @@ bool DemonState::UpdateDemonState(libcomp::DefinitionManager* definitionManager)
     std::lock_guard<std::mutex> lock(mLock);
 
     mDemonTokuseiIDs.clear();
+    mCharacterBonuses.clear();
 
     if(demon)
     {
         bool updated = false;
+
+        auto state = ClientState::GetEntityClientState(GetEntityID());
+        auto cState = state ? state->GetCharacterState() : nullptr;
 
         std::unordered_map<uint8_t, uint8_t> bonuses;
         std::set<uint32_t> setBonuses;
         if(demon->GetMitamaType() && CharacterManager::GetMitamaBonuses(demon,
             definitionManager, bonuses, setBonuses, false))
         {
-            auto state = ClientState::GetEntityClientState(GetEntityID());
-            auto cState = state ? state->GetCharacterState() : nullptr;
             bool exBonus = cState && cState->SkillAvailable(
                 SVR_CONST.MITAMA_SET_BOOST);
 
@@ -282,6 +285,21 @@ bool DemonState::UpdateDemonState(libcomp::DefinitionManager* definitionManager)
                         updated = true;
                     }
                 }
+            }
+        }
+
+        if(cState)
+        {
+            // Grant bonus XP based on expertise
+            uint8_t fRank = cState->GetExpertiseRank(EXPERTISE_FUSION);
+            uint8_t dRank = cState->GetExpertiseRank(EXPERTISE_DEMONOLOGY);
+
+            int16_t xpBoost = (int16_t)(((fRank / 30) * 2) +
+                ((dRank / 20) * 2));
+            if(xpBoost > 0)
+            {
+                mCharacterBonuses[CorrectTbl::RATE_XP] = xpBoost;
+                updated = true;
             }
         }
 
@@ -366,4 +384,69 @@ int16_t DemonState::UpdateLearningSkill(const std::shared_ptr<
     iSkill->SetProgress(progress);
 
     return progress;
+}
+
+uint8_t DemonState::RecalculateStats(
+    libcomp::DefinitionManager* definitionManager,
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+
+    if(calcState == nullptr)
+    {
+        // Calculating default entity state
+        calcState = GetCalculatedState();
+
+        auto previousSkills = GetCurrentSkills();
+        SetCurrentSkills(GetAllSkills(definitionManager, true));
+
+        bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
+        if(!skillsChanged)
+        {
+            for(uint32_t skillID : previousSkills)
+            {
+                if(!CurrentSkillsContains(skillID))
+                {
+                    skillsChanged = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    auto entity = GetEntity();
+    auto cs = GetCoreStats();
+    auto devilData = GetDevilData();
+    if(!entity || !cs || !devilData)
+    {
+        return true;
+    }
+
+    auto stats = CharacterManager::GetDemonBaseStats(devilData);
+
+    // Non-dependent stats will not change from growth calculation
+    stats[CorrectTbl::STR] = cs->GetSTR();
+    stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
+    stats[CorrectTbl::VIT] = cs->GetVIT();
+    stats[CorrectTbl::INT] = cs->GetINTEL();
+    stats[CorrectTbl::SPEED] = cs->GetSPEED();
+    stats[CorrectTbl::LUCK] = cs->GetLUCK();
+
+    // Set character gained bonuses
+    for(auto& pair : mCharacterBonuses)
+    {
+        stats[pair.first] = (int16_t)(stats[pair.first] + pair.second);
+    }
+
+    CharacterManager::AdjustDemonBaseStats(entity, stats, false);
+
+    CharacterManager::AdjustMitamaStats(entity, stats, definitionManager,
+        2, GetEntityID());
+
+    auto levelRate = definitionManager->GetDevilLVUpRateData(
+        devilData->GetGrowth()->GetGrowthType());
+    CharacterManager::FamiliarityBoostStats(entity->GetFamiliarity(), stats,
+        levelRate);
+
+    return RecalculateDemonStats(definitionManager, stats, calcState);
 }

@@ -83,6 +83,7 @@ std::shared_ptr<objects::LootBox> PlasmaPoint::GetLoot() const
 PlasmaState::PlasmaState(const std::shared_ptr<objects::PlasmaSpawn>& plasma)
     : EntityState<objects::PlasmaSpawn>(plasma)
 {
+    mDisabled = false;
 }
 
 bool PlasmaState::CreatePoints()
@@ -129,6 +130,22 @@ std::list<std::shared_ptr<PlasmaPoint>> PlasmaState::GetActivePoints()
     return results;
 }
 
+void PlasmaState::Toggle(bool enable)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    if(mDisabled == enable)
+    {
+        mDisabled = !enable;
+        if(!enable)
+        {
+            for(auto& pair : mPoints)
+            {
+                mPointHides[pair.second->GetID()] = 0;
+            }
+        }
+    }
+}
+
 bool PlasmaState::HasStateChangePoints(bool respawn, uint64_t now)
 {
     if(now == 0)
@@ -140,6 +157,11 @@ bool PlasmaState::HasStateChangePoints(bool respawn, uint64_t now)
 
     if(respawn)
     {
+        if(mDisabled)
+        {
+            return false;
+        }
+
         for(auto pair : mPoints)
         {
             if(pair.second->mHidden)
@@ -265,7 +287,7 @@ std::shared_ptr<PlasmaPoint> PlasmaState::SetPickResult(uint32_t pointID,
         }
 
         point = it->second;
-        if(point->mLooterID != looterID)
+        if(looterID > 0 && point->mLooterID != looterID)
         {
             return nullptr;
         }
@@ -391,7 +413,14 @@ void PlasmaState::HidePoint(const std::shared_ptr<PlasmaPoint>& point)
     point->mHidden = true;
     mPointHides.erase(point->GetID());
 
-    uint64_t respawnTime = (uint64_t)(ChannelServer::GetServerTime() +
-        (uint64_t)(GetEntity()->GetRespawnTime() * 1000000.f));
-    mPointRespawns[point->GetID()] = respawnTime;
+    if(!mDisabled)
+    {
+        uint64_t respawnTime = (uint64_t)(ChannelServer::GetServerTime() +
+            (uint64_t)(GetEntity()->GetRespawnTime() * 1000000.f));
+        mPointRespawns[point->GetID()] = respawnTime;
+    }
+    else
+    {
+        mPointRespawns[point->GetID()] = 0;
+    }
 }

@@ -118,6 +118,7 @@
     <constant name="STATUS_SUMMON_SYNC_2">364</constant>
     <constant name="STATUS_SUMMON_SYNC_3">365</constant>
     <constant name="TOKUSEI_BIKE_BOOST">20020000</constant>
+    <constant name="TOKUSEI_MAGIC_CONTROL_COST">120050</constant>
     <constant name="VALUABLE_DEVIL_BOOK_V1">250</constant>
     <constant name="VALUABLE_DEVIL_BOOK_V2">251</constant>
     <constant name="VALUABLE_DEMON_FORCE">230</constant>

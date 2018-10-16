@@ -147,7 +147,9 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         uint32_t equipComp   = p.ReadU32Little();
         uint32_t equipWeapon = p.ReadU32Little();
 
-        uint8_t eyeType = (uint8_t)(gender == objects::Character::Gender_t::MALE ? 1 : 101);
+        // Eye type depends on face type (often very slight difference)
+        uint8_t eyeType = (uint8_t)(gender == objects::Character::Gender_t::MALE
+            ? ((faceType - 1) % 3 + 1) : ((faceType - 101) % 3 + 101));
 
         auto character = libcomp::PersistentObject::New<objects::Character>();
         character->SetName(name);

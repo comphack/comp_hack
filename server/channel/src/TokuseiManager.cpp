@@ -129,6 +129,11 @@ bool TokuseiManager::Initialize()
                 // Keep track of cost adjustment tokusei
                 mCostAdjustmentTokusei.insert(tPair.first);
             }
+            else if(aspect->GetType() == TokuseiAspectType::EQUIP_MOVE_DECAY)
+            {
+                // Keep track of movement decay tokusei
+                mMoveDecayTokusei.insert(tPair.first);
+            }
         }
 
         for(uint32_t skillID : skillIDs)
@@ -150,7 +155,8 @@ bool TokuseiManager::Initialize()
             }
         }
 
-        if(tPair.second->SkillConditionsCount() > 0)
+        if(tPair.second->SkillConditionsCount() > 0 ||
+            tPair.second->SkillTargetConditionsCount() > 0)
         {
             // Make sure skill state conditions do not have a mix of target and
             // source types and only use equals/not equals comparisons
@@ -192,7 +198,9 @@ bool TokuseiManager::Initialize()
                     aspect->GetType() == TokuseiAspectType::FAMILIARITY_UP_RATE ||
                     aspect->GetType() == TokuseiAspectType::FAMILIARITY_DOWN_RATE ||
                     aspect->GetType() == TokuseiAspectType::KNOCKBACK_RECOVERY ||
-                    aspect->GetType() == TokuseiAspectType::SOUL_POINT_RATE)
+                    aspect->GetType() == TokuseiAspectType::SOUL_POINT_RATE ||
+                    aspect->GetType() == TokuseiAspectType::EQUIP_MOVE_DECAY ||
+                    aspect->GetType() == TokuseiAspectType::EQUIP_DECAY_XP)
                 {
                     invalidSkillAdjust = true;
                     break;
@@ -982,6 +990,14 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
             // Default to tokusei from equipment
             tokuseiIDs = cState->GetEquipmentTokuseiIDs();
 
+            // Add Magic Control tokusei
+            uint8_t mcClass = (uint8_t)(cState->GetExpertiseRank(
+                EXPERTISE_MAGIC_CONTROL) / 10);
+            for(uint8_t i = 0; i < mcClass; i++)
+            {
+                tokuseiIDs.push_back(SVR_CONST.TOKUSEI_MAGIC_CONTROL_COST);
+            }
+
             // Add quest bonus tokusei
             for(int32_t tokuseiID : cState->GetQuestBonusTokuseiIDs())
             {
@@ -1011,8 +1027,8 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
                 else if(conditionType >= 100 && conditionType <= 158)
                 {
                     // Expertise #(type - 100) rank check
-                    add = cState->GetExpertiseRank(definitionManager,
-                        (uint32_t)(conditionType - 100)) >= (uint8_t)p1;
+                    add = cState->GetExpertiseRank((uint32_t)(
+                        conditionType - 100), definitionManager) >= (uint8_t)p1;
                 }
 
                 if(add)
@@ -1282,7 +1298,7 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
             int32_t expertiseID = (int32_t)(condition->GetValue() % 100);
             int32_t rankCompare = (int32_t)((condition->GetValue() - expertiseID) / 100);
             uint8_t rank = cState->GetExpertiseRank(
-                mServer.lock()->GetDefinitionManager(), (uint32_t)expertiseID);
+                (uint32_t)expertiseID, mServer.lock()->GetDefinitionManager());
 
             return Compare((int32_t)rank, rankCompare, condition, true);
         }
@@ -1873,6 +1889,56 @@ void TokuseiManager::RemoveTrackingEntities(int32_t worldCID)
 {
     std::lock_guard<std::mutex> lock(mTimeLock);
     mTimedTokuseiEntities.erase(worldCID);
+}
+
+void TokuseiManager::UpdateMovementDecay(const std::shared_ptr<
+    ChannelClientConnection>& client, float distance)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto calcState = cState->GetCalculatedState();
+    auto character = cState->GetEntity();
+
+    auto server = mServer.lock();
+
+    std::unordered_map<std::shared_ptr<objects::Item>, int32_t> updates;
+    for(int32_t tokuseiID : mMoveDecayTokusei)
+    {
+        uint16_t count = calcState->GetEffectiveTokuseiFinal(tokuseiID);
+        if(count > 0)
+        {
+            auto tokusei = server->GetDefinitionManager()->GetTokuseiData(
+                tokuseiID);
+            for(auto aspect : tokusei->GetAspects())
+            {
+                if(aspect->GetType() == TokuseiAspectType::EQUIP_MOVE_DECAY)
+                {
+                    auto item = character ? character->GetEquippedItems(
+                        (size_t)aspect->GetModifier()).Get() : nullptr;
+                    if(item && item->GetDurability() > 0)
+                    {
+                        auto it = updates.find(item);
+                        if(it == updates.end())
+                        {
+                            updates[item] = 0;
+                            it = updates.find(item);
+                        }
+
+                        float decay = (float)aspect->GetValue() * -0.01f;
+                        for(uint16_t i = 0; i < count; i++)
+                        {
+                            it->second += (int32_t)ceil(distance * decay);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if(updates.size() > 0)
+    {
+        server->GetCharacterManager()->UpdateDurability(client, updates);
+    }
 }
 
 void TokuseiManager::SendCostAdjustments(int32_t entityID,

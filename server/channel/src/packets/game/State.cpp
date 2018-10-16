@@ -35,6 +35,7 @@
 #include <AccountLogin.h>
 #include <CharacterLogin.h>
 #include <ChannelConfig.h>
+#include <PostItem.h>
 #include <WorldSharedConfig.h>
 
 // channel Includes
@@ -102,6 +103,22 @@ void SendStateData(std::shared_ptr<ChannelServer> server,
 
     chatManager->SendChatMessage(client, ChatType_t::CHAT_SELF,
         "Type @version or @license for more information.");
+
+    // Send pending post distribution messages
+    std::list<std::shared_ptr<objects::PostItem>> distribute;
+    for(auto post : objects::PostItem::LoadPostItemListByAccount(server
+        ->GetLobbyDatabase(), state->GetAccountUID()))
+    {
+        if(post->GetDistributionMessageID())
+        {
+            distribute.push_back(post);
+        }
+    }
+
+    if(distribute.size() > 0)
+    {
+        characterManager->NotifyItemDistribution(client, distribute);
+    }
 }
 
 bool Parsers::State::Parse(libcomp::ManagerPacket *pPacketManager,

@@ -128,6 +128,9 @@ public:
     int16_t UpdateLearningSkill(const std::shared_ptr<
         objects::InheritedSkill>& iSkill, uint16_t points);
 
+    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
+        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
+
 private:
     /// Map of inherited skills not yet maxed by affinity ID. This
     /// map is refreshed by calling RefreshLearningSkills
@@ -152,6 +155,9 @@ private:
     /// Quick access count representing the number of entries in the
     /// demonic compendium by race
     std::unordered_map<uint8_t, uint16_t> mCompendiumRaceCounts;
+
+    /// Map of bonus stats gained from the character
+    libcomp::EnumMap<CorrectTbl, int16_t> mCharacterBonuses;
 
     /// Shared state property specific mutex lock
     std::mutex mSharedLock;

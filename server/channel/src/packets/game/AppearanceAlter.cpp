@@ -57,12 +57,12 @@ bool Parsers::AppearanceAlter::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     int32_t shopID = p.ReadS32Little();
-    int32_t cacheID = p.ReadS32Little();
+    int32_t trendTime = p.ReadS32Little();
     int64_t itemID = p.ReadS64Little();
 
     // Not sure when these would actually be used
     (void)shopID;
-    (void)cacheID;
+    (void)trendTime;
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);

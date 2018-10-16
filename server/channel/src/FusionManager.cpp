@@ -1384,11 +1384,10 @@ int8_t FusionManager::ProcessFusion(
         {
             uint16_t boost = 0;
 
-            uint8_t fRank = dCState->GetExpertiseRank(definitionManager,
-                EXPERTISE_FUSION);
+            uint8_t fRank = dCState->GetExpertiseRank(EXPERTISE_FUSION);
             if(client == dClient)
             {
-                uint8_t dRank = dCState->GetExpertiseRank(definitionManager,
+                uint8_t dRank = dCState->GetExpertiseRank(
                     EXPERTISE_DEMONOLOGY);
                 if(demonID3 > 0)
                 {
@@ -1448,6 +1447,21 @@ int8_t FusionManager::ProcessFusion(
     if(successRate <= 0.0 || (successRate < 100.0 &&
         RNG(uint16_t, 1, 10000) > (uint16_t)(successRate * 100.0)))
     {
+        // Update expertise for failure
+        std::list<std::pair<uint8_t, int32_t>> expPoints;
+
+        int32_t ePoints = characterManager->CalculateExpertiseGain(cState,
+            EXPERTISE_FUSION, 0.5f);
+        expPoints.push_back(std::pair<uint8_t, int32_t>(EXPERTISE_FUSION,
+            ePoints + 10));
+
+        ePoints = characterManager->CalculateExpertiseGain(cState,
+            EXPERTISE_DEMONOLOGY, 0.25f);
+        expPoints.push_back(std::pair<uint8_t, int32_t>(EXPERTISE_DEMONOLOGY,
+            ePoints + 10));
+
+        characterManager->UpdateExpertisePoints(client, expPoints);
+
         return 1;
     }
 
@@ -1648,6 +1662,21 @@ int8_t FusionManager::ProcessFusion(
     // Update demon quest if active
     server->GetEventManager()->UpdateDemonQuestCount(client,
         objects::DemonQuest::Type_t::FUSE, resultDemonType, 1);
+
+    // Update expertise for success
+    std::list<std::pair<uint8_t, int32_t>> expPoints;
+
+    int32_t ePoints = characterManager->CalculateExpertiseGain(cState,
+        EXPERTISE_FUSION, 2.f);
+    expPoints.push_back(std::pair<uint8_t, int32_t>(EXPERTISE_FUSION,
+        ePoints + 10));
+
+    ePoints = characterManager->CalculateExpertiseGain(cState,
+        EXPERTISE_DEMONOLOGY, 1.f);
+    expPoints.push_back(std::pair<uint8_t, int32_t>(EXPERTISE_DEMONOLOGY,
+        ePoints + 10));
+
+    characterManager->UpdateExpertisePoints(client, expPoints);
 
     return 0;
 }

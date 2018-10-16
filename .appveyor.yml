@@ -40,7 +40,7 @@ build_script:
   - 7z x objgen.zip
   - del objgen.zip
   - mv objgen* ..\deps\objgen
-  - appveyor DownloadFile https://github.com/comphack/libobjects/releases/download/v1.0.0/libobjects-win64.zip -FileName libobjects.zip
+  - appveyor DownloadFile https://github.com/comphack/libobjects/releases/download/v1.0.1/libobjects-win64.zip -FileName libobjects.zip
   - 7z x libobjects.zip
   - del libobjects.zip
   - mv libobjects* ..\deps\libobjects

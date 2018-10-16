@@ -3,11 +3,11 @@
     <object name="Match" persistent="false" scriptenabled="true">
         <member type="u32" name="ID"/>
         <member type="enum" name="Type" underlying="int8_t">
-            <value nume="-1">CUSTOM</value>
-            <value nume="0">PVP_FATE</value>
-            <value nume="1">PVP_VALHALLA</value>
-            <value nume="2">ULTIMATE_BATTLE</value>
-            <value nume="3">DIASPORA</value>
+            <value num="-1">CUSTOM</value>
+            <value num="0">PVP_FATE</value>
+            <value num="1">PVP_VALHALLA</value>
+            <value num="2">ULTIMATE_BATTLE</value>
+            <value num="3">DIASPORA</value>
         </member>
         <member type="set" name="MemberIDs">
             <element type="s32"/>

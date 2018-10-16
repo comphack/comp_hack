@@ -389,14 +389,10 @@ void CharacterState::RecalcEquipState(
 
         // Get item direct effects
         uint32_t specialEffect = equip->GetSpecialEffect();
-        auto sItemData = definitionManager->GetSItemData(
-            specialEffect ? specialEffect : equip->GetType());
-        if(sItemData)
+        for(int32_t tokuseiID : definitionManager->GetSItemTokusei(
+            specialEffect ? specialEffect : equip->GetType()))
         {
-            for(int32_t tokuseiID : sItemData->GetTokusei())
-            {
-                mEquipmentTokuseiIDs.push_back(tokuseiID);
-            }
+            mEquipmentTokuseiIDs.push_back(tokuseiID);
         }
 
         // Check for mod slot effects
@@ -665,41 +661,41 @@ bool CharacterState::UpdateQuestState(
 }
 
 uint8_t CharacterState::GetExpertiseRank(
-    libcomp::DefinitionManager* definitionManager, uint32_t expertiseID)
+    uint32_t expertiseID, libcomp::DefinitionManager* definitionManager)
 {
     int32_t pointSum = 0;
 
-    auto expData = definitionManager->GetExpertClassData(expertiseID);
-    if(expData)
+    auto expData = definitionManager
+        ? definitionManager->GetExpertClassData(expertiseID) : nullptr;
+    if(expData && expData->GetIsChain())
     {
-        if(expData->GetIsChain())
+        // Calculated chain expertise
+        for(uint8_t i = 0; i < expData->GetChainCount(); i++)
         {
-            for(uint8_t i = 0; i < expData->GetChainCount(); i++)
+            auto chainData = expData->GetChainData((size_t)i);
+            if(GetExpertiseRank(chainData->GetID(), definitionManager) <
+                chainData->GetRankRequired())
             {
-                auto chainData = expData->GetChainData((size_t)i);
-                if(GetExpertiseRank(definitionManager, chainData->GetID()) <
-                    chainData->GetRankRequired())
-                {
-                    // Chain expertise is not active
-                    return 0;
-                }
+                // Chain expertise is not active
+                return 0;
+            }
 
-                float percent = chainData->GetChainPercent();
-                if(percent > 0.f)
-                {
-                    auto exp = GetEntity()->GetExpertises(
-                        (size_t)chainData->GetID());
-                    pointSum = pointSum + (int32_t)(
-                        (float)(exp ? exp->GetPoints() : 0) * percent);
-                }
+            float percent = chainData->GetChainPercent();
+            if(percent > 0.f)
+            {
+                auto exp = GetEntity()->GetExpertises(
+                    (size_t)chainData->GetID());
+                pointSum = pointSum + (int32_t)(
+                    (float)(exp ? exp->GetPoints() : 0) * percent);
             }
         }
-        else
-        {
-            auto exp = GetEntity()->GetExpertises(
-                (size_t)expertiseID);
-            pointSum = (int32_t)(exp ? exp->GetPoints() : 0);
-        }
+    }
+    else
+    {
+        // Get as non-chain
+        auto exp = GetEntity()->GetExpertises(
+            (size_t)expertiseID);
+        pointSum = (int32_t)(exp ? exp->GetPoints() : 0);
     }
 
     return (uint8_t)floor((float)pointSum * 0.0001f);
@@ -817,7 +813,7 @@ bool CharacterState::RecalcDisabledSkills(
 
         if(!expertData) continue;
 
-        uint32_t currentRank = GetExpertiseRank(definitionManager, i);
+        uint32_t currentRank = GetExpertiseRank(i, definitionManager);
 
         uint32_t rank = 0;
         for(auto classData : expertData->GetClassData())
@@ -940,6 +936,21 @@ uint8_t CharacterState::RecalculateStats(
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), false);
 
     AdjustStats(correctTbls, stats, calcState, false);
+
+    if(GetStatusTimes(STATUS_RESTING))
+    {
+        // Apply (originally busted) Medical Sciences bonus of 10% more
+        // regen per class
+        uint8_t cls = (uint8_t)(GetExpertiseRank(EXPERTISE_MEDICAL_SCIENCES) /
+            10);
+        if(cls)
+        {
+            stats[CorrectTbl::HP_REGEN] = (int16_t)((double)
+                stats[CorrectTbl::HP_REGEN] * (1.0 + 0.1 * (double)cls));
+            stats[CorrectTbl::MP_REGEN] = (int16_t)((double)
+                stats[CorrectTbl::MP_REGEN] * (1.0 + 0.1 * (double)cls));
+        }
+    }
 
     if(selfState)
     {

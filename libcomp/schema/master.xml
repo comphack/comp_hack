@@ -22,6 +22,7 @@
     <include path="item.xml"/>
     <include path="match.xml"/>
     <include path="party.xml"/>
+    <include path="promo.xml"/>
     <include path="qmp_file.xml"/>
     <include path="registeredchannel.xml"/>
     <include path="registeredworld.xml"/>

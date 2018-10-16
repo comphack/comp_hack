@@ -37,10 +37,16 @@
 #define bool bool
 
 // MariaDB Includes
-#include <my_global.h>
 #include <mysql.h>
 
 using namespace libcomp;
+
+static libcomp::String ConnectionString(MYSQL *pConnection)
+{
+    return libcomp::String("{%1-%2}").Arg(
+        (uint32_t)(((uint64_t)pConnection) >> 32), 8, 16, '0').Arg(
+        (uint32_t)((uint64_t)pConnection), 8, 16, '0');
+}
 
 DatabaseMariaDB::DatabaseMariaDB(const std::shared_ptr<
     objects::DatabaseConfigMariaDB>& config) :
@@ -77,7 +83,19 @@ bool DatabaseMariaDB::Close(MYSQL*& connection)
     if(nullptr != connection && nullptr != connection)
     {
         mysql_close(connection);
+
+        if(mConfig->GetDatabaseDebug())
+        {
+            LOG_DEBUG(libcomp::String("Database connection closed: %1\n"
+                ).Arg(ConnectionString(connection)));
+        }
+
         connection = nullptr;
+    }
+    else if(mConfig->GetDatabaseDebug())
+    {
+        LOG_DEBUG(libcomp::String("Database connection NOT closed: %1\n"
+            ).Arg(ConnectionString(connection)));
     }
 
     return true;
@@ -92,7 +110,8 @@ bool DatabaseMariaDB::IsOpen() const
 DatabaseQuery DatabaseMariaDB::Prepare(const String& query)
 {
     auto connection = GetConnection(true);
-    return DatabaseQuery(new DatabaseQueryMariaDB(connection), query);
+    return DatabaseQuery(new DatabaseQueryMariaDB(connection,
+        mConfig->GetDatabaseDebug()), query);
 }
 
 bool DatabaseMariaDB::Exists()
@@ -139,8 +158,8 @@ bool DatabaseMariaDB::Setup(bool rebuild,
         }
 
         // Now re-create the database.
-        if(!Execute(String("CREATE DATABASE %1"
-            " CHARACTER SET utf8 COLLATE utf8_general_ci;").Arg(databaseName)))
+        if(!Execute(String("CREATE DATABASE %1 CHARACTER SET utf8mb4 "
+            "COLLATE utf8mb4_general_ci;").Arg(databaseName)))
         {
             LOG_ERROR("Failed to create database\n");
 
@@ -880,6 +899,15 @@ bool DatabaseMariaDB::ProcessStandardChangeSet(const std::shared_ptr<
 
     if(mysql_autocommit(connection, false))
     {
+        if(mConfig->GetDatabaseDebug())
+        {
+            LOG_DEBUG(libcomp::String(
+                "mysql_autocommit failed for connection: %1\n"
+                ).Arg(ConnectionString(connection)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(connection)));
+        }
+
         return false;
     }
 
@@ -914,15 +942,42 @@ bool DatabaseMariaDB::ProcessStandardChangeSet(const std::shared_ptr<
     if(result)
     {
         result = !mysql_commit(connection);
+
+        if(!result && mConfig->GetDatabaseDebug())
+        {
+            LOG_DEBUG(libcomp::String(
+                "mysql_commit failed for connection: %1\n"
+                ).Arg(ConnectionString(connection)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(connection)));
+        }
     }
     else if(mysql_rollback(connection))
     {
+        if(mConfig->GetDatabaseDebug())
+        {
+            LOG_DEBUG(libcomp::String(
+                "mysql_rollback failed for connection: %1\n"
+                ).Arg(ConnectionString(connection)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(connection)));
+        }
+
         // If this happens the server may need to be shut down
         LOG_CRITICAL("Rollback failed!\n");
     }
 
     if(mysql_autocommit(connection, true))
     {
+        if(mConfig->GetDatabaseDebug())
+        {
+            LOG_DEBUG(libcomp::String(
+                "mysql_autocommit failed for connection: %1\n"
+                ).Arg(ConnectionString(connection)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(connection)));
+        }
+
         return false;
     }
 
@@ -940,6 +995,15 @@ bool DatabaseMariaDB::ProcessOperationalChangeSet(const std::shared_ptr<
 
     if(mysql_autocommit(connection, false))
     {
+        if(mConfig->GetDatabaseDebug())
+        {
+            LOG_DEBUG(libcomp::String(
+                "mysql_autocommit failed for connection: %1\n"
+                ).Arg(ConnectionString(connection)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(connection)));
+        }
+
         return false;
     }
 
@@ -975,15 +1039,42 @@ bool DatabaseMariaDB::ProcessOperationalChangeSet(const std::shared_ptr<
     if(result)
     {
         result = !mysql_commit(connection);
+
+        if(!result && mConfig->GetDatabaseDebug())
+        {
+            LOG_DEBUG(libcomp::String(
+                "mysql_autocommit failed for connection: %1\n"
+                ).Arg(ConnectionString(connection)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(connection)));
+        }
     }
     else if(mysql_rollback(connection))
     {
+        if(mConfig->GetDatabaseDebug())
+        {
+            LOG_DEBUG(libcomp::String(
+                "mysql_rollback failed for connection: %1\n"
+                ).Arg(ConnectionString(connection)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(connection)));
+        }
+
         // If this happens the server may need to be shut down
         LOG_CRITICAL("Rollback failed!\n");
     }
 
     if(mysql_autocommit(connection, true))
     {
+        if(mConfig->GetDatabaseDebug())
+        {
+            LOG_DEBUG(libcomp::String(
+                "mysql_autocommit failed for connection: %1\n"
+                ).Arg(ConnectionString(connection)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(connection)));
+        }
+
         return false;
     }
 
@@ -1106,6 +1197,11 @@ bool DatabaseMariaDB::ConnectToDatabase(MYSQL*& connection, const libcomp::Strin
     connection = mysql_init(NULL);
     if(connection == NULL)
     {
+        if(mConfig->GetDatabaseDebug())
+        {
+            LOG_DEBUG(libcomp::String("mysql_init failed\n"));
+        }
+
         return false;
     }
 
@@ -1131,6 +1227,16 @@ bool DatabaseMariaDB::ConnectToDatabase(MYSQL*& connection, const libcomp::Strin
         return false;
     }
 
+    // Set the encoding of the connection.
+    if(mysql_set_character_set(connection, "utf8mb4"))
+    {
+        LOG_ERROR("Failed to set character set for database connection\n");
+
+        Close(connection);
+
+        return false;
+    }
+
     // Set auto reconnect in case a connection idles too long
     bool reconnect = 1;
     if(mysql_options(connection, MYSQL_OPT_RECONNECT, &reconnect))
@@ -1140,6 +1246,12 @@ bool DatabaseMariaDB::ConnectToDatabase(MYSQL*& connection, const libcomp::Strin
         Close(connection);
 
         return false;
+    }
+
+    if(mConfig->GetDatabaseDebug())
+    {
+        LOG_DEBUG(libcomp::String("New database connection opened: %1\n"
+            ).Arg(ConnectionString(connection)));
     }
 
     return true;
@@ -1206,6 +1318,21 @@ String DatabaseMariaDB::GetLastError()
 {
     auto connection = GetConnection(false);
 
+    if(connection)
+    {
+        const char *szError = mysql_error(connection);
+
+        if(nullptr != szError && 0 != szError[0])
+        {
+            return szError;
+        }
+    }
+
+    return "Invalid connection.";
+}
+
+String DatabaseMariaDB::GetLastError(MYSQL *connection)
+{
     if(connection)
     {
         const char *szError = mysql_error(connection);

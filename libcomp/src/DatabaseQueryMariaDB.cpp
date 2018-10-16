@@ -26,18 +26,41 @@
 
 #include "DatabaseQueryMariaDB.h"
 #include "DatabaseMariaDB.h"
+#include "Log.h"
 
  // config-win.h and my_global.h redefine bool unless explicitly defined
 #define bool bool
 
 // MariaDB Includes
-#include <my_global.h>
 #include <mysql.h>
 
 using namespace libcomp;
 
-DatabaseQueryMariaDB::DatabaseQueryMariaDB(MYSQL *pDatabase)
-    : mDatabase(pDatabase), mStatement(nullptr), mStatus(0)
+static libcomp::String ConnectionString(void *pConnection)
+{
+    return libcomp::String("{%1-%2}").Arg(
+        (uint32_t)(((uint64_t)pConnection) >> 32), 8, 16, '0').Arg(
+        (uint32_t)((uint64_t)pConnection), 8, 16, '0');
+}
+
+static libcomp::String GetLastError(MYSQL *connection)
+{
+    if(connection)
+    {
+        const char *szError = mysql_error(connection);
+
+        if(nullptr != szError && 0 != szError[0])
+        {
+            return szError;
+        }
+    }
+
+    return "Invalid connection.";
+}
+
+DatabaseQueryMariaDB::DatabaseQueryMariaDB(MYSQL *pDatabase,
+    bool databaseDebug) : mDatabase(pDatabase), mStatement(nullptr),
+    mStatus(0), mDatabaseDebug(databaseDebug)
 {
 }
 
@@ -46,6 +69,12 @@ DatabaseQueryMariaDB::~DatabaseQueryMariaDB()
     if(nullptr != mStatement)
     {
         mysql_stmt_close(mStatement);
+
+        if(mDatabaseDebug)
+        {
+            LOG_DEBUG(libcomp::String("Database statement closed: %1\n"
+                ).Arg(ConnectionString(mStatement)));
+        }
     }
 }
 
@@ -69,9 +98,46 @@ bool DatabaseQueryMariaDB::Prepare(const String& query)
 
     mStatement = mysql_stmt_init(mDatabase);
 
+    if(nullptr == mStatement && mDatabaseDebug)
+    {
+        LOG_DEBUG(libcomp::String(
+            "Failed to create statement for connection: %1\n"
+            ).Arg(ConnectionString(mDatabase)));
+    }
+
+    if(nullptr != mStatement && mDatabaseDebug)
+    {
+        LOG_DEBUG(libcomp::String(
+            "Created statement %1 for connection %2\n"
+            ).Arg(ConnectionString(mStatement)
+            ).Arg(ConnectionString(mDatabase)));
+    }
+
     unsigned long len = (unsigned long)transformed.length();
     mStatus = mysql_stmt_prepare(mStatement, transformed.c_str(),
         len);
+
+    if(mDatabaseDebug)
+    {
+        if(mStatus)
+        {
+            LOG_DEBUG(libcomp::String(
+                "Prepare '%1' FAILED for statement %2 for connection %3\n"
+                ).Arg(transformed.c_str()
+                ).Arg(ConnectionString(mStatement)
+                ).Arg(ConnectionString(mDatabase)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(mDatabase)));
+        }
+        else
+        {
+            LOG_DEBUG(libcomp::String(
+                "Prepare '%1' for statement %2 for connection %3\n"
+                ).Arg(transformed.c_str()
+                ).Arg(ConnectionString(mStatement)
+                ).Arg(ConnectionString(mDatabase)));
+        }
+    }
 
     return IsValid();
 }
@@ -85,6 +151,16 @@ bool DatabaseQueryMariaDB::Execute()
 
     if(mBindings.size() > 0 && mysql_stmt_bind_param(mStatement, &mBindings[0]))
     {
+        if(mDatabaseDebug)
+        {
+            LOG_DEBUG(libcomp::String("Execute of statement %1 failed for "
+                "connection %2 due to a bad bind\n"
+                ).Arg(ConnectionString(mStatement)
+                ).Arg(ConnectionString(mDatabase)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(mDatabase)));
+        }
+
         mStatus = -1;
         return false;
     }
@@ -92,9 +168,49 @@ bool DatabaseQueryMariaDB::Execute()
     mStatus = mysql_stmt_execute(mStatement);
     mAffectedRowCount = (int64_t)mysql_affected_rows(mDatabase);
 
+    if(mDatabaseDebug)
+    {
+        if(!mStatus)
+        {
+            LOG_DEBUG(libcomp::String("Execute of statement %1 for "
+                "connection %2 is OK with %3 rows affected\n"
+                ).Arg(ConnectionString(mStatement)
+                ).Arg(ConnectionString(mDatabase)
+                ).Arg(mAffectedRowCount));
+        }
+        else
+        {
+            LOG_DEBUG(libcomp::String(
+                "Execute of statement %1 failed for connection %2\n"
+                ).Arg(ConnectionString(mStatement)
+                ).Arg(ConnectionString(mDatabase)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(mDatabase)));
+        }
+    }
+
     my_bool aBool = 1;
-    mysql_stmt_attr_set(mStatement, STMT_ATTR_UPDATE_MAX_LENGTH, &aBool);
-    mysql_stmt_store_result(mStatement);
+
+    if(mysql_stmt_attr_set(mStatement, STMT_ATTR_UPDATE_MAX_LENGTH, &aBool) &&
+        mDatabaseDebug)
+    {
+        LOG_DEBUG(libcomp::String(
+            "mysql_stmt_attr_set of statement %1 failed for connection %2\n"
+            ).Arg(ConnectionString(mStatement)
+            ).Arg(ConnectionString(mDatabase)));
+        LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+            GetLastError(mDatabase)));
+    }
+
+    if(mysql_stmt_store_result(mStatement) && mDatabaseDebug)
+    {
+        LOG_DEBUG(libcomp::String(
+            "mysql_stmt_store_result of statement %1 failed for connection %2\n"
+            ).Arg(ConnectionString(mStatement)
+            ).Arg(ConnectionString(mDatabase)));
+        LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+            GetLastError(mDatabase)));
+    }
 
     MYSQL_RES *result = mysql_stmt_result_metadata(mStatement);
 
@@ -174,7 +290,16 @@ bool DatabaseQueryMariaDB::Execute()
             field = mysql_fetch_field(result);
         }
 
-        mysql_stmt_bind_result(mStatement, &mResultBindings[0]);
+        if(mysql_stmt_bind_result(mStatement, &mResultBindings[0]) &&
+            mDatabaseDebug)
+        {
+            LOG_DEBUG(libcomp::String(
+                "mysql_stmt_bind_result of statement %1 failed for connection %2\n"
+                ).Arg(ConnectionString(mStatement)
+                ).Arg(ConnectionString(mDatabase)));
+            LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+                GetLastError(mDatabase)));
+        }
     }
 
     return IsValid();
@@ -183,6 +308,16 @@ bool DatabaseQueryMariaDB::Execute()
 bool DatabaseQueryMariaDB::Next()
 {
     mStatus = mysql_stmt_fetch(mStatement);
+
+    if(mStatus && MYSQL_NO_DATA != mStatus && mDatabaseDebug)
+    {
+        LOG_DEBUG(libcomp::String(
+            "mysql_stmt_fetch of statement %1 failed for connection %2\n"
+            ).Arg(ConnectionString(mStatement)
+            ).Arg(ConnectionString(mDatabase)));
+        LOG_DEBUG(libcomp::String("Last SQL error: %1\n").Arg(
+            GetLastError(mDatabase)));
+    }
 
     return MYSQL_NO_DATA != mStatus && IsValid();
 }
@@ -252,7 +387,7 @@ bool DatabaseQueryMariaDB::Bind(size_t index, const libobjgen::UUID& value)
     {
         return false;
     }
-    
+
     auto uuidStr = libcomp::String(value.ToString());
 
     mBufferBlob.push_back(uuidStr.Data());

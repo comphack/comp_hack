@@ -69,6 +69,9 @@
 #include <SpawnLocationGroup.h>
 #include <Tokusei.h>
 
+// Standard C Includes
+#include <cmath>
+
 using namespace libcomp;
 
 ServerDataManager::ServerDataManager()

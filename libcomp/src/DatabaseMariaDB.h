@@ -121,6 +121,13 @@ public:
      */
     virtual String GetLastError();
 
+    /**
+     * Retrieve the last error raised by a database operation.
+     * @param pConnection Connection to get the error for.
+     * @return The last error that occurred
+     */
+    String GetLastError(MYSQL *pConnection);
+
 protected:
     virtual bool ProcessStandardChangeSet(const std::shared_ptr<
         DBStandardChangeSet>& changes);

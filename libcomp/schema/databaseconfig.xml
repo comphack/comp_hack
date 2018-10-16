@@ -6,5 +6,6 @@
         <member type="bool" name="MockData"/>
         <member type="string" name="MockDataFilename"/>
         <member type="bool" name="AutoSchemaUpdate" default="true"/>
+        <member type="bool" name="DatabaseDebug" default="false"/>
     </object>
 </objgen>

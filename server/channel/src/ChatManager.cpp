@@ -71,6 +71,7 @@
 
 // Standard C Includes
 #include <cstdlib>
+#include <cmath>
 
 // channel Includes
 #include "AccountManager.h"

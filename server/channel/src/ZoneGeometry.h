@@ -41,6 +41,7 @@ namespace objects
 {
 class MiSpotData;
 class QmpElement;
+class QmpNavPoint;
 }
 
 namespace channel
@@ -263,6 +264,12 @@ public:
 
     /// List of all Qmp elements
     std::list<std::shared_ptr<objects::QmpElement>> Elements;
+
+    /// List of nav points in zones that use this geometry. In zones that
+    /// contain player zone-in spots, these are filtered to the active play
+    /// area only.
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::QmpNavPoint>> NavPoints;
 };
 
 /**

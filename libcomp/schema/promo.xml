@@ -4,7 +4,7 @@
         <member type="string" name="Code" key="true" unique="false"/>
         <member type="u32" name="StartTime"/>
         <member type="u32" name="EndTime"/>
-        <member type="u8" name="Limit"/>
+        <member type="u8" name="UseLimit"/>
         <member type="enum" name="LimitType" underlying="int8_t">
             <value>PER_CHARACTER</value>
             <value>PER_WORLD</value>

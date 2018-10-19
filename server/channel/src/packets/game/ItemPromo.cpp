@@ -79,7 +79,7 @@ bool Parsers::ItemPromo::Parse(libcomp::ManagerPacket *pPacketManager,
             promo->GetEndTime() >= now))
         {
             bool valid = true;
-            if(promo->GetLimit())
+            if(promo->GetUseLimit())
             {
                 auto exchanges = existing;
                 exchanges.remove_if([promo](
@@ -109,7 +109,7 @@ bool Parsers::ItemPromo::Parse(libcomp::ManagerPacket *pPacketManager,
                     break;
                 }
 
-                valid = (size_t)promo->GetLimit() > exchanges.size();
+                valid = (size_t)promo->GetUseLimit() > exchanges.size();
             }
 
             if(valid)

@@ -1170,10 +1170,12 @@ public:
      * @param eState2 Pointer ot the secondary entity to modify. If removing
      *  and this is not supplied, all entities will be removed from the
      *  primary entity
+     * @param noDelay If false no player entity combat delay will occur
+     * @return true if the update occurred without issue
      */
     bool AddRemoveOpponent(bool add, const std::shared_ptr<
         ActiveEntityState>& eState1, const std::shared_ptr<
-        ActiveEntityState>& eState2);
+        ActiveEntityState>& eState2, bool noDelay = false);
 
     /**
      * Increase the digitalize XP points of one or more demon race for the

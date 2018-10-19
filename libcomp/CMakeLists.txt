@@ -564,10 +564,8 @@ IF(NOT USE_PREBUILT_OBJECTS)
         QmpBoundary.cpp
         QmpBoundaryLine.h
         QmpBoundaryLine.cpp
-        QmpUnknown1.h
-        QmpUnknown1.cpp
-        QmpUnknown2.h
-        QmpUnknown2.cpp
+        QmpNavPoint.h
+        QmpNavPoint.cpp
         RegisteredChannel.h
         RegisteredChannel.cpp
         RegisteredWorld.h

@@ -20,14 +20,17 @@
     </object>
     <object name="QmpBoundary" persistent="false">
         <member type="u32" name="ID"/>
-        <member type="array" name="Unknown" size="28">
-            <element type="u8"/>
+        <member type="s32" name="Unk1"/>
+        <member type="s32" name="Unk2"/>
+        <member type="s32" name="Unk3"/>
+        <member type="array" name="Unk4" size="4">
+            <element type="u32"/>
         </member>
         <member type="list" name="Lines">
             <element type="QmpBoundaryLine*"/>
         </member>
-        <member type="list" name="UnknownList">
-            <element type="QmpUnknown1*"/>
+        <member type="list" name="NavPoints">
+            <element type="QmpNavPoint*"/>
         </member>
     </object>
     <object name="QmpBoundaryLine" persistent="false">
@@ -37,17 +40,13 @@
         <member type="s32" name="X2"/>
         <member type="s32" name="Y2"/>
     </object>
-    <object name="QmpUnknown1" persistent="false">
-        <member type="array" name="Unknown" size="12">
-            <element type="u8"/>
-        </member>
-        <member type="list" name="UnknownList">
-            <element type="QmpUnknown2*"/>
-        </member>
-    </object>
-    <object name="QmpUnknown2" persistent="false">
-        <member type="array" name="Unknown" size="8">
-            <element type="u8"/>
+    <object name="QmpNavPoint" persistent="false">
+        <member type="u32" name="PointID"/>
+        <member type="s32" name="X"/>
+        <member type="s32" name="Y"/>
+        <member type="map" name="Distances">
+            <key type="u32"/>
+            <value type="float"/>
         </member>
     </object>
 </objgen>

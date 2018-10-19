@@ -76,6 +76,7 @@
 #include <QmpBoundaryLine.h>
 #include <QmpElement.h>
 #include <QmpFile.h>
+#include <QmpNavPoint.h>
 #include <ServerBazaar.h>
 #include <ServerCultureMachineSet.h>
 #include <ServerNPC.h>
@@ -178,9 +179,6 @@ void ZoneManager::LoadGeometry()
             continue;
         }
 
-        LOG_DEBUG(libcomp::String("Loaded zone geometry file: %1\n")
-            .Arg(filename));
-
         auto geometry = std::make_shared<ZoneGeometry>();
         geometry->QmpFilename = filename;
 
@@ -193,6 +191,8 @@ void ZoneManager::LoadGeometry()
         }
 
         std::unordered_map<uint32_t, std::list<Line>> lineMap;
+        std::unordered_map<uint32_t,
+            std::shared_ptr<objects::QmpNavPoint>> navPoints;
         for(auto qmpBoundary : qmpFile->GetBoundaries())
         {
             for(auto qmpLine : qmpBoundary->GetLines())
@@ -200,6 +200,11 @@ void ZoneManager::LoadGeometry()
                 Line l(Point((float)qmpLine->GetX1(), (float)qmpLine->GetY1()),
                     Point((float)qmpLine->GetX2(), (float)qmpLine->GetY2()));
                 lineMap[qmpLine->GetElementID()].push_back(l);
+            }
+
+            for(auto navPoint : qmpBoundary->GetNavPoints())
+            {
+                navPoints[navPoint->GetPointID()] = navPoint;
             }
         }
 
@@ -308,6 +313,122 @@ void ZoneManager::LoadGeometry()
                 }
             }
         }
+
+        // If any zone-in spots exist, remove all navpoints that are outside
+        // of all play areas by checking if the center point of zone-in spot
+        // connects to the points (in large zones this often times cuts the
+        // number of points in half)
+        std::list<Point> zoneInPoints;
+        for(auto dynamicMapID : zonePair.second)
+        {
+            auto spots = definitionManager->GetSpotData(dynamicMapID);
+            for(auto spotPair : spots)
+            {
+                if(spotPair.second->GetType() == 3)
+                {
+                    zoneInPoints.push_back(Point(spotPair.second->GetCenterX(),
+                        spotPair.second->GetCenterY()));
+                }
+            }
+        }
+
+        size_t navTotal = navPoints.size();
+        if(zoneInPoints.size() > 0)
+        {
+            // Gather all toggle enabled barriers to simulate everything being
+            // open
+            std::set<uint32_t> toggleBarriers;
+            for(auto qmpElem : qmpFile->GetElements())
+            {
+                if(qmpElem->GetType() == objects::QmpElement::Type_t::TOGGLE ||
+                   qmpElem->GetType() == objects::QmpElement::Type_t::TOGGLE_2)
+                {
+                    toggleBarriers.insert(qmpElem->GetID());
+                }
+            }
+
+            // Gather all points directly visible to a zone-in point
+            std::set<uint32_t> validPoints;
+
+            Point pOut;
+            Line lOut;
+            std::shared_ptr<ZoneShape> sOut;
+            for(Point& p : zoneInPoints)
+            {
+                for(auto& nPair : navPoints)
+                {
+                    if(validPoints.find(nPair.first) == validPoints.end())
+                    {
+                        auto n = nPair.second;
+
+                        Line l(p, Point((float)n->GetX(), (float)n->GetY()));
+                        if(!geometry->Collides(l, pOut, lOut, sOut,
+                            toggleBarriers))
+                        {
+                            validPoints.insert(nPair.first);
+
+                            // Pull all registered distance points as we go to
+                            // minimize geometry checks needed
+                            for(auto& dist : n->GetDistances())
+                            {
+                                validPoints.insert(dist.first);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // All direct points loaded, add direct path points from nav map
+            std::set<uint32_t> checked;
+            std::set<uint32_t> check = validPoints;
+            while(check.size() > 0)
+            {
+                uint32_t pointID = *check.begin();
+                check.erase(pointID);
+                checked.insert(pointID);
+
+                auto n = navPoints[pointID];
+                if(n)
+                {
+                    for(auto& dist : n->GetDistances())
+                    {
+                        uint32_t pointID2 = dist.first;
+                        if(checked.find(pointID2) == checked.end())
+                        {
+                            check.insert(pointID2);
+                            validPoints.insert(pointID2);
+                        }
+                    }
+                }
+            }
+
+            // Filter down the points
+            std::set<uint32_t> invalidPoints;
+            for(auto& pair : navPoints)
+            {
+                if(validPoints.find(pair.first) == validPoints.end())
+                {
+                    invalidPoints.insert(pair.first);
+                }
+            }
+
+            for(uint32_t pointID : invalidPoints)
+            {
+                navPoints.erase(pointID);
+            }
+        }
+
+        geometry->NavPoints = navPoints;
+
+        libcomp::String filterString;
+        if(navPoints.size() != navTotal)
+        {
+            filterString = libcomp::String(" (Nav points: %1 => %2)")
+                .Arg(navTotal).Arg(navPoints.size());
+        }
+
+        LOG_DEBUG(libcomp::String("Loaded zone geometry file: %1%2\n")
+            .Arg(filename).Arg(filterString));
 
         mZoneGeometry[filename.C()] = geometry;
     }
@@ -585,8 +706,8 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         auto definitionManager = server->GetDefinitionManager();
 
         // Remove any opponents
-        characterManager->AddRemoveOpponent(false, cState, nullptr);
-        characterManager->AddRemoveOpponent(false, dState, nullptr);
+        characterManager->AddRemoveOpponent(false, cState, nullptr, true);
+        characterManager->AddRemoveOpponent(false, dState, nullptr, true);
 
         // Deactivate and save the updated status effects
         cState->SetStatusEffectsActive(false, definitionManager);
@@ -923,8 +1044,8 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     }
 
     // Remove any opponents
-    characterManager->AddRemoveOpponent(false, cState, nullptr);
-    characterManager->AddRemoveOpponent(false, dState, nullptr);
+    characterManager->AddRemoveOpponent(false, cState, nullptr, true);
+    characterManager->AddRemoveOpponent(false, dState, nullptr, true);
 
     std::shared_ptr<Zone> zone = nullptr;
     bool instanceLeft = false;
@@ -5615,6 +5736,284 @@ Point ZoneManager::MoveRelative(const std::shared_ptr<ActiveEntityState>& eState
     }
 
     return point;
+}
+
+std::list<Point> ZoneManager::GetShortestPath(const std::shared_ptr<Zone>& zone,
+    const Point& source, const Point& dest, float maxDistance)
+{
+    std::list<Point> result;
+
+    bool collision = false;
+
+    auto geometry = zone->GetGeometry();
+    if(geometry)
+    {
+        Line path(source, dest);
+
+        Point collidePoint;
+        if(zone->Collides(path, collidePoint))
+        {
+            // Grab the closest points to the source and the target, determine
+            // shortest path(s) between them and simplify
+            std::array<std::shared_ptr<objects::QmpNavPoint>, 2> startPoints;
+
+            size_t idx = 0;
+            for(const Point& p : { source, dest })
+            {
+                std::list<std::pair<float,
+                    std::shared_ptr<objects::QmpNavPoint>>> points;
+                for(auto& pair : geometry->NavPoints)
+                {
+                    float dist = (float)(
+                        std::pow(((float)pair.second->GetX() - p.x), 2)
+                        + std::pow(((float)pair.second->GetY() - p.y), 2));
+                    points.push_back(std::make_pair(dist, pair.second));
+                }
+
+                points.sort([source](
+                    const std::pair<float,
+                        std::shared_ptr<objects::QmpNavPoint>>& a,
+                    const std::pair<float,
+                        std::shared_ptr<objects::QmpNavPoint>>& b)
+                    {
+                        return a.first < b.first;
+                    });
+
+                for(auto& pair : points)
+                {
+                    Line l(p, Point((float)pair.second->GetX(),
+                        (float)pair.second->GetY()));
+                    if(!zone->Collides(l, collidePoint))
+                    {
+                        startPoints[idx] = pair.second;
+                        break;
+                    }
+                }
+
+                idx++;
+            }
+
+            if(!startPoints[0] || !startPoints[1])
+            {
+                // Impossible to calculate
+                return result;
+            }
+            else if(startPoints[0] == startPoints[1])
+            {
+                // Rounding one corner
+                result.push_back(Point((float)startPoints[0]->GetX(),
+                    (float)startPoints[0]->GetY()));
+            }
+            else
+            {
+                auto pointIDs = GetShortestPath(geometry,
+                    startPoints[0]->GetPointID(),
+                    startPoints[1]->GetPointID());
+                if(pointIDs.size() == 0)
+                {
+                    // Could not calculate
+                    return result;
+                }
+
+                for(uint32_t pointID : pointIDs)
+                {
+                    auto n = geometry->NavPoints[pointID];
+                    result.push_back(Point((float)n->GetX(),
+                        (float)n->GetY()));
+                }
+            }
+
+            // Skip forward from the starting point (always leave 1)
+            size_t remove = 0;
+            for(auto iter = result.begin(); iter != result.end(); iter++)
+            {
+                if(iter == result.begin()) continue;
+
+                Line l(source, *iter);
+                if(zone->Collides(l, collidePoint))
+                {
+                    break;
+                }
+
+                remove++;
+            }
+
+            while(remove)
+            {
+                result.pop_front();
+                remove--;
+            }
+
+            // Skip forward to the end point (always leave 1)
+            remove = 0;
+            for(auto rIter = result.rbegin(); rIter != result.rend(); rIter++)
+            {
+                if(rIter == result.rbegin()) continue;
+
+                Line l(dest, *rIter);
+                if(zone->Collides(l, collidePoint))
+                {
+                    break;
+                }
+
+                remove++;
+            }
+
+            while(remove)
+            {
+                result.pop_back();
+                remove--;
+            }
+
+            result.push_back(dest);
+
+            // Make sure the max distance is not exceeded
+            if(maxDistance > 0.f)
+            {
+                // Add source for calculating distance
+                result.push_front(source);
+
+                auto iter1 = result.begin();
+                auto iter2 = result.begin();
+                iter2++;
+
+                float distance = 0.f;
+                while(iter2 != result.end())
+                {
+                    distance += iter1->GetDistance(*iter2);
+
+                    iter1++;
+                    iter2++;
+                }
+
+                if(distance > maxDistance)
+                {
+                    // Too far, return failure
+                    result.clear();
+                    return result;
+                }
+
+                result.pop_front();
+            }
+
+            collision = true;
+        }
+    }
+
+    if(!collision)
+    {
+        result.push_back(dest);
+    }
+
+    return result;
+}
+
+std::list<uint32_t> ZoneManager::GetShortestPath(
+    const std::shared_ptr<ZoneGeometry>& geometry, uint32_t sourceID,
+    uint32_t destID)
+{
+    std::list<uint32_t> result;
+
+    std::set<uint32_t> check;
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::QmpNavPoint>> points;
+    std::unordered_map<uint32_t, uint32_t> paths;
+    std::unordered_map<uint32_t, float> distances;
+
+    auto it = geometry->NavPoints.find(sourceID);
+    if(it == geometry->NavPoints.end())
+    {
+        // Error
+        return result;
+    }
+
+    check.insert(sourceID);
+    points[sourceID] = it->second;
+    distances[sourceID] = 0.f;
+
+    // Not found yet
+    distances[destID] = -1.f;
+
+    while(check.size() > 0)
+    {
+        uint32_t pointID = *check.begin();
+        float dist = distances[pointID];
+        check.erase(pointID);
+
+        auto point = geometry->NavPoints[pointID];
+        for(auto& pair : point->GetDistances())
+        {
+            float dist2 = dist + pair.second;
+
+            // Once we find a full path, ignore nodes that go further out
+            // than what we've already found
+            if(distances[destID] != -1.f && dist2 > distances[destID]) continue;
+
+            if(points.find(pair.first) == points.end())
+            {
+                // New point reached
+                it = geometry->NavPoints.find(pair.first);
+                if(it != geometry->NavPoints.end())
+                {
+                    points[pair.first] = it->second;
+                    check.insert(pair.first);
+                    paths[pair.first] = point->GetPointID();
+                    distances[pair.first] = dist2;
+                }
+            }
+            else if(distances[pair.first] > dist2)
+            {
+                // Closer path found, update the chain
+                float delta = dist2 - distances[pair.first];
+                distances[pair.first] = dist2;
+
+                paths[pair.first] = point->GetPointID();
+
+                std::set<uint32_t> affected;
+                affected.insert(pair.first);
+
+                bool repeat = true;
+                while(repeat)
+                {
+                    repeat = false;
+                    for(auto& pair2 : paths)
+                    {
+                        if(affected.find(pair2.first) == affected.end() &&
+                            affected.find(pair2.second) != affected.end())
+                        {
+                            affected.insert(pair2.first);
+                            distances[pair2.first] += delta;
+                            repeat = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if(distances[destID] != -1.f)
+    {
+        // End point was found, backtrack to get the path
+        result.push_back(destID);
+
+        uint32_t current = paths[destID];
+        while(current)
+        {
+            result.push_front(current);
+
+            auto pIter = paths.find(current);
+            if(pIter != paths.end())
+            {
+                current = pIter->second;
+            }
+            else
+            {
+                current = 0;
+            }
+        }
+    }
+
+    return result;
 }
 
 bool ZoneManager::PointInPolygon(const Point& p, const std::list<Point> vertices)

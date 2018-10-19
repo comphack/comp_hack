@@ -1046,39 +1046,14 @@ std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(const std::shared_ptr<
 
     auto zoneManager = mServer.lock()->GetZoneManager();
 
+    auto shortestPath = zoneManager->GetShortestPath(zone, source, dest);
+    if(shortestPath.size() == 0)
+    {
+        // No valid path
+        return nullptr;
+    }
+
     auto cmd = std::make_shared<AIMoveCommand>();
-
-    std::list<std::pair<float, float>> pathing;
-
-    bool collision = false;
-
-    std::list<Point> shortestPath;
-    auto geometry = zone->GetGeometry();
-    if(geometry)
-    {
-        Line path(source, dest);
-
-        Point collidePoint;
-        Line outSurface;
-        std::shared_ptr<ZoneShape> outShape;
-        if(zone->Collides(path, collidePoint, outSurface, outShape))
-        {
-            /*// Move off the collision point by 10
-            collidePoint = zoneManager->GetLinearPoint(collidePoint.x,
-                collidePoint.y, source.x, source.y, 10.f, false);
-
-            /// @todo: handle pathing properly
-
-            collision = true;*/
-            return nullptr;
-        }
-    }
-
-    if(!collision)
-    {
-        shortestPath.push_back(dest);
-    }
-
     if(reduce > 0.f)
     {
         auto it = shortestPath.rbegin();
@@ -1102,6 +1077,7 @@ std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(const std::shared_ptr<
         last.y = adjusted.y;
     }
 
+    std::list<std::pair<float, float>> pathing;
     for(auto p : shortestPath)
     {
         pathing.push_back(std::pair<float, float>(p.x, p.y));

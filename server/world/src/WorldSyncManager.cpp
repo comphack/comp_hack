@@ -131,6 +131,8 @@ bool WorldSyncManager::Initialize()
     mRegisteredTypes["PentalphaEntry"] = cfg;
 
     cfg = std::make_shared<ObjectConfig>("PentalphaMatch", true, worldDB);
+    cfg->UpdateHandler = &DataSyncManager::Update<WorldSyncManager,
+        objects::PentalphaMatch>;
     cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
         WorldSyncManager, objects::PentalphaMatch>;
 
@@ -658,6 +660,20 @@ void WorldSyncManager::SyncComplete<objects::PentalphaEntry>(
             }
         }
     }
+}
+
+template<>
+int8_t WorldSyncManager::Update<objects::PentalphaMatch>(
+    const libcomp::String& type, const std::shared_ptr<libcomp::Object>& obj,
+    bool isRemove, const libcomp::String& source)
+{
+    (void)type;
+    (void)obj;
+    (void)isRemove;
+    (void)source;
+
+    // Let all changes through
+    return SYNC_UPDATED;
 }
 
 template<>

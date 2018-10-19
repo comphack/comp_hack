@@ -850,6 +850,19 @@ public:
         uint64_t now, uint64_t endTime);
 
     /**
+     * Calculate the shortest path between the supplied source and destination
+     * points for the specified zone
+     * @param zone Pointer to the zone
+     * @param source Source point
+     * @param dest Destination point
+     * @param maxDistance Optional max distance for the path
+     * @return List of the full shortest path (starting with the source and
+     *  ending with the destination) or empty if no path is possible
+     */
+    std::list<Point> GetShortestPath(const std::shared_ptr<Zone>& zone,
+        const Point& source, const Point& dest, float maxDistance = 0.f);
+
+    /**
      * Determine if the specified point is within a polygon defined by vertices
      * @param p Point to check
      * @param vertices List of points representing a polygon's vertices
@@ -900,6 +913,19 @@ private:
         std::shared_ptr<DynamicMap>& dynamicMap,
         std::shared_ptr<objects::ServerZone>& zoneDef,
         std::list<std::shared_ptr<objects::SpawnLocation>>& locations);
+
+    /**
+     * Calculate the shortest path between the supplied source and destination
+     * Qmp points in the same zone geometry. Path optimization between points
+     * is up to the caller to perform.
+     * @param geometry Pointer to a zone geometry definition
+     * @param sourceID Source point ID
+     * @param destID Destination point ID
+     * @return List of the shortest path of points to move to in order
+     */
+    std::list<uint32_t> GetShortestPath(
+        const std::shared_ptr<ZoneGeometry>& geometry,
+        uint32_t sourceID, uint32_t destID);
 
     /**
      * Create an enemy (or ally) in the specified zone at set coordinates

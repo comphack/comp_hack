@@ -6115,8 +6115,9 @@ bool CharacterManager::GetRemovedStatusesPacket(libcomp::Packet& p,
     return true;
 }
 
-bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
-    ActiveEntityState>& eState1, const std::shared_ptr<ActiveEntityState>& eState2)
+bool CharacterManager::AddRemoveOpponent(
+    bool add, const std::shared_ptr<ActiveEntityState>& eState1,
+    const std::shared_ptr<ActiveEntityState>& eState2, bool noDelay)
 {
     auto zone = eState1->GetZone();
     if(!zone || (add && !eState2))
@@ -6274,7 +6275,7 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
 
             auto state = ClientState::GetEntityClientState(entity
                 ->GetEntityID());
-            if(state)
+            if(state && !noDelay)
             {
                 if(state->GetCharacterState()->GetOpponentIDs().size() == 0 &&
                     state->GetDemonState()->GetOpponentIDs().size() == 0)
@@ -6294,6 +6295,11 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
                 p.WriteFloat(entity->GetMovementSpeed());
 
                 packets.push_back(p);
+
+                if(state)
+                {
+                    state->SetBattleEndTimer(0);
+                }
             }
         }
 
@@ -6316,20 +6322,17 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
 
             server->GetTimerManager()->ScheduleEventIn(10, []
                 (std::shared_ptr<ChannelServer> pServer,
-                uint32_t pZoneID, uint32_t pDynamicMapID,
-                uint32_t pInstanceID, std::set<int32_t> pEntityIDs,
-                uint64_t pTimeout)
+                std::set<int32_t> pEntityIDs, uint64_t pTimeout)
                 {
                     auto zoneManager = pServer->GetZoneManager();
-                    auto pZone = zoneManager->GetExistingZone(pZoneID,
-                        pDynamicMapID, pInstanceID);
                     for(int32_t pEntityID : pEntityIDs)
                     {
                         auto client = pServer->GetManagerConnection()
                             ->GetEntityClient(pEntityID);
                         auto state = client ? client->GetClientState()
                             : nullptr;
-                        if(pZone && state && state->GetZone() == pZone &&
+                        auto pZone = state ? state->GetZone() : nullptr;
+                        if(pZone && state &&
                             state->GetBattleEndTimer() == pTimeout)
                         {
                             std::list<std::shared_ptr<ActiveEntityState>>
@@ -6350,8 +6353,7 @@ bool CharacterManager::AddRemoveOpponent(bool add, const std::shared_ptr<
                             }
                         }
                     }
-                }, server, zone->GetDefinitionID(), zone->GetDynamicMapID(),
-                zone->GetInstanceID(), playerEntitiesStopped, timeout);
+                }, server, playerEntitiesStopped, timeout);
         }
     }
 

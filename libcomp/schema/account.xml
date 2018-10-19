@@ -31,7 +31,6 @@
         <member type="u32" name="Timestamp"/>
         <member type="string" name="FromName"/>
         <member type="string" name="GiftMessage"/>
-        <member type="bool" name="PendingDistribution"/>
         <member type="s32" name="DistributionMessageID"/>
     </object>
     <object name="AccountWorldData" location="world" scriptenabled="true">

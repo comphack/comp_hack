@@ -4334,9 +4334,8 @@ bool CharacterManager::UpdateEventCounter(const std::shared_ptr<
 
     if(!noSync)
     {
-        server->GetChannelSyncManager()->UpdateRecord(eCounter,
+        server->GetChannelSyncManager()->SyncRecordUpdate(eCounter,
             "EventCounter");
-        server->GetChannelSyncManager()->SyncOutgoing();
     }
 
     return true;

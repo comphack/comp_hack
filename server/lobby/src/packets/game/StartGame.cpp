@@ -61,8 +61,8 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     // Grab the character ID.
     uint8_t cid = p.ReadU8();
 
-    // Grab the world ID.
-    int8_t worldID = p.ReadS8();
+    int8_t unknown = p.ReadS8();    // Always zero, selected channel?
+    (void)unknown;
 
     // We need all this jazz.
     auto client = std::dynamic_pointer_cast<LobbyClientConnection>(
@@ -72,16 +72,6 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     auto username = account->GetUsername();
     auto server = std::dynamic_pointer_cast<LobbyServer>(
         pPacketManager->GetServer());
-    auto world = server->GetWorldByID((uint8_t)worldID);
-
-    // Check the world is still there.
-    if(!world)
-    {
-        LOG_ERROR(libcomp::String("User '%1' tried to loging to world %2 but "
-            "that world is not active.\n").Arg(username).Arg(worldID));
-
-        return false;
-    }
 
     // We need all this jazz too.
     auto accountManager = server->GetAccountManager();
@@ -91,6 +81,18 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!character)
     {
         LOG_ERROR("Failed to get character?!\n");
+
+        return false;
+    }
+
+    auto world = server->GetWorldByID(character->GetWorldID());
+
+    // Check the world is still there.
+    if(!world)
+    {
+        LOG_ERROR(libcomp::String("User '%1' tried to loging to world %2 but "
+            "that world is not active.\n").Arg(username)
+            .Arg(character->GetWorldID()));
 
         return false;
     }

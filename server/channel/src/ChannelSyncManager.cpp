@@ -35,7 +35,9 @@
 
 // object Includes
 #include <Account.h>
+#include <CharacterLogin.h>
 #include <EventCounter.h>
+#include <InstanceAccess.h>
 #include <Match.h>
 #include <MatchEntry.h>
 #include <PentalphaEntry.h>
@@ -45,9 +47,11 @@
 #include <UBTournament.h>
 
 // channel Includes
+#include "AccountManager.h"
 #include "ChannelServer.h"
 #include "ManagerConnection.h"
 #include "MatchManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 
@@ -108,9 +112,23 @@ bool ChannelSyncManager::Initialize()
 
     mRegisteredTypes["Account"] = cfg;
 
+    cfg = std::make_shared<ObjectConfig>("CharacterLogin", false);
+    cfg->BuildHandler = &DataSyncManager::New<objects::CharacterLogin>;
+    cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
+        ChannelSyncManager, objects::CharacterLogin>;
+
+    mRegisteredTypes["CharacterLogin"] = cfg;
+
     cfg = std::make_shared<ObjectConfig>("CharacterProgress", false, worldDB);
 
     mRegisteredTypes["CharacterProgress"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("InstanceAccess", false);
+    cfg->BuildHandler = &DataSyncManager::New<objects::InstanceAccess>;
+    cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
+        ChannelSyncManager, objects::InstanceAccess>;
+
+    mRegisteredTypes["InstanceAccess"] = cfg;
 
     cfg = std::make_shared<ObjectConfig>("Match", false);
     cfg->BuildHandler = &DataSyncManager::New<objects::Match>;
@@ -170,8 +188,10 @@ bool ChannelSyncManager::Initialize()
     const std::set<std::string> worldTypes =
         {
             "Account",
+            "CharacterLogin",
             "CharacterProgress",
             "EventCounter",
+            "InstanceAccess",
             "Match",
             "MatchEntry",
             "PentalphaEntry",
@@ -385,6 +405,34 @@ int8_t ChannelSyncManager::Update<objects::SearchEntry>(const libcomp::String& t
 }
 
 template<>
+void ChannelSyncManager::SyncComplete<objects::CharacterLogin>(
+    const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
+    libcomp::Object>, bool>>& objs, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    std::list<std::shared_ptr<objects::CharacterLogin>> updates;
+    std::list<std::shared_ptr<objects::CharacterLogin>> removes;
+    for(auto& objPair : objs)
+    {
+        auto record = std::dynamic_pointer_cast<objects::CharacterLogin>(
+            objPair.first);
+        if(objPair.second)
+        {
+            removes.push_back(record);
+        }
+        else
+        {
+            updates.push_back(record);
+        }
+    }
+
+    mServer.lock()->GetAccountManager()->UpdateLogins(updates,
+        removes);
+}
+
+template<>
 int8_t ChannelSyncManager::Update<objects::EventCounter>(
     const libcomp::String& type, const std::shared_ptr<libcomp::Object>& obj,
     bool isRemove, const libcomp::String& source)
@@ -442,6 +490,70 @@ int8_t ChannelSyncManager::Update<objects::EventCounter>(
     }
 
     return SYNC_UPDATED;
+}
+
+template<>
+void ChannelSyncManager::SyncComplete<objects::InstanceAccess>(
+    const libcomp::String& type, const std::list<std::pair<std::shared_ptr<
+    libcomp::Object>, bool>>& objs, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    auto server = mServer.lock();
+    uint8_t channelID = server->GetChannelID();
+
+    std::list<std::shared_ptr<objects::InstanceAccess>> updates;
+    std::list<std::shared_ptr<objects::InstanceAccess>> removes;
+    std::list<std::shared_ptr<objects::InstanceAccess>> requested;
+    for(auto& objPair : objs)
+    {
+        auto record = std::dynamic_pointer_cast<objects::InstanceAccess>(
+            objPair.first);
+        record->SetIsLocal(channelID == record->GetChannelID());
+
+        if(!record->GetInstanceID())
+        {
+            // Check if we're requesting an instance ID
+            if(!objPair.second && record->GetIsLocal())
+            {
+                requested.push_back(record);
+            }
+        }
+        else
+        {
+            if(objPair.second)
+            {
+                removes.push_back(record);
+            }
+            else
+            {
+                updates.push_back(record);
+            }
+        }
+    }
+
+    if(updates.size() > 0 || removes.size() > 0)
+    {
+        server->GetZoneManager()->SyncInstanceAccess(updates, removes);
+    }
+
+    if(requested.size() > 0)
+    {
+        auto zoneManager = server->GetZoneManager();
+        for(auto request : requested)
+        {
+            if(!zoneManager->CreateInstance(request))
+            {
+                LOG_ERROR(libcomp::String("Failed to create zone instance from"
+                    " access request for instnace type: %1\n")
+                    .Arg(request->GetDefinitionID()));
+                continue;
+            }
+
+            UpdateRecord(request, "InstanceAccess");
+        }
+    }
 }
 
 template<>

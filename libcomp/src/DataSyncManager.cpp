@@ -423,6 +423,18 @@ bool DataSyncManager::UpdateRecord(const std::shared_ptr<libcomp::Object>& recor
     return false;
 }
 
+bool DataSyncManager::SyncRecordUpdate(const std::shared_ptr<
+    libcomp::Object>& record, const libcomp::String& type)
+{
+    if(UpdateRecord(record, type))
+    {
+        SyncOutgoing();
+        return true;
+    }
+
+    return false;
+}
+
 bool DataSyncManager::RemoveRecord(const std::shared_ptr<libcomp::Object>& record,
     const libcomp::String& type)
 {
@@ -451,6 +463,18 @@ bool DataSyncManager::RemoveRecord(const std::shared_ptr<libcomp::Object>& recor
                 return true;
             }
         }
+    }
+
+    return false;
+}
+
+bool DataSyncManager::SyncRecordRemoval(const std::shared_ptr<
+    libcomp::Object>& record, const libcomp::String& type)
+{
+    if(RemoveRecord(record, type))
+    {
+        SyncOutgoing();
+        return true;
     }
 
     return false;

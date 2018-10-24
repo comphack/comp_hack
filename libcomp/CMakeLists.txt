@@ -436,6 +436,8 @@ IF(NOT USE_PREBUILT_OBJECTS)
         ClanInfo.cpp
         ClanMember.h
         ClanMember.cpp
+        ChannelLogin.h
+        ChannelLogin.cpp
         CharacterLogin.h
         CharacterLogin.cpp
         CharacterProgress.h
@@ -520,6 +522,8 @@ IF(NOT USE_PREBUILT_OBJECTS)
         Hotbar.cpp
         InheritedSkill.h
         InheritedSkill.cpp
+        InstanceAccess.h
+        InstanceAccess.cpp
         ItemBox.h
         ItemBox.cpp
         ItemDrop.h

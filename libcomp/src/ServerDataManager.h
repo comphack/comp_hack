@@ -46,6 +46,7 @@
 
 namespace objects
 {
+class Action;
 class DemonPresent;
 class DemonQuestReward;
 class DropSet;
@@ -55,6 +56,7 @@ class ServerZone;
 class ServerZoneInstance;
 class ServerZoneInstanceVariant;
 class ServerZonePartial;
+class ServerZoneTrigger;
 }
 
 namespace libcomp
@@ -132,6 +134,17 @@ public:
      * @return Set of all zone instance definition IDs registered with the manager
      */
     const std::set<uint32_t> GetAllZoneInstanceIDs();
+
+    /**
+     * Check if the supplied zone ID and dynamicMap ID exist in a specific
+     * instance definition
+     * @param instanceID Definition ID of a zone instance
+     * @param zoneID Zone ID to check
+     * @param dynamicMapID Dynamic Map ID to check
+     * @return true if it exists, false if it does not
+     */
+    bool ExistsInInstance(uint32_t instanceID, uint32_t zoneID,
+        uint32_t dynamicMapID);
 
     /**
      * Get a server zone instance variant by definition ID
@@ -407,6 +420,28 @@ private:
      * @return true on success, false on failure
      */
     bool LoadScript(const libcomp::String& path, const libcomp::String& source);
+
+    /**
+     * Check for any issues in an action set and report any found in the logs
+     * @param actions List of actions to validate
+     * @param source Text descriptor of where the action is from
+     * @param autoContext If true, player only actions should be handled
+     *  differently
+     * @param inEvent Specifies that the actions are a direct subset of an
+     *  event (ex: EventPerformActions)
+     * @return false if any critical errors were encountered
+     */
+    bool ValidateActions(const std::list<
+        std::shared_ptr<objects::Action>>& actions,
+        const libcomp::String& source, bool autoContext, bool inEvent = false);
+
+    /**
+     * Check if the supplied trigger starts in an auto-only context for actions
+     * @param trigger Pointer to the trigger definition
+     * @return true if the trigger is an auto-only type, false if it is not
+     */
+    bool TriggerIsAutoContext(
+        const std::shared_ptr<objects::ServerZoneTrigger>& trigger);
 
     /// Map of server zone defintions by zone definition and dynamic map ID
     std::unordered_map<uint32_t, std::unordered_map<uint32_t,

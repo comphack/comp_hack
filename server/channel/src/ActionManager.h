@@ -87,11 +87,28 @@ public:
      * @param groupID Optional action group ID used for specific action logic
      * @param autoEventsOnly Optional parameter to force an auto-only context
      *  when processing events. Does not apply when context switching.
+     * @param incrementEventIndex Optional paramater to keep track of the
+     *  current EventPeformActions index for the client
      */
     void PerformActions(const std::shared_ptr<ChannelClientConnection>& client,
         const std::list<std::shared_ptr<objects::Action>>& actions,
         int32_t sourceEntityID, const std::shared_ptr<Zone>& zone = nullptr,
-        uint32_t groupID = 0, bool autoEventsOnly = false);
+        uint32_t groupID = 0, bool autoEventsOnly = false,
+        bool incrementEventIndex = false);
+
+    /**
+     * Send a stage effect notification to the client.
+     * @param client Client to display the effect for
+     * @param messageID ID of the effect message
+     * @param effectType Effect type
+     * @param includeMessage If true, the same message will print to the
+     *  console as well
+     * @param messageValue Optional message value to display inline in the
+     *  message
+     */
+    void SendStageEffect(const std::shared_ptr<ChannelClientConnection>& client,
+        int32_t messageID, int8_t effectType, bool includeMessage,
+        int32_t messageValue = 0);
 
 private:
     struct ActionContext
@@ -102,6 +119,7 @@ private:
         uint32_t GroupID = 0;
         std::shared_ptr<Zone> CurrentZone;
         bool AutoEventsOnly = false;
+        bool ChannelChanged = false;
     };
 
     /**

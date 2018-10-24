@@ -151,13 +151,6 @@ public:
 
 protected:
     /**
-     * Set up required test data for unit testing, removing the
-     * need for human interaction via the usual prompt.
-     * @return true on success, false on failure
-     */
-    bool InitializeTestMode();
-
-    /**
      * Create the first account when none currently exist
      * in the connected database via PromptCreateAccount.
      * The user will also be prompted to create more accounts

@@ -720,26 +720,6 @@ bool ChannelServer::Initialize()
     }
 
     mZoneManager = new ZoneManager(channelPtr);
-    mZoneManager->LoadGeometry();
-
-    // Pull first clock time then recalc
-    auto clock = GetWorldClockTime();
-    mTokuseiManager->RecalcTimedTokusei(clock);
-
-    // Schedule the world clock to tick once every second
-    auto sch = std::chrono::milliseconds(1000);
-    mTimerManager.SchedulePeriodicEvent(sch, []
-        (ChannelServer* pServer)
-        {
-            pServer->HandleClockEvents();
-        }, this);
-
-    // Schedule the demon quest reset for next midnight
-    mTimerManager.ScheduleEventIn((int)GetTimeUntilMidnight(), []
-        (ChannelServer* pServer)
-        {
-            pServer->HandleDemonQuestReset();
-        }, this);
 
     // Now connect to the world server.
     auto worldConnection = std::make_shared<
@@ -904,6 +884,12 @@ void ChannelServer::SetTimeOffset(uint32_t offset)
 const std::shared_ptr<objects::RegisteredChannel> ChannelServer::GetRegisteredChannel()
 {
     return mRegisteredChannel;
+}
+
+uint8_t ChannelServer::GetChannelID()
+{
+    // If it doesn't exist, assume we're the primary channel
+    return mRegisteredChannel ? mRegisteredChannel->GetID() : 0;
 }
 
 const std::list<std::shared_ptr<objects::RegisteredChannel>>
@@ -1255,6 +1241,37 @@ ChannelServer::PersistentObjectMap
     ChannelServer::GetDefaultCharacterObjectMap() const
 {
     return mDefaultCharacterObjectMap;
+}
+
+void ChannelServer::ScheduleRecurringActions()
+{
+    auto clock = GetWorldClockTime();
+    mTokuseiManager->RecalcTimedTokusei(clock);
+
+    // Schedule the world clock to tick once every second
+    auto sch = std::chrono::milliseconds(1000);
+    mTimerManager.SchedulePeriodicEvent(sch, []
+        (ChannelServer* pServer)
+        {
+            pServer->HandleClockEvents();
+        }, this);
+
+    // Schedule the demon quest reset for next midnight
+    mTimerManager.ScheduleEventIn((int)GetTimeUntilMidnight(), []
+        (ChannelServer* pServer)
+        {
+            pServer->HandleDemonQuestReset();
+        }, this);
+
+    // Start the tick handler
+    StartGameTick();
+    Tick();
+
+    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(GetConfig());
+    if(conf->GetTimeout() > 0)
+    {
+        mManagerConnection->ScheduleClientTimeoutHandler(conf->GetTimeout());
+    }
 }
 
 bool ChannelServer::RegisterClockEvent(WorldClockTime time, uint8_t type,

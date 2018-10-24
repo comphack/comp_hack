@@ -152,6 +152,7 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
             ? ((faceType - 1) % 3 + 1) : ((faceType - 101) % 3 + 101));
 
         auto character = libcomp::PersistentObject::New<objects::Character>();
+        character->SetWorldID(worldID);
         character->SetName(name);
         character->SetGender(gender);
         character->SetSkinType((uint8_t)skinType);

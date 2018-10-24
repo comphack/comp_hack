@@ -32,6 +32,10 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerDataManager.h>
+
+// object Includes
+#include <InstanceAccess.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -66,8 +70,9 @@ bool Parsers::DiasporaEnter::Parse(libcomp::ManagerPacket *pPacketManager,
         ->GetServer());
     auto zoneManager = server->GetZoneManager();
 
-    auto instance = zoneManager->GetInstanceAccess(client);
-    auto variant = instance ? instance->GetVariant() : nullptr;
+    auto instAccess = zoneManager->GetInstanceAccess(state->GetWorldCID());
+    auto variant = instAccess ? server->GetServerDataManager()
+        ->GetZoneInstanceVariantData(instAccess->GetVariantID()) : nullptr;
     if(variant && variant->GetInstanceType() == InstanceType_t::DIASPORA)
     {
         libcomp::Packet reply;
@@ -77,7 +82,7 @@ bool Parsers::DiasporaEnter::Parse(libcomp::ManagerPacket *pPacketManager,
 
         client->QueuePacket(reply);
 
-        zoneManager->MoveToStartingZone(client, instance, true);
+        zoneManager->MoveToInstance(client, instAccess, true);
 
         client->FlushOutgoing();
     }

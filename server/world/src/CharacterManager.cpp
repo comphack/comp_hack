@@ -143,6 +143,24 @@ std::shared_ptr<objects::CharacterLogin> CharacterManager::GetCharacterLogin(
     return character ? GetCharacterLogin(character->GetUUID()) : nullptr;
 }
 
+std::list<std::shared_ptr<objects::CharacterLogin>>
+    CharacterManager::GetActiveCharacters()
+{
+    std::list<std::shared_ptr<objects::CharacterLogin>> active;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto& pair : mCharacterCIDMap)
+    {
+        if(pair.second->GetStatus() !=
+            objects::CharacterLogin::Status_t::OFFLINE)
+        {
+            active.push_back(pair.second);
+        }
+    }
+
+    return active;
+}
+
 void CharacterManager::RequestChannelDisconnect(int32_t worldCID)
 {
     auto cLogin = GetCharacterLogin(worldCID);
@@ -269,10 +287,16 @@ std::list<std::shared_ptr<objects::CharacterLogin>>
         // If the character is currently loaded on the server, pull the friend
         // settings directly from it so we don't need to load every time
         auto character = cLogin->GetCharacter().Get();
-        if(character && cLogin->GetStatus() ==
-            objects::CharacterLogin::Status_t::ONLINE)
+        if(character && cLogin->GetStatus() !=
+            objects::CharacterLogin::Status_t::OFFLINE)
         {
             fSettings = character->GetFriendSettings().Get(worldDB);
+            if(!fSettings && !character->GetFriendSettings().IsNull())
+            {
+                LOG_ERROR(libcomp::String("Failed to get friend settings. "
+                    "Character UUID: %1\n").Arg(cLogin->GetCharacter().GetUUID()
+                        .ToString()));
+            }
         }
         else
         {
@@ -283,12 +307,6 @@ std::list<std::shared_ptr<objects::CharacterLogin>>
         if(fSettings)
         {
             targetUUIDs = fSettings->GetFriends();
-        }
-        else
-        {
-            LOG_ERROR(libcomp::String("Failed to get friend settings. "
-                "Character UUID: %1\n").Arg(cLogin->GetCharacter().GetUUID()
-                    .ToString()));
         }
     }
 
@@ -549,18 +567,11 @@ bool CharacterManager::PartyJoin(std::shared_ptr<objects::PartyCharacter> member
 
         sourceConnection->QueuePacket(relay);
     }
-    else if(partyID)
-    {
-        // Rejoining from login
-        if(AddToParty(member, partyID))
-        {
-            responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
-        }
-    }
 
     if(responseCode == (uint16_t)PartyErrorCodes_t::SUCCESS)
     {
-        SendNewPartyMember(member, partyID, newParty, sourceConnection);
+        SendPartyMember(member, partyID, newParty, false,
+            sourceConnection);
     }
 
     sourceConnection->FlushOutgoing();
@@ -618,7 +629,8 @@ bool CharacterManager::PartyRecruit(
 
     if(responseCode == (uint16_t)PartyErrorCodes_t::SUCCESS)
     {
-        SendNewPartyMember(targetMember, partyID, newParty, sourceConnection);
+        SendPartyMember(targetMember, partyID, newParty, false,
+            sourceConnection);
     }
 
     sourceConnection->FlushOutgoing();
@@ -627,7 +639,7 @@ bool CharacterManager::PartyRecruit(
 }
 
 void CharacterManager::PartyLeave(std::shared_ptr<objects::CharacterLogin> cLogin,
-    std::shared_ptr<libcomp::TcpConnection> requestConnection, bool tempLeave)
+    std::shared_ptr<libcomp::TcpConnection> requestConnection)
 {
     uint32_t partyID = cLogin->GetPartyID();
     auto party = GetParty(partyID);
@@ -642,10 +654,7 @@ void CharacterManager::PartyLeave(std::shared_ptr<objects::CharacterLogin> cLogi
     if(RemoveFromParty(cLogin, partyID))
     {
         responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
-        if(!tempLeave)
-        {
-            cLogin->SetPartyID(0);
-        }
+        cLogin->SetPartyID(0);
     }
 
     if(requestConnection)
@@ -2070,9 +2079,10 @@ uint32_t CharacterManager::CreateParty(std::shared_ptr<objects::PartyCharacter> 
     return partyID;
 }
 
-void CharacterManager::SendNewPartyMember(
+void CharacterManager::SendPartyMember(
     std::shared_ptr<objects::PartyCharacter> member, uint32_t partyID,
-    bool newParty, std::shared_ptr<libcomp::TcpConnection> sourceConnection)
+    bool newParty, bool isRefresh,
+    std::shared_ptr<libcomp::TcpConnection> sourceConnection)
 {
     SendPartyInfo(partyID);
 
@@ -2097,9 +2107,12 @@ void CharacterManager::SendNewPartyMember(
 
     if(newParty)
     {
-        // Send everyone to everyone
-        SendToRelatedCharacters(request, member->GetWorldCID(),
-            1, RELATED_PARTY, true);
+        if(!isRefresh)
+        {
+            // Send everyone to everyone
+            SendToRelatedCharacters(request, member->GetWorldCID(),
+                1, RELATED_PARTY, true);
+        }
     }
     else
     {
@@ -2108,18 +2121,22 @@ void CharacterManager::SendNewPartyMember(
         request.WriteS32Little(member->GetWorldCID());
         sourceConnection->SendPacket(request);
 
-        // Send new member to everyone else
-        request.Clear();
-        request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
-        request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_ADD);
-        request.WriteU32Little(partyID);
-        request.WriteU8(1);
-        member->SavePacket(request, false);
-        request.WriteU32Little(cLogin->GetZoneID());
-        request.WriteU8(0);
+        if(!isRefresh)
+        {
+            // Send new member to everyone else
+            request.Clear();
+            request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
+            request.WriteU8((uint8_t)
+                InternalPacketAction_t::PACKET_ACTION_ADD);
+            request.WriteU32Little(partyID);
+            request.WriteU8(1);
+            member->SavePacket(request, false);
+            request.WriteU32Little(cLogin->GetZoneID());
+            request.WriteU8(0);
 
-        SendToRelatedCharacters(request, member->GetWorldCID(),
-            1, RELATED_PARTY);
+            SendToRelatedCharacters(request, member->GetWorldCID(),
+                1, RELATED_PARTY);
+        }
     }
 
     libcomp::Packet relay;

@@ -38,6 +38,7 @@
 namespace objects
 {
 class Character;
+class InstanceAccess;
 class MatchEntry;
 class PentalphaMatch;
 class PvPMatch;
@@ -189,14 +190,11 @@ private:
     bool DetermineTeamPvPMatch(uint8_t type, std::set<int32_t> updated = {});
 
     /**
-     * Create or update a PvP match to send to the channels
-     * @param type Type ID of the PvP match
-     * @param existing Optional pointer to an existing match requested from
-     *  a channel server
-     * @return Pointer to the prepared PvP match
+     * Ready a supplied PvP match to send to the channels
+     * @param match Pointer to an existing match that has not been started
+     * @return true if the update succeeded, false if it did not
      */
-    std::shared_ptr<objects::PvPMatch> CreatePvPMatch(int8_t type,
-        std::shared_ptr<objects::PvPMatch> existing = nullptr);
+    bool PreparePvPMatch(std::shared_ptr<objects::PvPMatch> match);
 
     /**
      * Get all match entries by their team ID (including no team)
@@ -245,6 +243,11 @@ private:
     std::unordered_map<int32_t, libcomp::EnumMap<
         objects::SearchEntry::Type_t, uint16_t>> mSearchEntryCounts;
 
+    /// Map of zone instance access records by channel ID then instance ID.
+    /// Records are only stored here after they have an instance ID.
+    std::unordered_map<uint8_t, std::unordered_map<uint32_t,
+        std::shared_ptr<objects::InstanceAccess>>> mInstanceAccess;
+
     /// Map of character CIDs to queued match entries
     std::unordered_map<int32_t,
         std::shared_ptr<objects::MatchEntry>> mMatchEntries;
@@ -258,6 +261,12 @@ private:
     /// System timestamps for pending PvP ready times indexed by solo entries
     /// (0) or team (1) then PVP type
     std::array<std::array<uint32_t, 2>, 2> mPvPReadyTimes;
+
+    /// Pending PvP matches prepared by the primary channel with all necessary
+    /// instance information and the correct channel set indexed by solo
+    /// entries (0) or team (1) then PVP type
+    std::array<std::array<
+        std::shared_ptr<objects::PvPMatch>, 2>, 2> mPvPPendingMatches;
 
     /// Lowest points required to cause a recalculation of the current top
     /// 10 UB total score, top total points and top all time points (in that

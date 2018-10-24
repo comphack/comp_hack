@@ -78,9 +78,11 @@ public:
      * worker thread.
      * @sa BaseServer
      * @sa Worker
+     * @param delayReady Optional parameter to delay ready notification to
+     *  be called manually at a later point. Defaults to false.
      * @return Code indicating the exit status.
      */
-    virtual int Start();
+    virtual int Start(bool delayReady = false);
 
     /**
      * Remove a connection from the list of client connections.
@@ -131,17 +133,17 @@ public:
      */
     static DH* CopyDiffieHellman(const DH *pDiffieHellman);
 
+    /**
+     * Called when the server has started.
+     */
+    virtual void ServerReady();
+
 protected:
     /**
      * Main loop for the server.
      * @return Code indicating the exit status.
      */
     virtual int Run();
-
-    /**
-     * Called when the server has started.
-     */
-    virtual void ServerReady();
 
     /**
      * Create a connection to a newly active socket.

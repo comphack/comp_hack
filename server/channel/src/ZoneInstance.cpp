@@ -31,6 +31,7 @@
 
 // object Includes
 #include <DestinyBox.h>
+#include <InstanceAccess.h>
 #include <MiDCategoryData.h>
 #include <MiDevilData.h>
 #include <MiTimeLimitData.h>
@@ -68,12 +69,16 @@ namespace libcomp
 
 ZoneInstance::ZoneInstance(uint32_t id, const std::shared_ptr<
     objects::ServerZoneInstance>& definition,
-    const std::set<int32_t>& accessCIDs)
+    const std::shared_ptr<objects::InstanceAccess>& access)
 {
     SetID(id);
     SetDefinition(definition);
-    SetAccessCIDs(accessCIDs);
-    SetOriginalAccessCIDs(accessCIDs);
+    SetAccess(access);
+
+    if(access)
+    {
+        SetOriginalAccessCIDs(access->GetAccessCIDs());
+    }
 }
 
 ZoneInstance::~ZoneInstance()

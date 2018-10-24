@@ -946,7 +946,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
             effect->SetEntity(GetEntityUUID());
             effect->SetEffect(effectType);
             effect->SetStack(stack);
-            effect->SetIsConstant(cancel->GetDuration() == 0);
+            effect->SetIsConstant(ePair.second.IsConstant);
         }
 
         // Perform insert or edit modifications

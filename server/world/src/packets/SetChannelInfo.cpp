@@ -44,7 +44,8 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const
 {
-    auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
+    auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(
+        connection);
     if(nullptr == conn)
     {
         return false;
@@ -58,20 +59,22 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto channelID = p.ReadU8();
+    uint8_t channelID = p.ReadU8();
 
-    auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
-    if(channelID != server->GetNextChannelID())
+    auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager
+        ->GetServer());
+    if(server->GetChannelConnectionByID((int8_t)channelID))
     {
-        LOG_DEBUG("The ID of the channel requesting a connection does not match"
-            " the next expected channel ID.\n");
+        LOG_DEBUG("The ID of the channel requesting a connection does not"
+            " match an available channel ID.\n");
         connection->Close();
-        return false;
+        return true;
     }
 
     auto worldDB = server->GetWorldDatabase();
 
-    auto svr = objects::RegisteredChannel::LoadRegisteredChannelByID(worldDB, channelID);
+    auto svr = objects::RegisteredChannel::LoadRegisteredChannelByID(worldDB,
+        channelID);
 
     connection->SetName(libcomp::String("%1:%2:%3").Arg(
         connection->GetName()).Arg(svr->GetID()).Arg(svr->GetName()));
@@ -80,8 +83,8 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         .Arg(svr->GetID())
         .Arg(svr->GetName()));
 
-    // If the channel has already set the IP, it should be the externally facing IP
-    // so we'll leave it alone
+    // If the channel has already set the IP, it should be the externally
+    // facing IP so we'll leave it alone
     if(svr->GetIP().IsEmpty())
     {
         svr->SetIP(connection->GetRemoteAddress());

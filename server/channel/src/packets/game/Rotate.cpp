@@ -116,7 +116,5 @@ bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
         }
     }
 
-    /// @todo: lower movement durability
-
     return true;
 }

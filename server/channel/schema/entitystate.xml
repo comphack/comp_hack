@@ -20,10 +20,6 @@
         <member type="float" name="CurrentX"/>
         <member type="float" name="CurrentY"/>
         <member type="float" name="CurrentRotation"/>
-
-        <member type="list" name="Actions">
-            <element type="Action*"/>
-        </member>
     </object>
     <object name="CalculatedEntityState" scriptenabled="true" persistent="false">
         <member type="array" name="CorrectTbl" size="128">

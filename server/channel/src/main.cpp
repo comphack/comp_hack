@@ -104,7 +104,7 @@ int main(int argc, const char *argv[])
     libcomp::Shutdown::Configure(server.get());
 
     // Start the main server loop (blocks until done).
-    int returnCode = server->Start();
+    int returnCode = server->Start(true);
 
     // Complete the shutdown process.
     libcomp::Shutdown::Complete();

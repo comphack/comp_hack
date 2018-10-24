@@ -40,6 +40,7 @@
 // object Includes
 #include <ChannelConfig.h>
 #include <DiasporaBase.h>
+#include <InstanceAccess.h>
 #include <MatchEntry.h>
 #include <MiUraFieldTowerData.h>
 #include <PentalphaEntry.h>
@@ -300,6 +301,8 @@ void MatchManager::ConfirmMatch(const std::shared_ptr<
     case objects::Match::Type_t::PVP_FATE:
     case objects::Match::Type_t::PVP_VALHALLA:
         {
+            auto zoneManager = mServer.lock()->GetZoneManager();
+
             auto pvpMatch = std::dynamic_pointer_cast<objects::PvPMatch>(
                 match);
 
@@ -316,7 +319,7 @@ void MatchManager::ConfirmMatch(const std::shared_ptr<
 
             if(success)
             {
-                MoveToInstance(client, pvpMatch);
+                zoneManager->MoveToInstance(client);
             }
         }
         break;
@@ -717,15 +720,13 @@ bool MatchManager::RequestTeamPvPMatch(
         " instance %2: %3\n").Arg(variantID).Arg(instanceID)
         .Arg(client->GetClientState()->GetAccountUID().ToString()));
 
-    auto syncManager = server->GetChannelSyncManager();
-    if(!syncManager->UpdateRecord(match, "PvPMatch"))
+    if(!server->GetChannelSyncManager()->SyncRecordUpdate(match, "PvPMatch"))
     {
         LOG_DEBUG(libcomp::String("Team PvP creation failed: match could"
             " not be queued: %1\n").Arg(state->GetAccountUID().ToString()));
         return false;
     }
 
-    syncManager->SyncOutgoing();
     return true;
 }
 
@@ -3403,6 +3404,43 @@ void MatchManager::UpdateMatchEntries(
 
     std::lock_guard<std::mutex> lock(mLock);
 
+    // Leave PvP queuing up to the primary channel
+    if(server->GetChannelID() == 0)
+    {
+        std::unordered_map<int8_t, std::set<uint32_t>> currentReadyTimes;
+        for(auto& pair : mMatchEntries)
+        {
+            auto entry = pair.second;
+            if(IsPvPMatchEntry(entry) && entry->GetReadyTime())
+            {
+                int8_t type = (int8_t)entry->GetMatchType();
+                currentReadyTimes[type].insert(entry->GetReadyTime());
+            }
+        }
+
+        std::unordered_map<int8_t, std::set<uint32_t>> newReadyTimes;
+        for(auto update : updates)
+        {
+            if(IsPvPMatchEntry(update) && update->GetReadyTime())
+            {
+                int8_t type = (int8_t)update->GetMatchType();
+                newReadyTimes[type].insert(update->GetReadyTime());
+            }
+        }
+
+        for(auto& pair : newReadyTimes)
+        {
+            for(uint32_t time : pair.second)
+            {
+                if(currentReadyTimes[pair.first].find(time) ==
+                    currentReadyTimes[pair.first].end())
+                {
+                    QueuePendingPvPMatch((uint8_t)pair.first, time);
+                }
+            }
+        }
+    }
+
     bool pvpModified = false;
 
     std::set<int32_t> joinSelf;
@@ -3595,7 +3633,7 @@ void MatchManager::UpdatePvPMatches(
     auto server = mServer.lock();
     auto managerConnection = server->GetManagerConnection();
 
-    uint8_t channelID = server->GetRegisteredChannel()->GetID();
+    uint8_t channelID = server->GetChannelID();
 
     uint32_t now = (uint32_t)std::time(0);
     ServerTime serverTime = ChannelServer::GetServerTime();
@@ -3644,7 +3682,7 @@ void MatchManager::UpdatePvPMatches(
                             client->QueuePacket(request);
 
                             // Immediately move to the zone
-                            MoveToInstance(client, match);
+                            server->GetZoneManager()->MoveToInstance(client);
 
                             client->FlushOutgoing();
                         }
@@ -3847,29 +3885,12 @@ bool MatchManager::CreatePvPInstance(const std::shared_ptr<
     auto server = mServer.lock();
     auto serverDataManager = server->GetServerDataManager();
 
-    uint32_t variantID = match->GetVariantID();
-    if(!variantID)
-    {
-        auto variantIDs = serverDataManager->GetStandardPvPVariantIDs(
-            (uint8_t)match->GetType());
-        if(variantIDs.size() == 0)
-        {
-            LOG_ERROR(libcomp::String("PvP match creation failed due to"
-                " undefined match type variants: %1\n")
-                .Arg((int8_t)match->GetType()));
-            return false;
-        }
-
-        variantID = libcomp::Randomizer::GetEntry(variantIDs);
-        match->SetVariantID(variantID);
-    }
-
     auto variantDef = std::dynamic_pointer_cast<objects::PvPInstanceVariant>(
-        serverDataManager->GetZoneInstanceVariantData(variantID));
+        serverDataManager->GetZoneInstanceVariantData(match->GetVariantID()));
     if(!variantDef || !variantDef->GetDefaultInstanceID())
     {
         LOG_ERROR(libcomp::String("Invalid PvP variant encountered, match"
-            " creation failed: %1\n").Arg(variantID));
+            " creation failed: %1\n").Arg(match->GetVariantID()));
         return false;
     }
 
@@ -3881,12 +3902,18 @@ bool MatchManager::CreatePvPInstance(const std::shared_ptr<
         match->SetInstanceDefinitionID(variantDef->GetDefaultInstanceID());
     }
 
-    auto instance = server->GetZoneManager()->CreateInstance(instanceDefID,
-        cids, variantID);
+    auto instAccess = std::make_shared<objects::InstanceAccess>();
+    instAccess->SetAccessCIDs(cids);
+    instAccess->SetDefinitionID(instanceDefID);
+    instAccess->SetVariantID(match->GetVariantID());
+
+    server->GetZoneManager()->CreateInstance(instAccess);
+    auto instance = server->GetZoneManager()->GetInstance(instAccess
+        ->GetInstanceID());
     if(!instance)
     {
         LOG_ERROR(libcomp::String("Failed to create PvP instance"
-            " variant: %1\n").Arg(variantID));
+            " variant: %1\n").Arg(match->GetVariantID()));
         return false;
     }
 
@@ -3917,6 +3944,47 @@ bool MatchManager::CreatePvPInstance(const std::shared_ptr<
         }, this, instance->GetID());
 
     return true;
+}
+
+void MatchManager::QueuePendingPvPMatch(uint8_t type, uint32_t readyTime)
+{
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
+
+    auto variantIDs = serverDataManager->GetStandardPvPVariantIDs(type);
+    if(variantIDs.size() == 0)
+    {
+        LOG_ERROR(libcomp::String("PvP match queuing failed due to"
+            " undefined match type variants: %1\n").Arg(type));
+        return;
+    }
+
+    uint32_t variantID = libcomp::Randomizer::GetEntry(variantIDs);
+    auto variantDef = std::dynamic_pointer_cast<objects::PvPInstanceVariant>(
+        serverDataManager->GetZoneInstanceVariantData(variantID));
+    if(!variantDef || !variantDef->GetDefaultInstanceID())
+    {
+        LOG_ERROR(libcomp::String("Invalid PvP variant encountered, match"
+            " creation failed: %1\n").Arg(variantID));
+        return;
+    }
+
+    auto instDef = serverDataManager->GetZoneInstanceData(variantDef
+        ->GetDefaultInstanceID());
+
+    auto pvpMatch = std::make_shared<objects::PvPMatch>();
+    pvpMatch->SetType((objects::PvPMatch::Type_t)type);
+    pvpMatch->SetReadyTime(readyTime);
+    pvpMatch->SetZoneDefinitionID(instDef->GetZoneIDs(0));
+    pvpMatch->SetDynamicMapID(instDef->GetDynamicMapIDs(0));
+    pvpMatch->SetInstanceDefinitionID(instDef->GetID());
+    pvpMatch->SetVariantID(variantID);
+
+    // Channel modes does not matter here, one needs to be picked
+    pvpMatch->SetChannelID(server->GetWorldSharedConfig()
+        ->GetChannelDistribution(instDef->GetGroupID()));
+
+    server->GetChannelSyncManager()->SyncRecordUpdate(pvpMatch, "PvPMatch");
 }
 
 void MatchManager::GetPvPTrophies(
@@ -4449,31 +4517,6 @@ bool MatchManager::ValidateMatchEntries(
     }
 
     return true;
-}
-
-bool MatchManager::MoveToInstance(
-    const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<objects::PvPMatch>& match)
-{
-    auto server = mServer.lock();
-    auto zoneManager = server->GetZoneManager();
-    auto instance = zoneManager->GetInstance(match->GetInstanceID());
-    auto zone = zoneManager->GetInstanceStartingZone(instance);
-    if(zone)
-    {
-        float x, y, rot;
-        if(!zoneManager->GetMatchStartPosition(client, zone, x, y, rot) ||
-            !zoneManager->EnterZone(client, zone->GetDefinitionID(),
-                zone->GetDynamicMapID(), x, y, rot))
-        {
-            client->Kill();
-            return false;
-        }
-
-        return true;
-    }
-
-    return false;
 }
 
 bool MatchManager::EndUltimateBattlePhase(const std::shared_ptr<Zone>& zone,

@@ -68,9 +68,6 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
 
     bool success = false;
 
-    /// @todo: Most of these will need to be reviewed once channel switching
-    /// is properly implemented
-
     // Verify the filters and apply to the list of entries
     bool clanEventView = false;
     switch((objects::SearchEntry::Type_t)type)

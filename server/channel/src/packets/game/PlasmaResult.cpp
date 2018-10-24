@@ -33,6 +33,7 @@
 #include <PacketCodes.h>
 
  // channel Includes
+#include "ActionManager.h"
 #include "ChannelServer.h"
 #include "EventManager.h"
 #include "PlasmaState.h"
@@ -102,12 +103,25 @@ bool Parsers::PlasmaResult::Parse(libcomp::ManagerPacket *pPacketManager,
     // End the system event
     eventManager->HandleEvent(client, nullptr);
 
+    std::list<std::shared_ptr<objects::Action>> actions;
     if(!failure)
     {
         // Update demon quest if active
         eventManager->UpdateDemonQuestCount(client,
             objects::DemonQuest::Type_t::PLASMA,
             (uint32_t)pState->GetEntity()->GetColor(), 1);
+
+        actions = pState->GetEntity()->GetSuccessActions();
+    }
+    else
+    {
+        actions = pState->GetEntity()->GetFailActions();
+    }
+
+    if(actions.size() > 0)
+    {
+        server->GetActionManager()->PerformActions(client,
+            actions, pState->GetEntityID(), zone);
     }
 
     client->FlushOutgoing();

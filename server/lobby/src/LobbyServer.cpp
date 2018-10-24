@@ -87,14 +87,7 @@ bool LobbyServer::Initialize()
         return false;
     }
 
-    if(mUnitTestMode)
-    {
-        if(!InitializeTestMode())
-        {
-            return false;
-        }
-    }
-    else if(!mDatabase->TableHasRows("Account"))
+    if(!mUnitTestMode && !mDatabase->TableHasRows("Account"))
     {
         if(!Setup())
         {
@@ -295,13 +288,6 @@ std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
     }
 
     return connection;
-}
-
-bool LobbyServer::InitializeTestMode()
-{
-    /// @todo: Is this still needed now that mock data is inserted elsewhere?
-
-    return true;
 }
 
 void LobbyServer::CreateFirstAccount()

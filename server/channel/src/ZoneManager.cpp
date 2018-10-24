@@ -42,6 +42,7 @@
 #include <AccountWorldData.h>
 #include <ActionSpawn.h>
 #include <Ally.h>
+#include <ChannelLogin.h>
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
 #include <DestinyBox.h>
@@ -49,6 +50,7 @@
 #include <DigitalizeState.h>
 #include <Enemy.h>
 #include <EntityStats.h>
+#include <InstanceAccess.h>
 #include <Item.h>
 #include <ItemDrop.h>
 #include <Loot.h>
@@ -96,6 +98,7 @@
 #include <WorldSharedConfig.h>
 
 // channel Includes
+#include "AccountManager.h"
 #include "ActionManager.h"
 #include "AIManager.h"
 #include "AIState.h"
@@ -156,13 +159,44 @@ ZoneManager::~ZoneManager()
 void ZoneManager::LoadGeometry()
 {
     auto server = mServer.lock();
+    auto sharedConfig = server->GetWorldSharedConfig();
+    uint8_t channelID = server->GetChannelID();
+
     auto definitionManager = server->GetDefinitionManager();
     auto serverDataManager = server->GetServerDataManager();
 
-    auto zoneIDs = serverDataManager->GetAllZoneIDs();
+    std::unordered_map<uint32_t, std::set<uint32_t>> localZoneIDs;
+    for(auto zonePair : serverDataManager->GetAllZoneIDs())
+    {
+        uint32_t zoneID = zonePair.first;
+        for(auto dynamicMapID : zonePair.second)
+        {
+            auto zoneData = serverDataManager->GetZoneData(zoneID,
+                dynamicMapID);
+            if(!sharedConfig->ChannelDistributionCount() || sharedConfig
+               ->GetChannelDistribution(zoneData->GetGroupID()) == channelID)
+            {
+                localZoneIDs[zoneID].insert(dynamicMapID);
+            }
+        }
+    }
+
+    for(uint32_t instanceID : serverDataManager->GetAllZoneInstanceIDs())
+    {
+        auto instDef = serverDataManager->GetZoneInstanceData(instanceID);
+        if(!sharedConfig->ChannelDistributionCount() || sharedConfig
+            ->GetChannelDistribution(instDef->GetGroupID()) == channelID)
+        {
+            for(size_t i = 0; i < instDef->ZoneIDsCount(); i++)
+            {
+                localZoneIDs[instDef->GetZoneIDs(i)].insert(instDef
+                    ->GetDynamicMapIDs(i));
+            }
+        }
+    }
 
     // Build zone geometry from QMP files
-    for(auto zonePair : zoneIDs)
+    for(auto zonePair : localZoneIDs)
     {
         uint32_t zoneID = zonePair.first;
         auto zoneData = definitionManager->GetZoneData(zoneID);
@@ -436,7 +470,7 @@ void ZoneManager::LoadGeometry()
     // Build any existing zone spots as polygons
     // Loop through a second time instead of handling in the first loop
     // because dynamic map/QMP file combos are not the same on all zones
-    for(auto zonePair : zoneIDs)
+    for(auto zonePair : localZoneIDs)
     {
         uint32_t zoneID = zonePair.first;
         auto zoneData = definitionManager->GetZoneData(zoneID);
@@ -525,7 +559,10 @@ void ZoneManager::LoadGeometry()
 void ZoneManager::InstanceGlobalZones()
 {
     auto server = mServer.lock();
+    auto sharedConfig = server->GetWorldSharedConfig();
     auto serverDataManager = server->GetServerDataManager();
+
+    uint8_t channelID = server->GetChannelID();
 
     // Gather all global zone definitions
     std::list<std::shared_ptr<objects::ServerZone>> zoneDefs;
@@ -543,7 +580,14 @@ void ZoneManager::InstanceGlobalZones()
                 if(zoneData->GetGlobal() && (it == mGlobalZoneMap.end() ||
                     it->second.find(dynamicMapID) == it->second.end()))
                 {
-                    zoneDefs.push_back(zoneData);
+                    // Zone is a valid global zone but check to make sure
+                    // this channel owns it
+                    if(sharedConfig->ChannelDistributionCount() == 0 ||
+                        sharedConfig->GetChannelDistribution(zoneData
+                        ->GetGroupID()) == channelID)
+                    {
+                        zoneDefs.push_back(zoneData);
+                    }
                 }
             }
         }
@@ -664,22 +708,75 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto dState = state->GetDemonState();
     auto worldCID = state->GetWorldCID();
 
+    auto server = mServer.lock();
+    auto sharedConfig = server->GetWorldSharedConfig();
+
     auto currentZone = cState->GetZone();
     auto currentInstance = currentZone ? currentZone->GetInstance() : nullptr;
 
-    auto nextZone = GetZone(zoneID, dynamicMapID, client,
-        currentInstance ? currentInstance->GetID() : 0);
-    if(nextZone == nullptr)
+    bool changeChannel = false;
+    std::shared_ptr<objects::ServerZone> zoneDef;
+    std::shared_ptr<objects::ServerZoneInstanceVariant> variantDef;
+    if(sharedConfig->ChannelDistributionCount())
     {
-        return false;
-    }
-    else if(nextZone->GetDefinition()->GetRestricted() &&
-        !CanEnterRestrictedZone(client, nextZone))
-    {
-        return false;
+        // Check if the zone is handled by a different channel
+        auto serverDataManager = server->GetServerDataManager();
+        zoneDef = serverDataManager->GetZoneData(zoneID, dynamicMapID);
+        if(zoneDef)
+        {
+            uint32_t groupID = zoneDef->GetGroupID();
+            if(!zoneDef->GetGlobal())
+            {
+                // Check if its in the player's current instance access
+                auto instAccess = GetInstanceAccess(state->GetWorldCID());
+                auto instDef = instAccess ? serverDataManager
+                    ->GetZoneInstanceData(instAccess->GetDefinitionID())
+                    : nullptr;
+
+                if(instDef && serverDataManager->ExistsInInstance(
+                    instDef->GetID(), zoneID, dynamicMapID))
+                {
+                    groupID = instDef->GetGroupID();
+                    variantDef = serverDataManager->GetZoneInstanceVariantData(
+                        instAccess->GetVariantID());
+                }
+                else
+                {
+                    groupID = 0;
+                }
+            }
+
+            changeChannel = groupID && sharedConfig->GetChannelDistribution(
+                groupID) != server->GetChannelID();
+        }
     }
 
-    if(nextZone->GetInstanceType() == InstanceType_t::DEMON_ONLY &&
+    std::shared_ptr<Zone> nextZone;
+    std::shared_ptr<ZoneInstance> nextInstance;
+    if(!changeChannel)
+    {
+        nextZone = GetZone(zoneID, dynamicMapID, client,
+            currentInstance ? currentInstance->GetID() : 0);
+        if(nextZone == nullptr)
+        {
+            return false;
+        }
+        else
+        {
+            if(nextZone->GetDefinition()->GetRestricted() &&
+                !CanEnterRestrictedZone(client, nextZone))
+            {
+                return false;
+            }
+        }
+
+        zoneDef = nextZone->GetDefinition();
+        nextInstance = nextZone->GetInstance();
+        variantDef = nextInstance ? nextInstance->GetVariant() : nullptr;
+    }
+
+    if(variantDef &&
+        variantDef->GetInstanceType() == InstanceType_t::DEMON_ONLY &&
         (!dState->GetEntity() || !dState->IsAlive()))
     {
         LOG_ERROR(libcomp::String("Request to enter a demon only"
@@ -688,7 +785,17 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         return false;
     }
 
-    if(forceLeave || (currentZone && currentZone != nextZone))
+    if(changeChannel)
+    {
+        if(!MoveToZoneChannel(client, zoneID, dynamicMapID, nullptr, xCoord,
+            yCoord, rotation))
+        {
+            return false;
+        }
+
+        return true;
+    }
+    else if(forceLeave || (currentZone && currentZone != nextZone))
     {
         // Trigger zone-out actions
         if(currentZone)
@@ -701,7 +808,6 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     }
     else if(currentZone)
     {
-        auto server = mServer.lock();
         auto characterManager = server->GetCharacterManager();
         auto definitionManager = server->GetDefinitionManager();
 
@@ -722,8 +828,6 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     }
 
     auto uniqueID = nextZone->GetID();
-    auto nextInstance = nextZone->GetInstance();
-    auto zoneDef = nextZone->GetDefinition();
 
     bool firstConnection = false;
     {
@@ -734,14 +838,25 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         // revoke access so they cannot re-enter
         if(nextInstance)
         {
+            auto syncManager = server->GetChannelSyncManager();
+
             auto accessIter = mZoneInstanceAccess.find(worldCID);
             if(accessIter != mZoneInstanceAccess.end() &&
-                accessIter->second == nextInstance->GetID())
+               accessIter->second->GetIsLocal() &&
+               accessIter->second->GetInstanceID() == nextInstance->GetID())
             {
-                mZoneInstanceAccess.erase(worldCID);
+                auto access = accessIter->second;
+                access->RemoveAccessCIDs(worldCID);
+                mZoneInstanceAccess.erase(accessIter);
+
+                syncManager->UpdateRecord(access, "InstanceAccess");
             }
 
-            nextInstance->RemoveAccessCIDs(worldCID);
+            nextInstance->GetAccess()->RemoveAccessCIDs(worldCID);
+            syncManager->UpdateRecord(nextInstance->GetAccess(),
+                "InstanceAccess");
+
+            syncManager->SyncOutgoing();
         }
 
         // Reactive the zone if its not active already
@@ -785,7 +900,6 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     dState->SetDeathTimeOut(0);
     state->SetZoneInSpotID(0);
 
-    auto server = mServer.lock();
     auto ticks = server->GetServerTime();
 
     // Clear any additional zone dependent tokusei if changing instances
@@ -857,29 +971,21 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     }
 
     // Move the entity to the new location.
-    cState->SetOriginX(xCoord);
-    cState->SetOriginY(yCoord);
-    cState->SetOriginRotation(rotation);
-    cState->SetOriginTicks(ticks);
-    cState->SetDestinationX(xCoord);
-    cState->SetDestinationY(yCoord);
-    cState->SetDestinationRotation(rotation);
-    cState->SetDestinationTicks(ticks);
-    cState->SetCurrentX(xCoord);
-    cState->SetCurrentY(yCoord);
-    cState->SetCurrentRotation(rotation);
-
-    dState->SetOriginX(xCoord);
-    dState->SetOriginY(yCoord);
-    dState->SetOriginRotation(rotation);
-    dState->SetOriginTicks(ticks);
-    dState->SetDestinationX(xCoord);
-    dState->SetDestinationY(yCoord);
-    dState->SetDestinationRotation(rotation);
-    dState->SetDestinationTicks(ticks);
-    dState->SetCurrentX(xCoord);
-    dState->SetCurrentY(yCoord);
-    dState->SetCurrentRotation(rotation);
+    for(auto eState : { std::dynamic_pointer_cast<ActiveEntityState>(cState),
+        std::dynamic_pointer_cast<ActiveEntityState>(dState) })
+    {
+        eState->SetOriginX(xCoord);
+        eState->SetOriginY(yCoord);
+        eState->SetOriginRotation(rotation);
+        cState->SetOriginTicks(ticks);
+        eState->SetDestinationX(xCoord);
+        eState->SetDestinationY(yCoord);
+        eState->SetDestinationRotation(rotation);
+        cState->SetDestinationTicks(ticks);
+        eState->SetCurrentX(xCoord);
+        eState->SetCurrentY(yCoord);
+        eState->SetCurrentRotation(rotation);
+    }
 
     server->GetTokuseiManager()->RecalculateParty(state->GetParty());
 
@@ -918,6 +1024,13 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
                 server->GetCharacterManager()->DigitalizeEnd(client);
                 break;
             }
+        }
+
+        // If we're entering an instance but its not the first zone for the
+        // login, send the "moved to" message
+        if(nextInstance && currentZone)
+        {
+            SendAccessMessage(nextInstance->GetAccess(), true, client);
         }
     }
     else if(!nextInstance)
@@ -962,13 +1075,17 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         server->GetWorldDatabase()->QueueUpdate(character);
     }
 
+    // Fire pre-zone in just for the character
+    TriggerZoneActions(nextZone, { cState }, ZoneTrigger_t::PRE_ZONE_IN,
+        client);
+
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
     reply.WriteS32Little((int32_t)zoneDef->GetID());
     reply.WriteS32Little((int32_t)nextZone->GetID());
-    reply.WriteFloat(xCoord);
-    reply.WriteFloat(yCoord);
-    reply.WriteFloat(rotation);
+    reply.WriteFloat(cState->GetCurrentX());
+    reply.WriteFloat(cState->GetCurrentY());
+    reply.WriteFloat(cState->GetCurrentRotation());
     reply.WriteS32Little((int32_t)zoneDef->GetDynamicMapID());
 
     client->QueuePacket(reply);
@@ -1064,24 +1181,9 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
             mEntityMap.erase(worldCID);
             zone->RemoveConnection(client);
 
-            instanceLeft = instance != nullptr;
-
-            auto instDef = instance ? instance->GetDefinition() : nullptr;
-            if(instDef)
-            {
-                // Check if the player will remain in the instance
-                for(size_t i = 0; i < instDef->ZoneIDsCount(); i++)
-                {
-                    uint32_t zoneID = instDef->GetZoneIDs(i);
-                    uint32_t dynamicMapID = instDef->GetDynamicMapIDs(i);
-                    if(zoneID == newZoneID &&
-                        (newDynamicMapID == 0 || newDynamicMapID == dynamicMapID))
-                    {
-                        instanceLeft = false;
-                        break;
-                    }
-                }
-            }
+            instanceLeft = instance && !server->GetServerDataManager()
+                ->ExistsInInstance(instance->GetDefinitionID(), newZoneID,
+                    newDynamicMapID);
 
             // Determine actions needed if the last connection has left
             if(zone->GetConnections().size() == 0)
@@ -1181,6 +1283,9 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
 
         // Update tracking
         UpdateTrackedZone(zone, state->GetTeam());
+
+        cState->SetZone(nullptr);
+        dState->SetZone(nullptr);
     }
     else
     {
@@ -1193,21 +1298,18 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     // are cancelled on zone enter instead if not logging out)
     if(logOut)
     {
-        characterManager->CancelStatusEffects(client, EFFECT_CANCEL_LOGOUT
-            | EFFECT_CANCEL_ZONEOUT);
+        uint8_t cancelFlags = EFFECT_CANCEL_ZONEOUT;
 
-        std::lock_guard<std::mutex> lock(mLock);
-        auto accessIter = mZoneInstanceAccess.find(worldCID);
-        if(accessIter != mZoneInstanceAccess.end())
+        auto channelLogin = state->GetChannelLogin();
+        bool channelChange = channelLogin &&
+            channelLogin->GetToChannel() != server->GetChannelID();
+        if(!channelChange)
         {
-            uint32_t instanceID = accessIter->second;
-            mZoneInstanceAccess.erase(accessIter);
-
-            if(instanceID != 0)
-            {
-                RemoveInstance(instanceID);
-            }
+            // Only cancel logout status effects if we're not changing channels
+            cancelFlags |= EFFECT_CANCEL_LOGOUT;
         }
+
+        characterManager->CancelStatusEffects(client, cancelFlags);
     }
     else
     {
@@ -1226,21 +1328,22 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     characterManager->UpdateStatusEffects(dState, !logOut);
 }
 
-std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(uint32_t instanceID,
-    const std::set<int32_t>& accessCIDs, uint32_t variantID,
-    uint32_t timerID, libcomp::String timerExpirationEventID)
+uint8_t ZoneManager::CreateInstance(
+    const std::shared_ptr<objects::InstanceAccess>& access)
 {
     auto server = mServer.lock();
     auto serverDataManager = server->GetServerDataManager();
 
-    auto def = serverDataManager->GetZoneInstanceData(instanceID);
+    auto def = serverDataManager->GetZoneInstanceData(access
+        ->GetDefinitionID());
     if(!def)
     {
         LOG_ERROR(libcomp::String("Attempted to create invalid zone instance"
-            ": %1\n").Arg(instanceID));
-        return nullptr;
+            ": %1\n").Arg(access->GetDefinitionID()));
+        return 0;
     }
 
+    uint32_t variantID = access->GetVariantID();
     auto variant = variantID ? serverDataManager->GetZoneInstanceVariantData(
         variantID) : nullptr;
     if(variantID)
@@ -1249,29 +1352,30 @@ std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(uint32_t instanceID,
         {
             LOG_ERROR(libcomp::String("Invalid variant encountered during"
                 " instance creation: %1\n").Arg(variantID));
-            return nullptr;
+            return 0;
         }
 
         if(variant->GetInstanceType() == InstanceType_t::PVP &&
-            !serverDataManager->VerifyPvPInstance(instanceID,
+            !serverDataManager->VerifyPvPInstance(access->GetDefinitionID(),
                 server->GetDefinitionManager()))
         {
-            return nullptr;
+            return 0;
         }
     }
 
     std::shared_ptr<objects::MiTimeLimitData> timeData;
-    if(timerID)
+    if(access->GetCreateTimerID())
     {
         if(!variant || variant->GetInstanceType() == InstanceType_t::NORMAL)
         {
             timeData = server->GetDefinitionManager()->GetTimeLimitData(
-                timerID);
+                access->GetCreateTimerID());
             if(!timeData)
             {
                 LOG_ERROR(libcomp::String("Invalid timer ID specified"
-                    " for instance creation: %1\n").Arg(timerID));
-                return nullptr;
+                    " for instance creation: %1\n").Arg(access
+                    ->GetCreateTimerID()));
+                return 0;
             }
         }
         else if(variant->GetInstanceType() != InstanceType_t::DEMON_ONLY)
@@ -1281,66 +1385,124 @@ std::shared_ptr<ZoneInstance> ZoneManager::CreateInstance(uint32_t instanceID,
 
             LOG_ERROR(libcomp::String("Attempted to specify a timer during"
                 " special instance creation: %1\n").Arg(variantID));
-            return nullptr;
+            return 0;
         }
     }
 
-    // Make the instance
-    std::shared_ptr<ZoneInstance> instance;
+    auto syncManager = server->GetChannelSyncManager();
+    auto sharedConfig = server->GetWorldSharedConfig();
+
+    uint8_t channelID = server->GetChannelID();
+    uint8_t ownerChannelID = sharedConfig->ChannelDistributionCount() > 0
+        ? sharedConfig->GetChannelDistribution(def->GetGroupID()) : channelID;
+
+    access->SetChannelID(ownerChannelID);
+
+    // Notify players on this channel that it has been created (other channels
+    // will receive messages when the access is added)
+    SendAccessMessage(access, false);
+
+    std::lock_guard<std::mutex> lock(mLock);
+
+    std::set<std::shared_ptr<objects::InstanceAccess>> existing;
+    for(int32_t cid : access->GetAccessCIDs())
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        auto other = mZoneInstanceAccess[cid];
+        mZoneInstanceAccess[cid] = access;
 
-        uint32_t id = mNextZoneInstanceID++;
-
-        instance = std::make_shared<ZoneInstance>(id, def, accessCIDs);
-        if(variant)
+        if(other && other != access)
         {
-            instance->SetVariant(variant);
-            instance->SetTimerExpirationEventID(
-                variant->GetTimerExpirationEventID());
-
-            // If the variant uses a shared destiny box, make it now
-            instance->GetDestinyBox(0);
+            other->RemoveAccessCIDs(cid);
+            existing.insert(other);
         }
-
-        if(timeData)
-        {
-            instance->SetTimeLimitData(timeData);
-        }
-
-        instance->SetTimerExpirationEventID(timerExpirationEventID);
-        instance->SetTimerID(timerID);
-
-        for(int32_t cid : accessCIDs)
-        {
-            mZoneInstanceAccess[cid] = id;
-        }
-
-        mZoneInstances[id] = instance;
-        LOG_DEBUG(libcomp::String("Creating zone instance: %1 (%2%3)\n")
-            .Arg(id).Arg(def->GetID())
-            .Arg(variantID ? libcomp::String(": %1").Arg(variantID) : ""));
     }
 
-    if(variant && variant->GetInstanceType() == InstanceType_t::DIASPORA)
+    for(auto other : existing)
     {
-        // Create a default match and send to the world to disband the team(s)
-        // and relay back the instance enter request
-        auto match = std::make_shared<objects::Match>();
-        match->SetType(objects::Match::Type_t::DIASPORA);
-        match->SetInstanceDefinitionID(instanceID);
-        match->SetInstanceID(instance->GetID());
-        match->SetVariantID(variantID);
-        match->SetMemberIDs(accessCIDs);
+        if(other->AccessCIDsCount() == 0)
+        {
+            syncManager->RemoveRecord(other, "InstanceAccess");
+        }
+        else
+        {
+            syncManager->UpdateRecord(other, "InstanceAccess");
+        }
+    }
 
-        instance->SetMatch(match);
+    if(channelID != ownerChannelID)
+    {
+        // Set any local client's access values now (will sync back later)
+        access->SetIsLocal(false);
+        access->SetRequestID(libobjgen::UUID::Random());
 
-        auto syncManager = server->GetChannelSyncManager();
-        syncManager->UpdateRecord(match, "Match");
+        // Sync the record
+        syncManager->SyncRecordUpdate(access, "InstanceAccess");
+
+        return 2;   // Requested on another channel
+    }
+    else
+    {
+        // Instance valid, determine if the instance should be created here or
+        // on a different channel
+        std::shared_ptr<ZoneInstance> instance;
+        {
+            uint32_t id = mNextZoneInstanceID++;
+
+            instance = std::make_shared<ZoneInstance>(id, def, access);
+            if(variant)
+            {
+                instance->SetVariant(variant);
+                instance->SetTimerExpirationEventID(
+                    variant->GetTimerExpirationEventID());
+
+                // If the variant uses a shared destiny box, make it now
+                instance->GetDestinyBox(0);
+            }
+
+            if(timeData)
+            {
+                instance->SetTimeLimitData(timeData);
+            }
+
+            instance->SetTimerExpirationEventID(access
+                ->GetCreateTimerExpirationEventID());
+            instance->SetTimerID(access->GetCreateTimerID());
+
+            access->SetInstanceID(id);
+            access->SetIsLocal(true);
+            if(access->GetRequestID().IsNull())
+            {
+                access->SetRequestID(libobjgen::UUID::Random());
+            }
+
+            mZoneInstances[id] = instance;
+            LOG_DEBUG(libcomp::String("Creating zone instance: %1 (%2%3)\n")
+                .Arg(id).Arg(def->GetID())
+                .Arg(variantID ? libcomp::String(": %1").Arg(variantID) : ""));
+        }
+
+        if(variant && variant->GetInstanceType() == InstanceType_t::DIASPORA)
+        {
+            // Create a default match and send to the world to disband the
+            // team(s) and relay back the instance enter request
+            auto match = std::make_shared<objects::Match>();
+            match->SetType(objects::Match::Type_t::DIASPORA);
+            match->SetInstanceDefinitionID(access->GetDefinitionID());
+            match->SetInstanceID(instance->GetID());
+            match->SetVariantID(variantID);
+            match->SetMemberIDs(access->GetAccessCIDs());
+
+            instance->SetMatch(match);
+
+            syncManager->UpdateRecord(match, "Match");
+        }
+
+        // Sync the record to notify the rest
+        syncManager->UpdateRecord(access, "InstanceAccess");
         syncManager->SyncOutgoing();
-    }
 
-    return instance;
+        return 1;   // Created local
+    }
 }
 
 std::shared_ptr<ZoneInstance> ZoneManager::GetInstance(uint32_t instanceID)
@@ -1350,55 +1512,12 @@ std::shared_ptr<ZoneInstance> ZoneManager::GetInstance(uint32_t instanceID)
     return it != mZoneInstances.end() ? it->second : nullptr;
 }
 
-std::shared_ptr<ZoneInstance> ZoneManager::GetInstanceAccess(const std::shared_ptr<
-    ChannelClientConnection>& client)
+std::shared_ptr<objects::InstanceAccess> ZoneManager::GetInstanceAccess(
+    int32_t worldCID)
 {
-    auto state = client->GetClientState();
-
-    {
-        std::lock_guard<std::mutex> lock(mLock);
-        auto it = mZoneInstanceAccess.find(state->GetWorldCID());
-        if(it != mZoneInstanceAccess.end())
-        {
-            // Return next instance
-            uint32_t instanceID = it->second;
-            return mZoneInstances[instanceID];
-        }
-    }
-
-    // Return current instance if it exists
-    auto zone = state->GetCharacterState()->GetZone();
-    return zone ? zone->GetInstance() : nullptr;
-}
-
-bool ZoneManager::ClearInstanceAccess(uint32_t instanceID)
-{
-    bool removed = false;
-
     std::lock_guard<std::mutex> lock(mLock);
-
-    auto it = mZoneInstances.find(instanceID);
-    if(it != mZoneInstances.end())
-    {
-        auto instance = it->second;
-        for(int32_t cid : instance->GetAccessCIDs())
-        {
-            auto accessIter = mZoneInstanceAccess.find(cid);
-            if(accessIter != mZoneInstanceAccess.end() &&
-                accessIter->second == instanceID)
-            {
-                mZoneInstanceAccess.erase(accessIter);
-                removed = true;
-            }
-        }
-
-        instance->ClearAccessCIDs();
-    }
-
-    // If the instance is empty, remove it
-    RemoveInstance(instanceID);
-
-    return removed;
+    auto it = mZoneInstanceAccess.find(worldCID);
+    return it != mZoneInstanceAccess.end() ? it->second : nullptr;
 }
 
 std::shared_ptr<Zone> ZoneManager::GetInstanceStartingZone(
@@ -1475,37 +1594,57 @@ bool ZoneManager::GetMatchStartPosition(const std::shared_ptr<
 
     auto def = zone->GetDefinition();
 
-    // Gather team spots
-    std::unordered_map<uint8_t, std::set<uint32_t>> teamSpotIDs;
-    for(auto& spotPair : def->GetSpots())
-    {
-        switch(spotPair.second->GetMatchSpawn())
-        {
-        case objects::ServerZoneSpot::MatchSpawn_t::PVP_BLUE:
-            if(isPvp)
-            {
-                teamSpotIDs[0].insert(spotPair.first);
-            }
-            break;
-        case objects::ServerZoneSpot::MatchSpawn_t::PVP_RED:
-            if(isPvp)
-            {
-                teamSpotIDs[1].insert(spotPair.first);
-            }
-            break;
-        case objects::ServerZoneSpot::MatchSpawn_t::ALL:
-            teamSpotIDs[0].insert(spotPair.first);
-            teamSpotIDs[1].insert(spotPair.first);
-            break;
-        default:
-            break;
-        }
-    }
-
     // Move to blue spot, red spot or starting/zone-in spot
     uint32_t spotID = 0;
     if(groupIdx >= 0)
     {
+        // Gather team spots
+        std::unordered_map<uint8_t, std::set<uint32_t>> teamSpotIDs;
+        for(auto& spotPair : def->GetSpots())
+        {
+            auto spot = spotPair.second;
+            if(spot->GetMatchZoneInLimit())
+            {
+                // Skip if the limit has been reached
+                size_t count = 0;
+                for(auto c : zone->GetConnectionList())
+                {
+                    if(c != client && c->GetClientState()
+                        ->GetZoneInSpotID() == spotPair.first)
+                    {
+                        count++;
+                    }
+                }
+
+                if(count >= (size_t)spot->GetMatchZoneInLimit())
+                {
+                    continue;
+                }
+            }
+
+            switch(spot->GetMatchSpawn())
+            {
+            case objects::ServerZoneSpot::MatchSpawn_t::PVP_BLUE:
+                if(isPvp)
+                {
+                    teamSpotIDs[0].insert(spotPair.first);
+                }
+                break;
+            case objects::ServerZoneSpot::MatchSpawn_t::PVP_RED:
+                if(isPvp)
+                {
+                    teamSpotIDs[1].insert(spotPair.first);
+                }
+                break;
+            case objects::ServerZoneSpot::MatchSpawn_t::ALL:
+                teamSpotIDs[0].insert(spotPair.first);
+                teamSpotIDs[1].insert(spotPair.first);
+                break;
+            default:
+                break;
+            }
+        }
+
         spotID = libcomp::Randomizer::GetEntry(teamSpotIDs[(uint8_t)groupIdx]);
     }
     else if(state->GetZone() == zone)
@@ -1539,33 +1678,64 @@ bool ZoneManager::GetMatchStartPosition(const std::shared_ptr<
     return true;
 }
 
-bool ZoneManager::MoveToStartingZone(
+bool ZoneManager::MoveToInstance(
     const std::shared_ptr<ChannelClientConnection>& client,
-    const std::shared_ptr<ZoneInstance>& instance, bool diasporaEnter)
+    std::shared_ptr<objects::InstanceAccess> access, bool diasporaEnter)
 {
-    auto zone = GetInstanceStartingZone(instance);
-    if(zone)
+    auto state = client->GetClientState();
+    if(!access)
     {
-        auto zoneDef = zone->GetDefinition();
-
-        float x = zoneDef->GetStartingX();
-        float y = zoneDef->GetStartingY();
-        float rot = zoneDef->GetStartingRotation();
-        if(zone->GetInstanceType() == InstanceType_t::DIASPORA)
+        access = GetInstanceAccess(state->GetWorldCID());
+        if(!access)
         {
-            if(!diasporaEnter)
+            return false;
+        }
+    }
+
+    auto server = mServer.lock();
+    if(access->GetIsLocal())
+    {
+        // Enter the instance on this channel
+        auto instance = GetInstance(access->GetInstanceID());
+        auto zone = GetInstanceStartingZone(instance);
+        if(zone)
+        {
+            auto zoneDef = zone->GetDefinition();
+
+            float x = zoneDef->GetStartingX();
+            float y = zoneDef->GetStartingY();
+            float rot = zoneDef->GetStartingRotation();
+            if(zone->GetInstanceType() == InstanceType_t::DIASPORA)
             {
-                return false;
+                if(!diasporaEnter)
+                {
+                    return false;
+                }
+                else if(!GetMatchStartPosition(client, zone, x, y, rot))
+                {
+                    LOG_WARNING("Failed to find the Diaspora instance starting"
+                        " spot. Using the starting coordinates instead.\n");
+                }
             }
-            else if(!GetMatchStartPosition(client, zone, x, y, rot))
+            else if(zone->GetInstanceType() == InstanceType_t::PVP &&
+                !GetMatchStartPosition(client, zone, x, y, rot))
             {
-                LOG_WARNING("Failed to find the Diaspora instance starting"
+                LOG_WARNING("Failed to find the PvP instance starting"
                     " spot. Using the starting coordinates instead.\n");
             }
-        }
 
-        return EnterZone(client, zoneDef->GetID(),
-            zoneDef->GetDynamicMapID(), x, y, rot);
+            return EnterZone(client, zoneDef->GetID(),
+                zoneDef->GetDynamicMapID(), x, y, rot);
+        }
+    }
+    else
+    {
+        // Send to the correct channel
+        auto instDef = server->GetServerDataManager()
+            ->GetZoneInstanceData(access->GetDefinitionID());
+
+        return MoveToZoneChannel(client, instDef->GetZoneIDs(0),
+            instDef->GetDynamicMapIDs(0), access);
     }
 
     return false;
@@ -3461,6 +3631,130 @@ bool ZoneManager::SelectSpotAndLocation(bool useSpotID, uint32_t& spotID,
     return true;
 }
 
+bool ZoneManager::MoveToZoneChannel(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    uint32_t zoneID, uint32_t dynamicMapID,
+    const std::shared_ptr<objects::InstanceAccess>& toInstance,
+    float x, float y, float rot)
+{
+    auto state = client->GetClientState();
+    auto server = mServer.lock();
+
+    auto zoneData = server->GetServerDataManager()->GetZoneData(zoneID,
+        dynamicMapID);
+    if(!zoneData)
+    {
+        LOG_ERROR(libcomp::String("Attempted to move player to another channel"
+            " for invalid zone %1 (%2): %3\n").Arg(zoneID)
+            .Arg(dynamicMapID).Arg(state->GetAccountUID().ToString()));
+        return false;
+    }
+
+    dynamicMapID = zoneData->GetDynamicMapID();
+
+    uint8_t channelID = 0;
+    if(toInstance)
+    {
+        channelID = toInstance->GetChannelID();
+    }
+    else if(!zoneData->GetGlobal())
+    {
+        // Check if current instance access has the zone
+        auto instAccess = GetInstanceAccess(state->GetWorldCID());
+        if(!instAccess)
+        {
+            LOG_ERROR(libcomp::String("Attempted to move player to instance"
+                " zone %1 (%2) with no access: %3\n").Arg(zoneID)
+                .Arg(dynamicMapID).Arg(state->GetAccountUID().ToString()));
+            return false;
+        }
+
+        if(!server->GetServerDataManager()->ExistsInInstance(
+            instAccess->GetDefinitionID(), zoneID, dynamicMapID))
+        {
+            LOG_ERROR(libcomp::String("Attempted to move player to instance"
+                " zone %1 (%2) that did not match their current access: %3\n")
+                .Arg(zoneID).Arg(dynamicMapID)
+                .Arg(state->GetAccountUID().ToString()));
+            return false;
+        }
+
+        channelID = instAccess->GetChannelID();
+    }
+    else
+    {
+        auto sharedConfig = server->GetWorldSharedConfig();
+        if(sharedConfig->ChannelDistributionCount())
+        {
+            channelID = sharedConfig->GetChannelDistribution(zoneData
+                ->GetGroupID());
+        }
+        else
+        {
+            channelID = server->GetChannelID();
+        }
+    }
+
+    auto channelLogin = state->GetChannelLogin();
+    if(channelLogin && channelLogin->GetFromChannel() != (int8_t)channelID)
+    {
+        if(channelLogin->GetToChannel() != (int8_t)channelID)
+        {
+            LOG_ERROR(libcomp::String("Attempted to move player to two"
+                " different channels: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
+            return false;
+        }
+        else
+        {
+            // Nothing to do
+            return true;
+        }
+    }
+
+    if(!zoneData->GetGlobal())
+    {
+        // Send move message now
+        SendAccessMessage(toInstance, true, client);
+    }
+
+    if(toInstance)
+    {
+        // Get default x, y and rotation for the zone
+        x = zoneData->GetStartingX();
+        y = zoneData->GetStartingY();
+        rot = zoneData->GetStartingRotation();
+    }
+
+    auto character = state->GetCharacterState()->GetEntity();
+    if(character)
+    {
+        character->SetLogoutZone(zoneID);
+        character->SetLogoutX(x);
+        character->SetLogoutY(y);
+        character->SetLogoutRotation(rot);
+    }
+
+    server->GetAccountManager()->PrepareChannelChange(client,
+        zoneID, dynamicMapID, channelID);
+
+    if(state->GetZone())
+    {
+        // Handle like a logout
+        LeaveZone(client, true, 0, 0);
+    }
+
+    // Request channel change from client (will relay back to world)
+    libcomp::Packet request;
+    request.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_CHANNEL_CHANGED);
+    request.WriteS8((int8_t)channelID);
+
+    client->SendPacket(request);
+
+    return true;
+}
+
 bool ZoneManager::UpdatePlasma(const std::shared_ptr<Zone>& zone, uint64_t now)
 {
     if(zone->GetDefinition()->PlasmaSpawnsCount() == 0)
@@ -3582,6 +3876,121 @@ Point ZoneManager::RotatePoint(const Point& p, const Point& origin, float radian
 
     return Point((float)((xDelta * cos(radians)) - (yDelta * sin(radians))) + origin.x,
         (float)((xDelta * sin(radians)) + (yDelta * cos(radians))) + origin.y);
+}
+
+void ZoneManager::SyncInstanceAccess(
+    std::list<std::shared_ptr<objects::InstanceAccess>> updates,
+    std::list<std::shared_ptr<objects::InstanceAccess>> removes)
+{
+    std::list<std::shared_ptr<objects::InstanceAccess>> notify;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto update : updates)
+    {
+        // If we don't have an instance ID here, don't update yet
+        if(!update->GetInstanceID()) continue;
+
+        std::shared_ptr<objects::InstanceAccess> existing;
+        if(update->GetIsLocal())
+        {
+            auto it = mZoneInstances.find(update->GetInstanceID());
+            if(it != mZoneInstances.end())
+            {
+                existing = it->second->GetAccess();
+            }
+        }
+
+        if(!existing)
+        {
+            // Try to retrieve from any current accesses
+            for(int32_t worldCID : update->GetAccessCIDs())
+            {
+                auto it = mZoneInstanceAccess.find(worldCID);
+                if(it != mZoneInstanceAccess.end() &&
+                   it->second->GetRequestID() == update->GetRequestID())
+                {
+                    existing = it->second;
+                    break;
+                }
+            }
+        }
+
+        bool sendCreateMessage = !existing;
+        if(existing)
+        {
+            // Update access (only removals can happen)
+            auto currentCIDs = existing->GetAccessCIDs();
+            for(int32_t cid : currentCIDs)
+            {
+                if(!update->AccessCIDsContains(cid))
+                {
+                    existing->RemoveAccessCIDs(cid);
+                }
+            }
+
+            // If the instance ID was set, add it here
+            if(!existing->GetInstanceID() &&
+                existing->GetInstanceID() != update->GetInstanceID())
+            {
+                existing->SetInstanceID(update->GetInstanceID());
+            }
+        }
+        else
+        {
+            // Insert new
+            for(int32_t worldCID : update->GetAccessCIDs())
+            {
+                auto other = mZoneInstanceAccess[worldCID];
+                mZoneInstanceAccess[worldCID] = update;
+
+                if(other && other != update)
+                {
+                    other->RemoveAccessCIDs(worldCID);
+                    if(other->GetIsLocal() && !other->AccessCIDsCount())
+                    {
+                        RemoveInstance(other->GetInstanceID());
+                    }
+                }
+            }
+        }
+
+        if(sendCreateMessage)
+        {
+            notify.push_back(update);
+        }
+    }
+
+    for(auto remove : removes)
+    {
+        // Remove all access then remove the instance if its local
+        std::set<int32_t> removeCIDs;
+        for(auto& pair : mZoneInstanceAccess)
+        {
+            if(pair.second->GetRequestID() == remove->GetRequestID())
+            {
+                removeCIDs.insert(pair.first);
+            }
+        }
+
+        for(int32_t worldCID : removeCIDs)
+        {
+            mZoneInstanceAccess.erase(worldCID);
+        }
+
+        if(remove->GetIsLocal())
+        {
+            RemoveInstance(remove->GetInstanceID());
+        }
+    }
+
+    // Send any create messages needed
+    if(notify.size() > 0)
+    {
+        for(auto n : notify)
+        {
+            SendAccessMessage(n, false);
+        }
+    }
 }
 
 std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
@@ -6261,7 +6670,7 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
             if(nullptr == zone)
             {
                 LOG_ERROR(libcomp::String("Global zone encountered that has"
-                    " not been instance: %1\n").Arg(zoneID));
+                    " not been instanced: %1\n").Arg(zoneID));
                 return nullptr;
             }
         }
@@ -6278,8 +6687,11 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
                 {
                     auto accessIter = mZoneInstanceAccess.find(state
                         ->GetWorldCID());
-                    instanceID = accessIter != mZoneInstanceAccess.end()
-                        ? accessIter->second : 0;
+                    if(accessIter != mZoneInstanceAccess.end() &&
+                       accessIter->second->GetIsLocal())
+                    {
+                        instanceID = accessIter->second->GetInstanceID();
+                    }
                 }
 
                 if(instanceID == 0)
@@ -6398,6 +6810,119 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
     return zone;
 }
 
+bool ZoneManager::GetLoginZone(
+    const std::shared_ptr<objects::Character>& character,
+    uint32_t& zoneID, uint32_t& dynamicMapID, int8_t& channelID,
+    float& x, float& y, float& rot)
+{
+    // Default to last logout information first
+    zoneID = character->GetLogoutZone();
+    dynamicMapID = 0;
+    channelID = -1;
+    x = character->GetLogoutX();
+    y = character->GetLogoutY();
+    rot = character->GetLogoutRotation();
+
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
+
+    // Make sure the player can start in the zone
+    if(zoneID)
+    {
+        auto zoneData = serverDataManager->GetZoneData(zoneID, 0);
+        if(!zoneData)
+        {
+            // Can't discern any information about the logout zone
+            zoneID = 0;
+        }
+        else if(!zoneData->GetGlobal() || zoneData->GetRestricted())
+        {
+            // Determine which public zone to go to instead, defaulting
+            // to the lobby matching the group ID
+            uint32_t publicID = zoneData->GetGroupID();
+            if(!publicID && character->GetPreviousZone())
+            {
+                // If there is no group for the zone, return to
+                // the previous public zone
+                publicID = character->GetPreviousZone();
+            }
+
+            auto publicData = serverDataManager->GetZoneData(publicID, 0);
+            if(publicData && publicData->GetGlobal())
+            {
+                zoneID = publicData->GetID();
+                x = publicData->GetStartingX();
+                y = publicData->GetStartingY();
+                rot = publicData->GetStartingRotation();
+                dynamicMapID = publicData->GetDynamicMapID();
+            }
+            else
+            {
+                // Correct it further down
+                zoneID = 0;
+            }
+        }
+    }
+
+    // Default to homepoint second
+    if(zoneID == 0)
+    {
+        zoneID = character->GetHomepointZone();
+
+        auto zoneData = serverDataManager->GetZoneData(zoneID, 0);
+        if(zoneData)
+        {
+            dynamicMapID = zoneData->GetDynamicMapID();
+            GetSpotPosition(dynamicMapID, character->GetHomepointSpotID(),
+                x, y, rot);
+        }
+    }
+
+    // If all else fails start in the default zone
+    if(zoneID == 0)
+    {
+        auto zoneData = serverDataManager->GetZoneData(
+            SVR_CONST.ZONE_DEFAULT, 0);
+        if(zoneData)
+        {
+            zoneID = zoneData->GetID();
+            dynamicMapID = zoneData->GetDynamicMapID();
+            x = zoneData->GetStartingX();
+            y = zoneData->GetStartingY();
+            rot = zoneData->GetStartingRotation();
+        }
+    }
+
+    auto zoneData = serverDataManager->GetZoneData(zoneID, dynamicMapID);
+    if(zoneData)
+    {
+        // Set dynamic map ID again in case its not set
+        dynamicMapID = zoneData->GetDynamicMapID();
+
+        auto sharedConfig = server->GetWorldSharedConfig();
+        if(sharedConfig->ChannelDistributionCount())
+        {
+            // Channel distribution configured, determine which channel
+            // has the zone
+            if(!zoneData->GetGlobal())
+            {
+                // Shouldn't get here with an instance zone
+                return false;
+            }
+
+            // Entries that do not exist are mapped to channel 0
+            channelID = (int8_t)sharedConfig->GetChannelDistribution(
+                zoneData->GetGroupID());
+        }
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 std::shared_ptr<Zone> ZoneManager::CreateZone(
     const std::shared_ptr<objects::ServerZone>& definition,
     const std::shared_ptr<ZoneInstance>& instance)
@@ -6463,7 +6988,6 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         state->SetCurrentRotation(rot);
 
         state->SetEntityID(server->GetNextEntityID());
-        state->SetActions(npc->GetActions());
         zone->AddNPC(state);
     }
 
@@ -6512,7 +7036,6 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         state->SetCurrentRotation(rot);
 
         state->SetEntityID(server->GetNextEntityID());
-        state->SetActions(obj->GetActions());
         zone->AddObject(state);
 
         // Objects are assumed to be enabled by default so check geometry
@@ -6556,11 +7079,16 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
 
     if(definition->BazaarsCount() > 0)
     {
+        uint8_t channelID = server->GetChannelID();
+        bool distributedZones = server->GetWorldSharedConfig()
+            ->ChannelDistributionCount() > 0;
+
         std::list<std::shared_ptr<objects::BazaarData>> activeMarkets;
         for(auto m : objects::BazaarData::LoadBazaarDataListByZone(
             server->GetWorldDatabase(), zoneID))
         {
-            if(m->GetState() == objects::BazaarData::State_t::BAZAAR_ACTIVE)
+            if(m->GetState() == objects::BazaarData::State_t::BAZAAR_ACTIVE &&
+                (distributedZones || m->GetChannelID() == channelID))
             {
                 activeMarkets.push_back(m);
             }
@@ -6568,7 +7096,7 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
 
         for(auto bazaar : definition->GetBazaars())
         {
-            auto state = std::shared_ptr<BazaarState>(new BazaarState(bazaar));
+            auto state = std::make_shared<BazaarState>(bazaar);
 
             float x = bazaar->GetX();
             float y = bazaar->GetY();
@@ -7012,6 +7540,42 @@ bool ZoneManager::CanEnterRestrictedZone(
     return true;
 }
 
+void ZoneManager::SendAccessMessage(
+    const std::shared_ptr<objects::InstanceAccess>& access, bool joined,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
+
+    auto instDef = access ? serverDataManager->GetZoneInstanceData(
+        access->GetDefinitionID()) : nullptr;
+    if(instDef)
+    {
+        int32_t messageID = joined ? instDef->GetJoinMessageID()
+            : instDef->GetCreateMessageID();
+        if(messageID)
+        {
+            auto actionManager = server->GetActionManager();
+
+            std::list<std::shared_ptr<ChannelClientConnection>> clients;
+            if(client)
+            {
+                clients.push_back(client);
+            }
+            else
+            {
+                clients = server->GetManagerConnection()->GetEntityClients(
+                    access->GetAccessCIDs(), true);
+            }
+
+            for(auto c : clients)
+            {
+                actionManager->SendStageEffect(c, messageID, 0, true);
+            }
+        }
+    }
+}
+
 void ZoneManager::RemoveZone(const std::shared_ptr<Zone>& zone,
     bool freezeOnly)
 {
@@ -7081,20 +7645,21 @@ bool ZoneManager::RemoveInstance(uint32_t instanceID)
 
     // Since the zones will all be cleaned up, drop
     // the instance and remove all access
-    for(int32_t accessCID : instance->GetAccessCIDs())
+    auto access = instance->GetAccess();
+    for(int32_t accessCID : access->GetAccessCIDs())
     {
         auto it = mZoneInstanceAccess.find(accessCID);
         if(it != mZoneInstanceAccess.end() &&
-            it->second == instance->GetID())
+            it->second->GetRequestID() == access->GetRequestID())
         {
             mZoneInstanceAccess.erase(it);
         }
     }
 
-    instance->ClearAccessCIDs();
+    access->ClearAccessCIDs();
 
     LOG_DEBUG(libcomp::String("Cleaning up zone instance: %1 (%2)\n")
-        .Arg(instance->GetID()).Arg(instance->GetDefinition()->GetID()));
+        .Arg(instance->GetID()).Arg(instance->GetDefinitionID()));
 
     mZoneInstances.erase(instance->GetID());
 
@@ -7102,6 +7667,9 @@ bool ZoneManager::RemoveInstance(uint32_t instanceID)
     {
         RemoveZone(z, false);
     }
+
+    mServer.lock()->GetChannelSyncManager()
+        ->SyncRecordRemoval(access, "InstanceAccess");
 
     return true;
 }

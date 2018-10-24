@@ -195,15 +195,7 @@ bool Parsers::SearchAppReply::Parse(libcomp::ManagerPacket *pPacketManager,
             auto entry = std::make_shared<objects::SearchEntry>(*replyEntry);
             entry->SetLastAction(objects::SearchEntry::LastAction_t::REMOVE_MANUAL);
 
-            if(syncManager->RemoveRecord(entry, "SearchEntry"))
-            {
-                syncManager->SyncOutgoing();
-                success = true;
-            }
-            else
-            {
-                success = false;
-            }
+            success = syncManager->SyncRecordRemoval(entry, "SearchEntry");
         }
     }
 

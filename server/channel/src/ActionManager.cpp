@@ -72,6 +72,9 @@
 #include <DigitalizeState.h>
 #include <DropSet.h>
 #include <Expertise.h>
+#include <EventInstance.h>
+#include <EventState.h>
+#include <InstanceAccess.h>
 #include <Loot.h>
 #include <LootBox.h>
 #include <MiCategoryData.h>
@@ -171,7 +174,7 @@ void ActionManager::PerformActions(
     const std::shared_ptr<ChannelClientConnection>& client,
     const std::list<std::shared_ptr<objects::Action>>& actions,
     int32_t sourceEntityID, const std::shared_ptr<Zone>& zone,
-    uint32_t groupID, bool autoEventsOnly)
+    uint32_t groupID, bool autoEventsOnly, bool incrementEventIndex)
 {
     ActionContext ctx;
     ctx.Client = client;
@@ -204,6 +207,20 @@ void ActionManager::PerformActions(
 
     for(auto action : actions)
     {
+        if(ctx.ChannelChanged)
+        {
+            if(action->GetSourceContext() !=
+                objects::Action::SourceContext_t::SOURCE)
+            {
+                LOG_ERROR(libcomp::String("Non-source context encountered"
+                    " for action set that resulted in a channel change: %1\n")
+                    .Arg(ctx.Client->GetClientState()
+                        ->GetAccountUID().ToString()));
+            }
+
+            continue;
+        }
+
         ctx.Action = action;
 
         auto it = mActionHandlers.find(action->GetActionType());
@@ -316,7 +333,6 @@ void ActionManager::PerformActions(
                             }
                         }
                         break;
-                    case objects::Action::Location_t::WORLD:
                     default:
                         // Not supported
                         failure = true;
@@ -405,9 +421,6 @@ void ActionManager::PerformActions(
                                     return cState->GetZone() != ctxZone;
                                 });
                             break;
-                        case objects::Action::Location_t::WORLD:
-                            /// @todo: handle cross channel actions
-                            break;
                         case objects::Action::Location_t::CHANNEL:
                         default:
                             // No additional filtering
@@ -438,6 +451,20 @@ void ActionManager::PerformActions(
             else
             {
                 failure = !it->second(*this, ctx);
+
+                if(ctx.Client)
+                {
+                    auto state = ctx.Client->GetClientState();
+                    if(incrementEventIndex)
+                    {
+                        auto current = state->GetEventState()->GetCurrent();
+                        if(current)
+                        {
+                            current->SetIndex((uint16_t)(
+                                current->GetIndex() + 1));
+                        }
+                    }
+                }
             }
 
             if(failure && action->GetStopOnFailure())
@@ -458,6 +485,37 @@ void ActionManager::PerformActions(
             }
         }
     }
+}
+
+void ActionManager::SendStageEffect(
+    const std::shared_ptr<ChannelClientConnection>& client,
+    int32_t messageID, int8_t effectType, bool includeMessage,
+    int32_t messageValue)
+{
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_STAGE_EFFECT);
+    p.WriteS32Little(messageID);
+    p.WriteS8(effectType);
+
+    bool valueSet = messageValue != 0;
+    p.WriteS8(valueSet ? 1 : 0);
+    if(valueSet)
+    {
+        p.WriteS32Little(messageValue);
+    }
+
+    client->QueuePacket(p);
+
+    if(includeMessage)
+    {
+        p.Clear();
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_MESSAGE);
+        p.WriteS32Little(messageID);
+
+        client->QueuePacket(p);
+    }
+
+    client->FlushOutgoing();
 }
 
 bool ActionManager::StartEvent(ActionContext& ctx)
@@ -497,22 +555,10 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
 
     auto currentInstance = ctx.CurrentZone->GetInstance();
 
-    uint32_t spotID = act->GetSpotID();
-    if(!zoneID && !spotID)
-    {
-        // Spot 0, zone 0 is a request to go to the homepoint
-        auto character = ctx.Client->GetClientState()->GetCharacterState()->GetEntity();
-        zoneID = character ? character->GetHomepointZone() : 0;
-        spotID = character ? character->GetHomepointSpotID() : 0;
+    bool moveAndQuit = false;
 
-        if(!zoneID)
-        {
-            LOG_ERROR("Attempted to move to the homepoint but no"
-                " homepoint is set\n");
-            return false;
-        }
-    }
-    else if(zoneID && !dynamicMapID && currentInstance)
+    uint32_t spotID = act->GetSpotID();
+    if(zoneID && !dynamicMapID && currentInstance)
     {
         // Get the dynamic map ID from the instance
         auto instDef = currentInstance->GetDefinition();
@@ -523,6 +569,31 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
                 dynamicMapID = instDef->GetDynamicMapIDs(i);
                 break;
             }
+        }
+    }
+    else if(!zoneID)
+    {
+        auto state = ctx.Client->GetClientState();
+        auto cState = state->GetCharacterState();
+        if(!spotID)
+        {
+            // Spot 0, zone 0 is a request to go to the homepoint
+            auto character = cState->GetEntity();
+            zoneID = character ? character->GetHomepointZone() : 0;
+            spotID = character ? character->GetHomepointSpotID() : 0;
+
+            if(!zoneID)
+            {
+                LOG_ERROR("Attempted to move to the homepoint but no"
+                    " homepoint is set\n");
+                return false;
+            }
+        }
+        else if(cState->GetDisplayState() <= ActiveDisplayState_t::DATA_SENT)
+        {
+            // If we request a move before the character is even active,
+            // just move the character and demon
+            moveAndQuit = true;
         }
     }
 
@@ -567,6 +638,29 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
         }
     }
 
+    if(moveAndQuit)
+    {
+        auto state = ctx.Client->GetClientState();
+        auto cState = state->GetCharacterState();
+        auto dState = state->GetDemonState();
+
+        for(auto eState : { std::dynamic_pointer_cast<ActiveEntityState>(cState),
+            std::dynamic_pointer_cast<ActiveEntityState>(dState) })
+        {
+            eState->SetOriginX(x);
+            eState->SetOriginY(y);
+            eState->SetOriginRotation(rotation);
+            eState->SetDestinationX(x);
+            eState->SetDestinationY(y);
+            eState->SetDestinationRotation(rotation);
+            eState->SetCurrentX(x);
+            eState->SetCurrentY(y);
+            eState->SetCurrentRotation(rotation);
+        }
+
+        return true;
+    }
+
     // Enter the new zone and always leave the old zone even if its the same.
     if(!zoneManager->EnterZone(ctx.Client, zoneID, dynamicMapID,
         x, y, rotation, true))
@@ -578,8 +672,10 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
 
     // Update to point to the new zone
     ctx.CurrentZone = zoneManager->GetCurrentZone(ctx.Client);
+    ctx.ChannelChanged = !ctx.CurrentZone &&
+        ctx.Client->GetClientState()->GetChannelLogin() != nullptr;
 
-    return ctx.CurrentZone != nullptr;
+    return ctx.CurrentZone != nullptr || ctx.ChannelChanged;
 }
 
 bool ActionManager::SetHomepoint(ActionContext& ctx)
@@ -1557,30 +1653,8 @@ bool ActionManager::StageEffect(ActionContext& ctx)
         return false;
     }
 
-    libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_STAGE_EFFECT);
-    p.WriteS32Little(act->GetMessageID());
-    p.WriteS8(act->GetEffectType());
-
-    bool valueSet = act->GetMessageValue() != 0;
-    p.WriteS8(valueSet ? 1 : 0);
-    if(valueSet)
-    {
-        p.WriteS32Little(act->GetMessageValue());
-    }
-
-    ctx.Client->QueuePacket(p);
-
-    if(act->GetIncludeMessage())
-    {
-        p.Clear();
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_MESSAGE);
-        p.WriteS32Little(act->GetMessageID());
-
-        ctx.Client->QueuePacket(p);
-    }
-
-    ctx.Client->FlushOutgoing();
+    SendStageEffect(ctx.Client, act->GetMessageID(), act->GetEffectType(),
+        act->GetIncludeMessage(), act->GetMessageValue());
 
     return true;
 }
@@ -2137,9 +2211,8 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                 pEntry->SetPoints(newVals);
                 if(pEntry->Update(server->GetWorldDatabase()))
                 {
-                    auto syncManager = server->GetChannelSyncManager();
-                    syncManager->UpdateRecord(pEntry, "PentalphaEntry");
-                    syncManager->SyncOutgoing();
+                    server->GetChannelSyncManager()->SyncRecordUpdate(pEntry,
+                        "PentalphaEntry");
                 }
                 else
                 {
@@ -2452,7 +2525,7 @@ bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
 
 bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
 {
-    auto act = GetAction<objects::ActionZoneInstance>(ctx, true);
+    auto act = GetAction<objects::ActionZoneInstance>(ctx, false);
     if(!act)
     {
         return false;
@@ -2466,6 +2539,13 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
     case objects::ActionZoneInstance::Mode_t::CREATE:
     case objects::ActionZoneInstance::Mode_t::TEAM_JOIN:
     case objects::ActionZoneInstance::Mode_t::CLAN_JOIN:
+        if(!ctx.Client)
+        {
+            LOG_ERROR("Attempted to create an instance with no client"
+                " context\n");
+            return false;
+        }
+        else
         {
             auto serverDataManager = server->GetServerDataManager();
             auto instDef = serverDataManager->GetZoneInstanceData(
@@ -2555,10 +2635,16 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
                 }
             }
 
-            auto instance = zoneManager->CreateInstance(act->GetInstanceID(),
-                accessCIDs, act->GetVariantID(), act->GetTimerID(),
-                act->GetTimerExpirationEventID());
-            if(instance && moveNow)
+            auto instAccess = std::make_shared<objects::InstanceAccess>();
+            instAccess->SetAccessCIDs(accessCIDs);
+            instAccess->SetDefinitionID(act->GetInstanceID());
+            instAccess->SetVariantID(act->GetVariantID());
+            instAccess->SetCreateTimerID(act->GetTimerID());
+            instAccess->SetCreateTimerExpirationEventID(act
+                ->GetTimerExpirationEventID());
+
+            uint8_t resultCode = zoneManager->CreateInstance(instAccess);
+            if(resultCode && moveNow)
             {
                 // Move all players, kicking all players not in the source
                 // player's team or not in the set from their current teams
@@ -2591,37 +2677,38 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
                     }
                 }
 
-                if(instance)
+                for(auto client : clients)
                 {
-                    for(auto client : clients)
+                    zoneManager->MoveToInstance(client, instAccess);
+
+                    if(ctx.Client == client &&
+                        client->GetClientState()->GetChannelLogin())
                     {
-                        zoneManager->MoveToStartingZone(client, instance);
+                        ctx.ChannelChanged = true;
                     }
                 }
             }
 
-            return instance != nullptr;
+            return resultCode != 0;
         }
     case objects::ActionZoneInstance::Mode_t::JOIN:
+        if(!ctx.Client)
         {
-            auto instance = zoneManager->GetInstanceAccess(ctx.Client);
-            return instance && zoneManager->MoveToStartingZone(ctx.Client,
-                instance);
+            LOG_ERROR("Attempted to join an instance with no client"
+                " context\n");
+            return false;
         }
-        break;
-    case objects::ActionZoneInstance::Mode_t::REMOVE:
+        else
         {
-            auto state = ctx.Client->GetClientState();
-            auto zone = state->GetZone();
-            auto currentInst = zone ? zone->GetInstance() : nullptr;
+            auto instAccess = zoneManager->GetInstanceAccess(ctx.Client
+                ->GetClientState()->GetWorldCID());
+            bool success = instAccess && zoneManager->MoveToInstance(
+                ctx.Client, instAccess);
 
-            auto instance = zoneManager->GetInstanceAccess(ctx.Client);
-            if(instance && instance == currentInst)
-            {
-                zoneManager->ClearInstanceAccess(instance->GetID());
-            }
+            ctx.ChannelChanged = ctx.Client->GetClientState()
+                ->GetChannelLogin() != nullptr;
 
-            return true;
+            return success;
         }
         break;
     case objects::ActionZoneInstance::Mode_t::START_TIMER:
@@ -2711,6 +2798,13 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
         }
         break;
     case objects::ActionZoneInstance::Mode_t::TEAM_PVP:
+        if(!ctx.Client)
+        {
+            LOG_ERROR("Attempted to start a team PvP match with no client"
+                " context\n");
+            return false;
+        }
+        else
         {
             auto matchManager = server->GetMatchManager();
             return matchManager->RequestTeamPvPMatch(ctx.Client,
@@ -2896,17 +2990,25 @@ bool ActionManager::Delay(ActionContext& ctx)
             uint64_t delayTime = (uint64_t)(ChannelServer::GetServerTime() +
                 (uint64_t)((uint64_t)act->GetDuration() * 1000000));
 
+            int32_t worldCID = ctx.Client ? ctx.Client->GetClientState()
+                ->GetWorldCID() : 0;
+
             auto server = mServer.lock();
             server->ScheduleWork(delayTime, [](
                 const std::shared_ptr<ChannelServer> pServer,
                 const std::shared_ptr<objects::ActionDelay> pAct,
                 const std::shared_ptr<Zone> pZone,
-                int32_t pSourceEntityID, uint32_t pGroupID)
+                int32_t pSourceEntityID, int32_t pWorldCID,
+                uint32_t pGroupID)
                 {
                     auto actionManager = pServer->GetActionManager();
                     if(actionManager && !pZone->GetInvalid())
                     {
-                        actionManager->PerformActions(nullptr,
+                        // Only get the client if they're still in the zone
+                        auto client = pWorldCID
+                            ? pZone->GetConnections()[pWorldCID] : nullptr;
+
+                        actionManager->PerformActions(client,
                             pAct->GetActions(), pSourceEntityID, pZone,
                             pGroupID);
 
@@ -2918,14 +3020,14 @@ bool ActionManager::Delay(ActionContext& ctx)
                             {
                                 if(trigger->GetValue() == pAct->GetDelayID())
                                 {
-                                    actionManager->PerformActions(nullptr,
+                                    actionManager->PerformActions(client,
                                         trigger->GetActions(), pSourceEntityID,
                                         pZone, 0);
                                 }
                             }
                         }
                     }
-                }, server, act, ctx.CurrentZone, ctx.SourceEntityID,
+                }, server, act, ctx.CurrentZone, ctx.SourceEntityID, worldCID,
                     ctx.GroupID);
         }
     }

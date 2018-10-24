@@ -122,7 +122,7 @@ public:
      * Create a new StatusEffectChange.
      */
     StatusEffectChange() : Type(0), Stack(0), IsReplace(false),
-        Duration(0)
+        IsConstant(false), Duration(0)
     {
     }
 
@@ -134,7 +134,8 @@ public:
      *  the effect if it already exists
      */
     StatusEffectChange(uint32_t type, uint8_t stack, bool isReplace)
-        : Type(type), Stack(stack), IsReplace(isReplace), Duration(0)
+        : Type(type), Stack(stack), IsReplace(isReplace), IsConstant(false),
+        Duration(0)
     {
     }
 
@@ -147,6 +148,10 @@ public:
     /// Indicates if the status effect params should replace the effect if it
     /// already exists
     bool IsReplace;
+
+    /// Indicates if the status effect is a constant effect that is granted
+    /// from a renewing source like a tokusei
+    bool IsConstant;
 
     /// Explicit duration (in MS) to be used for the status effect. Overrides
     /// any default values and allows NONE (constant) status effects to be

@@ -118,12 +118,6 @@ public:
     uint8_t GetNextChannelID() const;
 
     /**
-     * Get the preferred channel to log into for a client in the lobby.
-     * @return Pointer to the RegisteredChannel
-     */
-    std::shared_ptr<objects::RegisteredChannel> GetLoginChannel() const;
-
-    /**
      * Get a pointer to the lobby connection.
      * @return Pointer to the lobby connection
      */
@@ -245,6 +239,9 @@ protected:
 
     /// Data sync manager for the server.
     WorldSyncManager* mSyncManager;
+
+    /// Server lock for shared resources
+    std::mutex mLock;
 };
 
 } // namespace world

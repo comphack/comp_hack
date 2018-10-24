@@ -35,16 +35,23 @@
 #include <math.h>
 
 // object Includes
+#include <Action.h>
+#include <ActionDelay.h>
+#include <ActionSpawn.h>
+#include <ActionZoneChange.h>
+#include <ActionZoneInstance.h>
 #include <DemonPresent.h>
 #include <DemonQuestReward.h>
 #include <DropSet.h>
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
 #include <Event.h>
+#include <EventPerformActions.h>
 #include <MiSItemData.h>
 #include <MiSStatusData.h>
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
+#include <PlasmaSpawn.h>
 #include <PvPInstanceVariant.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
@@ -55,6 +62,8 @@
 #include <ServerZoneInstance.h>
 #include <ServerZoneInstanceVariant.h>
 #include <ServerZonePartial.h>
+#include <ServerZoneSpot.h>
+#include <ServerZoneTrigger.h>
 #include <Spawn.h>
 #include <SpawnGroup.h>
 #include <SpawnLocationGroup.h>
@@ -253,6 +262,25 @@ const std::set<uint32_t> ServerDataManager::GetAllZoneInstanceIDs()
     }
 
     return instanceIDs;
+}
+
+bool ServerDataManager::ExistsInInstance(uint32_t instanceID, uint32_t zoneID,
+    uint32_t dynamicMapID)
+{
+    auto instDef = GetZoneInstanceData(instanceID);
+    if(instDef)
+    {
+        for(size_t i = 0; i < instDef->ZoneIDsCount(); i++)
+        {
+            if(instDef->GetZoneIDs(i) == zoneID &&
+               (!dynamicMapID || instDef->GetDynamicMapIDs(i) == dynamicMapID))
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 const std::shared_ptr<objects::ServerZoneInstanceVariant>
@@ -704,7 +732,9 @@ namespace libcomp
 
         for(auto sgPair : zone->GetSpawnGroups())
         {
-            for(auto sPair : sgPair.second->GetSpawns())
+            auto sg = sgPair.second;
+
+            for(auto sPair : sg->GetSpawns())
             {
                 if(!zone->SpawnsKeyExists(sPair.first))
                 {
@@ -713,6 +743,14 @@ namespace libcomp
                         .Arg(sPair.first));
                     return false;
                 }
+            }
+
+            if(!ValidateActions(sg->GetDefeatActions(), libcomp::String(
+               "Zone %1, SG %2 Defeat").Arg(zoneStr).Arg(sg->GetID()), false) ||
+               !ValidateActions(sg->GetSpawnActions(), libcomp::String(
+               "Zone %1, SG %2 Spawn").Arg(zoneStr).Arg(sg->GetID()), false))
+            {
+                return false;
             }
         }
 
@@ -736,6 +774,57 @@ namespace libcomp
         {
             mFieldZoneIDs.push_back(std::pair<uint32_t, uint32_t>(id,
                 dynamicMapID));
+        }
+
+        for(auto npc : zone->GetNPCs())
+        {
+            if(!ValidateActions(npc->GetActions(), libcomp::String(
+                "Zone %1, NPC %2").Arg(zoneStr).Arg(npc->GetID()), false))
+            {
+                return false;
+            }
+        }
+
+        for(auto obj : zone->GetObjects())
+        {
+            if(!ValidateActions(obj->GetActions(), libcomp::String(
+                "Zone %1, Object %2").Arg(zoneStr).Arg(obj->GetID()), false))
+            {
+                return false;
+            }
+        }
+
+        for(auto& pPair : zone->GetPlasmaSpawns())
+        {
+            auto plasma = pPair.second;
+            if(!ValidateActions(plasma->GetSuccessActions(), libcomp::String(
+                "Zone %1, Plasma %2").Arg(zoneStr).Arg(pPair.first), false) ||
+               !ValidateActions(plasma->GetFailActions(), libcomp::String(
+                "Zone %1, Plasma %2").Arg(zoneStr).Arg(pPair.first), false))
+            {
+                return false;
+            }
+        }
+
+        for(auto& spotPair : zone->GetSpots())
+        {
+            auto spot = spotPair.second;
+            if(!ValidateActions(spot->GetActions(), libcomp::String(
+                "Zone %1, Spot %2").Arg(zoneStr).Arg(spotPair.first), false) ||
+               !ValidateActions(spot->GetLeaveActions(), libcomp::String(
+                "Zone %1, Spot %2").Arg(zoneStr).Arg(spotPair.first), false))
+            {
+                return false;
+            }
+        }
+
+        for(auto t : zone->GetTriggers())
+        {
+            if(!ValidateActions(t->GetActions(), libcomp::String(
+                "Zone %1 trigger").Arg(zoneStr), TriggerIsAutoContext(t)))
+            {
+                return false;
+            }
         }
 
         return true;
@@ -809,6 +898,57 @@ namespace libcomp
 
         mZonePartialData[id] = prt;
 
+        for(auto sgPair : prt->GetSpawnGroups())
+        {
+            auto sg = sgPair.second;
+            if(!ValidateActions(sg->GetDefeatActions(), libcomp::String(
+               "Partial %1, SG %2 Defeat").Arg(id).Arg(sg->GetID()), false) ||
+               !ValidateActions(sg->GetSpawnActions(), libcomp::String(
+               "Partial %1, SG %2 Spawn").Arg(id).Arg(sg->GetID()), false))
+            {
+                return false;
+            }
+        }
+
+        for(auto npc : prt->GetNPCs())
+        {
+            if(!ValidateActions(npc->GetActions(), libcomp::String(
+                "Partial %1, NPC %2").Arg(id).Arg(npc->GetID()), false))
+            {
+                return false;
+            }
+        }
+
+        for(auto obj : prt->GetObjects())
+        {
+            if(!ValidateActions(obj->GetActions(), libcomp::String(
+                "Partial %1, Object %2").Arg(id).Arg(obj->GetID()), false))
+            {
+                return false;
+            }
+        }
+
+        for(auto& spotPair : prt->GetSpots())
+        {
+            auto spot = spotPair.second;
+            if(!ValidateActions(spot->GetActions(), libcomp::String(
+                "Partial %1, Spot %2").Arg(id).Arg(spotPair.first), false) ||
+               !ValidateActions(spot->GetLeaveActions(), libcomp::String(
+                "Partial %1, Spot %2").Arg(id).Arg(spotPair.first), false))
+            {
+                return false;
+            }
+        }
+
+        for(auto t : prt->GetTriggers())
+        {
+            if(!ValidateActions(t->GetActions(), libcomp::String(
+                "Partial %1 trigger").Arg(id), TriggerIsAutoContext(t)))
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -838,6 +978,18 @@ namespace libcomp
         }
 
         mEventData[id] = event;
+
+        if(event->GetEventType() == objects::Event::EventType_t::PERFORM_ACTIONS)
+        {
+            auto e = std::dynamic_pointer_cast<objects::EventPerformActions>(event);
+            if(e)
+            {
+                if(!ValidateActions(e->GetActions(), e->GetID(), false, true))
+                {
+                    return false;
+                }
+            }
+        }
 
         return true;
     }
@@ -1303,6 +1455,149 @@ bool ServerDataManager::LoadScript(const libcomp::String& path,
     }
 
     return true;
+}
+
+bool ServerDataManager::ValidateActions(const std::list<std::shared_ptr<
+    objects::Action>>& actions, const libcomp::String& source,
+    bool autoContext, bool inEvent)
+{
+    size_t current = 0;
+    size_t count = actions.size();
+    for(auto action : actions)
+    {
+        current++;
+
+        if(current != count && !inEvent)
+        {
+            bool warn = false;
+            switch(action->GetActionType())
+            {
+            case objects::Action::ActionType_t::ZONE_CHANGE:
+                {
+                    auto act = std::dynamic_pointer_cast<
+                        objects::ActionZoneChange>(action);
+                    warn = act && act->GetZoneID() != 0;
+                }
+                break;
+            case objects::Action::ActionType_t::ZONE_INSTANCE:
+                {
+                    auto act = std::dynamic_pointer_cast<
+                        objects::ActionZoneInstance>(action);
+                    if(act)
+                    {
+                        switch(act->GetMode())
+                        {
+                        case objects::ActionZoneInstance::Mode_t::JOIN:
+                        case objects::ActionZoneInstance::Mode_t::CLAN_JOIN:
+                        case objects::ActionZoneInstance::Mode_t::TEAM_JOIN:
+                        case objects::ActionZoneInstance::Mode_t::TEAM_PVP:
+                            warn = true;
+                            break;
+                        default:
+                            break;
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+
+            if(warn)
+            {
+                LOG_WARNING(libcomp::String("Zone change action encountered"
+                    " mid-action set in a context outside of an event. This"
+                    " can cause unexpected behavior for multi-channel setups."
+                    " Move to the end of the set to avoid errors: %1\n")
+                    .Arg(source));
+            }
+        }
+
+        bool autoCtx = autoContext && (action->GetSourceContext() ==
+            objects::Action::SourceContext_t::ENEMIES ||
+            action->GetSourceContext() ==
+            objects::Action::SourceContext_t::SOURCE);
+        switch(action->GetActionType())
+        {
+        case objects::Action::ActionType_t::DELAY:
+            {
+                auto act = std::dynamic_pointer_cast<objects::ActionDelay>(
+                    action);
+                if(!ValidateActions(act->GetActions(), libcomp::String(
+                    "%1 => Delay Actions").Arg(source), autoCtx))
+                {
+                    return false;
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::SPAWN:
+            {
+                auto act = std::dynamic_pointer_cast<objects::ActionSpawn>(
+                    action);
+                if(!ValidateActions(act->GetDefeatActions(), libcomp::String(
+                    "%1 => Defeat Actions").Arg(source), autoCtx))
+                {
+                    return false;
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::ADD_REMOVE_ITEMS:
+        case objects::Action::ActionType_t::DISPLAY_MESSAGE:
+        case objects::Action::ActionType_t::GRANT_SKILLS:
+        case objects::Action::ActionType_t::GRANT_XP:
+        case objects::Action::ActionType_t::PLAY_BGM:
+        case objects::Action::ActionType_t::PLAY_SOUND_EFFECT:
+        case objects::Action::ActionType_t::SET_HOMEPOINT:
+        case objects::Action::ActionType_t::SPECIAL_DIRECTION:
+        case objects::Action::ActionType_t::STAGE_EFFECT:
+        case objects::Action::ActionType_t::UPDATE_COMP:
+        case objects::Action::ActionType_t::UPDATE_FLAG:
+        case objects::Action::ActionType_t::UPDATE_LNC:
+        case objects::Action::ActionType_t::UPDATE_QUEST:
+        case objects::Action::ActionType_t::ZONE_CHANGE:
+        case objects::Action::ActionType_t::ZONE_INSTANCE:
+            if(autoCtx)
+            {
+                LOG_ERROR(libcomp::String("Non-player context with player"
+                    " required action type %1 encountered: %2\n")
+                    .Arg((int32_t)action->GetActionType()).Arg(source));
+                return false;
+            }
+            break;
+        case objects::Action::ActionType_t::ADD_REMOVE_STATUS:
+        case objects::Action::ActionType_t::CREATE_LOOT:
+        case objects::Action::ActionType_t::RUN_SCRIPT:
+        case objects::Action::ActionType_t::SET_NPC_STATE:
+        case objects::Action::ActionType_t::START_EVENT:
+        case objects::Action::ActionType_t::UPDATE_POINTS:
+        case objects::Action::ActionType_t::UPDATE_ZONE_FLAGS:
+        default:
+            // Nothing special needed
+            break;
+        }
+    }
+
+    return true;
+}
+
+bool ServerDataManager::TriggerIsAutoContext(
+    const std::shared_ptr<objects::ServerZoneTrigger>& trigger)
+{
+    // Most triggers use auto-only contexts
+    switch(trigger->GetTrigger())
+    {
+    case objects::ServerZoneTrigger::Trigger_t::ON_DEATH:
+    case objects::ServerZoneTrigger::Trigger_t::ON_DIASPORA_BASE_CAPTURE:
+    case objects::ServerZoneTrigger::Trigger_t::ON_FLAG_SET:
+    case objects::ServerZoneTrigger::Trigger_t::ON_PVP_BASE_CAPTURE:
+    case objects::ServerZoneTrigger::Trigger_t::ON_PVP_COMPLETE:
+    case objects::ServerZoneTrigger::Trigger_t::ON_REVIVAL:
+    case objects::ServerZoneTrigger::Trigger_t::ON_ZONE_IN:
+    case objects::ServerZoneTrigger::Trigger_t::ON_ZONE_OUT:
+        return false;
+    default:
+        return true;
+    }
 }
 
 namespace libcomp

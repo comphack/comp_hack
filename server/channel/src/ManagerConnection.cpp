@@ -118,9 +118,11 @@ void ManagerConnection::RequestWorldInfo()
 {
     if(nullptr != mWorldConnection)
     {
-        //Request world information
+        // Request world information
         libcomp::Packet packet;
         packet.WritePacketCode(InternalPacketCode_t::PACKET_GET_WORLD_INFO);
+        packet.WriteS8(std::dynamic_pointer_cast<objects::ChannelConfig>(
+            mServer.lock()->GetConfig())->GetReservedID());
 
         mWorldConnection->SendPacket(packet);
     }

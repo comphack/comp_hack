@@ -42,6 +42,7 @@
 // world Includes
 #include "CharacterManager.h"
 #include "WorldServer.h"
+#include "WorldSyncManager.h"
 
 using namespace world;
 
@@ -65,6 +66,30 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         LOG_ERROR(libcomp::String("Invalid world CID sent to CharacterLogin: %1\n").Arg(cid));
         return false;
+    }
+
+    if(!updateFlags)
+    {
+        // Special "channel refresh" request, send party/team info if still
+        // in either
+        if(cLogin->GetPartyID())
+        {
+            auto member = characterManager->GetPartyMember(cLogin
+                ->GetWorldCID());
+            if(member)
+            {
+                characterManager->SendPartyMember(member, cLogin->GetPartyID(),
+                    false, true, connection);
+            }
+        }
+
+        if(cLogin->GetTeamID())
+        {
+            characterManager->SendTeamInfo(cLogin->GetTeamID(),
+                { cLogin->GetWorldCID() });
+        }
+
+        return true;
     }
 
     if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_STATUS)
@@ -100,17 +125,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         }
     }
 
-    bool isRejoin = false;
     auto member = characterManager->GetPartyMember(cLogin->GetWorldCID());
-    if(!member && cLogin->GetPartyID() &&
-        (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO ||
-         updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO))
-    {
-        // Should be a first login, attempt to rejoin the same party
-        isRejoin = true;
-        member = std::make_shared<objects::PartyCharacter>();
-    }
-
     if(member)
     {
         if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO)
@@ -130,15 +145,6 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
                 LOG_ERROR("CharacterLogin party demon info failed to load\n");
                 return false;
             }
-        }
-    }
-
-    if(isRejoin)
-    {
-        if(!characterManager->PartyJoin(member, "", cLogin->GetPartyID(), connection))
-        {
-            // Rejoin failed, clean up
-            characterManager->PartyLeave(cLogin, nullptr, false);
         }
     }
 
@@ -195,6 +201,9 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             connection->FlushOutgoing();
         }
     }
+
+    // Sync with everyone else
+    server->GetWorldSyncManager()->SyncRecordUpdate(cLogin, "CharacterLogin");
 
     return true;
 }

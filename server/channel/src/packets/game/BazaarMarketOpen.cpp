@@ -101,7 +101,7 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
 
         bazaarData->SetCharacter(cState->GetEntity());
         bazaarData->SetZone(zone->GetDefinition()->GetID());
-        bazaarData->SetChannelID(server->GetRegisteredChannel()->GetID());
+        bazaarData->SetChannelID(server->GetChannelID());
         bazaarData->SetMarketID(marketID);
         bazaarData->SetState(objects::BazaarData::State_t::BAZAAR_PREPARING);
 

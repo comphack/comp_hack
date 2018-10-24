@@ -34,10 +34,12 @@
 #include <PacketCodes.h>
 
 // object Includes
+#include <CharacterLogin.h>
 #include <Clan.h>
 #include <ClanMember.h>
 
 // channel Includes
+#include "AccountManager.h"
 #include "ChannelServer.h"
 #include "ChannelSyncManager.h"
 
@@ -136,7 +138,10 @@ bool Parsers::SearchEntryData::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS32Little(ChannelServer::GetExpirationInSeconds(
                     entry->GetExpirationTime()));
 
-                reply.WriteS8(0);   // Login state
+                auto cLogin = server->GetAccountManager()->GetActiveLogin(entry
+                    ->GetRelatedTo());
+                reply.WriteS8(cLogin ? (int8_t)cLogin->GetStatus() : 0);
+
                 reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_TIME_FROM));
                 reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_TIME_TO));
                 reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON_RACE));
@@ -157,9 +162,9 @@ bool Parsers::SearchEntryData::Parse(libcomp::ManagerPacket *pPacketManager,
                     objects::Clan>(worldDB, entry->GetRelatedTo());
 
                 int8_t averageLevel = 0;
+                std::shared_ptr<objects::ClanMember> masterMember;
                 if(clan)
                 {
-                    std::shared_ptr<objects::ClanMember> masterMember;
                     std::list<libobjgen::UUID> memberUIDs;
                     for(auto member : objects::ClanMember::LoadClanMemberListByClan(worldDB,
                         clan->GetUUID()))
@@ -203,7 +208,10 @@ bool Parsers::SearchEntryData::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS32Little(ChannelServer::GetExpirationInSeconds(
                     entry->GetExpirationTime()));
 
-                reply.WriteS8(0);   // Connection status
+                auto cLogin = masterMember ? server->GetAccountManager()
+                    ->GetActiveLogin(masterMember->GetCharacter()) : nullptr;
+                reply.WriteS8(cLogin ? (int8_t)cLogin->GetStatus() : 0);
+
                 reply.WriteS32Little((int32_t)(clan ? clan->GetBaseZoneID() : 0));
                 reply.WriteS8(averageLevel);
             }

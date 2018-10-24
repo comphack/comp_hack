@@ -32,6 +32,8 @@
 #include <PacketCodes.h>
 
 // object includes
+#include <ServerNPC.h>
+#include <ServerObject.h>
 #include <ServerZone.h>
 #include <ServerZoneSpot.h>
 
@@ -80,24 +82,32 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
 
     std::list<std::shared_ptr<objects::Action>> actions;
 
-    // Lookup the spot and see if it has actions.
-    std::shared_ptr<objects::EntityStateObject> entity = zone->GetNPC(entityID);
-
-    // Look for an object if there is no NPC by that name.
-    if(!entity)
+    // Lookup the entity and see if it has actions.
+    bool valid = false;
+    auto npc = zone->GetNPC(entityID);
+    if(npc)
     {
-        entity = zone->GetServerObject(entityID);
+        actions = npc->GetEntity()->GetActions();
+        valid = true;
     }
-
-    /// @todo Implement better checks? In range of entity?
+    else
+    {
+        // Look for an object if there is no NPC by that ID.
+        auto obj = zone->GetServerObject(entityID);
+        if(obj)
+        {
+            actions = obj->GetEntity()->GetActions();
+            valid = true;
+        }
+    }
 
     LOG_DEBUG(libcomp::String("Interacted with entity %1\n").Arg(entityID));
 
-    if(entity)
+    if(valid)
     {
         // Get the action list.
         auto pActionList = new ActionList;
-        pActionList->actions = entity->GetActions();
+        pActionList->actions = actions;
         pActionList->sourceEntityID = entityID;
 
         LOG_DEBUG(libcomp::String("Got entity with %1 actions.\n").Arg(

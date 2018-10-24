@@ -264,25 +264,44 @@ uint8_t WorldServer::GetNextChannelID() const
     return static_cast<uint8_t>(mRegisteredChannels.size());
 }
 
-std::shared_ptr<objects::RegisteredChannel> WorldServer::GetLoginChannel() const
-{
-    /// @todo: fix this once channels are registered with public/private zones
-    return mRegisteredChannels.size() > 0 ? mRegisteredChannels.begin()->second : nullptr;
-}
-
 const std::shared_ptr<libcomp::InternalConnection> WorldServer::GetLobbyConnection() const
 {
     return mManagerConnection->GetLobbyConnection();
 }
 
-void WorldServer::RegisterChannel(const std::shared_ptr<objects::RegisteredChannel>& channel,
+void WorldServer::RegisterChannel(
+    const std::shared_ptr<objects::RegisteredChannel>& channel,
     const std::shared_ptr<libcomp::InternalConnection>& connection)
 {
-    mRegisteredChannels[connection] = channel;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+        mRegisteredChannels[connection] = channel;
+    }
+
+    // Register the channel connection with the sync manager and sync
+    // existing records
+    const std::set<std::string> channelSyncTypes = {
+            "CharacterLogin",
+            "EventCounter",
+            "InstanceAccess",
+            "Match",
+            "MatchEntry",
+            "PentalphaEntry",
+            "PentalphaMatch",
+            "PvPMatch",
+            "SearchEntry",
+            "UBResult",
+            "UBTournament"
+        };
+
+    mSyncManager->RegisterConnection(connection, channelSyncTypes);
+    mSyncManager->SyncExistingChannelRecords(connection);
 }
 
 bool WorldServer::RemoveChannel(const std::shared_ptr<libcomp::InternalConnection>& connection)
 {
+    std::lock_guard<std::mutex> lock(mLock);
+
     auto iter = mRegisteredChannels.find(connection);
     if(iter != mRegisteredChannels.end())
     {
@@ -435,21 +454,7 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
         connection->SetName(libcomp::String("%1:channel").Arg(
             connectionID++));
 
-        // Register the channel connection with the sync manager
-        const std::set<std::string> channelSyncTypes = {
-                "EventCounter",
-                "Match",
-                "MatchEntry",
-                "PentalphaEntry",
-                "PentalphaMatch",
-                "PvPMatch",
-                "SearchEntry",
-                "UBResult",
-                "UBTournament"
-            };
-
-        if(AssignMessageQueue(connection) &&
-            mSyncManager->RegisterConnection(connection, channelSyncTypes))
+        if(AssignMessageQueue(connection))
         {
             connection->ConnectionSuccess();
         }

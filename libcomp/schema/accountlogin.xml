@@ -31,4 +31,30 @@
             <value num="3">ONLINE</value>
         </member>
     </object>
+    <object name="ChannelLogin" persistent="false">
+        <member type="s32" name="WorldCID"/>
+        <member type="s8" name="FromChannel" default="-1"/>
+        <member type="s8" name="ToChannel" default="-1"/>
+        <member type="u32" name="ToZoneID"/>
+        <member type="u32" name="ToDynamicMapID"/>
+        <member type="string" name="ActiveEvent"/>
+        <member type="u16" name="ActiveEventIndex"/>
+        <member type="set" name="ActiveSwitchSkills">
+            <element type="u32"/>
+        </member>
+        <member type="pref" name="DigitalizeDemon"/>
+    </object>
+    <object name="InstanceAccess" persistent="false">
+        <member type="set" name="AccessCIDs">
+            <element type="s32"/>
+        </member>
+        <member type="u8" name="ChannelID"/>
+        <member type="pref" name="RequestID"/>
+        <member type="bool" name="IsLocal"/>
+        <member type="u32" name="InstanceID"/>
+        <member type="u32" name="DefinitionID"/>
+        <member type="u32" name="VariantID"/>
+        <member type="u32" name="CreateTimerID"/>
+        <member type="string" name="CreateTimerExpirationEventID"/>
+    </object>
 </objgen>

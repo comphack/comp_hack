@@ -36,6 +36,7 @@
 // object Includes
 #include <Account.h>
 #include <AccountLogin.h>
+#include <ChannelLogin.h>
 #include <Character.h>
 
 // world Includes
@@ -68,8 +69,14 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     auto cLogin = login->GetCharacterLogin();
     if(action == LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH)
     {
-        channelID = p.ReadS8();
-        if(accountManager->SwitchChannel(login, channelID))
+        auto channelLogin = std::make_shared<objects::ChannelLogin>();
+        if(!channelLogin->LoadPacket(p))
+        {
+            LOG_ERROR("Failed to load channel switch info from channel\n");
+            return false;
+        }
+
+        if(accountManager->SwitchChannel(login, channelLogin))
         {
             libcomp::Packet reply;
             reply.WritePacketCode(
@@ -77,7 +84,7 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
             reply.WriteS32Little(cLogin->GetWorldCID());
             reply.WriteU32Little(
                 (uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
-            reply.WriteS8(channelID);
+            reply.WriteS8(channelLogin->GetToChannel());
             reply.WriteU32Little(login->GetSessionKey());
 
             connection->SendPacket(reply);
@@ -96,11 +103,12 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
             InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
         reply.WriteS32Little(cLogin->GetWorldCID());
         reply.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+
         connection->SendPacket(reply);
     }
     else
     {
-        if(accountManager->PopChannelSwitch(username, channelID))
+        if(accountManager->ChannelSwitchPending(username, channelID))
         {
             LOG_DEBUG(libcomp::String("User is switching to channel %1: '%2'\n")
                 .Arg(channelID).Arg(username));
@@ -111,7 +119,8 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
                 InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
             lobbyMessage.WriteString16Little(
                 libcomp::Convert::Encoding_t::ENCODING_UTF8, username);
-            lobbyMessage.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
+            lobbyMessage.WriteU32Little(
+                (uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
 
             // Make sure the lobby has the new session key and channel
             lobbyMessage.WriteS8(channelID);

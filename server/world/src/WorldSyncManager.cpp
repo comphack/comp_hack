@@ -41,6 +41,7 @@
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
 #include <EventCounter.h>
+#include <InstanceAccess.h>
 #include <Match.h>
 #include <MatchEntry.h>
 #include <PentalphaEntry.h>
@@ -96,6 +97,13 @@ bool WorldSyncManager::Initialize()
 
     mRegisteredTypes["Character"] = cfg;
 
+    cfg = std::make_shared<ObjectConfig>("CharacterLogin", true);
+    cfg->BuildHandler = &DataSyncManager::New<objects::CharacterLogin>;
+    cfg->UpdateHandler = &DataSyncManager::Update<WorldSyncManager,
+        objects::CharacterLogin>;
+
+    mRegisteredTypes["CharacterLogin"] = cfg;
+
     cfg = std::make_shared<ObjectConfig>("CharacterProgress", true, worldDB);
     cfg->UpdateHandler = &DataSyncManager::Update<WorldSyncManager,
         objects::CharacterProgress>;
@@ -107,6 +115,13 @@ bool WorldSyncManager::Initialize()
         WorldSyncManager, objects::EventCounter>;
 
     mRegisteredTypes["EventCounter"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("InstanceAccess", true);
+    cfg->BuildHandler = &DataSyncManager::New<objects::InstanceAccess>;
+    cfg->UpdateHandler = &DataSyncManager::Update<WorldSyncManager,
+        objects::InstanceAccess>;
+
+    mRegisteredTypes["InstanceAccess"] = cfg;
 
     cfg = std::make_shared<ObjectConfig>("Match", true);
     cfg->BuildHandler = &DataSyncManager::New<objects::Match>;
@@ -332,6 +347,20 @@ int8_t WorldSyncManager::Update<objects::Character>(const libcomp::String& type,
 }
 
 template<>
+int8_t WorldSyncManager::Update<objects::CharacterLogin>(const libcomp::String& type,
+    const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+    const libcomp::String& source)
+{
+    (void)type;
+    (void)obj;
+    (void)isRemove;
+    (void)source;
+
+    // Let all changes through
+    return SYNC_UPDATED;
+}
+
+template<>
 int8_t WorldSyncManager::Update<objects::CharacterProgress>(
     const libcomp::String& type, const std::shared_ptr<libcomp::Object>& obj,
     bool isRemove, const libcomp::String& source)
@@ -366,6 +395,60 @@ int8_t WorldSyncManager::Update<objects::CharacterProgress>(
         }
     }
 
+    return SYNC_HANDLED;
+}
+
+template<>
+int8_t WorldSyncManager::Update<objects::InstanceAccess>(const libcomp::String& type,
+    const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+    const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    auto access = std::dynamic_pointer_cast<objects::InstanceAccess>(obj);
+
+    if(!isRemove)
+    {
+        if(access->GetInstanceID())
+        {
+            // Could be an access update or getting the ID, forward to all
+            mInstanceAccess[access->GetChannelID()][access
+                ->GetInstanceID()] = access;
+
+            return SYNC_UPDATED;
+        }
+        else
+        {
+            // Send to the correct channel to set the instance ID but do not
+            // store it
+            auto server = mServer.lock();
+            auto channel = server->GetChannelConnectionByID((int8_t)access
+                ->GetChannelID());
+            if(channel)
+            {
+                libcomp::Packet p;
+                WriteOutgoingRecord(p, false, "InstanceAccess", access);
+                channel->SendPacket(p);
+            }
+
+            return SYNC_HANDLED;
+        }
+    }
+    else if(access->GetInstanceID())
+    {
+        // Drop it from the cache
+        mInstanceAccess[access->GetChannelID()].erase(access->GetInstanceID());
+        if(mInstanceAccess[access->GetChannelID()].size() == 0)
+        {
+            mInstanceAccess.erase(access->GetChannelID());
+        }
+
+        // Forward to all
+        return SYNC_UPDATED;
+    }
+
+    // Otherwise just ignore
     return SYNC_HANDLED;
 }
 
@@ -540,6 +623,8 @@ void WorldSyncManager::SyncComplete<objects::EventCounter>(
             {
                 int32_t sum = 0;
                 std::shared_ptr<objects::EventCounter> gCounter;
+                std::unordered_map<std::string,
+                    std::shared_ptr<objects::EventCounter>> cCounters;
 
                 for(auto e : objects::EventCounter::LoadEventCounterListByType(
                     worldDB, t))
@@ -569,7 +654,42 @@ void WorldSyncManager::SyncComplete<objects::EventCounter>(
 
                             dbChanges->Update(e);
 
-                            updates.insert(gCounter);
+                            updates.insert(e);
+                        }
+
+                        // Make sure there is only one per character
+                        std::string uid = e->GetCharacter().ToString();
+                        auto existing = cCounters[uid];
+                        if(existing)
+                        {
+                            // Keep whichever one was created first
+                            if(existing->GetTimestamp() > e->GetTimestamp())
+                            {
+                                e->SetCounter(e->GetCounter() +
+                                    existing->GetCounter());
+                                cCounters[uid] = e;
+
+                                dbChanges->Update(e);
+                                dbChanges->Delete(existing);
+
+                                updates.insert(e);
+                                deletes.insert(existing);
+                            }
+                            else
+                            {
+                                existing->SetCounter(e->GetCounter() +
+                                    existing->GetCounter());
+
+                                dbChanges->Update(existing);
+                                dbChanges->Delete(e);
+
+                                updates.insert(existing);
+                                deletes.insert(e);
+                            }
+                        }
+                        else
+                        {
+                            cCounters[uid] = e;
                         }
                     }
                 }
@@ -807,11 +927,33 @@ int8_t WorldSyncManager::Update<objects::PvPMatch>(const libcomp::String& type,
     (void)type;
 
     auto match = std::dynamic_pointer_cast<objects::PvPMatch>(obj);
-    if(!isRemove && !source.IsEmpty() && match->GetID())
+    if(!isRemove && !source.IsEmpty())
     {
-        // Matches with IDs should not be passing through here from
-        // other servers
-        return SYNC_FAILED;
+        if(match->GetID())
+        {
+            // Matches with IDs should not be passing through here from
+            // other servers
+            return SYNC_FAILED;
+        }
+        else if(match->MemberIDsCount() == 0 && match->GetReadyTime() &&
+            (match->GetType() == objects::PvPMatch::Type_t::PVP_FATE ||
+             match->GetType() == objects::PvPMatch::Type_t::PVP_VALHALLA))
+        {
+            // Primary channel supplied pending match, do not sync back
+            size_t idx = (size_t)match->GetType();
+            for(size_t i = 0; i < 2; i++)
+            {
+                if(mPvPReadyTimes[i][idx] == match->GetReadyTime())
+                {
+                    // Copy the match in case team and solo matches somhow
+                    // managed to get the exact same ready time
+                    mPvPPendingMatches[i][idx] = std::make_shared<
+                        objects::PvPMatch>(*match);
+                }
+            }
+
+            return SYNC_HANDLED;
+        }
     }
 
     return SYNC_UPDATED;
@@ -833,7 +975,7 @@ void WorldSyncManager::SyncComplete<objects::PvPMatch>(
         {
             // Channel is requesting a custom match, set it up and let it
             // sync back
-            CreatePvPMatch((int8_t)match->GetType(), match);
+            PreparePvPMatch(match);
         }
     }
 }
@@ -856,9 +998,9 @@ void WorldSyncManager::Expire<objects::SearchEntry>(int32_t entryID,
         }
     }
 
-    if(entry && RemoveRecord(entry, "SearchEntry"))
+    if(entry)
     {
-        SyncOutgoing();
+        SyncRecordRemoval(entry, "SearchEntry");
     }
 }
 
@@ -1020,8 +1162,16 @@ bool WorldSyncManager::CleanUpCharacterLogin(int32_t worldCID, bool flushOutgoin
 {
     bool result = false;
 
+    auto cLogin = mServer.lock()->GetCharacterManager()->GetCharacterLogin(
+        worldCID);
+    if(cLogin)
+    {
+        result |= RemoveRecord(cLogin, "CharacterLogin");
+    }
+
     std::list<std::shared_ptr<libcomp::Object>> searchEntries;
     std::shared_ptr<objects::MatchEntry> matchEntry;
+    std::list<std::shared_ptr<objects::InstanceAccess>> instAccess;
     {
         std::lock_guard<std::mutex> lock(mLock);
         if(mSearchEntryCounts.find(worldCID) != mSearchEntryCounts.end())
@@ -1044,6 +1194,18 @@ bool WorldSyncManager::CleanUpCharacterLogin(int32_t worldCID, bool flushOutgoin
         if(it != mMatchEntries.end())
         {
             matchEntry = it->second;
+        }
+
+        for(auto& pair : mInstanceAccess)
+        {
+            for(auto& subPair : pair.second)
+            {
+                if(subPair.second->AccessCIDsContains(worldCID) ||
+                    subPair.second->AccessCIDsCount() == 0)
+                {
+                    instAccess.push_back(subPair.second);
+                }
+            }
         }
     }
 
@@ -1071,6 +1233,20 @@ bool WorldSyncManager::CleanUpCharacterLogin(int32_t worldCID, bool flushOutgoin
         }
     }
 
+    // Remove from instance access and sync
+    for(auto access : instAccess)
+    {
+        access->RemoveAccessCIDs(worldCID);
+        if(access->AccessCIDsCount() == 0)
+        {
+            result |= RemoveRecord(access, "InstanceAccess");
+        }
+        else
+        {
+            result |= UpdateRecord(access, "InstanceAccess");
+        }
+    }
+
     if(result && flushOutgoing)
     {
         SyncOutgoing();
@@ -1092,6 +1268,26 @@ void WorldSyncManager::SyncExistingChannelRecords(const std::shared_ptr<
     }
 
     QueueOutgoing("SearchEntry", connection, records, blank);
+
+    records.clear();
+    for(auto cLogin : mServer.lock()->GetCharacterManager()
+        ->GetActiveCharacters())
+    {
+        records.insert(cLogin);
+    }
+
+    QueueOutgoing("CharacterLogin", connection, records, blank);
+
+    records.clear();
+    for(auto& pair : mInstanceAccess)
+    {
+        for(auto& subPair : pair.second)
+        {
+            records.insert(subPair.second);
+        }
+    }
+
+    QueueOutgoing("InstanceAccess", connection, records, blank);
 
     records.clear();
     for(auto& pair : mMatchEntries)
@@ -1124,15 +1320,18 @@ void WorldSyncManager::StartPvPMatch(uint32_t time, uint8_t type)
 {
     bool start = false;
     uint32_t queuedTime = 0;
+    std::shared_ptr<objects::PvPMatch> match;
     {
         std::lock_guard<std::mutex> lock(mLock);
         if(type < 2)
         {
             queuedTime = mPvPReadyTimes[0][type];
+            match = mPvPPendingMatches[0][type];
             if(queuedTime == time)
             {
                 mPvPReadyTimes[0][type] = 0;
-                start = true;
+                mPvPPendingMatches[0][type] = nullptr;
+                start = match != nullptr;
             }
         }
     }
@@ -1173,7 +1372,7 @@ void WorldSyncManager::StartPvPMatch(uint32_t time, uint8_t type)
                 teamCount = (size_t)(teamCount - 1);
             }
 
-            auto match = CreatePvPMatch((int8_t)type);
+            PreparePvPMatch(match);
 
             // Split the teams and set the match ID
             size_t left = teamCount;
@@ -1211,8 +1410,7 @@ void WorldSyncManager::StartPvPMatch(uint32_t time, uint8_t type)
                 }
             }
 
-            UpdateRecord(match, "PvPMatch");
-            SyncOutgoing();
+            SyncRecordUpdate(match, "PvPMatch");
         }
 
         // Always recheck
@@ -1232,15 +1430,18 @@ void WorldSyncManager::StartTeamPvPMatch(uint32_t time, uint8_t type)
 {
     bool start = false;
     uint32_t queuedTime = 0;
+    std::shared_ptr<objects::PvPMatch> match;
     {
         std::lock_guard<std::mutex> lock(mLock);
         if(type < 2)
         {
             queuedTime = mPvPReadyTimes[1][type];
+            match = mPvPPendingMatches[1][type];
             if(queuedTime == time)
             {
                 mPvPReadyTimes[1][type] = 0;
-                start = true;
+                mPvPPendingMatches[1][type] = nullptr;
+                start = match != nullptr;
             }
         }
     }
@@ -1297,7 +1498,7 @@ void WorldSyncManager::StartTeamPvPMatch(uint32_t time, uint8_t type)
 
             teams[1] = readyTeams.front();
 
-            auto match = CreatePvPMatch((int8_t)type);
+            PreparePvPMatch(match);
 
             std::set<int32_t> cids;
             for(size_t i = 0; i < 2; i++)
@@ -1324,8 +1525,7 @@ void WorldSyncManager::StartTeamPvPMatch(uint32_t time, uint8_t type)
                 }
             }
 
-            UpdateRecord(match, "PvPMatch");
-            SyncOutgoing();
+            SyncRecordUpdate(match, "PvPMatch");
         }
 
         // Always recheck
@@ -1418,6 +1618,7 @@ bool WorldSyncManager::DeterminePvPMatch(uint8_t type,
     {
         // Ready count dropped below min amount, reset the ready time
         mPvPReadyTimes[0][type] = time = 0;
+        mPvPPendingMatches[0][type] = nullptr;
 
         // Allow restart if new entry count meets minimum
         checkStart = true;
@@ -1519,6 +1720,7 @@ bool WorldSyncManager::DetermineTeamPvPMatch(uint8_t type,
     {
         // Ready team count dropped below min amount, reset the ready time
         mPvPReadyTimes[1][type] = time = 0;
+        mPvPPendingMatches[1][type] = nullptr;
 
         // Allow restart if new entry count meets minimum
         checkStart = true;
@@ -1553,9 +1755,15 @@ bool WorldSyncManager::DetermineTeamPvPMatch(uint8_t type,
     return queued;
 }
 
-std::shared_ptr<objects::PvPMatch> WorldSyncManager::CreatePvPMatch(
-    int8_t type, std::shared_ptr<objects::PvPMatch> existing)
+bool WorldSyncManager::PreparePvPMatch(
+    std::shared_ptr<objects::PvPMatch> match)
 {
+    if(match->GetID())
+    {
+        // Already prepared
+        return false;
+    }
+
     uint32_t matchID = 0;
     {
         std::lock_guard<std::mutex> lock(mLock);
@@ -1563,24 +1771,10 @@ std::shared_ptr<objects::PvPMatch> WorldSyncManager::CreatePvPMatch(
     }
 
     uint32_t matchReady = (uint32_t)((uint32_t)std::time(0) + 30);
-
-    auto match = existing ? existing : std::make_shared<objects::PvPMatch>();
     match->SetID(matchID);
-    match->SetType((objects::Match::Type_t)type);
     match->SetReadyTime(matchReady);
 
-    uint8_t channelID = 0;
-
-    /// @todo: replace with dedicated channel logic
-    for(auto& cPair : mServer.lock()->GetChannels())
-    {
-        channelID = cPair.second->GetID();
-        break;
-    }
-
-    match->SetChannelID(channelID);
-
-    return match;
+    return true;
 }
 
 std::unordered_map<int32_t, std::list<std::shared_ptr<

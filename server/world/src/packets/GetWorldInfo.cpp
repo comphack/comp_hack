@@ -137,10 +137,28 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!fromLobby)
         {
-            auto nextChannelID = server->GetNextChannelID();
-            reply.WriteU8(nextChannelID);
+            int8_t reservedID = p.ReadS8();
 
-            bool otherChannelsExist = server->GetChannels().size() > 1;
+            if(reservedID >= 0)
+            {
+                if(server->GetChannelConnectionByID(reservedID))
+                {
+                    LOG_ERROR(libcomp::String("Channel requested reserved ID"
+                        " %1 which has already been given to another server\n")
+                        .Arg(reservedID));
+                    connection->Close();
+                    return true;
+                }
+
+                reply.WriteU8((uint8_t)reservedID);
+            }
+            else
+            {
+                uint8_t nextChannelID = server->GetNextChannelID();
+                reply.WriteU8(nextChannelID);
+            }
+
+            bool otherChannelsExist = server->GetChannels().size() > 0;
             reply.WriteU8(otherChannelsExist ? 1 : 0);
         }
     
@@ -161,17 +179,7 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         }
     }
 
-    connection->QueuePacket(reply);
-
-    if(!fromLobby)
-    {
-        // Send existing world level data
-        auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(
-            connection);
-        server->GetWorldSyncManager()->SyncExistingChannelRecords(iConnection);
-    }
-
-    connection->FlushOutgoing();
+    connection->SendPacket(reply);
 
     return true;
 }

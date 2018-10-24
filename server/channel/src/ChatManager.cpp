@@ -41,12 +41,14 @@
 #include <ActivatedAbility.h>
 #include <ChannelConfig.h>
 #include <Character.h>
+#include <CharacterLogin.h>
 #include <CharacterProgress.h>
 #include <Event.h>
 #include <EventCounter.h>
 #include <EventInstance.h>
 #include <EventState.h>
 #include <Expertise.h>
+#include <InstanceAccess.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <MiItemBasicData.h>
@@ -120,6 +122,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["license"] = &ChatManager::GMCommand_License;
     mGMands["lnc"] = &ChatManager::GMCommand_LNC;
     mGMands["map"] = &ChatManager::GMCommand_Map;
+    mGMands["online"] = &ChatManager::GMCommand_Online;
     mGMands["penalty"] = &ChatManager::GMCommand_PenaltyReset;
     mGMands["plugin"] = &ChatManager::GMCommand_Plugin;
     mGMands["pos"] = &ChatManager::GMCommand_Position;
@@ -1144,7 +1147,6 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
         demonID = devilData->GetBasic()->GetID();
     }
 
-    /// @todo: Default to directly in front of the player
     cState->RefreshCurrentPosition(ChannelServer::GetServerTime());
 
     float x = cState->GetCurrentX();
@@ -1846,6 +1848,11 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "@map ID",
             "Adds map for the player with the given ID.",
         } },
+        { "online", {
+            "@online [NAME]",
+            "Print how many players are online or check if the",
+            "character with a specific NAME is online."
+        } },
         { "penalty", {
             "@penalty [NAME]",
             "Remove all PvP penalties on the character NAME or to",
@@ -2171,9 +2178,14 @@ bool ChatManager::GMCommand_Instance(const std::shared_ptr<
         }
     }
 
-    auto instance = zoneManager->CreateInstance(instanceID, accessCIDs, variantID);
-    if(!instance ||
-        (!diaspora && !zoneManager->MoveToStartingZone(client, instance)))
+    auto instAccess = std::make_shared<objects::InstanceAccess>();
+    instAccess->SetAccessCIDs(accessCIDs);
+    instAccess->SetDefinitionID(instanceID);
+    instAccess->SetVariantID(variantID);
+
+    uint8_t resultCode = zoneManager->CreateInstance(instAccess);
+    if(!resultCode ||
+        (!diaspora && !zoneManager->MoveToInstance(client, instAccess)))
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
             libcomp::String("Failed to add to instance: %1").Arg(instanceID));
@@ -2521,6 +2533,75 @@ bool ChatManager::GMCommand_Map(const std::shared_ptr<
 
     mServer.lock()->GetCharacterManager()->AddMap(client,
         mapID);
+
+    return true;
+}
+
+bool ChatManager::GMCommand_Online(const std::shared_ptr<
+    channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args)
+{
+    if(!HaveUserLevel(client, 1))
+    {
+        return true;
+    }
+
+    std::list<libcomp::String> argsCopy = args;
+
+    auto server = mServer.lock();
+
+    std::shared_ptr<objects::Character> targetCharacter;
+
+    libcomp::String name;
+    if(GetStringArg(name, argsCopy))
+    {
+        // Get location of specific character
+        targetCharacter = objects::Character::LoadCharacterByName(
+            server->GetWorldDatabase(), name);
+        if(!targetCharacter)
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("Invalid character name supplied for"
+                    " online command: %1").Arg(name));
+        }
+
+        auto login = server->GetAccountManager()->GetActiveLogin(
+            targetCharacter->GetUUID());
+
+        uint32_t zoneID = login ? login->GetZoneID() : 0;
+        if(zoneID)
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("%1 is currently in zone %2")
+                .Arg(name).Arg(zoneID));
+        }
+        else
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                libcomp::String("%1 is not currently online")
+                .Arg(name));
+        }
+    }
+    else
+    {
+        // Get number of current players
+        int8_t channelID = (int8_t)server->GetChannelID();
+
+        int32_t total = 0;
+        int32_t channel = 0;
+        for(auto& pair : server->GetAccountManager()->GetActiveLogins())
+        {
+            total++;
+            if(pair.second->GetChannelID() == channelID)
+            {
+                channel++;
+            }
+        }
+
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("Characters online: %1 (%2 on current channel)")
+            .Arg(total).Arg(channel));
+    }
 
     return true;
 }

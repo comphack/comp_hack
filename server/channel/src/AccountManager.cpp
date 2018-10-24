@@ -38,6 +38,7 @@
 #include <AccountWorldData.h>
 #include <BazaarData.h>
 #include <BazaarItem.h>
+#include <ChannelLogin.h>
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
 #include <Clan.h>
@@ -45,6 +46,7 @@
 #include <CultureData.h>
 #include <DemonBox.h>
 #include <DemonQuest.h>
+#include <DigitalizeState.h>
 #include <EventCounter.h>
 #include <EventState.h>
 #include <Expertise.h>
@@ -108,8 +110,9 @@ void AccountManager::HandleLoginRequest(const std::shared_ptr<
 
         libcomp::Packet request;
         request.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
-        request.WriteU32(sessionKey);
+        request.WriteU8(0); // Normal request
         request.WriteString16Little(libcomp::Convert::ENCODING_UTF8, username);
+        request.WriteU32(sessionKey);
 
         worldConnection->SendPacket(request);
     }
@@ -136,6 +139,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
 
     if(InitializeCharacter(character, state))
     {
+        auto characterManager = server->GetCharacterManager();
         auto definitionManager = server->GetDefinitionManager();
         auto demon = character->GetActiveDemon().Get();
 
@@ -150,6 +154,47 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
             ? definitionManager->GetDevilData(demon->GetType()) : nullptr);
         dState->SetEntityID(server->GetNextEntityID());
         dState->RefreshLearningSkills(0, definitionManager);
+
+        // Cancel any status effects that shouldn't still be here
+        characterManager->CancelStatusEffects(client, EFFECT_CANCEL_ZONEOUT);
+
+        auto channelLogin = state->GetChannelLogin();
+        if(channelLogin && channelLogin->GetFromChannel() >= 0)
+        {
+            // Update the player state to match previous channel's state
+            // The login state is cleared later after sending packet data
+            cState->SetActiveSwitchSkills(channelLogin
+                ->GetActiveSwitchSkills());
+
+            // If the character was digitalized, set that up again
+            auto dgDemon = std::dynamic_pointer_cast<objects::Demon>(
+                libcomp::PersistentObject::GetObjectByUUID(channelLogin
+                    ->GetDigitalizeDemon()));
+            if(dgDemon && cState->StatusEffectActive(
+                SVR_CONST.STATUS_DIGITALIZE[(size_t)cState->GetGender()]))
+            {
+                cState->Digitalize(dgDemon, definitionManager);
+            }
+
+            // If one of the active switch skills was a mount skill, add to
+            // the demon too
+            for(uint32_t mountSkillID : definitionManager->GetFunctionIDSkills(
+                SVR_CONST.SKILL_MOUNT))
+            {
+                if(channelLogin->ActiveSwitchSkillsContains(mountSkillID))
+                {
+                    dState->InsertActiveSwitchSkills(mountSkillID);
+                    dState->SetDisplayState(ActiveDisplayState_t::MOUNT);
+                }
+            }
+        }
+        else
+        {
+            // No channel switch happening, we shouldn't have logout
+            // cancel effects
+            characterManager->CancelStatusEffects(client,
+                EFFECT_CANCEL_LOGOUT);
+        }
 
         // Initialize some run-time data
         cState->RecalcEquipState(definitionManager);
@@ -170,6 +215,24 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
 
         cState->RecalculateStats(definitionManager);
         dState->RecalculateStats(definitionManager);
+
+        if(channelLogin)
+        {
+            // Remove any switch skills no longer active or valid
+            std::set<uint32_t> removeSkills;
+            for(uint32_t skillID : channelLogin->GetActiveSwitchSkills())
+            {
+                if(!cState->ActiveSwitchSkillsContains(skillID))
+                {
+                    removeSkills.insert(skillID);
+                }
+            }
+
+            for(uint32_t skillID : removeSkills)
+            {
+                channelLogin->RemoveActiveSwitchSkills(skillID);
+            }
+        }
 
         reply.WriteU32Little(1);
 
@@ -201,58 +264,101 @@ void AccountManager::HandleLogoutRequest(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     LogoutCode_t code, uint8_t channelIdx)
 {
+    // Queue disconnect and start the timer
+    libcomp::Packet reply;
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_LOGOUT);
+    reply.WriteU32Little(
+        (uint32_t)LogoutPacketAction_t::LOGOUT_PREPARE);
+
+    client->SendPacket(reply);
+
+    // Countdown for 10 seconds
+    uint64_t timeout = (uint64_t)(ChannelServer::GetServerTime() +
+        10000000ULL);
+
+    auto channelLogin = client->GetClientState()->GetChannelLogin();
     switch(code)
     {
-        case LogoutCode_t::LOGOUT_CODE_QUIT:
-            {
-                // No need to tell the world, just queue disconnect and request
-                // timer start
-                libcomp::Packet reply;
-                reply.WritePacketCode(
-                    ChannelToClientPacketCode_t::PACKET_LOGOUT);
-                reply.WriteU32Little(
-                    (uint32_t)LogoutPacketAction_t::LOGOUT_PREPARE);
-                client->SendPacket(reply);
-
-                // Countdown for 10 seconds
-                uint64_t timeout = (uint64_t)(ChannelServer::GetServerTime() +
-                    10000000ULL);
-                client->GetClientState()->SetLogoutTimer(timeout);
-                
-                mServer.lock()->GetTimerManager()->ScheduleEventIn(10, []
-                    (std::shared_ptr<channel::ChannelClientConnection> pClient,
-                    uint64_t pTimeout)
+    case LogoutCode_t::LOGOUT_CODE_QUIT:
+        {
+            // Just disconnect, no need to tell the world
+            client->GetClientState()->SetLogoutTimer(timeout);
+            mServer.lock()->GetTimerManager()->ScheduleEventIn(10, []
+                (std::shared_ptr<channel::ChannelClientConnection> pClient,
+                uint64_t pTimeout)
+                {
+                    if(pClient->GetClientState()->GetLogoutTimer() ==
+                        pTimeout)
                     {
-                        if(pClient->GetClientState()->GetLogoutTimer() ==
-                            pTimeout)
-                        {
-                            libcomp::Packet p;
-                            p.WritePacketCode(
-                                ChannelToClientPacketCode_t::PACKET_LOGOUT);
-                            p.WriteU32Little((uint32_t)
-                                LogoutPacketAction_t::LOGOUT_DISCONNECT);
-                            pClient->SendPacket(p);
-                        }
-                    }, client, timeout);
-            }
-            break;
-        case LogoutCode_t::LOGOUT_CODE_SWITCH:
-            {
-                // Tell the world we're performing a channel switch and
-                // wait for the message to be responded to
-                auto account = client->GetClientState()->GetAccountLogin()->GetAccount();
+                        libcomp::Packet p;
+                        p.WritePacketCode(
+                            ChannelToClientPacketCode_t::PACKET_LOGOUT);
+                        p.WriteU32Little((uint32_t)
+                            LogoutPacketAction_t::LOGOUT_DISCONNECT);
+                        pClient->SendPacket(p);
+                    }
+                }, client, timeout);
+        }
+        break;
+    case LogoutCode_t::LOGOUT_CODE_SWITCH:
+        if(channelLogin)
+        {
+            // Request logout immediately
+            auto server = mServer.lock();
+            auto account = client->GetClientState()
+                ->GetAccountLogin()->GetAccount();
 
-                libcomp::Packet p;
-                p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
-                p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
-                p.WriteString16Little(
-                    libcomp::Convert::Encoding_t::ENCODING_UTF8, account->GetUsername());
-                p.WriteS8((int8_t)channelIdx);
-                mServer.lock()->GetManagerConnection()->GetWorldConnection()->SendPacket(p);
-            }
-            break;
-        default:
-            break;
+            libcomp::Packet p;
+            p.WritePacketCode(
+                InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+            p.WriteU32Little((uint32_t)
+                LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
+            p.WriteString16Little(
+                libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                account->GetUsername());
+            channelLogin->SavePacket(p);
+
+            server->GetManagerConnection()
+                ->GetWorldConnection()->SendPacket(p);
+        }
+        else
+        {
+            // Tell the world we're performing a channel switch and wait for
+            // the message to be responded to
+            auto server = mServer.lock();
+            client->GetClientState()->SetLogoutTimer(timeout);
+            server->GetTimerManager()->ScheduleEventIn(10, []
+                (std::shared_ptr<ChannelServer> pServer,
+                std::shared_ptr<channel::ChannelClientConnection> pClient,
+                uint8_t pChannelIdx, uint64_t pTimeout)
+                {
+                    if(pClient->GetClientState()->GetLogoutTimer() ==
+                        pTimeout)
+                    {
+                        auto pChannelLogin = pServer->GetAccountManager()
+                            ->PrepareChannelChange(pClient, 0, 0, pChannelIdx);
+                        auto account = pClient->GetClientState()
+                            ->GetAccountLogin()->GetAccount();
+
+                        libcomp::Packet p;
+                        p.WritePacketCode(
+                            InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+                        p.WriteU32Little((uint32_t)
+                            LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
+                        p.WriteString16Little(
+                            libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                            account->GetUsername());
+                        pChannelLogin->SavePacket(p);
+
+                        pServer->GetManagerConnection()
+                            ->GetWorldConnection()->SendPacket(p);
+                    }
+                }, server, client, channelIdx, timeout);
+        }
+        break;
+    default:
+        break;
     }
 }
 
@@ -290,7 +396,7 @@ void AccountManager::Logout(const std::shared_ptr<
         }
 
         auto dgState = cState->GetDigitalizeState();
-        if(dgState)
+        if(dgState && !state->GetChannelLogin())
         {
             // Active digitalize must be completed
             server->GetCharacterManager()->DigitalizeEnd(client);
@@ -316,8 +422,12 @@ void AccountManager::Logout(const std::shared_ptr<
         // Remove the connection if it hasn't been removed already.
         server->GetManagerConnection()->RemoveClientConnection(client);
 
+        // Unload the account and character so they drop from the cache once
+        // logout completes
         libcomp::ObjectReference<
             objects::Account>::Unload(account->GetUUID());
+        libcomp::ObjectReference<
+            objects::Character>::Unload(character->GetUUID());
 
         // Remove all secondary caching
         server->GetTokuseiManager()->RemoveTrackingEntities(
@@ -335,6 +445,66 @@ void AccountManager::RequestDisconnect(const std::shared_ptr<
         (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
 
     client->SendPacket(request, true);
+}
+
+std::shared_ptr<objects::ChannelLogin> AccountManager::PrepareChannelChange(
+    const std::shared_ptr<channel::ChannelClientConnection>& client,
+    uint32_t zoneID, uint32_t dynamicMapID, uint8_t channelID)
+{
+    auto state = client->GetClientState();
+    auto server = mServer.lock();
+
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    if(!zoneID)
+    {
+        // Use current info and perform logout save
+        auto zone = state->GetZone();
+        if(zone)
+        {
+            zoneID = zone->GetDefinitionID();
+            dynamicMapID = zone->GetDynamicMapID();
+
+            if(character)
+            {
+                character->SetLogoutZone(zoneID);
+                character->SetLogoutX(cState->GetCurrentX());
+                character->SetLogoutY(cState->GetCurrentY());
+                character->SetLogoutRotation(cState->GetCurrentRotation());
+            }
+        }
+    }
+
+    auto channelLogin = std::make_shared<objects::ChannelLogin>();
+    channelLogin->SetToZoneID(zoneID);
+    channelLogin->SetToDynamicMapID(dynamicMapID);
+    channelLogin->SetFromChannel((int8_t)server->GetChannelID());
+    channelLogin->SetToChannel((int8_t)channelID);
+
+    // Set current state values
+    auto dgState = state->GetCharacterState()->GetDigitalizeState();
+    if(dgState && dgState->GetTimeLimited())
+    {
+        channelLogin->SetDigitalizeDemon(dgState->GetDemon().GetUUID());
+    }
+
+    channelLogin->SetActiveSwitchSkills(cState->GetActiveSwitchSkills());
+
+    state->SetChannelLogin(channelLogin);
+
+    // Pull the current event state
+    server->GetEventManager()->SetChannelLoginEvent(client);
+
+    // Save the logout information now (this will also stop any keep alive
+    // refreshes)
+    if(character)
+    {
+        LogoutCharacter(state);
+
+        state->SetLogoutSave(false);
+    }
+
+    return channelLogin;
 }
 
 void AccountManager::Authenticate(const std::shared_ptr<
@@ -376,12 +546,7 @@ bool AccountManager::IncreaseCP(const std::shared_ptr<
 
     if(lobbyDB->ProcessChangeSet(opChangeset))
     {
-        auto syncManager = server->GetChannelSyncManager();
-        if(syncManager->UpdateRecord(account, "Account"))
-        {
-            syncManager->SyncOutgoing();
-        }
-
+        server->GetChannelSyncManager()->SyncRecordUpdate(account, "Account");
         return true;
     }
 
@@ -403,6 +568,50 @@ void AccountManager::SendCPBalance(const std::shared_ptr<
     reply.WriteS32Little(0);
 
     client->SendPacket(reply);
+}
+
+std::unordered_map<int32_t,
+    std::shared_ptr<objects::CharacterLogin>> AccountManager::GetActiveLogins()
+{
+    return mActiveLogins;
+}
+
+std::shared_ptr<objects::CharacterLogin>
+    AccountManager::GetActiveLogin(const libobjgen::UUID& characterUID)
+{
+    libcomp::String lookup = characterUID.ToString();
+
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mCIDMap.find(lookup);
+    if(it != mCIDMap.end())
+    {
+        auto it2 = mActiveLogins.find(it->second);
+        if(it2 != mActiveLogins.end())
+        {
+            return it2->second;
+        }
+    }
+
+    return nullptr;
+}
+
+void AccountManager::UpdateLogins(
+    std::list<std::shared_ptr<objects::CharacterLogin>> updates,
+    std::list<std::shared_ptr<objects::CharacterLogin>> removes)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto update : updates)
+    {
+        mActiveLogins[update->GetWorldCID()] = update;
+        mCIDMap[update->GetCharacter().GetUUID().ToString()] = update
+            ->GetWorldCID();
+    }
+
+    for(auto remove : removes)
+    {
+        mActiveLogins.erase(remove->GetWorldCID());
+        mCIDMap.erase(remove->GetCharacter().GetUUID().ToString());
+    }
 }
 
 bool AccountManager::InitializeCharacter(libcomp::ObjectReference<

@@ -431,11 +431,12 @@ ErrorCodes_t AccountManager::CompleteChannelLogin(
     }
 
     // Now check to see if the account is online.
-    if(objects::AccountLogin::State_t::LOBBY_TO_CHANNEL != login->GetState())
+    if(objects::AccountLogin::State_t::LOBBY_TO_CHANNEL != login->GetState() &&
+        objects::AccountLogin::State_t::CHANNEL_TO_CHANNEL != login->GetState())
     {
         LOG_DEBUG(libcomp::String("Login to channel for account '%1' failed "
-            "because it is not in the lobby to channel state.\n").Arg(
-            username));
+            "because it is not in the lobby to channel or channel to channel "
+            "state.\n").Arg(username));
 
         return ErrorCodes_t::SYSTEM_ERROR;
     }

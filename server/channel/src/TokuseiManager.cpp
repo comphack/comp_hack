@@ -834,8 +834,10 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
 
                 if(apply && !exists)
                 {
-                    effects[statusPair.first] = StatusEffectChange(
-                        statusPair.first, 1, true);
+                    StatusEffectChange change(statusPair.first, 1, true);
+                    change.IsConstant = true;
+
+                    effects[statusPair.first] = change;
                 }
                 else if(!apply && exists)
                 {

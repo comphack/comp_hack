@@ -12,6 +12,8 @@
         <member type="u64" name="LogoutTimer"/>
         <member type="u64" name="BattleEndTimer"/>
         <member type="AccountLogin*" name="AccountLogin"/>
+        <member type="ChannelLogin*" name="ChannelLogin"
+            nulldefault="true"/>
         <member type="AccountWorldData*" name="AccountWorldData"/>
         <member type="EventState*" name="EventState"/>
         <member type="PlayerExchangeSession*" name="ExchangeSession"
@@ -58,7 +60,7 @@
         <member type="EventSequence*" name="State"/>
         <member type="s32" name="SourceEntityID"/>
         <member type="u32" name="ActionGroupID"/>
-        <member type="u8" name="Index"/>
+        <member type="u16" name="Index"/>
         <member type="set" name="DisabledChoices">
             <element type="u8"/>
         </member>

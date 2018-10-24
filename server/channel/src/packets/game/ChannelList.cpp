@@ -32,8 +32,10 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <WorldSharedConfig.h>
+
 // channel Includes
-#include "ChannelClientConnection.h"
 #include "ChannelServer.h"
 
 using namespace channel;
@@ -47,8 +49,13 @@ bool Parsers::ChannelList::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
+    bool distributedZones = server->GetWorldSharedConfig()
+        ->ChannelDistributionCount() > 0;
+
     auto channels = server->GetAllRegisteredChannels();
+    uint8_t channelID = server->GetChannelID();
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHANNEL_LIST);
@@ -59,6 +66,19 @@ bool Parsers::ChannelList::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
             channel->GetName(), true);
 
+        /* The following flag seems to have had two purposes over time:
+         * 1) Pre-channel split it indicated the current zone the player
+         *    was in
+         * 2) Post-channel split it acted as a "hide" when set to zero
+         * Since both channel modes are supported, if post-channel split
+         * "distributed zones" are used, hide all but the current channel so
+         * manual zone switching is not UI enabled. The "current zone" logic
+         * appears to have broken a bit after this change was implemented
+         * which is the cause of the hard channel 0 restriction on login.
+         */
+        reply.WriteU8(!distributedZones || channel->GetID() == channelID
+            ? 1 : 0);
+
         /*
          * Server status is as follows:
          * 0-24 Comfortable
@@ -67,9 +87,9 @@ bool Parsers::ChannelList::Parse(libcomp::ManagerPacket *pPacketManager,
          * 99 Full (White Text)
          * 100+ Full (Red Text)
          */
-        reply.WriteU8(1);   // Show in list (always return true)
         reply.WriteS8(0);   // Percent full
-        reply.WriteS8(0);   // 0 = visible, 2 = PvP
+
+        reply.WriteS8(0);   // 0 = visible, 2 = Specialty (ex: PvP)
     }
 
     connection->SendPacket(reply);

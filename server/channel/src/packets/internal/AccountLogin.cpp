@@ -36,6 +36,7 @@
 // object Includes
 #include <Account.h>
 #include <AccountLogin.h>
+#include <ChannelLogin.h>
 #include <Character.h>
 #include <CharacterLogin.h>
 
@@ -43,6 +44,7 @@
 #include "AccountManager.h"
 #include "ChannelServer.h"
 #include "ManagerConnection.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 
@@ -67,8 +69,8 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(
         pPacketManager->GetServer());
 
-    int8_t errorCode = p.ReadS8();
-    if(errorCode == 1)
+    int8_t responseCode = p.ReadS8();
+    if(responseCode == 1)
     {
         // No error
         objects::AccountLogin response;
@@ -76,6 +78,18 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             LOG_ERROR("Invalid response received for AccountLogin.\n");
             return false;
+        }
+
+        auto channelLogin = std::make_shared<objects::ChannelLogin>();
+        if(p.ReadU8() == 1)
+        {
+            // Channel login also exists
+            if(!channelLogin->LoadPacket(p, false))
+            {
+                LOG_ERROR("Invalid ChannelLogin response received for"
+                    " AccountLogin.\n");
+                return false;
+            }
         }
 
         auto worldDB = server->GetWorldDatabase();
@@ -90,9 +104,9 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             return true;
         }
 
-        // The character should be cached as well
+        // Reload the character just in case
         auto character = response.GetCharacterLogin() != nullptr
-            ? response.GetCharacterLogin()->GetCharacter().Get(worldDB)
+            ? response.GetCharacterLogin()->GetCharacter().Get(worldDB, true)
             : nullptr;
         if(nullptr == character)
         {
@@ -114,8 +128,54 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         login->SetSessionID(response.GetSessionID());
         login->SetCharacterLogin(response.GetCharacterLogin());
 
+        // Respond to this in the handler
+        client->GetClientState()->SetChannelLogin(channelLogin);
+
         server->QueueWork(HandleLoginResponse, server->GetAccountManager(),
             client);
+    }
+    else if(responseCode == 2)
+    {
+        // World is requesting information about which channel to log
+        // a player into from the lobby
+        auto accountLogin = std::make_shared<objects::AccountLogin>();
+        if(!accountLogin->LoadPacket(p, false))
+        {
+            // Nothing we could send the world back would make sense so
+            // let it time out whatever it thinks its doing
+            return true;
+        }
+
+        auto charLogin = accountLogin->GetCharacterLogin();
+
+        auto channelLogin = std::make_shared<objects::ChannelLogin>();
+        channelLogin->SetWorldCID(charLogin->GetWorldCID());
+
+        auto character = charLogin->GetCharacter().Get(server
+            ->GetWorldDatabase(), true);
+        if(character)
+        {
+            uint32_t zoneID = 0, dynamicMapID = 0;
+            int8_t channelID = -1;
+            float x = 0.f, y = 0.f, rot = 0.f;
+            if(server->GetZoneManager()->GetLoginZone(character, zoneID,
+                dynamicMapID, channelID, x, y, rot))
+            {
+                channelLogin->SetToZoneID(zoneID);
+                channelLogin->SetToDynamicMapID(dynamicMapID);
+                channelLogin->SetToChannel(channelID);
+            }
+        }
+
+        // Send the info back to the world
+        libcomp::Packet reply;
+        reply.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
+        reply.WriteU8(1); // Information response
+        accountLogin->SavePacket(reply, false);
+        channelLogin->SavePacket(reply, false);
+
+        server->GetManagerConnection()->GetWorldConnection()
+            ->SendPacket(reply);
     }
     else
     {

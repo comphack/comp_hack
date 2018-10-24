@@ -17,10 +17,12 @@
             <value>PVP_RED</value>
         </member>
         <member type="u8" name="MatchBase"/>
+        <member type="u8" name="MatchZoneInLimit"/>
     </object>
     <object name="ServerZoneTrigger" persistent="false">
         <member type="enum" name="Trigger" underlying="uint8_t">
             <value>ON_SETUP</value>
+            <value>PRE_ZONE_IN</value>
             <value>ON_ZONE_IN</value>
             <value>ON_ZONE_OUT</value>
             <value>ON_SPAWN</value>
@@ -144,6 +146,9 @@
     <object name="ServerZoneInstance" persistent="false">
         <member type="u32" name="ID"/>
         <member type="u32" name="LobbyID"/>
+        <member type="u32" name="GroupID"/>
+        <member type="s32" name="CreateMessageID"/>
+        <member type="s32" name="JoinMessageID"/>
         <member type="list" name="ZoneIDs">
             <element type="u32"/>
         </member>

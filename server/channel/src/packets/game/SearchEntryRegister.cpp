@@ -448,14 +448,7 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(success)
     {
-        if(syncManager->UpdateRecord(entry, "SearchEntry"))
-        {
-            syncManager->SyncOutgoing();
-        }
-        else
-        {
-            success = false;
-        }
+        success = syncManager->SyncRecordUpdate(entry, "SearchEntry");
     }
     else
     {

@@ -36,6 +36,7 @@
 namespace objects
 {
 class DestinyBox;
+class InstanceAccess;
 class ServerZoneInstance;
 }
 
@@ -53,12 +54,11 @@ public:
      * Create a new zone instance.
      * @param id Unique server ID of the zone instance
      * @param definition Pointer to the ServerZoneInstance definition
-     * @param accessCIDs Set of world CIDs for characters with access to the
-     *  instance when it is created
+     * @param access Access definition for the instance
      */
     ZoneInstance(uint32_t id, const std::shared_ptr<
         objects::ServerZoneInstance>& definition,
-        const std::set<int32_t>& accessCIDs);
+        const std::shared_ptr<objects::InstanceAccess>& access);
 
     /**
      * Clean up the zone instance.

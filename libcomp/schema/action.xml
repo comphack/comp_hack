@@ -36,7 +36,6 @@
             <value>ENEMIES</value>
         </member>
         <member type="enum" name="location" default="ZONE">
-            <value>WORLD</value>
             <value>CHANNEL</value>
             <value>INSTANCE</value>
             <value>ZONE</value>

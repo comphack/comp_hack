@@ -148,6 +148,12 @@ public:
     const std::shared_ptr<objects::RegisteredChannel> GetRegisteredChannel();
 
     /**
+     * Get the current channel ID from the RegisteredChannel
+     * @return Current channel ID
+     */
+    uint8_t GetChannelID();
+
+    /**
      * Get all channels registerd on the channel's world (including
      * itself).
      * @return List of pointers to all of the world's registered channels
@@ -358,6 +364,13 @@ public:
      * @return Default character creation object map
      */
     PersistentObjectMap GetDefaultCharacterObjectMap() const;
+
+    /**
+     * Schedule recurring actions that continue to run until the server shuts
+     * down. This does not need to run until the channel has successfully
+     * registered with the world.
+     */
+    void ScheduleRecurringActions();
 
     /**
      * Register a timed event to occur when the world clock is updated to

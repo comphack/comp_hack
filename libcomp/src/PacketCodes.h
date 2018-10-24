@@ -758,7 +758,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_CULTURE_COMPLETE = 0x03B4,  //!< Notification that the current player's culture item is done.
     PACKET_CULTURE_RESULT = 0x03B5,  //!< Message containing information about an culture item being picked up.
     PACKET_CULTURE_END = 0x03B7,  //!< Response to the request to end interaction with a culture machine.
-    PACKET_SKILL_STATE = 0x03B8,    //!< Currently unused. Message containing persisted skill information (cooldown etc).
+    PACKET_SKILL_STATE = 0x03B8,    //!< Unused. Mysterious redundant notification that the player has certain skills available.
     PACKET_EQUIPMENT_MOD_EDIT = 0x03CC,  //!< Response to the request to edit a previously applied equipment modification.
     PACKET_PATTRIBUTE = 0x03E9,    //!< Notification containing punitive attribute system time information. Used by Invoke.
     PACKET_PATTRIBUTE_DEADLINE = 0x03EB, //!< Response to the request for the next punitive attribute deadline.

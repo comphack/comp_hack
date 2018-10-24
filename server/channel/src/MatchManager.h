@@ -597,6 +597,15 @@ private:
     bool CreatePvPInstance(const std::shared_ptr<objects::PvPMatch>& match);
 
     /**
+     * Create a PvPMatch with all pre-instance creation values and send it
+     * to the world to use if the match begins at the specified time. Only
+     * one channel needs to handle this when new ready times are seen.
+     * @param type Standard PvP match type
+     * @param readyTime Match ready time
+     */
+    void QueuePendingPvPMatch(uint8_t type, uint32_t readyTime);
+
+    /**
      * Calculate and assign all trophies earned during an instance's PvP match
      * to the entity statistics for that instance
      * @param instance Pointer to the instance
@@ -618,16 +627,6 @@ private:
     bool ValidateMatchEntries(
         const std::list<std::shared_ptr<ChannelClientConnection>>& clients,
         int8_t teamCategory, bool isTeam, bool checkPenalties);
-
-    /**
-     * Move the supplied client to the PvP match instance after determining
-     * their starting position based upon their team
-     * @param client Pointer to client connection
-     * @param match Pointer to the PvP match definition
-     * @return true if the move was successful, false if it was not
-     */
-    bool MoveToInstance(const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<objects::PvPMatch>& match);
 
     /**
      * Perform all end of phase actions for an Ultimate Battle zone for the

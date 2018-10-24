@@ -42,6 +42,7 @@
 #include <Account.h>
 #include <AccountWorldData.h>
 #include <ChannelConfig.h>
+#include <ChannelLogin.h>
 #include <CharacterProgress.h>
 #include <DemonBox.h>
 #include <DemonQuest.h>
@@ -67,6 +68,7 @@
 #include <EventScriptCondition.h>
 #include <EventState.h>
 #include <Expertise.h>
+#include <InstanceAccess.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <ItemDrop.h>
@@ -298,8 +300,6 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
                     HandleEvent(client, current);
                     return true;
                 }
-
-                /// @todo: check infinite loops
             }
             break;
         case objects::Event::EventType_t::PROMPT:
@@ -447,6 +447,91 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
     ctx.CurrentZone = cState->GetZone();
     ctx.AutoOnly = false;
     
+    HandleNext(ctx);
+
+    return true;
+}
+
+bool EventManager::SetChannelLoginEvent(
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto channelLogin = state->GetChannelLogin();
+    auto current = state->GetEventState()->GetCurrent();
+    if(!current || !channelLogin)
+    {
+        return false;
+    }
+
+    channelLogin->SetActiveEvent(current->GetEvent()->GetID());
+
+    if(current->GetEvent()->GetEventType() ==
+        objects::Event::EventType_t::PERFORM_ACTIONS)
+    {
+        // Actions can be continued in the new channel
+        channelLogin->SetActiveEventIndex(current->GetIndex());
+    }
+    else
+    {
+        // Go to next on start
+        channelLogin->SetActiveEventIndex(1);
+    }
+
+    return true;
+}
+
+bool EventManager::ContinueChannelChangeEvent(
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto state = client->GetClientState();
+    auto channelLogin = state->GetChannelLogin();
+    if(!channelLogin || channelLogin->GetActiveEvent().IsEmpty())
+    {
+        return false;
+    }
+
+    // Source entity ID does not carry over
+    auto instance = PrepareEvent(channelLogin->GetActiveEvent(), 0);
+    if(!instance)
+    {
+        LOG_ERROR(libcomp::String("Unable to continue event '%1' after channel"
+            " change for acount: %1\n").Arg(channelLogin->GetActiveEvent())
+            .Arg(state->GetAccountUID().ToString()));
+        return false;
+    }
+
+    EventContext ctx;
+    ctx.Client = client;
+    ctx.EventInstance = instance;
+    ctx.CurrentZone = state->GetZone();
+    ctx.AutoOnly = false;
+
+    state->GetEventState()->SetCurrent(instance);
+
+    if(instance->GetEvent()->GetEventType() ==
+        objects::Event::EventType_t::PERFORM_ACTIONS)
+    {
+        auto act = std::dynamic_pointer_cast<objects::EventPerformActions>(
+            instance->GetEvent());
+
+        auto actions = act->GetActions();
+
+        int32_t idx = (int32_t)channelLogin->GetActiveEventIndex();
+        while(idx >= 0 && actions.size() > 0)
+        {
+            instance->SetIndex((uint16_t)(instance->GetIndex() + 1));
+            actions.pop_front();
+            idx--;
+        }
+
+        // Jump into the next action we left off on
+        if(actions.size() > 0)
+        {
+            mServer.lock()->GetActionManager()->PerformActions(client,
+                actions, 0, state->GetZone(), 0, false, true);
+        }
+    }
+
     HandleNext(ctx);
 
     return true;
@@ -1921,22 +2006,21 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         else
         {
             // Character has access to instance of type compares to type [value 1]
-            auto instance = mServer.lock()->GetZoneManager()->GetInstanceAccess(client);
+            auto server = mServer.lock();
+            auto access = server->GetZoneManager()->GetInstanceAccess(
+                client->GetClientState()->GetWorldCID());
 
             if(compareMode == EventCompareMode::EXISTS)
             {
-                if(!instance)
-                {
-                    return false;
-                }
-
                 // Special comparison modes for EXISTS
                 switch(condition->GetValue2())
                 {
                 case 1:
                     // Instance the player has access to has variant ID [value 1]
                     {
-                        auto instVar = instance->GetVariant();
+                        auto instVar = access && access->GetVariantID() ? server
+                            ->GetServerDataManager()->GetZoneInstanceVariantData(
+                                access->GetVariantID()) : nullptr;
                         return instVar && (int32_t)instVar->GetID() ==
                             condition->GetValue1();
                     }
@@ -1944,7 +2028,9 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                 case 2:
                     // Instance the player has access to has variant type [value 1]
                     {
-                        auto instVar = instance->GetVariant();
+                        auto instVar = access && access->GetVariantID() ? server
+                            ->GetServerDataManager()->GetZoneInstanceVariantData(
+                                access->GetVariantID()) : nullptr;
                         return instVar && (int32_t)instVar->GetInstanceType() ==
                             condition->GetValue1();
                     }
@@ -1956,26 +2042,27 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                         auto zone = client->GetClientState()->GetZone();
                         auto currentInstance = zone->GetInstance();
 
-                        auto def = instance->GetDefinition();
+                        auto def = access ? server->GetServerDataManager()
+                            ->GetZoneInstanceData(access->GetDefinitionID())
+                            : nullptr;
                         auto currentDef = currentInstance
                             ? currentInstance->GetDefinition() : nullptr;
                         auto currentZoneDef = zone->GetDefinition();
 
                         // true if the instance is the same, the lobby is the
                         // same or they are in the lobby
-                        return instance == currentInstance ||
-                            (currentDef &&
+                        return (currentInstance && !access) ||
+                            (def && ((currentDef &&
                                 def->GetLobbyID() == currentDef->GetLobbyID()) ||
-                            def->GetLobbyID() == currentZoneDef->GetID();
+                                def->GetLobbyID() == currentZoneDef->GetID()));
                     }
                     break;
                 }
             }
 
-            auto def = instance ? instance->GetDefinition() : nullptr;
-            return Compare((int32_t)(def ? def->GetID() : 0), condition->GetValue1(),
-                condition->GetValue2(), compareMode, EventCompareMode::EQUAL,
-                EVENT_COMPARE_NUMERIC2);
+            return Compare((int32_t)(access ? access->GetDefinitionID() : 0),
+                condition->GetValue1(), condition->GetValue2(), compareMode,
+                EventCompareMode::EQUAL, EVENT_COMPARE_NUMERIC2);
         }
     case objects::EventConditionData::Type_t::INVENTORY_FREE:
         if(!client)
@@ -4052,7 +4139,7 @@ bool EventManager::PerformActions(EventContext& ctx)
 
     actionManager->PerformActions(ctx.Client, actions,
         ctx.EventInstance->GetSourceEntityID(), ctx.CurrentZone,
-        ctx.EventInstance->GetActionGroupID(), ctx.AutoOnly);
+        ctx.EventInstance->GetActionGroupID(), ctx.AutoOnly, true);
 
     HandleNext(ctx);
 

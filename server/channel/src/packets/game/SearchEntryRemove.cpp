@@ -115,14 +115,7 @@ bool Parsers::SearchEntryRemove::Parse(libcomp::ManagerPacket *pPacketManager,
     
         if(success)
         {
-            if(syncManager->RemoveRecord(entry, "SearchEntry"))
-            {
-                syncManager->SyncOutgoing();
-            }
-            else
-            {
-                success = false;
-            }
+            success = syncManager->SyncRecordRemoval(entry, "SearchEntry");
         }
         else
         {

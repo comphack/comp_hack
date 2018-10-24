@@ -45,15 +45,22 @@ bool Parsers::KeepAlive::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
     auto state = client->GetClientState();
 
     ServerTime now = server->GetServerTime();
 
     // Keep alive requests should occur once every 10 seconds
-    // After a missed request, the configurable server timeout countdown will occur
-    client->RefreshTimeout(now, 10);
+    // After a missed request, the configurable server timeout countdown
+    // will occur. Stop refreshing if the client is already prepared for
+    // a disconnect
+    if(state->GetLogoutSave())
+    {
+        client->RefreshTimeout(now, 10);
+    }
 
     // Refresh the client entity positions
     state->GetCharacterState()->RefreshCurrentPosition(now);

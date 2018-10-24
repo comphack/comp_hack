@@ -49,5 +49,9 @@
             <element type="u8"/>
         </member>
         <member type="u16" name="DailyGPLoss" default="3"/>
+        <member type="map" name="ChannelDistribution">
+            <key type="u32"/>
+            <value type="u8"/>
+        </member>
     </object>
 </objgen>

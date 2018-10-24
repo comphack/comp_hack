@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include <CString.h>
+#include <InternalConnection.h>
 
 // Standard C++11 Includes
 #include <unordered_map>
@@ -39,6 +40,7 @@
 namespace objects
 {
 class AccountWorldData;
+class ChannelLogin;
 class Character;
 class WebGameSession;
 }
@@ -89,14 +91,14 @@ public:
     bool ChannelLogin(std::shared_ptr<objects::AccountLogin> login);
 
     /**
-     * Transition the login from CHANNEL to CHANNEL_TO_CHANNEL and sechedule
+     * Transition the login from CHANNEL to CHANNEL_TO_CHANNEL and schedule
      * a timeout.
      * @param login Login information associated to the account.
-     * @param channelID New channel ID, the connection will be moved to
+     * @param switchDef Definition of the connection that will be moved to
      * @return true if the update succeeded, false if it did not
      */
     bool SwitchChannel(std::shared_ptr<objects::AccountLogin> login,
-        int8_t channelID);
+        const std::shared_ptr<objects::ChannelLogin>& switchDef);
 
     /**
      * Get the current user login state independent of world.
@@ -138,14 +140,55 @@ public:
         LogoutUsersOnChannel(int8_t channel);
 
     /**
-     * "Pop" any existing channel switch signifier from the manager for
-     * the specified account and return the channel ID value.
-     * @param username Username of the account set to switch channels
-     * @param channel Output parameter to store the channel being switched
-     *  to. If no channel switch is stored, this will not be set.
-     * @return true if a channel switch is stored, false if it is not
+     * Handle a request to connect to a channel from the lobby
+     * @param login Pointer to the AccountLogin request
      */
-    bool PopChannelSwitch(const libcomp::String& username, int8_t& channel);
+    void HandleLobbyLogin(const std::shared_ptr<objects::AccountLogin>& login);
+
+    /**
+     * Complete the request to connect to a channel from the lobby. If the
+     * server is configured for multiple channels, the request may have been
+     * relayed from the primary channel intead with the proper target channel
+     * and zone supplied.
+     * @param login Pointer to the AccountLogin request
+     * @param channelLogin Optional parameter supplied by the primary channel
+     *  when multiple channels are configured containing target login info
+     */
+    void CompleteLobbyLogin(
+        const std::shared_ptr<objects::AccountLogin>& login,
+        const std::shared_ptr<objects::ChannelLogin>& channelLogin = nullptr);
+
+    /**
+     * Handle a request to complete a channel login
+     * @param requestConnection Pointer to the channel connection where the
+     *  request came from
+     * @param sessionKey Session key supplied to the channel from the client
+     *  used for login validation
+     * @param username Username of the account logging in
+     */
+    void HandleChannelLogin(
+        const std::shared_ptr<libcomp::InternalConnection>& requestConnection,
+        uint32_t sessionKey, const libcomp::String& username);
+
+    /**
+     * Check if any existing channel switch signifier exists for the specified
+     * account
+     * @param username Username of the account set to check
+    * @param channel Output parameter to store the channel being switched
+    *  to. If no channel switch is stored, this will not be set.
+     * @return Pointer to the channel switch definition
+     */
+    bool ChannelSwitchPending(const libcomp::String& username,
+        int8_t& channel);
+
+    /**
+     * "Pop" any existing channel switch signifier from the manager for
+     * the specified account and return it
+     * @param username Username of the account set to switch channels
+     * @return Pointer to the channel switch definition
+     */
+    std::shared_ptr<objects::ChannelLogin> PopChannelSwitch(
+        const libcomp::String& username);
 
     /**
      * Perform all clean up operations related to each AccountWorldData entry
@@ -217,9 +260,10 @@ private:
      * account. The next logout request will pop this value and await a
      * reconnect to the specified channel rather than log the account out.
      * @param username Username of the account that will switch channels
-     * @param channel Channel being switched to
+     * @param switchDef Definition of the connection that will be moved to
      */
-    void PushChannelSwitch(const libcomp::String& username, int8_t channel);
+    void PushChannelSwitch(const libcomp::String& username,
+        const std::shared_ptr<objects::ChannelLogin>& switchDef);
 
     /**
      * Utility function to free up references to a PersistentObject loaded
@@ -244,7 +288,8 @@ private:
 
     /// Map of account usernames associated to accounts set to switch
     /// channel upon next disconnect from a channel
-    std::unordered_map<libcomp::String, int8_t> mChannelSwitches;
+    std::unordered_map<libcomp::String,
+        std::shared_ptr<objects::ChannelLogin>> mChannelSwitches;
 
     /// Map of account usernames associated to accounts to web-game sessions
     /// either pending or active for a character currently playing

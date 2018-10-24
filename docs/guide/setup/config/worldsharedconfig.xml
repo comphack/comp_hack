@@ -253,4 +253,17 @@
 
 </section><!-- DailyGPLoss -->
 
+<section>
+<title>ChannelDistribution</title>
+<para><emphasis role="strong">Type:</emphasis> map of integer to integer</para>
+<para><emphasis role="strong">Default:</emphasis> empty</para>
+<para>Map of ServerZone or ServerZoneInstance GroupID values to channel IDs specifying which channel the zones should be created on. If no entries are specified here, each channel server connected to the world will host every zone and the manual channel change control will be enabled. If a single entry is specified, all unspecified zones will default to the primary channel (channel 0).</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="ChannelDistribution"><pair><key>10101</key><value>0</value></pair></member>]]></para>
+</section><!-- Example -->
+
+</section><!-- ChannelDistribution -->
+
 </section>

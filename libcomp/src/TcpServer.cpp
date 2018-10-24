@@ -55,7 +55,7 @@ TcpServer::~TcpServer()
     }
 }
 
-int TcpServer::Start()
+int TcpServer::Start(bool delayReady)
 {
     // Check for a DH key pair.
     if(nullptr == mDiffieHellman)
@@ -115,7 +115,10 @@ int TcpServer::Start()
         mService.run();
     });
 
-    ServerReady();
+    if(!delayReady)
+    {
+        ServerReady();
+    }
 
     int returnCode = Run();
 

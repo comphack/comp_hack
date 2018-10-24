@@ -118,6 +118,12 @@ public:
         const libcomp::String& characterName);
 
     /**
+     * Retrieve all currently active CharacterLogins
+     * @return List of pointers to active CharacterLogins
+     */
+    std::list<std::shared_ptr<objects::CharacterLogin>> GetActiveCharacters();
+
+    /**
      * Match the supplied world CID with a registered character login and
      * send a request to the channel they are currently logged into to
      * disconnect that account
@@ -267,11 +273,9 @@ public:
      *  the party member leaving
      * @param requestConnection Optional parameter for the connection
      *  that sent the request
-     * @param tempLeave If true, the character will be able to join again
-     *  if the party remains.  Useful for handling log out joining.
      */
     void PartyLeave(std::shared_ptr<objects::CharacterLogin> cLogin,
-        std::shared_ptr<libcomp::TcpConnection> requestConnection, bool tempLeave);
+        std::shared_ptr<libcomp::TcpConnection> requestConnection);
 
     /**
      * Attempt to disband the specified party. All necessary packet
@@ -517,16 +521,8 @@ public:
      */
     void SendTeamInfo(int32_t teamID, const std::list<int32_t>& cids = {});
 
-private:
     /**
-     * Create a new party and set the supplied member as the leader
-     * @param member Party member to designate as the leader of a new party
-     * @return The ID of a the new party, 0 upon failure
-     */
-    uint32_t CreateParty(std::shared_ptr<objects::PartyCharacter> member);
-
-    /**
-     * Send new party member ifnormation to the current players in the party
+     * Send party member information to the current players in the party
      * @param member Pointer to the new party member
      * @param partyID ID of the party
      * @param newParty true if the party was just created, false if it already
@@ -534,9 +530,17 @@ private:
      * @param sourceConnection Optional parameter for the connection
      *  that sent the request
      */
-    void SendNewPartyMember(std::shared_ptr<objects::PartyCharacter> member,
-        uint32_t partyID, bool newParty,
+    void SendPartyMember(std::shared_ptr<objects::PartyCharacter> member,
+        uint32_t partyID, bool newParty, bool isRefresh,
         std::shared_ptr<libcomp::TcpConnection> sourceConnection);
+
+private:
+    /**
+     * Create a new party and set the supplied member as the leader
+     * @param member Party member to designate as the leader of a new party
+     * @return The ID of a the new party, 0 upon failure
+     */
+    uint32_t CreateParty(std::shared_ptr<objects::PartyCharacter> member);
 
     /**
      * Remove the supplied CharacterLogin from their current party

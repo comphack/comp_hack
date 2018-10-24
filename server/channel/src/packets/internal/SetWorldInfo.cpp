@@ -49,7 +49,8 @@
 
 using namespace channel;
 
-std::shared_ptr<libcomp::Database> ParseDatabase(const std::shared_ptr<ChannelServer>& server,
+std::shared_ptr<libcomp::Database> ParseDatabase(
+    const std::shared_ptr<ChannelServer>& server,
     libcomp::ReadOnlyPacket& p)
 {
     auto databaseType = server->GetConfig()->GetDatabaseType();
@@ -97,8 +98,8 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     auto channelID = p.ReadU8();
     auto otherChannelsExist = p.ReadU8() == 1;
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
 
     // Get the world database config
     auto worldDatabase = ParseDatabase(server, p);
@@ -114,8 +115,8 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     auto lobbyDatabase = ParseDatabase(server, p);
     if(nullptr == lobbyDatabase)
     {
-        LOG_CRITICAL("World Server supplied lobby database configuration could not"
-            " be initialized as a database.\n");
+        LOG_CRITICAL("World Server supplied lobby database configuration could"
+            " not be initialized as a database.\n");
         return false;
     }
     server->SetLobbyDatabase(lobbyDatabase);
@@ -128,9 +129,13 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
             " be loaded.\n");
         return false;
     }
+
+    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server
+        ->GetConfig());
     conf->SetWorldSharedConfig(worldSharedConfig);
 
-    auto svr = objects::RegisteredWorld::LoadRegisteredWorldByID(lobbyDatabase, worldID);
+    auto svr = objects::RegisteredWorld::LoadRegisteredWorldByID(lobbyDatabase,
+        worldID);
     if(nullptr == svr)
     {
         LOG_CRITICAL("World Server could not be loaded from the database.\n");
@@ -144,43 +149,41 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
 
     if(!server->RegisterServer(channelID))
     {
-        LOG_CRITICAL("The server failed to register with the world's database.\n");
+        LOG_CRITICAL("The server failed to register with the world's"
+            " database.\n");
         return false;
     }
 
-    // Initialize the sync manager now that we have the DBs, shutdown if it fails
+    // Load local geometry and build global zone instances now that we've
+    // connected properly
+    server->GetZoneManager()->LoadGeometry();
+    server->GetZoneManager()->InstanceGlobalZones();
+
+    // Initialize the sync manager now that we have the DBs, shutdown if
+    // it fails
     if(!server->GetChannelSyncManager()->Initialize())
     {
         server->Shutdown();
         return true;
     }
 
-    // Build all global zone instances now that we've connected properly
-    server->GetZoneManager()->InstanceGlobalZones();
-
     if(otherChannelsExist)
     {
         server->LoadAllRegisteredChannels();
     }
+
+    server->ServerReady();
 
     //Reply with the channel information
     libcomp::Packet reply;
 
     reply.WritePacketCode(
         InternalPacketCode_t::PACKET_SET_CHANNEL_INFO);
-    reply.WriteU8(server->GetRegisteredChannel()->GetID());
+    reply.WriteU8(server->GetChannelID());
 
     connection->SendPacket(reply);
 
-    // Now that we've connected to the world successfully, hit the first server tick
-    // to start the main loop in addition to any recurring scheduled work
-    server->StartGameTick();
-    server->Tick();
-
-    if(conf->GetTimeout() > 0)
-    {
-        server->GetManagerConnection()->ScheduleClientTimeoutHandler(conf->GetTimeout());
-    }
+    server->ScheduleRecurringActions();
 
     return true;
 }
@@ -193,7 +196,8 @@ bool Parsers::SetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     // not parse properly, the channel cannot start and should be shutdown.
     if(!SetWorldInfoFromPacket(pPacketManager, connection, p))
     {
-        auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+        auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+            ->GetServer());
         server->Shutdown();
         return false;
     }

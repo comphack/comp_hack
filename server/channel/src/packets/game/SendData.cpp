@@ -38,8 +38,11 @@
 
 // object includes
 #include <Account.h>
-#include <ServerZone.h>
 #include <ChannelConfig.h>
+#include <ChannelLogin.h>
+#include <InstanceAccess.h>
+#include <ServerZone.h>
+#include <ServerZoneInstance.h>
 #include <WorldSharedConfig.h>
 
 // channel Includes
@@ -56,8 +59,11 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     auto serverDataManager = server->GetServerDataManager();
     auto zoneManager = server->GetZoneManager();
     auto state = client->GetClientState();
+    auto channelLogin = state->GetChannelLogin();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
+
+    bool channelSwitched = channelLogin && channelLogin->GetFromChannel() >= 0;
 
     // Send world time
     {
@@ -114,89 +120,68 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
         client->QueuePacket(p);
     }
 
-    /// @todo: send player skill updates (toggleable abilities for example) [0x03B8]
-
     // Set character icon
     characterManager->SetStatusIcon(client);
 
-    // Send zone information
+    // Add to the login zone
     {
-        // Default to last logout information first
-        uint32_t zoneID = character->GetLogoutZone();
-        float xCoord = character->GetLogoutX();
-        float yCoord = character->GetLogoutY();
-        float rotation = character->GetLogoutRotation();
-
-        // Make sure the player can start in the zone
-        if(zoneID != 0)
+        std::shared_ptr<objects::InstanceAccess> instAccess;
+        if(channelSwitched)
         {
-            auto zoneData = serverDataManager->GetZoneData(zoneID, 0);
-            if(!zoneData)
+            // Switched from another channel, enter instance if valid
+            auto access = zoneManager->GetInstanceAccess(state
+                ->GetWorldCID());
+            if(access && serverDataManager->ExistsInInstance(
+                access->GetDefinitionID(), channelLogin->GetToZoneID(),
+                channelLogin->GetToDynamicMapID()))
             {
-                // Can't discern any information about the logout zone
-                zoneID = 0;
-            }
-            else if(!zoneData->GetGlobal() || zoneData->GetRestricted())
-            {
-                // Determine which public zone to go to instead, defaulting
-                // to the lobby matching the group ID
-                uint32_t publicID = zoneData->GetGroupID();
-                if(!publicID && character->GetPreviousZone())
-                {
-                    // If there is no group for the zone, return to
-                    // the previous public zone
-                    publicID = character->GetPreviousZone();
-                }
-
-                auto publicData = serverDataManager->GetZoneData(publicID, 0);
-                if(publicData && publicData->GetGlobal())
-                {
-                    zoneID = publicData->GetID();
-                    xCoord = publicData->GetStartingX();
-                    yCoord = publicData->GetStartingY();
-                    rotation = publicData->GetStartingRotation();
-                }
-                else
-                {
-                    // Correct it further down
-                    zoneID = 0;
-                }
+                instAccess = access;
             }
         }
 
-        // Default to homepoint second
-        if(zoneID == 0)
+        if(instAccess)
         {
-            zoneID = character->GetHomepointZone();
-
-            auto zoneData = server->GetServerDataManager()->GetZoneData(zoneID, 0);
-            if(zoneData)
+            if(!zoneManager->MoveToInstance(client, instAccess, true))
             {
-                zoneManager->GetSpotPosition(zoneData->GetDynamicMapID(),
-                    character->GetHomepointSpotID(), xCoord, yCoord, rotation);
+                LOG_ERROR(libcomp::String("Failed to add client to zone"
+                    " instance %1. Closing the connection.\n")
+                    .Arg(instAccess->GetDefinitionID()));
+                client->Close();
+                return;
             }
         }
-
-        // If all else fails start in the default zone
-        if(zoneID == 0)
+        else
         {
-            auto zoneData = serverDataManager->GetZoneData(
-                SVR_CONST.ZONE_DEFAULT, 0);
-            if(zoneData)
+            // Normal login, get zone info and verify channel
+            uint32_t zoneID = 0, dynamicMapID = 0;
+            float x = 0.f, y = 0.f, rot = 0.f;
+
+            int8_t channelID = -1;
+            if(!zoneManager->GetLoginZone(character, zoneID, dynamicMapID,
+                channelID, x, y, rot))
             {
-                zoneID = zoneData->GetID();
-                xCoord = zoneData->GetStartingX();
-                yCoord = zoneData->GetStartingY();
-                rotation = zoneData->GetStartingRotation();
+                LOG_ERROR(libcomp::String("Login zone for character %1 could"
+                    " not be determined.\n")
+                    .Arg(character->GetUUID().ToString()));
+                client->Close();
+                return;
             }
-        }
+            else if(channelID != -1 &&
+                (uint8_t)channelID != server->GetChannelID())
+            {
+                // Don't actually fail here, attempt to move to other channel
+                LOG_ERROR(libcomp::String("Login zone information determined"
+                    " for character %1 was not valid for this channel.\n")
+                    .Arg(character->GetUUID().ToString()));
+            }
 
-        if(!zoneManager->EnterZone(client, zoneID, 0, xCoord, yCoord, rotation))
-        {
-            LOG_ERROR(libcomp::String("Failed to add client to zone"
-                " %1. Closing the connection.\n").Arg(zoneID));
-            client->Close();
-            return;
+            if(!zoneManager->EnterZone(client, zoneID, dynamicMapID, x, y, rot))
+            {
+                LOG_ERROR(libcomp::String("Failed to add client to zone"
+                    " %1. Closing the connection.\n").Arg(zoneID));
+                client->Close();
+                return;
+            }
         }
     }
 

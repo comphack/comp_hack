@@ -89,13 +89,6 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
             request.WritePacketCode(
                 ChannelToClientPacketCode_t::PACKET_LOGOUT);
             request.WriteU32Little(
-                (uint32_t)LogoutPacketAction_t::LOGOUT_PREPARE);
-            client->QueuePacket(request);
-
-            request.Clear();
-            request.WritePacketCode(
-                ChannelToClientPacketCode_t::PACKET_LOGOUT);
-            request.WriteU32Little(
                 (uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
             request.WriteU32Little(sessionKey);
             request.WriteString16Little(libcomp::Convert::ENCODING_UTF8,

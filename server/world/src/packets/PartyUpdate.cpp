@@ -341,7 +341,7 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         break;
     case InternalPacketAction_t::PACKET_ACTION_GROUP_LEAVE:
-        server->GetCharacterManager()->PartyLeave(cLogin, connection, false);
+        server->GetCharacterManager()->PartyLeave(cLogin, connection);
         break;
     case InternalPacketAction_t::PACKET_ACTION_GROUP_DISBAND:
         server->GetCharacterManager()->PartyDisband(cLogin->GetPartyID(), cLogin->GetWorldCID(), connection);

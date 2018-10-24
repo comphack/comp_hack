@@ -157,6 +157,26 @@ public:
         int32_t responseID, int64_t objectID = -1);
 
     /**
+     * Set the supplied client's ChannelLogin active event and event index
+     * so the event chain can be continued when they arrive at the other
+     * channel server
+     * @param client Pointer to the client connection
+     * @return true on success, false on failure
+     */
+    bool SetChannelLoginEvent(
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Continue an event that was in progress when the supplied client changed
+     * from another channel to the current one.
+     * @param client Pointer to the client connection
+     * @return true if an event was started, false if no event needed to
+     *  be performed
+     */
+    bool ContinueChannelChangeEvent(
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
      * Start, update or complete a quest based upon the quest ID and phase
      * supplied. Restrictions are enforced to disallow skipping phases, etc.
      * @param client Pointer to the client the quest is associated to

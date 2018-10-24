@@ -93,6 +93,13 @@
         <member type="u32" name="DropSetID"/>
         <member type="SpawnRestriction*" name="Restrictions"
             nulldefault="true"/>
+
+        <member type="list" name="SuccessActions">
+            <element type="Action*"/>
+        </member>
+        <member type="list" name="FailActions">
+            <element type="Action*"/>
+        </member>
     </object>
     <object name="SpawnRestriction" persistent="false">
         <member type="bool" name="Disabled"/>

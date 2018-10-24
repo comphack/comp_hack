@@ -356,12 +356,8 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         else
         {
             success = true;
-
-            auto syncManager = server->GetChannelSyncManager();
-            if(syncManager->UpdateRecord(account, "Account"))
-            {
-                syncManager->SyncOutgoing();
-            }
+            server->GetChannelSyncManager()->SyncRecordUpdate(account,
+                "Account");
         }
     }
 

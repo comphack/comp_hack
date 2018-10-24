@@ -173,19 +173,12 @@ public:
 
     /**
      * Create a zone instance with access granted for the supplied CIDs
-     * @param instanceID Definition ID of the instance to create
-     * @param accessCIDs World CIDs to grant access to
-     * @param variantID Optional ID of a variant definition to assign to
-     *  the instance
-     * @param timerID Optional ID of a timer to assign to the instance that
-     *  will be started when the first player enters
-     * @param timerExpirationEventID Optional ID of the event to execute if
-     *  the timer expires
-     * @return Pointer to the new zone instance, null if it failed to create
+     * @param access Pointer to the access definition
+     * @return 0 if it failed to create, 1 if it created local, 2 if a request
+     *  was sent to the world to create the instance 
      */
-    std::shared_ptr<ZoneInstance> CreateInstance(uint32_t instanceID,
-        const std::set<int32_t>& accessCIDs, uint32_t variantID = 0,
-        uint32_t timerID = 0, libcomp::String timerExpirationEventID = "");
+    uint8_t CreateInstance(
+        const std::shared_ptr<objects::InstanceAccess>& access);
 
     /**
      * Get a zone instance by ID
@@ -195,24 +188,12 @@ public:
     std::shared_ptr<ZoneInstance> GetInstance(uint32_t instanceID);
 
     /**
-     * Get the zone instance the supplied client has access to. If an instance
-     * is prepared that the character has not entered yet, it will be returned.
-     * If not and the client is currently in a zone instance, that will be
-     * returned instead.
-     * @param client Client connection to create a zone instance for
-     * @return Pointer to the zone instance, null if none exist
+     * Get the zone instance access available to the supplied world CID
+     * @param worldCID Character world CID
+     * @return Pointer to the zone access, null if none exist
      */
-    std::shared_ptr<ZoneInstance> GetInstanceAccess(const std::shared_ptr<
-        ChannelClientConnection>& client);
-
-    /**
-     * Remove access to a zone instance by unique ID. If any characters are
-     * in the zones, they will not be kicked and the instance will be cleaned
-     * up when the last player leaves.
-     * @param instanceID Unique ID of the instance to clean up
-     * @return true if the instance was cleaned up, false it was not
-     */
-    bool ClearInstanceAccess(uint32_t instanceID);
+    std::shared_ptr<objects::InstanceAccess> GetInstanceAccess(
+        int32_t worldCID);
 
     /**
      * Get or create a zone in the supplied instance. Useful for creating
@@ -224,6 +205,23 @@ public:
      */
     std::shared_ptr<Zone> GetInstanceZone(const std::shared_ptr<
         ZoneInstance>& instance, uint32_t zoneID, uint32_t dynamicMapID);
+
+    /**
+     * Get information about the correct zone and channel to log into for
+     * the supplied character
+     * @param character Pointer to the character attempting to log in
+     * @param zoneID Output parameter for the zone ID to log into
+     * @param dynamicMapID Output parameter for the dynamic map ID to log into
+     * @param channelID Output parameter for the channel to log into or
+     *  -1 if the channel does not matter
+     * @param x X coordinate for the zone login
+     * @param y Y coordinate for the zone login
+     * @param rot Rotation for the zone login (in radians)
+     * @return true if the zone was determined correctly, false if it was not
+     */
+    bool GetLoginZone(const std::shared_ptr<objects::Character>& character,
+        uint32_t& zoneID, uint32_t& dynamicMapID, int8_t& channelID,
+        float& x, float& y, float& rot);
 
     /**
      * Get or create the first zone in the supplied instance
@@ -251,14 +249,14 @@ public:
      * Move the supplied client to the starting zone of the instance they
      * are entering
      * @param client Pointer to the client connection entering the instance
-     * @param instance Pointer to the instance the client is entering
+     * @param access Pointer to the access definition, will be loaded from the
+     *  client if not specified
      * @param diasporaEnter Optional indicator required to be set if the client
      *  is entering a Diaspora instance as it's entrance criteria is unique
      * @return true if the move was successful, false if it was not
      */
-    bool MoveToStartingZone(
-        const std::shared_ptr<ChannelClientConnection>& client,
-        const std::shared_ptr<ZoneInstance>& instance,
+    bool MoveToInstance(const std::shared_ptr<ChannelClientConnection>& client,
+        std::shared_ptr<objects::InstanceAccess> access = nullptr,
         bool diasporaEnter = false);
 
     /**
@@ -784,7 +782,7 @@ public:
 
     /**
      * Get the X/Y coordinates and rotation of the center point of a spot.
-     * @param dynamaicMapID Dynamic map ID of the zone containing the spot
+     * @param dynamicMapID Dynamic map ID of the zone containing the spot
      * @param spotID Spot ID to find the center of
      * @param x Default X position to use if the spot is not found, changes
      *  to the spot center X coordinate if found
@@ -893,6 +891,16 @@ public:
      */
     static Point RotatePoint(const Point& p, const Point& origin, float radians);
 
+    /**
+     * Sync updates and removals to InstanceAccess definitions that belong
+     * to this server or any other one
+     * @param updates List of updated InstanceAccess definitions
+     * @param removes List of removed InstanceAccess definitions
+     */
+    void SyncInstanceAccess(
+        std::list<std::shared_ptr<objects::InstanceAccess>> updates,
+        std::list<std::shared_ptr<objects::InstanceAccess>> removes);
+
 private:
     /**
      * Select a spot for a spawn group and get it's location.
@@ -913,6 +921,28 @@ private:
         std::shared_ptr<DynamicMap>& dynamicMap,
         std::shared_ptr<objects::ServerZone>& zoneDef,
         std::list<std::shared_ptr<objects::SpawnLocation>>& locations);
+
+    /**
+     * Move the supplied client from the current channel to another based upon
+     * the zone being moved to. This will cause the client to log out upon
+     * success.
+     * @param client Pointer to the client connection
+     * @param zoneID ID of the zone being entered
+     * @param dynamicMapID ID of the dynamic map being entered
+     * @param toInstance If supplied, the zone and dynamic map belong to an
+     *  instance and the access should be used
+     * @param x X coordinate to use in the new zone, ignored for instances
+     * @param y Y coordinate to use in the new zone, ignored for instances
+     * @param rot Rotation to use in the new zone (in radians), ignored for
+     *  instances
+     * @return true if the client was moved, false if they either didn't
+     *  need to move or the move failed
+     */
+    bool MoveToZoneChannel(
+        const std::shared_ptr<ChannelClientConnection>& client,
+        uint32_t zoneID, uint32_t dynamicMapID,
+        const std::shared_ptr<objects::InstanceAccess>& toInstance,
+        float x = 0.f, float y = 0.f, float rot = 0.f);
 
     /**
      * Calculate the shortest path between the supplied source and destination
@@ -1064,6 +1094,20 @@ private:
         const std::shared_ptr<Zone>& zone);
 
     /**
+     * Send InstanceAccess create or join messages to either one player or
+     * all players that have access to it
+     * @param access Pointer to the InstanceAccess
+     * @param joined If true the join message will be sent, if false the
+     *  create message will be sent
+     * @param client Pointer to a client connection that has access to the
+     *  instance. If null all players that have access to the instance will
+     *  be sent the message instead
+     */
+    void SendAccessMessage(
+        const std::shared_ptr<objects::InstanceAccess>& access, bool joined,
+        const std::shared_ptr<ChannelClientConnection>& client = nullptr);
+
+    /**
      * Remove and clean up all zone information for a specific zone
      * @param zone Pointer to the zone
      * @param freezeOnly If true, the zone will only be frozen and removed
@@ -1119,10 +1163,11 @@ private:
     /// Map of zone instances by unique ID
     std::unordered_map<uint32_t, std::shared_ptr<ZoneInstance>> mZoneInstances;
 
-    /// Map of world CIDs to the zone instances they have access to. The
+    /// Map of world CIDs to the zone instance access definitions. The
     /// moment a character enters the zone, they are removed from this map
     /// as they are not able to intentionally re-enter
-    std::unordered_map<int32_t, uint32_t> mZoneInstanceAccess;
+    std::unordered_map<int32_t,
+        std::shared_ptr<objects::InstanceAccess>> mZoneInstanceAccess;
 
     /// Map of world CIDs to zone unique IDs
     std::unordered_map<int32_t, uint32_t> mEntityMap;

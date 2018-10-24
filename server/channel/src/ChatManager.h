@@ -473,6 +473,17 @@ private:
         const std::list<libcomp::String>& args);
 
     /**
+     * GM command to get the number of players on each channel or to
+     * determine if a specific character is currently online.
+     * @param client Pointer to the client that sent the command
+     * @param args List of arguments for the command
+     * @return true if the command was handled properly, else false
+     */
+    bool GMCommand_Online(const std::shared_ptr<
+        channel::ChannelClientConnection>& client,
+        const std::list<libcomp::String>& args);
+
+    /**
      * GM command to reset a specific player's PvP penalties.
      * @param client Pointer to the client that sent the command
      * @param args List of arguments for the command

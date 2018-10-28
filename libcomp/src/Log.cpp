@@ -29,6 +29,7 @@
 #include <iostream>
 #include <cassert>
 #include <chrono>
+#include <thread>
 
 #include <cstdio>
 #include <cstdlib>
@@ -39,6 +40,9 @@
 #else
 #include <unistd.h>
 #endif // _WIN32
+
+// zlib Includes
+#include <zlib.h>
 
 using namespace libcomp;
 
@@ -161,7 +165,7 @@ static void LogToStandardOutput(Log::Level_t level,
     std::cout.flush();
 }
 
-Log::Log() : mLogFile(nullptr)
+Log::Log() : mLogFile(nullptr), mLastLog(-1337)
 {
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
@@ -188,6 +192,10 @@ Log::Log() : mLogFile(nullptr)
     }
 
     mLogFileTimestampEnabled = false;
+    mLogRotationEnabled = false;
+    mLogCompression = true;
+    mLogRotationCount = 3;
+    mLogRotationDays = 1;
 }
 
 Log::~Log()
@@ -250,10 +258,20 @@ void Log::LogMessage(Log::Level_t level, const String& msg)
 
     if(nullptr != mLogFile)
     {
+        auto now = std::chrono::system_clock::now();
+        auto duration = std::chrono::duration_cast< std::chrono::duration<
+            int64_t, std::ratio<86400>> >( now.time_since_epoch() ).count();
+
+        if(mLogRotationEnabled && mLogRotationDays <= (duration - mLastLog))
+        {
+            RotateLogs();
+        }
+
+        mLastLog = duration;
+
         if(mLogFileTimestampEnabled)
         {
-            auto currentTime = std::chrono::system_clock::to_time_t(
-                std::chrono::system_clock::now());
+            auto currentTime = std::chrono::system_clock::to_time_t(now);
 
             std::stringstream ss;
             ss << std::put_time(std::localtime(&currentTime), "%Y/%m/%d %T");
@@ -412,4 +430,167 @@ void Log::SetLogFileTimestampsEnabled(bool enabled)
 {
     // Set if the log file timestamps are enabled.
     mLogFileTimestampEnabled = enabled;
+}
+
+bool Log::GetLogRotationEnabled() const
+{
+    return mLogRotationEnabled;
+}
+
+void Log::SetLogRotationEnabled(bool enabled)
+{
+    mLogRotationEnabled = enabled;
+}
+
+bool Log::GetLogCompression() const
+{
+    return mLogCompression;
+}
+
+void Log::SetLogCompression(bool enabled)
+{
+    mLogCompression = enabled;
+}
+
+int Log::GetLogRotationCount() const
+{
+    return mLogRotationCount;
+}
+
+void Log::SetLogRotationCount(int count)
+{
+    mLogRotationCount = count;
+}
+
+int Log::GetLogRotationDays() const
+{
+    return mLogRotationDays;
+}
+
+void Log::SetLogRotationDays(int days)
+{
+    mLogRotationDays = days;
+}
+
+void Log::RotateLogs()
+{
+    // Do not rotate if the main log does not exist.
+    if(!mLogPath.IsEmpty() && !FileExists(mLogPath))
+    {
+        return;
+    }
+
+    // Delete the last log that we will rotate out.
+    FileDelete(libcomp::String("%1.%2").Arg(mLogPath).Arg(
+        mLogRotationCount));
+    FileDelete(libcomp::String("%1.%2.gz").Arg(mLogPath).Arg(
+        mLogRotationCount));
+
+    // Now we need to rotate them out moving the files as we go.
+    for(int i = mLogRotationCount - 1; i > 0; --i)
+    {
+        FileMove(libcomp::String("%1.%2").Arg(mLogPath).Arg(i),
+            libcomp::String("%1.%2").Arg(mLogPath).Arg(i + 1));
+        FileMove(libcomp::String("%1.%2.gz").Arg(mLogPath).Arg(i),
+            libcomp::String("%1.%2.gz").Arg(mLogPath).Arg(i + 1));
+    }
+
+    // Now close the main log and move it.
+    if(mLogFile)
+    {
+        mLogFile->close();
+        delete mLogFile;
+    }
+
+    FileMove(mLogPath, mLogPath + ".1");
+
+    // Open the log again.
+    mLogFile = new std::ofstream();
+    mLogFile->open(mLogPath.C(), std::ofstream::out | std::ofstream::trunc);
+    mLogFile->flush();
+
+    // If this failed, close it.
+    if(!mLogFile->good())
+    {
+        delete mLogFile;
+        mLogFile = nullptr;
+        mLogPath.Clear();
+    }
+
+    // If compression is enabled compress the log we just moved.
+    if(mLogCompression)
+    {
+        std::thread th([](libcomp::String compressPath)
+        {
+            bool error = false;
+            char buffer[4096];
+            libcomp::String compressedPath = compressPath + ".gz";
+
+            FILE *in = fopen(compressPath.C(), "rb");
+            gzFile gf = gzopen(compressedPath.C(), "wb");
+
+            if(in && gf)
+            {
+                while(!feof(in))
+                {
+                    auto sz = fread(buffer, 1, sizeof(buffer), in);
+
+                    if(0 >= sz)
+                    {
+                        break;
+                    }
+
+                    if(sz != gzwrite(gf, buffer, (unsigned)sz))
+                    {
+                        error = true;
+                        break;
+                    }
+                }
+            }
+
+            gzclose(gf);
+            fclose(in);
+
+            if(error)
+            {
+                FileDelete(compressedPath);
+            }
+            else
+            {
+                FileDelete(compressPath);
+            }
+        }, mLogPath + ".1");
+
+        // Detach the thread and let it work on it's own.
+        th.detach();
+    }
+}
+
+bool Log::FileMove(const libcomp::String& oldPath,
+    const libcomp::String& newPath)
+{
+#ifdef _WIN32
+    return MoveFileA(oldPath.Replace("/", "\\").C(),
+        newPath.Replace("/", "\\").C());
+#else
+    return 0 == rename(oldPath.C(), newPath.C());
+#endif
+}
+
+bool Log::FileExists(const libcomp::String& file)
+{
+#ifdef _WIN32
+    return PathFileExistsA(file.Replace("/", "\\").C());
+#else
+    return 0 == access(file.C(), F_OK);
+#endif
+}
+
+bool Log::FileDelete(const libcomp::String& file)
+{
+#ifdef _WIN32
+    return DeleteFileA(file.Replace("/", "\\").C());
+#else
+    return 0 == unlink(file.C());
+#endif
 }

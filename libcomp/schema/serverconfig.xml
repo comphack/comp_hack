@@ -21,6 +21,10 @@
         <member type="bool" name="LogWarning" default="true"/>
         <member type="bool" name="LogError" default="true"/>
         <member type="bool" name="LogCritical" default="true"/>
+        <member type="bool" name="LogRotation" default="false"/>
+        <member type="bool" name="LogCompression" default="true"/>
+        <member type="s32" name="LogRotationCount" default="3"/>
+        <member type="s32" name="LogRotationDays" default="1"/>
         <member type="string" name="CapturePath"/>
         <member type="string" name="ServerConstantsPath"/>
     </object>

@@ -404,6 +404,10 @@ bool BaseServer::ReadConfig(std::shared_ptr<objects::ServerConfig> config, tinyx
             config->GetLogError());
         log->SetLogLevelEnabled(libcomp::Log::LOG_LEVEL_CRITICAL,
             config->GetLogCritical());
+        log->SetLogRotationEnabled(config->GetLogRotation());
+        log->SetLogCompression(config->GetLogCompression());
+        log->SetLogRotationCount(config->GetLogRotationCount());
+        log->SetLogRotationDays(config->GetLogRotationDays());
 
         if(!config->GetLogFile().IsEmpty())
         {

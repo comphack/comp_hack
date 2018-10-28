@@ -181,6 +181,54 @@ public:
      */
     void SetLogFileTimestampsEnabled(bool enabled);
 
+    /**
+     * Get if the log rotation feature is enabled.
+     * @return true if log rotation is enabled.
+     */
+    bool GetLogRotationEnabled() const;
+
+    /**
+     * Set if the log rotation feature is enabled.
+     * @param enabled If log rotation is enabled.
+     */
+    void SetLogRotationEnabled(bool enabled);
+
+    /**
+     * Get if the log rotation will compress logs.
+     * @return true if log rotation will compress logs.
+     */
+    bool GetLogCompression() const;
+
+    /**
+     * Set if the log rotation will compress logs.
+     * @param enabled If log rotation will compress logs.
+     */
+    void SetLogCompression(bool enabled);
+
+    /**
+     * Get the number of logs that will be rotated.
+     * @return Number of logs that will be rotated.
+     */
+    int GetLogRotationCount() const;
+
+    /**
+     * Set the number of logs that will be rotated.
+     * @param count Number of logs that will be rotated.
+     */
+    void SetLogRotationCount(int count);
+
+    /**
+     * Get the number of days until the logs will be rotated.
+     * @return Number of days until the logs will be rotated.
+     */
+    int GetLogRotationDays() const;
+
+    /**
+     * Set the number of days until the logs will be rotated.
+     * @param days Number of days until the logs will be rotated.
+     */
+    void SetLogRotationDays(int days);
+
 protected:
     /**
      * @internal
@@ -191,6 +239,34 @@ protected:
      * @sa GetSingletonPtr
      */
     Log();
+
+    /**
+     * @internal
+     * Rotate the log files.
+     */
+    void RotateLogs();
+
+    /**
+     * @internal
+     * Move a file from one path to another.
+     * @return true if the file was moved; false otherwise.
+     */
+    static bool FileMove(const libcomp::String& oldPath,
+        const libcomp::String& newPath);
+
+    /**
+     * @internal
+     * Check if a file exists.
+     * @return true if the file exists; false otherwise.
+     */
+    static bool FileExists(const libcomp::String& file);
+
+    /**
+     * @internal
+     * Delete a file given it's path.
+     * @return true if the file was deleted; false otherwise.
+     */
+    static bool FileDelete(const libcomp::String& file);
 
     /**
      * @internal
@@ -209,6 +285,30 @@ protected:
      * Whether log file messages will contain a timestamp.
      */
     bool mLogFileTimestampEnabled;
+
+    /**
+     * @internal
+     * Whether log files rotate.
+     */
+    bool mLogRotationEnabled;
+
+    /**
+     * @internal
+     * Whether log files that have rotated compress.
+     */
+    bool mLogCompression;
+
+    /**
+     * @internal
+     * Number of past logs to keep when rotation is enabled.
+     */
+    int mLogRotationCount;
+
+    /**
+     * @internal
+     * Number of days to keep the log before rotating.
+     */
+    int mLogRotationDays;
 
     /**
      * @internal
@@ -234,6 +334,12 @@ protected:
      * Mutex to make the log thread safe.
      */
     std::mutex mLock;
+
+    /**
+     * @internal
+     * Number of days since the UNIX epoch for the last log message.
+     */
+    int64_t mLastLog;
 
 #ifdef _WIN32
     /**

@@ -189,6 +189,58 @@
 </section><!-- LogCritical -->
 
 <section>
+<title>LogRotation</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>Indicates if the logs should be rotated on a periodic basis.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogRotation">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogRotation -->
+
+<section>
+<title>LogCompression</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Indicates if the logs should be compressed when rotated.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogCompression">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogCompression -->
+
+<section>
+<title>LogRotationCount</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 3</para>
+<para>Indicates the number of rotated logs to keep. A negative value will keep all rotated logs.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogRotationCount">-1</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogRotationCount -->
+
+<section>
+<title>LogRotationDays</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 1</para>
+<para>Indicates the number of days before the logs will be rotated.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LogRotationDays">7</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LogRotationDays -->
+
+<section>
 <title>CapturePath</title>
 <para><emphasis role="strong">Type:</emphasis> string</para>
 <para><emphasis role="strong">Default:</emphasis> <emphasis>blank</emphasis></para>

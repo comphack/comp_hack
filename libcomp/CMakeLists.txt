@@ -1037,8 +1037,8 @@ TARGET_LINK_LIBRARIES(comp ${LIBOBJECTS_LIB} mariadbclient ${OPENSSL_LIBRARIES} 
 ADD_DEPENDENCIES(comp asio gsl git-version)
 
 IF(WIN32)
-    TARGET_LINK_LIBRARIES(comp advapi32 iphlpapi psapi shell32 userenv
-        ws2_32 dbghelp)
+    TARGET_LINK_LIBRARIES(comp shlwapi advapi32 iphlpapi psapi shell32
+        userenv ws2_32 dbghelp)
 ENDIF(WIN32)
 
 IF(USE_COTIRE)

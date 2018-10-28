@@ -37,6 +37,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <wincon.h>
+#include <shlwapi.h>
 #else
 #include <unistd.h>
 #endif // _WIN32

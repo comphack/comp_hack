@@ -540,7 +540,7 @@ void Log::RotateLogs()
                         break;
                     }
 
-                    if(sz != gzwrite(gf, buffer, (unsigned)sz))
+                    if((unsigned)sz != gzwrite(gf, buffer, (unsigned)sz))
                     {
                         error = true;
                         break;

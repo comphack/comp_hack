@@ -302,6 +302,8 @@ bool DatabaseQueryMariaDB::Execute()
         }
     }
 
+    mysql_free_result(result);
+
     return IsValid();
 }
 

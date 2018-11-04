@@ -13,6 +13,14 @@
              <ServiceDependency Id="LmHosts"/>
         </ServiceInstall>
     </CPackWiXFragment>
+    <CPackWiXFragment Id="CM_FP_comp_lobby.exe">
+        <FirewallException xmlns="http://schemas.microsoft.com/wix/FirewallExtension"
+            Id="firewall_comp_lobby"
+            Description="Firewall rule for the COMP_hack Lobby server."
+            Name="COMP_hack Lobby Server"
+            Profile="all"
+            Scope="any"/>
+    </CPackWiXFragment>
     <CPackWiXFragment Id="CM_CP_comp_world.exe">
         <ServiceInstall
             Id="comp_world"
@@ -26,6 +34,14 @@
             ErrorControl="normal">
              <ServiceDependency Id="comp_lobby"/>
         </ServiceInstall>
+    </CPackWiXFragment>
+    <CPackWiXFragment Id="CM_FP_comp_world.exe">
+        <FirewallException xmlns="http://schemas.microsoft.com/wix/FirewallExtension"
+            Id="firewall_comp_world"
+            Description="Firewall rule for the COMP_hack World server."
+            Name="COMP_hack World Server"
+            Profile="all"
+            Scope="any"/>
     </CPackWiXFragment>
     <CPackWiXFragment Id="CM_CP_comp_channel.exe">
         <ServiceInstall
@@ -41,5 +57,13 @@
              <ServiceDependency Id="comp_world"/>
         </ServiceInstall>
         <!-- <ServiceControl Id="comp_channel" Start="install" Stop="both" Remove="uninstall" Name="comp_channel" Wait="yes"/> -->
+    </CPackWiXFragment>
+    <CPackWiXFragment Id="CM_FP_comp_channel.exe">
+        <FirewallException xmlns="http://schemas.microsoft.com/wix/FirewallExtension"
+            Id="firewall_comp_channel"
+            Description="Firewall rule for the COMP_hack Channel server."
+            Name="COMP_hack Channel Server"
+            Profile="all"
+            Scope="any"/>
     </CPackWiXFragment>
 </CPackWiXPatch>

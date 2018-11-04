@@ -58,4 +58,17 @@
 
 </section><!-- AutoSchemaUpdate -->
 
+<section>
+<title>DatabaseDebug</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>Log debug database information (like detailed errors and SQL statements).</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DatabaseDebug">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DatabaseDebug -->
+
 </section>

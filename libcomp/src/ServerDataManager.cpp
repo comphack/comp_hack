@@ -31,9 +31,6 @@
 #include "Log.h"
 #include "ScriptEngine.h"
 
-// Standard C++11 Includes
-#include <math.h>
-
 // object Includes
 #include <Action.h>
 #include <ActionDelay.h>

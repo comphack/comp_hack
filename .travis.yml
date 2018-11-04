@@ -65,9 +65,9 @@ before_install:
   - if [ ! -f objgen-clang.tar.bz2 ]; then wget -q https://github.com/comphack/objgen/releases/download/v1.0.0/objgen-clang.tar.bz2; fi
   - if [ ! -f objgen-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/objgen/releases/download/v1.0.0/objgen-gcc5.tar.bz2; fi
   - if [ -f libobjects-clang.tar.bz2 ]; then rm libobjects-clang.tar.bz2; fi
-  - wget -q https://github.com/comphack/libobjects/releases/download/v1.0.4/libobjects-clang.tar.bz2
+  - wget -q https://github.com/comphack/libobjects/releases/download/v1.0.5/libobjects-clang.tar.bz2
   - if [ -f libobjects-gcc5.tar.bz2 ]; then rm libobjects-gcc5.tar.bz2; fi
-  - wget -q https://github.com/comphack/libobjects/releases/download/v1.0.4/libobjects-gcc5.tar.bz2
+  - wget -q https://github.com/comphack/libobjects/releases/download/v1.0.5/libobjects-gcc5.tar.bz2
   - ls -lh
   - cd ${ROOT_DIR}
   - sudo apt-get update -q

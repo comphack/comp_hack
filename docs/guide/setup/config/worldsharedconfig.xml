@@ -266,4 +266,30 @@
 
 </section><!-- ChannelDistribution -->
 
+<section>
+<title>AggroLimit</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Limits how many normal AI controlled entities will decide to aggro on a valid target that is already being pursued.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="AggroLimit">false</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- AggroLimit -->
+
+<section>
+<title>IFramesEnabled</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Enforce invincibility frames when multiple entities try to use combat skills on one target at the same time resulting in retry packets being sent to some of the attackers to stagger hits. Never applies to entities with hitstun null unless they are being knocked back.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="IFramesEnabled">false</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- IFramesEnabled -->
+
 </section>

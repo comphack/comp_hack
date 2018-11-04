@@ -30,6 +30,9 @@
 // object Includes
 #include <ActivatedAbility.h>
 
+// channel Includes
+#include "ZoneGeometry.h"
+
 using namespace channel;
 
 AICommand::AICommand() : mType(AICommandType_t::NONE), mDelay(0),
@@ -75,22 +78,19 @@ AIMoveCommand::~AIMoveCommand()
 {
 }
 
-void AIMoveCommand::SetPathing(const std::list<std::pair<
-    float, float>>& pathing)
+void AIMoveCommand::SetPathing(const std::list<Point>& pathing)
 {
     mPathing = pathing;
 }
 
-bool AIMoveCommand::GetCurrentDestination(float& x, float& y) const
+bool AIMoveCommand::GetCurrentDestination(Point& dest) const
 {
-    x = 0.f;
-    y = 0.f;
+    dest.x = 0.f;
+    dest.y = 0.f;
 
     if(mPathing.size() > 0)
     {
-        auto& loc = mPathing.front();
-        x = loc.first;
-        y = loc.second;
+        dest = mPathing.front();
 
         return true;
     }
@@ -100,16 +100,14 @@ bool AIMoveCommand::GetCurrentDestination(float& x, float& y) const
     }
 }
 
-bool AIMoveCommand::GetEndDestination(float& x, float& y) const
+bool AIMoveCommand::GetEndDestination(Point& dest) const
 {
-    x = 0.f;
-    y = 0.f;
+    dest.x = 0.f;
+    dest.y = 0.f;
 
     if(mPathing.size() > 0)
     {
-        auto& loc = mPathing.back();
-        x = loc.first;
-        y = loc.second;
+        dest = mPathing.back();
 
         return true;
     }

@@ -122,6 +122,7 @@
 
 // channel Includes
 #include "ActionManager.h"
+#include "AIManager.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "EventManager.h"
@@ -207,7 +208,12 @@ public:
     int16_t ChargeReduce = 0;
     std::unordered_map<int32_t, uint16_t> OffenseValues;
     bool IsItemSkill = false;
-    bool Reflected = false;
+    bool IsProjectile = false;
+    uint8_t Nulled = 0;
+    uint8_t Reflected = 0;
+    bool Absorbed = false;
+    uint8_t NRAAffinity = 0;
+    bool HardStrike = false;
     bool InPvP = false;
 
     std::shared_ptr<Zone> CurrentZone;
@@ -247,6 +253,7 @@ public:
     uint8_t HitNull = 0;    // 0: None, 1: Physical, 2: Magic, 3: Barrier
     uint8_t HitReflect = 0; // 0: None, 1: Physical, 2: Magic
     bool HitAbsorb = false;
+    uint8_t NRAAffinity = 0;
     bool CanHitstun = false;
     bool CanKnockback = false;
     bool AutoProtect = false;
@@ -302,7 +309,6 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
     mSkillFunctions[SVR_CONST.SKILL_WARP] = &SkillManager::SpecialSkill;
 
     /// @todo: implement these
-    // SVR_CONST.SKILL_BOSS_SPECIAL
     // SVR_CONST.SKILL_DESPAWN
     // SVR_CONST.SKILL_DESUMMON
     // SVR_CONST.SKILL_DIASPORA_QUAKE
@@ -335,11 +341,24 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         return false;
     }
 
+    auto now = ChannelServer::GetServerTime();
     auto client = server->GetManagerConnection()->GetEntityClient(
         source->GetEntityID());
+
+    // Check for cooldown first
+    source->ExpireStatusTimes(now);
+    if(source->GetSkillCooldowns(def->GetBasic()->GetCooldownID()))
+    {
+        SendFailure(source, skillID, client,
+            (uint8_t)SkillErrorCodes_t::COOLING_DOWN);
+        return false;
+    }
+
+    // Check additional restrictions
     if(SkillRestricted(source, def))
     {
-        SendFailure(source, skillID, client);
+        SendFailure(source, skillID, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
     }
 
@@ -374,15 +393,12 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         }
     }
 
-    auto activatedTime = ChannelServer::GetServerTime();
-
-    activated = std::shared_ptr<objects::ActivatedAbility>(
-        new objects::ActivatedAbility);
+    activated = std::make_shared<objects::ActivatedAbility>();
     activated->SetSkillID(skillID);
     activated->SetSourceEntity(source);
     activated->SetActivationObjectID(activationObjectID);
     activated->SetTargetObjectID(targetObjectID);
-    activated->SetActivationTime(activatedTime);
+    activated->SetActivationTime(now);
 
     if(instantExecution)
     {
@@ -430,7 +446,8 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
             chargeTime = GetSummonSpeed(pSkill, client);
             if(!chargeTime)
             {
-                SendFailure(source, skillID, client);
+                SendFailure(source, skillID, client,
+                    (uint8_t)SkillErrorCodes_t::GENERIC);
                 return false;
             }
 
@@ -455,7 +472,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         }
 
         // Charge time is in milliseconds, convert to microseconds
-        chargedTime = activatedTime + (chargeTime * 1000);
+        chargedTime = now + (chargeTime * 1000);
 
         activated->SetChargedTime(chargedTime);
 
@@ -584,6 +601,15 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
     }
     else
     {
+        if(activated->GetExecutionRequestTime() && !activated->GetHitTime() &&
+            activated->GetErrorCode() == -1)
+        {
+            // Currently being used or not ready to execute again
+            SendFailure(source, activated->GetSkillID(), client,
+                (uint8_t)SkillErrorCodes_t::SILENT_FAIL);
+            return false;
+        }
+
         activated->SetTargetObjectID(targetObjectID);
     }
 
@@ -609,7 +635,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     {
         LOG_ERROR(libcomp::String("Unknown skill ID encountered: %1\n")
             .Arg(skillID));
-        SendFailure(activated, client);
+        SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
     }
 
@@ -661,7 +687,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
 
     if(skillCategory == 0 || SkillRestricted(source, skillData))
     {
-        SendFailure(activated, client);
+        SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
     }
 
@@ -740,18 +766,22 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     // Verify the target now
     if(checkTargets && targetType != objects::MiTargetData::Type_t::OBJECT)
     {
+        // Normal target invalidation reasons do not print an error
         auto targetEntityID = (int32_t)activated->GetTargetObjectID();
-
         if(targetEntityID <= 0)
         {
-            //No target
-            SendFailure(activated, client,
-                (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+            SendFailure(activated, client);
             return false;
         }
 
         auto targetEntity = zone->GetActiveEntity(targetEntityID);
-        if(nullptr == targetEntity || !targetEntity->Ready())
+        if(!targetEntity)
+        {
+            SendFailure(activated, client);
+            return false;
+        }
+
+        if(!targetEntity->Ready())
         {
             SendFailure(activated, client,
                 (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
@@ -792,7 +822,8 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
                 return false;
             }
 
-            auto enemyState = std::dynamic_pointer_cast<EnemyState>(targetEntity);
+            auto enemyState = std::dynamic_pointer_cast<EnemyState>(
+                targetEntity);
             auto enemy = enemyState ? enemyState->GetEntity() : nullptr;
             auto spawn = enemy ? enemy->GetSpawnSource() : nullptr;
 
@@ -851,17 +882,21 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
             }
         }
 
-        auto sourceState = ClientState::GetEntityClientState(source->GetEntityID());
-        auto targetState = ClientState::GetEntityClientState(targetEntity->GetEntityID());
+        auto sourceState = ClientState::GetEntityClientState(source
+            ->GetEntityID());
+        auto targetState = ClientState::GetEntityClientState(targetEntity
+            ->GetEntityID());
 
         bool targetInvalid = false;
+        bool targetLivingStateInvalid = !targetAlive;
         switch(targetType)
         {
         case objects::MiTargetData::Type_t::ALLY:
-            targetInvalid = !allies || !targetAlive;
+            targetInvalid = !allies;
             break;
         case objects::MiTargetData::Type_t::DEAD_ALLY:
-            targetInvalid = !allies || targetAlive;
+            targetInvalid = !allies;
+            targetLivingStateInvalid = targetAlive;
             if(!targetInvalid)
             {
                 // If reviving and the target is a character (or demon in a
@@ -891,40 +926,45 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
             }
             break;
         case objects::MiTargetData::Type_t::PARTNER:
-            targetInvalid = !sourceState || sourceState->GetCharacterState() != source ||
-                sourceState->GetDemonState() != targetEntity || !targetAlive;
+            targetInvalid = !sourceState ||
+                sourceState->GetCharacterState() != source ||
+                sourceState->GetDemonState() != targetEntity;
             break;
         case objects::MiTargetData::Type_t::PARTY:
-            targetInvalid = !sourceState || !targetState || (sourceState->GetPartyID() &&
+            targetInvalid = !sourceState || !targetState ||
+                (sourceState->GetPartyID() &&
                 sourceState->GetPartyID() != targetState->GetPartyID()) ||
-                (!sourceState->GetPartyID() && sourceState != targetState)|| !targetAlive;
+                (!sourceState->GetPartyID() && sourceState != targetState);
             break;
         case objects::MiTargetData::Type_t::ENEMY:
             targetInvalid = allies || !targetAlive;
             break;
         case objects::MiTargetData::Type_t::DEAD_PARTNER:
-            targetInvalid = !sourceState || sourceState->GetCharacterState() != source ||
-                sourceState->GetDemonState() != targetEntity || targetAlive;
+            targetInvalid = !sourceState ||
+                sourceState->GetCharacterState() != source ||
+                sourceState->GetDemonState() != targetEntity;
+            targetLivingStateInvalid = targetAlive;
             break;
         case objects::MiTargetData::Type_t::OTHER_PLAYER:
             targetInvalid = targetEntityType != EntityType_t::CHARACTER ||
-                sourceState == targetState || !allies || !targetAlive;
+                sourceState == targetState || !allies;
             break;
         case objects::MiTargetData::Type_t::OTHER_DEMON:
             targetInvalid = targetEntityType != EntityType_t::PARTNER_DEMON ||
-                (sourceState && sourceState->GetDemonState() != targetEntity) || !allies ||
-                !targetAlive;
+                (sourceState &&
+                    sourceState->GetDemonState() != targetEntity) || !allies;
             break;
         case objects::MiTargetData::Type_t::ALLY_PLAYER:
             targetInvalid = targetEntityType != EntityType_t::CHARACTER ||
-                !allies || !targetAlive;
+                !allies;
             break;
         case objects::MiTargetData::Type_t::ALLY_DEMON:
             targetInvalid = targetEntityType != EntityType_t::PARTNER_DEMON ||
-                !allies || !targetAlive;
+                !allies;
             break;
         case objects::MiTargetData::Type_t::PLAYER:
-            targetInvalid = !sourceState || sourceState->GetCharacterState() != targetEntity;
+            targetInvalid = !sourceState ||
+                sourceState->GetCharacterState() != targetEntity;
             break;
         default:
             break;
@@ -932,7 +972,26 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
 
         if(targetInvalid)
         {
-            SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+            if(targetEntityID == source->GetEntityID())
+            {
+                // The client has a very strange habit of setting the target
+                // as yourself for skills that should never hit you if no
+                // valid target exists (maybe a side effect of ally buff skills
+                // that don't NEED a target)
+                SendFailure(activated, client,
+                    (uint8_t)SkillErrorCodes_t::SILENT_FAIL);
+            }
+            else
+            {
+                SendFailure(activated, client,
+                    (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+            }
+            return false;
+        }
+        else if(targetLivingStateInvalid)
+        {
+            // No message here or skill spammers would be spammed in return
+            SendFailure(activated, client);
             return false;
         }
 
@@ -953,7 +1012,10 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         return false;
     }
 
-    activated->SetExecutionTime(ChannelServer::GetServerTime());
+    // Reset anything that may have happened from previous attempt
+    activated->SetErrorCode(-1);
+
+    activated->SetExecutionRequestTime(ChannelServer::GetServerTime());
     source->RefreshCurrentPosition(activated->GetExecutionTime());
 
     // Execute the skill
@@ -983,6 +1045,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     if(success)
     {
         FinalizeSkillExecution(client, ctx, activated);
+        FinalizeSkill(ctx, activated);
     }
     else
     {
@@ -1317,13 +1380,328 @@ bool SkillManager::PrepareFusionSkill(
     }
 }
 
+bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
+    std::shared_ptr<SkillExecutionContext> ctx)
+{
+    auto source = pSkill->EffectiveSource;
+    auto zone = pSkill->CurrentZone;
+    auto activated = pSkill->Activated;
+    if(!source || !zone || source->GetZone() != zone)
+    {
+        LOG_DEBUG(libcomp::String("Fizzling starting skill with no source or a"
+            " source not in the skill's zone: %1\n").Arg(pSkill->SkillID));
+        return false;
+    }
+
+    if(activated->GetCancelled() || source->GetActivatedAbility() != activated)
+    {
+        // Skill cancelled or otherwise detached already
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto client = server->GetManagerConnection()->GetEntityClient(source
+        ->GetEntityID());
+
+    uint64_t processTime = 0;
+    if(!ctx->FastTrack)
+    {
+        // If hitstunned, don't start the skill
+        source->ExpireStatusTimes(ChannelServer::GetServerTime());
+        if(source->StatusTimesKeyExists(STATUS_HIT_STUN))
+        {
+            SendFailure(activated, client);
+            return false;
+        }
+
+        // Execute the skill now; finalize, calculate damage and effects when
+        // it hits
+        processTime = (activated->GetExecutionRequestTime() + 500000ULL) +
+            (uint64_t)(pSkill->Definition->GetDischarge()->GetHitDelay() * 1000);
+    }
+    else
+    {
+        processTime = activated->GetExecutionRequestTime();
+    }
+
+    if(!ctx->Fizzle)
+    {
+        // NRA for the primary target determines how the rest of the skill
+        // behaves, causing it to fizzle or be eligible to defend
+        switch(pSkill->Definition->GetTarget()->GetType())
+        {
+        case objects::MiTargetData::Type_t::NONE:
+            // Source is technically the primary target (though most of
+            // these types of skills will filter it out)
+            pSkill->PrimaryTarget = source;
+            break;
+        case objects::MiTargetData::Type_t::ALLY:
+        case objects::MiTargetData::Type_t::DEAD_ALLY:
+        case objects::MiTargetData::Type_t::PARTNER:
+        case objects::MiTargetData::Type_t::PARTY:
+        case objects::MiTargetData::Type_t::ENEMY:
+        case objects::MiTargetData::Type_t::DEAD_PARTNER:
+        case objects::MiTargetData::Type_t::OTHER_PLAYER:
+        case objects::MiTargetData::Type_t::OTHER_DEMON:
+        case objects::MiTargetData::Type_t::ALLY_PLAYER:
+        case objects::MiTargetData::Type_t::ALLY_DEMON:
+        case objects::MiTargetData::Type_t::PLAYER:
+            {
+                auto targetEntityID = (int32_t)activated->GetTargetObjectID();
+                auto targetEntity = zone->GetActiveEntity(targetEntityID);
+                if(!targetEntity)
+                {
+                    // Target is not valid anymore, fizzle it
+                    ctx->Fizzle = true;
+                    break;
+                }
+
+                if(targetEntity != source && !ctx->CounteredSkill)
+                {
+                    // Make sure the target is in range
+                    targetEntity->RefreshCurrentPosition(
+                        ChannelServer::GetServerTime());
+
+                    float distance = source->GetDistance(targetEntity
+                        ->GetCurrentX(), targetEntity->GetCurrentY());
+                    uint16_t maxTargetRange = (uint16_t)(400 +
+                        (pSkill->Definition->GetTarget()->GetRange() * 10));
+                    if((float)maxTargetRange < distance)
+                    {
+                        // Out of range, fail execution
+                        SendFailure(activated, client);
+                        return false;
+                    }
+                }
+
+                SkillTargetResult target;
+                target.EntityState = targetEntity;
+                target.CalcState = GetCalculatedState(targetEntity, pSkill,
+                    true, source);
+                GetCalculatedState(source, pSkill, false, targetEntity);
+
+                if(SetNRA(target, *pSkill, false))
+                {
+                    // The skill is reflected and the source becomes
+                    // the primary target
+                    pSkill->PrimaryTarget = source;
+                    pSkill->EffectiveSource = targetEntity;
+                    pSkill->Targets.push_back(target);
+
+                    pSkill->Reflected = target.HitReflect;
+                    pSkill->NRAAffinity = target.NRAAffinity;
+                }
+                else
+                {
+                    pSkill->PrimaryTarget = targetEntity;
+
+                    pSkill->Nulled = target.HitNull;
+                    pSkill->Absorbed = target.HitAbsorb;
+                    pSkill->NRAAffinity = target.NRAAffinity;
+
+                    // If it had been reflected we wouldn't be here!
+                    pSkill->Reflected = 0;
+                }
+            }
+            break;
+        case objects::MiTargetData::Type_t::OBJECT:
+            // Nothing special to do (for now)
+            break;
+        default:
+            LOG_ERROR(libcomp::String("Unknown target type encountered: %1\n")
+                .Arg((uint8_t)pSkill->Definition->GetTarget()->GetType()));
+            ctx->Fizzle = true;
+        }
+    }
+
+    if(ctx->Fizzle)
+    {
+        // Fast track skills fizzle at the end
+        if(!ctx->FastTrack)
+        {
+            return false;
+        }
+    }
+
+    // Set again later for projectiles
+    activated->SetHitTime(processTime);
+
+    if(!pSkill->IsProjectile)
+    {
+        // If the skill can be defended against and it was not nulled or
+        // absorbed, check for counter, dodge or guard on the primary target
+        // as these kick off immediately. This happens at projectile hit for
+        // anything with a projectile.
+        if(pSkill->PrimaryTarget && pSkill->PrimaryTarget != source &&
+            pSkill->Definition->GetBasic()->GetDefensible() &&
+            !pSkill->Nulled && !pSkill->Reflected && !pSkill->Absorbed)
+        {
+            ApplyPrimaryCounter(source, pSkill, true);
+        }
+    }
+
+    FinalizeSkillExecution(client, ctx, activated);
+
+    if(!ctx->FastTrack)
+    {
+        server->ScheduleWork(processTime, []
+            (std::shared_ptr<ChannelServer> pServer,
+            std::shared_ptr<ProcessingSkill> prSkill,
+            std::shared_ptr<SkillExecutionContext> pCtx)
+            {
+                pServer->GetSkillManager()->CompleteSkillExecution(prSkill,
+                    pCtx);
+            }, server, pSkill, ctx);
+    }
+    else
+    {
+        return CompleteSkillExecution(pSkill, ctx);
+    }
+
+    return true;
+}
+
+bool SkillManager::CompleteSkillExecution(
+    std::shared_ptr<ProcessingSkill> pSkill,
+    std::shared_ptr<SkillExecutionContext> ctx)
+{
+    auto source = pSkill->EffectiveSource;
+    auto zone = pSkill->CurrentZone;
+    auto activated = pSkill->Activated;
+    if(!source || !zone || source->GetZone() != zone)
+    {
+        LOG_DEBUG(libcomp::String("Fizzling skill with no source or a"
+            " source not in the skill's zone: %1\n").Arg(pSkill->SkillID));
+        return false;
+    }
+
+    if(activated->GetCancelled() || (!pSkill->IsProjectile &&
+        source->GetActivatedAbility() != activated))
+    {
+        // Skill cancelled or otherwise detached already
+        return false;
+    }
+
+    // No cancelling past this point, it can only fizzle
+    if(!ctx->Fizzle)
+    {
+        if(ctx->FastTrack && pSkill->Definition->GetBasic()->GetActionType() !=
+            objects::MiSkillBasicData::ActionType_t::COUNTER)
+        {
+            // Fizzle fast track skills without line of sight now (excluding
+            // counter which always hits at this point)
+            auto target = zone->GetActiveEntity((int32_t)activated
+                ->GetTargetObjectID());
+            if(target)
+            {
+                uint64_t now = ChannelServer::GetServerTime();
+                source->RefreshCurrentPosition(now);
+                target->RefreshCurrentPosition(now);
+
+                Point src(source->GetCurrentX(), source->GetCurrentY());
+                Point dest(target->GetCurrentX(), target->GetCurrentY());
+                Point collidePoint;
+                if(zone->Collides(Line(src, dest), collidePoint))
+                {
+                    ctx->Fizzle = true;
+                }
+            }
+        }
+    }
+
+    if(!ctx->FastTrack)
+    {
+        // Continue on with a copy if more uses exist
+        pSkill->Activated = activated = FinalizeSkill(ctx, activated);
+    }
+
+    if(ctx->Fizzle)
+    {
+        return false;
+    }
+    else if(ctx->CounteredSkill)
+    {
+        // If this is a counter, dodge or guard, defer final processing to
+        // the skill being countered
+        ctx->CounteredSkill->ExecutionContext->CounteringSkills.push_back(
+            pSkill);
+    }
+    else
+    {
+        // If the skill has a projectile, delay until it hits
+        if(pSkill->IsProjectile && !ctx->FastTrack)
+        {
+            auto targetEntityID = (int32_t)activated->GetTargetObjectID();
+            auto target = zone->GetActiveEntity(targetEntityID);
+            if(!target)
+            {
+                // Target is not valid anymore, let it fizzle
+                return false;
+            }
+
+            // Determine time from projectile speed and distance (cannot
+            // miss from range after execution starts)
+            uint64_t now = ChannelServer::GetServerTime();
+            target->RefreshCurrentPosition(now);
+            double distance = (double)source->GetDistance(target
+                ->GetCurrentX(), target->GetCurrentY());
+
+            // Projectile speed is measured in how many 10ths of a unit the
+            // projectile will traverse per millisecond (with a half second
+            // delay for the default cast to projectile move speed)
+            uint32_t projectileSpeed = pSkill->Definition->GetDischarge()
+                ->GetProjectileSpeed();
+            uint64_t projectileTime = now + (uint64_t)(distance /
+                (double)(projectileSpeed * 10) * 1000000.0);
+
+            activated->SetHitTime(projectileTime);
+
+            auto server = mServer.lock();
+            server->ScheduleWork(projectileTime, []
+                (std::shared_ptr<ChannelServer> pServer,
+                std::shared_ptr<ProcessingSkill> prSkill,
+                std::shared_ptr<SkillExecutionContext> pCtx)
+                {
+                    pServer->GetSkillManager()->ProjectileHit(prSkill, pCtx);
+                }, server, pSkill, ctx);
+        }
+        else
+        {
+            activated->SetHitTime(ChannelServer::GetServerTime());
+
+            return ProcessSkillResult(activated, ctx);
+        }
+    }
+
+    return true;
+}
+
+void SkillManager::ProjectileHit(std::shared_ptr<ProcessingSkill> pSkill,
+    std::shared_ptr<SkillExecutionContext> ctx)
+{
+    // If the skill can be defended against and it was not nulled or absorbed,
+    // check for counter, dodge or guard on the primary target now that the
+    // projectile will hit. Under normal circumstances this will only result
+    // in a dodge.
+    if(!pSkill->Nulled && !pSkill->Reflected && !pSkill->Absorbed &&
+        pSkill->Definition->GetBasic()->GetDefensible())
+    {
+        ApplyPrimaryCounter(pSkill->EffectiveSource, pSkill, true);
+    }
+
+    ProcessSkillResult(pSkill->Activated, ctx);
+}
+
 void SkillManager::SendFailure(
     std::shared_ptr<objects::ActivatedAbility> activated,
     const std::shared_ptr<ChannelClientConnection> client, uint8_t errorCode)
 {
+    activated->SetErrorCode((int8_t)errorCode);
+
     if(activated->GetActivationID() == -1)
     {
-        SendExecuteSkillInstant(activated, errorCode);
+        auto pSkill = GetProcessingSkill(activated, nullptr);
+        SendExecuteSkillInstant(pSkill, errorCode);
     }
     else
     {
@@ -1362,10 +1740,9 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
     uint8_t skillCategory = pSkill->Definition->GetCommon()->GetCategory()
         ->GetMainCategory();
 
-    // Skip costs if free-cast, invalid skill category or deactivating
-    // a switch skill
-    if(ctx->FreeCast || (skillCategory != 1 && (skillCategory != 2 ||
-        source->ActiveSwitchSkillsContains(pSkill->SkillID))))
+    // Skip invalid skill category or deactivating a switch skill
+    if(skillCategory != 1 && (skillCategory != 2 ||
+        source->ActiveSwitchSkillsContains(pSkill->SkillID)))
     {
         return true;
     }
@@ -1381,12 +1758,20 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
 
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
-    auto tokuseiManager = server->GetTokuseiManager();
 
     int32_t hpCost = 0, mpCost = 0;
-    uint32_t hpCostPercent = 0, mpCostPercent = 0, fGaugeCost = 0;
+    uint32_t fGaugeCost = 0;
     uint16_t bulletCost = 0;
     std::unordered_map<uint32_t, uint32_t> itemCosts;
+
+    // Gather the normal costs first
+    if(!DetermineNormalCosts(source, pSkill->Definition, hpCost, mpCost,
+        bulletCost, itemCosts, pSkill->SourceExecutionState))
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC);
+        return false;
+    }
 
     // Gather special function costs (only applies to client)
     if(pSkill->FunctionID && client)
@@ -1493,7 +1878,8 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
             auto demonData = target ? target->GetDevilData() : nullptr;
             if(!demonData)
             {
-                SendFailure(activated, client);
+                SendFailure(activated, client,
+                    (uint8_t)SkillErrorCodes_t::GENERIC);
                 return false;
             }
 
@@ -1505,115 +1891,6 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
                     itemCosts[pair.first] = 1;
                 }
             }
-        }
-    }
-
-    // Gather normal costs
-    for(auto cost : pSkill->Definition->GetCondition()->GetCosts())
-    {
-        auto num = cost->GetCost();
-        bool percentCost = cost->GetNumType() ==
-            objects::MiCostTbl::NumType_t::PERCENT;
-        switch(cost->GetType())
-        {
-        case objects::MiCostTbl::Type_t::HP:
-            if(percentCost)
-            {
-                hpCostPercent = (uint32_t)(hpCostPercent + num);
-            }
-            else
-            {
-                hpCost = (int32_t)(hpCost + num);
-            }
-            break;
-        case objects::MiCostTbl::Type_t::MP:
-            if(percentCost)
-            {
-                mpCostPercent = (uint32_t)(mpCostPercent + num);
-            }
-            else
-            {
-                mpCost = (int32_t)(mpCost + num);
-            }
-            break;
-        case objects::MiCostTbl::Type_t::ITEM:
-            if(percentCost)
-            {
-                LOG_ERROR("Item percent cost encountered.\n");
-                SendFailure(activated, client);
-                return false;
-            }
-            else
-            {
-                auto itemID = cost->GetItem();
-                if(itemCosts.find(itemID) == itemCosts.end())
-                {
-                    itemCosts[itemID] = 0;
-                }
-                itemCosts[itemID] = (uint32_t)(itemCosts[itemID] + num);
-            }
-            break;
-        case objects::MiCostTbl::Type_t::BULLET:
-            if(percentCost)
-            {
-                LOG_ERROR("Bullet percent cost encountered.\n");
-                SendFailure(activated, client);
-                return false;
-            }
-            else
-            {
-                bulletCost = (uint16_t)(bulletCost + num);
-            }
-            break;
-        default:
-            LOG_ERROR(libcomp::String("Unsupported cost type encountered: %1\n")
-                .Arg((uint8_t)cost->GetType()));
-            SendFailure(activated, client);
-            return false;
-        }
-    }
-
-    // Get final HP cost
-    if(hpCost != 0 || hpCostPercent != 0)
-    {
-        hpCost = (int32_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
-            (float)source->GetMaxHP()));
-
-        double multiplier = 1.0;
-        for(double adjust : tokuseiManager->GetAspectValueList(source,
-            TokuseiAspectType::HP_COST_ADJUST, pSkill->SourceExecutionState))
-        {
-            multiplier = adjust <= -100.0 ? 0.0 : (multiplier *
-                (1.0 + adjust * 0.01));
-        }
-
-        hpCost = (int32_t)ceil((double)hpCost * multiplier);
-
-        if(hpCost < 0)
-        {
-            hpCost = 0;
-        }
-    }
-
-    // Get final MP cost
-    if(mpCost != 0 || mpCostPercent != 0)
-    {
-        mpCost = (int32_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
-            (float)source->GetMaxMP()));
-
-        double multiplier = 1.0;
-        for(double adjust : tokuseiManager->GetAspectValueList(source,
-            TokuseiAspectType::MP_COST_ADJUST, pSkill->SourceExecutionState))
-        {
-            multiplier = adjust <= -100.0 ? 0.0 : (multiplier *
-                (1.0 + adjust * 0.01));
-        }
-
-        mpCost = (int32_t)ceil((double)mpCost * multiplier);
-
-        if(mpCost < 0)
-        {
-            mpCost = 0;
         }
     }
 
@@ -1717,7 +1994,131 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
     return true;
 }
 
-bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnection> client,
+bool SkillManager::DetermineNormalCosts(
+    const std::shared_ptr<ActiveEntityState>& source,
+    const std::shared_ptr<objects::MiSkillData>& skillData,
+    int32_t& hpCost, int32_t& mpCost, uint16_t& bulletCost,
+    std::unordered_map<uint32_t, uint32_t>& itemCosts,
+    std::shared_ptr<objects::CalculatedEntityState> calcState)
+{
+    hpCost = 0;
+    mpCost = 0;
+    bulletCost = 0;
+    itemCosts.clear();
+
+    uint32_t hpCostPercent = 0, mpCostPercent = 0;
+    for(auto cost : skillData->GetCondition()->GetCosts())
+    {
+        auto num = cost->GetCost();
+        bool percentCost = cost->GetNumType() ==
+            objects::MiCostTbl::NumType_t::PERCENT;
+        switch(cost->GetType())
+        {
+        case objects::MiCostTbl::Type_t::HP:
+            if(percentCost)
+            {
+                hpCostPercent = (uint32_t)(hpCostPercent + num);
+            }
+            else
+            {
+                hpCost = (int32_t)(hpCost + num);
+            }
+            break;
+        case objects::MiCostTbl::Type_t::MP:
+            if(percentCost)
+            {
+                mpCostPercent = (uint32_t)(mpCostPercent + num);
+            }
+            else
+            {
+                mpCost = (int32_t)(mpCost + num);
+            }
+            break;
+        case objects::MiCostTbl::Type_t::ITEM:
+            if(percentCost)
+            {
+                LOG_ERROR("Item percent cost encountered.\n");
+                return false;
+            }
+            else
+            {
+                auto itemID = cost->GetItem();
+                if(itemCosts.find(itemID) == itemCosts.end())
+                {
+                    itemCosts[itemID] = 0;
+                }
+                itemCosts[itemID] = (uint32_t)(itemCosts[itemID] + num);
+            }
+            break;
+        case objects::MiCostTbl::Type_t::BULLET:
+            if(percentCost)
+            {
+                LOG_ERROR("Bullet percent cost encountered.\n");
+                return false;
+            }
+            else
+            {
+                bulletCost = (uint16_t)(bulletCost + num);
+            }
+            break;
+        default:
+            LOG_ERROR(libcomp::String("Unsupported cost type"
+                " encountered: %1\n").Arg((uint8_t)cost->GetType()));
+            return false;
+        }
+    }
+
+    // Get final HP cost
+    if(hpCost != 0 || hpCostPercent != 0)
+    {
+        hpCost = (int32_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
+            (float)source->GetMaxHP()));
+
+        double multiplier = 1.0;
+        for(double adjust : mServer.lock()->GetTokuseiManager()
+            ->GetAspectValueList(source, TokuseiAspectType::HP_COST_ADJUST,
+                calcState))
+        {
+            multiplier = adjust <= -100.0 ? 0.0 : (multiplier *
+                (1.0 + adjust * 0.01));
+        }
+
+        hpCost = (int32_t)ceil((double)hpCost * multiplier);
+
+        if(hpCost < 0)
+        {
+            hpCost = 0;
+        }
+    }
+
+    // Get final MP cost
+    if(mpCost != 0 || mpCostPercent != 0)
+    {
+        mpCost = (int32_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
+            (float)source->GetMaxMP()));
+
+        double multiplier = 1.0;
+        for(double adjust : mServer.lock()->GetTokuseiManager()
+            ->GetAspectValueList(source, TokuseiAspectType::MP_COST_ADJUST,
+                calcState))
+        {
+            multiplier = adjust <= -100.0 ? 0.0 : (multiplier *
+                (1.0 + adjust * 0.01));
+        }
+
+        mpCost = (int32_t)ceil((double)mpCost * multiplier);
+
+        if(mpCost < 0)
+        {
+            mpCost = 0;
+        }
+    }
+
+    return true;
+}
+
+bool SkillManager::ExecuteNormalSkill(
+    const std::shared_ptr<ChannelClientConnection> client,
     std::shared_ptr<objects::ActivatedAbility> activated,
     const std::shared_ptr<SkillExecutionContext>& ctx)
 {
@@ -1736,67 +2137,68 @@ bool SkillManager::ExecuteNormalSkill(const std::shared_ptr<ChannelClientConnect
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
-    auto skillID = activated->GetSkillID();
-    auto skillData = definitionManager->GetSkillData(skillID);
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
 
-    uint32_t projectileSpeed = skillData->GetDischarge()->GetProjectileSpeed();
-    if(projectileSpeed == 0 || skillData->GetTarget()->GetType() ==
-        objects::MiTargetData::Type_t::NONE)
+    bool retry = false;
+    if(!ctx->FastTrack && IFramesEnabled() &&
+        skillData->GetBasic()->GetCombatSkill() && skillData->GetTarget()
+        ->GetType() != objects::MiTargetData::Type_t::NONE)
     {
-        // Non-projectile skill, calculate damage and effects immediately
-        if(!ProcessSkillResult(activated, ctx))
+        // Check if the hit is valid or if another one is already pending
+        auto targetEntityID = (int32_t)activated->GetTargetObjectID();
+        auto target = zone->GetActiveEntity(targetEntityID);
+        if(!target)
         {
-            SendFailure(activated, client);
+            // Not a retry and not valid
             return false;
+        }
+
+        target->ExpireStatusTimes(ChannelServer::GetServerTime());
+        if(target->StatusTimesKeyExists(STATUS_KNOCKBACK))
+        {
+            retry = true;
+        }
+        else
+        {
+            // Hitstun null removes the stagger requirement
+            bool targetHitstunNull = target->GetCalculatedState()
+                ->ExistingTokuseiAspectsContains((int8_t)
+                    TokuseiAspectType::HITSTUN_NULL);
+            if(!targetHitstunNull && !target->UpdatePendingCombatants(
+                source->GetEntityID(), activated->GetExecutionRequestTime()))
+            {
+                retry = true;
+            }
+        }
+    }
+
+    if(retry)
+    {
+        if(client)
+        {
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::ACTION_RETRY);
         }
 
         return true;
     }
+
+    auto pSkill = GetProcessingSkill(activated, ctx);
+    if(!ctx->FastTrack)
+    {
+        uint64_t startTime = activated->GetExecutionRequestTime() +
+            (uint64_t)skillData->GetDischarge()->GetCompleteDelay() * 1000ULL;
+        server->ScheduleWork(startTime, []
+            (std::shared_ptr<ChannelServer> pServer,
+            std::shared_ptr<ProcessingSkill> prSkill,
+            std::shared_ptr<SkillExecutionContext> pCtx)
+            {
+                pServer->GetSkillManager()->BeginSkillExecution(prSkill, pCtx);
+            }, server, pSkill, ctx);
+    }
     else
     {
-        // Check for the target
-        int32_t targetEntityID = (int32_t)activated->GetTargetObjectID();
-        auto target = zone->GetActiveEntity(targetEntityID);
-
-        // If it isn't valid at this point, fail the skill
-        if(!target)
-        {
-            SendFailure(activated, client);
-            return false;
-        }
-
-        // Determine time from projectile speed and distance
-        target->RefreshCurrentPosition(activated->GetExecutionTime());
-
-        float distance = source->GetDistance(target->GetCurrentX(),
-            target->GetCurrentY());
-        uint16_t maxTargetRange = (uint16_t)(400 + (skillData->GetTarget()->GetRange() * 10));
-        if((float)maxTargetRange < distance)
-        {
-            // Out of range, fail execution
-            SendFailure(activated, client);
-            return false;
-        }
-
-        // Complete the skill, calculate damage and effects when the projectile hits
-        auto projectile = FinalizeSkillExecution(client, ctx, activated);
-
-        // Projectile speed is measured in how many 10ths of a unit the projectile will
-        // traverse per millisecond (with a half second delay for the default cast to projectile
-        // move speed)
-        uint64_t addMicro = (uint64_t)((double)distance / (projectileSpeed * 10)) * 1000000;
-        uint64_t processTime = (projectile->GetExecutionTime() + addMicro) + 500000ULL;
-
-        server->ScheduleWork(processTime, [](const std::shared_ptr<ChannelServer> pServer,
-            const std::shared_ptr<objects::ActivatedAbility> pActivated,
-            const std::shared_ptr<SkillExecutionContext> pCtx)
-            {
-                auto pSkillManager = pServer->GetSkillManager();
-                if(pSkillManager)
-                {
-                    pSkillManager->ProcessSkillResult(pActivated, pCtx);
-                }
-            }, server, projectile, ctx);
+        BeginSkillExecution(pSkill, ctx);
     }
 
     return true;
@@ -1822,96 +2224,116 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
     ProcessingSkill& skill = *pSkill.get();
 
-    // Get the target of the spell, keeping track of initial NRA
-    uint8_t initialHitNull = 0;
-    uint8_t initialHitReflect = 0;
-    bool initialHitAbsorb = false;
-    bool targetChanged = false;
-    switch(skillData->GetTarget()->GetType())
+    bool initialHitReflect = pSkill->Reflected != 0;
+    if(pSkill->Nulled || pSkill->Reflected || pSkill->Absorbed)
     {
-    case objects::MiTargetData::Type_t::NONE:
-        // Source is technically the primary target (though most of
-        // these types of skills will filter it out)
-        skill.PrimaryTarget = source;
-        break;
-    case objects::MiTargetData::Type_t::ALLY:
-    case objects::MiTargetData::Type_t::DEAD_ALLY:
-    case objects::MiTargetData::Type_t::PARTNER:
-    case objects::MiTargetData::Type_t::PARTY:
-    case objects::MiTargetData::Type_t::ENEMY:
-    case objects::MiTargetData::Type_t::DEAD_PARTNER:
-    case objects::MiTargetData::Type_t::OTHER_PLAYER:
-    case objects::MiTargetData::Type_t::OTHER_DEMON:
-    case objects::MiTargetData::Type_t::ALLY_PLAYER:
-    case objects::MiTargetData::Type_t::ALLY_DEMON:
-    case objects::MiTargetData::Type_t::PLAYER:
+        // Apply original target NRA
+        std::shared_ptr<ActiveEntityState> nraTarget;
+        if(activated->GetEntityTargeted())
         {
-            auto targetEntityID = (int32_t)activated->GetTargetObjectID();
-            auto targetEntity = zone->GetActiveEntity(targetEntityID);
-                
-            if(!targetEntity)
+            nraTarget = zone->GetActiveEntity((int32_t)activated
+                ->GetTargetObjectID());
+        }
+        else
+        {
+            nraTarget = source;
+        }
+
+        // Let it fail later if the target doesn't exist
+        if(nraTarget)
+        {
+            uint8_t nraIdx = 0;
+            if(pSkill->Nulled)
             {
-                // Target is not valid anymore
-                /// @todo: what should we do in this instance?
-                break;
+                nraIdx = NRA_NULL;
             }
-
-            if(targetEntity != source)
+            else if(pSkill->Reflected)
             {
-                // Rotate the source to face the target
-                float destRot = (float)atan2(
-                    source->GetCurrentY() - targetEntity->GetCurrentY(),
-                    source->GetCurrentX() - targetEntity->GetCurrentX());
-                source->SetCurrentRotation(destRot);
-                source->SetOriginRotation(destRot);
-                source->SetDestinationRotation(destRot);
-            }
-
-            SkillTargetResult target;
-            target.EntityState = targetEntity;
-            target.CalcState = GetCalculatedState(targetEntity, pSkill, true, source);
-            GetCalculatedState(source, pSkill, false, targetEntity);
-
-            if(SetNRA(target, skill))
-            {
-                // The skill is reflected and the source becomes
-                // the primary target
-                skill.PrimaryTarget = source;
-                skill.EffectiveSource = targetEntity;
-                skill.Reflected = true;
-                skill.Targets.push_back(target);
-
-                // Determine NRA for reflect
-                SkillTargetResult selfTarget;
-                selfTarget.EntityState = source;
-                selfTarget.CalcState = GetCalculatedState(source, pSkill, true, source);
-                GetCalculatedState(source, pSkill, false, source);
-                SetNRA(selfTarget, skill);
-
-                initialHitNull = selfTarget.HitNull;
-                initialHitReflect = selfTarget.HitReflect;
-                initialHitAbsorb = selfTarget.HitAbsorb;
-                targetChanged = true;
+                nraIdx = NRA_REFLECT;
             }
             else
             {
-                skill.PrimaryTarget = targetEntity;
+                nraIdx = NRA_ABSORB;
+            }
 
-                initialHitNull = target.HitNull;
-                initialHitAbsorb = target.HitAbsorb;
+            // It's possible at this point for all NRA to have been consumed
+            // or lost. In this instance a delayed counter skill can occur.
+            bool delayedCounter = false;
 
-                // If it had been reflected we wouldn't be here!
-                initialHitReflect = 0;
+            // Attempt to consume a shield first
+            CorrectTbl nraAffinity = (CorrectTbl)(
+                pSkill->NRAAffinity + NRA_OFFSET);
+            if(!nraTarget->GetNRAShield(nraIdx, nraAffinity, true))
+            {
+                // If a natural chance exists, use that
+                auto calcState = GetCalculatedState(nraTarget,
+                    pSkill, true, source);
+                delayedCounter = nraTarget->GetNRAChance((uint8_t)nraIdx,
+                    nraAffinity, calcState) == 0;
+            }
+
+            if(delayedCounter)
+            {
+                // Rest the NRA, and the targets and check if the original
+                // primary target defends against it
+                pSkill->Nulled = pSkill->Reflected = 0;
+                pSkill->Absorbed = false;
+                pSkill->Targets.clear();
+                pSkill->PrimaryTarget = nraTarget;
+
+                ApplyPrimaryCounter(source, pSkill, false);
             }
         }
-        break;
-    case objects::MiTargetData::Type_t::OBJECT:
-        // Nothing special to do (for now)
-        break;
-    default:
-        LOG_ERROR(libcomp::String("Unknown target type encountered: %1\n")
-            .Arg((uint8_t)skillData->GetTarget()->GetType()));
-        return false;
+    }
+
+    if(pSkill->PrimaryTarget)
+    {
+        if(pSkill->PrimaryTarget != source)
+        {
+            // Rotate the source to face the target
+            float destRot = (float)atan2(
+                source->GetCurrentY() - pSkill->PrimaryTarget->GetCurrentY(),
+                source->GetCurrentX() - pSkill->PrimaryTarget->GetCurrentX());
+            source->SetCurrentRotation(destRot);
+            source->SetOriginRotation(destRot);
+            source->SetDestinationRotation(destRot);
+        }
+
+        if(pSkill->EffectiveSource != source &&
+            pSkill->PrimaryTarget == source)
+        {
+            // Determine NRA for new primary target and update skill NRA
+            SkillTargetResult selfTarget;
+            selfTarget.EntityState = source;
+            selfTarget.CalcState = GetCalculatedState(source,
+                pSkill, true, source);
+            GetCalculatedState(source, pSkill, false, source);
+
+            SetNRA(selfTarget, *pSkill, true);
+
+            pSkill->Nulled = selfTarget.HitNull;
+            pSkill->Reflected = selfTarget.HitReflect;
+            pSkill->Absorbed = selfTarget.HitAbsorb;
+            pSkill->NRAAffinity = selfTarget.NRAAffinity;
+        }
+    }
+
+    // If the final target state of the skill was nulled or reflected or
+    // the primary target avoided the hit, do not gather targets
+    bool gatherTargets = !pSkill->Nulled && !pSkill->Reflected;
+    if(gatherTargets && pSkill->PrimaryTarget)
+    {
+        for(auto& target : pSkill->Targets)
+        {
+            if(target.EntityState == pSkill->PrimaryTarget)
+            {
+                if(target.HitAvoided)
+                {
+                    gatherTargets = false;
+                }
+                break;
+            }
+        }
     }
 
     auto effectiveSource = skill.EffectiveSource;
@@ -1923,7 +2345,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     {
         effectiveTargets = zone->GetActiveEntities();
     }
-    else if(skillRange->GetAreaType() != objects::MiEffectiveRangeData::AreaType_t::NONE)
+    else if(gatherTargets &&
+        skillRange->GetAreaType() != objects::MiEffectiveRangeData::AreaType_t::NONE)
     {
         // Determine area effects
         // Unlike damage calculations, this will use effectiveSource instead
@@ -1939,7 +2362,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             effectiveTargets.push_back(effectiveSource);
             break;
         case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS:
-            if(!targetChanged)
+            if(!skill.Reflected)
             {
                 effectiveTargets = zone->GetActiveEntitiesInRadius(
                     effectiveSource->GetCurrentX(), effectiveSource->GetCurrentY(), aoeRange);
@@ -1947,7 +2370,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             break;
         case objects::MiEffectiveRangeData::AreaType_t::TARGET_RADIUS:
             // If the primary target is set and NRA did not occur, gather other targets
-            if(primaryTarget && !initialHitNull && !initialHitReflect && !initialHitAbsorb)
+            if(primaryTarget && !skill.Nulled && !skill.Reflected && !skill.Absorbed)
             {
                 effectiveTargets = zone->GetActiveEntitiesInRadius(
                     primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(),
@@ -1957,7 +2380,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_1:
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_2:
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_3:
-            if(!targetChanged)
+            if(!skill.Reflected)
             {
                 /// @todo: figure out how these 3 differ
 
@@ -1984,7 +2407,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             }
             break;
         case objects::MiEffectiveRangeData::AreaType_t::STRAIGHT_LINE:
-            if(!targetChanged && primaryTarget &&
+            if(!skill.Reflected && primaryTarget &&
                 skillRange->GetAoeLineWidth() > 0)
             {
                 // Create a rotated rectangle to represent the line with
@@ -2090,7 +2513,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         effectiveTargets.push_front(primaryTarget);
     }
 
-    // Filter out invalid effective targets (including the primary target)
+    // Filter out invalid effective targets
     auto validType = skillRange->GetValidType();
     switch(validType)
     {
@@ -2195,14 +2618,28 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         }
     }
 
+    // Make sure nothing would be added twice (should only be the initial
+    // target under very strange conditions)
+    effectiveTargets.remove_if([pSkill](
+        const std::shared_ptr<ActiveEntityState>& eTarget)
+        {
+            for(auto& target : pSkill->Targets)
+            {
+                if(target.EntityState == eTarget)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
     // Filter down to all valid targets
     uint16_t aoeReflect = 0;
     for(auto effectiveTarget : effectiveTargets)
     {
-        bool isPrimaryTarget = effectiveTarget == primaryTarget;
-
         SkillTargetResult target;
-        target.PrimaryTarget = isPrimaryTarget;
+        target.PrimaryTarget = effectiveTarget == primaryTarget;
         target.EntityState = effectiveTarget;
         target.CalcState = GetCalculatedState(effectiveTarget, pSkill, true,
             source);
@@ -2210,19 +2647,49 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
         // Set NRA
         // If the primary target is still in the set and a reflect did not
-        // occur, apply the initially calculated flags first
+        // occur on the original target, apply the initially calculated flags
         // If an AOE target that is not the source is in the set, increase
         // the number of AOE reflections as needed
         bool isSource = effectiveTarget == source;
-        if(isPrimaryTarget && !initialHitReflect)
+        if(target.PrimaryTarget && !initialHitReflect)
         {
-            target.HitNull = initialHitNull;
-            target.HitAbsorb = initialHitAbsorb;
-            target.HitAvoided = initialHitNull != 0;
+            target.HitNull = skill.Nulled;
+            target.HitReflect = skill.Reflected;
+            target.HitAbsorb = skill.Absorbed;
+            target.HitAvoided = skill.Nulled != 0;
+            target.NRAAffinity = skill.NRAAffinity;
         }
-        else if(SetNRA(target, skill) && !isSource)
+        else
         {
-            aoeReflect++;
+            if(SetNRA(target, skill) && !isSource)
+            {
+                aoeReflect++;
+            }
+
+            if(!target.HitNull && !target.HitAbsorb && !target.HitReflect)
+            {
+                // Check if the target dodges or guards the skill. Counters
+                // only apply for the primary target and are handled earlier.
+                auto tActivated = target.EntityState->GetActivatedAbility();
+                if(tActivated && target.EntityState != source)
+                {
+                    auto tSkillData = definitionManager->GetSkillData(
+                        tActivated->GetSkillID());
+                    switch(tSkillData->GetBasic()->GetActionType())
+                    {
+                    case objects::MiSkillBasicData::ActionType_t::GUARD:
+                        HandleGuard(source, target, pSkill);
+                        break;
+                    case objects::MiSkillBasicData::ActionType_t::DODGE:
+                        HandleDodge(source, target, pSkill);
+                        break;
+                    default:
+                        // Cancellations occur based on knockback or damage
+                        // later
+                        break;
+                    }
+                }
+            }
         }
 
         skill.Targets.push_back(target);
@@ -2243,36 +2710,26 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         skill.Targets.push_back(target);
     }
 
-    // If this is a counter, defer final processing to the skill being
-    // countered (see below)
-    if(ctx->CounteredSkill)
-    {
-        ctx->CounteredSkill->ExecutionContext->CounteringSkills.push_back(pSkill);
-    }
-    else
-    {
-        // Determine hit outcomes
-        CheckSkillHits(source, pSkill);
+    // Finalize the skill processing
+    ProcessSkillResultFinal(pSkill, ctx);
 
-        // Finalize the skill processing
-        ProcessSkillResultFinal(pSkill, ctx);
-
-        // Lastly if the skill was countered, finalize those too
-        if(ctx->CounteringSkills.size() > 0)
+    // Lastly if the skill was countered, finalize those too
+    if(ctx->CounteringSkills.size() > 0)
+    {
+        for(auto counteringSkill : ctx->CounteringSkills)
         {
-            for(auto counteringSkill : ctx->CounteringSkills)
-            {
-                ProcessSkillResultFinal(counteringSkill, nullptr);
+            auto copyCtx = std::make_shared<SkillExecutionContext>(
+                *counteringSkill->ExecutionContext);
+            ProcessSkillResult(counteringSkill->Activated, copyCtx);
 
-                // Now that we're done make sure we clean up context pointer
-                counteringSkill->ExecutionContext = nullptr;
-            }
+            // Now that we're done make sure we clean up the context pointer
+            counteringSkill->ExecutionContext = nullptr;
         }
-
-        // Clean up the related contexts as they are no longer needed
-        ctx->CounteringSkills.clear();
-        ctx->SubContexts.clear();
     }
+
+    // Clean up the related contexts as they are no longer needed
+    ctx->CounteringSkills.clear();
+    ctx->SubContexts.clear();
 
     return true;
 }
@@ -2383,8 +2840,9 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     int8_t kbMod = skillKnockback->GetModifier();
     uint8_t kbType = skillKnockback->GetKnockBackType();
     float kbDistance = (float)(skillKnockback->GetDistance() * 10);
+    bool knockbackExists = false;
 
-    bool doTalk = IsTalkSkill(pSkill->Definition, false) &&
+    bool doTalk = IsTalkSkill(skill.Definition, false) &&
         source->StatusRestrictTalkCount() == 0;
     uint64_t now = ChannelServer::GetServerTime();
     source->RefreshCurrentPosition(now);
@@ -2448,16 +2906,32 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
         }
 
-        // Perform knockback if there is normal damage but no damage potential
-        // or if damage will be dealt (since effective damage cannot be set to
-        // zero past at this point)
         auto battleDamage = damageData->GetBattleDamage();
-        bool applyKnockback = (battleDamage->GetFormula()
-            == objects::MiBattleDamageData::Formula_t::DMG_NORMAL &&
-            battleDamage->GetModifier1() == 0 &&
-            battleDamage->GetModifier2() == 0) ||
-            (!hpMpSet && hpDamage > 0) || (hpMpSet && hpDamage != -1);
-        if(applyKnockback && kbMod)
+        bool applyKnockback = skill.HardStrike && !target.HitAvoided &&
+            !target.HitAbsorb;
+        if(!applyKnockback && kbMod && kbType != 2)
+        {
+            if(battleDamage->GetFormula()
+                == objects::MiBattleDamageData::Formula_t::NONE)
+            {
+                // Perform knockback if configured for knockback with no
+                // damage possible
+                applyKnockback = true;
+            }
+            else if((battleDamage->GetFormula()
+                == objects::MiBattleDamageData::Formula_t::DMG_NORMAL &&
+                battleDamage->GetModifier1() == 0 &&
+                battleDamage->GetModifier2() == 0) ||
+                (!hpMpSet && hpDamage > 0) || (hpMpSet && hpDamage != -1))
+            {
+                // Also perform knockback if there is normal damage but no
+                // damage potential or if damage will be dealt (since effective
+                // damage cannot be set to zero past this point)
+                applyKnockback = true;
+            }
+        }
+
+        if(applyKnockback)
         {
             // Check if the source removes knockback
             int32_t kbRemove = (int32_t)tokuseiManager->GetAspectSum(source,
@@ -2488,12 +2962,15 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     target.EntityState, TokuseiAspectType::KNOCKBACK_RECOVERY,
                     targetCalc) * 0.01);
 
-                float kb = target.EntityState->UpdateKnockback(now, kbMod,
-                    kbRecoverBoost);
+                // Hard strikes are instant knockbacks if we get here
+                float kb = target.EntityState->UpdateKnockback(now,
+                    skill.HardStrike ? -1.f : kbMod, kbRecoverBoost);
                 if(kb == 0.f)
                 {
                     target.Flags1 |= FLAG1_KNOCKBACK;
                     target.EffectCancellations |= EFFECT_CANCEL_KNOCKBACK;
+                    target.CanHitstun = true;
+                    knockbackExists = true;
                 }
             }
         }
@@ -2544,7 +3021,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     target.EntityState != source))
             {
                 // If reflect occurred, a special clench type must be active
-                auto clenchType = pSkill->Reflected
+                auto clenchType = skill.Reflected
                     ? TokuseiAspectType::CLENCH_REFLECT_CHANCE
                     : TokuseiAspectType::CLENCH_CHANCE;
 
@@ -2614,15 +3091,33 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             target.RecalcTriggers.insert(TokuseiConditionType::CURRENT_HP);
         }
 
-        if(hpAdjustedSum < 0)
+        // If we haven't already set hitstun, check if we can now
+        if(!target.CanHitstun)
         {
-            int32_t hitstunNull = (int32_t)tokuseiManager->GetAspectSum(
-                target.EntityState, TokuseiAspectType::HITSTUN_NULL, targetCalc) * 100;
-            target.CanHitstun = hitstunNull != 10000 &&
-                (target.Flags1 & FLAG1_GUARDED) == 0 && !target.HitAbsorb &&
-                (hitstunNull < 0 || RNG(int32_t, 1, 10000) > hitstunNull);
+            bool calcHitstun = false;
+            if(hpAdjustedSum < 0)
+            {
+                calcHitstun = true;
 
-            target.EffectCancellations |= EFFECT_CANCEL_HIT | EFFECT_CANCEL_DAMAGE;
+                target.EffectCancellations |= EFFECT_CANCEL_HIT |
+                    EFFECT_CANCEL_DAMAGE;
+            }
+            else if(target.EntityState == skill.PrimaryTarget &&
+                skill.Definition->GetBasic()->GetActionType() ==
+                objects::MiSkillBasicData::ActionType_t::GUARD)
+            {
+                calcHitstun = true;
+            }
+
+            if(calcHitstun)
+            {
+                int32_t hitstunNull = (int32_t)tokuseiManager->GetAspectSum(
+                    target.EntityState, TokuseiAspectType::HITSTUN_NULL,
+                    targetCalc) * 100;
+                target.CanHitstun = hitstunNull != 10000 &&
+                    (target.Flags1 & FLAG1_GUARDED) == 0 && !target.HitAbsorb &&
+                    (hitstunNull < 0 || RNG(int32_t, 1, 10000) > hitstunNull);
+            }
         }
 
         switch(target.EntityState->GetEntityType())
@@ -2687,8 +3182,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     ApplyZoneSpecificEffects(pSkill);
 
     std::set<uint32_t> keepEffects;
-    if(pSkill->FunctionID &&
-        pSkill->FunctionID == SVR_CONST.SKILL_SLEEP_RESTRICTED)
+    if(skill.FunctionID &&
+        skill.FunctionID == SVR_CONST.SKILL_SLEEP_RESTRICTED)
     {
         // Sleep effects are not cancelled by these skills
         keepEffects.insert(SVR_CONST.STATUS_SLEEP);
@@ -2714,10 +3209,28 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 if(tSkillData)
                 {
                     auto tCancel = tSkillData->GetCast()->GetCancel();
-                    bool applyInterrupt = ((cancelFlags & EFFECT_CANCEL_DAMAGE) != 0 &&
-                        tCancel->GetDamageCancel()) ||
-                        ((cancelFlags & EFFECT_CANCEL_KNOCKBACK) != 0 &&
-                            tCancel->GetKnockbackCancel());
+
+                    bool applyInterrupt = false;
+                    if((cancelFlags & EFFECT_CANCEL_DAMAGE) != 0 &&
+                        tCancel->GetDamageCancel())
+                    {
+                        // Interrupted from damage
+                        applyInterrupt = true;
+                    }
+                    else if((cancelFlags & EFFECT_CANCEL_KNOCKBACK) != 0 &&
+                        tCancel->GetKnockbackCancel())
+                    {
+                        // Interrupted from knockback
+                        applyInterrupt = true;
+                    }
+                    else if(tSkillData->GetDischarge()->GetShotInterruptible() &&
+                        tActivated->GetHitTime() > now &&
+                        tActivated->GetHitTime() - now > 100000ULL)
+                    {
+                        // Interrupted during shot (outside of simultaneous
+                        // hit window)
+                        applyInterrupt = true;
+                    }
 
                     if(applyInterrupt)
                     {
@@ -2821,20 +3334,44 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         HandleNegotiations(source, zone, talkDone);
     }
 
-    if(!ctx || !ctx->Finalized)
+    if(!ctx || !ctx->Executed || !ctx->Finalized)
     {
-        // Send right before finishing execution
+        // Send right before finishing execution if we haven't already
         auto client = server->GetManagerConnection()->GetEntityClient(
             source->GetEntityID());
         FinalizeSkillExecution(client, ctx, activated);
+        FinalizeSkill(ctx, activated);
     }
+
+    bool isGuard = skill.Definition->GetBasic()->GetActionType() ==
+        objects::MiSkillBasicData::ActionType_t::GUARD && skill.PrimaryTarget;
 
     bool doRush = skill.Definition->GetBasic()->GetActionType() ==
         objects::MiSkillBasicData::ActionType_t::RUSH && skill.PrimaryTarget;
     if(doRush)
     {
-        SkillTargetResult* selfTarget = GetSelfTarget(source, skill.Targets, true);
-        selfTarget->Flags1 |= FLAG1_RUSH_MOVEMENT;
+        // If a rush is countered, do not actually rush
+        bool countered = false;
+        for(auto& target : skill.Targets)
+        {
+            if(target.PrimaryTarget &&
+                (target.Flags1 & FLAG1_GUARDED) != 0 && target.HitAvoided)
+            {
+                countered = true;
+                break;
+            }
+        }
+
+        if(!countered)
+        {
+            SkillTargetResult* selfTarget = GetSelfTarget(source,
+                skill.Targets, true);
+            selfTarget->Flags1 |= FLAG1_RUSH_MOVEMENT;
+        }
+        else
+        {
+            doRush = false;
+        }
     }
 
     auto effectiveSource = skill.EffectiveSource;
@@ -2842,10 +3379,27 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     auto effectiveTarget = primaryTarget ? primaryTarget : effectiveSource;
 
     uint64_t hitTimings[3];
-    uint64_t completeTime = now +
+    uint64_t completeTime = activated->GetExecutionTime() +
         (skill.Definition->GetDischarge()->GetStiffness() * 1000);
-    uint64_t hitStopTime = now +
+    uint64_t hitStopTime = activated->GetExecutionTime() +
         (skill.Definition->GetDamage()->GetHitStopTime() * 1000);
+    uint64_t selfDelay = 0;
+
+    // Make sure the hit stop time isn't somehow before now
+    if(hitStopTime < now)
+    {
+        hitStopTime = now;
+    }
+
+    if(knockbackExists && !doRush && activated->GetLockOutTime() &&
+        activated->GetLockOutTime() > now)
+    {
+        // Causing knockback results in a longer immobolization period for
+        // the source entity but only if they would still be stopped by
+        // the lockout time
+        GetSelfTarget(source, skill.Targets, true);
+        selfDelay = hitStopTime;
+    }
 
     auto zConnections = zone->GetConnectionList();
     RelativeTimeMap timeMap;
@@ -2887,7 +3441,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
             // An execute packet must be sent once per report (even if its
             // identical) or the client starts ignoring the reports
-            SendExecuteSkill(pSkill->Activated);
+            SendExecuteSkill(pSkill);
         }
 
         libcomp::Packet p;
@@ -2912,7 +3466,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             p.WriteS32Little(abs(target.AilmentDamage));
 
             bool rushing = false, knockedBack = false;
-            if((target.Flags1 & FLAG1_KNOCKBACK) && kbType != 2)
+            bool guarded = isGuard && target.EntityState == skill.PrimaryTarget;
+            if(target.Flags1 & FLAG1_KNOCKBACK)
             {
                 uint8_t kbEffectiveType = kbType;
                 if(kbType == 1 && target.PrimaryTarget)
@@ -2949,7 +3504,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     break;
                 case 5:
                     {
-                        // Oosition becomes source position
+                        // Position becomes source position
                         target.EntityState->SetOriginX(target.EntityState->GetCurrentX());
                         target.EntityState->SetOriginY(target.EntityState->GetCurrentY());
                         target.EntityState->SetOriginTicks(now);
@@ -3002,15 +3557,14 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             hitTimings[0] = hitTimings[1] = hitTimings[2] = 0;
             if(rushing)
             {
-                hitTimings[0] = now;
-                hitTimings[1] = now + 200000;
+                hitTimings[0] = activated->GetExecutionTime();
+                hitTimings[1] = activated->GetExecutionTime() + 200000;
             }
-            else if(target.CanHitstun &&
-                (target.Damage1Type == DAMAGE_TYPE_GENERIC || knockedBack))
+            else if(target.CanHitstun)
             {
-                if(target.Damage1)
+                if(target.Damage1 || guarded)
                 {
-                    // Damage dealt, determine stun time
+                    // Damage dealt (or guarded), determine stun time
                     bool extendHitStun = target.AilmentDamageType != 0 || knockedBack;
                     if(extendHitStun)
                     {
@@ -3052,6 +3606,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     // No damage, just result displays
                     hitTimings[2] = completeTime;
                 }
+            }
+            else if(target.EntityState == source && selfDelay)
+            {
+                // Source is quasi-hitstunned until the knockback ends
+                source->SetStatusTimes(STATUS_IMMOBILE, selfDelay);
+                hitTimings[2] = selfDelay;
             }
 
             for(size_t i = 0; i < 3; i++)
@@ -3119,6 +3679,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     std::set<std::shared_ptr<ActiveEntityState>> partnerDemons;
     std::set<std::shared_ptr<ActiveEntityState>> revived;
     std::set<std::shared_ptr<ActiveEntityState>> killed;
+    std::list<std::shared_ptr<ActiveEntityState>> aiHit;
     std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
     std::set<int32_t> interruptEvent;
 
@@ -3151,7 +3712,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         switch(eState->GetEntityType())
         {
         case EntityType_t::CHARACTER:
-            if(!target.HitAvoided)
+            if(!target.HitAvoided && !target.HitAbsorb)
             {
                 durabilityHit.insert(eState);
             }
@@ -3220,6 +3781,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 displayStateModified.insert(eState);
             }
         }
+
+        if(eState != source && eState->GetAIState() &&
+            skill.Definition->GetBasic()->GetCombatSkill())
+        {
+            aiHit.push_back(eState);
+        }
     }
 
     // Process all additional effects
@@ -3234,7 +3801,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     }
 
     // Update durability (ignore for PvP)
-    if(!pSkill->InPvP)
+    if(!skill.InPvP)
     {
         for(auto entity : durabilityHit)
         {
@@ -3292,6 +3859,24 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         HandleKills(source, zone, killed);
     }
 
+    // Make sure all AI entities that got attacked are notified
+    if(aiHit.size() > 0)
+    {
+        server->GetAIManager()->CombatSkillHit(aiHit, source,
+            skill.Definition);
+    }
+
+    if(source->GetAIState() &&
+        skill.Definition->GetBasic()->GetCombatSkill())
+    {
+        // The skill hit if it wasn't nulled, absorbed or countered
+        bool hit = !skill.Nulled && !skill.Absorbed &&
+            ctx->CounteringSkills.size() == 0;
+        server->GetAIManager()->CombatSkillComplete(source,
+            activated, skill.Definition, skill.PrimaryTarget,
+            hit);
+    }
+
     // Report all updates to the world
     if(displayStateModified.size() > 0)
     {
@@ -3340,6 +3925,8 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
         skill->CurrentZone->GetInstanceType() == InstanceType_t::PVP;
     skill->IsItemSkill = skillData->GetBasic()->GetFamily() == 2 ||
         skillData->GetBasic()->GetFamily() == 6;
+    skill->IsProjectile = skillData->GetDischarge()->GetProjectileSpeed() &&
+        skillData->GetTarget()->GetType() != objects::MiTargetData::Type_t::NONE;
     skill->FunctionID = skillData->GetDamage()->GetFunctionID();
 
     if(skill->FunctionID &&
@@ -3933,45 +4520,68 @@ uint16_t SkillManager::CalculateOffenseValue(const std::shared_ptr<ActiveEntityS
     return off;
 }
 
-void SkillManager::CheckSkillHits(const std::shared_ptr<ActiveEntityState>& source,
-    const std::shared_ptr<ProcessingSkill>& pSkill)
+bool SkillManager::ApplyPrimaryCounter(
+    const std::shared_ptr<ActiveEntityState>& source,
+    const std::shared_ptr<ProcessingSkill>& pSkill, bool guard)
 {
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-
-    // Check for counter first and stop if one succeeds
-    for(SkillTargetResult& target : pSkill->Targets)
+    auto tActivated = pSkill->PrimaryTarget->GetActivatedAbility();
+    if(!tActivated || !pSkill->PrimaryTarget)
     {
-        auto tActivated = target.EntityState->GetActivatedAbility();
-        if(tActivated && target.EntityState != source)
-        {
-            auto tSkillData = definitionManager->GetSkillData(tActivated->GetSkillID());
-            switch(tSkillData->GetBasic()->GetActionType())
-            {
-            case objects::MiSkillBasicData::ActionType_t::GUARD:
-                HandleGuard(source, target, pSkill);
-                break;
-            case objects::MiSkillBasicData::ActionType_t::COUNTER:
-                HandleCounter(source, target, pSkill);
-                break;
-            case objects::MiSkillBasicData::ActionType_t::DODGE:
-                HandleDodge(source, target, pSkill);
-                break;
-            default:
-                // Cancellations occur based on knockback or damage later
-                break;
-            }
-        }
+        return false;
     }
+
+    if(pSkill->ExecutionContext->CounteredSkill)
+    {
+        // Cannot double counter
+        return false;
+    }
+
+    SkillTargetResult target;
+    target.EntityState = pSkill->PrimaryTarget;
+    target.CalcState = GetCalculatedState(pSkill->PrimaryTarget, pSkill,
+        true, source);
+
+    auto server = mServer.lock();
+    auto tSkillData = server->GetDefinitionManager()
+        ->GetSkillData(tActivated->GetSkillID());
+    switch(tSkillData->GetBasic()->GetActionType())
+    {
+    case objects::MiSkillBasicData::ActionType_t::COUNTER:
+        if(HandleCounter(source, target, pSkill))
+        {
+            pSkill->Targets.push_back(target);
+            return true;
+        }
+        break;
+    case objects::MiSkillBasicData::ActionType_t::DODGE:
+        if(HandleDodge(source, target, pSkill))
+        {
+            pSkill->Targets.push_back(target);
+            return true;
+        }
+        break;
+    case objects::MiSkillBasicData::ActionType_t::GUARD:
+        if(guard && HandleGuard(source, target, pSkill))
+        {
+            pSkill->Targets.push_back(target);
+            return true;
+        }
+        break;
+    default:
+        // Cancellations occur based on knockback or damage later
+        break;
+    }
+
+    return false;
 }
 
-void SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
+bool SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
     SkillTargetResult& target, const std::shared_ptr<ProcessingSkill>& pSkill)
 {
     auto tActivated = target.EntityState->GetActivatedAbility();
     if(!tActivated)
     {
-        return;
+        return false;
     }
 
     uint8_t cancelType = 1;
@@ -3985,12 +4595,25 @@ void SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
         {
         case objects::MiSkillBasicData::ActionType_t::ATTACK:
         case objects::MiSkillBasicData::ActionType_t::SPIN:
-            if(tActivated->GetChargedTime() <= pSkill->Activated->GetExecutionTime())
+            if(tActivated->GetChargedTime() <= pSkill->Activated->GetHitTime())
             {
                 target.Flags1 |= FLAG1_GUARDED;
-                target.GuardModifier = tSkillData->GetDamage()->GetBattleDamage()->GetModifier1();
-                ExecuteSkill(target.EntityState, activationID, (int64_t)source->GetEntityID());
-                return;
+                target.GuardModifier = tSkillData->GetDamage()
+                    ->GetBattleDamage()->GetModifier1();
+
+                // Fast track execute now but fizzle if not the primary target,
+                // defense bonus still applies
+                auto guardCtx = std::make_shared<SkillExecutionContext>();
+                guardCtx->CounteredSkill = pSkill;
+                guardCtx->FastTrack = true;
+                guardCtx->Fizzle = target.EntityState != pSkill->PrimaryTarget;
+
+                if(ExecuteSkill(target.EntityState, activationID, source
+                    ->GetEntityID(), guardCtx))
+                {
+                    pSkill->ExecutionContext->SubContexts.push_back(guardCtx);
+                    return true;
+                }
             }
             break;
         case objects::MiSkillBasicData::ActionType_t::RUSH:
@@ -4002,15 +4625,16 @@ void SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
     }
 
     CancelSkill(target.EntityState, tActivated->GetActivationID(), cancelType);
+    return false;
 }
 
-void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& source,
+bool SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& source,
     SkillTargetResult& target, const std::shared_ptr<ProcessingSkill>& pSkill)
 {
     auto tActivated = target.EntityState->GetActivatedAbility();
     if(!tActivated)
     {
-        return;
+        return false;
     }
 
     uint8_t cancelType = 1;
@@ -4024,18 +4648,22 @@ void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
         {
         case objects::MiSkillBasicData::ActionType_t::ATTACK:
         case objects::MiSkillBasicData::ActionType_t::RUSH:
-            if(tActivated->GetChargedTime() <= pSkill->Activated->GetExecutionTime())
+            if(tActivated->GetChargedTime() <= pSkill->Activated->GetHitTime())
             {
                 target.Flags1 |= FLAG1_GUARDED;
                 target.HitAvoided = true;
 
                 auto counterCtx = std::make_shared<SkillExecutionContext>();
                 counterCtx->CounteredSkill = pSkill;
-                pSkill->ExecutionContext->SubContexts.push_back(counterCtx);
+                counterCtx->FastTrack = true;
 
-                ExecuteSkill(target.EntityState, activationID, (int64_t)source->GetEntityID(),
-                    counterCtx);
-                return;
+                if(ExecuteSkill(target.EntityState, activationID, source
+                    ->GetEntityID(), counterCtx))
+                {
+                    pSkill->ExecutionContext->SubContexts.push_back(
+                        counterCtx);
+                    return true;
+                }
             }
         case objects::MiSkillBasicData::ActionType_t::SPIN:
             cancelType = 3; // Display counter break animation
@@ -4046,15 +4674,16 @@ void SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
     }
 
     CancelSkill(target.EntityState, activationID, cancelType);
+    return false;
 }
 
-void SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
+bool SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
     SkillTargetResult& target, const std::shared_ptr<ProcessingSkill>& pSkill)
 {
     auto tActivated = target.EntityState->GetActivatedAbility();
     if(!tActivated)
     {
-        return;
+        return false;
     }
 
     int8_t activationID = tActivated->GetActivationID();
@@ -4067,13 +4696,24 @@ void SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
         {
         case objects::MiSkillBasicData::ActionType_t::SHOT:
         case objects::MiSkillBasicData::ActionType_t::RAPID:
-            if(tActivated->GetChargedTime() <= pSkill->Activated->GetExecutionTime())
+            if(tActivated->GetChargedTime() <= pSkill->Activated->GetHitTime())
             {
                 target.Flags1 |= FLAG1_DODGED;
                 target.Damage1Type = target.Damage2Type = DAMAGE_TYPE_MISS;
                 target.HitAvoided = true;
-                ExecuteSkill(target.EntityState, activationID, (int64_t)source->GetEntityID());
-                return;
+
+                // Fast track execute now but fizzle if not the primary target
+                auto dodgeCtx = std::make_shared<SkillExecutionContext>();
+                dodgeCtx->CounteredSkill = pSkill;
+                dodgeCtx->FastTrack = true;
+                dodgeCtx->Fizzle = target.EntityState != pSkill->PrimaryTarget;
+
+                if(ExecuteSkill(target.EntityState, activationID, source
+                    ->GetEntityID(), dodgeCtx))
+                {
+                    pSkill->ExecutionContext->SubContexts.push_back(dodgeCtx);
+                    return true;
+                }
             }
         default:
             break;
@@ -4081,6 +4721,7 @@ void SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
     }
 
     CancelSkill(target.EntityState, activationID);
+    return false;
 }
 
 std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
@@ -4331,7 +4972,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
                 }
             }
 
-            uint8_t stack = CalculateStatusEffectStack(minStack, maxStack);
+            int8_t stack = CalculateStatusEffectStack(minStack, maxStack);
             if(stack == 0 && !isReplace) continue;
 
             // Check for status damage to apply at the end of the skill
@@ -4342,7 +4983,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
                 auto tDamage = statusDef->GetEffect()->GetDamage();
                 bool minDamage = targetCalc->ExistingTokuseiAspectsContains(
                     (int8_t)TokuseiAspectType::DAMAGE_MIN);
-                if(tDamage->GetHPDamage() > 0 && !minDamage)
+                if(tDamage->GetHPDamage() > 0 && !minDamage && stack > 0)
                 {
                     uint8_t ailmentDamageType = (uint8_t)(affinity - AIL_OFFSET);
 
@@ -5303,19 +5944,18 @@ void SkillManager::HandleEncounterDefeat(const std::shared_ptr<
     auto actionManager = server->GetActionManager();
     auto sourceClient = server->GetManagerConnection()->
         GetEntityClient(source->GetEntityID());
+    std::list<std::shared_ptr<objects::Action>> defeatActions;
     for(auto ePair : encounterGroups)
     {
         if(!ePair.first) continue;
 
-        std::shared_ptr<objects::ActionSpawn> defeatActionSource;
-        if(zone->EncounterDefeated(ePair.first, defeatActionSource))
+        if(zone->EncounterDefeated(ePair.first, defeatActions))
         {
             // If the defeatActionSource has actions, those override the group's default
-            if(defeatActionSource && defeatActionSource->DefeatActionsCount() > 0)
+            if(defeatActions.size() > 0)
             {
-                actionManager->PerformActions(sourceClient,
-                    defeatActionSource->GetDefeatActions(), source->GetEntityID(),
-                    zone, ePair.first);
+                actionManager->PerformActions(sourceClient, defeatActions,
+                    source->GetEntityID(), zone, ePair.first);
             }
             else
             {
@@ -6757,7 +7397,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                         if(target.PursuitAffinity != skill.EffectiveAffinity)
                         {
                             // Check NRA for pursuit affinity and stop if it is prevented
-                            if(!GetNRAResult(target, skill, target.PursuitAffinity, true))
+                            if(!GetNRAResult(target, skill, target.PursuitAffinity))
                             {
                                 // Calculate the new enemy resistence and determine damage
                                 float pResist = (float)(targetState->GetCorrectTbl(
@@ -6880,7 +7520,8 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
             float aoeReduction = (float)damageData->GetAoeReduction();
             if(mod1)
             {
-                if(!target.PrimaryTarget && aoeReduction)
+                if(!target.PrimaryTarget && damageData->GetAoeReduction() &&
+                    aoeReduction > 0)
                 {
                     target.Damage1 = (uint16_t)((float)target.Damage1 *
                         (float)(1.f - (0.01f * aoeReduction)));
@@ -6891,10 +7532,11 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                     target.Damage1 = 1;
                 }
             }
-    
+
             if(mod2)
             {
-                if(!target.PrimaryTarget && aoeReduction)
+                if(!target.PrimaryTarget && damageData->GetAoeReduction() &&
+                    aoeReduction > 0)
                 {
                     target.Damage2 = (uint16_t)((float)target.Damage2 *
                         (float)(1.f - (0.01f * aoeReduction)));
@@ -7148,7 +7790,8 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         calc = calc + (float)skill.ExpertiseRankBoost * 0.5f;
 
         // Subtract the enemy defense, unless its a critical or limit break
-        calc = calc - (float)(critLevel > 0 ? 0 : def);
+        // in which case only the guard modifier applies
+        calc = calc - (float)(critLevel > 0 ? target.GuardModifier : def);
 
         if(calc > 0.f)
         {
@@ -7348,9 +7991,11 @@ SkillTargetResult* SkillManager::GetSelfTarget(const std::shared_ptr<ActiveEntit
     }
 }
 
-bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
+bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill,
+    bool reduceShields)
 {
-    uint8_t resultIdx = GetNRAResult(target, skill, skill.EffectiveAffinity);
+    uint8_t resultIdx = GetNRAResult(target, skill, skill.EffectiveAffinity,
+        target.NRAAffinity, false, reduceShields);
     if(resultIdx && skill.InPvP)
     {
         target.AutoProtect = true;
@@ -7412,9 +8057,18 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill)
     }
 }
 
-uint8_t SkillManager::GetNRAResult(SkillTargetResult& target, ProcessingSkill& skill,
-    uint8_t effectiveAffinity, bool effectiveOnly)
+uint8_t SkillManager::GetNRAResult(SkillTargetResult& target,
+    ProcessingSkill& skill, uint8_t effectiveAffinity)
 {
+    return GetNRAResult(target, skill, effectiveAffinity, target.NRAAffinity,
+        true, true);
+}
+
+uint8_t SkillManager::GetNRAResult(SkillTargetResult& target,
+    ProcessingSkill& skill, uint8_t effectiveAffinity,
+    uint8_t& resultAffinity, bool effectiveOnly, bool reduceShields)
+{
+    resultAffinity = 0;
     if(!skill.Definition->GetBasic()->GetCombatSkill())
     {
         // Non-combat skills cannot be NRA'd meaning NRA_HEAL was (apparently)
@@ -7425,8 +8079,8 @@ uint8_t SkillManager::GetNRAResult(SkillTargetResult& target, ProcessingSkill& s
     std::list<CorrectTbl> affinities;
     if(!effectiveOnly)
     {
-        // Calculate affinity checks for physical vs magic and both base and effective
-        // values if they differ
+        // Calculate affinity checks for physical vs magic and both base and
+        // effective values if they differ
         if(effectiveAffinity != 11)
         {
             // Gather based on dependency type and base affinity if not almighty
@@ -7468,8 +8122,10 @@ uint8_t SkillManager::GetNRAResult(SkillTargetResult& target, ProcessingSkill& s
         for(CorrectTbl affinity : affinities)
         {
             // Consume shields first
-            if(target.EntityState->PopNRAShield((uint8_t)nraIdx, affinity))
+            if(target.EntityState->GetNRAShield((uint8_t)nraIdx, affinity,
+                reduceShields))
             {
+                resultAffinity = (uint8_t)((uint8_t)affinity - NRA_OFFSET);
                 return (uint8_t)nraIdx;
             }
 
@@ -7478,6 +8134,7 @@ uint8_t SkillManager::GetNRAResult(SkillTargetResult& target, ProcessingSkill& s
                 affinity, target.CalcState);
             if(chance >= 100 || (chance > 0 && RNG(int16_t, 1, 100) <= chance))
             {
+                resultAffinity = (uint8_t)((uint8_t)affinity - NRA_OFFSET);
                 return (uint8_t)nraIdx;
             }
         }
@@ -7486,7 +8143,7 @@ uint8_t SkillManager::GetNRAResult(SkillTargetResult& target, ProcessingSkill& s
     return 0;
 }
 
-uint8_t SkillManager::CalculateStatusEffectStack(int8_t minStack, int8_t maxStack) const
+int8_t SkillManager::CalculateStatusEffectStack(int8_t minStack, int8_t maxStack) const
 {
     // Sanity check
     if(minStack > maxStack)
@@ -7494,8 +8151,8 @@ uint8_t SkillManager::CalculateStatusEffectStack(int8_t minStack, int8_t maxStac
         return 0;
     }
 
-    return minStack == maxStack ? (uint8_t)maxStack
-        : (uint8_t)RNG(uint16_t, (uint16_t)minStack, (uint16_t)maxStack);
+    return minStack == maxStack ? maxStack
+        : (int8_t)RNG(int16_t, (int16_t)minStack, (int16_t)maxStack);
 }
 
 std::unordered_map<uint8_t, std::list<std::shared_ptr<objects::ItemDrop>>>
@@ -7538,20 +8195,23 @@ std::unordered_map<uint8_t, std::list<std::shared_ptr<objects::ItemDrop>>>
             dropSetIDs.push_back(dropSetID);
         }
 
-        // Add global drops
-        auto globalDef = serverDataManager->GetZonePartialData(0);
-        if(globalDef)
+        if(spawn->GetInheritDrops())
         {
-            for(uint32_t dropSetID : globalDef->GetDropSetIDs())
+            // Add global drops
+            auto globalDef = serverDataManager->GetZonePartialData(0);
+            if(globalDef)
+            {
+                for(uint32_t dropSetID : globalDef->GetDropSetIDs())
+                {
+                    dropSetIDs.push_back(dropSetID);
+                }
+            }
+
+            // Add zone drops
+            for(uint32_t dropSetID : zone->GetDefinition()->GetDropSetIDs())
             {
                 dropSetIDs.push_back(dropSetID);
             }
-        }
-
-        // Add zone drops
-        for(uint32_t dropSetID : zone->GetDefinition()->GetDropSetIDs())
-        {
-            dropSetIDs.push_back(dropSetID);
         }
     }
 
@@ -7656,20 +8316,20 @@ void SkillManager::ScheduleFreeLoot(uint64_t time, const std::shared_ptr<Zone>& 
         }, server->GetCharacterManager(), zone, lootEntityIDs, worldCIDs);
 }
 
-std::shared_ptr<objects::ActivatedAbility> SkillManager::FinalizeSkillExecution(
+void SkillManager::FinalizeSkillExecution(
     const std::shared_ptr<ChannelClientConnection> client,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     std::shared_ptr<objects::ActivatedAbility> activated)
 {
     if(ctx)
     {
-        if(ctx->Finalized)
+        if(ctx->Executed)
         {
-            // Already finalized
-            return activated;
+            // Already executed
+            return;
         }
 
-        ctx->Finalized = true;
+        ctx->Executed = true;
     }
 
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(
@@ -7745,37 +8405,45 @@ std::shared_ptr<objects::ActivatedAbility> SkillManager::FinalizeSkillExecution(
         }
     }
 
-    if(skillData->GetBasic()->GetCombatSkill() && activated->GetEntityTargeted() && zone)
+    activated->SetExecutionTime(ChannelServer::GetServerTime());
+
+    if(skillData->GetBasic()->GetCombatSkill() &&
+        activated->GetEntityTargeted() && zone)
     {
         // Start combat if the target exists
         auto targetEntityID = (int32_t)activated->GetTargetObjectID();
         auto target = zone->GetActiveEntity(targetEntityID);
-        if(target && !source->SameFaction(target))
+        if(target)
         {
-            characterManager->AddRemoveOpponent(true, source, target);
+            auto kbData = skillData->GetDamage()->GetKnockBack();
+            uint8_t kbType = kbData->GetKnockBackType();
+            if(activated->GetHitTime() && kbType != 2)
+            {
+                // Estimate if the attack will cause knockback to indicate
+                // a "hard strike" animation. Does not guarantee knockback.
+                float kbRecoverBoost = (float)(tokuseiManager->GetAspectSum(
+                    target, TokuseiAspectType::KNOCKBACK_RECOVERY,
+                    target->GetCalculatedState()) * 0.01);
+                if(target->RefreshKnockback(activated->GetHitTime(),
+                    kbRecoverBoost, false) - kbData->GetModifier() <= 0.f)
+                {
+                    pSkill->HardStrike = true;
+                }
+            }
+
+            if(!source->SameFaction(target))
+            {
+                characterManager->AddRemoveOpponent(true, source, target);
+            }
         }
     }
 
-    bool end = SetSkillCompleteState(pSkill, true);
-    if(!end)
+    SetSkillCompleteState(pSkill, true);
+
+    // Do not ACTUALLY execute when using Rest
+    if(pSkill->FunctionID != SVR_CONST.SKILL_REST)
     {
-        // More uses, make a copy and reset values on original
-        auto copy = std::make_shared<objects::ActivatedAbility>(*activated);
-
-        activated->SetHPCost(0);
-        activated->SetMPCost(0);
-        activated->SetBulletCost(0);
-        activated->ClearItemCosts();
-
-        // Proceed with the copy
-        activated = copy;
-    }
-
-    // Do not execute or complete when using Rest
-    bool executeAndComplete = pSkill->FunctionID != SVR_CONST.SKILL_REST;
-    if(executeAndComplete)
-    {
-        SendExecuteSkill(activated);
+        SendExecuteSkill(pSkill);
     }
 
     if(client && source->GetEntityType() == EntityType_t::CHARACTER)
@@ -7793,18 +8461,6 @@ std::shared_ptr<objects::ActivatedAbility> SkillManager::FinalizeSkillExecution(
             activated->GetExpertiseBoost(), multiplier);
     }
 
-    // Update the execution count and remove and complete it from the entity
-    if(end && executeAndComplete)
-    {
-        if(source->GetActivatedAbility() == activated)
-        {
-            source->SetActivatedAbility(nullptr);
-            source->ResetUpkeep();
-        }
-
-        SendCompleteSkill(activated, 0);
-    }
-
     // Cancel any status effects (not just added) that expire on
     // skill execution
     auto selfTarget = GetSelfTarget(source, pSkill->Targets, true, false);
@@ -7818,6 +8474,59 @@ std::shared_ptr<objects::ActivatedAbility> SkillManager::FinalizeSkillExecution(
     }
 
     source->CancelStatusEffects(EFFECT_CANCEL_SKILL, ignore);
+}
+
+std::shared_ptr<objects::ActivatedAbility> SkillManager::FinalizeSkill(
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    std::shared_ptr<objects::ActivatedAbility> activated)
+{
+    if(ctx)
+    {
+        if(ctx->Finalized)
+        {
+            // Already finalized
+            return activated;
+        }
+
+        ctx->Finalized = true;
+    }
+
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(
+        activated->GetSourceEntity());
+    auto zone = source->GetZone();
+    auto pSkill = GetProcessingSkill(activated, ctx);
+    auto skillData = pSkill->Definition;
+
+    if(activated->GetExecuteCount() < activated->GetMaxUseCount())
+    {
+        // More uses, make a copy and reset values on original
+        auto copy = std::make_shared<objects::ActivatedAbility>(*activated);
+
+        activated->SetHPCost(0);
+        activated->SetMPCost(0);
+        activated->SetBulletCost(0);
+        activated->ClearItemCosts();
+
+        // Proceed with the copy
+        activated = copy;
+
+        // Reset times
+        activated->SetExecutionTime(0);
+        activated->SetExecutionRequestTime(0);
+        activated->SetHitTime(0);
+    }
+    else if(pSkill->FunctionID != SVR_CONST.SKILL_REST)
+    {
+        // Update the execution count and remove and complete it from the
+        // entity
+        if(source->GetActivatedAbility() == activated)
+        {
+            source->SetActivatedAbility(nullptr);
+            source->ResetUpkeep();
+        }
+
+        SendCompleteSkill(activated, 0);
+    }
 
     return activated;
 }
@@ -7829,14 +8538,22 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(
         activated->GetSourceEntity());
 
-    uint64_t currentTime = executed
-        ? activated->GetExecutionTime() : ChannelServer::GetServerTime();
+    uint64_t currentTime = activated->GetExecutionRequestTime();
+    if(!currentTime)
+    {
+        currentTime = ChannelServer::GetServerTime();
+    }
 
     uint8_t execCount = activated->GetExecuteCount();
     if(executed)
     {
         execCount = (uint8_t)(execCount + 1);
         activated->SetExecuteCount(execCount);
+    }
+    else
+    {
+        // Skill was cancelled
+        activated->SetCancelled(true);
     }
 
     bool moreUses = execCount < activated->GetMaxUseCount();
@@ -7849,12 +8566,15 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
         uint32_t stiffness = dischargeData->GetStiffness();
 
         uint64_t lockOutTime = currentTime + (uint64_t)(stiffness * 1000);
-        source->SetStatusTimes(STATUS_IMMOBILE, lockOutTime);
-
-        if(source->IsMoving())
+        if(stiffness)
         {
-            mServer.lock()->GetZoneManager()->FixCurrentPosition(source,
-                lockOutTime, currentTime);
+            source->SetStatusTimes(STATUS_LOCKOUT, lockOutTime);
+
+            if(source->IsMoving())
+            {
+                mServer.lock()->GetZoneManager()->FixCurrentPosition(source,
+                    lockOutTime, currentTime);
+            }
         }
 
         activated->SetLockOutTime(lockOutTime);
@@ -7890,6 +8610,17 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
 
     activated->SetCooldownTime(cooldownTime);
 
+    if(cooldownTime)
+    {
+        source->SetSkillCooldowns(pSkill->Definition->GetBasic()
+            ->GetCooldownID(), cooldownTime);
+    }
+    else
+    {
+        source->RemoveSkillCooldowns(pSkill->Definition->GetBasic()
+            ->GetCooldownID());
+    }
+
     return !executed || !moreUses;
 }
 
@@ -7906,6 +8637,8 @@ bool SkillManager::SpecialSkill(const std::shared_ptr<objects::ActivatedAbility>
         // Clean up the special activation
         source->RemoveSpecialActivations(activated->GetActivationID());
     }
+
+    activated->SetExecutionTime(ChannelServer::GetServerTime());
 
     return true;
 }
@@ -8351,13 +9084,13 @@ bool SkillManager::DirectStatus(const std::shared_ptr<objects::ActivatedAbility>
         {
             uint32_t effectID = (uint32_t)param;
 
-            uint8_t stackSize = 1;
+            int8_t stackSize = 1;
             if(!limited)
             {
                 // Add 30% of max stack
                 auto statusData = definitionManager->GetStatusData(effectID);
                 uint8_t maxStack = statusData->GetBasic()->GetMaxStack();
-                stackSize = (uint8_t)ceil((float)maxStack / 30.f);
+                stackSize = (int8_t)ceil((float)maxStack / 30.f);
             }
 
             effects[effectID] = StatusEffectChange(effectID, stackSize, false);
@@ -8416,7 +9149,7 @@ bool SkillManager::EquipItem(const std::shared_ptr<objects::ActivatedAbility>& a
     auto itemID = activated->GetActivationObjectID();
     if(itemID <= 0)
     {
-        SendFailure(activated, client);
+        SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
     }
 
@@ -8500,7 +9233,8 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     {
         if(statusEffects.find(addStatus->GetStatusID()) != statusEffects.end())
         {
-            SendFailure(activated, client);
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::GENERIC);
             return false;
         }
     }
@@ -8509,7 +9243,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
 
     if(fType > 16)
     {
-        SendFailure(activated, client);
+        SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
     }
 
@@ -8554,7 +9288,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     StatusEffectChanges effects;
     for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
     {
-        uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
+        int8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
             addStatus->GetMaxStack());
         if(stack == 0 && !addStatus->GetIsReplace()) continue;
 
@@ -8827,7 +9561,7 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     StatusEffectChanges effects;
     for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
     {
-        uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
+        int8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
             addStatus->GetMaxStack());
         if(stack == 0 && !addStatus->GetIsReplace()) continue;
 
@@ -9296,7 +10030,7 @@ bool SkillManager::Rest(const std::shared_ptr<objects::ActivatedAbility>& activa
         StatusEffectChanges effects;
         for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
         {
-            uint8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
+            int8_t stack = CalculateStatusEffectStack(addStatus->GetMinStack(),
                 addStatus->GetMaxStack());
             if(stack == 0 && !addStatus->GetIsReplace()) continue;
 
@@ -9627,19 +10361,22 @@ void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> 
     }
 }
 
-void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> activated)
+void SkillManager::SendExecuteSkill(
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill)
 {
     // Instant executions use a special packet to execute
+    auto activated = pSkill->Activated;
     if(activated->GetActivationID() == -1)
     {
-        SendExecuteSkillInstant(activated, 0);
+        SendExecuteSkillInstant(pSkill, 0);
         return;
     }
 
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     auto zone = source ? source->GetZone() : nullptr;
-    auto zConnections = zone
-        ? zone->GetConnectionList() : std::list<std::shared_ptr<ChannelClientConnection>>();
+    auto zConnections = zone ? zone->GetConnectionList()
+        : std::list<std::shared_ptr<ChannelClientConnection>>();
     if(zConnections.size() > 0)
     {
         int32_t targetedEntityID = activated->GetEntityTargeted()
@@ -9668,20 +10405,23 @@ void SkillManager::SendExecuteSkill(std::shared_ptr<objects::ActivatedAbility> a
         p.WriteFloat(0);    //Unknown
         p.WriteFloat(0);    //Unknown
         p.WriteFloat(0);    //Unknown
-        p.WriteU8(0);   //Unknown
+        p.WriteU8(pSkill->HardStrike ? 1 : 0);
         p.WriteU8(0xFF);   //Unknown
 
-        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+        ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
+            timeMap);
     }
 }
 
-void SkillManager::SendExecuteSkillInstant(std::shared_ptr<
-    objects::ActivatedAbility> activated, uint8_t errorCode)
+void SkillManager::SendExecuteSkillInstant(
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill, uint8_t errorCode)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto activated = pSkill->Activated;
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     auto zone = source ? source->GetZone() : nullptr;
-    auto zConnections = zone
-        ? zone->GetConnectionList() : std::list<std::shared_ptr<ChannelClientConnection>>();
+    auto zConnections = zone ? zone->GetConnectionList()
+        : std::list<std::shared_ptr<ChannelClientConnection>>();
     if(zConnections.size() > 0)
     {
         int32_t targetedEntityID = activated->GetEntityTargeted()
@@ -9691,7 +10431,8 @@ void SkillManager::SendExecuteSkillInstant(std::shared_ptr<
         RelativeTimeMap timeMap;
 
         libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTED_INSTANT);
+        p.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTED_INSTANT);
         p.WriteU8(errorCode);
         p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
@@ -9707,7 +10448,8 @@ void SkillManager::SendExecuteSkillInstant(std::shared_ptr<
         if(cooldown)
         {
             // Relative times are only needed if a cooldown is set
-            ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+            ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
+                timeMap);
         }
         else
         {
@@ -9823,4 +10565,11 @@ bool SkillManager::IsTalkSkill(const std::shared_ptr<
     }
 
     return false;
+}
+
+bool SkillManager::IFramesEnabled()
+{
+    const static bool enabled = mServer.lock()->GetWorldSharedConfig()
+        ->GetIFramesEnabled();
+    return enabled;
 }

@@ -2838,8 +2838,6 @@ bool ActionManager::Spawn(ActionContext& ctx)
         // to a specific spot ID that has already spawned enemies
         return spawned || ctx.CurrentZone->SpawnedAtSpot(act->GetSpotID());
     case objects::ActionSpawn::Mode_t::DESPAWN:
-    case objects::ActionSpawn::Mode_t::ENABLE_GROUP:
-    case objects::ActionSpawn::Mode_t::DISABLE_GROUP:
         // Never quit
         return true;
     default:

@@ -76,10 +76,14 @@ public:
      * other necessary data
      * @param eState Pointer to the entity state
      * @param aiType AI script type to bind to the entity
+     * @param baseAIType AI type to use for the base demon AI or zero
+     *  to use the default for the demon type
+     * @param aggression Aggression level of a the AI, defaults to 100
      * @return true on sucess, false upon failure
      */
     bool Prepare(const std::shared_ptr<ActiveEntityState>& eState,
-        const libcomp::String& aiType, uint8_t aggression = 100);
+        const libcomp::String& aiType, uint16_t baseAIType = 0,
+        uint8_t aggression = 100);
 
     /**
      * Update the AI state of all active AI controlled entities in the
@@ -91,6 +95,38 @@ public:
      */
     void UpdateActiveStates(const std::shared_ptr<Zone>& zone, uint64_t now,
         bool isNight);
+
+    /**
+     * Handler for any AI controlled entities that get hit by a combat skill
+     * from another entity. This is executed immediately after a skill is
+     * processed and reported to the clients.
+     * @param entities List of pointers to AI controlled entities
+     * @param source Pointer to the source of the skill. Can be an ally
+     *  but is never the same entity being hit
+     * @param skillData Pointer to the definition of the skill being used
+     */
+    void CombatSkillHit(
+        const std::list<std::shared_ptr<ActiveEntityState>>& entities,
+        const std::shared_ptr<ActiveEntityState>& source,
+        const std::shared_ptr<objects::MiSkillData>& skillData);
+
+    /**
+     * Handler for an AI controlled entity completing a skill responsible
+     * for timing post skill use actions
+     * @param eState Pointer to the entity state
+     * @param activated Pointer to the skill's activation state
+     * @param skillData Pointer to the definition of the skill being used
+     * @param target Pointer to the primary target of the skill. Can be
+     *  an ally or even the entity itself if a reflect occurred. The original
+     *  target can be retrieved from the ActivatedAbility
+     * @param hit true if the skill hit the target entity in a normal fasion
+     *  (not avoided, NRA'd etc)
+     */
+    void CombatSkillComplete(
+        const std::shared_ptr<ActiveEntityState>& eState,
+        const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<objects::MiSkillData>& skillData,
+        const std::shared_ptr<ActiveEntityState>& target, bool hit);
 
     /**
      * Queue a script command on the specified AIState
@@ -136,16 +172,25 @@ private:
     /**
      * Update the state of an enemy or ally, processing AI directly or queuing
      * commands to be procssed on next update
-     * @param state Pointer to the entity state to update
-     * @param eBase Pointer to the enemy base objects
+     * @param eState Pointer to the entity state to update
+     * @param eBase Pointer to the enemy base object from the entity
      * @param now Current timestamp of the server
      * @param isNight Night time indicator which affects targetting
      * @return true if the entity state should be communicated to the zone,
      *  false otherwise
      */
-    bool UpdateEnemyState(const std::shared_ptr<ActiveEntityState>& state,
+    bool UpdateEnemyState(const std::shared_ptr<ActiveEntityState>& eState,
         const std::shared_ptr<objects::EnemyBase>& eBase, uint64_t now,
         bool isNight);
+
+    /**
+     * Handle normal wander actions for the supplied AI controlled enemy
+     * based entity
+     * @param eState Pointer to the entity state to update
+     * @param eBase Pointer to the enemy base object from the entity
+     */
+    void Wander(const std::shared_ptr<ActiveEntityState>& eState,
+        const std::shared_ptr<objects::EnemyBase>& eBase);
 
     /**
      * Clear an entity's AIState current target and find the next target to focus on
@@ -165,6 +210,14 @@ private:
      */
     void RefreshSkillMap(const std::shared_ptr<ActiveEntityState>& eState,
         const std::shared_ptr<AIState>& aiState);
+
+    /**
+     * Determine which skill the entity will use next based on their current
+     * state
+     * @param eState Pointer to the entity state
+     * @return true if a skill was selected, false if none can be used
+     */
+    bool PrepareSkillUsage(const std::shared_ptr<ActiveEntityState>& state);
 
     /**
      * Execute a function on the script bound to an entity's AI state and return the
@@ -201,14 +254,18 @@ private:
     /**
      * Get a new move command from one point to another, calculating pathing and
      * adjusting for collisions
-     * @param source Starting point
+     * @param eState Pointer to the entity state to move
      * @param dest End point
      * @param reduce Reduces the final movement path by a set amount so the entity
      *  ends up that amount of units away
+     * @param split If true, movements will be split into smaller segments to
+     *  be more accurate to original movement. Disable for less important
+     *  actions such as wandering with no target for less packet traffic.
      * @return Pointer to the new move command
      */
-    std::shared_ptr<AIMoveCommand> GetMoveCommand(const std::shared_ptr<Zone>& zone,
-        const Point& source, const Point& dest, float reduce = 0.f) const;
+    std::shared_ptr<AIMoveCommand> GetMoveCommand(
+        const std::shared_ptr<ActiveEntityState>& eState,
+        const Point& dest, float reduce = 0.f, bool split = true) const;
 
     /**
      * Get a new wait command

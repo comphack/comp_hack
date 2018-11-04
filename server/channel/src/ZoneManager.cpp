@@ -41,6 +41,7 @@
 #include <AccountLogin.h>
 #include <AccountWorldData.h>
 #include <ActionSpawn.h>
+#include <ActionStartEvent.h>
 #include <Ally.h>
 #include <ChannelLogin.h>
 #include <CharacterLogin.h>
@@ -133,7 +134,14 @@ namespace libcomp
             binding
                 .Func("GetGlobalZone", &ZoneManager::GetGlobalZone)
                 .Func("GetExistingZone", &ZoneManager::GetExistingZone)
-                .Func("GetInstanceStartingZone", &ZoneManager::GetInstanceStartingZone);
+                .Func("GetInstanceStartingZone", &ZoneManager::GetInstanceStartingZone)
+                .Func<std::shared_ptr<ActiveEntityState>(ZoneManager::*)(
+                    const std::shared_ptr<Zone>&, uint32_t, uint32_t, uint32_t,
+                    float, float, float)>("CreateEnemy", &ZoneManager::CreateEnemy)
+                .Func<bool(ZoneManager::*)(
+                    std::list<std::shared_ptr<ActiveEntityState>>,
+                    const std::shared_ptr<Zone>&, bool, bool, const libcomp::String&)>(
+                    "AddEnemiesToZone", &ZoneManager::AddEnemiesToZone);
 
             Bind<ZoneManager>("ZoneManager", binding);
         }
@@ -899,6 +907,8 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     cState->SetDeathTimeOut(0);
     dState->SetDeathTimeOut(0);
     state->SetZoneInSpotID(0);
+    cState->ClearAggroIDs();
+    dState->ClearAggroIDs();
 
     auto ticks = server->GetServerTime();
 
@@ -2152,11 +2162,15 @@ void ZoneManager::FixCurrentPosition(const std::shared_ptr<ActiveEntityState>& e
         }
 
         eState->RefreshCurrentPosition(now);
+
+        // In between rotation values do not matter
+        float rot = eState->GetDestinationRotation();
+        eState->SetCurrentRotation(rot);
+
         eState->Stop(now);
 
         float x = eState->GetCurrentX();
         float y = eState->GetCurrentY();
-        float rot = eState->GetCurrentRotation();
 
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FIX_POSITION);
@@ -2304,7 +2318,7 @@ void ZoneManager::SendBazaarMarketData(const std::shared_ptr<Zone>& zone,
     p.WriteS32Little(bState->GetEntityID());
     p.WriteS32Little((int32_t)marketID);
     p.WriteS32Little(market ? (int32_t)market->GetNPCType() : -1);
-    p.WriteS32Little(market ? 1 : 0); // State: 0 = vacant, 1 = ready, 2 = pending?
+    p.WriteS32Little(market ? (int32_t)market->GetState() : 0);
     p.WriteString16Little(libcomp::Convert::ENCODING_CP932,
         market ? market->GetComment() : "", true);
 
@@ -2470,9 +2484,12 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<EnemyState>& enemyState,
     p.WriteS8(stats->GetLevel());
     p.WriteS32Little((int32_t)zone->GetID());
     p.WriteS32Little((int32_t)zoneData->GetID());
-    p.WriteFloat(enemyState->GetOriginX());
-    p.WriteFloat(enemyState->GetOriginY());
-    p.WriteFloat(enemyState->GetOriginRotation());
+
+    // Send destination instead of origin so the next move doesn't look
+    // off and they are more likely to be valid for attacking
+    p.WriteFloat(enemyState->GetDestinationX());
+    p.WriteFloat(enemyState->GetDestinationY());
+    p.WriteFloat(enemyState->GetDestinationRotation());
     
     auto statusEffects = enemyState->GetCurrentStatusEffectStates();
 
@@ -2543,9 +2560,12 @@ void ZoneManager::SendAllyData(const std::shared_ptr<AllyState>& allyState,
     p.WriteS8(stats->GetLevel());
     p.WriteS32Little((int32_t)zone->GetID());
     p.WriteS32Little((int32_t)zoneData->GetID());
-    p.WriteFloat(allyState->GetOriginX());
-    p.WriteFloat(allyState->GetOriginY());
-    p.WriteFloat(allyState->GetOriginRotation());
+
+    // Send destination instead of origin so the next move doesn't look
+    // off and they are more likely to be valid for using skills on
+    p.WriteFloat(allyState->GetDestinationX());
+    p.WriteFloat(allyState->GetDestinationY());
+    p.WriteFloat(allyState->GetDestinationRotation());
 
     auto statusEffects = allyState->GetCurrentStatusEffectStates();
 
@@ -3028,7 +3048,7 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
     float x, float y, float rot, const libcomp::String& aiType)
 {
     auto eState = std::dynamic_pointer_cast<EnemyState>(
-        CreateEnemy(zone, demonID, nullptr, x, y, rot));
+        CreateEnemy(zone, demonID, 0, 0, x, y, rot));
     if(eState)
     {
         auto server = mServer.lock();
@@ -3045,6 +3065,196 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
     {
         return false;
     }
+}
+
+std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
+    const std::shared_ptr<Zone>& zone, uint32_t demonID, uint32_t spawnID,
+    uint32_t spotID, float x, float y, float rot)
+{
+    if(!zone || !demonID)
+    {
+        return nullptr;
+    }
+
+    auto spawn = zone->GetDefinition()->GetSpawns(spawnID);
+    if(!spawn && spawnID)
+    {
+        LOG_ERROR(libcomp::String("Failed to load spawn ID %1 in zone %2\n")
+            .Arg(spawnID).Arg(zone->GetDefinitionID()));
+    }
+
+    if(spotID)
+    {
+        auto definitionManager = mServer.lock()->GetDefinitionManager();
+        auto spots = definitionManager->GetSpotData(zone->GetDynamicMapID());
+        auto spotIter = spots.find(spotID);
+        if(spotIter != spots.end())
+        {
+            auto zoneData = definitionManager->GetZoneData(
+                zone->GetDefinitionID());
+
+            Point p = GetRandomSpotPoint(spotIter->second, zoneData);
+            x = p.x;
+            y = p.y;
+            rot = spotIter->second->GetRotation();
+        }
+    }
+
+    auto eState = CreateEnemy(zone, demonID, spawn, x, y, rot);
+    if(eState)
+    {
+        eState->GetEnemyBase()->SetSpawnSpotID(spotID);
+    }
+
+    return eState;
+}
+
+bool ZoneManager::AddEnemiesToZone(
+    const std::list<std::shared_ptr<ActiveEntityState>>& eStates,
+    const std::shared_ptr<Zone>& zone, bool staggerSpawn, bool asEncounter,
+    const std::list<std::shared_ptr<objects::Action>>& defeatActions)
+{
+    if(!zone)
+    {
+        return false;
+    }
+
+    for(auto eState : eStates)
+    {
+        if(eState->GetEntityType() != EntityType_t::ENEMY &&
+            eState->GetEntityType() != EntityType_t::ALLY)
+        {
+            LOG_ERROR(libcomp::String("Attempted to add an entity other than"
+                " an enemy or ally via AddEnemiesToZone: %1\n")
+                .Arg(zone->GetDefinitionID()));
+            return false;
+        }
+
+        if(eState->GetZone() != zone)
+        {
+            LOG_ERROR(libcomp::String("At least one enemy being added to zone"
+                " %1 was not created there\n")
+                .Arg(zone->GetDefinitionID()));
+            return false;
+        }
+    }
+
+    auto server = mServer.lock();
+    auto aiManager = server->GetAIManager();
+
+    bool first = true;
+    uint64_t staggerTime = 0;
+    for(auto eState : eStates)
+    {
+        auto spawn = eState->GetEnemyBase()->GetSpawnSource();
+        if(spawn)
+        {
+            // Prepare spawn based AI
+            if(!aiManager->Prepare(eState, spawn->GetAIScriptID(),
+                spawn->GetBaseAIType(), spawn->GetAggression()))
+            {
+                LOG_WARNING(libcomp::String("Failed to prepare AI for"
+                    " enemy: %1\n").Arg(spawn->GetAIScriptID()));
+            }
+        }
+        else
+        {
+            // Prepare default AI
+            aiManager->Prepare(eState, "");
+        }
+
+        if(!asEncounter)
+        {
+            if(!first && staggerSpawn)
+            {
+                if(!staggerTime)
+                {
+                    staggerTime = ChannelServer::GetServerTime();
+                }
+
+                // Spawn every half second
+                staggerTime = (uint64_t)(staggerTime + 500000);
+            }
+
+            if(eState->GetEntityType() == EntityType_t::ENEMY)
+            {
+                auto e = std::dynamic_pointer_cast<EnemyState>(eState);
+                zone->AddEnemy(e, staggerTime);
+            }
+            else
+            {
+                auto a = std::dynamic_pointer_cast<AllyState>(eState);
+                zone->AddAlly(a, staggerTime);
+            }
+
+            first = false;
+        }
+    }
+
+    if(asEncounter)
+    {
+        zone->CreateEncounter(eStates, staggerSpawn, defeatActions);
+    }
+
+    TriggerZoneActions(zone, eStates, ZoneTrigger_t::ON_SPAWN);
+
+    for(auto& eState : eStates)
+    {
+        if(eState->Ready())
+        {
+            if(eState->GetEntityType() == EntityType_t::ENEMY)
+            {
+                auto e = std::dynamic_pointer_cast<EnemyState>(eState);
+                SendEnemyData(e, nullptr, zone, false);
+            }
+            else
+            {
+                auto a = std::dynamic_pointer_cast<AllyState>(eState);
+                SendAllyData(a, nullptr, zone, false);
+            }
+        }
+    }
+
+    return true;
+}
+
+bool ZoneManager::AddEnemiesToZone(
+    std::list<std::shared_ptr<ActiveEntityState>> eStates,
+    const std::shared_ptr<Zone>& zone, bool staggerSpawn, bool asEncounter,
+    const libcomp::String& defeatEventID)
+{
+    if(!zone)
+    {
+        return false;
+    }
+
+    std::list<std::shared_ptr<objects::Action>> defeatActions;
+    if(asEncounter && !defeatEventID.IsEmpty())
+    {
+        auto startEvent = std::make_shared<objects::ActionStartEvent>();
+        startEvent->SetEventID(defeatEventID);
+        defeatActions.push_back(startEvent);
+    }
+
+    for(auto& eState : eStates)
+    {
+        if(!eState)
+        {
+            LOG_ERROR(libcomp::String("Attempted to add null enemy to zone"
+                ": %1\n").Arg(zone->GetDefinitionID()));
+            return false;
+        }
+
+        if(zone->GetActiveEntity(eState->GetEntityID()))
+        {
+            LOG_ERROR(libcomp::String("Attempted to add enemy to zone twice"
+                ": %1\n").Arg(zone->GetDefinitionID()));
+            return false;
+        }
+    }
+
+    return AddEnemiesToZone(eStates, zone, staggerSpawn, asEncounter,
+        defeatActions);
 }
 
 bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
@@ -3067,13 +3277,10 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             checking.push_back(p);
         }
 
-        bool enabling = mode == objects::ActionSpawn::Mode_t::ENABLE_GROUP;
-
         std::set<uint32_t> disabledGroupIDs = zone->GetDisabledSpawnGroups();
         for(auto gPair : actionSource->GetSpawnGroupIDs())
         {
-            if(enabling ||
-                disabledGroupIDs.find(gPair.first) == disabledGroupIDs.end())
+            if(disabledGroupIDs.find(gPair.first) == disabledGroupIDs.end())
             {
                 std::pair<bool, std::pair<uint32_t, uint32_t>> p(false,
                     std::pair<uint32_t, uint32_t>(gPair.first, gPair.second));
@@ -3081,25 +3288,8 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             }
         }
 
-        // Enable/disable spawn groups and despawn all work a bit different
-        // than normal spawns
-        if(enabling ||
-            mode == objects::ActionSpawn::Mode_t::DISABLE_GROUP)
-        {
-            std::set<uint32_t> groupIDs;
-            for(auto& pair : checking)
-            {
-                // Filter just group IDs
-                if(!pair.first)
-                {
-                    groupIDs.insert(pair.second.first);
-                }
-            }
-
-            zone->EnableDisableSpawnGroups(groupIDs, enabling);
-            return false;
-        }
-        else if(mode == objects::ActionSpawn::Mode_t::DESPAWN)
+        // Despawn works a bit different than normal spawns
+        if(mode == objects::ActionSpawn::Mode_t::DESPAWN)
         {
             // Match enemies in zone on specified locations and
             // group/location pairs
@@ -3484,79 +3674,30 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
     if(eStateGroups.size() > 0)
     {
         auto server = mServer.lock();
-        auto aiManager = server->GetAIManager();
+
+        // Spawn encounters or simple groups
+        std::list<std::shared_ptr<objects::Action>> defeatActions;
         for(auto& eStateGroup : eStateGroups)
         {
-            bool encounterSpawn = !containsSimpleSpawns || eStateGroup != eStateGroups.front();
+            bool stagger = !refreshAll ||
+                (actionSource && !actionSource->GetNoStagger());
+            bool encounterSpawn = !containsSimpleSpawns ||
+                eStateGroup != eStateGroups.front();
 
-            bool first = true;
-            uint64_t staggerTime = 0;
-            for(auto eState : eStateGroup)
+            if(actionSource)
             {
-                auto spawn = eState->GetEnemyBase()->GetSpawnSource();
-                if(!aiManager->Prepare(eState, spawn->GetAIScriptID(), spawn->GetAggression()))
-                {
-                    LOG_ERROR(libcomp::String("Failed to prepare AI for enemy: %1\n")
-                        .Arg(spawn->GetAIScriptID()));
-                }
-
-                if(!encounterSpawn)
-                {
-                    if(!first && !refreshAll &&
-                        (!actionSource || !actionSource->GetNoStagger()))
-                    {
-                        if(!staggerTime)
-                        {
-                            staggerTime = ChannelServer::GetServerTime();
-                        }
-
-                        // Spawn every half second
-                        staggerTime = (uint64_t)(staggerTime + 500000);
-                    }
-
-                    if(eState->GetEntityType() == EntityType_t::ENEMY)
-                    {
-                        auto e = std::dynamic_pointer_cast<EnemyState>(eState);
-                        zone->AddEnemy(e, staggerTime);
-                    }
-                    else
-                    {
-                        auto a = std::dynamic_pointer_cast<AllyState>(eState);
-                        zone->AddAlly(a, staggerTime);
-                    }
-
-                    first = false;
-                }
+                defeatActions = actionSource->GetDefeatActions();
+            }
+            else
+            {
+                defeatActions.clear();
             }
 
-            if(encounterSpawn)
-            {
-                zone->CreateEncounter(eStateGroup, actionSource);
-            }
-
-            TriggerZoneActions(zone, eStateGroup, ZoneTrigger_t::ON_SPAWN);
+            AddEnemiesToZone(eStateGroup, zone, stagger,
+                encounterSpawn, defeatActions);
         }
 
-        for(auto& eStateGroup : eStateGroups)
-        {
-            for(auto& eState : eStateGroup)
-            {
-                if(eState->Ready())
-                {
-                    if(eState->GetEntityType() == EntityType_t::ENEMY)
-                    {
-                        auto e = std::dynamic_pointer_cast<EnemyState>(eState);
-                        SendEnemyData(e, nullptr, zone, false);
-                    }
-                    else
-                    {
-                        auto a = std::dynamic_pointer_cast<AllyState>(eState);
-                        SendAllyData(a, nullptr, zone, false);
-                    }
-                }
-            }
-        }
-
+        // Fire spawn group actions
         for(auto sg : spawnActionGroups)
         {
             server->GetActionManager()->PerformActions(nullptr,
@@ -7050,7 +7191,7 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         for(auto plasmaPair : definition->GetPlasmaSpawns())
         {
             auto pSpawn = plasmaPair.second;
-            auto state = std::shared_ptr<PlasmaState>(new PlasmaState(pSpawn));
+            auto state = std::make_shared<PlasmaState>(pSpawn);
 
             float x = pSpawn->GetX();
             float y = pSpawn->GetY();
@@ -7071,6 +7212,13 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             state->CreatePoints();
 
             state->SetEntityID(server->GetNextEntityID());
+
+            auto restriction = pSpawn->GetRestrictions();
+            if(restriction && restriction->GetDisabled())
+            {
+                state->Toggle(false);
+            }
+
             zone->AddPlasma(state);
         }
 

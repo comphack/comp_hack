@@ -29,6 +29,7 @@
 // libcomp Includes
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ScriptEngine.h>
 
 // objects Includes
 #include <Loot.h>
@@ -39,6 +40,27 @@
 #include "ChannelServer.h"
 
 using namespace channel;
+
+namespace libcomp
+{
+    template<>
+    ScriptEngine& ScriptEngine::Using<PlasmaState>()
+    {
+        if(!BindingExists("PlasmaState", true))
+        {
+            Using<objects::EntityStateObject>();
+
+            Sqrat::DerivedClass<PlasmaState, objects::EntityStateObject,
+                Sqrat::NoConstructor<PlasmaState>> binding(mVM, "PlasmaState");
+            binding
+                .Func("Toggle", &PlasmaState::Toggle);
+
+            Bind<PlasmaState>("PlasmaState", binding);
+        }
+
+        return *this;
+    }
+}
 
 PlasmaPoint::PlasmaPoint()
 {

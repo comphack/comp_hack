@@ -39,6 +39,8 @@ class ActivatedAbility;
 namespace channel
 {
 
+class Point;
+
 /**
  * Type of AI command used to specify what should happen to an AI controlled
  * entity upon state update.
@@ -132,24 +134,22 @@ public:
      * point as the destination
      * @param pathing List of sequential points defining a movement path
      */
-    void SetPathing(const std::list<std::pair<float, float>>& pathing);
+    void SetPathing(const std::list<Point>& pathing);
 
     /**
      * Get the x and y coordinates of the point in the pathing that will
      * be moved to next
-     * @param x Output parameter for the next movement point's X coordinate
-     * @param y Output parameter for the next movement point's Y coordinate
+     * @param dest Output parameter for the next movement point's coordinates
      * @return true if a current destination exists, false if one does not
      */
-    bool GetCurrentDestination(float& x, float& y) const;
+    bool GetCurrentDestination(Point& dest) const;
     
     /**
      * Get the x and y coordinates of the point at the end of the pathing
-     * @param x Output parameter for the final movement point's X coordinate
-     * @param y Output parameter for the final movement point's Y coordinate
+     * @param dest Output parameter for the next movement point's coordinates
      * @return true if the end destination exists, false if one does not
      */
-    bool GetEndDestination(float& x, float& y) const;
+    bool GetEndDestination(Point& dest) const;
 
     /**
      * Remove the current destination from the pathing and move on to the next
@@ -160,7 +160,7 @@ public:
 
 private:
     /// List of sequential points defining a movement path
-    std::list<std::pair<float, float>> mPathing;
+    std::list<Point> mPathing;
 };
 
 /**

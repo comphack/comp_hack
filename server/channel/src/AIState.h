@@ -39,6 +39,7 @@
 namespace objects
 {
 class MiAIData;
+class MiSkillData;
 }
 
 namespace channel
@@ -174,7 +175,7 @@ public:
      * 2000 milliseconds will be used.
      * @return AI think speed in milliseconds
      */
-    int32_t GetThinkSpeed() const;
+    int32_t GetThinkSpeed();
 
     /**
      * Get the AI's aggro value from its base AI definition represnting
@@ -257,18 +258,19 @@ public:
 
     /**
      * Get the mapped skills of the AI controlled entity
-     * @return Map of AI skill types to active skill IDs the entity can use
+     * @return Map of AI skill types to active skill definitions the entity
+     *  can use
      */
     std::unordered_map<uint16_t,
-        std::vector<uint32_t>> GetSkillMap() const;
+        std::list<std::shared_ptr<objects::MiSkillData>>> GetSkillMap() const;
 
     /**
      * Set the mapped skills of the AI controlled entity
-     * @param skillMap Map of AI skill types to active skill IDs the entity
-     *  can use
+     * @param skillMap Map of AI skill types to active skill definitions
+     *  the entity can use
      */
     void SetSkillMap(const std::unordered_map<uint16_t,
-        std::vector<uint32_t>>& skillMap);
+        std::list<std::shared_ptr<objects::MiSkillData>>>& skillMap);
 
     /**
      * Override a default server side processing action with a
@@ -307,8 +309,9 @@ private:
     /// Map of AI actions to script function names to call instead
     std::unordered_map<std::string, libcomp::String> mActionOverrides;
 
-    /// Map of AI skill types to active skill IDs the entity can use
-    std::unordered_map<uint16_t, std::vector<uint32_t>> mSkillMap;
+    /// Map of AI skill types to active skill definitions the entity can use
+    std::unordered_map<uint16_t,
+        std::list<std::shared_ptr<objects::MiSkillData>>> mSkillMap;
 
     /// Pointer to the base AI definition for the AI controlled entity
     std::shared_ptr<objects::MiAIData> mAIData;

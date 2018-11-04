@@ -105,11 +105,11 @@
         </member>
     </object>
     <object name="MiDischargeData" persistent="false">
-        <member type="u32" name="discharge1"/>
+        <member type="u32" name="completeDelay"/>
         <member type="u32" name="projectileSpeed"/>
-        <member type="u32" name="discharge3"/>
+        <member type="u32" name="hitDelay"/>
         <member type="u32" name="stiffness"/>
-        <member type="bool" name="discharge5" pad="3"/>
+        <member type="bool" name="shotInterruptible" pad="3"/>
     </object>
     <object name="MiEffectiveRangeData" persistent="false">
         <member type="enum" name="areaType" underlying="uint8_t">
@@ -148,7 +148,7 @@
             <value num="11">HEAL_MAX_PERCENT</value>
             <value num="14">DMG_MAX_PERCENT</value>
         </member>
-        <member type="u8" name="battleDamage2"/>
+        <member type="bool" name="aoeReduce"/>
         <member type="u8" name="aoeReduction" pad="1"/>
         <member type="u16" name="modifier1"/>
         <member type="u16" name="modifier2"/>
@@ -172,8 +172,8 @@
     </object>
     <object name="MiAddStatusTbl" persistent="false">
         <member type="u32" name="statusID"/>
-        <member type="s8" name="maxStack"/>
-        <member type="s8" name="minStack"/>
+        <member type="s8" name="maxStack" max="100"/>
+        <member type="s8" name="minStack" max="100"/>
         <member type="u8" name="onKnockback"/>
         <member type="bool" name="isReplace"/>
         <member type="u16" name="successRate" pad="2"/>

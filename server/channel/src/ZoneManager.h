@@ -513,7 +513,68 @@ public:
         float y, float rot, const libcomp::String& aiType = "");
 
     /**
-     * Update the specified zone's SpawnLocationGroups
+     * Create an enemy (or ally) in the specified zone at set coordinates
+     * but do not add it to the zone yet
+     * @param zone Pointer to the zone where the entity should be spawned
+     * @param demonID Demon/enemy type ID to spawn
+     * @param spawnID Optional zone definition spawn ID
+     * @param spotID Optional spot ID to add the enemy to
+     * @param x X coordinate to render the enemy at
+     * @param y Y coordinate to render the enemy at
+     * @param rot Rotation to render the enemy with
+     * @return Pointer to the new ActiveEntityState
+     */
+    std::shared_ptr<ActiveEntityState> CreateEnemy(
+        const std::shared_ptr<Zone>& zone, uint32_t demonID, uint32_t spawnID,
+        uint32_t spotID, float x, float y, float rot);
+
+    /**
+     * Add enemies (or allies) already created in the zone, prepare AI and
+     * fire spawn triggers. Spawns can optionally be staggered and/or created
+     * as a single encounter that will fire the supplied action source actions
+     * when defeated.
+     * @param eStates Pointer to enemy or ally states to add to the zone
+     * @param zone Pointer to the zone where the entities should be added
+     * @param staggerSpawn If true the spawns will be staggered as they appear,
+     *  if false they will all appear at once
+     * @param asEncounter If true the enemies will be created as an encounter
+     *  and the supplied defeatActions will fire when the last one is defeated,
+     *  if false they will be normal spawns
+     * @param defeatActions List of defeat actions to fire when the enemies
+     *  are killed, should the be spawned in as an encounter
+     * @return true if the enemies were added successfully, false if an error
+     *  occurred
+     */
+    bool AddEnemiesToZone(
+        const std::list<std::shared_ptr<ActiveEntityState>>& eStates,
+        const std::shared_ptr<Zone>& zone, bool staggerSpawn, bool asEncounter,
+        const std::list<std::shared_ptr<objects::Action>>& defeatActions);
+
+    /**
+     * Add enemies (or allies) already created in the zone, prepare AI and
+     * fire spawn triggers. Spawns can optionally be staggered and/or created
+     * as a single encounter that will fire the supplied action source actions
+     * when defeated.
+     * @param eStates Pointer to enemy or ally states to add to the zone
+     * @param zone Pointer to the zone where the entities should be added
+     * @param staggerSpawn If true the spawns will be staggered as they appear,
+     *  if false they will all appear at once
+     * @param asEncounter If true the enemies will be created as an encounter
+     *  and the supplied defeatEventID will fire when the last one is defeated,
+     *  if false they will be normal spawns
+     * @param defeatEventID Event ID to fire from an action when the encounter
+     *  is defeated
+     * @return true if the enemies were added successfully, false if an error
+     *  occurred
+     */
+    bool AddEnemiesToZone(
+        std::list<std::shared_ptr<ActiveEntityState>> eStates,
+        const std::shared_ptr<Zone>& zone, bool staggerSpawn, bool asEncounter,
+        const libcomp::String& defeatEventID);
+
+    /**
+     * Update the specified zone's spawns from SpawnLocationGroups or
+     * SpawnGroups directly updated at specific spots
      * @param zone Pointer to the zone where the groups should be updated
      * @param refreshAll true if each group should be filled, false if only
      *  spawn groups with an elapsed refresh timer should be updated
@@ -959,13 +1020,14 @@ private:
 
     /**
      * Create an enemy (or ally) in the specified zone at set coordinates
+     * but do not add it to the zone yet
      * @param zone Pointer to the zone where the entity should be spawned
      * @param demonID Demon/enemy type ID to spawn
      * @param spawn Optional pointer to the entity's spawn definition
      * @param x X coordinate to render the enemy at
      * @param y Y coordinate to render the enemy at
      * @param rot Rotation to render the enemy with
-     * @return Pointer to the new enemy state
+     * @return Pointer to the new ActiveEntityState
      */
     std::shared_ptr<ActiveEntityState> CreateEnemy(
         const std::shared_ptr<Zone>& zone, uint32_t demonID,

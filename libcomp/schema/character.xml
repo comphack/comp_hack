@@ -121,7 +121,7 @@
         <member type="u32" name="Effect"/>
         <member type="pref" name="Entity" key="true" unique="false"/>
         <member type="u32" name="Expiration"/>
-        <member type="u8" name="Stack"/>
+        <member type="u8" name="Stack" max="100"/>
         <member type="bool" name="IsConstant"/>
     </object>
     <object name="CharacterProgress" location="world" scriptenabled="true">

@@ -149,10 +149,6 @@ struct Data
     /// Function ID of absolute damage dealing skills
     uint16_t SKILL_ABS_DAMAGE;
 
-    /// Function ID of skills unique to bosses that have special
-    /// range and damage adjustments
-    uint16_t SKILL_BOSS_SPECIAL;
-
     /// Function ID of "cameo" skills
     uint16_t SKILL_CAMEO;
 

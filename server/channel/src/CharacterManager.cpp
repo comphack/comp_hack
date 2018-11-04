@@ -4561,7 +4561,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         for(auto& pair : SVR_CONST.LEVELUP_STATUSES)
         {
             effects[pair.first] = StatusEffectChange(pair.first,
-                pair.second, true);
+                (int8_t)pair.second, true);
         }
 
         if(effects.size() > 0)
@@ -6167,7 +6167,6 @@ bool CharacterManager::AddRemoveOpponent(
         }
 
         std::list<std::shared_ptr<ActiveEntityState>> battleStarted;
-        std::list<std::shared_ptr<ActiveEntityState>> activatedEnemies;
         for(auto e1 : e1s)
         {
             if(!e1->Ready()) continue;
@@ -6180,22 +6179,12 @@ bool CharacterManager::AddRemoveOpponent(
                 if(opponentCount == 1)
                 {
                     battleStarted.push_back(e1);
-                    auto enemy = std::dynamic_pointer_cast<EnemyState>(e1);
-                    if(enemy)
-                    {
-                        activatedEnemies.push_back(enemy);
-                    }
                 }
 
                 opponentCount = e2->AddRemoveOpponent(true, e1->GetEntityID());
                 if(opponentCount == 1)
                 {
                     battleStarted.push_back(e2);
-                    auto enemy = std::dynamic_pointer_cast<EnemyState>(e1);
-                    if(enemy)
-                    {
-                        activatedEnemies.push_back(enemy);
-                    }
                 }
             }
         }
@@ -6212,15 +6201,6 @@ bool CharacterManager::AddRemoveOpponent(
             p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BATTLE_STARTED);
             p.WriteS32Little(entity->GetEntityID());
             p.WriteFloat(entity->GetMovementSpeed());
-            packets.push_back(p);
-        }
-
-        for(auto enemy : activatedEnemies)
-        {
-            libcomp::Packet p;
-            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENEMY_ACTIVATED);
-            p.WriteS32Little(eState1->GetEntityID());
-            p.WriteS32Little(enemy->GetEntityID());
             packets.push_back(p);
         }
     }
@@ -7324,7 +7304,7 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStats(
     stats[CorrectTbl::MOVE1] = (int16_t)(STAT_DEFAULT_SPEED / 2);
     stats[CorrectTbl::MOVE2] = STAT_DEFAULT_SPEED;
     stats[CorrectTbl::SUMMON_SPEED] = 0;
-    stats[CorrectTbl::KNOCKBACK_RESIST] = 100;
+    stats[CorrectTbl::KNOCKBACK_RESIST] = 61;
     stats[CorrectTbl::COOLDOWN_TIME] = 100;
     stats[CorrectTbl::RES_STATUS] = 100;
     stats[CorrectTbl::LB_DAMAGE] = 100;

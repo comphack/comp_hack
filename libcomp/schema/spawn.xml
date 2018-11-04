@@ -17,6 +17,7 @@
         <member type="list" name="DropSetIDs">
             <element type="u32"/>
         </member>
+        <member type="bool" name="InheritDrops" default="true"/>
         <member type="list" name="Gifts">
             <element type="ItemDrop*"/>
         </member>
@@ -36,6 +37,7 @@
         </member>
 
         <member type="u8" name="Aggression" default="100"/>
+        <member type="u16" name="BaseAIType"/>
         <member type="string" name="AIScriptID"/>
 
         <member type="u8" name="TalkResist"/>

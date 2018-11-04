@@ -88,8 +88,11 @@ const uint8_t STATUS_CHARGING = 0x08;
 /// Entity is using the rest command
 const uint8_t STATUS_RESTING = 0x10;
 
+/// Entity is still affected by a skill's lockout time
+const uint8_t STATUS_LOCKOUT = 0x20;
+
 /// Entity is waiting (used by AI controlled entity)
-const uint8_t STATUS_WAITING = 0x20;
+const uint8_t STATUS_WAITING = 0x40;
 
 namespace libcomp
 {
@@ -133,7 +136,7 @@ public:
      * @param isReplace Indicates if the status effect params should replace
      *  the effect if it already exists
      */
-    StatusEffectChange(uint32_t type, uint8_t stack, bool isReplace)
+    StatusEffectChange(uint32_t type, int8_t stack, bool isReplace)
         : Type(type), Stack(stack), IsReplace(isReplace), IsConstant(false),
         Duration(0)
     {
@@ -142,8 +145,9 @@ public:
     /// Status effect type
     uint32_t Type;
 
-    /// Stack size of the effect
-    uint8_t Stack;
+    /// Stack size of the effect. If this is not a replace, the stack can be
+    /// negative to reduce the stack.
+    int8_t Stack;
 
     /// Indicates if the status effect params should replace the effect if it
     /// already exists
@@ -388,7 +392,21 @@ public:
     void RefreshCurrentPosition(uint64_t now);
 
     /**
-     * Expire any status times that have passed
+     * Update the entity's current pending combatants, removing any that
+     * are no longer valid and adding the supplied values if the time supplied
+     * is no later than the simultaneous hit window (100ms) of the earliest
+     * value already set. Once a value is added here, the corresponding pending
+     * skill can be queued to execute. If the value is not added, the skill
+     * should be retried again later.
+     * @param entityID ID of the entity that is attacking
+     * @param executeTime Pending execution time of the skill if it were
+     *  allowed to hit
+     * @return true if the skill hit was added, false if it was not
+     */
+    bool UpdatePendingCombatants(int32_t entityID, uint64_t executeTime);
+
+    /**
+     * Expire any status times that have passed (including skill cooldowns)
      * @param now Current timestamp of the server
      */
     void ExpireStatusTimes(uint64_t now);
@@ -421,20 +439,25 @@ public:
     void SetActionTime(const libcomp::String& action, uint64_t time);
 
     /**
-     * Update the entity's current knockback value based on the last
-     * ticks associated to the value and the current time. If the value
+     * Get or update the entity's current knockback value based on the last
+     * ticks associated to the value and the supplied time. If the value
      * reaches or exceeds the maximum knockback resistance, the max
      * value will be used and the last update tick will be cleared.
-     * @param now Current timestamp of the server
+     * @param time Timestamp from the server
      * @param recoveryBoost Recovery rate increase percentage
+     * @param setValue Optional parameter to disable setting the value
+     *  and only retrun the estimated value
+     * @return Updated knockback value
      */
-    void RefreshKnockback(uint64_t now, float recoveryBoost);
+    float RefreshKnockback(uint64_t time, float recoveryBoost,
+        bool setValue = true);
 
     /**
      * Refresh and then reduce the entity's knockback value. If the value
      * goes under zero, it will be set to zero.
      * @param now Current timestamp of the server
-     * @param decrease Value to decrease the knockback value by
+     * @param decrease Value to decrease the knockback value by or -1.f
+     *  to indicate a full decrease
      * @param recoveryBoost Recovery rate increase percentage
      */
     float UpdateKnockback(uint64_t now, float decrease,
@@ -684,16 +707,18 @@ public:
 
     /**
      * Determine if the supplied NRA type/index effect shield is active on the
-     * entity and decrease the effect by one if it is.
+     * entity and optionally decrease the effect by one if it is.
      * @param nraIdx Correct table index for affinity NRA
      *  1) Null
      *  2) Reflect
      *  3) Absorb
      *  Defines exist in the Constants header for each of these.
      * @param type Correct table type of the affinity to retrieve
+     * @param reduce If true, the first matching NRA shield will be reduced
+     *  by one
      * @return true if a shield effect existed, false if one did not
      */
-    bool PopNRAShield(uint8_t nraIdx, CorrectTbl type);
+    bool GetNRAShield(uint8_t nraIdx, CorrectTbl type, bool reduce);
 
     /**
      * Get the next activated ability ID from 0 to 127.

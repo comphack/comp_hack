@@ -109,6 +109,27 @@ namespace libcomp
 
         return *this;
     }
+
+    template<>
+    ScriptEngine& ScriptEngine::Using<AllyState>()
+    {
+        if(!BindingExists("AllyState", true))
+        {
+            Using<ActiveEntityState>();
+            Using<objects::Ally>();
+
+            Sqrat::DerivedClass<AllyState, ActiveEntityState,
+                Sqrat::NoConstructor<AllyState>> binding(mVM, "AllyState");
+            binding
+                .Func<std::shared_ptr<objects::Ally>
+                (AllyState::*)()>(
+                    "GetEntity", &AllyState::GetEntity);
+
+            Bind<AllyState>("AllyState", binding);
+        }
+
+        return *this;
+    }
 }
 
 ActiveEntityState::ActiveEntityState() : mCurrentZone(0),
@@ -220,6 +241,8 @@ bool ActiveEntityState::IsRotating() const
 bool ActiveEntityState::CanAct()
 {
     return mAlive && !StatusRestrictActCount() &&
+        !GetStatusTimes(STATUS_KNOCKBACK) &&
+        !GetStatusTimes(STATUS_HIT_STUN) &&
         (CanMove() || CurrentSkillsCount() > 0);
 }
 
@@ -327,6 +350,8 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
 {
     if(now != mLastRefresh)
     {
+        std::lock_guard<std::mutex> lock(mLock);
+
         uint64_t destTicks = GetDestinationTicks();
         if(destTicks < mLastRefresh)
         {
@@ -404,17 +429,97 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
     }
 }
 
+bool ActiveEntityState::UpdatePendingCombatants(int32_t entityID,
+    uint64_t executeTime)
+{
+    bool valid = false;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    if(PendingCombatantsCount())
+    {
+        // No entity should ever have 2 values
+        RemovePendingCombatants(entityID);
+
+        auto zone = GetZone();
+        if(zone)
+        {
+            // Remove any invalid entries
+            int64_t selfID = (int64_t)GetEntityID();
+            auto pending = GetPendingCombatants();
+            for(auto& pair : pending)
+            {
+                // Combatants are only valid if they're still in the zone
+                // and still have an ability targeting this entity with the
+                // same execution timestamp registered here
+                auto eState = zone->GetActiveEntity(pair.first);
+                auto activated = eState
+                    ? eState->GetActivatedAbility() : nullptr;
+                if(!eState || !activated ||
+                    activated->GetTargetObjectID() != selfID ||
+                    activated->GetExecutionRequestTime() != pair.second)
+                {
+                    RemovePendingCombatants(pair.first);
+                }
+            }
+            
+        }
+
+        if(!PendingCombatantsCount())
+        {
+            // None left, always valid
+            valid = true;
+        }
+        else
+        {
+            // Check against earliest time
+            uint64_t first = 0;
+            for(auto& pair : GetPendingCombatants())
+            {
+                if(!first || pair.second < first)
+                {
+                    first = pair.second;
+                }
+            }
+
+            // The simultaneous hit window is 100ms
+            if(!first || first >= executeTime ||
+                executeTime - first < 100000ULL)
+            {
+                valid = true;
+            }
+        }
+    }
+    else
+    {
+        // No other combatants, always valid
+        valid = true;
+    }
+
+    if(valid)
+    {
+        SetPendingCombatants(entityID, executeTime);
+    }
+
+    return valid;
+}
+
 void ActiveEntityState::ExpireStatusTimes(uint64_t now)
 {
     auto statusTimes = GetStatusTimes();
-    if(statusTimes.size() > 0)
+    for(auto& pair : statusTimes)
     {
-        for(auto pair : statusTimes)
+        if(pair.second != 0 && pair.second <= now)
         {
-            if(pair.second != 0 && pair.second <= now)
-            {
-                RemoveStatusTimes(pair.first);
-            }
+            RemoveStatusTimes(pair.first);
+        }
+    }
+
+    auto cooldowns = GetSkillCooldowns();
+    for(auto& pair : cooldowns)
+    {
+        if(pair.second <= now)
+        {
+            RemoveSkillCooldowns(pair.first);
         }
     }
 }
@@ -447,7 +552,8 @@ void ActiveEntityState::SetActionTime(const libcomp::String& action, uint64_t ti
     mActionTimes[action.C()] = time;
 }
 
-void ActiveEntityState::RefreshKnockback(uint64_t now, float recoveryBoost)
+float ActiveEntityState::RefreshKnockback(uint64_t time, float recoveryBoost,
+    bool setValue)
 {
     std::lock_guard<std::mutex> lock(mLock);
 
@@ -455,9 +561,9 @@ void ActiveEntityState::RefreshKnockback(uint64_t now, float recoveryBoost)
     float kbMax = (float)GetCorrectValue(CorrectTbl::KNOCKBACK_RESIST);
     if(kb < kbMax)
     {
-        // Knockback refreshes at a rate of 15/s (or 0.015/ms)
-        kb = kb + (float)((double)(now - GetKnockbackTicks()) * 0.001 *
-            (0.015 * (1.0 + (double)recoveryBoost)));
+        // Knockback refreshes at a rate of 12.5/s (or 0.0125/ms)
+        kb = kb + (float)((double)(time - GetKnockbackTicks()) * 0.001 *
+            (0.0125 * (1.0 + (double)recoveryBoost)));
         if(kb > kbMax)
         {
             kb = kbMax;
@@ -468,13 +574,18 @@ void ActiveEntityState::RefreshKnockback(uint64_t now, float recoveryBoost)
             kb = 0.f;
         }
 
-        SetKnockbackResist(kb);
-        if(kb == kbMax)
+        if(setValue)
         {
-            // Reset to no time
-            SetKnockbackTicks(0);
+            SetKnockbackResist(kb);
+            if(kb == kbMax)
+            {
+                // Reset to no time
+                SetKnockbackTicks(0);
+            }
         }
     }
+
+    return kb;
 }
 
 float ActiveEntityState::UpdateKnockback(uint64_t now, float decrease,
@@ -488,10 +599,17 @@ float ActiveEntityState::UpdateKnockback(uint64_t now, float decrease,
     auto kb = GetKnockbackResist();
     if(kb > 0)
     {
-        kb -= decrease;
-        if(kb <= 0)
+        if(decrease == -1.f)
         {
-            kb = 0.f;
+            kb = 0;
+        }
+        else
+        {
+            kb -= decrease;
+            if(kb <= 0)
+            {
+                kb = 0.f;
+            }
         }
 
         SetKnockbackResist(kb);
@@ -719,16 +837,16 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
     {
         bool isReplace = ePair.second.IsReplace;
         uint32_t effectType = ePair.second.Type;
-        uint8_t stack = ePair.second.Stack;
+        int8_t stack = ePair.second.Stack;
 
         auto def = definitionManager->GetStatusData(effectType);
         auto basic = def->GetBasic();
         auto cancel = def->GetCancel();
         auto maxStack = basic->GetMaxStack();
 
-        if(stack > maxStack)
+        if(stack > (int8_t)maxStack)
         {
-            stack = maxStack;
+            stack = (int8_t)maxStack;
         }
 
         bool add = true;
@@ -748,7 +866,8 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
             case 0:
             case 1: // Differs during skill processing
                 // Always set/add stack
-                doReplace = isReplace && ((existing->GetStack() < stack) || !stack);
+                doReplace = isReplace && (((int8_t)
+                    existing->GetStack() < stack) || !stack);
                 addStack = !isReplace;
                 break;
             case 2:
@@ -767,12 +886,30 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
 
             if(doReplace)
             {
-                existing->SetStack(stack);
+                if(stack < 0)
+                {
+                    existing->SetStack(0);
+                }
+                else
+                {
+                    existing->SetStack((uint8_t)stack);
+                }
             }
-            else if(addStack && existing->GetStack() < maxStack)
+            else if(addStack && (stack < 0 ||
+                (int8_t)existing->GetStack() < (int8_t)maxStack))
             {
-                stack = (uint8_t)(stack + existing->GetStack());
-                existing->SetStack(maxStack < stack ? maxStack : stack);
+                stack = (int8_t)(stack + (int8_t)existing->GetStack());
+                if(stack > (int8_t)maxStack)
+                {
+                    stack = (int8_t)maxStack;
+                }
+
+                if(stack < 0)
+                {
+                    stack = 0;
+                }
+
+                existing->SetStack((uint8_t)stack);
             }
 
             if(existing->GetStack() > 0)
@@ -786,9 +923,9 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
 
             add = false;
         }
-        else if(stack == 0)
+        else if(stack <= 0)
         {
-            // Effect does not exist, ignore removal attempt
+            // Effect does not exist, ignore removal/reduction attempt
             continue;
         }
         else
@@ -796,9 +933,11 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
             // Effect does not exist already, determine if it can be added
             auto common = def->GetCommon();
 
-            // Map out existing effects and info to check for inverse cancellation
+            // Map out existing effects and info to check for inverse
+            // cancellation
             bool canCancel = common->CorrectTblCount() > 0;
-            libcomp::EnumMap<CorrectTbl, std::unordered_map<bool, uint8_t>> cancelMap;
+            libcomp::EnumMap<CorrectTbl,
+                std::unordered_map<bool, uint8_t>> cancelMap;
             for(auto c : common->GetCorrectTbl())
             {
                 if(c->GetValue() == 0 || c->GetType() == 1)
@@ -901,17 +1040,17 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
                 // Should never be more than one but in case there is, the
                 // lowest ID will be cancelled
                 auto exEffect = mStatusEffects[*inverseEffects.begin()];
-                if(exEffect->GetStack() == stack)
+                if(exEffect->GetStack() == (uint8_t)stack)
                 {
                     // Cancel the old one, don't add anything
                     add = false;
 
                     removeEffect = exEffect;
                 }
-                else if(exEffect->GetStack() < stack)
+                else if(exEffect->GetStack() < (uint8_t)stack)
                 {
                     // Cancel the old one, add the new one with a lower stack
-                    stack = (uint8_t)(stack - exEffect->GetStack());
+                    stack = (int8_t)(stack - (int8_t)exEffect->GetStack());
                     add = true;
 
                     removeEffect = exEffect;
@@ -919,7 +1058,8 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
                 else
                 {
                     // Reduce the stack of the existing one;
-                    exEffect->SetStack((uint8_t)(exEffect->GetStack() - stack));
+                    exEffect->SetStack((uint8_t)(
+                        exEffect->GetStack() - (uint8_t)stack));
                     add = false;
 
                     // Application logic 2 effects have their expirations reset
@@ -945,7 +1085,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
             effect = libcomp::PersistentObject::New<objects::StatusEffect>(true);
             effect->SetEntity(GetEntityUUID());
             effect->SetEffect(effectType);
-            effect->SetStack(stack);
+            effect->SetStack((uint8_t)stack);
             effect->SetIsConstant(ePair.second.IsConstant);
         }
 
@@ -1509,7 +1649,8 @@ int16_t ActiveEntityState::GetNRAChance(uint8_t nraIdx, CorrectTbl type,
     }
 }
 
-bool ActiveEntityState::PopNRAShield(uint8_t nraIdx, CorrectTbl type)
+bool ActiveEntityState::GetNRAShield(uint8_t nraIdx, CorrectTbl type,
+    bool reduce)
 {
     uint32_t adjustEffect = 0;
     bool expire = false;
@@ -1524,6 +1665,11 @@ bool ActiveEntityState::PopNRAShield(uint8_t nraIdx, CorrectTbl type)
                 adjustEffect = pair.first;
                 break;
             }
+        }
+
+        if(!reduce)
+        {
+            return adjustEffect != 0;
         }
 
         if(adjustEffect)
@@ -1704,10 +1850,17 @@ void ActiveEntityState::ActivateStatusEffect(
     {
         case objects::MiCancelData::DurationType_t::MS:
         case objects::MiCancelData::DurationType_t::MS_SET:
-        case objects::MiCancelData::DurationType_t::NONE:
             if(!effect->GetIsConstant())
             {
                 // Force next tick time to duration
+                uint32_t time = (uint32_t)(now + (effect->GetExpiration() * 0.001));
+                mNextEffectTimes[time].insert(effectType);
+            }
+            break;
+        case objects::MiCancelData::DurationType_t::NONE:
+            if(!effect->GetIsConstant() && effect->GetExpiration())
+            {
+                // Force next tick time to duration but only if it has time
                 uint32_t time = (uint32_t)(now + (effect->GetExpiration() * 0.001));
                 mNextEffectTimes[time].insert(effectType);
             }

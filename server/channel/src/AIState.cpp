@@ -26,10 +26,12 @@
 
 #include "AIState.h"
 
+// object Includes
 #include <MiAIData.h>
 #include <MiFindInfo.h>
 
 using namespace channel;
+
 namespace libcomp
 {
     template<>
@@ -94,6 +96,7 @@ bool AIState::SetStatus(AIStatus_t status, bool isDefault)
         return false;
     }
 
+    std::lock_guard<std::mutex> lock(*mLock);
     mStatusChanged = mStatus != status;
 
     mPreviousStatus = mStatus;
@@ -119,6 +122,7 @@ bool AIState::StatusChanged() const
 
 void AIState::ResetStatusChanged()
 {
+    std::lock_guard<std::mutex> lock(*mLock);
     mStatusChanged = false;
 }
 
@@ -137,13 +141,16 @@ uint8_t AIState::GetAggression() const
     return mAggression;
 }
 
-int32_t AIState::GetThinkSpeed() const
+int32_t AIState::GetThinkSpeed()
 {
+    std::lock_guard<std::mutex> lock(*mLock);
+
     return mAIData ? mAIData->GetThinkSpeed() : 2000;
 }
 
 float AIState::GetAggroValue(uint8_t mode, bool fov, float defaultVal)
 {
+    std::lock_guard<std::mutex> lock(*mLock);
     if(mAIData && mode < 3)
     {
         auto fInfo = mode == 0 ? mAIData->GetAggroNormal()
@@ -173,6 +180,7 @@ std::shared_ptr<AICommand> AIState::GetCurrentCommand() const
 
 void AIState::QueueCommand(const std::shared_ptr<AICommand>& command)
 {
+    std::lock_guard<std::mutex> lock(*mLock);
     mCommandQueue.push_back(command);
 
     if(mCommandQueue.size() == 1)
@@ -183,12 +191,14 @@ void AIState::QueueCommand(const std::shared_ptr<AICommand>& command)
 
 void AIState::ClearCommands()
 {
+    std::lock_guard<std::mutex> lock(*mLock);
     mCommandQueue.clear();
     mCurrentCommand = nullptr;
 }
 
 std::shared_ptr<AICommand> AIState::PopCommand()
 {
+    std::lock_guard<std::mutex> lock(*mLock);
     if(mCommandQueue.size() > 0)
     {
         auto command = mCommandQueue.front();
@@ -211,6 +221,7 @@ int32_t AIState::GetTarget() const
 
 void AIState::SetTarget(int32_t targetEntityID)
 {
+    std::lock_guard<std::mutex> lock(*mLock);
     mTargetEntityID = targetEntityID;
 }
 
@@ -221,6 +232,7 @@ uint16_t AIState::GetSkillSettings() const
 
 void AIState::SetSkillSettings(uint16_t skillSettings)
 {
+    std::lock_guard<std::mutex> lock(*mLock);
     if(mSkillSettings != skillSettings)
     {
         mSkillSettings = skillSettings;
@@ -241,13 +253,13 @@ void AIState::ResetSkillsMapped()
 }
 
 std::unordered_map<uint16_t,
-    std::vector<uint32_t>> AIState::GetSkillMap() const
+    std::list<std::shared_ptr<objects::MiSkillData>>> AIState::GetSkillMap() const
 {
     return mSkillMap;
 }
 
 void AIState::SetSkillMap(const std::unordered_map<uint16_t,
-    std::vector<uint32_t>> &skillMap)
+    std::list<std::shared_ptr<objects::MiSkillData>>> &skillMap)
 {
     std::lock_guard<std::mutex> lock(*mLock);
     mSkillMap = skillMap;
@@ -256,16 +268,19 @@ void AIState::SetSkillMap(const std::unordered_map<uint16_t,
 void AIState::OverrideAction(const libcomp::String& action,
     const libcomp::String& functionName)
 {
+    std::lock_guard<std::mutex> lock(*mLock);
     mActionOverrides[action.C()] = functionName;
 }
 
 bool AIState::IsOverridden(const libcomp::String& action)
 {
+    std::lock_guard<std::mutex> lock(*mLock);
     return mActionOverrides.find(action.C()) != mActionOverrides.end();
 }
 
 libcomp::String AIState::GetScriptFunction(const libcomp::String& action)
 {
+    std::lock_guard<std::mutex> lock(*mLock);
     auto it = mActionOverrides.find(action.C());
     return it != mActionOverrides.end() ? it->second : "";
 }

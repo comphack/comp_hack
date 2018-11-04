@@ -69,9 +69,13 @@ namespace libcomp
         {
             Using<objects::ZoneObject>();
             Using<ActiveEntityState>();
-            Using<objects::Demon>();
+            Using<PlasmaState>();
             Using<objects::UBMatch>();
             Using<ZoneInstance>();
+
+            /// @todo: For some reason this crashes sqrat
+            //Using<AllyState>();
+            //Using<EnemyState>();
 
             Sqrat::DerivedClass<Zone,
                 objects::ZoneObject,
@@ -83,7 +87,13 @@ namespace libcomp
                 .Func("GetFlagState", &Zone::GetFlagStateValue)
                 .Func("GetUBMatch", &Zone::GetUBMatch)
                 .Func("GetZoneInstance", &Zone::GetInstance)
-                .Func("GroupHasSpawned", &Zone::GroupHasSpawned);
+                .Func("GroupHasSpawned", &Zone::GroupHasSpawned)
+                .Func("GetActiveEntity", &Zone::GetActiveEntity)
+                //.Func("GetAllies", &Zone::GetAllies)
+                //.Func("GetEnemies", &Zone::GetEnemies)
+                .Func<std::shared_ptr<PlasmaState>(Zone::*)(uint32_t)>(
+                    "GetPlasma", &Zone::GetPlasma)
+                .Func("EnableDisableSpawnGroup", &Zone::EnableDisableSpawnGroup);
 
             Bind<Zone>("Zone", binding);
         }
@@ -994,7 +1004,8 @@ bool Zone::SpawnedAtSpot(uint32_t spotID)
 
 void Zone::CreateEncounter(
     const std::list<std::shared_ptr<ActiveEntityState>>& entities,
-    std::shared_ptr<objects::ActionSpawn> spawnSource)
+    bool staggerSpawn, const std::list<
+    std::shared_ptr<objects::Action>>& defeatActions)
 {
     if(entities.size() > 0)
     {
@@ -1011,9 +1022,9 @@ void Zone::CreateEncounter(
             }
         }
 
-        if(spawnSource)
+        if(defeatActions.size() > 0)
         {
-            mEncounterSpawnSources[encounterID] = spawnSource;
+            mEncounterDefeatActions[encounterID] = defeatActions;
         }
     }
 
@@ -1021,7 +1032,7 @@ void Zone::CreateEncounter(
     uint64_t staggerTime = 0;
     for(auto entity : entities)
     {
-        if(!first && (!spawnSource || !spawnSource->GetNoStagger()))
+        if(!first && staggerSpawn)
         {
             if(!staggerTime)
             {
@@ -1048,8 +1059,10 @@ void Zone::CreateEncounter(
 }
 
 bool Zone::EncounterDefeated(uint32_t encounterID,
-    std::shared_ptr<objects::ActionSpawn>& defeatActionSource)
+    std::list<std::shared_ptr<objects::Action>>& defeatActions)
 {
+    defeatActions.clear();
+
     std::lock_guard<std::mutex> lock(mLock);
     auto it = mEncounters.find(encounterID);
     if(it != mEncounters.end())
@@ -1062,18 +1075,18 @@ bool Zone::EncounterDefeated(uint32_t encounterID,
             }
         }
 
-        mEncounters.erase(encounterID);
+        mEncounters.erase(it);
 
-        auto dIter = mEncounterSpawnSources.find(encounterID);
-        if(dIter != mEncounterSpawnSources.end())
+        auto dIter = mEncounterDefeatActions.find(encounterID);
+        if(dIter != mEncounterDefeatActions.end())
         {
-            defeatActionSource = dIter->second;
+            for(auto action : dIter->second)
+            {
+                defeatActions.push_back(action);
+            }
+
+            mEncounterDefeatActions.erase(dIter);
         }
-        else
-        {
-            defeatActionSource = nullptr;
-        }
-        mEncounterSpawnSources.erase(encounterID);
 
         return true;
     }
@@ -1168,9 +1181,10 @@ bool Zone::UpdateTimedSpawns(const WorldClock& clock,
     return updated;
 }
 
-bool Zone::EnableDisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
-    bool enable)
+bool Zone::EnableDisableSpawnGroup(uint32_t spawnGroupID, bool enable)
 {
+    std::set<uint32_t> spawnGroupIDs = { spawnGroupID };
+
     std::lock_guard<std::mutex> lock(mLock);
     if(enable)
     {
@@ -1459,7 +1473,7 @@ void Zone::Cleanup()
     mBossIDs.clear();
     mCultureMachines.clear();
     mEncounters.clear();
-    mEncounterSpawnSources.clear();
+    mEncounterDefeatActions.clear();
     mEnemies.clear();
     mNPCs.clear();
     mObjects.clear();

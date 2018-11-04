@@ -100,7 +100,6 @@
     <constant name="SKILL_ZONE_TARGET_ALL">411</constant>
     <constant name="SKILL_PIERCE">412</constant>
     <constant name="SKILL_DIGITALIZE_BREAK">413</constant>
-    <constant name="SKILL_BOSS_SPECIAL">414</constant>
     <constant name="SKILL_HP_MP_MIN">415</constant>
 
     <constant name="STATUS_BIKE">807</constant>
@@ -1346,11 +1345,11 @@
             <value>171</value>
         </pair>
         <pair>
-            <key>2</key>
+            <key>3</key>
             <value>173,174</value>
         </pair>
         <pair>
-            <key>3</key>
+            <key>4</key>
             <value>173,175</value>
         </pair>
         <pair>

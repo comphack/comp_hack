@@ -44,7 +44,7 @@
 
 namespace objects
 {
-class ActionSpawn;
+class Action;
 class Ally;
 class DiasporaBase;
 class Loot;
@@ -515,28 +515,30 @@ public:
 
     /**
      * Create an encounter from a group of entities and register them with
-     * the zone. Encounter information will be retained until a check via
+     * the zone. DefeatActions will be retained until a check via
      * EncounterDefeated is called.
      * @param entities List of the entities to add to the encounter
-     * @param spawnSource Optional pointer to spawn action that created the
-     *  encounter. If this is specified, it will be returned as the
-     *  defeatActionSource when calling EncounterDefeated
+     * @param staggerSpawn If true spawns will appear with a spawn stagger,
+     *  if false  they will all appear at once
+     * @param defeatActions Optional list of defeat actions associted with
+     *  the encounter. These actions will be returned when calling
+     *  EncounterDefeated
      */
     void CreateEncounter(const std::list<std::shared_ptr<
-        ActiveEntityState>>& entities,
-        std::shared_ptr<objects::ActionSpawn> spawnSource = nullptr);
+        ActiveEntityState>>& entities, bool staggerSpawn,
+        const std::list<std::shared_ptr<objects::Action>>& defeatActions);
 
     /**
      * Determine if an entity encounter has been defeated and clean up the
      * encounter information for the zone.
      * @param encounterID ID of the encounter
-     * @param defeatActionSource Output parameter to contain the original
-     *  spawn action source that can contain defeat actions to execute
+     * @param defeatActions Output parameter to contain the encounter's
+     *  defeat actions to fire if the encounter is defeated
      * @return true if the encounter has been defeated, false if at least
      *  one entity from the group is still alive
      */
     bool EncounterDefeated(uint32_t encounterID,
-        std::shared_ptr<objects::ActionSpawn>& defeatActionSource);
+        std::list<std::shared_ptr<objects::Action>>& defeatActions);
 
     /**
      * Get the IDs of all entities in the zone marked for despawn.
@@ -569,16 +571,15 @@ public:
     bool UpdateTimedSpawns(const WorldClock& clock, bool initializing = false);
 
     /**
-     * Enable or disable the supplied spawn groups and also disable (or enable)
-     * any spawn location groups that now have all groups disabled (or one enabled)
-     * @param spawnGroupIDs Set of spawn group IDs to adjust
+     * Enable or disable the supplied spawn group and also disable (or enable)
+     * any affected spawn location groups
+     * @param spawnGroupID Spawn group ID to adjust
      * @param enable true if the group should be enabled, false if it should
      *  be disabled
      * @return true if any updates were performed that the zone manager needs
      *  to react to, false if none occurred or they can be processed later
      */
-    bool EnableDisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
-        bool enable);
+    bool EnableDisableSpawnGroup(uint32_t spawnGroupID, bool enable);
 
     /**
      * Get the set of spawn location groups that need to be respawned.
@@ -806,9 +807,9 @@ private:
     std::unordered_map<uint32_t,
         std::set<std::shared_ptr<ActiveEntityState>>> mEncounters;
 
-    /// Map of encounter IDs to spawn actions that created the encounter
+    /// Map of encounter IDs to defeat actions assigned when they were created
     std::unordered_map<uint32_t,
-        std::shared_ptr<objects::ActionSpawn>> mEncounterSpawnSources;
+        std::list<std::shared_ptr<objects::Action>>> mEncounterDefeatActions;
 
     /// Set of all spot IDs that have had an enemy spawned
     std::set<uint32_t> mSpotsSpawned;

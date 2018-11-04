@@ -81,6 +81,7 @@ enum class SkillErrorCodes_t : uint8_t
     CONDITION_RESTRICT = 10,    //!< Skill is not in a useable state
     LOCATION_RESTRICT = 11, //!< Cannot be used in the current location
     ITEM_USE = 12,  //!< Item cannot have its skill used
+    SILENT_FAIL = 13, //!< Skill cannot be used but don't print an error
     TALK_INVALID = 21,  //!< Target cannot be talked to
     TALK_LEVEL = 22,    //!< Target's level is too high and cannot be talked
     TALK_WONT_LISTEN = 23,  //!< Target refuses to listen to talk skills

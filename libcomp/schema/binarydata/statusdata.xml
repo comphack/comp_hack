@@ -3,7 +3,7 @@
     <include path="binarydata/shared.xml"/>
     
     <object name="MiStatusBasicData" persistent="false">
-        <member type="u8" name="maxStack"/>
+        <member type="u8" name="maxStack" max="100"/>
         <member type="u8" name="stackType"/>
         <member type="u8" name="applicationLogic"/>
         <member type="u8" name="unknown"/>

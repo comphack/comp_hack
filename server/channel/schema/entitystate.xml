@@ -126,6 +126,17 @@
             <key type="s8"/>
             <value type="ActivatedAbility*"/>
         </member>
+        <member type="map" name="SkillCooldowns">
+            <key type="u32"/>
+            <value type="u64"/>
+        </member>
+        <member type="map" name="PendingCombatants">
+            <key type="s32"/>
+            <value type="u64"/>
+        </member>
+        <member type="set" name="AggroIDs">
+            <element type="s32"/>
+        </member>
 
         <member type="set" name="CurrentSkills">
             <element type="u32"/>
@@ -170,8 +181,10 @@
         <member type="bool" name="EntityTargeted"/>
         <member type="s8" name="ActivationID"/>
         <member type="u64" name="ActivationTime"/>
-        <member type="u64" name="ExecutionTime"/>
         <member type="u64" name="ChargedTime"/>
+        <member type="u64" name="ExecutionRequestTime"/>
+        <member type="u64" name="ExecutionTime"/>
+        <member type="u64" name="HitTime"/>
         <member type="u64" name="CooldownTime"/>
         <member type="u64" name="LockOutTime"/>
         <member type="s16" name="UpkeepCost"/>
@@ -180,6 +193,9 @@
         <member type="float" name="ChargeMoveSpeed"/>
         <member type="float" name="ChargeCompleteMoveSpeed"/>
         <member type="u16" name="ExpertiseBoost"/>
+
+        <member type="bool" name="Cancelled"/>
+        <member type="s8" name="ErrorCode" default="-1"/>
 
         <member type="s32" name="HPCost"/>
         <member type="s32" name="MPCost"/>

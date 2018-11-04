@@ -57,5 +57,7 @@
             <key type="u32"/>
             <value type="u8"/>
         </member>
+        <member type="bool" name="AggroLimit" default="true"/>
+        <member type="bool" name="IFramesEnabled" default="true"/>
     </object>
 </objgen>

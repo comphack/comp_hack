@@ -963,22 +963,21 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
             "Invalid effect ID supplied: %1").Arg(effectID));
     }
 
-    // If the next arg starts with a '+', mark as an add instead of replace
+    // If the next arg starts with a '+' or '-', mark as an add instead of replace
     bool isAdd = false;
 
     if(argsCopy.size() > 0)
     {
         libcomp::String& next = argsCopy.front();
-        if(!next.IsEmpty() && next.C()[0] == '+')
+        if(!next.IsEmpty() && (next.C()[0] == '+' || next.C()[0] == '-'))
         {
             isAdd = true;
-            next = next.Right(next.Length() - 1);
         }
     }
 
-    uint8_t stack;
+    int8_t stack;
 
-    if(!GetIntegerArg<uint8_t>(stack, argsCopy))
+    if(!GetIntegerArg<int8_t>(stack, argsCopy))
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
             "@effect requires a stack count");
@@ -1736,7 +1735,7 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "Gain digitalize XP for the specified demon race ID."
         } },
         { "effect", {
-            "@effect ID [+]STACK [DEMON]",
+            "@effect ID [+/-]STACK [DEMON]",
             "Add or sets the stack count for status effect with",
             "the given ID for the player or demon if DEMON is set",
             "to 'demon'."

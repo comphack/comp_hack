@@ -148,8 +148,6 @@ bool ServerConstants::Initialize(const String& filePath)
     // Load skill constants
     success &= LoadInteger(constants["SKILL_ABS_DAMAGE"],
         sConstants.SKILL_ABS_DAMAGE);
-    success &= LoadInteger(constants["SKILL_BOSS_SPECIAL"],
-        sConstants.SKILL_BOSS_SPECIAL);
     success &= LoadInteger(constants["SKILL_CAMEO"],
         sConstants.SKILL_CAMEO);
     success &= LoadInteger(constants["SKILL_CLAN_FORM"],

@@ -62,7 +62,9 @@ bool Parsers::PlasmaResult::Parse(libcomp::ManagerPacket *pPacketManager,
     auto eventManager = server->GetEventManager();
     auto zoneManager = server->GetZoneManager();
 
-    auto pState = std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID));
+    auto pState = zone
+        ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
+        : nullptr;
 
     auto point = pState
         ? pState->SetPickResult((uint32_t)pointID, state->GetWorldCID(), result)
@@ -103,25 +105,28 @@ bool Parsers::PlasmaResult::Parse(libcomp::ManagerPacket *pPacketManager,
     // End the system event
     eventManager->HandleEvent(client, nullptr);
 
-    std::list<std::shared_ptr<objects::Action>> actions;
-    if(!failure)
+    if(pState)
     {
-        // Update demon quest if active
-        eventManager->UpdateDemonQuestCount(client,
-            objects::DemonQuest::Type_t::PLASMA,
-            (uint32_t)pState->GetEntity()->GetColor(), 1);
+        std::list<std::shared_ptr<objects::Action>> actions;
+        if(!failure)
+        {
+            // Update demon quest if active
+            eventManager->UpdateDemonQuestCount(client,
+                objects::DemonQuest::Type_t::PLASMA,
+                (uint32_t)pState->GetEntity()->GetColor(), 1);
 
-        actions = pState->GetEntity()->GetSuccessActions();
-    }
-    else
-    {
-        actions = pState->GetEntity()->GetFailActions();
-    }
+            actions = pState->GetEntity()->GetSuccessActions();
+        }
+        else
+        {
+            actions = pState->GetEntity()->GetFailActions();
+        }
 
-    if(actions.size() > 0)
-    {
-        server->GetActionManager()->PerformActions(client,
-            actions, pState->GetEntityID(), zone);
+        if(actions.size() > 0)
+        {
+            server->GetActionManager()->PerformActions(client,
+                actions, pState->GetEntityID(), zone);
+        }
     }
 
     client->FlushOutgoing();

@@ -1245,20 +1245,28 @@ std::list<std::shared_ptr<ActiveEntityState>>
 
         for(auto eState : pair.second)
         {
-            result.push_back(eState);
+            auto eBase = eState->GetEnemyBase();
+            uint32_t sgID = eBase ? eBase->GetSpawnGroupID() : 0;
 
-            if(eState->GetEntityType() == EntityType_t::ENEMY)
+            // Don't actually spawn anything in a disabled group
+            if(!sgID ||
+                mDisabledSpawnGroups.find(sgID) == mDisabledSpawnGroups.end())
             {
-                mEnemies.push_back(
-                    std::dynamic_pointer_cast<EnemyState>(eState));
-            }
-            else
-            {
-                mAllies.push_back(
-                    std::dynamic_pointer_cast<AllyState>(eState));
-            }
+                result.push_back(eState);
 
-            eState->SetDisplayState(ActiveDisplayState_t::ACTIVE);
+                if(eState->GetEntityType() == EntityType_t::ENEMY)
+                {
+                    mEnemies.push_back(
+                        std::dynamic_pointer_cast<EnemyState>(eState));
+                }
+                else
+                {
+                    mAllies.push_back(
+                        std::dynamic_pointer_cast<AllyState>(eState));
+                }
+
+                eState->SetDisplayState(ActiveDisplayState_t::ACTIVE);
+            }
         }
     }
 

@@ -5629,7 +5629,8 @@ void ZoneManager::EndInstanceTimer(
                         {
                             float globalDXPBonus = mServer.lock()
                                 ->GetWorldSharedConfig()->GetDigitalizePointBonus();
-                            float timePercent = elapsed / (float)rankA;
+                            float timePercent = rankA
+                                ? (elapsed / (float)rankA) : 1.f;
 
                             gain = gain + (int32_t)ceil((double)
                                 (rankA * rewardModifier) * (double)timePercent *
@@ -6246,10 +6247,8 @@ Point ZoneManager::GetLinearPoint(float sourceX, float sourceY,
     }
     else if(targetY != sourceY)
     {
-        float yOffset = (float)((targetY - sourceY)/distance);
-
         dest.y = (away == (targetY > sourceY))
-            ? (sourceY - yOffset) : (sourceY + yOffset);
+            ? (sourceY - distance) : (sourceY + distance);
     }
 
     return dest;

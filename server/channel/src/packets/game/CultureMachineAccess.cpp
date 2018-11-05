@@ -61,10 +61,13 @@ bool Parsers::CultureMachineAccess::Parse(libcomp::ManagerPacket *pPacketManager
     }
 
     const int8_t STATUS_FREE = 0;
+    const int8_t STATUS_ACTIVE_EXISTS = 1;
+    const int8_t STATUS_ITEM_PENDING = 2;
     const int8_t STATUS_PREVIOUS = 3;
-    const int8_t STATUS_EXPERT_LOW = 4;    /// @todo: verify
+    //const int8_t STATUS_OTHER_ERROR = 4;  // Fail state for other owner
     const int8_t STATUS_SELF = 5;
     const int8_t STATUS_OTHER = 6;
+    const int8_t STATUS_EXPERT_LOW = 7;
     const int8_t STATUS_FAIL = -1;
 
     int32_t machineEntityID = p.ReadS32Little();
@@ -129,6 +132,16 @@ bool Parsers::CultureMachineAccess::Parse(libcomp::ManagerPacket *pPacketManager
                 // Cannot rent the same machine twice
                 status = STATUS_PREVIOUS;
             }
+            else if(cData && cData->GetActive())
+            {
+                // Cannot rent two machines
+                status = STATUS_ACTIVE_EXISTS;
+            }
+            else if(cData && !cData->GetItem().IsNull())
+            {
+                // Cannot rent while an item is pending pickup
+                status = STATUS_ITEM_PENDING;
+            }
             else
             {
                 status = STATUS_FREE;
@@ -136,7 +149,8 @@ bool Parsers::CultureMachineAccess::Parse(libcomp::ManagerPacket *pPacketManager
         }
 
         reply.WriteS8(status);
-        if(status != STATUS_FAIL && status != STATUS_PREVIOUS)
+        if(status == STATUS_SELF || status == STATUS_FREE ||
+            status == STATUS_OTHER)
         {
             // Calculate multipliers
             double passiveBoost = 1.0;

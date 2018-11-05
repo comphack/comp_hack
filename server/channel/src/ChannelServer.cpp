@@ -100,7 +100,7 @@ ChannelServer::ChannelServer(const char *szProgram,
     mEventManager(0), mFusionManager(0), mMatchManager(0), mSkillManager(0),
     mZoneManager(0), mDefinitionManager(0), mServerDataManager(0),
     mRecalcTimeDependents(false), mMaxEntityID(0), mMaxObjectID(0),
-    mTickRunning(true)
+    mTicksPending(0), mTickRunning(true)
 {
 }
 
@@ -1088,6 +1088,11 @@ int64_t ChannelServer::GetNextObjectID()
 
 void ChannelServer::Tick()
 {
+    {
+        std::lock_guard<std::mutex> lock(mTickLock);
+        mTicksPending--;
+    }
+
     ServerTime tickTime = GetServerTime();
 
     // Update the active zone states
@@ -1176,10 +1181,43 @@ void ChannelServer::StartGameTick()
         const static int TICK_DELTA = 100;
         auto tickDelta = std::chrono::milliseconds(TICK_DELTA);
 
+        int32_t ticksMissed = 0;
+        int32_t tickCounter = 0;
         while(*pTickRunning)
         {
             std::this_thread::sleep_for(tickDelta);
-            queue->Enqueue(new libcomp::Message::Tick);
+            {
+                {
+                    std::lock_guard<std::mutex> lock(mTickLock);
+                    if(mTicksPending < 2)
+                    {
+                        // Do not add more ticks to the queue if there are
+                        // at least two already pending in case we get into
+                        // a state where ticks take longer to process than
+                        // they do to queue. Having at most two at any
+                        // given point guarantees the queueing mechanism is
+                        // not to blame for missed ticks.
+                        queue->Enqueue(new libcomp::Message::Tick);
+                        mTicksPending++;
+                    }
+                    else
+                    {
+                        ticksMissed++;
+                    }
+                }
+
+                if(++tickCounter == 3000)
+                {
+                    if(ticksMissed)
+                    {
+                        LOG_DEBUG(libcomp::String("Missed %1 tick(s) within"
+                            " the last 5 minutes.\n").Arg(ticksMissed));
+                    }
+
+                    ticksMissed = 0;
+                    tickCounter = 0;
+                }
+            }
         }
     }, mQueueWorker.GetMessageQueue(), &mTickRunning);
 }
@@ -1265,7 +1303,6 @@ void ChannelServer::ScheduleRecurringActions()
 
     // Start the tick handler
     StartGameTick();
-    Tick();
 
     auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(GetConfig());
     if(conf->GetTimeout() > 0)

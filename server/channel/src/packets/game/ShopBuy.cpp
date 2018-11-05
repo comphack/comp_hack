@@ -61,7 +61,9 @@
 using namespace channel;
 
 // Result values
-// 0: Success
+// 2: CP Gift Success
+// 1: CP Success
+// 0: Normal Success
 // -1: too many items
 // anything else: error dialog
 void SendShopPurchaseReply(const std::shared_ptr<ChannelClientConnection> client,
@@ -228,7 +230,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         price = 1;
     }
 
-    bool success = false;
+    int32_t result = -2;
     if(!cpPurchase)
     {
         // Non-CP purchases go to the inventory
@@ -281,8 +283,11 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
             qtyLeft = (int32_t)(qtyLeft - stack);
         }
 
-        success = characterManager->UpdateItems(client, false, insertItems,
-            stackAdjustItems);
+        if(characterManager->UpdateItems(client, false, insertItems,
+            stackAdjustItems))
+        {
+            result = 0; // Normal success
+        }
     }
     else
     {
@@ -355,13 +360,13 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         }
         else
         {
-            success = true;
+            result = !gifteeName.IsEmpty() ? 2 : 1;
             server->GetChannelSyncManager()->SyncRecordUpdate(account,
                 "Account");
         }
     }
 
-    SendShopPurchaseReply(client, shopID, productID, success  ? 0 : -1, false);
+    SendShopPurchaseReply(client, shopID, productID, result, false);
 }
 
 bool Parsers::ShopBuy::Parse(libcomp::ManagerPacket *pPacketManager,

@@ -68,7 +68,9 @@ void SendHotbarData(const std::shared_ptr<ChannelClientConnection> client,
             itemID = state->GetObjectID(itemUID);
         }
 
-        reply.WriteS8(itemID > 0 ? type : 0);
+        // Only clear the type value if a UID item fails to load (0 is a valid
+        // itemID for non-UID types)
+        reply.WriteS8(itemUID.IsNull() || itemID > 0 ? type : 0);
         reply.WriteS64(itemID);
     }
 

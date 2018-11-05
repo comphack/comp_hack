@@ -83,7 +83,7 @@ bool Parsers::DiasporaBaseCapture::Parse(libcomp::ManagerPacket *pPacketManager,
         state->GetZone(), baseID, cState->GetEntityID(), true))
     {
         std::unordered_map<uint32_t, uint32_t> items;
-        items[itemType] = itemCount;
+        items[itemType] = 1;
         characterManager->AddRemoveItems(client, items, false);
     }
     else

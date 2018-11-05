@@ -344,8 +344,10 @@ public:
      * @param cLogin Pointer to the CharacterLogin to remove from the clan
      * @param clanID Clan instance ID
      * @param requestConnection Pointer to the connection requesting the change
+     * @return true if the character was successfully removed, false if they
+     *  were not
      */
-    void ClanLeave(std::shared_ptr<objects::CharacterLogin> cLogin, int32_t clanID,
+    bool ClanLeave(std::shared_ptr<objects::CharacterLogin> cLogin, int32_t clanID,
         std::shared_ptr<libcomp::TcpConnection> requestConnection);
 
     /**

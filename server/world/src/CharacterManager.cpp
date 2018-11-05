@@ -1043,7 +1043,7 @@ bool CharacterManager::ClanJoin(std::shared_ptr<objects::CharacterLogin> cLogin,
     return true;
 }
 
-void CharacterManager::ClanLeave(std::shared_ptr<objects::CharacterLogin> cLogin,
+bool CharacterManager::ClanLeave(std::shared_ptr<objects::CharacterLogin> cLogin,
     int32_t clanID, std::shared_ptr<libcomp::TcpConnection> requestConnection)
 {
     auto clanLogins = GetRelatedCharacterLogins(cLogin, RELATED_CLAN);
@@ -1075,7 +1075,8 @@ void CharacterManager::ClanLeave(std::shared_ptr<objects::CharacterLogin> cLogin
         std::list<int32_t> cids = { cLogin->GetWorldCID() };
         SendClanInfo(0, 0x0F, cids);
 
-        if(member->GetMemberType() == objects::ClanMember::MemberType_t::MASTER)
+        if(member && member->GetMemberType() ==
+            objects::ClanMember::MemberType_t::MASTER)
         {
             // Need to set the new master
             std::shared_ptr<objects::ClanMember> newMaster;
@@ -1113,7 +1114,11 @@ void CharacterManager::ClanLeave(std::shared_ptr<objects::CharacterLogin> cLogin
                     RELATED_CLAN, true);
             }
         }
+
+        return true;
     }
+
+    return false;
 }
 
 void CharacterManager::ClanDisband(int32_t clanID, int32_t sourceCID,
@@ -2176,37 +2181,54 @@ bool CharacterManager::RemoveFromClan(std::shared_ptr<objects::CharacterLogin> c
         auto clan = clanInfo->GetClan().Get();
         clanInfo->RemoveMemberMap(cLogin->GetWorldCID());
 
+        auto server = mServer.lock();
+        auto worldDB = server->GetWorldDatabase();
+
         size_t idx = 0;
         std::shared_ptr<objects::ClanMember> member;
-        for(auto m : clan->GetMembers())
+        if(clan)
         {
-            if(m->GetCharacter() == cLogin->GetCharacter().GetUUID())
+            for(auto mRef : clan->GetMembers())
             {
-                member = m.Get();
-                clan->RemoveMembers(idx);
-                break;
+                auto m = mRef.Get(worldDB);
+                if(m)
+                {
+                    if(m->GetCharacter() == cLogin->GetCharacter().GetUUID())
+                    {
+                        member = m;
+                        clan->RemoveMembers(idx);
+                        break;
+                    }
+                }
+                else
+                {
+                    LOG_ERROR(libcomp::String("Invalid clan member %1"
+                        " encountered on clan %1\n")
+                        .Arg(mRef.GetUUID().ToString())
+                        .Arg(clan->GetUUID().ToString()));
+                }
+
+                idx++;
             }
-            idx++;
         }
+
+        auto dbChanges = libcomp::DatabaseChangeSet::Create();
 
         if(member)
         {
-            auto server = mServer.lock();
-            auto worldDB = server->GetWorldDatabase();
-
-            auto dbChanges = libcomp::DatabaseChangeSet::Create();
             dbChanges->Update(clan);
             dbChanges->Delete(member);
-
-            auto character = cLogin->LoadCharacter(worldDB);
-            if(character)
-            {
-                character->SetClan(NULLUUID);
-                dbChanges->Update(character);
-            }
-
-            return worldDB->ProcessChangeSet(dbChanges);
         }
+
+        auto character = cLogin->LoadCharacter(worldDB);
+        if(character && character->GetClan().GetUUID() == clanInfo
+            ->GetClan().GetUUID())
+        {
+            character->SetClan(NULLUUID);
+            dbChanges->Update(character);
+        }
+
+        return worldDB->ProcessChangeSet(dbChanges);
     }
 
     return false;

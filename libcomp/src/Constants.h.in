@@ -578,31 +578,6 @@ const unsigned char DEMON_FORCE_CONVERSION[20] = {
     79  // RES_STATUS
 };
 
-/// Maximum boost values for demon force stats. A single boost value is
-/// actually 100000 points data-side.
-const unsigned short DEMON_FORCE_MAX[20] = {
-    500,    // HP_MAX
-    100,    // MP_MAX
-    50,     // STR
-    50,     // MAGIC
-    50,     // VIT
-    50,     // INT
-    50,     // SPEED
-    50,     // LUCK
-    100,    // HP_REGEN
-    10,     // MP_REGEN
-    40,     // CLSR
-    40,     // LNGR
-    40,     // SPELL
-    40,     // SUPPORT
-    100,    // CRITICAL
-    5,      // PDEF
-    5,      // MDEF
-    100,    // CRIT_DEF
-    300,    // RATE_XP
-    50      // RES_STATUS
-};
-
 } // namespace libcomp
 
 #endif // LIBCOMP_SRC_CONSTANTS_H

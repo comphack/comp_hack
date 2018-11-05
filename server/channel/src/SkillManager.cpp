@@ -374,7 +374,15 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     auto activated = source->GetActivatedAbility();
     if(activated && !instantExecution)
     {
-        // Cancel existing first
+        // Cancel existing first unless it's still pending execution
+        if(activated->GetErrorCode() == -1 &&
+            activated->GetExecutionRequestTime())
+        {
+            SendFailure(source, skillID, client,
+                (uint8_t)SkillErrorCodes_t::SILENT_FAIL);
+            return false;
+        }
+
         CancelSkill(source, activated->GetActivationID());
     }
 
@@ -1393,18 +1401,19 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
         return false;
     }
 
-    if(activated->GetCancelled() || source->GetActivatedAbility() != activated)
-    {
-        // Skill cancelled or otherwise detached already
-        return false;
-    }
-
     auto server = mServer.lock();
     auto client = server->GetManagerConnection()->GetEntityClient(source
         ->GetEntityID());
 
+    // Complete delay does not appear to adjust the actual hit timing just
+    // if you can counter it before it completes. If its not specified
+    // no delay applies at all.
+    uint32_t completeDelay = pSkill->Definition->GetDischarge()
+        ->GetCompleteDelay();
+    bool skipDelay = ctx->FastTrack || !completeDelay;
+
     uint64_t processTime = 0;
-    if(!ctx->FastTrack)
+    if(!skipDelay)
     {
         // If hitstunned, don't start the skill
         source->ExpireStatusTimes(ChannelServer::GetServerTime());
@@ -1416,8 +1425,7 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
 
         // Execute the skill now; finalize, calculate damage and effects when
         // it hits
-        processTime = (activated->GetExecutionRequestTime() + 500000ULL) +
-            (uint64_t)(pSkill->Definition->GetDischarge()->GetHitDelay() * 1000);
+        processTime = activated->GetExecutionRequestTime() + 500000ULL;
     }
     else
     {
@@ -1523,10 +1531,11 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
         }
     }
 
-    // Set again later for projectiles
+    // Set again later for projectiles and delayed hits
     activated->SetHitTime(processTime);
 
-    if(!pSkill->IsProjectile)
+    uint32_t hitDelay = pSkill->Definition->GetDischarge()->GetHitDelay();
+    if(!pSkill->IsProjectile && !hitDelay)
     {
         // If the skill can be defended against and it was not nulled or
         // absorbed, check for counter, dodge or guard on the primary target
@@ -1542,7 +1551,7 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
 
     FinalizeSkillExecution(client, ctx, activated);
 
-    if(!ctx->FastTrack)
+    if(!skipDelay)
     {
         server->ScheduleWork(processTime, []
             (std::shared_ptr<ChannelServer> pServer,
@@ -1576,6 +1585,7 @@ bool SkillManager::CompleteSkillExecution(
     }
 
     if(activated->GetCancelled() || (!pSkill->IsProjectile &&
+        activated->GetActivationID() != -1 &&
         source->GetActivatedAbility() != activated))
     {
         // Skill cancelled or otherwise detached already
@@ -1628,36 +1638,49 @@ bool SkillManager::CompleteSkillExecution(
     }
     else
     {
-        // If the skill has a projectile, delay until it hits
-        if(pSkill->IsProjectile && !ctx->FastTrack)
+        // Determine if we delay the hit or hit right away
+        uint64_t delay = 0;
+        if(!ctx->FastTrack)
         {
-            auto targetEntityID = (int32_t)activated->GetTargetObjectID();
-            auto target = zone->GetActiveEntity(targetEntityID);
-            if(!target)
+            uint32_t hitDelay = pSkill->Definition->GetDischarge()
+                ->GetHitDelay();
+            delay = (uint64_t)(hitDelay * 1000ULL);
+
+            if(pSkill->IsProjectile)
             {
-                // Target is not valid anymore, let it fizzle
-                return false;
+                auto targetEntityID = (int32_t)activated->GetTargetObjectID();
+                auto target = zone->GetActiveEntity(targetEntityID);
+                if(!target)
+                {
+                    // Target is not valid anymore, let it fizzle
+                    return false;
+                }
+
+                // Determine time from projectile speed and distance (cannot
+                // miss from range after execution starts)
+                target->RefreshCurrentPosition(ChannelServer::GetServerTime());
+                double distance = (double)source->GetDistance(target
+                    ->GetCurrentX(), target->GetCurrentY());
+
+                // Projectile speed is measured in how many 10ths of a unit the
+                // projectile will traverse per millisecond (with a half second
+                // delay for the default cast to projectile move speed)
+                uint32_t projectileSpeed = pSkill->Definition->GetDischarge()
+                    ->GetProjectileSpeed();
+                uint64_t projectileTime = (uint64_t)(distance /
+                    (double)(projectileSpeed * 10) * 1000000.0);
+
+                delay = (uint64_t)(delay + projectileTime);
             }
+        }
 
-            // Determine time from projectile speed and distance (cannot
-            // miss from range after execution starts)
-            uint64_t now = ChannelServer::GetServerTime();
-            target->RefreshCurrentPosition(now);
-            double distance = (double)source->GetDistance(target
-                ->GetCurrentX(), target->GetCurrentY());
-
-            // Projectile speed is measured in how many 10ths of a unit the
-            // projectile will traverse per millisecond (with a half second
-            // delay for the default cast to projectile move speed)
-            uint32_t projectileSpeed = pSkill->Definition->GetDischarge()
-                ->GetProjectileSpeed();
-            uint64_t projectileTime = now + (uint64_t)(distance /
-                (double)(projectileSpeed * 10) * 1000000.0);
-
-            activated->SetHitTime(projectileTime);
+        if(delay)
+        {
+            delay = ChannelServer::GetServerTime() + delay;
+            activated->SetHitTime(delay);
 
             auto server = mServer.lock();
-            server->ScheduleWork(projectileTime, []
+            server->ScheduleWork(delay, []
                 (std::shared_ptr<ChannelServer> pServer,
                 std::shared_ptr<ProcessingSkill> prSkill,
                 std::shared_ptr<SkillExecutionContext> pCtx)
@@ -2184,22 +2207,7 @@ bool SkillManager::ExecuteNormalSkill(
     }
 
     auto pSkill = GetProcessingSkill(activated, ctx);
-    if(!ctx->FastTrack)
-    {
-        uint64_t startTime = activated->GetExecutionRequestTime() +
-            (uint64_t)skillData->GetDischarge()->GetCompleteDelay() * 1000ULL;
-        server->ScheduleWork(startTime, []
-            (std::shared_ptr<ChannelServer> pServer,
-            std::shared_ptr<ProcessingSkill> prSkill,
-            std::shared_ptr<SkillExecutionContext> pCtx)
-            {
-                pServer->GetSkillManager()->BeginSkillExecution(prSkill, pCtx);
-            }, server, pSkill, ctx);
-    }
-    else
-    {
-        BeginSkillExecution(pSkill, ctx);
-    }
+    BeginSkillExecution(pSkill, ctx);
 
     return true;
 }
@@ -2217,7 +2225,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
     auto pSkill = GetProcessingSkill(activated, ctx);
     auto zone = pSkill->CurrentZone;
-    if(!zone)
+    if(!zone || activated->GetCancelled())
     {
         return false;
     }
@@ -3209,6 +3217,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 if(tSkillData)
                 {
                     auto tCancel = tSkillData->GetCast()->GetCancel();
+                    auto tDischarge = tSkillData->GetDischarge();
 
                     bool applyInterrupt = false;
                     if((cancelFlags & EFFECT_CANCEL_DAMAGE) != 0 &&
@@ -3223,13 +3232,33 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                         // Interrupted from knockback
                         applyInterrupt = true;
                     }
-                    else if(tSkillData->GetDischarge()->GetShotInterruptible() &&
-                        tActivated->GetHitTime() > now &&
-                        tActivated->GetHitTime() - now > 100000ULL)
+
+                    if(!applyInterrupt && tDischarge->GetShotInterruptible() &&
+                        tActivated->GetHitTime() > now)
                     {
-                        // Interrupted during shot (outside of simultaneous
-                        // hit window)
-                        applyInterrupt = true;
+                        // Determine which part of the skill can be interrupted
+                        // (all but last X percent)
+                        uint64_t hitWindowAdjust = (uint64_t)(500000.0 *
+                            (double)tDischarge->GetCompleteDelay() * 0.01);
+                        if(now < tActivated->GetHitTime() - hitWindowAdjust)
+                        {
+                            // Interrupted during shot
+                            applyInterrupt = true;
+                        }
+                    }
+
+                    // If an interrupt would happen but the skill is a countering
+                    // skill. Do not cancel.
+                    if(applyInterrupt)
+                    {
+                        for(auto counteringSkill : ctx->CounteringSkills)
+                        {
+                            if(counteringSkill->Activated == tActivated)
+                            {
+                                applyInterrupt = false;
+                                break;
+                            }
+                        }
                     }
 
                     if(applyInterrupt)
@@ -7045,6 +7074,7 @@ bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnecti
     }
 
     FinalizeSkillExecution(client, ctx, activated);
+    FinalizeSkill(ctx, activated);
 
     if(client)
     {
@@ -9168,7 +9198,7 @@ bool SkillManager::EquipItem(const std::shared_ptr<objects::ActivatedAbility>& a
 
     // Finalize now that it all succeeded
     ctx->Finalized = false;
-    FinalizeSkillExecution(client, ctx, activated);
+    FinalizeSkill(ctx, activated);
 
     return true;
 }

@@ -94,14 +94,18 @@ bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
 
         return true;
     }
-    
+
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(state
+        ->GetAccountUID());
+
     // If the active demon is being moved to a non-COMP box, store it first
-    if(srcDemon != nullptr && srcDemon == character->GetActiveDemon().Get() && destBoxID != 0)
+    if(srcDemon != nullptr && srcDemon == character->GetActiveDemon().Get()
+        && destBoxID != 0)
     {
         characterManager->StoreDemon(client);
+        dbChanges->Update(character);
     }
 
-    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
     dbChanges->Update(srcDemon);
     dbChanges->Update(srcBox);
     dbChanges->Update(destBox);

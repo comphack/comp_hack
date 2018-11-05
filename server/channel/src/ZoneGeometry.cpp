@@ -88,10 +88,18 @@ bool Line::Intersect(const Line& other, Point& point, float& dist) const
     Point delta1(dest.x - src.x, dest.y - src.y);
     Point delta2(second.x - first.x, second.y - first.y);
 
+    float det = -delta2.x * delta1.y + delta1.x * delta2.y;
+    if(det == 0.f)
+    {
+        // If the determinate is zero, the lines are parallel and the point
+        // of intersection is undefined
+        return false;
+    }
+
     float s = (-delta1.y * (src.x - first.x) + delta1.x *
-        (src.y - first.y)) / (-delta2.x * delta1.y + delta1.x * delta2.y);
+        (src.y - first.y)) / det;
     float t = (delta2.x * (src.y - first.y) - delta2.y *
-        (src.x - first.x)) / (-delta2.x * delta1.y + delta1.x * delta2.y);
+        (src.x - first.x)) / det;
 
     if(s < 0 || s > 1 || t < 0 || t > 1)
         return false;

@@ -923,7 +923,8 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
         Point collidePoint;
         if(zone->Collides(Line(source, dest), collidePoint))
         {
-            dest = collidePoint;
+            dest = zoneManager->GetLinearPoint(collidePoint.x,
+                collidePoint.y, source.x, source.y, 10.f, false);
         }
 
         auto command = GetMoveCommand(eState, dest, 0.f, false);
@@ -1302,7 +1303,7 @@ std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(
     float reduce, bool split) const
 {
     auto zone = eState->GetZone();
-    if(!zone)
+    if(!zone || !eState->CanMove())
     {
         return nullptr;
     }
@@ -1347,12 +1348,12 @@ std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(
         last.y = adjusted.y;
     }
 
-    if(split)
+    float moveSpeed = eState->GetMovementSpeed();
+    if(split && moveSpeed > 0.f)
     {
         // Move in 0.5s increments so it looks less robotic
         // (maximum distance in 0.5s is = speed * 0.5);
-        float maxMoveDistance = (float)((float)eState->GetMovementSpeed() *
-            0.5f);
+        float maxMoveDistance = moveSpeed * 0.5f;
 
         Point prev = source;
 

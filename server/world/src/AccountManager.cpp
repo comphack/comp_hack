@@ -908,8 +908,7 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
             if(clanInfo)
             {
                 clanID = clanInfo->GetID();
-                characterManager->ClanLeave(cLogin, clanID, nullptr);
-                left = true;
+                left = characterManager->ClanLeave(cLogin, clanID, nullptr);
             }
         }
 

@@ -37,6 +37,7 @@
 #include <ActivatedAbility.h>
 #include <Item.h>
 #include <MiConditionData.h>
+#include <MiSkillBasicData.h>
 #include <MiSkillData.h>
 #include <MiWarpPointData.h>
 
@@ -89,9 +90,11 @@ bool Parsers::Warp::Parse(libcomp::ManagerPacket *pPacketManager,
             libcomp::PersistentObject::GetObjectByUUID(
             state->GetObjectUUID(activatedAbility->GetActivationObjectID())));
 
+        // Warp is valid if the item was consumed or the skill wasn't an item skill
         auto warpDef = definitionManager->GetWarpPointData(warpPointID);
         auto skillData = definitionManager->GetSkillData(activatedAbility->GetSkillID());
-        if(warpDef && item)
+        if(warpDef && (item || (skillData->GetBasic()->GetFamily() != 2 &&
+            skillData->GetBasic()->GetFamily() != 6)))
         {
             uint32_t zoneID = warpDef->GetZoneID();
 

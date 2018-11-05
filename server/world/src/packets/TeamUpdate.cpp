@@ -71,13 +71,13 @@ void TeamForm(std::shared_ptr<WorldServer> server,
     if(team)
     {
         // Define new team and send update
-        if(type >= (int8_t)objects::Team::Category_t::DIASPORA)
-        {
-            team->SetCategory(objects::Team::Category_t::DIASPORA);
-        }
-        else if(type >= (int8_t)objects::Team::Category_t::CATHEDRAL)
+        if(type >= (int8_t)objects::Team::Category_t::CATHEDRAL)
         {
             team->SetCategory(objects::Team::Category_t::CATHEDRAL);
+        }
+        else if(type >= (int8_t)objects::Team::Category_t::DIASPORA)
+        {
+            team->SetCategory(objects::Team::Category_t::DIASPORA);
         }
         else
         {

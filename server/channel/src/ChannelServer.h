@@ -557,6 +557,10 @@ protected:
     /// Highest unique object ID currently assigned
     int64_t mMaxObjectID;
 
+    /// Inidicates how many tick messages are sitting in the queue.
+    /// Incremented by StartTick and decremented by Tick.
+    uint8_t mTicksPending;
+
     /// Thread that queues up tick messages after a delay.
     std::thread mTickThread;
 
@@ -565,6 +569,9 @@ protected:
 
     /// Server lock for server time calculation
     std::mutex mTimeLock;
+
+    /// Server lock for setting the tick pending indicator
+    std::mutex mTickLock;
 
     /// If the tick thread should continue running.
     volatile bool mTickRunning;

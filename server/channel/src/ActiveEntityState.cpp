@@ -1063,12 +1063,12 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
                     add = false;
 
                     // Application logic 2 effects have their expirations reset
-                    // any time they are re-applied
+                    // any time they are re-applied (barring "set" durations)
                     auto exDef = definitionManager->GetStatusData(
                         exEffect->GetEffect());
                     if(exDef->GetBasic()->GetApplicationLogic() == 2)
                     {
-                        exEffect->SetExpiration(0);
+                        resetTime = true;
                     }
 
                     effect = exEffect;
@@ -1101,6 +1101,7 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
             uint32_t expiration = 0;
             bool absoluteTime = false;
             bool durationOverride = false;
+            bool durationRequired = true;
             switch(cancel->GetDurationType())
             {
             case objects::MiCancelData::DurationType_t::MS:
@@ -1128,6 +1129,10 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
                     expiration = ePair.second.Duration;
                     effect->SetIsConstant(false);
                     durationOverride = true;
+                }
+                else
+                {
+                    durationRequired = false;
                 }
                 break;
             default:
@@ -1171,7 +1176,13 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
                 }
             }
 
-            if(setTime)
+            if(durationRequired && !expiration)
+            {
+                // Do not actually add it if we have no time here
+                effect = nullptr;
+                activateEffect = false;
+            }
+            else if(setTime)
             {
                 effect->SetExpiration(expiration);
                 activateEffect = true;
@@ -1373,9 +1384,18 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
                 auto it = mStatusEffects.find(effectType);
                 if(it == mStatusEffects.end()) continue;
 
-                uint32_t exp = GetCurrentExpiration(it->second, pair.first,
+                auto effect = it->second;
+                uint32_t exp = GetCurrentExpiration(effect, pair.first,
                     now);
-                it->second->SetExpiration(exp);
+
+                // Make sure the expiration is never frozen at 0 without
+                // a normal in zone expiration or the client can desync
+                if(effect->GetExpiration() && !exp)
+                {
+                    exp = 1;
+                }
+
+                effect->SetExpiration(exp);
             }
         }
     }

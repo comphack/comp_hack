@@ -5803,51 +5803,30 @@ bool CharacterManager::UpdateStatusEffects(const std::shared_ptr<
         }
     }
 
-    std::set<uint32_t> removed;
+    // All removals are handled by the zone expiration logic
     std::list<libcomp::ObjectReference<objects::StatusEffect>> updated;
     for(auto ePair : effectStates)
     {
         auto effectType = ePair.first;
         auto effect = effectMap[effectType];
 
-        // If the effect can expire but somehow was not removed yet, remove it
-        bool expire = !effect->GetIsConstant() && effect->GetExpiration() == 0;
-        
         // Do not save constant effects
         if(!effect->GetIsConstant())
         {
-            if(expire)
-            {
-                removed.insert(effectType);
-            }
-            else
-            {
-                updated.push_back(effect);
-            }
+            updated.push_back(effect);
 
             if(!ePair.second)
             {
-                if(expire)
-                {
-                    changes->Delete(effect);
-                }
-                else
-                {
-                    changes->Update(effect);
-                }
+                changes->Update(effect);
             }
-            else if(!expire)
+            else
             {
                 changes->Insert(effect);
             }
         }
     }
 
-    if(removed.size() > 0)
-    {
-        eState->ExpireStatusEffects(removed);
-    }
-    else if(updated.size() == 0 && previous.size() == 0)
+    if(updated.size() == 0 && previous.size() == 0)
     {
         // Nothing to do
         return true;

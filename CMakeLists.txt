@@ -97,6 +97,7 @@ IF(WIN32)
     SET(CPACK_WIX_PROGRAM_MENU_FOLDER "COMP_hack")
     SET(CPACK_WIX_PROPERTY_ARPHELPLINK "https://github.com/comphack/comp_hack")
     SET(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/contrib/services.wxs")
+    SET(CPACK_WIX_EXTENSIONS "WixFirewallExtension")
     SET(CPACK_PACKAGE_INSTALL_DIRECTORY "COMP_hack")
     SET(CPACK_PACKAGE_EXECUTABLES "comp_capgrep;Capture Analysis;comp_logger;Capture Logger;comp_map;Enemy Mapping")
 

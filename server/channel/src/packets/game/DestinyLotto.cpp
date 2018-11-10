@@ -108,7 +108,7 @@ bool Parsers::DestinyLotto::Parse(libcomp::ManagerPacket *pPacketManager,
         }
     }
 
-    if(success && assistItemType == static_cast<uint32_t>(-1))
+    if(success && assistItemType != static_cast<uint32_t>(-1))
     {
         auto it = SVR_CONST.ADJUSTMENT_ITEMS.find(assistItemType);
         if(it == SVR_CONST.ADJUSTMENT_ITEMS.end() ||
@@ -128,8 +128,10 @@ bool Parsers::DestinyLotto::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
+            // Consume one assist item per bonus added (or one for slot
+            // specification)
             std::unordered_map<uint32_t, uint32_t> items;
-            items[assistItemType] = 1;
+            items[assistItemType] = slotSpecified == 1 ? 1 : bonusCount;
             success = characterManager->AddRemoveItems(client, items, false);
         }
     }

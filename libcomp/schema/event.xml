@@ -101,9 +101,12 @@
             <value>STAT_VALUE</value>
             <value>STATUS_ACTIVE</value>
             <value>TEAM_CATEGORY</value>
+            <value>TEAM_LEADER</value>
             <value>TEAM_SIZE</value>
             <value>TEAM_TYPE</value>
             <value>TIMESPAN_DATETIME</value>
+            <value>ZIOTITE_LARGE</value>
+            <value>ZIOTITE_SMALL</value>
 
             <!-- Custom flag types -->
             <value num="1001">ZONE_FLAGS</value>

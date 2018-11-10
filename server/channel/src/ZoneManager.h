@@ -885,11 +885,13 @@ public:
      * @param distance Distance to move
      * @param away true if the point calculated should be futher from the
      *  target point, false if it should be closer to it
+     * @param zone Optional pointer to the zone to check against collision
      * @return X, Y coordinates at the specified point not adjusted for
      *  collisions
      */
     Point GetLinearPoint(float sourceX, float sourceY,
-        float targetX, float targetY, float distance, bool away);
+        float targetX, float targetY, float distance, bool away,
+        const std::shared_ptr<Zone>& zone = nullptr);
 
     /**
      * Set an entity's destination position at a distace directly away or
@@ -1284,6 +1286,9 @@ private:
 
     /// Server lock for shared resources
     std::mutex mLock;
+
+    /// Server lock for creating or getting existing zones in an instance
+    std::mutex mInstanceZoneLock;
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;

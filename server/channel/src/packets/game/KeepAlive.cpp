@@ -27,12 +27,14 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 
 using namespace channel;
 
@@ -45,13 +47,11 @@ bool Parsers::KeepAlive::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
     auto state = client->GetClientState();
 
-    ServerTime now = server->GetServerTime();
+    ServerTime now = ChannelServer::GetServerTime();
 
     // Keep alive requests should occur once every 10 seconds
     // After a missed request, the configurable server timeout countdown
@@ -63,12 +63,24 @@ bool Parsers::KeepAlive::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     // Refresh the client entity positions
-    state->GetCharacterState()->RefreshCurrentPosition(now);
+    auto cState = state->GetCharacterState();
+    cState->RefreshCurrentPosition(now);
 
     auto dState = state->GetDemonState();
     if(dState->Ready())
     {
         dState->RefreshCurrentPosition(now);
+    }
+
+    // Sync equipment expiration up with this request since frequent calls
+    // are required to keep connected
+    if(cState->EquipmentExpired((uint32_t)std::time(0)))
+    {
+        auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+            ->GetServer());
+        cState->RecalcEquipState(server->GetDefinitionManager());
+        server->GetCharacterManager()->RecalculateTokuseiAndStats(cState,
+            client);
     }
 
     libcomp::Packet reply;

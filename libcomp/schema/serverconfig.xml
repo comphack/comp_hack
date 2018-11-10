@@ -40,6 +40,7 @@
         <member type="float" name="XPBonus"/>
         <member type="float" name="ExpertiseBonus"/>
         <member type="float" name="DropRateBonus"/>
+        <member type="float" name="LoginPointBonus"/>
         <member type="float" name="FusionGaugeBonus" default="3.0"/>
         <member type="float" name="BethelBonus"/>
         <member type="float" name="DigitalizePointBonus"/>

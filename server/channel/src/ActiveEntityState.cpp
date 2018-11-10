@@ -70,6 +70,7 @@
 #include "CharacterManager.h"
 #include "TokuseiManager.h"
 #include "Zone.h"
+#include "ZoneInstance.h"
 
 using namespace channel;
 
@@ -1479,8 +1480,29 @@ bool ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
                 {
                     if(doRegen)
                     {
-                        hpTDamage = (int32_t)(hpTDamage -
-                            GetCorrectValue(CorrectTbl::HP_REGEN));
+                        auto calcState = GetCalculatedState();
+                        if(calcState->ExistingTokuseiAspectsContains(
+                            (int8_t)TokuseiAspectType::ZONE_INSTANCE_POISON))
+                        {
+                            // Ignore all HP regen and take HP damage based
+                            // upon max HP and the instance's poison level
+                            auto zone = GetZone();
+                            auto instance = zone
+                                ? zone->GetInstance() : nullptr;
+                            auto cs = GetCoreStats();
+                            if(instance && cs)
+                            {
+                                hpTDamage = (int32_t)(hpTDamage +
+                                    ceil((float)instance->GetPoisonLevel() *
+                                        0.01f * (float)cs->GetMaxHP()));
+                            }
+                        }
+                        else
+                        {
+                            hpTDamage = (int32_t)(hpTDamage -
+                                GetCorrectValue(CorrectTbl::HP_REGEN));
+                        }
+
                         mpTDamage = (int32_t)(mpTDamage -
                             GetCorrectValue(CorrectTbl::MP_REGEN));
                     }

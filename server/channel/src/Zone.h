@@ -670,6 +670,22 @@ public:
     std::set<int8_t> GetBaseRestrictedActionTypes();
 
     /**
+     * Get the number of living Diaspora base bound miniboss spawn location
+     * group encounters and maximum count for the phase
+     * @return Number of living mini-boss encounters and maximum count for the
+     *  current phase
+     */
+    std::pair<uint8_t, uint8_t> GetDiasporaMiniBossCount();
+
+    /**
+     * Determine if the Diaspora mini-bosses for this zone have updated since
+     * the last time this function has been called. Reset the flag if one has
+     * occurred.
+     * @return true if and update has occurred, false one has not
+     */
+    bool DiasporaMiniBossUpdated();
+
+    /**
      * Get the current UBMatch associated to the zone if one exists
      * @return Pointer to the UBMatch or null if none exists
      */
@@ -890,6 +906,10 @@ private:
 
     /// Quick reference flag to determine if the zone has respwa
     bool mHasRespawns;
+
+    /// Flag indicating that Diaspora mini-boss spawn location groups have
+    /// updated since the last call to DiasporaMiniBossUpdated
+    bool mDiasporaMiniBossUpdated;
 
     /// Server lock for shared resources
     std::mutex mLock;

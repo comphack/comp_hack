@@ -63,6 +63,7 @@
         </member>
         <member type="PvPInstanceStats*" name="PvPStats"
             nulldefault="true"/>
+        <member type="u8" name="PoisonLevel" max="100"/>
     </object>
     <object name="PvPBase" scriptenabled="true" persistent="false">
         <member type="s8" name="Team" default="2"/>

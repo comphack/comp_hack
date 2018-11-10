@@ -124,6 +124,19 @@
 </section><!-- DropRateBonus -->
 
 <section>
+<title>LoginPointBonus</title>
+<para><emphasis role="strong">Type:</emphasis> float</para>
+<para><emphasis role="strong">Default:</emphasis> 0.0</para>
+<para>Sets the additional login point gain percentage (used for clans) when logging in for the day (ex: 0.5 would grant 150%).</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LoginPointBonus">3.0</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LoginPointBonus -->
+
+<section>
 <title>FusionGaugeBonus</title>
 <para><emphasis role="strong">Type:</emphasis> float</para>
 <para><emphasis role="strong">Default:</emphasis> 3.0</para>

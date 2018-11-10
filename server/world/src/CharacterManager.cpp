@@ -1286,12 +1286,17 @@ void CharacterManager::RecalculateClanLevel(int32_t clanID, bool sendUpdate)
                 character->GetLoginPoints());
         }
 
-        uint32_t newLevel = (uint32_t)((double)totalPoints * 0.0001);
-        if(newLevel > 10)
+        uint32_t newLevel = 0;
+        for(newLevel = 10; newLevel > 1; newLevel--)
         {
-            newLevel = 10;
+            size_t idx = (size_t)(newLevel - 1);
+            if(libcomp::CLAN_POINT_REQUIREMENT[idx] <= totalPoints)
+            {
+                break;
+            }
         }
-        else if(newLevel == 0)
+
+        if(newLevel == 0)
         {
             newLevel = 1;
         }

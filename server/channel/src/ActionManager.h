@@ -123,6 +123,20 @@ private:
     };
 
     /**
+     * Get world CIDs associated to the action context of the supplied
+     * action
+     * @param action Pointer to the current action
+     * @param ctx ActionContext for the executing source information.
+     * @param failure Output parameter designating if a failure occurred
+     * @param preFiltered Output parameter designating if the set was
+     *  prefiltered or if it needs to be filtered still
+     * @retval Set of world CIDs
+     */
+    std::set<int32_t> GetActionContextCIDs(
+        const std::shared_ptr<objects::Action>& action, ActionContext& ctx,
+        bool& failure, bool& preFiltered);
+
+    /**
      * Start an event sequence for the client.
      * @param ctx ActionContext for the executing source information.
      * @retval false The action list should stop after this action.

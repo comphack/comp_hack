@@ -30,15 +30,14 @@
 // libcomp Includes
 #include <ScriptEngine.h>
 
+// object Includes
+#include <AIStateObject.h>
+
 // channel Includes
 #include "AICommand.h"
 
-// Standard C++11 includes
-#include <mutex>
-
 namespace objects
 {
-class MiAIData;
 class MiSkillData;
 }
 
@@ -84,18 +83,13 @@ enum AIStatus_t : uint8_t
  * Contains the state of an entity's AI information when controlled
  * by the channel.
  */
-class AIState
+class AIState : public objects::AIStateObject
 {
 public:
     /**
      * Create a new AI state.
      */
     AIState();
-
-    /**
-     * Clean up the AI state.
-     */
-    virtual ~AIState();
 
     /**
      * Get the status
@@ -142,40 +136,16 @@ public:
     void ResetStatusChanged();
 
     /**
-     * Bind an AI script to the AI controlled entity
-     * @param aiScript Script to bind to the AI controlled entity
-     */
-    void SetAI(const std::shared_ptr<objects::MiAIData>& aiData,
-        const std::shared_ptr<libcomp::ScriptEngine>& aiScript,
-        uint8_t aggression = 100);
-
-    /**
-     * Get the base AI definition
-     * @return Pointer to the base AI definition bound the the
-     *  entity or null if not bound
-     */
-    std::shared_ptr<objects::MiAIData> GetAIData() const;
-
-    /**
      * Get the bound AI script
      * @return Pointer to the bound AI script or null if not bound
      */
     std::shared_ptr<libcomp::ScriptEngine> GetScript() const;
 
     /**
-     * Get the AI aggression level representing how often it
-     * should choose to aggro when checking for targets
-     * @return AI aggression level
+     * Bind an AI script to the AI controlled entity
+     * @param aiScript Script to bind to the AI controlled entity
      */
-    uint8_t GetAggression() const;
-
-    /**
-     * Get AI "think speed" representing the millisecond interval all
-     * non-skill actions act upon. If no base AI definition is assigned,
-     * 2000 milliseconds will be used.
-     * @return AI think speed in milliseconds
-     */
-    int32_t GetThinkSpeed();
+    void SetScript(const std::shared_ptr<libcomp::ScriptEngine>& aiScript);
 
     /**
      * Get the AI's aggro value from its base AI definition represnting
@@ -218,40 +188,6 @@ public:
     std::shared_ptr<AICommand> PopCommand();
 
     /**
-     * Entity ID of the the currently targeted entity or 0 if none
-     * is set
-     * @return Entity ID of the AI controlled entity's target
-     */
-    int32_t GetTarget() const;
-
-    /**
-     * Set the entity ID of the currently targeted entity
-     * @param Entity ID of the currently targeted entity
-     */
-    void SetTarget(int32_t targetEntityID);
-
-    /**
-     * Get the settings mask that specifies what kinds of skills
-     * the AI controlled entity should use
-     * @return skillSettings Skill settings mask
-     */
-    uint16_t GetSkillSettings() const;
-
-    /**
-     * Set the settings mask that specifies what kinds of skills
-     * the AI controlled entity should use
-     * @param skillSettings Skill settings mask
-     */
-    void SetSkillSettings(uint16_t skillSettings);
-
-    /**
-     * Check if the AI controlled entity's skill map has been set
-     * @return true if the skills have been mapped, false if they
-     *  have not
-     */
-    bool SkillsMapped() const;
-
-    /**
      * Mark the skill map as needing a refresh
      */
     void ResetSkillsMapped();
@@ -272,32 +208,6 @@ public:
     void SetSkillMap(const std::unordered_map<uint16_t,
         std::list<std::shared_ptr<objects::MiSkillData>>>& skillMap);
 
-    /**
-     * Override a default server side processing action with a
-     * function in the script bound to the entity.
-     * @param action Name of the action to override
-     * @param functionName Name of the script function that will
-     *  override the action. If this is specified as blank, a
-     *  function with the action name specified will be called
-     *  when the action is hit instead.
-     */
-    void OverrideAction(const libcomp::String& action,
-        const libcomp::String& functionName);
-
-    /**
-     * Check if the specified AI action has been overridden
-     * @param action Name of the action to check
-     * @return true if the action has been overridden
-     */
-    bool IsOverridden(const libcomp::String& action);
-
-    /**
-     * Get the script function name set to override the AI action
-     * @param action Name of the action to check
-     * @return Name of the function set to override the AI action
-     */
-    libcomp::String GetScriptFunction(const libcomp::String& action);
-
 private:
     /// List of all AI commands to be processed, starting with the current
     /// command and ending with the last to be processed
@@ -313,22 +223,8 @@ private:
     std::unordered_map<uint16_t,
         std::list<std::shared_ptr<objects::MiSkillData>>> mSkillMap;
 
-    /// Pointer to the base AI definition for the AI controlled entity
-    std::shared_ptr<objects::MiAIData> mAIData;
-
     /// Pointer to the AI script to use for the AI controlled entity
     std::shared_ptr<libcomp::ScriptEngine> mAIScript;
-
-    /// Aggression level to use when determining if the entity should
-    /// target an enemy in view when searching
-    uint8_t mAggression;
-
-    /// Entity ID of another entity in the zone being targeted independent
-    /// of a skill being used
-    int32_t mTargetEntityID;
-
-    /// Mask of AI skill type flags the entity will use
-    uint16_t mSkillSettings;
 
     /// Current AI status of the entity
     AIStatus_t mStatus;
@@ -341,13 +237,6 @@ private:
 
     /// Specifies that the status has changed and hasn't been checked yet
     bool mStatusChanged;
-
-    /// Speifies that the entity's skills need to be mapped for use
-    bool mSkillsMapped;
-
-    /// Server lock for shared resources (represented by pointer for ease
-    /// of Sqrat use)
-    std::mutex* mLock;
 };
 
 } // namespace channel

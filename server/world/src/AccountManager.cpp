@@ -147,6 +147,8 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
         // This is the character's first login of the day, increase
         // their login points, mark COMP demons with quests and drop GP
         auto stats = character->LoadCoreStats(worldDB);
+        auto sharedConfig = std::dynamic_pointer_cast<
+            objects::WorldConfig>(server->GetConfig())->GetWorldSharedConfig();
 
         // Count any time before today as one day
         uint32_t daysSinceLogin = ((today - lastLogin) / (24 * 60 * 60)) + 1;
@@ -188,9 +190,7 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
             worldChanges->Update(progress);
         }
 
-        int32_t gpLoss = (int32_t)std::dynamic_pointer_cast<
-            objects::WorldConfig>(server->GetConfig())->GetWorldSharedConfig()
-            ->GetDailyGPLoss();
+        int32_t gpLoss = (int32_t)sharedConfig->GetDailyGPLoss();
         if(gpLoss)
         {
             // A set number of points is lost every day
@@ -211,20 +211,26 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
         if(stats->GetLevel() > 0)
         {
             int32_t points = character->GetLoginPoints();
-            points = points + (int32_t)ceil((float)stats->GetLevel() * 0.2);
-            character->SetLoginPoints(points);
+            points = points + (int32_t)ceil((float)stats->GetLevel() * 0.2 *
+                (1.f + sharedConfig->GetLoginPointBonus()));
 
-            // If the character is in a clan, queue up a recalculation of
-            // the clan level and sending of the character updates
-            if(cLogin->GetClanID())
+            if(points > character->GetLoginPoints())
             {
-                server->QueueWork([](std::shared_ptr<WorldServer> pServer,
-                    std::shared_ptr<objects::CharacterLogin> pLogin, int32_t pClanID)
+                character->SetLoginPoints(points);
+
+                // If the character is in a clan, queue up a recalculation of
+                // the clan level and sending of the character updates
+                if(cLogin->GetClanID())
                 {
-                    auto characterManager = pServer->GetCharacterManager();
-                    characterManager->SendClanMemberInfo(pLogin);
-                    characterManager->RecalculateClanLevel(pClanID);
-                }, server, cLogin, cLogin->GetClanID());
+                    server->QueueWork([](std::shared_ptr<WorldServer> pServer,
+                        std::shared_ptr<objects::CharacterLogin> pLogin,
+                        int32_t pClanID)
+                    {
+                        auto characterManager = pServer->GetCharacterManager();
+                        characterManager->SendClanMemberInfo(pLogin);
+                        characterManager->RecalculateClanLevel(pClanID);
+                    }, server, cLogin, cLogin->GetClanID());
+                }
             }
         }
     }

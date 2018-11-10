@@ -76,14 +76,10 @@ public:
      * other necessary data
      * @param eState Pointer to the entity state
      * @param aiType AI script type to bind to the entity
-     * @param baseAIType AI type to use for the base demon AI or zero
-     *  to use the default for the demon type
-     * @param aggression Aggression level of a the AI, defaults to 100
      * @return true on sucess, false upon failure
      */
     bool Prepare(const std::shared_ptr<ActiveEntityState>& eState,
-        const libcomp::String& aiType, uint16_t baseAIType = 0,
-        uint8_t aggression = 100);
+        const libcomp::String& aiType);
 
     /**
      * Update the AI state of all active AI controlled entities in the
@@ -134,7 +130,7 @@ public:
      * @param functionName Name of the script function to be executed when
      *  the command is processed
      */
-    void QueueScriptCommand(const std::shared_ptr<AIState> aiState,
+    void QueueScriptCommand(const std::shared_ptr<AIState>& aiState,
         const libcomp::String& functionName);
 
     /**
@@ -143,8 +139,17 @@ public:
      * @param waitTime Number of seconds the entity should wait when
      *  the command is processed
      */
-    void QueueWaitCommand(const std::shared_ptr<AIState> aiState,
+    void QueueWaitCommand(const std::shared_ptr<AIState>& aiState,
         uint32_t waitTime);
+
+    /**
+     * Set or remove the aggro target on an AI controlled entity
+     * @param eState Pointer to the entity state
+     * @param targetID Entity ID representing the new AI target or
+     *  -1 for no target
+     */
+    void UpdateAggro(const std::shared_ptr<ActiveEntityState>& eState,
+        int32_t targetID);
 
     /**
      * Set the entity's destination position based on the supplied

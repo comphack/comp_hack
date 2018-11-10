@@ -252,6 +252,13 @@ public:
     void SendCostAdjustments(int32_t entityID, const std::shared_ptr<
         ChannelClientConnection>& client);
 
+    /**
+     * Update all entities affected by the DIASPORA_MINIBOSS_COUNT tokusei
+     * condition in the supplied zone
+     * @param zone Pointer to the zone that was updated
+     */
+    void UpdateDiasporaMinibossCount(const std::shared_ptr<Zone>& zone);
+
 private:
     /**
      * Recalculate skill cost adjustments from tokusei for the specified

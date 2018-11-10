@@ -110,8 +110,8 @@ enum class SkillErrorCodes_t : uint8_t
     MOOCH_PARTNER_TOO_FAR = 60, //!< Partner demon is too far away for mooch
     INVENTORY_SPACE_PRESENT = 61,   //!< Inventory space needed to recieve demon present
     INVENTORY_SPACE = 63,   //!< Inventory space needed to receive item
-    NOTHING_HAPPNED_NOW = 68,   //!< Nothing happened currently
-    NOTHING_HAPPNED_HERE = 69,  //!< Nothing happened in the current place
+    NOTHING_HAPPENED_NOW = 68,   //!< Nothing happened currently
+    NOTHING_HAPPENED_HERE = 69,  //!< Nothing happened in the current place
     TIME_RESTRICT = 71, //!< Time invalid for use
     ZONE_INVALID = 72,  //!< Target zone is not valid
     PARTNER_INCOMPATIBLE = 75,  //!< Partner demon is incompatible

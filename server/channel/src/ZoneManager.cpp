@@ -1174,6 +1174,20 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     characterManager->AddRemoveOpponent(false, cState, nullptr, true);
     characterManager->AddRemoveOpponent(false, dState, nullptr, true);
 
+    // If there is a pending bazaar, mark as active again
+    auto bState = state->GetBazaarState();
+    if(bState)
+    {
+        auto worldData = state->GetAccountWorldData().Get();
+        auto bData = worldData->GetBazaarData().Get();
+        if(bData && bState->GetCurrentMarket(bData->GetMarketID()) == bData &&
+            bData->GetState() == objects::BazaarData::State_t::BAZAAR_PREPARING)
+        {
+            bData->SetState(objects::BazaarData::State_t::BAZAAR_ACTIVE);
+            SendBazaarMarketData(state->GetZone(), bState, bData->GetMarketID());
+        }
+    }
+
     std::shared_ptr<Zone> zone = nullptr;
     bool instanceLeft = false;
     bool instanceRemoved = false;
@@ -1474,8 +1488,12 @@ uint8_t ZoneManager::CreateInstance(
                 instance->SetTimeLimitData(timeData);
             }
 
-            instance->SetTimerExpirationEventID(access
-                ->GetCreateTimerExpirationEventID());
+            if(instance->GetTimerExpirationEventID().IsEmpty())
+            {
+                instance->SetTimerExpirationEventID(access
+                    ->GetCreateTimerExpirationEventID());
+            }
+
             instance->SetTimerID(access->GetCreateTimerID());
 
             access->SetInstanceID(id);
@@ -2641,32 +2659,31 @@ void ZoneManager::HandleDespawns(const std::shared_ptr<Zone>& zone)
     std::set<int32_t> despawnEntities = zone->GetDespawnEntities();
     if(despawnEntities.size() > 0)
     {
-        auto characterManager = mServer.lock()->GetCharacterManager();
+        auto server = mServer.lock();
+        auto characterManager = server->GetCharacterManager();
         for(int32_t entityID : despawnEntities)
         {
-            auto eState = zone->GetEntity(entityID);
-            if(eState)
+            auto eState = zone->GetActiveEntity(entityID);
+            auto eBase = eState ? eState->GetEnemyBase() : nullptr;
+            if(eBase)
             {
-                switch(eState->GetEntityType())
-                {
-                case EntityType_t::ENEMY:
-                    enemyIDs.push_back(entityID);
+                enemyIDs.push_back(entityID);
 
-                    // Remove from combat first
-                    characterManager->AddRemoveOpponent(false,
-                        std::dynamic_pointer_cast<EnemyState>(eState),
-                        nullptr);
-                    zone->RemoveEntity(entityID);
-                    break;
-                default:
-                    break;
-                }
+                // Remove from combat first
+                characterManager->AddRemoveOpponent(false, eState,
+                    nullptr);
+                zone->RemoveEntity(entityID);
             }
         }
 
         if(enemyIDs.size() > 0)
         {
             RemoveEntitiesFromZone(zone, enemyIDs, 7, false);
+        }
+
+        if(zone->DiasporaMiniBossUpdated())
+        {
+            server->GetTokuseiManager()->UpdateDiasporaMinibossCount(zone);
         }
     }
 }
@@ -3096,7 +3113,7 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
             Point p = GetRandomSpotPoint(spotIter->second, zoneData);
             x = p.x;
             y = p.y;
-            rot = spotIter->second->GetRotation();
+            rot = RNG_DEC(float, -3.14f, 3.14f, 2);
         }
     }
 
@@ -3150,8 +3167,7 @@ bool ZoneManager::AddEnemiesToZone(
         if(spawn)
         {
             // Prepare spawn based AI
-            if(!aiManager->Prepare(eState, spawn->GetAIScriptID(),
-                spawn->GetBaseAIType(), spawn->GetAggression()))
+            if(!aiManager->Prepare(eState, spawn->GetAIScriptID()))
             {
                 LOG_WARNING(libcomp::String("Failed to prepare AI for"
                     " enemy: %1\n").Arg(spawn->GetAIScriptID()));
@@ -3194,6 +3210,11 @@ bool ZoneManager::AddEnemiesToZone(
     if(asEncounter)
     {
         zone->CreateEncounter(eStates, staggerSpawn, defeatActions);
+    }
+
+    if(zone->DiasporaMiniBossUpdated())
+    {
+        server->GetTokuseiManager()->UpdateDiasporaMinibossCount(zone);
     }
 
     TriggerZoneActions(zone, eStates, ZoneTrigger_t::ON_SPAWN);
@@ -3597,15 +3618,8 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
                     // Make sure a straight line can be drawn from the center
                     // point so the enemy is not spawned outside of the zone
-                    Point collision;
-                    Line fromCenter(center, p);
-
-                    if(zone->Collides(fromCenter, collision))
-                    {
-                        // Back it off slightly
-                        p = GetLinearPoint(collision.x, collision.y,
-                            center.x, center.y, 10.f, false);
-                    }
+                    p = GetLinearPoint(center.x, center.y, p.x, p.y,
+                        center.GetDistance(p), false, zone);
 
                     x = p.x;
                     y = p.y;
@@ -3619,7 +3633,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                     y = location->GetY() - rPoint.y;
                 }
 
-                float rot = RNG_DEC(float, 0.f, 3.14f, 2);
+                float rot = RNG_DEC(float, -3.14f, 3.14f, 2);
 
                 // Create the entity state
                 auto state = CreateEnemy(zone, spawn->GetEnemyType(), spawn, x, y, rot);
@@ -4860,7 +4874,16 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
                 std::lock_guard<std::mutex> lock(mLock);
                 if(!instance->GetTimerStop())
                 {
-                    instance->SetTimerStop(stopTime);
+                    if(instance->GetTimerExpire() <= stopTime)
+                    {
+                        // Timer expired
+                        instance->SetTimerStop(instance->GetTimerExpire());
+                        expired = true;
+                    }
+                    else
+                    {
+                        instance->SetTimerStop(stopTime);
+                    }
 
                     if(!instance->GetMatch()->GetPhase())
                     {
@@ -4891,7 +4914,16 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
             std::lock_guard<std::mutex> lock(mLock);
             if(!instance->GetTimerStop())
             {
-                instance->SetTimerStop(stopTime);
+                if(instance->GetTimerExpire() <= stopTime)
+                {
+                    // Timer expired
+                    instance->SetTimerStop(instance->GetTimerExpire());
+                    expired = true;
+                }
+                else
+                {
+                    instance->SetTimerStop(stopTime);
+                }
 
                 // Complete timer
                 for(auto client : instance->GetConnections())
@@ -5732,22 +5764,13 @@ bool ZoneManager::UpdateTrackedZone(const std::shared_ptr<Zone>& zone,
         if(boss)
         {
             auto enemy = boss->GetEntity();
-
-            int32_t capturedBases = 0;
-            auto bases = zone->GetDiasporaBases();
-            for(auto base : bases)
-            {
-                if(base->GetEntity()->GetCaptured())
-                {
-                    capturedBases++;
-                }
-            }
+            auto mbCounts = zone->GetDiasporaMiniBossCount();
 
             notify.WriteU32Little(enemy->GetType());
             notify.WriteS32Little(boss->GetCoreStats()->GetHP());
             notify.WriteS32Little(boss->GetMaxHP());
-            notify.WriteS32Little(capturedBases);
-            notify.WriteS32Little((int32_t)bases.size());
+            notify.WriteS32Little((int32_t)mbCounts.first);
+            notify.WriteS32Little((int32_t)mbCounts.second);
         }
 
         ChannelClientConnection::BroadcastPacket(clients, notify);
@@ -6229,8 +6252,11 @@ Point ZoneManager::GetRandomSpotPoint(
 }
 
 Point ZoneManager::GetLinearPoint(float sourceX, float sourceY,
-    float targetX, float targetY, float distance, bool away)
+    float targetX, float targetY, float distance, bool away,
+    const std::shared_ptr<Zone>& zone)
 {
+    bool adjusted = true;
+
     Point dest(sourceX, sourceY);
     if(targetX != sourceX)
     {
@@ -6250,6 +6276,25 @@ Point ZoneManager::GetLinearPoint(float sourceX, float sourceY,
         dest.y = (away == (targetY > sourceY))
             ? (sourceY - distance) : (sourceY + distance);
     }
+    else
+    {
+        adjusted = false;
+    }
+
+    if(zone && adjusted)
+    {
+        // Check collision and back off if one happens
+        Point src(sourceX, sourceY);
+
+        Point collidePoint;
+        if(zone->Collides(Line(src, dest), collidePoint))
+        {
+            // 10 units seems to be the approximate distance you
+            // can walk up to a boundary before it stops you
+            dest = GetLinearPoint(collidePoint.x,
+                collidePoint.y, src.x, src.y, 10.f, false);
+        }
+    }
 
     return dest;
 }
@@ -6261,20 +6306,11 @@ Point ZoneManager::MoveRelative(const std::shared_ptr<ActiveEntityState>& eState
     float x = eState->GetCurrentX();
     float y = eState->GetCurrentY();
 
-    auto point = GetLinearPoint(x, y, targetX, targetY, distance, away);
+    auto point = GetLinearPoint(x, y, targetX, targetY, distance, away,
+        eState->GetZone());
 
     if(point.x != x || point.y != y)
     {
-        // Check collision and adjust
-        Line move(x, y, point.x, point.y);
-
-        Point corrected;
-        if(eState->GetZone()->Collides(move, corrected))
-        {
-            // Move off the collision point by 10
-            point = GetLinearPoint(corrected.x, corrected.y, x, y, 10.f, false);
-        }
-
         eState->SetOriginX(x);
         eState->SetOriginY(y);
         eState->SetOriginTicks(now);
@@ -6865,6 +6901,8 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
     const std::shared_ptr<ZoneInstance>& instance, uint32_t zoneID,
     uint32_t dynamicMapID)
 {
+    std::lock_guard<std::mutex> iLock(mInstanceZoneLock);
+
     auto zone = instance->GetZone(zoneID, dynamicMapID);
     if(zone)
     {

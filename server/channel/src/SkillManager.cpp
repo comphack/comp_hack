@@ -113,6 +113,7 @@
 #include <ServerZonePartial.h>
 #include <Spawn.h>
 #include <SpawnGroup.h>
+#include <SpawnLocation.h>
 #include <SpawnLocationGroup.h>
 #include <Tokusei.h>
 #include <TokuseiCondition.h>
@@ -271,19 +272,27 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
     mSkillFunctions[SVR_CONST.SKILL_CAMEO] = &SkillManager::Cameo;
     mSkillFunctions[SVR_CONST.SKILL_CLOAK] = &SkillManager::Cloak;
     mSkillFunctions[SVR_CONST.SKILL_DCM] = &SkillManager::DCM;
+    mSkillFunctions[SVR_CONST.SKILL_DESPAWN] = &SkillManager::Despawn;
+    mSkillFunctions[SVR_CONST.SKILL_DESUMMON] = &SkillManager::Desummon;
     mSkillFunctions[SVR_CONST.SKILL_DIGITALIZE] = &SkillManager::Digitalize;
     mSkillFunctions[SVR_CONST.SKILL_DIGITALIZE_BREAK] = &SkillManager::DigitalizeBreak;
     mSkillFunctions[SVR_CONST.SKILL_DIGITALIZE_CANCEL] = &SkillManager::DigitalizeCancel;
+    mSkillFunctions[SVR_CONST.SKILL_ESTOMA] = &SkillManager::Estoma;
     mSkillFunctions[SVR_CONST.SKILL_EQUIP_ITEM] = &SkillManager::EquipItem;
     mSkillFunctions[SVR_CONST.SKILL_EXPERT_FORGET_ALL] = &SkillManager::ForgetAllExpertiseSkills;
     mSkillFunctions[SVR_CONST.SKILL_FAM_UP] = &SkillManager::FamiliarityUp;
     mSkillFunctions[SVR_CONST.SKILL_ITEM_FAM_UP] = &SkillManager::FamiliarityUpItem;
+    mSkillFunctions[SVR_CONST.SKILL_LIBERAMA] = &SkillManager::Liberama;
+    mSkillFunctions[SVR_CONST.SKILL_MINION_DESPAWN] = &SkillManager::MinionDespawn;
+    mSkillFunctions[SVR_CONST.SKILL_MINION_SPAWN] = &SkillManager::MinionSpawn;
     mSkillFunctions[SVR_CONST.SKILL_MOOCH] = &SkillManager::Mooch;
     mSkillFunctions[SVR_CONST.SKILL_MOUNT] = &SkillManager::Mount;
     mSkillFunctions[SVR_CONST.SKILL_RANDOM_ITEM] = &SkillManager::RandomItem;
     mSkillFunctions[SVR_CONST.SKILL_RANDOMIZE] = &SkillManager::Randomize;
     mSkillFunctions[SVR_CONST.SKILL_RESPEC] = &SkillManager::Respec;
     mSkillFunctions[SVR_CONST.SKILL_REST] = &SkillManager::Rest;
+    mSkillFunctions[SVR_CONST.SKILL_SPAWN] = &SkillManager::Spawn;
+    mSkillFunctions[SVR_CONST.SKILL_SPAWN_ZONE] = &SkillManager::SpawnZone;
     mSkillFunctions[SVR_CONST.SKILL_STATUS_DIRECT] = &SkillManager::DirectStatus;
     mSkillFunctions[SVR_CONST.SKILL_STATUS_LIMITED] = &SkillManager::DirectStatus;
     mSkillFunctions[SVR_CONST.SKILL_SUMMON_DEMON] = &SkillManager::SummonDemon;
@@ -307,18 +316,6 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
     mSkillFunctions[SVR_CONST.SKILL_MAX_DURABILITY_RANDOM] = &SkillManager::SpecialSkill;
     mSkillFunctions[SVR_CONST.SKILL_SPECIAL_REQUEST] = &SkillManager::SpecialSkill;
     mSkillFunctions[SVR_CONST.SKILL_WARP] = &SkillManager::SpecialSkill;
-
-    /// @todo: implement these
-    // SVR_CONST.SKILL_DESPAWN
-    // SVR_CONST.SKILL_DESUMMON
-    // SVR_CONST.SKILL_DIASPORA_QUAKE
-    // SVR_CONST.SKILL_ESTOMA
-    // SVR_CONST.SKILL_LIBERAMA
-    // SVR_CONST.SKILL_MINION_DESPAWN
-    // SVR_CONST.SKILL_MINION_SPAWN
-    // SVR_CONST.SKILL_SPAWN
-    // SVR_CONST.SKILL_SPAWN_ZONE
-    // SVR_CONST.SKILL_TAUNT
 
     // Make sure anything not set is not pulled in to the mapping
     mSkillFunctions.erase(0);
@@ -530,7 +527,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
             }
         }
 
-        SendActivateSkill(activated);
+        SendActivateSkill(pSkill);
 
         if(!executeNow && def->GetCondition()->GetActiveMPDrain() > 0)
         {
@@ -1122,16 +1119,16 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
 
 void SkillManager::SendFailure(const std::shared_ptr<ActiveEntityState> source,
     uint32_t skillID, const std::shared_ptr<ChannelClientConnection> client,
-    uint8_t errorCode)
+    uint8_t errorCode, int8_t activationID)
 {
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_FAILED);
     p.WriteS32Little(source ? source->GetEntityID() : -1);
     p.WriteU32Little(skillID);
-    p.WriteS8(-1);  //Unknown
-    p.WriteU8(0);  //Unknown
+    p.WriteS8(activationID);
+    p.WriteU8(0);  // Unknown (values seen: 0, 1, 2)
     p.WriteU8(errorCode);
-    p.WriteS32Little(-1);  //Unknown
+    p.WriteS32Little(-1);  // Target entity ID, doesn't seem to be used
 
     if(client)
     {
@@ -1730,7 +1727,8 @@ void SkillManager::SendFailure(
     {
         auto source = std::dynamic_pointer_cast<ActiveEntityState>(
             activated->GetSourceEntity());
-        SendFailure(source, activated->GetSkillID(), client, errorCode);
+        SendFailure(source, activated->GetSkillID(), client, errorCode,
+            activated->GetActivationID());
     }
 }
 
@@ -1812,34 +1810,39 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
                 return false;
             }
 
-            // Calculate MAG cost
-            uint32_t demonType = demon->GetType();
-            auto demonData = server->GetDefinitionManager()->GetDevilData(
-                demonType);
-
-            int16_t characterLNC = character->GetLNC();
-            int16_t demonLNC = demonData->GetBasic()->GetLNC();
-            int8_t level = demon->GetCoreStats()->GetLevel();
-            uint8_t magMod = demonData->GetSummonData()->GetMagModifier();
-
-            double lncAdjust = characterLNC == 0
-                ? pow(demonLNC, 2.0f)
-                : (pow(abs(characterLNC), -0.06f) *
-                    pow(characterLNC - demonLNC, 2.0f));
-            double magAdjust = (double)(level * magMod);
-
-            double mag = (magAdjust * lncAdjust / 18000000.0) +
-                (magAdjust * 0.25);
-
-            if(demon->GetMagReduction() > 0)
+            // Calculate MAG cost (Diaspora cost is always zero)
+            if(pSkill->CurrentZone->GetInstanceType() !=
+                InstanceType_t::DIASPORA)
             {
-                mag = mag * (double)(100 - demon->GetMagReduction()) * 0.01;
-            }
+                uint32_t demonType = demon->GetType();
+                auto demonData = server->GetDefinitionManager()->GetDevilData(
+                    demonType);
 
-            uint32_t cost = (uint32_t)round(mag);
-            if(cost)
-            {
-                itemCosts[SVR_CONST.ITEM_MAGNETITE] = cost;
+                int16_t characterLNC = character->GetLNC();
+                int16_t demonLNC = demonData->GetBasic()->GetLNC();
+                int8_t level = demon->GetCoreStats()->GetLevel();
+                uint8_t magMod = demonData->GetSummonData()->GetMagModifier();
+
+                double lncAdjust = characterLNC == 0
+                    ? pow(demonLNC, 2.0f)
+                    : (pow(abs(characterLNC), -0.06f) *
+                        pow(characterLNC - demonLNC, 2.0f));
+                double magAdjust = (double)(level * magMod);
+
+                double mag = (magAdjust * lncAdjust / 18000000.0) +
+                    (magAdjust * 0.25);
+
+                if(demon->GetMagReduction() > 0)
+                {
+                    mag = mag * (double)(100 - demon->GetMagReduction()) *
+                        0.01;
+                }
+
+                uint32_t cost = (uint32_t)round(mag);
+                if(cost)
+                {
+                    itemCosts[SVR_CONST.ITEM_MAGNETITE] = cost;
+                }
             }
         }
         else if(pSkill->FunctionID == SVR_CONST.SKILL_DEMON_FUSION)
@@ -2939,6 +2942,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
         }
 
+        if(applyKnockback && target.GuardModifier)
+        {
+            // Guarding prevents all knockback increases
+            applyKnockback = false;
+        }
+
         if(applyKnockback)
         {
             // Check if the source removes knockback
@@ -3580,14 +3589,14 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 p.WriteBlank(8);
             }
 
-            p.WriteFloat(0);    // Unknown
+            p.WriteFloat(0);    // Unused additional timing value
 
             // Calculate hit timing
             hitTimings[0] = hitTimings[1] = hitTimings[2] = 0;
             if(rushing)
             {
                 hitTimings[0] = activated->GetExecutionTime();
-                hitTimings[1] = activated->GetExecutionTime() + 200000;
+                hitTimings[1] = activated->GetExecutionTime() + 200000ULL;
             }
             else if(target.CanHitstun)
             {
@@ -4613,43 +4622,62 @@ bool SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
         return false;
     }
 
+    bool guardValid = false;
     uint8_t cancelType = 1;
     int8_t activationID = tActivated->GetActivationID();
     if(pSkill->Definition->GetBasic()->GetDefensible())
     {
-        auto server = mServer.lock();
-        auto definitionManager = server->GetDefinitionManager();
-        auto tSkillData = definitionManager->GetSkillData(tActivated->GetSkillID());
         switch(pSkill->Definition->GetBasic()->GetActionType())
         {
         case objects::MiSkillBasicData::ActionType_t::ATTACK:
         case objects::MiSkillBasicData::ActionType_t::SPIN:
-            if(tActivated->GetChargedTime() <= pSkill->Activated->GetHitTime())
-            {
-                target.Flags1 |= FLAG1_GUARDED;
-                target.GuardModifier = tSkillData->GetDamage()
-                    ->GetBattleDamage()->GetModifier1();
-
-                // Fast track execute now but fizzle if not the primary target,
-                // defense bonus still applies
-                auto guardCtx = std::make_shared<SkillExecutionContext>();
-                guardCtx->CounteredSkill = pSkill;
-                guardCtx->FastTrack = true;
-                guardCtx->Fizzle = target.EntityState != pSkill->PrimaryTarget;
-
-                if(ExecuteSkill(target.EntityState, activationID, source
-                    ->GetEntityID(), guardCtx))
-                {
-                    pSkill->ExecutionContext->SubContexts.push_back(guardCtx);
-                    return true;
-                }
-            }
+            guardValid = true;
             break;
         case objects::MiSkillBasicData::ActionType_t::RUSH:
             cancelType = 3; // Display guard break animation
             break;
         default:
             break;
+        }
+    }
+
+    bool quake = false;
+    if(!guardValid && pSkill->FunctionID == SVR_CONST.SKILL_DIASPORA_QUAKE)
+    {
+        guardValid = true;
+        quake = true;
+    }
+
+    if(guardValid &&
+        tActivated->GetChargedTime() <= pSkill->Activated->GetHitTime())
+    {
+        auto tSkillData = mServer.lock()->GetDefinitionManager()
+            ->GetSkillData(tActivated->GetSkillID());
+
+        target.Flags1 |= FLAG1_GUARDED;
+        target.GuardModifier = tSkillData->GetDamage()
+            ->GetBattleDamage()->GetModifier1();
+
+        // Fast track execute now but fizzle if not the primary target,
+        // defense bonus still applies
+        auto guardCtx = std::make_shared<SkillExecutionContext>();
+        guardCtx->CounteredSkill = pSkill;
+        guardCtx->FastTrack = true;
+        guardCtx->Fizzle = quake ||
+            target.EntityState != pSkill->PrimaryTarget;
+
+        if(ExecuteSkill(target.EntityState, activationID, source
+            ->GetEntityID(), guardCtx))
+        {
+            if(quake)
+            {
+                // The Diaspora Quake skill is fully cancelled when guarding
+                target.HitNull = 2;
+                target.HitAvoided = true;
+            }
+
+            pSkill->ExecutionContext->SubContexts.push_back(guardCtx);
+            return true;
         }
     }
 
@@ -5556,14 +5584,16 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 
             if(dDrops.size() > 0 && instance && sourceState)
             {
-                // Add zero or one item from the destiny drops to the box
-                dDrops = characterManager->DetermineDrops(dDrops, 0, false);
-
-                if(dDrops.size() > 0)
+                // Always add at least one item
+                auto filtered = characterManager->DetermineDrops(dDrops, 0, false);
+                if(filtered.size() == 0)
                 {
-                    dDrops = { libcomp::Randomizer::GetEntry(dDrops) };
+                    filtered = { libcomp::Randomizer::GetEntry(dDrops) };
+                }
 
-                    auto loot = characterManager->CreateLootFromDrops(dDrops);
+                if(filtered.size() > 0)
+                {
+                    auto loot = characterManager->CreateLootFromDrops(filtered);
                     zoneManager->UpdateDestinyBox(instance, sourceState
                         ->GetWorldCID(), loot);
                 }
@@ -5592,6 +5622,12 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         {
             server->GetEventManager()->UpdateQuestKillCount(sourceClient,
                 questKills);
+        }
+
+        if(zone->DiasporaMiniBossUpdated())
+        {
+            // Update mini-boss count before firing defeat actions
+            server->GetTokuseiManager()->UpdateDiasporaMinibossCount(zone);
         }
 
         // Perform defeat actions for all empty encounters
@@ -6527,6 +6563,21 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
         target.TalkFlags = (success ? TALK_RESPONSE_1 : TALK_RESPONSE_4);
     }
 
+    // If the target is AI controlled, update aggro
+    auto aiState = target.EntityState->GetAIState();
+    if(aiState)
+    {
+        bool isTaunt = pSkill->FunctionID == SVR_CONST.SKILL_TAUNT;
+        if((success && isTaunt) ||
+            (!success && !isTaunt && !aiState->GetTargetEntityID()))
+        {
+            // Taunt skills aggro on success
+            // Non-taunt skills aggro on failure (if no target set)
+            mServer.lock()->GetAIManager()->UpdateAggro(target.EntityState,
+                source->GetEntityID());
+        }
+    }
+
     return target.TalkDone;
 }
 
@@ -6607,7 +6658,6 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
         {
             auto enemy = eState->GetEntity();
 
-            /// @todo: handle the various outcomes properly
             std::shared_ptr<objects::LootBox> lBox;
             switch(pair.second)
             {
@@ -6742,6 +6792,11 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
         {
             ScheduleFreeLoot(pair.first, zone, pair.second, sourcePartyMembers);
         }
+    }
+
+    if(zone->DiasporaMiniBossUpdated())
+    {
+        server->GetTokuseiManager()->UpdateDiasporaMinibossCount(zone);
     }
 
     if(encounterGroups.size() > 0)
@@ -8537,13 +8592,13 @@ std::shared_ptr<objects::ActivatedAbility> SkillManager::FinalizeSkill(
         activated->SetBulletCost(0);
         activated->ClearItemCosts();
 
-        // Proceed with the copy
-        activated = copy;
-
         // Reset times
         activated->SetExecutionTime(0);
         activated->SetExecutionRequestTime(0);
         activated->SetHitTime(0);
+
+        // Proceed with the copy
+        activated = copy;
     }
     else if(pSkill->FunctionID != SVR_CONST.SKILL_REST)
     {
@@ -8892,6 +8947,90 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
     }
 }
 
+bool SkillManager::Despawn(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    auto zone = source->GetZone();
+    if(ProcessSkillResult(activated, ctx) && zone)
+    {
+        switch(source->GetEntityType())
+        {
+        case EntityType_t::ALLY:
+        case EntityType_t::ENEMY:
+            zone->MarkDespawn(source->GetEntityID());
+            break;
+        default:
+            break;
+        }
+    }
+
+    return true;
+}
+
+bool SkillManager::Desummon(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    auto zone = source->GetZone();
+    if(ProcessSkillResult(activated, ctx) && zone)
+    {
+        auto target = zone->GetActiveEntity((int32_t)activated
+            ->GetTargetObjectID());
+        if(target)
+        {
+            std::unordered_map<uint32_t, uint32_t> encounterGroups;
+
+            auto eBase = target->GetEnemyBase();
+            if(eBase && eBase->GetEncounterID())
+            {
+                encounterGroups[eBase->GetEncounterID()] = eBase
+                    ->GetSpawnGroupID();
+            }
+
+            auto state = client ? client->GetClientState() : nullptr;
+            switch(target->GetEntityType())
+            {
+            case EntityType_t::ALLY:
+            case EntityType_t::ENEMY:
+                // Non-players and GMs can despawn any enemy/ally
+                if(!state || state->GetUserLevel() > 0)
+                {
+                    zone->MarkDespawn(target->GetEntityID());
+                }
+                break;
+            case EntityType_t::PARTNER_DEMON:
+                // Desummon's partner demons for valid players
+                {
+                    auto server = mServer.lock();
+                    auto targetClient = server->GetManagerConnection()
+                        ->GetEntityClient(target->GetEntityID());
+                    if(targetClient)
+                    {
+                        server->GetCharacterManager()->StoreDemon(
+                            targetClient);
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    return true;
+}
+
 bool SkillManager::Digitalize(
     const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
@@ -9158,6 +9297,39 @@ bool SkillManager::DirectStatus(const std::shared_ptr<objects::ActivatedAbility>
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
+    }
+
+    return true;
+}
+
+bool SkillManager::Estoma(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    std::set<int32_t> entityIDs = { source->GetEntityID() };
+    if(client)
+    {
+        // Include both character and demon
+        auto state = client->GetClientState();
+        entityIDs.insert(state->GetCharacterState()->GetEntityID());
+        entityIDs.insert(state->GetDemonState()->GetEntityID());
+    }
+
+    auto pSkill = GetProcessingSkill(activated, ctx);
+    if(ProcessSkillResult(activated, ctx) && pSkill->PrimaryTarget)
+    {
+        auto aiState = pSkill->PrimaryTarget->GetAIState();
+        if(aiState &&
+            entityIDs.find(aiState->GetTargetEntityID()) != entityIDs.end())
+        {
+            mServer.lock()->GetAIManager()->UpdateAggro(pSkill->PrimaryTarget,
+                -1);
+        }
     }
 
     return true;
@@ -9495,6 +9667,175 @@ bool SkillManager::ForgetAllExpertiseSkills(
     server->GetCharacterManager()->RecalculateTokuseiAndStats(cState, client);
 
     server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+
+    return true;
+}
+
+bool SkillManager::Liberama(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    auto pSkill = GetProcessingSkill(activated, ctx);
+    if(ProcessSkillResult(activated, ctx) && pSkill->PrimaryTarget)
+    {
+        mServer.lock()->GetAIManager()->UpdateAggro(pSkill->PrimaryTarget,
+            source->GetEntityID());
+    }
+
+    return true;
+}
+
+bool SkillManager::MinionDespawn(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    auto zone = source->GetZone();
+    if(!zone)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC);
+        return false;
+    }
+
+    auto definitionManager = mServer.lock()->GetDefinitionManager();
+
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto params = skillData->GetSpecial()->GetSpecialParams();
+
+    auto zoneDef = zone->GetDefinition();
+    if(zoneDef->GetID() != (uint32_t)params[0])
+    {
+        // Restricted to specific zone
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::NOTHING_HAPPENED_HERE);
+        return false;
+    }
+
+    if(ProcessSkillResult(activated, ctx))
+    {
+        for(auto enemy : zone->GetEnemies())
+        {
+            auto eBase = enemy->GetEntity();
+            if(eBase->GetSummonerID() == source->GetEntityID() &&
+                eBase->GetSpawnLocationGroupID() == (uint32_t)params[1])
+            {
+                zone->MarkDespawn(enemy->GetEntityID());
+            }
+        }
+    }
+
+    return true;
+}
+
+bool SkillManager::MinionSpawn(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    auto zone = source->GetZone();
+    if(!zone)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC);
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto params = skillData->GetSpecial()->GetSpecialParams();
+
+    // Pull the spawn location group information from the current zone
+    auto zoneDef = zone->GetDefinition();
+    if(zoneDef->GetID() != (uint32_t)params[0])
+    {
+        // Restricted to specific zone
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::NOTHING_HAPPENED_HERE);
+        return false;
+    }
+
+    auto slg = zoneDef->GetSpawnLocationGroups((uint32_t)params[1]);
+    if(!slg)
+    {
+        LOG_ERROR(libcomp::String("Failed to use MinionSpawn skill from invalid"
+            " SpawnLocationGroup: %1\n").Arg(params[1]));
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC);
+        return false;
+    }
+
+    if(ProcessSkillResult(activated, ctx))
+    {
+        auto zoneManager = server->GetZoneManager();
+        
+        uint32_t sgID = libcomp::Randomizer::GetEntry(slg->GetGroupIDs());
+
+        auto spawnGroup = zoneDef->GetSpawnGroups(sgID);
+        if(!spawnGroup)
+        {
+            LOG_ERROR(libcomp::String("Invalid spawn group ID for MinionSpawn"
+                " skill: %1\n").Arg(sgID));
+            return false;
+        }
+
+        // Pick one spot ID
+        uint32_t spotID = libcomp::Randomizer::GetEntry(slg->GetSpotIDs());
+
+        std::list<std::shared_ptr<ActiveEntityState>> enemies;
+        for(auto& spawnPair : spawnGroup->GetSpawns())
+        {
+            auto spawn = zoneDef->GetSpawns(spawnPair.first);
+            if(!spawn)
+            {
+                LOG_ERROR(libcomp::String("Invalid spawn ID for MinionSpawn"
+                    " skill: %1\n").Arg(spawnPair.first));
+                continue;
+            }
+
+            for(uint16_t i = 0; i < spawnPair.second; i++)
+            {
+                auto enemy = zoneManager->CreateEnemy(zone, spawn
+                    ->GetEnemyType(), spawn->GetID(), spotID, 0.f, 0.f, 0.f);
+                if(enemy)
+                {
+                    auto eBase = enemy->GetEnemyBase();
+                    eBase->SetSpawnGroupID(sgID);
+                    eBase->SetSummonerID(source->GetEntityID());
+                    enemies.push_back(enemy);
+
+                    auto sourceBase = source->GetEnemyBase();
+                    if(sourceBase)
+                    {
+                        sourceBase->InsertMinionIDs(enemy->GetEntityID());
+                    }
+                }
+                else
+                {
+                    LOG_ERROR(libcomp::String("Failed to create enemy for"
+                        " MinionSpawn skill: %1\n").Arg(spawnPair.first));
+                }
+            }
+        }
+
+        std::list<std::shared_ptr<objects::Action>> empty;
+        zoneManager->AddEnemiesToZone(enemies, zone, true, true, empty);
+    }
 
     return true;
 }
@@ -10078,6 +10419,243 @@ bool SkillManager::Rest(const std::shared_ptr<objects::ActivatedAbility>& activa
     return true;
 }
 
+bool SkillManager::Spawn(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    auto zone = source->GetZone();
+    if(!zone)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC);
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto serverDataManager = server->GetServerDataManager();
+
+    // Zone independent spawns are restricted to fields
+    bool isField = false;
+    for(auto& pair : serverDataManager->GetFieldZoneIDs())
+    {
+        if(pair.first == zone->GetDefinitionID() &&
+           pair.second == zone->GetDynamicMapID())
+        {
+            isField = true;
+            break;
+        }
+    }
+
+    if(!isField)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::NOTHING_HAPPENED_HERE);
+        return false;
+    }
+
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto params = skillData->GetSpecial()->GetSpecialParams();
+
+    // Pull the spawn group information from the global partial
+    auto globalDef = serverDataManager->GetZonePartialData(0);
+
+    // If it matches a spawn location group, pull a random group from
+    // that instead
+    uint32_t sgID = (uint32_t)params[0];
+    auto slg = globalDef ? globalDef->GetSpawnLocationGroups(sgID) : nullptr;
+    if(slg)
+    {
+        sgID = libcomp::Randomizer::GetEntry(slg->GetGroupIDs());
+    }
+
+    auto spawnGroup = globalDef ? globalDef->GetSpawnGroups(sgID) : nullptr;
+    if(!spawnGroup)
+    {
+        LOG_ERROR(libcomp::String("Failed to use Spawn skill from invalid"
+            " global SpawnGroup: %1\n").Arg(sgID));
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC);
+        return false;
+    }
+
+    if(ProcessSkillResult(activated, ctx))
+    {
+        auto zoneManager = server->GetZoneManager();
+
+        Point center(source->GetCurrentX(), source->GetCurrentY());
+
+        auto spawnLoc = std::make_shared<objects::SpawnLocation>();
+        spawnLoc->SetX(center.x - 1000.f);
+        spawnLoc->SetY(center.y + 1000.f);
+        spawnLoc->SetWidth(2000.f);
+        spawnLoc->SetHeight(2000.f);
+
+        std::list<std::shared_ptr<ActiveEntityState>> enemies;
+        for(auto& spawnPair : spawnGroup->GetSpawns())
+        {
+            auto spawn = globalDef->GetSpawns(spawnPair.first);
+            if(!spawn)
+            {
+                LOG_ERROR(libcomp::String("Invalid spawn ID for Spawn"
+                    " skill: %1\n").Arg(spawnPair.first));
+                continue;
+            }
+
+            for(uint16_t i = 0; i < spawnPair.second; i++)
+            {
+                auto sp = zoneManager->GetRandomPoint(2000.f, 2000.f);
+
+                sp.x += spawnLoc->GetX();
+                sp.y = spawnLoc->GetY() - sp.y;
+
+                // Make sure we don't spawn out of bounds
+                sp = zoneManager->GetLinearPoint(center.x, center.y,
+                    sp.x, sp.y, center.GetDistance(sp), false, zone);
+
+                float rot = RNG_DEC(float, -3.14f, 3.14f, 2);
+                auto enemy = zoneManager->CreateEnemy(zone, spawn
+                    ->GetEnemyType(), 0, 0, sp.x, sp.y, rot);
+                if(enemy)
+                {
+                    auto eBase = enemy->GetEnemyBase();
+                    eBase->SetSpawnSource(spawn);
+                    eBase->SetSpawnGroupID(spawnGroup->GetID());
+                    eBase->SetSpawnLocation(spawnLoc);
+                    enemies.push_back(enemy);
+                }
+                else
+                {
+                    LOG_ERROR(libcomp::String("Failed to create enemy for"
+                        " Spawn skill: %1\n").Arg(spawnPair.first));
+                }
+            }
+        }
+
+        std::list<std::shared_ptr<objects::Action>> empty;
+        zoneManager->AddEnemiesToZone(enemies, zone, true, true, empty);
+    }
+
+    return true;
+}
+
+bool SkillManager::SpawnZone(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<SkillExecutionContext>& ctx,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    SpecialSkill(activated, ctx, client);
+
+    auto zone = source->GetZone();
+    if(!zone)
+    {
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC);
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto params = skillData->GetSpecial()->GetSpecialParams();
+
+    // Pull the spawn group information from the current zone
+    auto zoneDef = zone->GetDefinition();
+    if(zoneDef->GetID() != (uint32_t)params[0])
+    {
+        // Restricted to specific zone
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::NOTHING_HAPPENED_HERE);
+        return false;
+    }
+    else if(zone->GroupHasSpawned((uint32_t)params[1], false, true))
+    {
+        // Cannot be alive already
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::NOTHING_HAPPENED_NOW);
+        return false;
+    }
+
+    auto spawnGroup = zoneDef->GetSpawnGroups((uint32_t)params[1]);
+    if(!spawnGroup)
+    {
+        LOG_ERROR(libcomp::String("Failed to use SpawnZone skill from invalid"
+            " global SpawnGroup: %1\n").Arg(params[1]));
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC);
+        return false;
+    }
+
+    if(ProcessSkillResult(activated, ctx))
+    {
+        auto zoneManager = server->GetZoneManager();
+
+        Point center(source->GetCurrentX(), source->GetCurrentY());
+
+        float hw = (float)(params[2] * 2);
+
+        auto spawnLoc = std::make_shared<objects::SpawnLocation>();
+        spawnLoc->SetX(center.x - (float)params[2]);
+        spawnLoc->SetY(center.y + (float)params[2]);
+        spawnLoc->SetWidth(hw);
+        spawnLoc->SetHeight(hw);
+
+        std::list<std::shared_ptr<ActiveEntityState>> enemies;
+        for(auto& spawnPair : spawnGroup->GetSpawns())
+        {
+            auto spawn = zoneDef->GetSpawns(spawnPair.first);
+            if(!spawn)
+            {
+                LOG_ERROR(libcomp::String("Invalid spawn ID for SpawnZone"
+                    " skill: %1\n").Arg(spawnPair.first));
+                continue;
+            }
+
+            for(uint16_t i = 0; i < spawnPair.second; i++)
+            {
+                auto sp = zoneManager->GetRandomPoint(hw, hw);
+
+                sp.x += spawnLoc->GetX();
+                sp.y = spawnLoc->GetY() - sp.y;
+
+                // Make sure we don't spawn out of bounds
+                sp = zoneManager->GetLinearPoint(center.x, center.y,
+                    sp.x, sp.y, center.GetDistance(sp), false, zone);
+
+                float rot = RNG_DEC(float, -3.14f, 3.14f, 2);
+                auto enemy = zoneManager->CreateEnemy(zone, spawn
+                    ->GetEnemyType(), 0, 0, sp.x, sp.y, rot);
+                if(enemy)
+                {
+                    auto eBase = enemy->GetEnemyBase();
+                    eBase->SetSpawnSource(spawn);
+                    eBase->SetSpawnGroupID(spawnGroup->GetID());
+                    eBase->SetSpawnLocation(spawnLoc);
+                    enemies.push_back(enemy);
+                }
+                else
+                {
+                    LOG_ERROR(libcomp::String("Failed to create enemy for"
+                        " SpawnZone skill: %1\n").Arg(spawnPair.first));
+                }
+            }
+        }
+
+        std::list<std::shared_ptr<objects::Action>> empty;
+        zoneManager->AddEnemiesToZone(enemies, zone, true, true, empty);
+    }
+
+    return true;
+}
+
 bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
@@ -10356,24 +10934,28 @@ void SkillManager::GiveDemonPresent(const std::shared_ptr<ChannelClientConnectio
     }
 }
 
-void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> activated)
+void SkillManager::SendActivateSkill(
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill)
 {
     // Instant executions are not technically activated
+    auto activated = pSkill->Activated;
     if(activated->GetActivationID() == -1)
     {
         return;
     }
 
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     auto zone = source ? source->GetZone() : nullptr;
-    auto zConnections = zone
-        ? zone->GetConnectionList() : std::list<std::shared_ptr<ChannelClientConnection>>();
+    auto zConnections = zone ? zone->GetConnectionList()
+        : std::list<std::shared_ptr<ChannelClientConnection>>();
     if(zConnections.size() > 0)
     {
         RelativeTimeMap timeMap;
 
         libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_ACTIVATED);
+        p.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_SKILL_ACTIVATED);
         p.WriteS32Little(source->GetEntityID());
         p.WriteU32Little(activated->GetSkillID());
         p.WriteS8(activated->GetActivationID());
@@ -10382,12 +10964,29 @@ void SkillManager::SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> 
         p.WriteFloat(0.f);
 
         p.WriteU8(activated->GetMaxUseCount());
-        p.WriteU8(2);   //Unknown
+
+        // Set some sort of category flag. Initially I thought this was a
+        // notification that the attacker needed to get closer or not but
+        // the client handles this just fine.
+        switch(pSkill->Definition->GetBasic()->GetActionType())
+        {
+        case objects::MiSkillBasicData::ActionType_t::ATTACK:
+        case objects::MiSkillBasicData::ActionType_t::RUSH:
+            p.WriteU8(1);
+            break;
+        case objects::MiSkillBasicData::ActionType_t::GUARD:
+            p.WriteU8(0);
+            break;
+        default:
+            p.WriteU8(2);
+            break;
+        }
 
         p.WriteFloat(activated->GetChargeMoveSpeed());
         p.WriteFloat(activated->GetChargeCompleteMoveSpeed());
 
-        ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+        ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
+            timeMap);
     }
 }
 
@@ -10429,14 +11028,33 @@ void SkillManager::SendExecuteSkill(
 
         p.WriteU32Little((uint32_t)activated->GetHPCost());
         p.WriteU32Little((uint32_t)activated->GetMPCost());
-        p.WriteU8(0);   //Unknown
-        p.WriteFloat(0);    //Unknown
-        p.WriteFloat(0);    //Unknown
-        p.WriteFloat(0);    //Unknown
-        p.WriteFloat(0);    //Unknown
-        p.WriteFloat(0);    //Unknown
+
+        // Rush skills have additional execution point values however the
+        // animation is smoother without this at all
+        /*if(isRush)
+        {
+            p.WriteU8(1);   // Rush flag
+
+            // Originally this was used to "speed up" the source to the
+            // correct rush starting point but I'm pretty sure this was
+            // a server concession for timing
+            p.WriteFloat(source->GetCurrentX());
+            p.WriteFloat(source->GetCurrentY());
+
+            p.WriteFloat(0);    // Always 0
+
+            // Usage timing
+            timeMap[44] = timeMap[48] = activated->GetExecutionTime();
+            p.WriteFloat(0.f);
+            p.WriteFloat(0.f);
+        }
+        else
+        {*/
+            p.WriteBlank(21);
+        //}
+
         p.WriteU8(pSkill->HardStrike ? 1 : 0);
-        p.WriteU8(0xFF);   //Unknown
+        p.WriteU8(0xFF);   // Always the same value
 
         ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
             timeMap);

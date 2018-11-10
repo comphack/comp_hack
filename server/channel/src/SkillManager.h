@@ -168,9 +168,11 @@ public:
      * @param client Pointer to the client connection that should be sent
      *  the failure instead of the entire zone
      * @param errorCode Error code to send (defaults to generic, no message)
+     * @param activationID ID of the activated ability instance (or -1 for none)
      */
-    void SendFailure(const std::shared_ptr<ActiveEntityState> source, uint32_t skillID,
-        const std::shared_ptr<ChannelClientConnection> client, uint8_t errorCode = 13);
+    void SendFailure(const std::shared_ptr<ActiveEntityState> source,
+        uint32_t skillID, const std::shared_ptr<ChannelClientConnection> client,
+        uint8_t errorCode = 13, int8_t activationID = -1);
 
     /**
      * Determine if the specified skill is locked from use on the supplied entity.
@@ -879,6 +881,29 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
+     * Execute an enemy despawning skill. This mimics the behavior of the skill
+     * in other games as it was not originally released.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Despawn(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a targeted spawn desummon skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Desummon(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
      * Execute a skill that results in digitalizing the player character.
      * @param activated Pointer to the activated ability instance
      * @param ctx Special execution state for the skill
@@ -938,6 +963,17 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
+     * Execute the aggro clearing "Estoma" skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Estoma(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
      * Execute a familiarity boosting skill.
      * @param activated Pointer to the activated ability instance
      * @param ctx Special execution state for the skill
@@ -969,6 +1005,41 @@ private:
      *  this will always fail if it is null
      */
     bool ForgetAllExpertiseSkills(
+        const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute the aggro drawing "liberama" skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Liberama(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a minion despawning skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool MinionDespawn(
+        const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a minion spawning skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool MinionSpawn(
         const std::shared_ptr<objects::ActivatedAbility>& activated,
         const std::shared_ptr<SkillExecutionContext>& ctx,
         const std::shared_ptr<ChannelClientConnection>& client);
@@ -1040,6 +1111,28 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
+     * Execute a (non-zone specific) enemy spawning skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool Spawn(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
+     * Execute a zone specific enemy spawning skill.
+     * @param activated Pointer to the activated ability instance
+     * @param ctx Special execution state for the skill
+     * @param client Pointer to the client connection that activated the skill,
+     *  this will always fail if it is null
+     */
+    bool SpawnZone(const std::shared_ptr<objects::ActivatedAbility>& activated,
+        const std::shared_ptr<SkillExecutionContext>& ctx,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
      * Execute the "summon demon" skill.
      * @param activated Pointer to the activated ability instance
      * @param ctx Special execution state for the skill
@@ -1099,9 +1192,10 @@ private:
      * Notify the client that a skill has been activated.  The client will notify
      * the server when the specified charge time has elapsed for execution if
      * applicable.
-     * @param activated Pointer to the activated ability instance
+     * @param pSkill Current skill processing state
      */
-    void SendActivateSkill(std::shared_ptr<objects::ActivatedAbility> activated);
+    void SendActivateSkill(
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
      * Notify the client that a skill is executing.

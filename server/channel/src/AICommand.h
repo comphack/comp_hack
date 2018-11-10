@@ -57,6 +57,8 @@ enum AICommandType_t : uint8_t
  * Base class for all AI commands to be handled by the AIManager on
  * server ticks. Any command can be configured to delay before execution
  * so this doubles up as a request to "wait" when no other action is queued.
+ * This class is NOT thread safe but it should only be used by AIManager
+ * which is responsible for locking.
  */
 class AICommand
 {
@@ -90,26 +92,40 @@ public:
     void SetDelay(uint64_t delay);
 
     /**
-     * Check if the command has been marked as started
-     * @return true if the command has started, false if it
-     *  has not
+     * Get the server time set when the command started
+     * @return Server time in microseconds
      */
-    bool Started();
+    uint64_t GetStartTime();
 
     /**
      * Set the command as having been started
      */
     void Start();
 
+    /**
+     * Get the ID of the entity targeted by the command
+     * @return Entity ID targeted by the command or -1 if none set
+     */
+    int32_t GetTargetEntityID() const;
+
+    /**
+     * Set the ID of the entity targeted by the command
+     * @param targetEntityID Entity ID targeted by the command or -1 if none
+     */
+    void SetTargetEntityID(int32_t targetEntityID);
+
 protected:
     /// AI command type
     AICommandType_t mType;
 
+    /// Command start time
+    uint64_t mStartTime;
+
     /// Pre-process delay time in microseconds
     uint64_t mDelay;
 
-    /// Indicates that the command has been started
-    bool mStarted;
+    /// Entity ID being targeted by the command (can be unset as -1)
+    int32_t mTargetEntityID;
 };
 
 /**
@@ -172,9 +188,9 @@ public:
     /**
      * Create a new use skill command for a skill not already activated
      * @param skillID ID of the skill being used
-     * @param targetObjectID ID of the object being targeted by the skill
+     * @param targetEntityID ID of the entity being targeted by the skill
      */
-    AIUseSkillCommand(uint32_t skillID, int64_t targetObjectID);
+    AIUseSkillCommand(uint32_t skillID, int32_t targetEntityID);
 
     /**
      * Create a new use skill command for a skill that has already been activated
@@ -194,12 +210,6 @@ public:
     uint32_t GetSkillID() const;
 
     /**
-     * Get the ID of the object that was targeted by the skill
-     * @return ID of the object that was targeted by the skill
-     */
-    int64_t GetTargetObjectID() const;
-
-    /**
      * Set the ActivatedAbility pointer after the skill has been activated
      * @param activated Pointer to the ActivatedAbility of a skill to execute
      */
@@ -215,9 +225,6 @@ public:
 private:
     /// ID of the skill being used
     uint32_t mSkillID;
-
-    /// ID of the object being targeted by the skill
-    int64_t mTargetObjectID;
 
     /// Pointer to the ActivatedAbility of a skill to execute
     std::shared_ptr<objects::ActivatedAbility> mActivated;

@@ -105,6 +105,7 @@ SET(${PROJECT_NAME}_HDRS
 )
 
 SET(${PROJECT_NAME}_SCHEMA
+    schema/aistate.xml
     schema/channelconfig.xml
     schema/clientstate.xml
     schema/entitystate.xml
@@ -126,6 +127,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ../../libcomp/schema
 
     # Output files
+    AIStateObject.h
+    AIStateObject.cpp
     EntityStateObject.h
     EntityStateObject.cpp
     ActivatedAbility.h

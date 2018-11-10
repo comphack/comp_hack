@@ -77,6 +77,7 @@
 #include <InstanceAccess.h>
 #include <Loot.h>
 #include <LootBox.h>
+#include <Match.h>
 #include <MiCategoryData.h>
 #include <MiItemData.h>
 #include <MiPossessionData.h>
@@ -91,6 +92,7 @@
 #include <PentalphaMatch.h>
 #include <PostItem.h>
 #include <PvPInstanceStats.h>
+#include <PvPMatch.h>
 #include <Quest.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
@@ -272,6 +274,16 @@ void ActionManager::PerformActions(
                     }
                 }
             }
+            else if(srcCtx == objects::Action::SourceContext_t::NONE)
+            {
+                // Remove current player context
+                ActionContext copyCtx = ctx;
+                copyCtx.Client = nullptr;
+                copyCtx.SourceEntityID = 0;
+                copyCtx.AutoEventsOnly = true;
+
+                failure |= !it->second(*this, copyCtx);
+            }
             else if(srcCtx != objects::Action::SourceContext_t::SOURCE)
             {
                 auto connectionManager = mServer.lock()->GetManagerConnection();
@@ -280,112 +292,8 @@ void ActionManager::PerformActions(
                 // if any fail
                 bool preFiltered = false;
 
-                std::set<int32_t> worldCIDs;
-                switch(srcCtx)
-                {
-                case objects::Action::SourceContext_t::ALL:
-                    // Sub-divide by location
-                    switch(action->GetLocation())
-                    {
-                    case objects::Action::Location_t::INSTANCE:
-                        if(ctx.CurrentZone)
-                        {
-                            std::list<std::shared_ptr<Zone>> zones;
-                            auto instance = ctx.CurrentZone->GetInstance();
-                            if(instance)
-                            {
-                                zones = instance->GetZones();
-                            }
-
-                            for(auto z : zones)
-                            {
-                                for(auto conn : z->GetConnectionList())
-                                {
-                                    auto state = conn->GetClientState();
-                                    if(state)
-                                    {
-                                        worldCIDs.insert(state->GetWorldCID());
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    case objects::Action::Location_t::ZONE:
-                        if(ctx.CurrentZone)
-                        {
-                            for(auto conn : ctx.CurrentZone->GetConnectionList())
-                            {
-                                auto state = conn->GetClientState();
-                                if(state)
-                                {
-                                    worldCIDs.insert(state->GetWorldCID());
-                                }
-                            }
-                        }
-                        break;
-                    case objects::Action::Location_t::CHANNEL:
-                        for(auto conn : connectionManager->GetAllConnections())
-                        {
-                            auto state = conn->GetClientState();
-                            if(state)
-                            {
-                                worldCIDs.insert(state->GetWorldCID());
-                            }
-                        }
-                        break;
-                    default:
-                        // Not supported
-                        failure = true;
-                        break;
-                    }
-
-                    preFiltered = true;
-                    break;
-                case objects::Action::SourceContext_t::PARTY:
-                case objects::Action::SourceContext_t::TEAM:
-                    {
-                        auto sourceClient = ctx.Client
-                            ? ctx.Client : connectionManager->GetEntityClient(
-                                sourceEntityID, false);
-                        if(!sourceClient)
-                        {
-                            failure = true;
-                            break;
-                        }
-
-                        auto state = sourceClient->GetClientState();
-                        switch(srcCtx)
-                        {
-                        case objects::Action::SourceContext_t::PARTY:
-                            {
-                                auto party = state->GetParty();
-                                if(party)
-                                {
-                                    worldCIDs = party->GetMemberIDs();
-                                }
-                            }
-                            break;
-                        case objects::Action::SourceContext_t::TEAM:
-                            {
-                                auto team = state->GetTeam();
-                                if(team)
-                                {
-                                    worldCIDs = team->GetMemberIDs();
-                                }
-                            }
-                            break;
-                        default:
-                            break;
-                        }
-
-                        // Always include self in group
-                        worldCIDs.insert(state->GetWorldCID());
-                    }
-                    break;
-                default:
-                    break;
-                }
-
+                auto worldCIDs = GetActionContextCIDs(action, ctx, failure,
+                    preFiltered);
                 if(!failure)
                 {
                     std::list<std::shared_ptr<CharacterState>> cStates;
@@ -516,6 +424,179 @@ void ActionManager::SendStageEffect(
     }
 
     client->FlushOutgoing();
+}
+
+std::set<int32_t> ActionManager::GetActionContextCIDs(
+    const std::shared_ptr<objects::Action>& action, ActionContext& ctx,
+    bool& failure, bool& preFiltered)
+{
+    auto connectionManager = mServer.lock()->GetManagerConnection();
+
+    std::set<int32_t> worldCIDs;
+    switch(action->GetSourceContext())
+    {
+    case objects::Action::SourceContext_t::ALL:
+        // Sub-divide by location
+        switch(action->GetLocation())
+        {
+        case objects::Action::Location_t::INSTANCE:
+            if(ctx.CurrentZone)
+            {
+                std::list<std::shared_ptr<Zone>> zones;
+                auto instance = ctx.CurrentZone->GetInstance();
+                if(instance)
+                {
+                    zones = instance->GetZones();
+                }
+
+                for(auto z : zones)
+                {
+                    for(auto conn : z->GetConnectionList())
+                    {
+                        auto state = conn->GetClientState();
+                        if(state)
+                        {
+                            worldCIDs.insert(state->GetWorldCID());
+                        }
+                    }
+                }
+            }
+            break;
+        case objects::Action::Location_t::ZONE:
+            if(ctx.CurrentZone)
+            {
+                for(auto conn : ctx.CurrentZone->GetConnectionList())
+                {
+                    auto state = conn->GetClientState();
+                    if(state)
+                    {
+                        worldCIDs.insert(state->GetWorldCID());
+                    }
+                }
+            }
+            break;
+        case objects::Action::Location_t::CHANNEL:
+            for(auto conn : connectionManager->GetAllConnections())
+            {
+                auto state = conn->GetClientState();
+                if(state)
+                {
+                    worldCIDs.insert(state->GetWorldCID());
+                }
+            }
+            break;
+        default:
+            // Not supported
+            failure = true;
+            break;
+        }
+
+        preFiltered = true;
+        break;
+    case objects::Action::SourceContext_t::PARTY:
+    case objects::Action::SourceContext_t::TEAM:
+        {
+            auto sourceClient = ctx.Client
+                ? ctx.Client : connectionManager->GetEntityClient(
+                    ctx.SourceEntityID, false);
+            if(!sourceClient)
+            {
+                failure = true;
+                break;
+            }
+
+            auto state = sourceClient->GetClientState();
+            switch(action->GetSourceContext())
+            {
+            case objects::Action::SourceContext_t::PARTY:
+                {
+                    auto party = state->GetParty();
+                    if(party)
+                    {
+                        worldCIDs = party->GetMemberIDs();
+                    }
+                }
+                break;
+            case objects::Action::SourceContext_t::TEAM:
+                {
+                    auto team = state->GetTeam();
+                    if(team)
+                    {
+                        worldCIDs = team->GetMemberIDs();
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+
+            // Always include self in group
+            worldCIDs.insert(state->GetWorldCID());
+        }
+        break;
+    case objects::Action::SourceContext_t::MATCH_TEAM:
+        {
+            auto sourceClient = ctx.Client
+                ? ctx.Client : connectionManager->GetEntityClient(
+                    ctx.SourceEntityID, false);
+            if(!sourceClient)
+            {
+                failure = true;
+                break;
+            }
+
+            auto state = sourceClient->GetClientState();
+
+            auto match = ctx.CurrentZone
+                ? ctx.CurrentZone->GetMatch() : nullptr;
+            if(match && match->MemberIDsContains(state
+                ->GetWorldCID()))
+            {
+                auto pvpMatch = std::dynamic_pointer_cast<
+                    objects::PvPMatch>(match);
+                if(pvpMatch)
+                {
+                    // Add PvP team participants
+                    for(auto& team : { pvpMatch->GetBlueMemberIDs(),
+                        pvpMatch->GetRedMemberIDs() })
+                    {
+                        bool inTeam = false;
+                        for(int32_t worldCID : team)
+                        {
+                            if(worldCID == state->GetWorldCID())
+                            {
+                                inTeam = true;
+                            }
+
+                            worldCIDs.insert(worldCID);
+                        }
+
+                        if(inTeam)
+                        {
+                            break;
+                        }
+
+                        worldCIDs.clear();
+                    }
+                }
+                else
+                {
+                    // Add all participants
+                    worldCIDs = match->GetMemberIDs();
+                }
+            }
+            else
+            {
+                failure = true;
+                break;
+            }
+        }
+        break;
+    default:
+        break;
+    }
+
+    return worldCIDs;
 }
 
 bool ActionManager::StartEvent(ActionContext& ctx)

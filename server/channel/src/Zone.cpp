@@ -366,24 +366,45 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                         return e == removeSpawn;
                     });
 
-                auto slg = GetDefinition()->GetSpawnLocationGroups(slgID);
-                if(slg->GetRespawnTime() > 0.f &&
-                    mSpawnLocationGroups[slgID].size() == 0)
+                if(mSpawnLocationGroups[slgID].size() == 0)
                 {
-                    // Update the respawn time for the group, exit if found
-                    for(auto rPair : mRespawnTimes)
+                    auto slg = GetDefinition()->GetSpawnLocationGroups(slgID);
+                    if(slg->GetRespawnTime() > 0.f)
                     {
-                        if(rPair.second.find(slgID) != rPair.second.end())
+                        // Update the respawn time for the group, exit if found
+                        for(auto rPair : mRespawnTimes)
                         {
-                            return;
+                            if(rPair.second.find(slgID) != rPair.second.end())
+                            {
+                                return;
+                            }
                         }
+
+                        uint64_t rTime = ChannelServer::GetServerTime()
+                            + (uint64_t)((double)slg->GetRespawnTime() *
+                                1000000.0 + (double)(spawnDelay * 1000));
+
+                        mRespawnTimes[rTime].insert(slgID);
                     }
 
-                    uint64_t rTime = ChannelServer::GetServerTime()
-                        + (uint64_t)((double)slg->GetRespawnTime() *
-                            1000000.0 + (double)(spawnDelay * 1000));
+                    // Set the Diaspora mini-boss flag when applicable
+                    auto match = GetMatch();
+                    if(match && !mDiasporaMiniBossUpdated &&
+                        match->GetType() == objects::Match::Type_t::DIASPORA &&
+                        match->GetPhase() == DIASPORA_PHASE_BOSS)
+                    {
+                        for(auto bState : GetDiasporaBases())
+                        {
+                            auto base = bState->GetEntity();
 
-                    mRespawnTimes[rTime].insert(slgID);
+                            if(slgID == base->GetDefinition()
+                                ->GetPhaseMiniBosses(DIASPORA_PHASE_BOSS))
+                            {
+                                mDiasporaMiniBossUpdated = true;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -396,6 +417,23 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                 if(eIter != mEncounters.end())
                 {
                     eIter->second.erase(removeSpawn);
+                }
+            }
+
+            // If the spawn has a summoning enemy, remove from its minions
+            auto eBase = removeSpawn->GetEnemyBase();
+            if(eBase && eBase->GetSummonerID())
+            {
+                auto it = mAllEntities.find(eBase->GetSummonerID());
+                if(it != mAllEntities.end())
+                {
+                    auto active = std::dynamic_pointer_cast<ActiveEntityState>(
+                        it->second);
+                    auto eBase2 = active ? active->GetEnemyBase() : nullptr;
+                    if(eBase2)
+                    {
+                        eBase2->RemoveMinionIDs(removeSpawn->GetEntityID());
+                    }
                 }
             }
         }
@@ -1381,7 +1419,8 @@ std::set<int8_t> Zone::GetBaseRestrictedActionTypes()
 
     // Action type restrictions only apply during the boss phase
     auto match = GetMatch();
-    if(match && match->GetPhase() == DIASPORA_PHASE_BOSS)
+    if(match && match->GetType() == objects::Match::Type_t::DIASPORA &&
+        match->GetPhase() == DIASPORA_PHASE_BOSS)
     {
         for(auto bState : GetDiasporaBases())
         {
@@ -1398,6 +1437,49 @@ std::set<int8_t> Zone::GetBaseRestrictedActionTypes()
     }
 
     return result;
+}
+
+std::pair<uint8_t, uint8_t> Zone::GetDiasporaMiniBossCount()
+{
+    std::pair<uint8_t, uint8_t> result(0, 0);
+
+    auto match = GetMatch();
+    if(match && match->GetType() == objects::Match::Type_t::DIASPORA &&
+        match->GetPhase() == DIASPORA_PHASE_BOSS)
+    {
+        for(auto bState : GetDiasporaBases())
+        {
+            auto base = bState->GetEntity();
+
+            uint32_t slgID = base->GetDefinition()
+                ->GetPhaseMiniBosses(DIASPORA_PHASE_BOSS);
+            if(slgID)
+            {
+                // Update total count
+                result.second = (uint8_t)(result.second + 1);
+
+                if(GroupHasSpawned(slgID, true, true))
+                {
+                    // Update active count
+                    result.first = (uint8_t)(result.first + 1);
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
+bool Zone::DiasporaMiniBossUpdated()
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    if(mDiasporaMiniBossUpdated)
+    {
+        mDiasporaMiniBossUpdated = false;
+        return true;
+    }
+
+    return false;
 }
 
 std::shared_ptr<objects::UBMatch> Zone::GetUBMatch() const
@@ -1630,6 +1712,28 @@ void Zone::AddSpawnedEntity(const std::shared_ptr<ActiveEntityState>& state,
     auto slg = GetDefinition()->GetSpawnLocationGroups(slgID);
     if(slg)
     {
+        // If we're adding the first entity from an SLG that is one
+        // of the Diaspora mini-boss groups and we're in the boss phase,
+        // set the flag indicating such
+        auto match = GetMatch();
+        if(match && !mDiasporaMiniBossUpdated &&
+            mSpawnLocationGroups[slgID].size() == 0 &&
+            match->GetType() == objects::Match::Type_t::DIASPORA &&
+            match->GetPhase() == DIASPORA_PHASE_BOSS)
+        {
+            for(auto bState : GetDiasporaBases())
+            {
+                auto base = bState->GetEntity();
+
+                if(slgID == base->GetDefinition()
+                    ->GetPhaseMiniBosses(DIASPORA_PHASE_BOSS))
+                {
+                    mDiasporaMiniBossUpdated = true;
+                    break;
+                }
+            }
+        }
+
         mSpawnLocationGroups[slgID].push_back(state);
 
         // Be sure to clear the respawn time

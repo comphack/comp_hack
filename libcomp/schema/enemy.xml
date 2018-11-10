@@ -12,6 +12,10 @@
         <member type="u32" name="SpawnGroupID"/>
         <member type="u32" name="SpawnLocationGroupID"/>
         <member type="u32" name="EncounterID"/>
+        <member type="s32" name="SummonerID" default="-1"/>
+        <member type="set" name="MinionIDs">
+            <element type="s32"/>
+        </member>
 
         <!-- Sub-sections -->
         <member type="EntityStats*" name="CoreStats"/>

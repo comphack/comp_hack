@@ -537,6 +537,20 @@ const unsigned long long LEVEL_XP_REQUIREMENTS[] = {
     565795254492ULL,    // 98->99
 };
 
+/// Login point totals required to reach specified clan levels
+const unsigned int CLAN_POINT_REQUIREMENT[] = {
+    0,               // 1
+    2000,            // 2
+    5000,            // 3
+    10000,           // 4
+    20000,           // 5
+    35000,           // 6
+    55000,           // 7
+    80000,           // 8
+    110000,          // 9
+    145000           // 10
+};
+
 /// Fusion gauge points gained by using a skill listed in the order of player
 /// character against lower level enemies, then equal or higher level, followed
 /// by demon against lower level enemies, then equal or higher level.

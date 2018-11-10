@@ -1336,6 +1336,20 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
                 objects::TokuseiCondition::Comparator_t::EQUALS);
         }
         break;
+    case TokuseiConditionType::DIASPORA_MINIBOSS_COUNT:
+        // Count active spawn location groups bound to Diaspora bases in the
+        // current zone
+        {
+            auto zone = eState->GetZone();
+            if(!zone)
+            {
+                return false;
+            }
+
+            auto counts = zone->GetDiasporaMiniBossCount();
+            return Compare((int32_t)counts.first, condition, true);
+        }
+        break;
     case TokuseiConditionType::GAME_TIME:
     case TokuseiConditionType::MOON_PHASE:
         // Toggled by the server, just return true or false
@@ -1951,6 +1965,26 @@ void TokuseiManager::SendCostAdjustments(int32_t entityID,
         auto state = client->GetClientState();
         auto adjustments = state->GetCostAdjustments(entityID);
         SendCostAdjustments(entityID, adjustments, client);
+    }
+}
+
+void TokuseiManager::UpdateDiasporaMinibossCount(
+    const std::shared_ptr<Zone>& zone)
+{
+    std::list<std::shared_ptr<ActiveEntityState>> entities;
+    for(auto eState : zone->GetActiveEntities())
+    {
+        auto calcState = eState->GetCalculatedState();
+        if(calcState->ActiveTokuseiTriggersContains(
+            (int8_t)TokuseiConditionType::DIASPORA_MINIBOSS_COUNT))
+        {
+            entities.push_back(eState);
+        }
+    }
+
+    if(entities.size() > 0)
+    {
+        Recalculate(entities, true);
     }
 }
 

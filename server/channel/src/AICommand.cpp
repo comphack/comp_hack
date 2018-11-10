@@ -31,12 +31,13 @@
 #include <ActivatedAbility.h>
 
 // channel Includes
+#include "ChannelServer.h"
 #include "ZoneGeometry.h"
 
 using namespace channel;
 
-AICommand::AICommand() : mType(AICommandType_t::NONE), mDelay(0),
-    mStarted(false)
+AICommand::AICommand() : mType(AICommandType_t::NONE), mStartTime(0),
+    mDelay(0), mTargetEntityID(-1)
 {
 }
 
@@ -59,14 +60,27 @@ void AICommand::SetDelay(uint64_t delay)
     mDelay = delay;
 }
 
-bool AICommand::Started()
+uint64_t AICommand::GetStartTime()
 {
-    return mStarted;
+    return mStartTime;
 }
 
 void AICommand::Start()
 {
-    mStarted = true;
+    if(!mStartTime)
+    {
+        mStartTime = ChannelServer::GetServerTime();
+    }
+}
+
+int32_t AICommand::GetTargetEntityID() const
+{
+    return mTargetEntityID;
+}
+
+void AICommand::SetTargetEntityID(int32_t targetEntityID)
+{
+    mTargetEntityID = targetEntityID;
 }
 
 AIMoveCommand::AIMoveCommand()
@@ -127,11 +141,11 @@ bool AIMoveCommand::SetNextDestination()
     return mPathing.size() > 0;
 }
 
-AIUseSkillCommand::AIUseSkillCommand(uint32_t skillID, int64_t targetObjectID)
+AIUseSkillCommand::AIUseSkillCommand(uint32_t skillID, int32_t targetEntityID)
 {
     mType = AICommandType_t::USE_SKILL;
     mSkillID = skillID;
-    mTargetObjectID = targetObjectID;
+    mTargetEntityID = targetEntityID;
 }
 
 AIUseSkillCommand::AIUseSkillCommand(
@@ -142,7 +156,9 @@ AIUseSkillCommand::AIUseSkillCommand(
     if(activated)
     {
         mSkillID = activated->GetSkillID();
-        mTargetObjectID = activated->GetTargetObjectID();
+
+        // AI cannot target non-entities
+        mTargetEntityID = (int32_t)activated->GetTargetObjectID();
     }
 }
 
@@ -153,11 +169,6 @@ AIUseSkillCommand::~AIUseSkillCommand()
 uint32_t AIUseSkillCommand::GetSkillID() const
 {
     return mSkillID;
-}
-
-int64_t AIUseSkillCommand::GetTargetObjectID() const
-{
-    return mTargetObjectID;
 }
 
 void AIUseSkillCommand::SetActivatedAbility(const std::shared_ptr<

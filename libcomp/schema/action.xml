@@ -32,8 +32,10 @@
             <value>SOURCE</value>
             <value>PARTY</value>
             <value>TEAM</value>
+            <value>MATCH_TEAM</value>
             <value>ALL</value>
             <value>ENEMIES</value>
+            <value>NONE</value>
         </member>
         <member type="enum" name="location" default="ZONE">
             <value>CHANNEL</value>

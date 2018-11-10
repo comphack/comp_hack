@@ -5,6 +5,7 @@
             <value>NONE</value>
             <value>CURRENT_HP</value>
             <value>CURRENT_MP</value>
+            <value>DIASPORA_MINIBOSS_COUNT</value>
             <value>DIGITALIZED</value>
             <value>EQUIPPED_WEAPON_TYPE</value>
             <value>EXPERTISE</value>
@@ -143,6 +144,7 @@
             <value>DEATH_PENALTY</value>
             <value>SUMMON_STATUS</value>
             <value>SUMMON_SYNC_EXTEND</value>
+            <value>ZONE_INSTANCE_POISON</value>
         </member>
         <member type="s32" name="Value"/>
         <member type="s32" name="Modifier"/>

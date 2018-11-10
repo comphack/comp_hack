@@ -2265,7 +2265,22 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         {
             // Team category = [value 1]
             auto team = client->GetClientState()->GetTeam();
-            return (int32_t)team->GetCategory() == condition->GetValue1();
+            return team &&
+                (int32_t)team->GetCategory() == condition->GetValue1();
+        }
+    case objects::EventCondition::Type_t::TEAM_LEADER:
+        if(!client || (compareMode != EventCompareMode::EQUAL &&
+            compareMode != EventCompareMode::DEFAULT_COMPARE))
+        {
+            return false;
+        }
+        else
+        {
+            // Client context belongs to the team leader
+            auto state = client->GetClientState();
+            auto team = state->GetTeam();
+            return team &&
+                (int32_t)team->GetLeaderCID() == state->GetWorldCID();
         }
     case objects::EventCondition::Type_t::TEAM_SIZE:
         if(!client)
@@ -2296,7 +2311,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         {
             // Team type = [value 1]
             auto team = client->GetClientState()->GetTeam();
-            return (int32_t)team->GetType() == condition->GetValue1();
+            return (team ? (int32_t)team->GetType() : -1) == condition->GetValue1();
         }
     case objects::EventCondition::Type_t::TIMESPAN_DATETIME:
         if(compareMode != EventCompareMode::BETWEEN && compareMode != EventCompareMode::DEFAULT_COMPARE)
@@ -2340,6 +2355,34 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             return Compare((int32_t)character->QuestsCount(), condition->GetValue1(),
                 condition->GetValue2(), compareMode, EventCompareMode::EQUAL,
                 EVENT_COMPARE_NUMERIC2);
+        }
+    case objects::EventCondition::Type_t::ZIOTITE_LARGE:
+        if(!client)
+        {
+            return false;
+        }
+        else
+        {
+            // Team large ziotite compares to [value 1] (and [value 2])
+            auto team = client->GetClientState()->GetTeam();
+
+            return Compare((int32_t)(team ? team->GetLargeZiotite() : 0),
+                condition->GetValue1(), condition->GetValue2(), compareMode,
+                EventCompareMode::BETWEEN, EVENT_COMPARE_NUMERIC2);
+        }
+    case objects::EventCondition::Type_t::ZIOTITE_SMALL:
+        if(!client)
+        {
+            return false;
+        }
+        else
+        {
+            // Team small ziotite compares to [value 1] (and [value 2])
+            auto team = client->GetClientState()->GetTeam();
+
+            return Compare((int32_t)(team ? team->GetSmallZiotite() : 0),
+                condition->GetValue1(), condition->GetValue2(), compareMode,
+                EventCompareMode::BETWEEN, EVENT_COMPARE_NUMERIC2);
         }
     case objects::EventConditionData::Type_t::NONE:
     default:
@@ -4113,14 +4156,36 @@ bool EventManager::OpenMenu(EventContext& ctx)
     p.WriteString16Little(state->GetClientStringEncoding(),
         sessionID, true);
 
-    ctx.Client->SendPacket(p);
+    ctx.Client->QueuePacket(p);
 
-    if(menuType == (int32_t)SVR_CONST.MENU_UB_RANKING)
+    if(menuType == (int32_t)SVR_CONST.MENU_BAZAAR)
+    {
+        int32_t bazaarEntityID = ctx.EventInstance->GetSourceEntityID();
+        auto bState = state->GetBazaarState();
+        auto zone = state->GetZone();
+        if(bState && bState->GetEntityID() == bazaarEntityID && zone)
+        {
+            // If the market belongs to the player, make sure to mark as
+            // pending when they open it
+            auto market = bState->GetCurrentMarket((uint32_t)e->GetShopID());
+            if(market &&
+                market->GetAccount().GetUUID() == state->GetAccountUID())
+            {
+                market->SetState(
+                    objects::BazaarData::State_t::BAZAAR_PREPARING);
+                mServer.lock()->GetZoneManager()->SendBazaarMarketData(zone,
+                    bState, (uint32_t)market->GetMarketID());
+            }
+        }
+    }
+    else if(menuType == (int32_t)SVR_CONST.MENU_UB_RANKING)
     {
         // Send UB rankings for the menu
         mServer.lock()->GetMatchManager()->SendUltimateBattleRankings(
             ctx.Client);
     }
+
+    ctx.Client->FlushOutgoing();
 
     return true;
 }

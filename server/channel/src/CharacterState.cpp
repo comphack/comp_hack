@@ -91,6 +91,7 @@ namespace libcomp
             Using<ActiveEntityState>();
             Using<objects::Character>();
             Using<objects::DigitalizeState>();
+            Using<objects::EventCounter>();
 
             Sqrat::DerivedClass<CharacterState, ActiveEntityState,
                 Sqrat::NoConstructor<CharacterState>> binding(mVM, "CharacterState");
@@ -114,8 +115,8 @@ namespace libcomp
     }
 }
 
-CharacterState::CharacterState() : mQuestBonusCount(0),
-    mMaxFusionGaugeStocks(0)
+CharacterState::CharacterState() : mNextEquipmentExpiration(0),
+    mQuestBonusCount(0), mMaxFusionGaugeStocks(0)
 {
 }
 
@@ -364,11 +365,16 @@ void CharacterState::RecalcEquipState(
         return;
     }
 
+    // Keep track of the current system time for expired equipment
+    uint32_t now = (uint32_t)std::time(0);
+
     std::lock_guard<std::mutex> lock(mLock);
     mEquipmentTokuseiIDs.clear();
     mConditionalTokusei.clear();
     mStatConditionalTokusei.clear();
     mEquipFuseBonuses.clear();
+
+    mNextEquipmentExpiration = 0;
 
     uint8_t maxStocks = CharacterManager::HasValuable(character,
         SVR_CONST.VALUABLE_FUSION_GAUGE) ? 1 : 0;
@@ -380,6 +386,19 @@ void CharacterState::RecalcEquipState(
     {
         auto equip = character->GetEquippedItems(i).Get();
         if(!equip || equip->GetDurability() == 0) continue;
+
+        uint32_t expiration = equip->GetRentalExpiration();
+        if(expiration)
+        {
+            // No bonuses if its expired
+            if(expiration <= now) continue;
+
+            if(!mNextEquipmentExpiration ||
+                expiration <= mNextEquipmentExpiration)
+            {
+                mNextEquipmentExpiration = expiration;
+            }
+        }
 
         auto itemData = definitionManager->GetItemData(
             equip->GetType());
@@ -573,6 +592,12 @@ void CharacterState::RecalcEquipState(
     }
 
     mMaxFusionGaugeStocks = maxStocks;
+}
+
+bool CharacterState::EquipmentExpired(uint32_t now)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    return mNextEquipmentExpiration && mNextEquipmentExpiration <= now;
 }
 
 bool CharacterState::UpdateQuestState(
@@ -902,12 +927,16 @@ uint8_t CharacterState::RecalculateStats(
         }
     }
 
+    // Keep track of the current system time for expired equipment
+    uint32_t now = (uint32_t)std::time(0);
+
     // Calculate based on adjustments
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
     std::list<std::shared_ptr<objects::MiCorrectTbl>> nraTbls;
     for(auto equip : c->GetEquippedItems())
     {
-        if(!equip.IsNull() && equip->GetDurability() > 0)
+        if(!equip.IsNull() && equip->GetDurability() > 0 &&
+            (!equip->GetRentalExpiration() || now < equip->GetRentalExpiration()))
         {
             uint32_t basicEffect = equip->GetBasicEffect();
             auto itemData = definitionManager->GetItemData(

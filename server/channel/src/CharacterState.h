@@ -136,6 +136,15 @@ public:
     void RecalcEquipState(libcomp::DefinitionManager* definitionManager);
 
     /**
+     * Determine if any equipment on the character is set to expire but has
+     * not yet since the last time it was checked. If this returns true,
+     * RecalcEquipState should be called again.
+     * @param now Current system time
+     * @return true if equipment has expired, false if it has not
+     */
+    bool EquipmentExpired(uint32_t now);
+
+    /**
      * Determine the quest bonus effects gained for the character based
      * on the number of completed quests. If a quest is being completed
      * this function should be used with the optional secondary parameter
@@ -246,6 +255,10 @@ private:
 
     /// Pointer to the current digitalization state of the character
     std::shared_ptr<objects::DigitalizeState> mDigitalizeState;
+
+    /// System time for the next equipped item expiration to be checked
+    /// at set intervals
+    uint32_t mNextEquipmentExpiration;
 
     /// Quick access count representing the number of completed quests
     /// that can affect bonuses

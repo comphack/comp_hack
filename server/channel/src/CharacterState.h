@@ -212,11 +212,17 @@ public:
      */
     bool RecalcDisabledSkills(libcomp::DefinitionManager* definitionManager);
 
+    virtual const libobjgen::UUID GetEntityUUID();
+
     virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
         std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
     virtual std::set<uint32_t> GetAllSkills(
         libcomp::DefinitionManager* definitionManager, bool includeTokusei);
+
+    virtual uint8_t GetLNCType();
+
+    virtual int8_t GetGender();
 
 protected:
     virtual void BaseStatsCalculated(

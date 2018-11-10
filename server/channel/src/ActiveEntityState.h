@@ -1033,7 +1033,7 @@ public:
      * Get the active entity
      * @return Pointer to the active entity
      */
-    std::shared_ptr<T> GetEntity()
+    std::shared_ptr<T> GetEntity() const
     {
         return mEntity;
     }
@@ -1047,13 +1047,6 @@ public:
     void SetEntity(const std::shared_ptr<T>& entity,
         const std::shared_ptr<objects::MiDevilData>& devilData);
 
-    virtual const libobjgen::UUID GetEntityUUID();
-
-    virtual std::shared_ptr<objects::EnemyBase> GetEnemyBase() const
-    {
-        return nullptr;
-    }
-
     virtual std::shared_ptr<objects::EntityStats> GetCoreStats()
     {
         return mEntity ? mEntity->GetCoreStats().Get() : nullptr;
@@ -1064,28 +1057,6 @@ public:
         auto cs = GetCoreStats();
         return cs ? cs->GetLevel() : 0;
     }
-
-    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
-        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr)
-    {
-        (void)definitionManager;
-        (void)calcState;
-
-        return 0;
-    }
-
-    virtual std::set<uint32_t> GetAllSkills(
-        libcomp::DefinitionManager* definitionManager, bool includeTokusei)
-    {
-        (void)definitionManager;
-        (void)includeTokusei;
-
-        return std::set<uint32_t>{};
-    }
-
-    virtual uint8_t GetLNCType();
-
-    virtual int8_t GetGender();
 
     virtual bool Ready(bool ignoreDisplayState = false)
     {

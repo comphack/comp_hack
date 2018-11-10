@@ -1,10 +1,10 @@
 /**
- * @file server/channel/src/EnemyState.cpp
+ * @file server/channel/src/AllyState.cpp
  * @ingroup channel
  *
  * @author HACKfrost
  *
- * @brief Represents the state of an enemy on the channel.
+ * @brief Represents the state of an ally entity on the channel.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -24,7 +24,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "EnemyState.h"
+#include "AllyState.h"
 
 // libcomp Includes
 #include <ScriptEngine.h>
@@ -38,54 +38,41 @@ using namespace channel;
 namespace libcomp
 {
     template<>
-    ScriptEngine& ScriptEngine::Using<EnemyState>()
+    ScriptEngine& ScriptEngine::Using<AllyState>()
     {
-        if(!BindingExists("EnemyState", true))
+        if(!BindingExists("AllyState", true))
         {
             Using<ActiveEntityState>();
-            Using<objects::Enemy>();
+            Using<objects::Ally>();
 
-            Sqrat::DerivedClass<EnemyState, ActiveEntityState,
-                Sqrat::NoConstructor<EnemyState>> binding(mVM, "EnemyState");
+            Sqrat::DerivedClass<AllyState, ActiveEntityState,
+                Sqrat::NoConstructor<AllyState>> binding(mVM, "AllyState");
             binding
-                .Func("GetEntity", &EnemyState::GetEntity);
+                .Func("GetEntity", &AllyState::GetEntity);
 
-            Bind<EnemyState>("EnemyState", binding);
+            Bind<AllyState>("AllyState", binding);
         }
 
         return *this;
     }
 }
 
-EnemyState::EnemyState()
+AllyState::AllyState()
 {
 }
 
-std::pair<uint8_t, uint8_t> EnemyState::GetTalkPoints(int32_t entityID)
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    auto it = mTalkPoints.find(entityID);
-    if(it == mTalkPoints.end())
-    {
-        mTalkPoints[entityID] = std::pair<uint8_t, uint8_t>(0, 0);
-    }
-
-    return mTalkPoints[entityID];
-}
-
-void EnemyState::SetTalkPoints(int32_t entityID,
-    const std::pair<uint8_t, uint8_t>& points)
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    mTalkPoints[entityID] = points;
-}
-
-std::shared_ptr<objects::EnemyBase> EnemyState::GetEnemyBase() const
+std::shared_ptr<objects::EnemyBase> AllyState::GetEnemyBase() const
 {
     return GetEntity();
 }
 
-uint8_t EnemyState::RecalculateStats(
+std::set<uint32_t> AllyState::GetAllSkills(
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
+{
+    return GetAllEnemySkills(definitionManager, includeTokusei);
+}
+
+uint8_t AllyState::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
@@ -100,13 +87,7 @@ uint8_t EnemyState::RecalculateStats(
     return RecalculateEnemyStats(definitionManager, calcState);
 }
 
-std::set<uint32_t> EnemyState::GetAllSkills(
-    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
-{
-    return GetAllEnemySkills(definitionManager, includeTokusei);
-}
-
-uint8_t EnemyState::GetLNCType()
+uint8_t AllyState::GetLNCType()
 {
     int16_t lncPoints = 0;
 
@@ -120,7 +101,7 @@ uint8_t EnemyState::GetLNCType()
     return CalculateLNCType(lncPoints);
 }
 
-int8_t EnemyState::GetGender()
+int8_t AllyState::GetGender()
 {
     auto demonData = GetDevilData();
     if(demonData)

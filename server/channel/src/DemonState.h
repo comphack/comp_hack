@@ -128,8 +128,17 @@ public:
     int16_t UpdateLearningSkill(const std::shared_ptr<
         objects::InheritedSkill>& iSkill, uint16_t points);
 
+    virtual const libobjgen::UUID GetEntityUUID();
+
     virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
         std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
+
+    virtual std::set<uint32_t> GetAllSkills(
+        libcomp::DefinitionManager* definitionManager, bool includeTokusei);
+
+    virtual uint8_t GetLNCType();
+
+    virtual int8_t GetGender();
 
 private:
     /// Map of inherited skills not yet maxed by affinity ID. This

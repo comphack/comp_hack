@@ -96,9 +96,7 @@ namespace libcomp
             Sqrat::DerivedClass<CharacterState, ActiveEntityState,
                 Sqrat::NoConstructor<CharacterState>> binding(mVM, "CharacterState");
             binding
-                .Func<std::shared_ptr<objects::Character>
-                (CharacterState::*)()>(
-                    "GetEntity", &CharacterState::GetEntity)
+                .Func("GetEntity", &CharacterState::GetEntity)
                 .Func("GetDigitalizeState",
                     &CharacterState::GetDigitalizeState)
                 .Func("GetEventCounter",
@@ -869,6 +867,12 @@ bool CharacterState::RecalcDisabledSkills(
     return newSkillDisabled || disabledSkills.size() != currentDisabledSkills.size();
 }
 
+const libobjgen::UUID CharacterState::GetEntityUUID()
+{
+    auto entity = GetEntity();
+    return entity ? entity->GetUUID() : NULLUUID;
+}
+
 uint8_t CharacterState::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState)
@@ -1045,6 +1049,18 @@ std::set<uint32_t> CharacterState::GetAllSkills(
     }
 
     return skillIDs;
+}
+
+uint8_t CharacterState::GetLNCType()
+{
+    auto entity = GetEntity();
+    return CalculateLNCType(entity ? entity->GetLNC() : 0);
+}
+
+int8_t CharacterState::GetGender()
+{
+    auto entity = GetEntity();
+    return entity ? (int8_t)entity->GetGender() : 2;
 }
 
 void CharacterState::BaseStatsCalculated(

@@ -70,6 +70,18 @@ public:
      */
     void SetTalkPoints(int32_t entityID, const std::pair<uint8_t, uint8_t>& points);
 
+    virtual std::shared_ptr<objects::EnemyBase> GetEnemyBase() const;
+
+    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
+        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
+
+    virtual std::set<uint32_t> GetAllSkills(
+        libcomp::DefinitionManager* definitionManager, bool includeTokusei);
+
+    virtual uint8_t GetLNCType();
+
+    virtual int8_t GetGender();
+
 private:
     /// Player local entity IDs mapped to the enemy's current talk skill
     /// related points: affability then fear. If either of these

@@ -37,6 +37,7 @@ SET(${PROJECT_NAME}_SRCS
     src/AICommand.cpp
     src/AIManager.cpp
     src/AIState.cpp
+    src/AllyState.cpp
     src/BazaarState.cpp
     src/ChannelClientConnection.cpp
     src/ChannelServer.cpp
@@ -74,6 +75,7 @@ SET(${PROJECT_NAME}_HDRS
     src/AICommand.h
     src/AIManager.h
     src/AIState.h
+    src/AllyState.h
     src/BazaarState.h
     src/ChannelClientConnection.h
     src/ChannelServer.h

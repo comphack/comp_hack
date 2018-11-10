@@ -43,6 +43,7 @@
 #include <MiDevilData.h>
 #include <MiGrowthData.h>
 #include <MiMitamaReunionSetBonusData.h>
+#include <MiNPCBasicData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 
@@ -64,9 +65,7 @@ namespace libcomp
             Sqrat::DerivedClass<DemonState, ActiveEntityState,
                 Sqrat::NoConstructor<DemonState>> binding(mVM, "DemonState");
             binding
-                .Func<std::shared_ptr<objects::Demon>
-                (DemonState::*)()>(
-                    "GetEntity", &DemonState::GetEntity);
+                .Func("GetEntity", &DemonState::GetEntity);
 
             Bind<DemonState>("DemonState", binding);
         }
@@ -386,6 +385,12 @@ int16_t DemonState::UpdateLearningSkill(const std::shared_ptr<
     return progress;
 }
 
+const libobjgen::UUID DemonState::GetEntityUUID()
+{
+    auto entity = GetEntity();
+    return entity ? entity->GetUUID() : NULLUUID;
+}
+
 uint8_t DemonState::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState)
@@ -449,4 +454,64 @@ uint8_t DemonState::RecalculateStats(
         levelRate);
 
     return RecalculateDemonStats(definitionManager, stats, calcState);
+}
+
+std::set<uint32_t> DemonState::GetAllSkills(
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
+{
+    std::set<uint32_t> skillIDs;
+
+    auto entity = GetEntity();
+    if(entity)
+    {
+        for(uint32_t skillID : entity->GetLearnedSkills())
+        {
+            if(skillID)
+            {
+                skillIDs.insert(skillID);
+            }
+        }
+
+        auto demonData = GetDevilData();
+        for(uint32_t skillID : CharacterManager::GetTraitSkills(entity,
+            demonData, definitionManager))
+        {
+            skillIDs.insert(skillID);
+        }
+
+        if(includeTokusei)
+        {
+            for(uint32_t skillID : GetEffectiveTokuseiSkills(definitionManager))
+            {
+                skillIDs.insert(skillID);
+            }
+        }
+    }
+
+    return skillIDs;
+}
+
+uint8_t DemonState::GetLNCType()
+{
+    int16_t lncPoints = 0;
+
+    auto entity = GetEntity();
+    auto demonData = GetDevilData();
+    if(entity && demonData)
+    {
+        lncPoints = demonData->GetBasic()->GetLNC();
+    }
+
+    return CalculateLNCType(lncPoints);
+}
+
+int8_t DemonState::GetGender()
+{
+    auto demonData = GetDevilData();
+    if(demonData)
+    {
+        return (int8_t)demonData->GetBasic()->GetGender();
+    }
+
+    return 2;   // None
 }

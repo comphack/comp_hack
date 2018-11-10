@@ -29,6 +29,7 @@
 
 // channel Includes
 #include "ActiveEntityState.h"
+#include "AllyState.h"
 #include "BazaarState.h"
 #include "ChannelClientConnection.h"
 #include "EnemyState.h"
@@ -66,7 +67,6 @@ class PlasmaState;
 class WorldClock;
 class ZoneInstance;
 
-typedef ActiveEntityStateImp<objects::Ally> AllyState;
 typedef EntityState<objects::DiasporaBase> DiasporaBaseState;
 typedef EntityState<objects::LootBox> LootBoxState;
 typedef EntityState<objects::ServerNPC> NPCState;

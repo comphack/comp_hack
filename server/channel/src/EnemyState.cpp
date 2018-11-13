@@ -48,7 +48,9 @@ namespace libcomp
             Sqrat::DerivedClass<EnemyState, ActiveEntityState,
                 Sqrat::NoConstructor<EnemyState>> binding(mVM, "EnemyState");
             binding
-                .Func("GetEntity", &EnemyState::GetEntity);
+                .Func<std::shared_ptr<objects::Enemy>
+                (EnemyState::*)() const>(
+                    "GetEntity", &EnemyState::GetEntity);
 
             Bind<EnemyState>("EnemyState", binding);
         }

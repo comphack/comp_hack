@@ -425,20 +425,6 @@ public:
     void SetAIState(const std::shared_ptr<channel::AIState>& aiState);
 
     /**
-     * Retrieves a timestamp associated to an enemy specific action.
-     * @param action Name of the action to retrieve information from
-     * @return Timestamp associated to the action or 0 if not found
-     */
-    uint64_t GetActionTime(const libcomp::String& action);
-
-    /**
-     * Stores a timestamp associated to an enemy specific action.
-     * @param action Name of the action to store
-     * @param time Timestamp of the specified action
-     */
-    void SetActionTime(const libcomp::String& action, uint64_t time);
-
-    /**
      * Get or update the entity's current knockback value based on the last
      * ticks associated to the value and the supplied time. If the value
      * reaches or exceeds the maximum knockback resistance, the max
@@ -600,7 +586,8 @@ public:
 
     /**
      * Cancel existing status effects via cancel event flags. The expire
-     * event will be queued up for processing on the next server tick.
+     * event will be queued up for processing on the next server tick unless
+     * effects are not active.
      * @param cancelFlags Flags indicating conditions that can cause status
      *  effects to be cancelled. The set of valid status conditions are listed
      *  as constants on ActiveEntityState
@@ -609,6 +596,21 @@ public:
      */
     std::set<uint32_t> CancelStatusEffects(uint8_t cancelFlags,
         const std::set<uint32_t>& keepEffects = {});
+
+    /**
+     * Cancel existing status effects via cancel event flags. The expire
+     * event will be queued up for processing on the next server tick unless
+     * effects are not active.
+     * @param cancelFlags Flags indicating conditions that can cause status
+     *  effects to be cancelled. The set of valid status conditions are listed
+     *  as constants on ActiveEntityState
+     * @param cancelled Output parameter stating whether any effects were
+     *  cancelled, independent of queuing
+     * @param keepEffects Optional set of status effects to keep
+     * @return Set of cancelled status effect types that will not be queued
+     */
+    std::set<uint32_t> CancelStatusEffects(uint8_t cancelFlags,
+        bool& cancelled, const std::set<uint32_t>& keepEffects = {});
 
     /**
      * Activate or deactivate the entity's status effect states. By activating
@@ -1001,9 +1003,6 @@ protected:
 
     /// Next available activated ability ID
     int8_t mNextActivatedAbilityID;
-
-    /// Map of timestamps associated to AI specific actions
-    std::unordered_map<std::string, uint64_t> mActionTimes;
 
     /// Pointer to the AI state information bound to the entity
     std::shared_ptr<AIState> mAIState;

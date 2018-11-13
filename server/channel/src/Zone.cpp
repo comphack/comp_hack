@@ -1316,6 +1316,71 @@ std::list<std::shared_ptr<ActiveEntityState>>
     return result;
 }
 
+std::shared_ptr<ActiveEntityState> Zone::StartStopCombat(int32_t entityID,
+    uint64_t timeout, bool checkBefore)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    auto it = mAllEntities.find(entityID);
+    if(it != mAllEntities.end())
+    {
+        // They have to be in the zone or this fails
+        auto active = std::dynamic_pointer_cast<ActiveEntityState>(it->second);
+        if(active)
+        {
+            if(checkBefore && active->GetCombatTimeOut() > timeout)
+            {
+                // Can't end yet
+                return nullptr;
+            }
+
+            bool endTime = timeout == 0 || checkBefore;
+
+            bool result = (active->GetCombatTimeOut() == 0) != endTime;
+            if(!checkBefore)
+            {
+                auto state = ClientState::GetEntityClientState(entityID);
+                if(state)
+                {
+                    // Add both player entities
+                    auto cState = state->GetCharacterState();
+                    auto dState = state->GetDemonState();
+
+                    cState->SetCombatTimeOut(timeout);
+                    dState->SetCombatTimeOut(timeout);
+
+                    if(!timeout)
+                    {
+                        RemoveCombatantIDs(cState->GetEntityID());
+                        RemoveCombatantIDs(dState->GetEntityID());
+                    }
+                    else
+                    {
+                        InsertCombatantIDs(cState->GetEntityID());
+                        InsertCombatantIDs(dState->GetEntityID());
+                    }
+                }
+                else
+                {
+                    active->SetCombatTimeOut(timeout);
+
+                    if(endTime)
+                    {
+                        RemoveCombatantIDs(active->GetEntityID());
+                    }
+                    else
+                    {
+                        InsertCombatantIDs(active->GetEntityID());
+                    }
+                }
+            }
+
+            return result ? active : nullptr;
+        }
+    }
+
+    return nullptr;
+}
+
 bool Zone::GetFlagState(int32_t key, int32_t& value, int32_t worldCID)
 {
     std::lock_guard<std::mutex> lock(mLock);

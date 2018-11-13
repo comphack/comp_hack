@@ -161,7 +161,7 @@ std::list<std::shared_ptr<objects::CharacterLogin>>
     return active;
 }
 
-void CharacterManager::RequestChannelDisconnect(int32_t worldCID)
+bool CharacterManager::RequestChannelDisconnect(int32_t worldCID)
 {
     auto cLogin = GetCharacterLogin(worldCID);
     if(cLogin && cLogin->GetChannelID() >= 0)
@@ -177,8 +177,12 @@ void CharacterManager::RequestChannelDisconnect(int32_t worldCID)
                 LogoutPacketAction_t::LOGOUT_DISCONNECT);
 
             channel->SendPacket(p);
+
+            return true;
         }
     }
+
+    return false;
 }
 
 bool CharacterManager::SendToCharacters(libcomp::Packet& p,

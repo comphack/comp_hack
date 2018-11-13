@@ -420,21 +420,30 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
             }
             break;
         case objects::Event::EventType_t::OPEN_MENU:
+            if(responseID == -1)
+            {
+                // Allow next events
+                current->SetIndex(1);
+            }
+            else if(responseID != 0)
+            {
+                LOG_ERROR(libcomp::String("Non-zero response %1 received for"
+                    " menu %2\n").Arg(responseID).Arg(event->GetID()));
+            }
+            break;
         case objects::Event::EventType_t::PLAY_SCENE:
         case objects::Event::EventType_t::DIRECTION:
         case objects::Event::EventType_t::EX_NPC_MESSAGE:
         case objects::Event::EventType_t::MULTITALK:
+            if(responseID != 0)
             {
-                if(responseID != 0)
-                {
-                    LOG_ERROR(libcomp::String("Non-zero response %1 received for event %2\n"
-                        ).Arg(responseID).Arg(event->GetID()));
-                }
+                LOG_ERROR(libcomp::String("Non-zero response %1 received for"
+                    " event %2\n").Arg(responseID).Arg(event->GetID()));
             }
             break;
         default:
-            LOG_ERROR(libcomp::String("Response received for invalid event of type %1\n"
-                ).Arg(to_underlying(eventType)));
+            LOG_ERROR(libcomp::String("Response received for invalid event of"
+                " type %1\n").Arg(to_underlying(eventType)));
             break;
     }
 
@@ -3918,7 +3927,8 @@ void EventManager::HandleNext(EventContext& ctx)
     // normal "next" progression) either repeat previous or process next
     // queued event
     if(nextEventID.IsEmpty() ||
-        event->GetEventType() == objects::Event::EventType_t::OPEN_MENU)
+        (event->GetEventType() == objects::Event::EventType_t::OPEN_MENU &&
+            ctx.EventInstance->GetIndex() == 0))
     {
         if(!ctx.AutoOnly)
         {

@@ -820,8 +820,8 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         auto definitionManager = server->GetDefinitionManager();
 
         // Remove any opponents
-        characterManager->AddRemoveOpponent(false, cState, nullptr, true);
-        characterManager->AddRemoveOpponent(false, dState, nullptr, true);
+        characterManager->AddRemoveOpponent(false, cState, nullptr);
+        characterManager->AddRemoveOpponent(false, dState, nullptr);
 
         // Deactivate and save the updated status effects
         cState->SetStatusEffectsActive(false, definitionManager);
@@ -1171,8 +1171,8 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     }
 
     // Remove any opponents
-    characterManager->AddRemoveOpponent(false, cState, nullptr, true);
-    characterManager->AddRemoveOpponent(false, dState, nullptr, true);
+    characterManager->AddRemoveOpponent(false, cState, nullptr);
+    characterManager->AddRemoveOpponent(false, dState, nullptr);
 
     // If there is a pending bazaar, mark as active again
     auto bState = state->GetBazaarState();
@@ -4270,6 +4270,17 @@ void ZoneManager::UpdateActiveZoneStates()
     {
         // Despawn first
         HandleDespawns(zone);
+
+        // Stop combat next
+        for(int32_t combatantID : zone->GetCombatantIDs())
+        {
+            auto entity = zone->StartStopCombat(combatantID, serverTime, true);
+            if(entity)
+            {
+                server->GetCharacterManager()->AddRemoveOpponent(false,
+                    entity, nullptr);
+            }
+        }
 
         // Update active AI controlled entities
         aiManager->UpdateActiveStates(zone, serverTime, isNight);

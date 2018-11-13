@@ -469,9 +469,10 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
 
     // Certain types need to force the event to end so pre-barter checks can
     // run again
-    if(!failed && (oneTimeValuables.size() > 0 || cooldowns.size() > 0))
+    if(!failed && (oneTimeValuables.size() > 0 || cooldowns.size() > 0) &&
+        state->GetCurrentMenuShopID() != 0)
     {
-        server->GetEventManager()->HandleEvent(client, nullptr);
+        server->GetEventManager()->HandleResponse(client, -1);
     }
 }
 

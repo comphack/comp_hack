@@ -78,6 +78,7 @@ enum class SkillErrorCodes_t : uint8_t
     ACTIVATION_FAILURE = 4,   //!< Cannot be activated
     COOLING_DOWN = 5,   //!< Cool down has not completed
     ACTION_RETRY = 6,   //!< No message, request that client pursue and retry
+    TOO_FAR = 8,   //!< The skill was too far away when execution was attempted
     CONDITION_RESTRICT = 10,    //!< Skill is not in a useable state
     LOCATION_RESTRICT = 11, //!< Cannot be used in the current location
     ITEM_USE = 12,  //!< Item cannot have its skill used

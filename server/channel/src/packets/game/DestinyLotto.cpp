@@ -105,6 +105,8 @@ bool Parsers::DestinyLotto::Parse(libcomp::ManagerPacket *pPacketManager,
             {
                 specifiedLoot = l;
             }
+
+            slot = (uint8_t)(slot + 1);
         }
     }
 

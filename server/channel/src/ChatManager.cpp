@@ -578,29 +578,61 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
             "@ban requires one argument, <username>"));
     }
 
+    uint8_t kickLevel = 1;
+
     std::shared_ptr<objects::Character> target;
     std::shared_ptr<objects::Account> targetAccount;
     std::shared_ptr<channel::ChannelClientConnection> targetClient;
-    GetTargetCharacterAccount(bannedPlayer, false, target, targetAccount,
-        targetClient);
+    if(!GetTargetCharacterAccount(bannedPlayer, false, target, targetAccount,
+        targetClient) || (targetAccount && !targetClient))
+    {
+        if(!GetIntegerArg(kickLevel, argsCopy) ||
+            kickLevel == 0 || kickLevel > 3)
+        {
+            kickLevel = 1;
+        }
 
-    if(targetAccount &&
-        client->GetClientState()->GetUserLevel() < targetAccount->GetUserLevel())
+        SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("Target character is not currently on the channel"
+                " to kick. Banning and sending level %1 disconnect request to"
+                " the world.").Arg(kickLevel));
+    }
+
+    if(!targetAccount)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Supplied character name is invalid.");
+    }
+    else if(client->GetClientState()->GetUserLevel() <
+        targetAccount->GetUserLevel())
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
             "Your user level is lower than the user you tried to ban.");
     }
 
-    if(targetClient != nullptr)
-    {
-        targetAccount->SetEnabled(false);
-        targetAccount->Update(mServer.lock()->GetLobbyDatabase());
-        targetClient->Close();
+    auto server = mServer.lock();
+    targetAccount->SetEnabled(false);
+    targetAccount->Update(server->GetLobbyDatabase());
 
-        return true;
+    if(targetClient)
+    {
+        targetClient->Close();
+    }
+    else
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+        p.WriteU32Little(
+            (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+        p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+            targetAccount->GetUsername());
+        p.WriteU8(kickLevel);
+
+        server->GetManagerConnection()->GetWorldConnection()
+            ->SendPacket(p);
     }
 
-    return false;
+    return true;
 }
 
 bool ChatManager::GMCommand_BattlePoints(const std::shared_ptr<
@@ -1697,8 +1729,11 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "Announce a ticker MESSAGE with the specified COLOR.",
         } },
         { "ban", {
-            "@ban NAME",
-            "Bans the account which owns the character NAME.",
+            "@ban NAME [1/2/3]",
+            "Bans the account which owns the character NAME. If the",
+            "account is not on the channel, remove them with options",
+            "1 (request current channel, default), 2 (request any",
+            "channel) or 3 (remove from world/lobby, USE AT OWN RISK)."
         } },
         { "bethel",{
             "@bethel INDEX AMOUNT",
@@ -1822,8 +1857,12 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "'macca' or 'mag' instead."
         } },
         { "kick", {
-            "@kick NAME",
+            "@kick NAME [1/2/3]",
             "Kicks the character with the given NAME from the server.",
+            "If their account is not on the channel, remove them with",
+            "options 1 (request current channel, default), 2 (request",
+            "any channel) or 3 (remove from world/lobby, USE AT OWN",
+            "RISK)."
         } },
         { "kill", {
             "@kill [NAME]",
@@ -2269,14 +2308,33 @@ bool ChatManager::GMCommand_Kick(const std::shared_ptr<
             "@kick requires one argument, <username>");
     }
 
+    uint8_t kickLevel = 1;
+
     std::shared_ptr<objects::Character> target;
     std::shared_ptr<objects::Account> targetAccount;
     std::shared_ptr<channel::ChannelClientConnection> targetClient;
-    GetTargetCharacterAccount(kickedPlayer, false, target, targetAccount,
-        targetClient);
+    if(!GetTargetCharacterAccount(kickedPlayer, false, target, targetAccount,
+        targetClient) || (targetAccount && !targetClient))
+    {
+        if(!GetIntegerArg(kickLevel, argsCopy) ||
+            kickLevel == 0 || kickLevel > 3)
+        {
+            kickLevel = 1;
+        }
 
-    if(targetAccount &&
-        client->GetClientState()->GetUserLevel() < targetAccount->GetUserLevel())
+        SendChatMessage(client, ChatType_t::CHAT_SELF,
+            libcomp::String("Target character is not currently on the channel"
+                " to kick. Sending level %1 disconnect request to the world.")
+            .Arg(kickLevel));
+    }
+
+    if(!targetAccount)
+    {
+        return SendChatMessage(client, ChatType_t::CHAT_SELF,
+            "Supplied character name is invalid.");
+    }
+    else if(client->GetClientState()->GetUserLevel() <
+        targetAccount->GetUserLevel())
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
             "Your user level is lower than the user you tried to kick.");
@@ -2285,11 +2343,21 @@ bool ChatManager::GMCommand_Kick(const std::shared_ptr<
     if(targetClient != nullptr)
     {
         targetClient->Close();
+    }
+    else
+    {
+        libcomp::Packet p;
+        p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+        p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+        p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+            targetAccount->GetUsername());
+        p.WriteU8(kickLevel);
 
-        return true;
+        mServer.lock()->GetManagerConnection()->GetWorldConnection()
+            ->SendPacket(p);
     }
 
-    return false;
+    return true;
 }
 
 bool ChatManager::GMCommand_Kill(const std::shared_ptr<
@@ -3949,7 +4017,8 @@ bool ChatManager::GetTargetCharacterAccount(libcomp::String& targetName,
     if(targetCharacter)
     {
         targetAccount = libcomp::PersistentObject::LoadObjectByUUID<
-            objects::Account>(worldDB, targetCharacter->GetAccount());
+            objects::Account>(server->GetLobbyDatabase(),
+                targetCharacter->GetAccount());
     }
     else
     {

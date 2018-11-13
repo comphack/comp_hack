@@ -184,6 +184,18 @@ public:
         const std::shared_ptr<objects::MiSkillData>& skillData);
 
     /**
+     * Determine if the skill target supplied is valid for a specific skill
+     * @param source Entity that is attempting to use the skill
+     * @param skillData Pointer to the skill's definition
+     * @param target Pointer to the targeted entity
+     * @return Skill error code or -1 if no error
+     */
+    int8_t ValidateSkillTarget(
+        const std::shared_ptr<ActiveEntityState> source,
+        const std::shared_ptr<objects::MiSkillData>& skillData,
+        const std::shared_ptr<ActiveEntityState>& target);
+
+    /**
      * Check fusion skill usage pre-skill validation and determine which one
      * should be used. Fusion skills are decided based upon the two demons
      * involved, defaulting to the COMP demon if no special skill exists.
@@ -222,11 +234,13 @@ public:
      * costs will still be paid as the skill has already been "shot" by now.
      * @param pSkill Current skill processing state
      * @param ctx Special execution state for the skill
+     * @param syncTime Accurate skill completion time, useful for server
+     *  processing delay correction
      * @retult false if the skill failed execution immediately, true if it
      *  succeeded or was queued
      */
     bool CompleteSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
-        std::shared_ptr<SkillExecutionContext> ctx);
+        std::shared_ptr<SkillExecutionContext> ctx, uint64_t syncTime);
 
     /**
      * Complete executing a skill with a projectile, simulating the effect
@@ -777,6 +791,7 @@ private:
     /**
      * Gather drops for a specific enemy spawn from its own drops, global drops
      * and demon family drops.
+     * @param source Pointer to the entity that activated the skill
      * @param spawn Pointer to the spawn information for the enemy which may
      *  or may not exist (ex: GM created enemy)
      * @param zone Pointer to the zone the entities belong to
@@ -786,8 +801,9 @@ private:
      *  source
      */
     std::unordered_map<uint8_t, std::list<std::shared_ptr<objects::ItemDrop>>>
-        GetItemDrops(const std::shared_ptr<objects::Spawn>& spawn,
-            const std::shared_ptr<Zone>& zone, bool giftMode = false) const;
+        GetItemDrops(const std::shared_ptr<ActiveEntityState>& source,
+            const std::shared_ptr<objects::Spawn>& spawn,
+            const std::shared_ptr<Zone>& zone, bool giftMode = false);
 
     /**
      * Schedule the adjustment of who is a valid looter for one or more loot
@@ -1246,6 +1262,14 @@ private:
      */
     bool IsTalkSkill(const std::shared_ptr<objects::MiSkillData>& skillData,
         bool primaryOnly);
+
+    /**
+     * Get the level associated to the supplied spawn. Defaults to the enemy
+     * type's normal level if none specified.
+     * @param spawn Pointer to a spawn
+     * @return Level for the spawn
+     */
+    int8_t GetSpawnLevel(const std::shared_ptr<objects::Spawn>& spawn);
 
     /**
      * Determine if invincibility frames are enabled for the server to

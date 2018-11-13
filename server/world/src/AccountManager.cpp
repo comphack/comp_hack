@@ -323,8 +323,6 @@ std::shared_ptr<objects::AccountLogin> AccountManager::GetUserLogin(
 std::shared_ptr<objects::AccountLogin> AccountManager::LogoutUser(
     const libcomp::String& username, int8_t channel)
 {
-    LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
-
     std::shared_ptr<objects::AccountLogin> result;
 
     libcomp::String lookup = username.ToLower();
@@ -335,6 +333,8 @@ std::shared_ptr<objects::AccountLogin> AccountManager::LogoutUser(
     if (mAccountMap.end() != pair && (channel == -1 ||
         channel == pair->second->GetCharacterLogin()->GetChannelID()))
     {
+        LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
+
         result = pair->second;
         Cleanup(result);
         mAccountMap.erase(pair);

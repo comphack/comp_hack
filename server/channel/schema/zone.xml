@@ -36,6 +36,9 @@
         <member type="set" name="DisabledBarriers">
             <element type="u32"/>
         </member>
+        <member type="set" name="CombatantIDs">
+            <element type="s32"/>
+        </member>
     </object>
     <object name="ZoneInstanceObject" persistent="false"
         scriptenabled="true">

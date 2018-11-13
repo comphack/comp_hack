@@ -597,6 +597,19 @@ public:
         UpdateStaggeredSpawns(uint64_t now);
 
     /**
+     * Add or remove the supplied entity as a combatant in the zone. If
+     * the entity belongs to a player, both the character and demon will
+     * be added.
+     * @param entityID ID of the entity starting or stopping combat
+     * @param timeout Server time for when combat will end or 0 for ending now
+     * @param checkBefore If true the timestamp will be used to check if the
+     *  entity can end combat at that time and no values will be changed.
+     * @return Pointer to the entity if it was in the opposite state
+     */
+    std::shared_ptr<ActiveEntityState> StartStopCombat(int32_t entityID,
+        uint64_t timeout, bool checkBefore = false);
+
+    /**
      * Get the state of a zone flag.
      * @param key Lookup key for the flag
      * @param value Output value for the flag if it exists

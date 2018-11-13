@@ -6095,7 +6095,7 @@ bool CharacterManager::GetRemovedStatusesPacket(libcomp::Packet& p,
 
 bool CharacterManager::AddRemoveOpponent(
     bool add, const std::shared_ptr<ActiveEntityState>& eState1,
-    const std::shared_ptr<ActiveEntityState>& eState2, bool noDelay)
+    const std::shared_ptr<ActiveEntityState>& eState2)
 {
     auto zone = eState1->GetZone();
     if(!zone || (add && !eState2))
@@ -6103,13 +6103,18 @@ bool CharacterManager::AddRemoveOpponent(
         return false;
     }
 
+    // Battle ends in 10s if no new one hits again
+    uint64_t timeout = (uint64_t)(
+        ChannelServer::GetServerTime() + 10000000ULL);
     if(add && eState1->HasOpponent(eState2->GetEntityID()))
     {
-        return true;
-    }
+        // Refresh the timeouts
+        zone->StartStopCombat(eState1->GetEntityID(), timeout);
+        if(eState2)
+        {
+            zone->StartStopCombat(eState2->GetEntityID(), timeout);
+        }
 
-    if(!add && eState1->GetOpponentIDs().size() == 0)
-    {
         return true;
     }
 
@@ -6137,7 +6142,6 @@ bool CharacterManager::AddRemoveOpponent(
             {
                 l.push_back(state->GetCharacterState());
                 l.push_back(state->GetDemonState());
-                state->SetBattleEndTimer(0);
             }
             else
             {
@@ -6154,14 +6158,14 @@ bool CharacterManager::AddRemoveOpponent(
             {
                 if(!e2->Ready()) continue;
 
-                size_t opponentCount = e1->AddRemoveOpponent(true, e2->GetEntityID());
-                if(opponentCount == 1)
+                e1->AddRemoveOpponent(true, e2->GetEntityID());
+                if(zone->StartStopCombat(e1->GetEntityID(), timeout))
                 {
                     battleStarted.push_back(e1);
                 }
 
-                opponentCount = e2->AddRemoveOpponent(true, e1->GetEntityID());
-                if(opponentCount == 1)
+                e2->AddRemoveOpponent(true, e1->GetEntityID());
+                if(zone->StartStopCombat(e2->GetEntityID(), timeout))
                 {
                     battleStarted.push_back(e2);
                 }
@@ -6205,113 +6209,35 @@ bool CharacterManager::AddRemoveOpponent(
                     opponents.push_back(opponent);
                 }
             }
-        }
 
-        std::list<std::shared_ptr<ActiveEntityState>> battleStopped;
-        if(eState1->GetOpponentIDs().size() == 0)
-        {
-            battleStopped.push_back(eState1);
+            if(zone->StartStopCombat(eState1->GetEntityID(), 0))
+            {
+                // Notify player entities
+                auto state = ClientState::GetEntityClientState(eState1
+                    ->GetEntityID());
+                if(state)
+                {
+                    std::list<std::shared_ptr<ActiveEntityState>> entities;
+                    entities.push_back(state->GetCharacterState());
+                    entities.push_back(state->GetDemonState());
+
+                    for(auto entity : entities)
+                    {
+                        libcomp::Packet p;
+                        p.WritePacketCode(ChannelToClientPacketCode_t::
+                            PACKET_BATTLE_STOPPED);
+                        p.WriteS32Little(entity->GetEntityID());
+                        p.WriteFloat(entity->GetMovementSpeed());
+
+                        packets.push_back(p);
+                    }
+                }
+            }
         }
 
         for(auto opponent : opponents)
         {
             opponent->AddRemoveOpponent(false, e1ID);
-            if(opponent->GetOpponentIDs().size() == 0)
-            {
-                battleStopped.push_back(opponent);
-            }
-        }
-
-        std::set<int32_t> playerEntitiesStopped;
-        for(auto entity : battleStopped)
-        {
-            auto aiState = entity->GetAIState();
-            if(aiState)
-            {
-                aiState->SetStatus(aiState->GetDefaultStatus());
-            }
-
-            auto state = ClientState::GetEntityClientState(entity
-                ->GetEntityID());
-            if(state && !noDelay)
-            {
-                if(state->GetCharacterState()->GetOpponentIDs().size() == 0 &&
-                    state->GetDemonState()->GetOpponentIDs().size() == 0)
-                {
-                    // Queue battle end timeout
-                    playerEntitiesStopped.insert(state->GetCharacterState()
-                        ->GetEntityID());
-                }
-            }
-            else
-            {
-                // End right away
-                libcomp::Packet p;
-                p.WritePacketCode(
-                    ChannelToClientPacketCode_t::PACKET_BATTLE_STOPPED);
-                p.WriteS32Little(entity->GetEntityID());
-                p.WriteFloat(entity->GetMovementSpeed());
-
-                packets.push_back(p);
-
-                if(state)
-                {
-                    state->SetBattleEndTimer(0);
-                }
-            }
-        }
-
-        if(playerEntitiesStopped.size() > 0)
-        {
-            // Battle ends in 10s if no new one starts for each player
-            uint64_t timeout = (uint64_t)(
-                ChannelServer::GetServerTime() + 10000000ULL);
-
-            auto server = mServer.lock();
-            for(int32_t entityID : playerEntitiesStopped)
-            {
-                auto client = server->GetManagerConnection()->GetEntityClient(
-                    entityID);
-                if(client)
-                {
-                    client->GetClientState()->SetBattleEndTimer(timeout);
-                }
-            }
-
-            server->GetTimerManager()->ScheduleEventIn(10, []
-                (std::shared_ptr<ChannelServer> pServer,
-                std::set<int32_t> pEntityIDs, uint64_t pTimeout)
-                {
-                    auto zoneManager = pServer->GetZoneManager();
-                    for(int32_t pEntityID : pEntityIDs)
-                    {
-                        auto client = pServer->GetManagerConnection()
-                            ->GetEntityClient(pEntityID);
-                        auto state = client ? client->GetClientState()
-                            : nullptr;
-                        auto pZone = state ? state->GetZone() : nullptr;
-                        if(pZone && state &&
-                            state->GetBattleEndTimer() == pTimeout)
-                        {
-                            std::list<std::shared_ptr<ActiveEntityState>>
-                                playerEntities;
-                            playerEntities.push_back(state
-                                ->GetCharacterState());
-                            playerEntities.push_back(state->GetDemonState());
-
-                            for(auto eState : playerEntities)
-                            {
-                                libcomp::Packet p;
-                                p.WritePacketCode(ChannelToClientPacketCode_t::
-                                    PACKET_BATTLE_STOPPED);
-                                p.WriteS32Little(eState->GetEntityID());
-                                p.WriteFloat(eState->GetMovementSpeed());
-
-                                zoneManager->BroadcastPacket(pZone, p);
-                            }
-                        }
-                    }
-                }, server, playerEntitiesStopped, timeout);
         }
     }
 

@@ -480,8 +480,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         chargedTime = now + (chargeTime * 1000);
 
         activated->SetChargedTime(chargedTime);
-
-        source->SetActivatedAbility(activated);
+        source->SetActivatedAbility(nullptr);
 
         float chargeSpeed = 0.f, chargeCompleteSpeed = 0.f;
 
@@ -497,6 +496,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         case objects::MiSkillBasicData::ActionType_t::SHOT:
         case objects::MiSkillBasicData::ActionType_t::TALK:
         case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
+        case objects::MiSkillBasicData::ActionType_t::TAUNT:
         case objects::MiSkillBasicData::ActionType_t::SUPPORT:
             // Move after only
             chargeCompleteSpeed = source->GetMovementSpeed();
@@ -516,6 +516,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
         activated->SetChargeMoveSpeed(chargeSpeed);
         activated->SetChargeCompleteMoveSpeed(chargeCompleteSpeed);
+        source->SetActivatedAbility(activated);
 
         if(pSkill->FunctionID)
         {
@@ -780,223 +781,12 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         }
 
         auto targetEntity = zone->GetActiveEntity(targetEntityID);
-        if(!targetEntity)
+
+        int8_t errCode = ValidateSkillTarget(source, skillData,
+            targetEntity);
+        if(errCode != -1)
         {
-            SendFailure(activated, client);
-            return false;
-        }
-
-        if(!targetEntity->Ready())
-        {
-            SendFailure(activated, client,
-                (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
-            return false;
-        }
-
-        if(functionID)
-        {
-            // Check FID target state restrictions
-            bool valid = true;
-            if(functionID == SVR_CONST.SKILL_GENDER_RESTRICTED)
-            {
-                valid = (int32_t)targetEntity->GetGender() ==
-                    skillData->GetSpecial()->GetSpecialParams(0);
-            }
-            else if(functionID == SVR_CONST.SKILL_SLEEP_RESTRICTED)
-            {
-                valid = targetEntity->StatusEffectActive(SVR_CONST.STATUS_SLEEP);
-            }
-
-            if(!valid)
-            {
-                SendFailure(activated, client,
-                    (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
-                return false;
-            }
-        }
-
-        bool targetAlive = targetEntity->IsAlive();
-        bool allies = source->SameFaction(targetEntity);
-        auto targetEntityType = targetEntity->GetEntityType();
-        if(IsTalkSkill(skillData, true))
-        {
-            if(targetEntityType != EntityType_t::ENEMY)
-            {
-                SendFailure(activated, client,
-                    (uint8_t)SkillErrorCodes_t::TALK_INVALID);
-                return false;
-            }
-
-            auto enemyState = std::dynamic_pointer_cast<EnemyState>(
-                targetEntity);
-            auto enemy = enemyState ? enemyState->GetEntity() : nullptr;
-            auto spawn = enemy ? enemy->GetSpawnSource() : nullptr;
-
-            // Non-spawn and 100% talk resist enemies cannot be
-            // negotiated with
-            if(!spawn || spawn->GetTalkResist() >= 100)
-            {
-                SendFailure(activated, client,
-                    (uint8_t)SkillErrorCodes_t::TALK_INVALID);
-                return false;
-            }
-
-            // Talk restrictions apply to source and target
-            if(targetEntity->StatusRestrictTalkCount() > 0)
-            {
-                SendFailure(activated, client,
-                    (uint8_t)SkillErrorCodes_t::TALK_INVALID_STATE);
-                return false;
-            }
-
-            if((spawn->GetTalkResults() & 0x01) == 0)
-            {
-                // If an enemy can't join, fail if auto-join skill
-                auto talkDamage = skillData->GetDamage()
-                    ->GetNegotiationDamage();
-                if(!talkDamage->GetSuccessAffability() &&
-                    !talkDamage->GetFailureAffability() &&
-                    !talkDamage->GetSuccessFear() &&
-                    !talkDamage->GetFailureFear())
-                {
-                    SendFailure(activated, client,
-                        (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
-                    return false;
-                }
-            }
-
-            int8_t targetLvl = targetEntity->GetLevel();
-            if(targetLvl > source->GetLevel())
-            {
-                SendFailure(activated, client,
-                    (uint8_t)SkillErrorCodes_t::TALK_LEVEL);
-                return false;
-            }
-
-            if(!functionID)
-            {
-                // No FID, talk skills use level requirements in the params
-                auto params = skillData->GetSpecial()->GetSpecialParams();
-                if((params[0] && params[0] > (int32_t)targetLvl) ||
-                    (params[1] && params[1] < (int32_t)targetLvl))
-                {
-                    SendFailure(activated, client,
-                        (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
-                    return false;
-                }
-            }
-        }
-
-        auto sourceState = ClientState::GetEntityClientState(source
-            ->GetEntityID());
-        auto targetState = ClientState::GetEntityClientState(targetEntity
-            ->GetEntityID());
-
-        bool targetInvalid = false;
-        bool targetLivingStateInvalid = !targetAlive;
-        switch(targetType)
-        {
-        case objects::MiTargetData::Type_t::ALLY:
-            targetInvalid = !allies;
-            break;
-        case objects::MiTargetData::Type_t::DEAD_ALLY:
-            targetInvalid = !allies;
-            targetLivingStateInvalid = targetAlive;
-            if(!targetInvalid)
-            {
-                // If reviving and the target is a character (or demon in a
-                // demon only instance) and they have not accepted revival,
-                // stop here
-                bool isRevive = false;
-                switch(skillData->GetDamage()->GetBattleDamage()->GetFormula())
-                {
-                case objects::MiBattleDamageData::Formula_t::HEAL_NORMAL:
-                case objects::MiBattleDamageData::Formula_t::HEAL_STATIC:
-                case objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT:
-                    isRevive = true;
-                    break;
-                default:
-                    break;
-                }
-
-                auto targetClientState = ClientState::GetEntityClientState(
-                    targetEntityID);
-                if(isRevive && targetClientState)
-                {
-                    targetInvalid = !targetClientState->GetAcceptRevival() &&
-                        (targetClientState->GetCharacterState() == targetEntity ||
-                            (targetClientState->GetDemonState() == targetEntity &&
-                            zone->GetInstanceType() == InstanceType_t::DEMON_ONLY));
-                }
-            }
-            break;
-        case objects::MiTargetData::Type_t::PARTNER:
-            targetInvalid = !sourceState ||
-                sourceState->GetCharacterState() != source ||
-                sourceState->GetDemonState() != targetEntity;
-            break;
-        case objects::MiTargetData::Type_t::PARTY:
-            targetInvalid = !sourceState || !targetState ||
-                (sourceState->GetPartyID() &&
-                sourceState->GetPartyID() != targetState->GetPartyID()) ||
-                (!sourceState->GetPartyID() && sourceState != targetState);
-            break;
-        case objects::MiTargetData::Type_t::ENEMY:
-            targetInvalid = allies || !targetAlive;
-            break;
-        case objects::MiTargetData::Type_t::DEAD_PARTNER:
-            targetInvalid = !sourceState ||
-                sourceState->GetCharacterState() != source ||
-                sourceState->GetDemonState() != targetEntity;
-            targetLivingStateInvalid = targetAlive;
-            break;
-        case objects::MiTargetData::Type_t::OTHER_PLAYER:
-            targetInvalid = targetEntityType != EntityType_t::CHARACTER ||
-                sourceState == targetState || !allies;
-            break;
-        case objects::MiTargetData::Type_t::OTHER_DEMON:
-            targetInvalid = targetEntityType != EntityType_t::PARTNER_DEMON ||
-                (sourceState &&
-                    sourceState->GetDemonState() != targetEntity) || !allies;
-            break;
-        case objects::MiTargetData::Type_t::ALLY_PLAYER:
-            targetInvalid = targetEntityType != EntityType_t::CHARACTER ||
-                !allies;
-            break;
-        case objects::MiTargetData::Type_t::ALLY_DEMON:
-            targetInvalid = targetEntityType != EntityType_t::PARTNER_DEMON ||
-                !allies;
-            break;
-        case objects::MiTargetData::Type_t::PLAYER:
-            targetInvalid = !sourceState ||
-                sourceState->GetCharacterState() != targetEntity;
-            break;
-        default:
-            break;
-        }
-
-        if(targetInvalid)
-        {
-            if(targetEntityID == source->GetEntityID())
-            {
-                // The client has a very strange habit of setting the target
-                // as yourself for skills that should never hit you if no
-                // valid target exists (maybe a side effect of ally buff skills
-                // that don't NEED a target)
-                SendFailure(activated, client,
-                    (uint8_t)SkillErrorCodes_t::SILENT_FAIL);
-            }
-            else
-            {
-                SendFailure(activated, client,
-                    (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
-            }
-            return false;
-        }
-        else if(targetLivingStateInvalid)
-        {
-            // No message here or skill spammers would be spammed in return
-            SendFailure(activated, client);
+            SendFailure(activated, client, (uint8_t)errCode);
             return false;
         }
 
@@ -1187,6 +977,215 @@ bool SkillManager::SkillRestricted(const std::shared_ptr<ActiveEntityState> sour
     default:
         return false;
     }
+}
+
+int8_t SkillManager::ValidateSkillTarget(
+    const std::shared_ptr<ActiveEntityState> source,
+    const std::shared_ptr<objects::MiSkillData>& skillData,
+    const std::shared_ptr<ActiveEntityState>& target)
+{
+    if(!target)
+    {
+        return (int8_t)SkillErrorCodes_t::SILENT_FAIL;
+    }
+
+    if(!target->Ready())
+    {
+        return (int8_t)SkillErrorCodes_t::TARGET_INVALID;
+    }
+
+    uint16_t functionID = skillData->GetDamage()->GetFunctionID();
+    if(functionID)
+    {
+        // Check FID target state restrictions
+        bool valid = true;
+        if(functionID == SVR_CONST.SKILL_GENDER_RESTRICTED)
+        {
+            valid = (int32_t)target->GetGender() ==
+                skillData->GetSpecial()->GetSpecialParams(0);
+        }
+        else if(functionID == SVR_CONST.SKILL_SLEEP_RESTRICTED)
+        {
+            valid = target->StatusEffectActive(SVR_CONST.STATUS_SLEEP);
+        }
+
+        if(!valid)
+        {
+            return (int8_t)SkillErrorCodes_t::TARGET_INVALID;
+        }
+    }
+
+    bool targetAlive = target->IsAlive();
+    bool allies = source->SameFaction(target);
+    auto targetEntityType = target->GetEntityType();
+    if(IsTalkSkill(skillData, true))
+    {
+        if(targetEntityType != EntityType_t::ENEMY)
+        {
+            return (int8_t)SkillErrorCodes_t::TALK_INVALID;
+        }
+
+        auto enemyState = std::dynamic_pointer_cast<EnemyState>(
+            target);
+        auto enemy = enemyState ? enemyState->GetEntity() : nullptr;
+        auto spawn = enemy ? enemy->GetSpawnSource() : nullptr;
+
+        // Non-spawn and 100% talk resist enemies cannot be
+        // negotiated with
+        if(!spawn || spawn->GetTalkResist() >= 100)
+        {
+            return (int8_t)SkillErrorCodes_t::TALK_INVALID;
+        }
+
+        // Talk restrictions apply to source and target
+        if(target->StatusRestrictTalkCount() > 0)
+        {
+            return (int8_t)SkillErrorCodes_t::TALK_INVALID_STATE;
+        }
+
+        if((spawn->GetTalkResults() & 0x01) == 0)
+        {
+            // If an enemy can't join, fail if auto-join skill
+            auto talkDamage = skillData->GetDamage()
+                ->GetNegotiationDamage();
+            if(!talkDamage->GetSuccessAffability() &&
+                !talkDamage->GetFailureAffability() &&
+                !talkDamage->GetSuccessFear() &&
+                !talkDamage->GetFailureFear())
+            {
+                return (int8_t)SkillErrorCodes_t::TARGET_INVALID;
+            }
+        }
+
+        int8_t targetLvl = target->GetLevel();
+        if(targetLvl > source->GetLevel())
+        {
+            return (int8_t)SkillErrorCodes_t::TALK_LEVEL;
+        }
+
+        if(!functionID)
+        {
+            // No FID, talk skills use level requirements in the params
+            auto params = skillData->GetSpecial()->GetSpecialParams();
+            if((params[0] && params[0] > (int32_t)targetLvl) ||
+                (params[1] && params[1] < (int32_t)targetLvl))
+            {
+                return (int8_t)SkillErrorCodes_t::TARGET_INVALID;
+            }
+        }
+    }
+
+    auto sourceState = ClientState::GetEntityClientState(source
+        ->GetEntityID());
+    auto targetState = ClientState::GetEntityClientState(target
+        ->GetEntityID());
+
+    bool targetInvalid = false;
+    bool targetLivingStateInvalid = !targetAlive;
+    switch(skillData->GetTarget()->GetType())
+    {
+    case objects::MiTargetData::Type_t::ALLY:
+        targetInvalid = !allies;
+        break;
+    case objects::MiTargetData::Type_t::DEAD_ALLY:
+        targetInvalid = !allies;
+        targetLivingStateInvalid = targetAlive;
+        if(!targetInvalid)
+        {
+            // If reviving and the target is a character (or demon in a
+            // demon only instance) and they have not accepted revival,
+            // stop here
+            bool isRevive = false;
+            switch(skillData->GetDamage()->GetBattleDamage()->GetFormula())
+            {
+            case objects::MiBattleDamageData::Formula_t::HEAL_NORMAL:
+            case objects::MiBattleDamageData::Formula_t::HEAL_STATIC:
+            case objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT:
+                isRevive = true;
+                break;
+            default:
+                break;
+            }
+
+            auto targetClientState = ClientState::GetEntityClientState(
+                target->GetEntityID());
+            auto zone = target->GetZone();
+            if(isRevive && targetClientState && zone)
+            {
+                targetInvalid = !targetClientState->GetAcceptRevival() &&
+                    (targetClientState->GetCharacterState() == target ||
+                        (targetClientState->GetDemonState() == target &&
+                        zone->GetInstanceType() == InstanceType_t::DEMON_ONLY));
+            }
+        }
+        break;
+    case objects::MiTargetData::Type_t::PARTNER:
+        targetInvalid = !sourceState ||
+            sourceState->GetCharacterState() != source ||
+            sourceState->GetDemonState() != target;
+        break;
+    case objects::MiTargetData::Type_t::PARTY:
+        targetInvalid = !sourceState || !targetState ||
+            (sourceState->GetPartyID() &&
+            sourceState->GetPartyID() != targetState->GetPartyID()) ||
+            (!sourceState->GetPartyID() && sourceState != targetState);
+        break;
+    case objects::MiTargetData::Type_t::ENEMY:
+        targetInvalid = allies || !targetAlive;
+        break;
+    case objects::MiTargetData::Type_t::DEAD_PARTNER:
+        targetInvalid = !sourceState ||
+            sourceState->GetCharacterState() != source ||
+            sourceState->GetDemonState() != target;
+        targetLivingStateInvalid = targetAlive;
+        break;
+    case objects::MiTargetData::Type_t::OTHER_PLAYER:
+        targetInvalid = targetEntityType != EntityType_t::CHARACTER ||
+            sourceState == targetState || !allies;
+        break;
+    case objects::MiTargetData::Type_t::OTHER_DEMON:
+        targetInvalid = targetEntityType != EntityType_t::PARTNER_DEMON ||
+            (sourceState &&
+                sourceState->GetDemonState() != target) || !allies;
+        break;
+    case objects::MiTargetData::Type_t::ALLY_PLAYER:
+        targetInvalid = targetEntityType != EntityType_t::CHARACTER ||
+            !allies;
+        break;
+    case objects::MiTargetData::Type_t::ALLY_DEMON:
+        targetInvalid = targetEntityType != EntityType_t::PARTNER_DEMON ||
+            !allies;
+        break;
+    case objects::MiTargetData::Type_t::PLAYER:
+        targetInvalid = !sourceState ||
+            sourceState->GetCharacterState() != target;
+        break;
+    default:
+        break;
+    }
+
+    if(targetInvalid)
+    {
+        if(target == source)
+        {
+            // The client has a very strange habit of setting the target
+            // as yourself for skills that should never hit you if no
+            // valid target exists (maybe a side effect of ally buff skills
+            // that don't NEED a target)
+            return (int8_t)SkillErrorCodes_t::SILENT_FAIL;
+        }
+        else
+        {
+            return (int8_t)SkillErrorCodes_t::TARGET_INVALID;
+        }
+    }
+    else if(targetLivingStateInvalid)
+    {
+        // No message here or skill spammers would be spammed in return
+        return (int8_t)SkillErrorCodes_t::SILENT_FAIL;
+    }
+
+    return -1;
 }
 
 bool SkillManager::PrepareFusionSkill(
@@ -1388,9 +1387,10 @@ bool SkillManager::PrepareFusionSkill(
 bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
     std::shared_ptr<SkillExecutionContext> ctx)
 {
-    auto source = pSkill->EffectiveSource;
     auto zone = pSkill->CurrentZone;
     auto activated = pSkill->Activated;
+    auto source = activated ? std::dynamic_pointer_cast<ActiveEntityState>(
+        activated->GetSourceEntity()) : nullptr;
     if(!source || !zone || source->GetZone() != zone)
     {
         LOG_DEBUG(libcomp::String("Fizzling starting skill with no source or a"
@@ -1474,7 +1474,8 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
                     if((float)maxTargetRange < distance)
                     {
                         // Out of range, fail execution
-                        SendFailure(activated, client);
+                        SendFailure(activated, client,
+                            (uint8_t)SkillErrorCodes_t::TOO_FAR);
                         return false;
                     }
                 }
@@ -1553,15 +1554,16 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
         server->ScheduleWork(processTime, []
             (std::shared_ptr<ChannelServer> pServer,
             std::shared_ptr<ProcessingSkill> prSkill,
-            std::shared_ptr<SkillExecutionContext> pCtx)
+            std::shared_ptr<SkillExecutionContext> pCtx,
+            uint64_t pSyncTime)
             {
                 pServer->GetSkillManager()->CompleteSkillExecution(prSkill,
-                    pCtx);
-            }, server, pSkill, ctx);
+                    pCtx, pSyncTime);
+            }, server, pSkill, ctx, processTime);
     }
     else
     {
-        return CompleteSkillExecution(pSkill, ctx);
+        return CompleteSkillExecution(pSkill, ctx, processTime);
     }
 
     return true;
@@ -1569,11 +1571,12 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
 
 bool SkillManager::CompleteSkillExecution(
     std::shared_ptr<ProcessingSkill> pSkill,
-    std::shared_ptr<SkillExecutionContext> ctx)
+    std::shared_ptr<SkillExecutionContext> ctx, uint64_t syncTime)
 {
-    auto source = pSkill->EffectiveSource;
     auto zone = pSkill->CurrentZone;
     auto activated = pSkill->Activated;
+    auto source = activated ? std::dynamic_pointer_cast<ActiveEntityState>(
+        activated->GetSourceEntity()) : nullptr;
     if(!source || !zone || source->GetZone() != zone)
     {
         LOG_DEBUG(libcomp::String("Fizzling skill with no source or a"
@@ -1616,7 +1619,7 @@ bool SkillManager::CompleteSkillExecution(
         }
     }
 
-    if(!ctx->FastTrack)
+    if(!ctx->FastTrack || ctx->Fizzle)
     {
         // Continue on with a copy if more uses exist
         pSkill->Activated = activated = FinalizeSkill(ctx, activated);
@@ -1659,21 +1662,38 @@ bool SkillManager::CompleteSkillExecution(
                 double distance = (double)source->GetDistance(target
                     ->GetCurrentX(), target->GetCurrentY());
 
-                // Projectile speed is measured in how many 10ths of a unit the
-                // projectile will traverse per millisecond (with a half second
-                // delay for the default cast to projectile move speed)
-                uint32_t projectileSpeed = pSkill->Definition->GetDischarge()
-                    ->GetProjectileSpeed();
-                uint64_t projectileTime = (uint64_t)(distance /
-                    (double)(projectileSpeed * 10) * 1000000.0);
+                auto discharge = pSkill->Definition->GetDischarge();
+                if(discharge->GetShotInterruptible())
+                {
+                    // Normal projectile speed is measured in how many 10ths of
+                    // a unit the projectile will traverse per millisecond
+                    // (with a half second delay for the default cast to
+                    // projectile move speed)
+                    uint32_t projectileSpeed = discharge->GetProjectileSpeed();
+                    uint64_t projectileTime = (uint64_t)(distance /
+                        (double)(projectileSpeed * 10 + 400) * 1000000.0);
 
-                delay = (uint64_t)(delay + projectileTime);
+                    delay = (uint64_t)(delay + projectileTime);
+                }
+                else
+                {
+                    // Non-interruptible projectiles are unique in the sense
+                    // that they process timing at the same points as normal
+                    // ones but they do not have an effective projectile time
+                    delay = (uint64_t)(delay + 1);
+                }
+
+                if(!delay)
+                {
+                    // Projectiles require a delay, even if its miniscule
+                    delay = 1;
+                }
             }
         }
 
         if(delay)
         {
-            delay = ChannelServer::GetServerTime() + delay;
+            delay = syncTime + delay;
             activated->SetHitTime(delay);
 
             auto server = mServer.lock();
@@ -1687,7 +1707,7 @@ bool SkillManager::CompleteSkillExecution(
         }
         else
         {
-            activated->SetHitTime(ChannelServer::GetServerTime());
+            activated->SetHitTime(syncTime);
 
             return ProcessSkillResult(activated, ctx);
         }
@@ -1744,8 +1764,10 @@ std::shared_ptr<objects::ActivatedAbility> SkillManager::GetActivation(
     activated = source ? source->GetActivatedAbility() : nullptr;
     if(nullptr == activated || activationID != activated->GetActivationID())
     {
-        LOG_ERROR(libcomp::String("Unknown activation ID encountered: %1\n")
-            .Arg(activationID));
+        // Commenting out because this is way too common during normal combat
+        // between two very active entities
+        /*LOG_ERROR(libcomp::String("Unknown activation ID encountered: %1\n")
+            .Arg(activationID));*/
         return nullptr;
     }
 
@@ -2200,11 +2222,8 @@ bool SkillManager::ExecuteNormalSkill(
 
     if(retry)
     {
-        if(client)
-        {
-            SendFailure(activated, client,
-                (uint8_t)SkillErrorCodes_t::ACTION_RETRY);
-        }
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::ACTION_RETRY);
 
         return true;
     }
@@ -2721,6 +2740,20 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         skill.Targets.push_back(target);
     }
 
+    if(skillData->GetBasic()->GetCombatSkill())
+    {
+        // Update all opponents
+        auto characterManager = server->GetCharacterManager();
+        for(auto& target : skill.Targets)
+        {
+            if(!source->SameFaction(target.EntityState))
+            {
+                characterManager->AddRemoveOpponent(true, source,
+                    target.EntityState);
+            }
+        }
+    }
+
     // Finalize the skill processing
     ProcessSkillResultFinal(pSkill, ctx);
 
@@ -3213,8 +3246,10 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             auto eState = target.EntityState;
             uint8_t cancelFlags = target.EffectCancellations;
 
+            bool cancelled = false;
+
             auto keep = eState->IsAlive() ? keepEffects : std::set<uint32_t>();
-            eState->CancelStatusEffects(cancelFlags, keep);
+            eState->CancelStatusEffects(cancelFlags, cancelled, keep);
 
             // Check for skills that need to be cancelled
             if(cancelFlags & (EFFECT_CANCEL_DAMAGE | EFFECT_CANCEL_KNOCKBACK) &&
@@ -3287,7 +3322,11 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 }
             }
 
-            target.RecalcTriggers.insert(TokuseiConditionType::STATUS_ACTIVE);
+            if(cancelled)
+            {
+                target.RecalcTriggers.insert(
+                    TokuseiConditionType::STATUS_ACTIVE);
+            }
         }
     }
 
@@ -3617,8 +3656,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                         }
                         else
                         {
-                            // Apply ailment damage after hit stop
+                            // Apply ailment damage after hit stop and extend
+                            // knockback time
                             hitTimings[2] = hitStopTime + target.AilmentDamageTime;
+
+                            target.EntityState->SetStatusTimes(STATUS_KNOCKBACK,
+                                hitTimings[2]);
                         }
                     }
                     else
@@ -5520,7 +5563,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 }
             }
 
-            auto drops = GetItemDrops(spawn, zone);
+            auto drops = GetItemDrops(source, spawn, zone);
 
             if(validLooterIDs.size() > 0)
             {
@@ -6690,8 +6733,8 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
                     lBox->SetType(objects::LootBox::Type_t::GIFT_BOX);
                     lBox->SetEnemy(enemy);
 
-                    auto drops = GetItemDrops(enemy->GetSpawnSource(), zone,
-                        true);
+                    auto drops = GetItemDrops(source, enemy->GetSpawnSource(),
+                        zone, true);
                     auto gifts = drops[(uint8_t)objects::DropSet::Type_t::NORMAL];
                     characterManager->CreateLootFromDrops(lBox, gifts,
                         source->GetLUCK(), true);
@@ -8240,9 +8283,11 @@ int8_t SkillManager::CalculateStatusEffectStack(int8_t minStack, int8_t maxStack
         : (int8_t)RNG(int16_t, (int16_t)minStack, (int16_t)maxStack);
 }
 
-std::unordered_map<uint8_t, std::list<std::shared_ptr<objects::ItemDrop>>>
-    SkillManager::GetItemDrops(const std::shared_ptr<objects::Spawn>& spawn,
-    const std::shared_ptr<Zone>& zone, bool giftMode) const
+std::unordered_map<uint8_t, std::list<
+    std::shared_ptr<objects::ItemDrop>>> SkillManager::GetItemDrops(
+    const std::shared_ptr<ActiveEntityState>& source,
+    const std::shared_ptr<objects::Spawn>& spawn,
+    const std::shared_ptr<Zone>& zone, bool giftMode)
 {
     std::unordered_map<uint8_t,
         std::list<std::shared_ptr<objects::ItemDrop>>> drops;
@@ -8358,13 +8403,22 @@ std::unordered_map<uint8_t, std::list<std::shared_ptr<objects::ItemDrop>>>
 
                         uint16_t min = copy->GetMinStack();
                         uint16_t max = copy->GetMaxStack();
-                        float multiplier = (float)spawn->GetLevel() *
-                            copy->GetMultiplier();
+                        float multiplier = (float)GetSpawnLevel(spawn) *
+                            copy->GetModifier();
 
                         copy->SetMinStack((uint16_t)((float)min * multiplier));
                         copy->SetMaxStack((uint16_t)((float)max * multiplier));
 
                         drops[type].push_back(copy);
+                    }
+                    break;
+                case objects::ItemDrop::Type_t::RELATIVE_LEVEL_MIN:
+                    // Only add if the relative spawn's level is at least the
+                    // same as the source's level + the modifier
+                    if((int32_t)GetSpawnLevel(spawn) >=
+                        (int32_t)(source->GetLevel() + drop->GetModifier()))
+                    {
+                        drops[type].push_back(drop);
                     }
                     break;
                 case objects::ItemDrop::Type_t::NORMAL:
@@ -8514,11 +8568,6 @@ void SkillManager::FinalizeSkillExecution(
                 {
                     pSkill->HardStrike = true;
                 }
-            }
-
-            if(!source->SameFaction(target))
-            {
-                characterManager->AddRemoveOpponent(true, source, target);
             }
         }
     }
@@ -11213,6 +11262,27 @@ bool SkillManager::IsTalkSkill(const std::shared_ptr<
     }
 
     return false;
+}
+
+int8_t SkillManager::GetSpawnLevel(
+    const std::shared_ptr<objects::Spawn>& spawn)
+{
+    if(spawn)
+    {
+        if(spawn->GetLevel() != -1)
+        {
+            return spawn->GetLevel();
+        }
+
+        auto devilData = mServer.lock()->GetDefinitionManager()->GetDevilData(
+            spawn->GetEnemyType());
+        if(devilData)
+        {
+            return (int8_t)devilData->GetGrowth()->GetBaseLevel();
+        }
+    }
+
+    return 0;
 }
 
 bool SkillManager::IFramesEnabled()

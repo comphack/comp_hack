@@ -137,6 +137,7 @@
         <member type="set" name="AggroIDs">
             <element type="s32"/>
         </member>
+        <member type="u64" name="CombatTimeOut"/>
 
         <member type="set" name="CurrentSkills">
             <element type="u32"/>

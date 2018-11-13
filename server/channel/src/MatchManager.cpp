@@ -4929,23 +4929,31 @@ void MatchManager::SendUltimateBattleMemberState(
         for(int32_t entityID : { cState->GetEntityID(), dState->GetEntityID()})
         {
             auto eState = s->GetEntityState(entityID);
-            auto cs = eState->GetCoreStats();
-
-            p.WriteS32Little(entityID);
-            p.WriteS8(eState->GetLevel());
-            p.WriteS32Little(cs ? cs->GetHP() : 0);
-            p.WriteS32Little(eState->GetMaxHP());
-            p.WriteS32Little(cs ? cs->GetMP() : 0);
-            p.WriteS32Little(eState->GetMaxMP());
-
-            auto statusEffects = eState->GetCurrentStatusEffectStates();
-
-            p.WriteS32Little((int32_t)statusEffects.size());
-            for(auto ePair : statusEffects)
+            if(eState)
             {
-                p.WriteU32Little(ePair.first->GetEffect());
-                p.WriteS32Little((int32_t)ePair.second);
-                p.WriteU8(ePair.first->GetStack());
+                auto cs = eState->GetCoreStats();
+
+                p.WriteS32Little(entityID);
+                p.WriteS8(eState->GetLevel());
+                p.WriteS32Little(cs ? cs->GetHP() : 0);
+                p.WriteS32Little(eState->GetMaxHP());
+                p.WriteS32Little(cs ? cs->GetMP() : 0);
+                p.WriteS32Little(eState->GetMaxMP());
+
+                auto statusEffects = eState->GetCurrentStatusEffectStates();
+
+                p.WriteS32Little((int32_t)statusEffects.size());
+                for(auto ePair : statusEffects)
+                {
+                    p.WriteU32Little(ePair.first->GetEffect());
+                    p.WriteS32Little((int32_t)ePair.second);
+                    p.WriteU8(ePair.first->GetStack());
+                }
+            }
+            else
+            {
+                p.WriteS32Little(-1);
+                p.WriteBlank(21);
             }
         }
 

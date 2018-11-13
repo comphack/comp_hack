@@ -29,6 +29,8 @@
 
 // object Includes
 #include <ActivatedAbility.h>
+#include <MiSkillData.h>
+#include <MiSkillItemStatusCommonData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -86,10 +88,25 @@ void AICommand::SetTargetEntityID(int32_t targetEntityID)
 AIMoveCommand::AIMoveCommand()
 {
     mType = AICommandType_t::MOVE;
+    mMinimumTargetDistance = 0.f;
+    mMaximumTargetDistance = 0.f;
+}
+
+AIMoveCommand::AIMoveCommand(int32_t targetEntityID, float minimumDistance,
+    float maximumDistance)
+{
+    SetTargetEntityID(targetEntityID);
+    mMinimumTargetDistance = minimumDistance;
+    mMaximumTargetDistance = maximumDistance;
 }
 
 AIMoveCommand::~AIMoveCommand()
 {
+}
+
+std::list<Point> AIMoveCommand::GetPathing() const
+{
+    return mPathing;
 }
 
 void AIMoveCommand::SetPathing(const std::list<Point>& pathing)
@@ -141,22 +158,41 @@ bool AIMoveCommand::SetNextDestination()
     return mPathing.size() > 0;
 }
 
-AIUseSkillCommand::AIUseSkillCommand(uint32_t skillID, int32_t targetEntityID)
+float AIMoveCommand::GetTargetDistance(bool min) const
+{
+    return min ? mMinimumTargetDistance : mMaximumTargetDistance;
+}
+
+void AIMoveCommand::SetTargetDistance(float distance, bool min)
+{
+    if(min)
+    {
+        mMinimumTargetDistance = distance;
+    }
+    else
+    {
+        mMaximumTargetDistance = distance;
+    }
+}
+
+AIUseSkillCommand::AIUseSkillCommand(
+    const std::shared_ptr<objects::MiSkillData>& skillData,
+    int32_t targetEntityID)
 {
     mType = AICommandType_t::USE_SKILL;
-    mSkillID = skillID;
+    mSkillData = skillData;
     mTargetEntityID = targetEntityID;
 }
 
 AIUseSkillCommand::AIUseSkillCommand(
+    const std::shared_ptr<objects::MiSkillData>& skillData,
     const std::shared_ptr<objects::ActivatedAbility>& activated)
 {
     mType = AICommandType_t::USE_SKILL;
+    mSkillData = skillData;
     mActivated = activated;
     if(activated)
     {
-        mSkillID = activated->GetSkillID();
-
         // AI cannot target non-entities
         mTargetEntityID = (int32_t)activated->GetTargetObjectID();
     }
@@ -168,7 +204,12 @@ AIUseSkillCommand::~AIUseSkillCommand()
 
 uint32_t AIUseSkillCommand::GetSkillID() const
 {
-    return mSkillID;
+    return mSkillData ? mSkillData->GetCommon()->GetID() : 0;
+}
+
+std::shared_ptr<objects::MiSkillData> AIUseSkillCommand::GetSkillData() const
+{
+    return mSkillData;
 }
 
 void AIUseSkillCommand::SetActivatedAbility(const std::shared_ptr<

@@ -136,7 +136,20 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WriteS32Little(shopID);
     reply.WriteS32Little((int32_t)trendTime);
 
-    reply.WriteU16Little(0);    // Deprecated ID
+    switch(shopData->GetRepairType())
+    {
+    case objects::ServerShop::RepairType_t::WEAPON_ONLY:
+        reply.WriteU16Little(0x0100);
+        break;
+    case objects::ServerShop::RepairType_t::ARMOR_ONLY:
+        reply.WriteU16Little(0x0200);
+        break;
+    default:
+    case objects::ServerShop::RepairType_t::ANY:
+        reply.WriteU16Little(0);
+        break;
+    }
+
     reply.WriteFloat(shopData->GetRepairCostMultiplier());
     reply.WriteFloat(shopData->GetRepairRate());
     reply.WriteU8(shopData->GetLNCAdjust() ? 1 : 0);

@@ -30,6 +30,9 @@
 #include <MiAIData.h>
 #include <MiFindInfo.h>
 
+// channel Includes
+#include "ChannelServer.h"
+
 using namespace channel;
 
 namespace libcomp
@@ -57,6 +60,18 @@ namespace libcomp
             e.Const("COMBAT", (int32_t)AIStatus_t::COMBAT);
 
             Sqrat::ConstTable(mVM).Enum("AIStatus_t", e);
+
+            e = Sqrat::Enumeration(mVM);
+            e.Const("CLSR", AI_SKILL_TYPE_CLSR);
+            e.Const("LNGR", AI_SKILL_TYPE_LNGR);
+            e.Const("DEF", AI_SKILL_TYPE_DEF);
+            e.Const("HEAL", AI_SKILL_TYPE_HEAL);
+            e.Const("SUPPORT", AI_SKILL_TYPE_SUPPORT);
+            e.Const("ENEMY", AI_SKILL_TYPES_ENEMY);
+            e.Const("ALLY", AI_SKILL_TYPES_ALLY);
+            e.Const("ALL", AI_SKILL_TYPES_ALL);
+
+            Sqrat::ConstTable(mVM).Enum("AISkillType_t", e);
         }
 
         return *this;
@@ -93,15 +108,43 @@ bool AIState::SetStatus(AIStatus_t status, bool isDefault)
         return false;
     }
 
-    std::lock_guard<std::mutex> lock(mFieldLock);
-    mStatusChanged = mStatus != status;
-
-    mPreviousStatus = mStatus;
-    mStatus = status;
-
-    if(isDefault)
+    bool startDespawnTimer = false;
+    bool endDespawnTimer = false;
     {
-        mDefaultStatus = status;
+        std::lock_guard<std::mutex> lock(mFieldLock);
+        mStatusChanged = mStatus != status;
+
+        mPreviousStatus = mStatus;
+        mStatus = status;
+
+        if(isDefault)
+        {
+            mDefaultStatus = status;
+        }
+        else if(mStatusChanged)
+        {
+            if(status == AIStatus_t::WANDERING)
+            {
+                // Set if switching to wandering
+                startDespawnTimer = GetDespawnWhenLost();
+            }
+            else if(GetDespawnTimeout())
+            {
+                // Clear if switching to anything else
+                endDespawnTimer = true;
+            }
+        }
+    }
+
+    if(startDespawnTimer)
+    {
+        // Most entities despawn when switching to wandering after 5 minutes
+        // if they don't make their way back to their spawn location
+        SetDespawnTimeout(ChannelServer::GetServerTime() + 300000000ULL);
+    }
+    else if(endDespawnTimer)
+    {
+        SetDespawnTimeout(0);
     }
 
     return true;
@@ -142,9 +185,10 @@ float AIState::GetAggroValue(uint8_t mode, bool fov, float defaultVal)
         auto fInfo = mode == 0 ? aiData->GetAggroNormal()
             : (mode == 1 ? aiData->GetAggroNight() : aiData->GetAggroCast());
 
-        return fov
+        float val = fov
             ? ((float)fInfo->GetFOV() / 360.f * 3.14f)
             : (400.f + (float)fInfo->GetDistance() * 10.f);
+        return val * GetAwareness();
     }
 
     return defaultVal;
@@ -155,15 +199,25 @@ std::shared_ptr<AICommand> AIState::GetCurrentCommand() const
     return mCurrentCommand;
 }
 
-void AIState::QueueCommand(const std::shared_ptr<AICommand>& command)
+void AIState::QueueCommand(const std::shared_ptr<AICommand>& command,
+    bool interrupt)
 {
     std::lock_guard<std::mutex> lock(mFieldLock);
-    mCommandQueue.push_back(command);
-
-    if(mCommandQueue.size() == 1)
+    if(interrupt)
     {
+        mCommandQueue.push_front(command);
         mCurrentCommand = command;
     }
+    else
+    {
+        mCommandQueue.push_back(command);
+
+        if(mCommandQueue.size() == 1)
+        {
+            mCurrentCommand = command;
+        }
+    }
+
 }
 
 void AIState::ClearCommands()
@@ -173,13 +227,25 @@ void AIState::ClearCommands()
     mCurrentCommand = nullptr;
 }
 
-std::shared_ptr<AICommand> AIState::PopCommand()
+std::shared_ptr<AICommand> AIState::PopCommand(
+    const std::shared_ptr<AICommand>& specific)
 {
     std::lock_guard<std::mutex> lock(mFieldLock);
-    if(mCommandQueue.size() > 0)
+    if(specific)
     {
-        auto command = mCommandQueue.front();
-        mCommandQueue.pop_front();
+        mCommandQueue.remove_if([specific]
+            (const std::shared_ptr<AICommand>& cmd)
+            {
+                return cmd == specific;
+            });
+    }
+    else
+    {
+        if(mCommandQueue.size() > 0)
+        {
+            auto command = mCommandQueue.front();
+            mCommandQueue.pop_front();
+        }
     }
 
     mCurrentCommand = nullptr;
@@ -199,14 +265,12 @@ void AIState::ResetSkillsMapped()
     mSkillMap.clear();
 }
 
-std::unordered_map<uint16_t,
-    std::list<std::shared_ptr<objects::MiSkillData>>> AIState::GetSkillMap() const
+AISkillMap_t AIState::GetSkillMap() const
 {
     return mSkillMap;
 }
 
-void AIState::SetSkillMap(const std::unordered_map<uint16_t,
-    std::list<std::shared_ptr<objects::MiSkillData>>> &skillMap)
+void AIState::SetSkillMap(const AISkillMap_t& skillMap)
 {
     std::lock_guard<std::mutex> lock(mFieldLock);
     mSkillMap = skillMap;

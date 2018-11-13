@@ -34,6 +34,7 @@
 #include <Randomizer.h>
 #include <ScriptEngine.h>
 #include <ServerDataManager.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <ActivatedAbility.h>
@@ -56,11 +57,13 @@
 #include <MiTargetData.h>
 #include <Spawn.h>
 #include <SpawnLocation.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "AICommand.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 #include "SkillManager.h"
 #include "ZoneManager.h"
 
@@ -81,9 +84,13 @@ namespace libcomp
             Sqrat::Class<AIManager,
                 Sqrat::NoConstructor<AIManager>> binding(mVM, "AIManager");
             binding
-                .Func("Move", &AIManager::Move)
+                .Func("QueueMoveCommand", &AIManager::QueueMoveCommand)
                 .Func("QueueScriptCommand", &AIManager::QueueScriptCommand)
-                .Func("QueueWaitCommand", &AIManager::QueueWaitCommand);
+                .Func("QueueUseSkillCommand", &AIManager::QueueUseSkillCommand)
+                .Func("QueueWaitCommand", &AIManager::QueueWaitCommand)
+                .Func("Chase", &AIManager::Chase)
+                .Func("Circle", &AIManager::Circle)
+                .Func("Retreat", &AIManager::Retreat);
 
             Bind<AIManager>("AIManager", binding);
         }
@@ -112,10 +119,20 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
     eState->SetAIState(aiState);
 
     auto eBase = eState->GetEnemyBase();
-    if(eBase && (eBase->GetSpawnLocation() || eBase->GetSpawnSpotID()))
+    if(eBase)
     {
-        // Default to wandering first
-        aiState->SetStatus(AIStatus_t::WANDERING, true);
+        if(eBase->GetSpawnLocation() || eBase->GetSpawnSpotID())
+        {
+            // Default to wandering first
+            aiState->SetStatus(AIStatus_t::WANDERING, true);
+        }
+
+        if(eBase->GetEncounterID())
+        {
+            // Nothing with an encounter ID despawns when lost or we could
+            // potentially break defeat actions by accident
+            aiState->SetDespawnWhenLost(false);
+        }
     }
 
     auto spawn = eBase ? eBase->GetSpawnSource() : nullptr;
@@ -190,6 +207,7 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
 
     // The first command all AI perform is a wait command for a set time
     QueueWaitCommand(aiState, 3000);
+    aiState->ResetStatusChanged();
 
     return true;
 }
@@ -280,8 +298,6 @@ void AIManager::CombatSkillHit(
     const std::shared_ptr<ActiveEntityState>& source,
     const std::shared_ptr<objects::MiSkillData>& skillData)
 {
-    (void)skillData;
-
     for(auto eState : entities)
     {
         auto aiState = eState->GetAIState();
@@ -297,7 +313,25 @@ void AIManager::CombatSkillHit(
             aiState->PopCommand();
         }
 
-        /// @todo: add override
+        if(aiState->ActionOverridesKeyExists("combatSkillHit"))
+        {
+            libcomp::String fOverride = aiState->GetActionOverrides(
+                "combatSkillHit");
+
+            Sqrat::Function f(Sqrat::RootTable(aiState->GetScript()->GetVM()),
+                !fOverride.IsEmpty() ? "combatSkillHit" : fOverride.C());
+
+            /// @todo: bind MiSkillData and pass that
+            auto scriptResult = !f.IsNull()
+                ? f.Evaluate<int32_t>(eState, this, source,
+                    skillData->GetCommon()->GetID()) : 0;
+            if(!scriptResult || *scriptResult == 0)
+            {
+                // Do not continue
+                return;
+            }
+        }
+
         if(!eState->SameFaction(source))
         {
             // If the entity's current target is not the source of this skill,
@@ -306,7 +340,7 @@ void AIManager::CombatSkillHit(
             if(aiState->GetTargetEntityID() != source->GetEntityID() &&
                 RNG(int32_t, 1, 10) <= 2)
             {
-                aiState->SetTargetEntityID(source->GetEntityID());
+                UpdateAggro(eState, source->GetEntityID());
             }
 
             // If the entity is not active, clear all pending commands
@@ -332,11 +366,10 @@ void AIManager::CombatSkillComplete(
         return;
     }
 
-    uint32_t skillID = skillData->GetCommon()->GetID();
-
     // Multiple triggers in combat cause normal AI to reset and reorient
     // itself so they're not spamming skills non-stop
     bool reset = false;
+    bool wait = true;
     if(target)
     {
         if(target->GetStatusTimes(STATUS_KNOCKBACK))
@@ -348,7 +381,7 @@ void AIManager::CombatSkillComplete(
         else if(eState->GetStatusTimes(STATUS_HIT_STUN))
         {
             // If the source is hitstunned for whatever reason (counter
-            // or guard for example), reset
+            // or guard for example)
             reset = true;
         }
         else if(!skillData->GetTarget()->GetRange() &&
@@ -376,7 +409,7 @@ void AIManager::CombatSkillComplete(
 
             if(combo && !aiState->GetCurrentCommand())
             {
-                auto cmd = std::make_shared<AIUseSkillCommand>(skillID,
+                auto cmd = std::make_shared<AIUseSkillCommand>(skillData,
                     target->GetEntityID());
                 aiState->QueueCommand(cmd);
             }
@@ -385,62 +418,329 @@ void AIManager::CombatSkillComplete(
                 reset = true;
             }
         }
-        else if(activated->GetExecuteCount() >= activated->GetMaxUseCount())
+        else
         {
-            // Other skills should be staggered by thinkspeed unless
-            // more executions exist
-            reset = true;
+            // Check what kind of skill it was to decide how to handle
+            switch(skillData->GetBasic()->GetActionType())
+            {
+            case objects::MiSkillBasicData::ActionType_t::GUARD:
+            case objects::MiSkillBasicData::ActionType_t::COUNTER:
+            case objects::MiSkillBasicData::ActionType_t::DODGE:
+                // Reset actions but do not wait
+                reset = true;
+                wait = false;
+                break;
+            default:
+                // Other skills should be staggered by thinkspeed unless
+                // more executions exist
+                reset = activated->GetExecuteCount() >= activated
+                    ->GetMaxUseCount();
+                break;
+            }
         }
     }
 
     if(reset)
     {
         aiState->ClearCommands();
-        QueueWaitCommand(aiState, (uint32_t)aiState->GetThinkSpeed());
+        if(wait)
+        {
+            QueueWaitCommand(aiState, (uint32_t)aiState->GetThinkSpeed());
+        }
     }
 }
 
-void AIManager::QueueScriptCommand(const std::shared_ptr<AIState>& aiState,
-    const libcomp::String& functionName)
+bool AIManager::QueueMoveCommand(const std::shared_ptr<ActiveEntityState>& eState,
+    float x, float y, bool interrupt)
 {
-    auto cmd = std::make_shared<AIScriptedCommand>(functionName);
-    aiState->QueueCommand(cmd);
+    auto aiState = eState ? eState->GetAIState() : nullptr;
+    if(!aiState)
+    {
+        return false;
+    }
+
+    auto cmdMove = GetMoveCommand(eState, Point(x, y));
+    if(cmdMove)
+    {
+        aiState->QueueCommand(cmdMove, interrupt);
+
+        return true;
+    }
+
+    return false;
+}
+
+bool AIManager::QueueUseSkillCommand(
+    const std::shared_ptr<ActiveEntityState>& eState, uint32_t skillID,
+    int32_t targetEntityID, bool advance)
+{
+    auto aiState = eState ? eState->GetAIState() : nullptr;
+    if(!aiState)
+    {
+        return false;
+    }
+
+    auto definitionManager = mServer.lock()->GetDefinitionManager();
+    auto skillData = definitionManager->GetSkillData(skillID);
+    if(!skillData)
+    {
+        return false;
+    }
+
+    if(advance)
+    {
+        SkillAdvance(eState, skillData);
+    }
+
+    auto skillCmd = std::make_shared<AIUseSkillCommand>(skillData,
+        targetEntityID);
+    aiState->QueueCommand(skillCmd);
+
+    return true;
+}
+
+void AIManager::QueueScriptCommand(const std::shared_ptr<AIState>& aiState,
+    const libcomp::String& functionName, bool interrupt)
+{
+    if(aiState)
+    {
+        auto cmd = std::make_shared<AIScriptedCommand>(functionName);
+        aiState->QueueCommand(cmd, interrupt);
+    }
 }
 
 void AIManager::QueueWaitCommand(const std::shared_ptr<AIState>& aiState,
-    uint32_t waitTime)
+    uint32_t waitTime, bool interrupt)
 {
-    auto cmd = GetWaitCommand(waitTime);
-    aiState->QueueCommand(cmd);
+    if(aiState)
+    {
+        auto cmd = GetWaitCommand(waitTime);
+        aiState->QueueCommand(cmd, interrupt);
+    }
+}
+
+bool AIManager::StartEvent(const std::shared_ptr<ActiveEntityState>& eState,
+    const libcomp::String& eventID)
+{
+    if(eState)
+    {
+        auto eventManager = mServer.lock()->GetEventManager();
+        return eventManager->HandleEvent(nullptr, eventID, eState
+            ->GetEntityID(), eState->GetZone(), 0, true);
+    }
+
+    return false;
 }
 
 void AIManager::UpdateAggro(const std::shared_ptr<ActiveEntityState>& eState,
     int32_t targetID)
 {
     auto aiState = eState->GetAIState();
-    if(aiState)
+    auto zone = eState->GetZone();
+    int32_t currentTargetID = aiState ? aiState->GetTargetEntityID() : -1;
+    if(aiState && zone && currentTargetID != targetID)
     {
-        if(targetID > 0 &&
-            (aiState->GetStatus() == AIStatus_t::IDLE ||
-             aiState->GetStatus() == AIStatus_t::WANDERING))
+        if(currentTargetID > 0)
         {
-            aiState->SetStatus(AIStatus_t::AGGRO);
+            // Clear old aggro
+            auto oldTarget = zone->GetActiveEntity(currentTargetID);
+            if(oldTarget)
+            {
+                oldTarget->RemoveAggroIDs(eState->GetEntityID());
+            }
+        }
+
+        if(targetID > 0)
+        {
+            // Set aggro
+            if(aiState->GetStatus() == AIStatus_t::IDLE ||
+                aiState->GetStatus() == AIStatus_t::WANDERING)
+            {
+                aiState->SetStatus(AIStatus_t::AGGRO);
+            }
+
+            auto newTarget = zone->GetActiveEntity(targetID);
+            if(newTarget)
+            {
+                newTarget->InsertAggroIDs(eState->GetEntityID());
+            }
+        }
+        else if(currentTargetID > 0)
+        {
+            // Remove all commands that targeted the old entity
+            auto cmd = aiState->GetCurrentCommand();
+            while(cmd && cmd->GetTargetEntityID() == currentTargetID)
+            {
+                aiState->PopCommand();
+                cmd = aiState->GetCurrentCommand();
+            }
         }
 
         aiState->SetTargetEntityID(targetID);
+
+        if(eState->GetEnemyBase())
+        {
+            // Enemies and allies telegraph who they are targeting by facing them
+            libcomp::Packet p;
+            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENEMY_ACTIVATED);
+            p.WriteS32Little(eState->GetEntityID());
+            p.WriteS32Little(aiState->GetTargetEntityID());
+
+            ChannelClientConnection::BroadcastPacket(zone->GetConnectionList(), p);
+        }
     }
 }
 
-void AIManager::Move(const std::shared_ptr<ActiveEntityState>& eState,
-    float xPos, float yPos, uint64_t now)
+bool AIManager::Chase(const std::shared_ptr<ActiveEntityState>& eState,
+    int32_t targetEntityID, float minDistance, float maxDistance,
+    bool interrupt)
 {
-    if(!eState->CanMove())
+    auto zone = eState ? eState->GetZone() : nullptr;
+    auto aiState = eState ? eState->GetAIState() : nullptr;
+    if(!zone || !aiState)
     {
-        return;
+        return false;
     }
 
-    /// @todo: check collision and correct
-    eState->Move(xPos, yPos, now);
+    auto targetEntity = zone->GetActiveEntity(targetEntityID);
+    if(!targetEntity || eState == targetEntity)
+    {
+        return false;
+    }
+
+    Point src(eState->GetCurrentX(), eState->GetCurrentY());
+    Point dest(targetEntity->GetCurrentX(), targetEntity->GetCurrentY());
+
+    auto server = mServer.lock();
+    auto zoneManager = server->GetZoneManager();
+
+    auto point = zoneManager->GetLinearPoint(src.x, src.y,
+        dest.x, dest.y, src.GetDistance(dest), false);
+
+    auto cmd = GetMoveCommand(eState, point);
+    if(cmd)
+    {
+        cmd->SetTargetEntityID(targetEntityID);
+        cmd->SetTargetDistance(minDistance, true);
+        cmd->SetTargetDistance(maxDistance, false);
+        aiState->QueueCommand(cmd, interrupt);
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool AIManager::Retreat(const std::shared_ptr<ActiveEntityState>& eState,
+    float x, float y, float distance, bool interrupt)
+{
+    auto zone = eState ? eState->GetZone() : nullptr;
+    auto aiState = eState ? eState->GetAIState() : nullptr;
+    if(!zone || !aiState || !eState->CanMove())
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto zoneManager = server->GetZoneManager();
+
+    Point src(eState->GetCurrentX(), eState->GetCurrentY());
+    Point target(x, y);
+
+    Point retreatPoint = zoneManager->GetLinearPoint(target.x, target.y,
+        src.x, src.y, distance, false, zone);
+    if(retreatPoint.GetDistance(target) > src.GetDistance(target))
+    {
+        std::list<Point> pathing;
+        pathing.push_back(retreatPoint);
+
+        auto cmd = std::make_shared<AIMoveCommand>();
+        cmd->SetPathing(pathing);
+        aiState->QueueCommand(cmd, interrupt);
+
+        return true;
+    }
+
+    return false;
+}
+
+bool AIManager::Circle(const std::shared_ptr<ActiveEntityState>& eState,
+    float x, float y, bool interrupt, float distance)
+{
+    auto zone = eState ? eState->GetZone() : nullptr;
+    auto aiState = eState ? eState->GetAIState() : nullptr;
+    if(!zone || !aiState || !eState->CanMove())
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto zoneManager = server->GetZoneManager();
+
+    Point src(eState->GetCurrentX(), eState->GetCurrentY());
+    Point target(x, y);
+
+    std::list<Point> pathing;
+
+    // Distance from the target first
+    Point start = zoneManager->GetLinearPoint(target.x, target.y,
+        src.x, src.y, distance, false, zone);
+    if(start != src)
+    {
+        // If we can't get to the start point in a straight line
+        // quit now as the move should not be that complex
+        Point collidePoint;
+        if(zone->Collides(Line(start, src), collidePoint))
+        {
+            return false;
+        }
+
+        pathing.push_back(start);
+    }
+
+    // Rotate the starting point around the target for the second
+    // (or third) point
+    int32_t pointCount = RNG(int32_t, 1, 2);
+    bool invert = RNG(int32_t, 1, 2) == 1;
+    for(int32_t i = 0; i < pointCount; i++)
+    {
+        Point prev = pathing.size() > 0 ? pathing.back() : src;
+        Point p = zoneManager->RotatePoint(prev, target,
+            invert ? -0.52f : 0.52f);
+
+        // Check for collision
+        Point pFinal = zoneManager->GetLinearPoint(prev.x, prev.y,
+            p.x, p.y, prev.GetDistance(p), false, zone);
+        if(pFinal != p && i == 0)
+        {
+            // Hit something, try the other direction (only once)
+            pointCount++;
+            invert = !invert;
+        }
+        else if(pFinal == prev)
+        {
+            // Can't move further
+            break;
+        }
+        else
+        {
+            // Add the point
+            pathing.push_back(pFinal);
+        }
+    }
+
+    if(pathing.size() > 0)
+    {
+        auto cmd = std::make_shared<AIMoveCommand>();
+        cmd->SetPathing(pathing);
+        aiState->QueueCommand(cmd, interrupt);
+
+        return true;
+    }
+
+    return false;
 }
 
 bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
@@ -449,8 +749,27 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
     eState->RefreshCurrentPosition(now);
 
     auto aiState = eState->GetAIState();
-    if(!aiState || (aiState->IsIdle() &&
-        !aiState->ActionOverridesKeyExists("idle")))
+    if(!aiState)
+    {
+        return false;
+    }
+
+    uint64_t despawnTimout = aiState->GetDespawnTimeout();
+    if(despawnTimout && despawnTimout <= now)
+    {
+        // Despawn it and quit
+        auto zone = eState->GetZone();
+        if(zone)
+        {
+            zone->MarkDespawn(eState->GetEntityID());
+        }
+
+        aiState->SetDespawnTimeout(0);
+        return false;
+    }
+
+    if(aiState->IsIdle() &&
+        !aiState->ActionOverridesKeyExists("idle"))
     {
         return false;
     }
@@ -519,11 +838,11 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
 
         if(aiState->ActionOverridesKeyExists(actionName))
         {
-            libcomp::String functionOverride = aiState->GetActionOverrides(actionName);
-            if(!functionOverride.IsEmpty())
+            libcomp::String fOverride = aiState->GetActionOverrides(actionName);
+            if(!fOverride.IsEmpty())
             {
                 // Queue the overridden function
-                QueueScriptCommand(aiState, functionOverride);
+                QueueScriptCommand(aiState, fOverride);
             }
             else
             {
@@ -574,37 +893,102 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             }
         }
 
+        auto zone = eState->GetZone();
+        if(!zone)
+        {
+            return false;
+        }
+
+        std::shared_ptr<ActiveEntityState> targetEntity;
+        if(cmd->GetTargetEntityID() > 0)
+        {
+            targetEntity = zone->GetActiveEntity(cmd->GetTargetEntityID());
+            if(targetEntity)
+            {
+                targetEntity->RefreshCurrentPosition(now);
+            }
+        }
+
         switch(cmd->GetType())
         {
         case AICommandType_t::MOVE:
             if(eState->CanMove())
             {
-                if(eState->IsMoving())
-                {
-                    return false;
-                }
-                else
-                {
-                    auto cmdMove = std::dynamic_pointer_cast<AIMoveCommand>(cmd);
+                Point src(eState->GetCurrentX(), eState->GetCurrentY());
 
-                    // Move to the first point in the path that is not the entity's
-                    // current position
-                    Point dest;
-                    while(cmdMove->GetCurrentDestination(dest))
+                auto cmdMove = std::dynamic_pointer_cast<AIMoveCommand>(cmd);
+
+                bool moving = eState->IsMoving();
+                float minDistance = cmdMove->GetTargetDistance(true);
+                if(moving || minDistance)
+                {
+                    float maxDistance = cmdMove->GetTargetDistance(false);
+                    if(targetEntity && (minDistance || maxDistance))
                     {
-                        if(dest.x != eState->GetCurrentX() ||
-                            dest.y != eState->GetCurrentY())
+                        // Make sure the destination is still close to the
+                        // target
+                        Point tPoint(targetEntity->GetCurrentX(),
+                            targetEntity->GetCurrentY());
+                        if(moving && maxDistance &&
+                            tPoint.GetDistance(src) >= maxDistance)
                         {
-                            Move(eState, dest.x, dest.y, now);
-                            return true;
+                            // Quit movement
+                            targetEntity->Stop(now);
+                            aiState->PopCommand();
                         }
-                        else if(!cmdMove->SetNextDestination())
+                        else if(moving && minDistance &&
+                            tPoint.GetDistance(src) <= minDistance)
                         {
-                            break;
+                            // Movement is done, stop now
+                            targetEntity->Stop(now);
+                            aiState->PopCommand();
+                        }
+                        else if(minDistance)
+                        {
+                            Point endPoint;
+                            if(cmdMove->GetEndDestination(endPoint) &&
+                                floor(tPoint.GetDistance(endPoint)) > minDistance)
+                            {
+                                // End point is no longer valid, repath
+                                auto cmdNew = GetMoveCommand(eState, tPoint,
+                                    minDistance);
+                                if(cmdNew && cmdMove->GetEndDestination(endPoint))
+                                {
+                                    cmdMove->SetPathing(cmdNew->GetPathing());
+                                }
+                                else
+                                {
+                                    aiState->PopCommand();
+                                }
+
+                                return false;
+                            }
                         }
                     }
+
+                    if(moving)
+                    {
+                        return false;
+                    }
                 }
-                aiState->PopCommand();
+
+                // Move to the first point in the path that is not the
+                // entity's current position
+                Point dest;
+                while(cmdMove->GetCurrentDestination(dest))
+                {
+                    if(dest != src)
+                    {
+                        Move(eState, dest, now);
+                        return true;
+                    }
+                    else if(!cmdMove->SetNextDestination())
+                    {
+                        break;
+                    }
+                }
+
+                aiState->PopCommand(cmdMove);
             }
             else
             {
@@ -648,48 +1032,68 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                 auto server = mServer.lock();
                 auto skillManager = server->GetSkillManager();
 
-                bool valid = true;
-
                 if(cmdSkill->GetTargetEntityID() > 0)
                 {
-                    auto targetEntity = eState->GetZone()->GetActiveEntity(
-                        cmdSkill->GetTargetEntityID());
                     if(!targetEntity || !targetEntity->IsAlive() ||
                         targetEntity->GetAIIgnored())
                     {
                         // Target invalid or dead, cancel the skill and move on
                         if(activated)
                         {
-                            skillManager->CancelSkill(eState, activated->GetActivationID());
+                            skillManager->CancelSkill(eState, activated
+                                ->GetActivationID());
                         }
-                        valid = false;
+
+                        // Not valid
+                        aiState->PopCommand(cmdSkill);
+                        return false;
                     }
                 }
 
-                if(valid)
+                if(targetEntity)
                 {
-                    if(activated)
+                    targetEntity->ExpireStatusTimes(now);
+
+                    if(AggroLimitEnabled() &&
+                        targetEntity->GetStatusTimes(STATUS_KNOCKBACK))
                     {
-                        // Execute the skill
-                        if(!skillManager->ExecuteSkill(eState, activated->GetActivationID(),
-                            activated->GetTargetObjectID()) &&
-                            eState->GetActivatedAbility() == activated)
-                        {
-                            if(activated->GetErrorCode() != (int8_t)SkillErrorCodes_t::ACTION_RETRY)
-                            {
-                                skillManager->CancelSkill(eState, activated->GetActivationID());
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // Activate the skill
-                        skillManager->ActivateSkill(eState, cmdSkill->GetSkillID(),
-                            cmdSkill->GetTargetEntityID(), cmdSkill->GetTargetEntityID());
+                        // Delay execution or activation
+                        QueueWaitCommand(aiState, (uint32_t)aiState
+                            ->GetThinkSpeed(), true);
+                        return false;
                     }
                 }
 
-                aiState->PopCommand();
+                if(activated)
+                {
+                    // Execute the skill
+                    if(!skillManager->ExecuteSkill(eState, activated
+                        ->GetActivationID(), activated->GetTargetObjectID()) &&
+                        eState->GetActivatedAbility() == activated)
+                    {
+                        if(!CanRetrySkill(eState, activated))
+                        {
+                            skillManager->CancelSkill(eState, activated
+                                ->GetActivationID());
+                        }
+                    }
+                }
+                else
+                {
+                    // Activate the skill
+                    if(skillManager->ActivateSkill(eState, cmdSkill
+                        ->GetSkillID(), cmdSkill->GetTargetEntityID(),
+                        cmdSkill->GetTargetEntityID()))
+                    {
+                        auto skillData = cmdSkill->GetSkillData();
+                        if(skillData->GetBasic()->GetActivationType() == 5)
+                        {
+                            aiState->SetSkillWaitStart(now);
+                        }
+                    }
+                }
+
+                aiState->PopCommand(cmdSkill);
             }
             break;
         case AICommandType_t::SCRIPTED:
@@ -752,9 +1156,6 @@ bool AIManager::UpdateEnemyState(
         return true;
     }
 
-    // If not wandering, handle aggro and combat somewhat similarly
-    bool inCombat = aiState->GetStatus() == AIStatus_t::COMBAT;
-
     auto zone = eState->GetZone();
     int32_t targetEntityID = aiState->GetTargetEntityID();
     auto target = targetEntityID > 0
@@ -762,14 +1163,13 @@ bool AIManager::UpdateEnemyState(
     if(!target || !target->IsAlive() || !target->Ready() ||
         target->GetAIIgnored())
     {
-        if(inCombat)
-        {
-            // Try to find another opponent
-            target = Retarget(eState, now, isNight);
-        }
-        else
+        // Try to find another target
+        target = Retarget(eState, now, isNight);
+
+        if(!target)
         {
             // Reset to default state and quit
+            UpdateAggro(eState, -1);
             aiState->SetStatus(aiState->GetDefaultStatus());
             return false;
         }
@@ -808,9 +1208,6 @@ bool AIManager::UpdateEnemyState(
                 activated->GetActivationID());
         }
 
-        server->GetCharacterManager()->AddRemoveOpponent(false,
-            eState, nullptr);
-
         return false;
     }
     else if(targetChanged)
@@ -823,12 +1220,59 @@ bool AIManager::UpdateEnemyState(
 
     targetEntityID = target->GetEntityID();
 
-    if(activated && activated->GetErrorCode() >= 0)
+    if(activated)
     {
-        // Somehow we have an error, cancel and choose something else
-        server->GetSkillManager()->CancelSkill(eState, activated
-            ->GetActivationID());
-        activated = nullptr;
+        if(eState->GetStatusTimes(STATUS_CHARGING))
+        {
+            // Let charging finish
+            return false;
+        }
+
+        bool cancelAndReset = false;
+        if(!CanRetrySkill(eState, activated))
+        {
+            // Somehow we have an error
+            cancelAndReset = true;
+        }
+        else if(aiState->GetSkillWaitStart())
+        {
+            // If we have a skill waiting on being hit and we've been
+            // waiting a decent amount of time, check if we should cancel
+            int32_t thinkSpeedAdjust = aiState->GetThinkSpeed()
+                ? aiState->GetThinkSpeed() : 1000;
+            int32_t minWait = thinkSpeedAdjust * 2 * 1000;
+            if(now > aiState->GetSkillWaitStart() + (uint64_t)minWait &&
+                RNG(uint16_t, 1, 2) == 1)
+            {
+                cancelAndReset = true;
+            }
+            else
+            {
+                if(target && aiState->GetDefensiveDistance() > 0.f)
+                {
+                    // Circle the target
+                    Circle(eState, targetX, targetY, true,
+                        aiState->GetDefensiveDistance());
+                }
+
+                // Wait no matter what
+                QueueWaitCommand(aiState, (uint32_t)thinkSpeedAdjust);
+                return false;
+            }
+        }
+        
+        if(cancelAndReset)
+        {
+            aiState->SetSkillWaitStart(0);
+            server->GetSkillManager()->CancelSkill(eState, activated
+                ->GetActivationID());
+            activated = nullptr;
+        }
+    }
+    else if(aiState->GetSkillWaitStart())
+    {
+        // Shouldn't be set anymore
+        aiState->SetSkillWaitStart(0);
     }
 
     if(activated)
@@ -837,7 +1281,9 @@ bool AIManager::UpdateEnemyState(
 
         // Skill charged, cancel, execute or move within range
         int64_t activationTarget = activated->GetTargetObjectID();
-        if(activationTarget && targetEntityID != (int32_t)activationTarget)
+        if(activationTarget > 0 &&
+            targetEntityID != (int32_t)activationTarget &&
+            eState->GetEntityID() != (int32_t)activationTarget)
         {
             // Target changed
             skillManager->TargetSkill(eState, targetEntityID);
@@ -847,71 +1293,96 @@ bool AIManager::UpdateEnemyState(
         auto definitionManager = server->GetDefinitionManager();
         auto skillData = definitionManager->GetSkillData(activated
             ->GetSkillID());
-        uint16_t maxTargetRange = (uint16_t)(400 +
-            (skillData->GetTarget()->GetRange() * 10));
 
-        if(targetDist > (maxTargetRange + 20.f))
+        // Move forward if needed and execute when close enough
+        uint8_t moveResponse = SkillAdvance(eState, skillData);
+        if(moveResponse == 0)
         {
-            // Move within range (keep a bit of a buffer for movement)
-            auto zoneManager = server->GetZoneManager();
-            auto point = zoneManager->GetLinearPoint(eState->GetCurrentX(),
-                eState->GetCurrentY(), targetX, targetY,
-                (float)(targetDist - (float)maxTargetRange + 10.f), false);
-
-            auto cmd = GetMoveCommand(eState, point);
-            if(cmd)
-            {
-                aiState->QueueCommand(cmd);
-            }
-            else
-            {
-                skillManager->CancelSkill(eState, activated->GetActivationID());
-            }
+            // Moving forward, stop here
+            return false;
         }
-        else if(activated->GetExecutionRequestTime() == 0)
+        else if(moveResponse == 1)
+        {
+            // Could not move forward
+            skillManager->CancelSkill(eState, activated->GetActivationID());
+        }
+        else if(CanRetrySkill(eState, activated))
         {
             // Execute the skill
-            auto cmd = std::make_shared<AIUseSkillCommand>(activated);
+            auto cmd = std::make_shared<AIUseSkillCommand>(skillData,
+                activated);
             aiState->QueueCommand(cmd);
         }
     }
     else
     {
-        int16_t rCommand = RNG(int16_t, 1, 10);
-
-        if(rCommand == 1)
+        // 20% chance to just wait (lower for high aggression)
+        int16_t waitChance = (int16_t)(100.f *
+            (float)aiState->GetAggression() * 0.01f);
+        if(RNG(int16_t, 1, waitChance > 25 ? waitChance : 25) <= 20)
         {
-            // 10% chance to just wait
             QueueWaitCommand(aiState, (uint32_t)aiState->GetThinkSpeed());
+        }
+        else if(eState->CurrentSkillsCount() > 0)
+        {
+            // If aggro limit is enabled and the target is being knocked back
+            // wait instead to stagger attacks
+            if(target)
+            {
+                target->ExpireStatusTimes(now);
+                if(AggroLimitEnabled() &&
+                    target->GetStatusTimes(STATUS_KNOCKBACK))
+                {
+                    QueueWaitCommand(aiState,
+                        (uint32_t)aiState->GetThinkSpeed());
+                    return false;
+                }
+            }
+
+            // All normal movement is based off skill usage, determine which
+            // skill to use next
+            if(!PrepareSkillUsage(eState))
+            {
+                // No skill can be used, drop aggro
+                UpdateAggro(eState, -1);
+
+                // Run away if defensive distance specified
+                if(aiState->GetDefensiveDistance() > 0.f)
+                {
+                    Retreat(eState, targetX, targetY, aiState
+                        ->GetDefensiveDistance(), true);
+                }
+            }
         }
         else
         {
-            if(targetDist > 400.f)
-            {
-                // Run up to the target but don't do anything yet
-                auto zoneManager = server->GetZoneManager();
-                auto point = zoneManager->GetLinearPoint(eState->GetCurrentX(),
-                    eState->GetCurrentY(), targetX, targetY, targetDist, false);
-
-                auto cmd = GetMoveCommand(eState, point, 200.f);
-                if(cmd)
-                {
-                    aiState->QueueCommand(cmd);
-                }
-                else
-                {
-                    // If the enemy can't move to the target, retarget and quit
-                    Retarget(eState, now, isNight);
-                }
-            }
-            else if(eState->CurrentSkillsCount() > 0)
-            {
-                PrepareSkillUsage(eState);
-            }
+            // No skills exist, drop aggro
+            UpdateAggro(eState, -1);
         }
     }
 
     return false;
+}
+
+void AIManager::Move(const std::shared_ptr<ActiveEntityState>& eState,
+    Point dest, uint64_t now)
+{
+    auto zone = eState->GetZone();
+    if(!eState->CanMove() || !zone)
+    {
+        return;
+    }
+
+    Point collidePoint;
+    if(zone->Collides(Line(Point(eState->GetCurrentX(), eState->GetCurrentY()),
+        dest), collidePoint))
+    {
+        // Cannot reach the destination, clear commands and quit
+        eState->GetAIState()->ClearCommands();
+        return;
+    }
+
+    eState->Move(dest.x, dest.y, now);
 }
 
 void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
@@ -927,6 +1398,12 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
     {
         auto zone = eState->GetZone();
 
+        Point source(eState->GetCurrentX(), eState->GetCurrentY());
+
+        // If the entity has a despawn timeout, they should attempt to wander
+        // back to the spawn location
+        bool wanderBack = aiState->GetDespawnTimeout() > 0;
+
         Point dest;
         auto zoneManager = mServer.lock()->GetZoneManager();
         if(spawnLocation)
@@ -938,11 +1415,29 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
             // left corner of the rectangle and extend towards +X/-Y
             dest.x = (float)(spawnLocation->GetX() + point.x);
             dest.y = (float)(spawnLocation->GetY() - point.y);
+
+            if(wanderBack)
+            {
+                std::list<Point> vertices;
+                vertices.push_back(Point(spawnLocation->GetX(),
+                    spawnLocation->GetY()));
+                vertices.push_back(Point(spawnLocation->GetX() +
+                    spawnLocation->GetWidth(), spawnLocation->GetY()));
+                vertices.push_back(Point(
+                    spawnLocation->GetX() + spawnLocation->GetWidth(),
+                    spawnLocation->GetY() - spawnLocation->GetHeight()));
+                vertices.push_back(Point(spawnLocation->GetX(),
+                    spawnLocation->GetY() - spawnLocation->GetHeight()));
+
+                wanderBack = !zoneManager->PointInPolygon(source, vertices);
+            }
         }
         else
         {
-            dest = zoneManager->GetRandomSpotPoint(zone
-                ->GetDynamicMap()->Spots[spotID]->Definition);
+            auto spot = zone->GetDynamicMap()->Spots[spotID];
+            dest = zoneManager->GetRandomSpotPoint(spot->Definition);
+
+            wanderBack &= !zoneManager->PointInPolygon(source, spot->Vertices);
         }
 
         // Use the destination as a direction to head and either
@@ -950,18 +1445,91 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
         float moveDistance = (float)((float)eState->GetMovementSpeed() *
             (float)(thinkSpeed < 500 ? 500 : thinkSpeed) * 0.001f);
 
-        Point source(eState->GetCurrentX(), eState->GetCurrentY());
-        dest = zoneManager->GetLinearPoint(source.x, source.y,
+        Point finalDest = zoneManager->GetLinearPoint(source.x, source.y,
             dest.x, dest.y, moveDistance, false, zone);
 
-        auto command = GetMoveCommand(eState, dest, 0.f, false);
+        bool canReach = source.GetDistance(finalDest) >=
+            source.GetDistance(dest);
+        if(!canReach && wanderBack)
+        {
+            // Pull the shortest path and follow the first part of the path
+            auto path = zoneManager->GetShortestPath(zone, source, dest);
+            if(path.size() > 0)
+            {
+                finalDest = path.front();
+                if(source.GetDistance(finalDest) > moveDistance)
+                {
+                    // Reduce to the maximum distance
+                    finalDest = zoneManager->GetLinearPoint(source.x, source.y,
+                        finalDest.x, finalDest.y, moveDistance, false, zone);
+                }
+            }
+        }
+
+        auto command = GetMoveCommand(eState, finalDest, 0.f, false);
         if(command)
         {
             aiState->QueueCommand(command);
+
+            // If the entity has a respawn timeout, clear it if they can
+            // reach the designated point which is in the spawn area or
+            // they don't actually need to wander back
+            if(aiState->GetDespawnTimeout() && (!wanderBack || canReach))
+            {
+                aiState->SetDespawnTimeout(0);
+            }
         }
     }
 
     QueueWaitCommand(aiState, (uint32_t)(thinkSpeed * RNG(int32_t, 1, 3)));
+}
+
+uint8_t AIManager::SkillAdvance(
+    const std::shared_ptr<ActiveEntityState>& eState,
+    const std::shared_ptr<objects::MiSkillData>& skillData)
+{
+    auto zone = eState->GetZone();
+    auto aiState = eState->GetAIState();
+
+    int32_t targetEntityID = aiState->GetTargetEntityID();
+    auto target = zone && targetEntityID > 0
+        ? zone->GetActiveEntity(targetEntityID) : nullptr;
+    if(!target)
+    {
+        return 1;
+    }
+
+    uint16_t normalRange = skillData->GetTarget()->GetRange();
+    uint16_t maxTargetRange = (uint16_t)(400 + (normalRange * 10));
+
+    Point src(eState->GetCurrentX(), eState->GetCurrentY());
+    Point dest(target->GetCurrentX(), target->GetCurrentY());
+    float targetDist = src.GetDistance(dest);
+
+    // Move within range (keep a bit of a buffer for movement)
+    if(targetDist > (maxTargetRange - 20.f))
+    {
+        // Either run up to max range if a ranged attack or to a close melee
+        // distance
+        float minDistance = normalRange ? (float)maxTargetRange - 20.f : 350.f;
+
+        // Stop at de-aggro distance
+        float maxDistance = aiState->GetAggroValue(0, false, 2000.f) * 1.5f;
+
+        if(Chase(eState, targetEntityID, minDistance, maxDistance, false))
+        {
+            return 0;
+        }
+        else
+        {
+            return 1;
+        }
+    }
+    else
+    {
+        // Nothing to do
+        return 2;
+    }
 }
 
 std::shared_ptr<ActiveEntityState> AIManager::Retarget(
@@ -972,14 +1540,13 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
 
     auto aiState = eState->GetAIState();
 
-    int32_t currentTarget = aiState->GetTargetEntityID();
-    aiState->SetTargetEntityID(-1);
-
     auto zone = eState->GetZone();
     if(!zone)
     {
         return nullptr;
     }
+
+    int32_t currentTarget = aiState->GetTargetEntityID();
 
     float sourceX = eState->GetCurrentX();
     float sourceY = eState->GetCurrentY();
@@ -1014,6 +1581,11 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
         uint8_t aggression = aiState->GetAggression();
         if(aggression < 100 && RNG(int32_t, 1, 100) > aggression)
         {
+            if(currentTarget > 0)
+            {
+                UpdateAggro(eState, -1);
+            }
+
             return nullptr;
         }
 
@@ -1042,7 +1614,8 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
                 {
                     return eState->SameFaction(entity) ||
                         (castingOnly && !entity->GetStatusTimes(STATUS_CHARGING)) ||
-                        !entity->Ready() || entity->GetAIIgnored();
+                        !entity->Ready() || entity->GetAIIgnored() ||
+                        !entity->IsAlive();
                 });
 
             // If the aggro level limit could potentially exclude a target
@@ -1053,6 +1626,41 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
                     const std::shared_ptr<ActiveEntityState>& entity)
                     {
                         return entity->GetLevel() > aggroLevelLimit;
+                    });
+            }
+
+            // If aggro limiting is enabled, remove targets based upon level
+            // limit
+            if(AggroLimitEnabled() && !aiState->GetIgnoreAggroLimit())
+            {
+                for(auto f : filtered)
+                {
+                    // Remove invalid pursuers first
+                    for(int32_t aggroID : f->GetAggroIDs())
+                    {
+                        auto other = zone->GetActiveEntity(aggroID);
+                        auto otherState = other
+                            ? other->GetAIState() : nullptr;
+                        if(!other || !other->Ready() || !otherState ||
+                            otherState->GetTargetEntityID() != f->GetEntityID())
+                        {
+                            f->RemoveAggroIDs(aggroID);
+                        }
+                    }
+                }
+
+                // Do not pursue if they're already being pursued by too
+                // many enemies (this is ignored for opponents)
+                size_t max = 1;
+                if(aggroLevelLimit >= 99)
+                {
+                    max = 2;
+                }
+
+                filtered.remove_if([max](
+                    const std::shared_ptr<ActiveEntityState>& entity)
+                    {
+                        return entity->AggroIDsCount() >= max;
                     });
             }
 
@@ -1104,6 +1712,7 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
         }
     }
 
+    int32_t newTarget = currentTarget;
     if(possibleTargets.size() > 0)
     {
         if(aiState->ActionOverridesKeyExists("target") && aiState->GetScript())
@@ -1120,22 +1729,19 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
         }
         else
         {
-            /// @todo: add better default target selection logic
             target = libcomp::Randomizer::GetEntry(possibleTargets);
         }
 
-        aiState->SetTargetEntityID(target ? target->GetEntityID() : -1);
+        newTarget = target ? target->GetEntityID() : -1;
+    }
+    else
+    {
+        newTarget = -1;
     }
 
-    if(eState->GetEnemyBase() && aiState->GetTargetEntityID() != currentTarget)
+    if(newTarget != currentTarget)
     {
-        // Enemies and allies telegraph who they are targeting by facing them
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENEMY_ACTIVATED);
-        p.WriteS32Little(eState->GetEntityID());
-        p.WriteS32Little(aiState->GetTargetEntityID());
-
-        ChannelClientConnection::BroadcastPacket(zone->GetConnectionList(), p);
+        UpdateAggro(eState, newTarget);
     }
 
     return target;
@@ -1144,145 +1750,118 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
 void AIManager::RefreshSkillMap(const std::shared_ptr<ActiveEntityState>& eState,
     const std::shared_ptr<AIState>& aiState)
 {
-    if(!aiState->GetSkillsMapped())
+    if(aiState->GetSkillsMapped())
     {
-        auto cs = eState->GetCoreStats();
-        auto isEnemy = eState->GetEntityType() == EntityType_t::ENEMY;
+        return;
+    }
 
-        std::unordered_map<uint16_t,
-            std::list<std::shared_ptr<objects::MiSkillData>>> skillMap;
+    bool isEnemy = eState->GetEnemyBase() != nullptr;
 
-        auto server = mServer.lock();
-        auto definitionManager = server->GetDefinitionManager();
+    AISkillMap_t skillMap;
 
-        auto currentSkills = eState->GetCurrentSkills();
-        for(uint32_t skillID : currentSkills)
+    // AI entities have the concept of skills that can completely outclass
+    // another. To be eligible to outclass another skill, the first attribute
+    // it must have is that it must always be useable therefore it must have no
+    // cost and no cooldown time. Beyond this the skill must be seen as one
+    // that serves the same function but does so better than the other. This
+    // adds both variance and predictability depending on the skill set and
+    // can be disabled per entity at any time.
+    std::set<uint32_t> outclassEligible;
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto skillManager = server->GetSkillManager();
+    for(uint32_t skillID : eState->GetCurrentSkills())
+    {
+        auto skillData = definitionManager->GetSkillData(skillID);
+
+        if(!SkillIsValid(skillData)) continue;
+
+        int16_t targetType = -1;
+        switch(skillData->GetRange()->GetValidType())
         {
-            auto skillData = definitionManager->GetSkillData(skillID);
-
-            // Active skills only
-            auto category = skillData->GetCommon()->GetCategory();
-            if(category->GetMainCategory() != 1) continue;
-
-            auto range = skillData->GetRange();
-
-            int16_t targetType = -1;
-            switch(range->GetValidType())
+        case objects::MiEffectiveRangeData::ValidType_t::ALLY:
+        case objects::MiEffectiveRangeData::ValidType_t::SOURCE:
+            targetType = (int16_t)AI_SKILL_TYPES_ALLY;
+            break;
+        case objects::MiEffectiveRangeData::ValidType_t::ENEMY:
+            targetType = (int16_t)AI_SKILL_TYPES_ENEMY;
+            break;
+        case objects::MiEffectiveRangeData::ValidType_t::PARTY:
+        case objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY:
+        case objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY:
+            if(!isEnemy)
             {
-            case objects::MiEffectiveRangeData::ValidType_t::ALLY:
+                // Skills that affect parties or dead entities are not
+                // usable by enemies
                 targetType = (int16_t)AI_SKILL_TYPES_ALLY;
-                break;
-            case objects::MiEffectiveRangeData::ValidType_t::SOURCE:
-                targetType = (int16_t)AI_SKILL_TYPE_DEF;
-                break;
-            case objects::MiEffectiveRangeData::ValidType_t::ENEMY:
-                targetType = (int16_t)AI_SKILL_TYPES_ENEMY;
-                break;
-            case objects::MiEffectiveRangeData::ValidType_t::PARTY:
-            case objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY:
-            case objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY:
-                if(!isEnemy)
+            }
+            break;
+        default:
+            break;
+        }
+
+        if(targetType != -1)
+        {
+            // Determine if its a valid type
+            int16_t skillType = -1;
+            switch(skillData->GetBasic()->GetActionType())
+            {
+            case objects::MiSkillBasicData::ActionType_t::ATTACK:
+            case objects::MiSkillBasicData::ActionType_t::RUSH:
+            case objects::MiSkillBasicData::ActionType_t::SPIN:
+                if(targetType == (int16_t)AI_SKILL_TYPES_ENEMY)
                 {
-                    // Skills that affect parties or dead entities are not
-                    // usable by enemies
-                    targetType = (int16_t)AI_SKILL_TYPES_ALLY;
+                    skillType = (int16_t)AI_SKILL_TYPE_CLSR;
                 }
                 break;
-            default:
-                break;
-            }
-
-            if(targetType != -1)
-            {
-                auto damage = skillData->GetDamage()->GetBattleDamage();
-                switch(damage->GetFormula())
+            case objects::MiSkillBasicData::ActionType_t::SHOT:
+            case objects::MiSkillBasicData::ActionType_t::RAPID:
+                if(targetType == (int16_t)AI_SKILL_TYPES_ENEMY)
                 {
-                case objects::MiBattleDamageData::Formula_t::DMG_NORMAL:
-                case objects::MiBattleDamageData::Formula_t::DMG_PERCENT:
-                case objects::MiBattleDamageData::Formula_t::DMG_SOURCE_PERCENT:
-                case objects::MiBattleDamageData::Formula_t::DMG_MAX_PERCENT:
-                case objects::MiBattleDamageData::Formula_t::DMG_STATIC:
-                    // Do not add skills that damage allies by default
-                    if(targetType == (int16_t)AI_SKILL_TYPES_ENEMY)
-                    {
-                        auto target = skillData->GetTarget();
-                        if(target->GetRange() > 0)
-                        {
-                            skillMap[AI_SKILL_TYPE_CLSR].push_back(skillData);
-                        }
-                        else
-                        {
-                            skillMap[AI_SKILL_TYPE_LNGR].push_back(skillData);
-                        }
-                    }
-                    break;
+                    skillType = (int16_t)AI_SKILL_TYPE_LNGR;
+                }
+                break;
+            case objects::MiSkillBasicData::ActionType_t::SUPPORT:
+                // Split based upon if the skill can heal or not
+                switch(skillData->GetDamage()->GetBattleDamage()
+                    ->GetFormula())
+                {
                 case objects::MiBattleDamageData::Formula_t::HEAL_NORMAL:
                 case objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT:
                 case objects::MiBattleDamageData::Formula_t::HEAL_STATIC:
+                    if(skillData->GetDamage()->GetBattleDamage()
+                        ->GetModifier1())
                     {
-                        skillMap[AI_SKILL_TYPE_HEAL].push_back(skillData);
+                        // MP only heal not supported
+                        skillType = (int16_t)AI_SKILL_TYPE_HEAL;
                     }
                     break;
                 default:
-                    /// @todo: determine the difference between self buff and defense
-                    if(targetType == (int16_t)AI_SKILL_TYPE_DEF)
-                    {
-                        skillMap[AI_SKILL_TYPE_DEF].push_back(skillData);
-                    }
-                    else
-                    {
-                        skillMap[AI_SKILL_TYPE_SUPPORT].push_back(skillData);
-                    }
+                    skillType = (int16_t)AI_SKILL_TYPE_SUPPORT;
                     break;
                 }
-            }
-        }
-
-        aiState->SetSkillMap(skillMap);
-    }
-}
-
-bool AIManager::PrepareSkillUsage(
-    const std::shared_ptr<ActiveEntityState>& eState)
-{
-    auto aiState = eState->GetAIState();
-    auto cs = eState->GetCoreStats();
-
-    RefreshSkillMap(eState, aiState);
-
-    int32_t targetID = aiState->GetTargetEntityID();
-
-    auto skillMap = aiState->GetSkillMap();
-    if(skillMap.size() > 0 && targetID > 0)
-    {
-        auto skillManager = mServer.lock()->GetSkillManager();
-
-        /// @todo: add skill selection weights and non-combat skills
-        uint32_t skillID = 0;
-
-        uint16_t priorityType = RNG(uint16_t, AI_SKILL_TYPE_CLSR,
-            AI_SKILL_TYPE_LNGR);
-        for(uint16_t skillType : { priorityType,
-            priorityType == AI_SKILL_TYPE_LNGR ? AI_SKILL_TYPE_CLSR : AI_SKILL_TYPE_LNGR })
-        {
-            std::set<std::shared_ptr<objects::MiSkillData>> skillSet;
-            for(auto skillData : skillMap[skillType])
-            {
-                // Make sure its not cooling down or restricted
-                if(!eState->SkillCooldownsKeyExists(skillData->GetBasic()
-                    ->GetCooldownID()) &&
-                    !skillManager->SkillRestricted(eState, skillData))
-                {
-                    skillSet.insert(skillData);
-                }
+                break;
+            case objects::MiSkillBasicData::ActionType_t::GUARD:
+            case objects::MiSkillBasicData::ActionType_t::COUNTER:
+            case objects::MiSkillBasicData::ActionType_t::DODGE:
+                skillType = (int16_t)AI_SKILL_TYPE_DEF;
+                break;
+            case objects::MiSkillBasicData::ActionType_t::TALK:
+            case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
+            case objects::MiSkillBasicData::ActionType_t::TAUNT:
+            default:
+                // Not supported
+                break;
             }
 
-            while(!skillID && skillSet.size() > 0)
+            if(skillType != -1)
             {
-                auto skillData = libcomp::Randomizer::GetEntry(skillSet);
-                skillSet.erase(skillData);
-
-                // Make sure costs can be paid
+                // Determine if costs are not valid for this entity or if any
+                // cost exists at all. Even though the HP/MP cost will not
+                // apply for the entire time the entity is active, since
+                // percentage costs round up we should still have a clear
+                // picture of if any costs exist.
                 int32_t hpCost = 0, mpCost = 0;
                 uint16_t bulletCost = 0;
                 std::unordered_map<uint32_t, uint32_t> itemCosts;
@@ -1293,28 +1872,407 @@ bool AIManager::PrepareSkillUsage(
                     continue;
                 }
 
-                if(hpCost || mpCost)
+                // Skill is valid. Calculate the weight (higher for more
+                // preferable skills). Defense is hardly weighted and cannot
+                // outclass anything else.
+                int32_t weight = 2;
+                if(skillType == AI_SKILL_TYPE_DEF)
                 {
-                    if(!cs) continue;
+                    weight = 1;
+                }
+                else
+                {
+                    // Determine if the skill can outclass anything while
+                    // calculating the weight
+                    bool canOutclass = skillData->GetCondition()
+                        ->GetCooldownTime() == 0;
 
-                    if(hpCost >= cs->GetHP() || mpCost > cs->GetMP())
+                    // Having no charge time adds weight
+                    if(!skillData->GetCast()->GetBasic()->GetChargeTime())
                     {
-                        continue;
+                        weight += aiState->GetSkillWeightCharge();
+                    }
+
+                    // Having no cost adds weight
+                    if(hpCost == 0 && mpCost == 0)
+                    {
+                        weight += aiState->GetSkillWeightCost();
+                    }
+                    else
+                    {
+                        canOutclass = false;
+                    }
+
+                    // Heal skills are weighted more only when the heal threshold
+                    // is active as they are not chosen otherwise
+                    if(skillType == AI_SKILL_TYPE_HEAL)
+                    {
+                        weight += aiState->GetSkillWeightHeal();
+                    }
+
+                    // Ranged attacks add weight
+                    if(skillData->GetTarget()->GetRange() > 0)
+                    {
+                        weight += aiState->GetSkillWeightRange();
+                    }
+
+                    if(canOutclass)
+                    {
+                        outclassEligible.insert(skillData->GetCommon()->GetID());
                     }
                 }
 
-                skillID = skillData->GetCommon()->GetID();
+                skillMap[(uint16_t)skillType].push_back(std::make_pair(
+                    skillData, weight));
+            }
+        }
+    }
+
+    if(outclassEligible.size() > 0)
+    {
+        // Determine which skills are considered outclassed
+        for(auto& pair : skillMap)
+        {
+            int16_t validType = -1;
+            if(pair.first == AI_SKILL_TYPE_HEAL)
+            {
+                // Healing skills can only outclass healing skills,
+                // regardless of if they can provide healing
+                validType = AI_SKILL_TYPE_HEAL;
             }
 
-            if(skillID)
+            for(auto& weightPair : pair.second)
             {
-                break;
+                auto def1 = weightPair.first;
+                if(outclassEligible.find(def1->GetCommon()->GetID()) ==
+                    outclassEligible.end())
+                {
+                    continue;
+                }
+
+                // Compare against all other skills not already outclassed
+                for(auto& pair2 : skillMap)
+                {
+                    std::list<std::shared_ptr<objects::MiSkillData>> others;
+                    if(validType != -1 && (int16_t)pair2.first != validType)
+                    {
+                        continue;
+                    }
+
+                    for(auto& weightPair2 : pair2.second)
+                    {
+                        auto def2 = weightPair2.first;
+                        if(def2 != def1 && !aiState->OutclassedSkillsContains(
+                            def2->GetCommon()->GetID()))
+                        {
+                            others.push_back(def2);
+                        }
+                    }
+
+                    for(auto def2 : others)
+                    {
+                        if(def2->GetRange()->GetAoeRange())
+                        {
+                            // Never outclass AoE
+                            continue;
+                        }
+                        else if(def2->GetDamage()->AddStatusesCount())
+                        {
+                            // Never outclass status effect adding skills
+                            continue;
+                        }
+
+                        auto damage1 = def1->GetDamage()->GetBattleDamage();
+                        auto damage2 = def2->GetDamage()->GetBattleDamage();
+                        if(damage1->GetFormula() != damage2->GetFormula())
+                        {
+                            // Damage formulas must match
+                            continue;
+                        }
+                        else if(damage1->GetModifier1() &&
+                            damage1->GetModifier1() < damage2->GetModifier1())
+                        {
+                            // Can't have lower damage potential (HP)
+                            continue;
+                        }
+                        else if(!damage1->GetModifier1() &&
+                            damage1->GetModifier2() &&
+                            damage1->GetModifier2() < damage2->GetModifier2())
+                        {
+                            // If no HP damage, can't have lower damage
+                            // potential (MP)
+                            continue;
+                        }
+
+                        if((pair.first == AI_SKILL_TYPE_CLSR ||
+                            pair.first == AI_SKILL_TYPE_LNGR) &&
+                            def1->GetTarget()->GetRange() <=
+                            def2->GetTarget()->GetRange())
+                        {
+                            // Can't be shorter or same range
+                            continue;
+                        }
+                        else if(def1->GetCast()->GetBasic()->GetUseCount() <
+                            def2->GetCast()->GetBasic()->GetUseCount())
+                        {
+                            // Don't outclass more uses
+                            continue;
+                        }
+
+                        aiState->InsertOutclassedSkills(def2->GetCommon()
+                            ->GetID());
+                    }
+                }
+            }
+        }
+    }
+
+    aiState->SetSkillMap(skillMap);
+}
+
+bool AIManager::SkillIsValid(
+    const std::shared_ptr<objects::MiSkillData>& skillData)
+{
+    // Active skills only
+    auto category = skillData->GetCommon()->GetCategory();
+    if(category->GetMainCategory() != 1)
+    {
+        return false;
+    }
+
+    auto basic = skillData->GetBasic();
+
+    // Ignore invalid family types (items, fusion)
+    if(basic->GetFamily() == 2 || basic->GetFamily() == 5 ||
+        basic->GetFamily() == 6)
+    {
+        return false;
+    }
+
+    uint16_t functionID = skillData->GetDamage()->GetFunctionID();
+    if(functionID)
+    {
+        // Only certain function IDs are supported for general use
+        const static std::set<uint16_t> supportedFIDs = {
+                SVR_CONST.SKILL_ABS_DAMAGE,
+                SVR_CONST.SKILL_DIGITALIZE_BREAK,
+                SVR_CONST.SKILL_HP_DEPENDENT,
+                SVR_CONST.SKILL_HP_MP_MIN,
+                SVR_CONST.SKILL_LNC_DAMAGE,
+                SVR_CONST.SKILL_PIERCE,
+                SVR_CONST.SKILL_SLEEP_RESTRICTED,
+                SVR_CONST.SKILL_STAT_SUM_DAMAGE,
+                SVR_CONST.SKILL_STATUS_DIRECT,
+                SVR_CONST.SKILL_STATUS_RANDOM,
+                SVR_CONST.SKILL_STATUS_RANDOM2,
+                SVR_CONST.SKILL_STATUS_SCALE,
+                SVR_CONST.SKILL_SUICIDE,
+            };
+
+        if(supportedFIDs.find(functionID) == supportedFIDs.end())
+        {
+            // Not supported
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool AIManager::CanRetrySkill(const std::shared_ptr<ActiveEntityState>& eState,
+    const std::shared_ptr<objects::ActivatedAbility>& activated)
+{
+    if(!activated || !eState || eState->GetActivatedAbility() != activated)
+    {
+        return false;
+    }
+
+    switch(activated->GetErrorCode())
+    {
+    case (int8_t)SkillErrorCodes_t::ACTION_RETRY:
+    case (int8_t)SkillErrorCodes_t::TOO_FAR:
+        return true;
+        break;
+    case -1:
+        // Can retry if no execution pending
+        return !activated->GetExecutionRequestTime();
+        break;
+    default:
+        break;
+    }
+
+    return false;
+}
+
+bool AIManager::PrepareSkillUsage(
+    const std::shared_ptr<ActiveEntityState>& eState)
+{
+    auto zone = eState->GetZone();
+    auto aiState = eState->GetAIState();
+    auto cs = eState->GetCoreStats();
+    if(!zone || !cs)
+    {
+        return false;
+    }
+
+    RefreshSkillMap(eState, aiState);
+
+    int32_t targetID = aiState->GetTargetEntityID();
+    auto target = targetID > 0 ? zone->GetActiveEntity(targetID) : nullptr;
+
+    if(aiState->ActionOverridesKeyExists("prepareSkill"))
+    {
+        libcomp::String fOverride = aiState->GetActionOverrides(
+            "prepareSkill");
+
+        Sqrat::Function f(Sqrat::RootTable(aiState->GetScript()->GetVM()),
+            !fOverride.IsEmpty() ? "prepareSkill" : fOverride.C());
+
+        auto scriptResult = !f.IsNull()
+            ? f.Evaluate<int32_t>(eState, this, target) : 0;
+        if(!scriptResult || *scriptResult == -1)
+        {
+            // Do not continue
+            return false;
+        }
+        else if(*scriptResult == 0)
+        {
+            // Added by script
+            return true;
+        }
+    }
+
+    auto skillMap = aiState->GetSkillMap();
+
+    bool canFight = target != nullptr;
+    bool canHeal = (float)cs->GetHP() / (float)cs->GetMaxHP() <=
+        (float)aiState->GetHealThreshold() * 0.01f;
+    bool canSupport = skillMap[AI_SKILL_TYPE_SUPPORT].size() > 0;
+    if(skillMap.size() > 0 && (canFight || canHeal || canSupport))
+    {
+        auto skillManager = mServer.lock()->GetSkillManager();
+
+        uint16_t totalWeight = 0;
+        std::list<AISkillWeight_t> weightedSkills;
+        std::unordered_map<uint32_t, uint16_t> skillTypes;
+        for(auto& pair : skillMap)
+        {
+            // Make sure the skill type is valid for the current state
+            bool isHeal = pair.first == AI_SKILL_TYPE_HEAL;
+            bool isSupport = pair.first == AI_SKILL_TYPE_SUPPORT;
+            if((aiState->GetSkillSettings() & pair.first) != 0 &&
+                ((isHeal && canHeal) ||
+                (!isHeal && !isSupport && canFight) ||
+                isSupport)) // No special requirement
+            {
+                for(auto& weight : pair.second)
+                {
+                    auto skillData = weight.first;
+                    uint32_t skillID = skillData->GetCommon()->GetID();
+
+                    // Remove outclassed skills
+                    if(aiState->GetSkipOutclassedSkills() &&
+                        aiState->OutclassedSkillsContains(skillID))
+                    {
+                        continue;
+                    }
+
+                    // Make sure its not cooling down or restricted
+                    if(eState->SkillCooldownsKeyExists(skillData
+                        ->GetBasic()->GetCooldownID()) ||
+                        skillManager->SkillRestricted(eState, skillData))
+                    {
+                        continue;
+                    }
+
+                    // Make sure the target is valid
+                    if((!isHeal && !isSupport && !skillManager
+                        ->ValidateSkillTarget(eState, skillData, target)) ||
+                        ((isHeal || isSupport) && !skillManager
+                            ->ValidateSkillTarget(eState, skillData, eState)))
+                    {
+                        continue;
+                    }
+
+                    // Make sure costs can be paid (item/bullet costs won't
+                    // be in the map at all)
+                    int32_t hpCost = 0, mpCost = 0;
+                    uint16_t bulletCost = 0;
+                    std::unordered_map<uint32_t, uint32_t> itemCosts;
+                    if(!skillManager->DetermineNormalCosts(eState, skillData,
+                        hpCost, mpCost, bulletCost, itemCosts) ||
+                        hpCost >= cs->GetHP() || mpCost > cs->GetMP())
+                    {
+                        continue;
+                    }
+
+                    weightedSkills.push_back(weight);
+                    skillTypes[skillID] = pair.first;
+                    totalWeight = (uint16_t)(totalWeight + weight.second);
+                }
             }
         }
 
-        if(skillID)
+        if(weightedSkills.size() == 0)
         {
-            auto cmd = std::make_shared<AIUseSkillCommand>(skillID, targetID);
+            // Can't use anything right now
+            return false;
+        }
+
+        // Sort skills by weight (higher first)
+        weightedSkills.sort([](const AISkillWeight_t& a,
+            const AISkillWeight_t& b)
+            {
+                return a.second > b.second;
+            });
+
+        std::shared_ptr<objects::MiSkillData> skillData;
+
+        // Pull a random number between 1 and the total weight and use the
+        // first one that exceeds the value that we reduce by weight as we go
+        uint16_t rVal = RNG(uint16_t, 1, totalWeight);
+        for(auto& wSkill : weightedSkills)
+        {
+            if(wSkill.second >= rVal)
+            {
+                skillData = wSkill.first;
+                break;
+            }
+            else
+            {
+                rVal = (uint16_t)(rVal - wSkill.second);
+            }
+        }
+
+        if(skillData)
+        {
+            // The skill target is either the aggro target or the entity itself
+            int32_t skillTargetID = targetID;
+            switch(skillTypes[skillData->GetCommon()->GetID()])
+            {
+            case AI_SKILL_TYPE_HEAL:
+            case AI_SKILL_TYPE_SUPPORT:
+                skillTargetID = eState->GetEntityID();
+                break;
+            default:
+                break;
+            }
+
+            switch(skillData->GetBasic()->GetActionType())
+            {
+            case objects::MiSkillBasicData::ActionType_t::SPIN:
+            case objects::MiSkillBasicData::ActionType_t::RAPID:
+            case objects::MiSkillBasicData::ActionType_t::COUNTER:
+            case objects::MiSkillBasicData::ActionType_t::DODGE:
+                // Move up to the target first
+                SkillAdvance(eState, skillData);
+                break;
+            default:
+                break;
+            }
+
+            auto cmd = std::make_shared<AIUseSkillCommand>(skillData,
+                skillTargetID);
             aiState->QueueCommand(cmd);
 
             return true;
@@ -1428,4 +2386,11 @@ std::shared_ptr<AICommand> AIManager::GetWaitCommand(uint32_t waitTime) const
     cmd->SetDelay((uint64_t)waitTime * 1000);
 
     return cmd;
+}
+
+bool AIManager::AggroLimitEnabled()
+{
+    const static bool enabled = mServer.lock()->GetWorldSharedConfig()
+        ->GetAggroLimit();
+    return enabled;
 }

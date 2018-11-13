@@ -41,8 +41,9 @@
         <member type="enum" name="Type" underlying="int8_t">
             <value>NORMAL</value>
             <value>LEVEL_MULTIPLY</value>
+            <value>RELATIVE_LEVEL_MIN</value>
         </member>
-        <member type="float" name="Multiplier" default="1.0"/>
+        <member type="float" name="Modifier" default="1.0"/>
         <member type="s32" name="CooldownRestrict"/>
     </object>
     <object name="DropSet" persistent="false">

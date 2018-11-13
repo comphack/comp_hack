@@ -97,8 +97,6 @@ namespace libcomp
                 .Func("IsMoving", &ActiveEntityState::IsMoving)
                 .Func("IsRotating", &ActiveEntityState::IsRotating)
                 .Func("GetAIState", &ActiveEntityState::GetAIState)
-                .Func("GetActionTime", &ActiveEntityState::GetActionTime)
-                .Func("SetActionTime", &ActiveEntityState::SetActionTime)
                 .Func("GetWorldCID", &ActiveEntityState::GetWorldCID)
                 .Func("GetEnemyBase", &ActiveEntityState::GetEnemyBase)
                 .Func("StatusEffectActive", &ActiveEntityState::StatusEffectActive)
@@ -302,12 +300,19 @@ float ActiveEntityState::GetDistance(float x, float y, bool squared)
 float ActiveEntityState::GetMovementSpeed(bool altSpeed)
 {
     int16_t speed = 0;
+    auto activated = GetActivatedAbility();
     if(altSpeed)
     {
         // Get alternate "walk" speed
         speed = GetCorrectValue(CorrectTbl::MOVE1);
     }
-    else if((mOpponentIDs.size() > 0 || GetActivatedAbility() != nullptr) &&
+    else if(activated && activated->GetChargedTime() &&
+        !activated->GetExecutionTime())
+    {
+        // Charge speed is preserved regardless of
+        return activated->GetChargeCompleteMoveSpeed();
+    }
+    else if((GetCombatTimeOut() || activated) &&
         !GetCalculatedState()->ExistingTokuseiAspectsContains(
             (int8_t)TokuseiAspectType::COMBAT_SPEED_NULL))
     {
@@ -511,24 +516,6 @@ std::shared_ptr<AIState> ActiveEntityState::GetAIState() const
 void ActiveEntityState::SetAIState(const std::shared_ptr<AIState>& aiState)
 {
     mAIState = aiState;
-}
-
-uint64_t ActiveEntityState::GetActionTime(const libcomp::String& action)
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    auto it = mActionTimes.find(action.C());
-    if(it != mActionTimes.end())
-    {
-        return it->second;
-    }
-
-    return 0;
-}
-
-void ActiveEntityState::SetActionTime(const libcomp::String& action, uint64_t time)
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    mActionTimes[action.C()] = time;
 }
 
 float ActiveEntityState::RefreshKnockback(uint64_t time, float recoveryBoost,
@@ -1272,7 +1259,17 @@ std::set<uint32_t> ActiveEntityState::ExpireStatusEffects(
 std::set<uint32_t> ActiveEntityState::CancelStatusEffects(
     uint8_t cancelFlags, const std::set<uint32_t>& keepEffects)
 {
-    std::set<uint32_t> cancelled;
+    bool cancelled = false;
+    return CancelStatusEffects(cancelFlags, cancelled, keepEffects);
+}
+
+std::set<uint32_t> ActiveEntityState::CancelStatusEffects(
+    uint8_t cancelFlags, bool& cancelled,
+    const std::set<uint32_t>& keepEffects)
+{
+    cancelled = false;
+
+    std::set<uint32_t> cancelEffects;
     if(mCancelConditions.size() > 0)
     {
         std::lock_guard<std::mutex> lock(mLock);
@@ -1286,16 +1283,17 @@ std::set<uint32_t> ActiveEntityState::CancelStatusEffects(
                     if(keepEffects.find(effectType) ==
                         keepEffects.end())
                     {
-                        cancelled.insert(effectType);
+                        cancelEffects.insert(effectType);
                     }
                 }
             }
         }
     }
 
-    if(cancelled.size() > 0)
+    if(cancelEffects.size() > 0)
     {
-        return ExpireStatusEffects(cancelled);
+        cancelled = true;
+        return ExpireStatusEffects(cancelEffects);
     }
     else
     {
@@ -2306,6 +2304,8 @@ void ActiveEntityStateImp<objects::Demon>::SetEntity(
     calcState->ClearActiveTokuseiTriggers();
     calcState->ClearEffectiveTokusei();
     ClearAdditionalTokusei();
+    ClearSkillCooldowns();
+    ClearPendingCombatants();
 
     // Reset knockback and let refresh correct
     SetKnockbackResist(0);
@@ -2324,7 +2324,6 @@ void ActiveEntityStateImp<objects::Enemy>::SetEntity(
     {
         mAlive = entity->GetCoreStats()->GetHP() > 0;
 
-        mEffectsActive = true;
         SetDisplayState(ActiveDisplayState_t::DATA_NOT_SENT);
 
         auto spawn = entity->GetSpawnSource();
@@ -2359,7 +2358,6 @@ void ActiveEntityStateImp<objects::Ally>::SetEntity(
     {
         mAlive = entity->GetCoreStats()->GetHP() > 0;
 
-        mEffectsActive = true;
         SetDisplayState(ActiveDisplayState_t::DATA_NOT_SENT);
 
         auto spawn = entity->GetSpawnSource();
@@ -2890,13 +2888,15 @@ uint8_t ActiveEntityState::RecalculateEnemyStats(
     libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
+    bool selfState = calcState == GetCalculatedState();
     if(calcState == nullptr)
     {
         // Calculating default entity state
         calcState = GetCalculatedState();
+        selfState = true;
     }
 
-    if(!mInitialCalc)
+    if(selfState)
     {
         auto previousSkills = GetCurrentSkills();
         SetCurrentSkills(GetAllSkills(definitionManager, true));
@@ -2914,7 +2914,13 @@ uint8_t ActiveEntityState::RecalculateEnemyStats(
             }
         }
 
-        if(skillsChanged && mAIState)
+        // If this is an AI entity and the available skills changed or cost
+        // adjust tokusei exist, remap skills to get new options and weights
+        if(mAIState && (skillsChanged ||
+            calcState->ExistingTokuseiAspectsContains((int8_t)
+                TokuseiAspectType::HP_COST_ADJUST) ||
+            calcState->ExistingTokuseiAspectsContains((int8_t)
+                TokuseiAspectType::MP_COST_ADJUST)))
         {
             mAIState->ResetSkillsMapped();
         }

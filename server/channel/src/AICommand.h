@@ -34,6 +34,7 @@
 namespace objects
 {
 class ActivatedAbility;
+class MiSkillData;
 }
 
 namespace channel
@@ -139,11 +140,29 @@ public:
      * Create a new move command
      */
     AIMoveCommand();
+    
+    /**
+     * Create a new move command with a targeted entity in mind
+     * @param targetEntityID ID of the entity being targeted by the movement
+     * @param minimumDistance Minimum distance required before the movement
+     *  is complete
+     * @param maximumDistance Maximum distance the move command will attempt
+     *  to move before quitting
+     */
+    AIMoveCommand(int32_t targetEntityID, float minimumDistance,
+        float maximumDistance = 0.f);
 
     /**
      * Clean up the move command
      */
     virtual ~AIMoveCommand();
+
+    /**
+     * Set the pathing information for the move command, using the last
+     * point as the destination
+     * @param pathing List of sequential points defining a movement path
+     */
+    std::list<Point> GetPathing() const;
 
     /**
      * Set the pathing information for the move command, using the last
@@ -159,7 +178,7 @@ public:
      * @return true if a current destination exists, false if one does not
      */
     bool GetCurrentDestination(Point& dest) const;
-    
+
     /**
      * Get the x and y coordinates of the point at the end of the pathing
      * @param dest Output parameter for the next movement point's coordinates
@@ -174,9 +193,33 @@ public:
      */
     bool SetNextDestination();
 
+    /**
+     * Get the min target distance required to consider the movement
+     * complete or max distance it can get away before stopping
+     * @param min If true, get the min, else get the max
+     * @return Min/max target distance
+     */
+    float GetTargetDistance(bool min) const;
+
+    /**
+     * Set the min target distance required to consider the movement
+     * complete or max distance it can get away before stopping
+     * @param distance Min/max target distance
+     * @param min If true, set the min, else set the max
+     */
+    void SetTargetDistance(float distance, bool min);
+
 private:
     /// List of sequential points defining a movement path
     std::list<Point> mPathing;
+
+    /// Maximum distance the move command will attempt to move (minus pathing)
+    /// before quitting
+    float mMaximumTargetDistance;
+
+    /// Minimum distance the move command requires with the target before it
+    /// is considered complete
+    float mMinimumTargetDistance;
 };
 
 /**
@@ -187,16 +230,19 @@ class AIUseSkillCommand : public AICommand
 public:
     /**
      * Create a new use skill command for a skill not already activated
-     * @param skillID ID of the skill being used
+     * @param skillData Pointer to the definition of the skill being used
      * @param targetEntityID ID of the entity being targeted by the skill
      */
-    AIUseSkillCommand(uint32_t skillID, int32_t targetEntityID);
+    AIUseSkillCommand(const std::shared_ptr<objects::MiSkillData>& skillData,
+        int32_t targetEntityID);
 
     /**
      * Create a new use skill command for a skill that has already been activated
+     * @param skillData Pointer to the definition of the skill being used
      * @param activated Pointer to the ActivatedAbility of a skill to execute
      */
-    AIUseSkillCommand(const std::shared_ptr<objects::ActivatedAbility>& activated);
+    AIUseSkillCommand(const std::shared_ptr<objects::MiSkillData>& skillData,
+        const std::shared_ptr<objects::ActivatedAbility>& activated);
 
     /**
      * Clean up the use skill command
@@ -208,6 +254,12 @@ public:
      * @return ID fo the skill to use
      */
     uint32_t GetSkillID() const;
+
+    /**
+     * Get the definition of the skill to use
+     * @return Definition fo the skill to use
+     */
+    std::shared_ptr<objects::MiSkillData> GetSkillData() const;
 
     /**
      * Set the ActivatedAbility pointer after the skill has been activated
@@ -223,8 +275,8 @@ public:
     std::shared_ptr<objects::ActivatedAbility> GetActivatedAbility() const;
 
 private:
-    /// ID of the skill being used
-    uint32_t mSkillID;
+    /// Definition of the skill being used
+    std::shared_ptr<objects::MiSkillData> mSkillData;
 
     /// Pointer to the ActivatedAbility of a skill to execute
     std::shared_ptr<objects::ActivatedAbility> mActivated;

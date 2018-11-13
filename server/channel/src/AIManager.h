@@ -37,6 +37,11 @@ namespace libcomp
 class ScriptEngine;
 }
 
+namespace objects
+{
+class MiSkillData;
+}
+
 namespace channel
 {
 
@@ -125,22 +130,60 @@ public:
         const std::shared_ptr<ActiveEntityState>& target, bool hit);
 
     /**
+     * Queue a use move command on the specified AI controlled entity.
+     * The shortest possible path will be used when creating the command.
+     * @param eState Pointer to the entity state
+     * @param x X coordiate to move to
+     * @param y Y coordiate to move to
+     * @param interrupt If true the command will interrupt whatever
+     *  the current command is
+     * @return true if the command was queued, false if it was not
+     */
+    bool QueueMoveCommand(const std::shared_ptr<ActiveEntityState>& eState,
+        float x, float y, bool interrupt = false);
+
+    /**
+     * Queue a use skill command on the specified AI controlled entity
+     * @param eState Pointer to the entity state
+     * @param skillID Skill ID to use
+     * @param targetEntityID Entity ID of the target to use the skill on
+     * @param advance If true, a pre-skill movement command will be queued
+     *  first
+     * @return true if the skill queued correctly, false if it did not
+     */
+    bool QueueUseSkillCommand(const std::shared_ptr<ActiveEntityState>& eState,
+        uint32_t skillID, int32_t targetEntityID, bool advance);
+
+    /**
      * Queue a script command on the specified AIState
      * @param aiState Pointer to the AIState
      * @param functionName Name of the script function to be executed when
      *  the command is processed
+     * @param interrupt If true the command will interrupt whatever
+     *  the current command is
      */
     void QueueScriptCommand(const std::shared_ptr<AIState>& aiState,
-        const libcomp::String& functionName);
+        const libcomp::String& functionName, bool interrupt = false);
 
     /**
      * Queue a wait command on the specified AIState
      * @param aiState Pointer to the AIState
      * @param waitTime Number of seconds the entity should wait when
      *  the command is processed
+     * @param interrupt If true the command will interrupt whatever
+     *  the current command is
      */
     void QueueWaitCommand(const std::shared_ptr<AIState>& aiState,
-        uint32_t waitTime);
+        uint32_t waitTime, bool interrupt = false);
+
+    /**
+     * Start an event with the supplied entity as the source entity
+     * @param eState Pointer to the entity state
+     * @param eventID Event ID to start
+     * @return true if the event started, false if it did not
+     */
+    bool StartEvent(const std::shared_ptr<ActiveEntityState>& eState,
+        const libcomp::String& eventID);
 
     /**
      * Set or remove the aggro target on an AI controlled entity
@@ -152,15 +195,54 @@ public:
         int32_t targetID);
 
     /**
-     * Set the entity's destination position based on the supplied
-     * values and uses the current position values to set the origin.
-     * Communicating that the move has taken place must be done elsewhere.
-     * @param xPos X position to move to
-     * @param yPos Y position to move to
-     * @param now Server time to use as the origin ticks
+     * Create a move command that chases a specified target in the same
+     * zone.
+     * @param eState Pointer to the entity state
+     * @param targetEntityID Entity ID of the target to chase
+     * @param minDistance Optional minimum distance needed before stopping,
+     *  0 to ignore
+     * @param maxDistance Optional maximum distance allowed before stopping,
+     *  0 to ignore
+     * @param interrupt If true the command will interrupt whatever
+     *  the current command is
+     * @return true if the command was queued, false if it was not
      */
-    void Move(const std::shared_ptr<ActiveEntityState>& eState,
-        float xPos, float yPos, uint64_t now);
+    bool Chase(const std::shared_ptr<ActiveEntityState>& eState,
+        int32_t targetEntityID, float minDistance = 0.f,
+        float maxDistance = 0.f, bool interrupt = false);
+
+    /**
+     * Create a move command that causes the entity to retreat from a
+     * target point in a straight line up to a min distance. Only fails
+     * if something was invalid or the entity would not retreat further
+     * from the command.
+     * @param eState Pointer to the entity state
+     * @param x X coordiate to retreat from
+     * @param y Y coordiate to retreat from
+     * @param interrupt If true the command will interrupt whatever
+     *  the current command is
+     * @param distance Distance to put between the entity and its target
+     * @return true if the command was queued, false if it was not
+     */
+    bool Retreat(const std::shared_ptr<ActiveEntityState>& eState,
+        float x, float y, float distance, bool interrupt = false);
+
+    /**
+     * Create a move command that causes the entity to retreat from a
+     * target point and circle them when far enough away. If they are
+     * further away from the target than the designated distance, they
+     * will move in first.
+     * @param eState Pointer to the entity state
+     * @param x X coordiate to circle
+     * @param y Y coordiate to circle
+     * @param interrupt If true the command will interrupt whatever
+     *  the current command is
+     * @param distance Distance to put between the entity and its target
+     * @return true if the command was queued, false if it was not
+     */
+    bool Circle(const std::shared_ptr<ActiveEntityState>& eState,
+        float x, float y, bool interrupt = false, float distance = 800.f);
+
 private:
     /**
      * Update the state of an entity, processing AI and performing other
@@ -189,6 +271,17 @@ private:
         bool isNight);
 
     /**
+     * Set the entity's destination position based on the supplied
+     * values and uses the current position values to set the origin.
+     * Communicating that the move has taken place must be done elsewhere.
+     * @param eState Pointer to the entity state
+     * @param dest Position to move to
+     * @param now Server time to use as the origin ticks
+     */
+    void Move(const std::shared_ptr<ActiveEntityState>& eState,
+        Point dest, uint64_t now);
+
+    /**
      * Handle normal wander actions for the supplied AI controlled enemy
      * based entity
      * @param eState Pointer to the entity state to update
@@ -196,6 +289,16 @@ private:
      */
     void Wander(const std::shared_ptr<ActiveEntityState>& eState,
         const std::shared_ptr<objects::EnemyBase>& eBase);
+
+    /**
+     * Queue a command that will move the entity into range with its target
+     * @param eState Pointer to the entity state
+     * @param skillData Pointer to the skill that will be used
+     * @return 0 if the entity queued a move command to the target, 1 if the
+     *  move was not possible, 2 if no move was needed
+     */
+    uint8_t SkillAdvance(const std::shared_ptr<ActiveEntityState>& eState,
+        const std::shared_ptr<objects::MiSkillData>& skillData);
 
     /**
      * Clear an entity's AIState current target and find the next target to focus on
@@ -215,6 +318,25 @@ private:
      */
     void RefreshSkillMap(const std::shared_ptr<ActiveEntityState>& eState,
         const std::shared_ptr<AIState>& aiState);
+
+    /**
+     * Determine if a skill can be used at a base level
+     * @param skillData Pointer to the skill definition
+     * @return true if it is valid, false if it is not
+     */
+    bool SkillIsValid(
+        const std::shared_ptr<objects::MiSkillData>& skillData);
+
+    /**
+     * Determine if a skill that has already attempted activation can
+     * be used again
+     * @param eState Pointer to the entity state
+     * @param activated Pointer to the skill's activation state
+     * @return true if the skill can be reactivated, false if it cannot
+     *  and should be cancelled
+     */
+    bool CanRetrySkill(const std::shared_ptr<ActiveEntityState>& eState,
+        const std::shared_ptr<objects::ActivatedAbility>& activated);
 
     /**
      * Determine which skill the entity will use next based on their current
@@ -279,6 +401,13 @@ private:
      * @return Pointer to the new move command
      */
     std::shared_ptr<AICommand> GetWaitCommand(uint32_t waitTime) const;
+
+    /**
+     * Determine if the aggro limit is enabled for the server to
+     * adjust AI behavior
+     * @return true if the aggro limit is enabled, false if it is not
+     */
+    bool AggroLimitEnabled();
 
     /// Static map of scripts that have been loaded and compiled
     /// by AI type name

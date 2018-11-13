@@ -68,6 +68,10 @@ const uint16_t AI_SKILL_TYPES_ALLY = 0x1C;
 /// AI skill type mask for all skills
 const uint16_t AI_SKILL_TYPES_ALL = 0x1F;
 
+typedef std::pair<
+    std::shared_ptr<objects::MiSkillData>, uint16_t> AISkillWeight_t;
+typedef std::unordered_map<uint16_t, std::list<AISkillWeight_t>> AISkillMap_t;
+
 /**
  * Possible AI statuses for an active AI controlled entity.
  */
@@ -172,8 +176,11 @@ public:
     /**
      * Queue a command to process for the AI controlled entity
      * @param command Pointer to a command to queue for the entity
+     * @param interrupt If true the command will become the new current
+     *  command. If false the command will be added to the end.
      */
-    void QueueCommand(const std::shared_ptr<AICommand>& command);
+    void QueueCommand(const std::shared_ptr<AICommand>& command,
+        bool interrupt = false);
 
     /**
      * Clear all queued commands
@@ -182,10 +189,13 @@ public:
 
     /**
      * Pop the first command off the command queue
+     * @param specific Optional pointer to the specific command to remove
+     *  in case its not the first command
      * @return Pointer to the command that was removed or null if
      *  there were no commands
      */
-    std::shared_ptr<AICommand> PopCommand();
+    std::shared_ptr<AICommand> PopCommand(
+        const std::shared_ptr<AICommand>& specific = nullptr);
 
     /**
      * Mark the skill map as needing a refresh
@@ -197,16 +207,14 @@ public:
      * @return Map of AI skill types to active skill definitions the entity
      *  can use
      */
-    std::unordered_map<uint16_t,
-        std::list<std::shared_ptr<objects::MiSkillData>>> GetSkillMap() const;
+    AISkillMap_t GetSkillMap() const;
 
     /**
      * Set the mapped skills of the AI controlled entity
      * @param skillMap Map of AI skill types to active skill definitions
      *  the entity can use
      */
-    void SetSkillMap(const std::unordered_map<uint16_t,
-        std::list<std::shared_ptr<objects::MiSkillData>>>& skillMap);
+    void SetSkillMap(const AISkillMap_t& skillMap);
 
 private:
     /// List of all AI commands to be processed, starting with the current
@@ -216,12 +224,10 @@ private:
     /// Pointer to the current AI command or the next to process if not started
     std::shared_ptr<AICommand> mCurrentCommand;
 
-    /// Map of AI actions to script function names to call instead
-    std::unordered_map<std::string, libcomp::String> mActionOverrides;
-
     /// Map of AI skill types to active skill definitions the entity can use
-    std::unordered_map<uint16_t,
-        std::list<std::shared_ptr<objects::MiSkillData>>> mSkillMap;
+    /// with definitions and assigned weights that recalculate whenever the
+    /// set or costs are adjusted
+    AISkillMap_t mSkillMap;
 
     /// Pointer to the AI script to use for the AI controlled entity
     std::shared_ptr<libcomp::ScriptEngine> mAIScript;

@@ -66,6 +66,13 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto login = accountManager->GetUserLogin(username);
+    if(!login)
+    {
+        LOG_DEBUG(libcomp::String("Unknown username supplied for"
+            " AccountLogout: '%1'\n").Arg(username));
+        return true;
+    }
+
     auto cLogin = login->GetCharacterLogin();
     if(action == LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH)
     {
@@ -95,16 +102,75 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
                 cLogin->GetWorldCID());
         }
     }
-    else if(p.Left() > 0 && p.PeekU8() == 1)
+    else if(p.Left() > 0)
     {
-        // Tell the channel to disconnect
-        libcomp::Packet reply;
-        reply.WritePacketCode(
-            InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
-        reply.WriteS32Little(cLogin->GetWorldCID());
-        reply.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+        // Special disconnect request
+        uint8_t kickLevel = p.ReadU8();
+        switch(kickLevel)
+        {
+        case 1:
+            {
+                // Tell the source channel to disconnect
+                libcomp::Packet reply;
+                reply.WritePacketCode(
+                    InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+                reply.WriteS32Little(cLogin->GetWorldCID());
+                reply.WriteU32Little(
+                    (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
 
-        connection->SendPacket(reply);
+                connection->SendPacket(reply);
+            }
+            break;
+        case 2:
+        case 3:
+            {
+                // Request disconnect from active channel or kill the
+                // connection directly on the world or lobby (skip supplied
+                // character login). For kick level 3, skip trying to remove
+                // from channel (last resort if stuck).
+                if(kickLevel == 2)
+                {
+                    cLogin = login->GetCharacterLogin();
+                    if(cLogin && server->GetCharacterManager()
+                        ->RequestChannelDisconnect(cLogin->GetWorldCID()))
+                    {
+                        LOG_DEBUG(libcomp::String("Requesting special channel"
+                            " disconnect: '%1'\n").Arg(username));
+                        return true;
+                    }
+                    else
+                    {
+                        LOG_DEBUG(libcomp::String("Special channel disconnect"
+                            " failed to find channel: '%1'\n").Arg(username));
+                    }
+                }
+
+                if(server->GetAccountManager()->LogoutUser(username, -1))
+                {
+                    // Message logged in function
+                    return true;
+                }
+                else
+                {
+                    LOG_DEBUG(libcomp::String("Special channel disconnect"
+                        " user not on this world: '%1'\n").Arg(username));
+                }
+
+                // Nothing left to try but the lobby directly
+                libcomp::Packet request;
+                request.WritePacketCode(
+                    InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+                request.WriteString16Little(
+                    libcomp::Convert::Encoding_t::ENCODING_UTF8, username);
+
+                server->GetLobbyConnection()->SendPacket(request);
+            }
+            break;
+        default:
+            LOG_ERROR(libcomp::String("Unknown logout request received"
+                " %1: '%2'\n").Arg(kickLevel).Arg(username));
+            break;
+        }
     }
     else
     {

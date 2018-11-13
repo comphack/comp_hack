@@ -128,8 +128,10 @@ public:
      * send a request to the channel they are currently logged into to
      * disconnect that account
      * @param worldCID World CID associated to the character
+     * @return true if the request was sent, false if either no channel exists
+     *  or no channel is has the character
      */
-    void RequestChannelDisconnect(int32_t worldCID);
+    bool RequestChannelDisconnect(int32_t worldCID);
 
     /**
      * Send a packet to the specified logins

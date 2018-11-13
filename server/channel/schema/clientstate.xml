@@ -10,7 +10,6 @@
         <member type="u32" name="LastZoneID"/>
         <member type="u32" name="ZoneInSpotID"/>
         <member type="u64" name="LogoutTimer"/>
-        <member type="u64" name="BattleEndTimer"/>
         <member type="AccountLogin*" name="AccountLogin"/>
         <member type="ChannelLogin*" name="ChannelLogin"
             nulldefault="true"/>

@@ -7,6 +7,11 @@
             <value>NORMAL</value>
             <value>COMP_SHOP</value>
         </member>
+        <member type="enum" name="RepairType" underlying="uint8_t">
+            <value>ANY</value>
+            <value>WEAPON_ONLY</value>
+            <value>ARMOR_ONLY</value>
+        </member>
         <member type="float" name="RepairCostMultiplier"/>
         <member type="float" name="RepairRate"/>
         <member type="bool" name="LNCAdjust"/>

@@ -31,11 +31,6 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
-// object Includes
-#include <EventInstance.h>
-#include <EventOpenMenu.h>
-#include <EventState.h>
-
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
@@ -95,16 +90,10 @@ void HandleMitamaReset(const std::shared_ptr<ChannelServer> server,
                 std::set<int32_t>{ dState->GetEntityID() });
             characterManager->RecalculateStats(dState, client);
 
-            // If the current event is a menu with a "next" event,
-            // process that now (in auto-only mode)
-            auto eState = state->GetEventState();
-            auto current = eState->GetCurrent();
-            auto menu = current ? std::dynamic_pointer_cast<
-                objects::EventOpenMenu>(current->GetEvent()) : nullptr;
-            if(menu && !menu->GetNext().IsEmpty())
+            // If the current event is a menu, handle the "next" event,
+            if(state->GetCurrentMenuShopID() != 0)
             {
-                server->GetEventManager()->HandleEvent(client, menu->GetNext(),
-                    cState->GetEntityID(), nullptr, 0, true);
+                server->GetEventManager()->HandleResponse(client, -1);
             }
         }
     }

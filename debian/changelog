@@ -1,3 +1,19 @@
+comphack (3.9.1) xenial; urgency=low
+
+  * Hathor Release Candidate 1 includes:
+  * Skill timing correction
+  * AI overhaul
+  * Digitalize
+  * Mitama fusion/reinforcement
+  * PvP
+  * All remaining instance types
+  * Ultimate Battle
+  * Casino games
+  * Armor modding
+  * I-Time
+
+ -- COMP Omega <compomega@tutanota.com>  Mon, 12 Nov 2018 18:20:57 -0700
+
 comphack (3.1.1.1) xenial; urgency=low
 
   * Fixed the debian package to include the debug symbols again.

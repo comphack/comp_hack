@@ -80,61 +80,34 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     auto destBox = characterManager->GetItemBox(state, destType, destBoxID);
     size_t sourceSlot = item ? (size_t)item->GetBoxSlot() : 0;
 
-    if(item && sourceBox && destBox && sourceBox->GetItems(sourceSlot).Get() == item)
-    {
-        auto character = state->GetCharacterState()->GetEntity();
-        bool sameBox = destBox == sourceBox;
-        if(!sameBox)
-        {
-            characterManager->UnequipItem(client, item);
-        }
+    auto otherItem = destBox
+        ? destBox->GetItems((size_t)destSlot).Get() : nullptr;
 
-        // Swap the items (the destination could be a null object or a real item)
-        item->SetItemBox(destBox->GetUUID());
-        item->SetBoxSlot((int8_t)destSlot);
-
-        auto otherItem = destBox->GetItems((size_t)destSlot);
-        destBox->SetItems((size_t)destSlot, item);
-        sourceBox->SetItems(sourceSlot, otherItem);
-
-        auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
-        dbChanges->Update(item);
-        dbChanges->Update(destBox);
-        dbChanges->Update(sourceBox);
-
-        if(!otherItem.IsNull())
-        {
-            otherItem->SetItemBox(sourceBox->GetUUID());
-            otherItem->SetBoxSlot((int8_t)sourceSlot);
-            dbChanges->Update(otherItem.Get());
-        }
-
-        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
-
-        // The client will handle moves just fine on its own for the most part but
-        // certain simultaneous actions will cause some weirdness without sending
-        // the updated slots back
-        std::list<uint16_t> slots = { (uint16_t)sourceSlot };
-        if(sameBox)
-        {
-            slots.push_back((uint16_t)destSlot);
-        }
-
-        characterManager->SendItemBoxData(client, sourceBox, slots, false);
-
-        if(!sameBox)
-        {
-            slots.clear();
-            slots.push_back((uint16_t)destSlot);
-
-            characterManager->SendItemBoxData(client, destBox, slots, true);
-        }
-    }
-    else
+    bool fail = false;
+    if(!item || !sourceBox || !destBox ||
+        sourceBox->GetItems(sourceSlot).Get() != item)
     {
         LOG_DEBUG(libcomp::String("ItemMove request failed. Notifying"
             " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
 
+        fail = true;
+    }
+    else if(sourceBox != destBox)
+    {
+        // Make sure nothing is being moved into an expired box (allow
+        // reorganize because why not?)
+        uint32_t now = (uint32_t)std::time(0);
+        if((item && destBox->GetRentalExpiration() &&
+            destBox->GetRentalExpiration() < now) ||
+            (otherItem && sourceBox->GetRentalExpiration() &&
+                sourceBox->GetRentalExpiration() < now))
+        {
+            fail = true;
+        }
+    }
+
+    if(fail)
+    {
         libcomp::Packet err;
         err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_ITEM);
         err.WriteS32Little((int32_t)
@@ -144,6 +117,61 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
         err.WriteS8(1);
 
         client->SendPacket(err);
+
+        return true;
+    }
+
+    auto character = state->GetCharacterState()->GetEntity();
+
+    bool sameBox = destBox == sourceBox;
+    if(!sameBox)
+    {
+        characterManager->UnequipItem(client, item);
+        if(otherItem)
+        {
+            characterManager->UnequipItem(client, otherItem);
+        }
+    }
+
+    // Swap the items (the destination could be a null object or a real item)
+    item->SetItemBox(destBox->GetUUID());
+    item->SetBoxSlot((int8_t)destSlot);
+
+    destBox->SetItems((size_t)destSlot, item);
+    sourceBox->SetItems(sourceSlot, otherItem);
+
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(state
+        ->GetAccountUID());
+    dbChanges->Update(item);
+    dbChanges->Update(destBox);
+    dbChanges->Update(sourceBox);
+
+    if(otherItem)
+    {
+        otherItem->SetItemBox(sourceBox->GetUUID());
+        otherItem->SetBoxSlot((int8_t)sourceSlot);
+        dbChanges->Update(otherItem);
+    }
+
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+
+    // The client will handle moves just fine on its own for the most part but
+    // certain simultaneous actions will cause some weirdness without sending
+    // the updated slots back
+    std::list<uint16_t> slots = { (uint16_t)sourceSlot };
+    if(sameBox)
+    {
+        slots.push_back((uint16_t)destSlot);
+    }
+
+    characterManager->SendItemBoxData(client, sourceBox, slots, false);
+
+    if(!sameBox)
+    {
+        slots.clear();
+        slots.push_back((uint16_t)destSlot);
+
+        characterManager->SendItemBoxData(client, destBox, slots, true);
     }
 
     return true;

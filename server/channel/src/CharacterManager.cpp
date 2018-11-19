@@ -954,6 +954,7 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
     float newX = 0.f, newY = 0.f, newRot = 0.f;
     std::unordered_map<std::shared_ptr<ActiveEntityState>,
         int32_t> hpRestores;
+    uint32_t baseItemID = 0;
 
     bool xpLossLevel = characterLevel >= 10 && characterLevel < 99;
     bool triggerRespawn = false;
@@ -1034,14 +1035,9 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
         break;
     case REVIVE_ITEM:
         {
-            std::unordered_map<uint32_t, uint32_t> itemMap;
-            itemMap[SVR_CONST.ITEM_BALM_OF_LIFE] = 1;
-
-            if(AddRemoveItems(client, itemMap, false))
-            {
-                responseType1 = REVIVAL_REVIVE_NORMAL;
-                hpRestores[cState] = cState->GetMaxHP();
-            }
+            baseItemID = SVR_CONST.ITEM_BALM_OF_LIFE;
+            responseType1 = REVIVAL_REVIVE_NORMAL;
+            hpRestores[cState] = cState->GetMaxHP();
         }
         break;
     case REVIVE_ACCEPT_REVIVAL:
@@ -1068,15 +1064,10 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
         break;
     case REVIVE_DEMON_SOLO_ITEM:
         {
-            std::unordered_map<uint32_t, uint32_t> itemMap;
-            itemMap[SVR_CONST.ITEM_BALM_OF_LIFE_DEMON] = 1;
-
-            if(AddRemoveItems(client, itemMap, false))
-            {
-                responseType1 = REVIVAL_REVIVE_NORMAL;
-                hpRestores[dState] = dState->GetMaxHP();
-                hpRestores[cState] = 1;
-            }
+            baseItemID = SVR_CONST.ITEM_BALM_OF_LIFE_DEMON;
+            responseType1 = REVIVAL_REVIVE_NORMAL;
+            hpRestores[dState] = dState->GetMaxHP();
+            hpRestores[cState] = 1;
         }
         break;
     case REVIVE_DEMON_SOLO_QUIT:
@@ -1106,6 +1097,54 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
         LOG_ERROR(libcomp::String("Unknown revival mode requested: %1\n")
             .Arg(revivalMode));
         break;
+    }
+
+    if(baseItemID)
+    {
+        // Determine which items are in the inventory that have the same base
+        // item ID and consume variants first (non-trade etc)
+        uint32_t itemID = 0;
+        auto inventory = character->GetItemBoxes(0).Get();
+        auto definitionManager = server->GetDefinitionManager();
+        for(size_t i = 0; i < 50; i++)
+        {
+            auto item = inventory->GetItems(i).Get();
+            auto itemData = item
+                ? definitionManager->GetItemData(item->GetType()) : nullptr;
+            if(itemData && itemData->GetBasic()->GetBaseID() == baseItemID)
+            {
+                if(item->GetType() != baseItemID)
+                {
+                    // Variant found, go with this
+                    itemID = item->GetType();
+                    break;
+                }
+                else
+                {
+                    // Item found but keep going
+                    itemID = item->GetType();
+                }
+            }
+        }
+
+        std::unordered_map<uint32_t, uint32_t> itemMap;
+        if(itemID)
+        {
+            itemMap[itemID] = 1;
+        }
+
+        if(itemMap.size() == 0 || !AddRemoveItems(client, itemMap, false))
+        {
+            responseType1 = -1;
+            responseType2 = -1;
+        }
+    }
+
+    if(responseType1 == -1 && responseType2 == -1)
+    {
+        LOG_ERROR(libcomp::String("Revival failed for character %1\n")
+            .Arg(cState->GetEntityUUID().ToString()));
+        return;
     }
 
     bool deathPenaltyDisabled = server->GetWorldSharedConfig()
@@ -3583,7 +3622,7 @@ bool CharacterManager::ReunionDemon(
         if(!force && success && !isReset && rank > 1)
         {
             // Base criteria valid, make sure the demon is leveled enough
-            int8_t lvl = demon->GetCoreStats()->GetLevel();
+            int8_t lvl = cs->GetLevel();
             if(rank >= 9)
             {
                 if(lvl < 99)
@@ -3666,12 +3705,75 @@ bool CharacterManager::ReunionDemon(
                 demon->SetReunion(groupIdx, newRank);
             }
 
-            // Reset level and stats
+            // Determine new level and stats
+            int64_t keepXP = 0;
+            auto effectMap = cState->GetStatusEffects();
+            auto effectIter = effectMap.find(SVR_CONST.STATUS_REUNION_XP_SAVE);
+            if(effectIter != effectMap.end())
+            {
+                // Keep 1% XP for each stack active then expire the effect
+                uint8_t stacks = effectIter->second->GetStack();
+                if(stacks > 100)
+                {
+                    stacks = 100;
+                }
+
+                // Sum up existing XP then reduce
+                int8_t lvl = cs->GetLevel();
+                keepXP = cs->GetXP();
+
+                for(int8_t i = 1; i < lvl; i++)
+                {
+                    keepXP = keepXP +
+                        (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[(size_t)i];
+                }
+
+                keepXP = (int64_t)floorl((double)keepXP * (double)stacks * 0.01);
+
+                std::set<uint32_t> expire = { SVR_CONST.STATUS_REUNION_XP_SAVE };
+                cState->ExpireStatusEffects(expire);
+            }
+
+            if(keepXP)
+            {
+                // Re-level to the kept XP point
+                int8_t levelCap = server->GetWorldSharedConfig()
+                    ->GetLevelCap();
+
+                int8_t lvl = 1;
+                while(lvl < levelCap && keepXP > 0)
+                {
+                    int64_t req = (int64_t)
+                        libcomp::LEVEL_XP_REQUIREMENTS[(size_t)lvl];
+                    if(req <= keepXP)
+                    {
+                        lvl = (int8_t)(lvl + 1);
+                        keepXP = (int64_t)(keepXP - req);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                if(lvl == levelCap)
+                {
+                    keepXP = 0;
+                }
+
+                cs->SetLevel(lvl);
+                cs->SetXP(keepXP);
+            }
+            else
+            {
+                // Reset level/XP
+                cs->SetLevel(1);
+                cs->SetXP(0);
+            }
+
             auto dbChanges = libcomp::DatabaseChangeSet::Create(
                 state->GetAccountUID());
 
-            cs->SetLevel(1);
-            cs->SetXP(0);
             demon->SetGrowthType(growthType);
             CalculateDemonBaseStats(demon);
 
@@ -3708,7 +3810,7 @@ bool CharacterManager::ReunionDemon(
             ChannelToClientPacketCode_t::PACKET_PARTNER_LEVEL_DOWN);
         notify.WriteS32Little(dState->GetEntityID());
         notify.WriteS8(cs->GetLevel());
-        notify.WriteS64Little(0);    // Probably object ID, always 0 though
+        notify.WriteS64Little(cs->GetXP());
         GetEntityStatsPacketData(notify, cs, dState, 1);
         notify.WriteU8(growthType);
 
@@ -5233,6 +5335,12 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
         else if(rate > 100.0)
         {
             rate = 100.0;
+        }
+
+        // Tarot/soul have a 5% minimum no matter what
+        if(rate < 5.0 && (isTarot || isSoul))
+        {
+            rate = 5.0;
         }
 
         successRates.push_back((int32_t)rate);

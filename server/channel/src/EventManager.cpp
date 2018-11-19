@@ -1832,9 +1832,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             auto server = mServer.lock();
             auto definitionManager = server->GetDefinitionManager();
 
-            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
-            auto worldData = std::dynamic_pointer_cast<objects::AccountWorldData>(
-                libcomp::PersistentObject::GetObjectByUUID(character->GetAccount()));
+            auto worldData = client->GetClientState()->GetAccountWorldData().Get();
             if(!worldData)
             {
                 return false;

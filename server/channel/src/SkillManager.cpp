@@ -512,8 +512,6 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
             break;
         }
 
-        activated->SetChargeMoveSpeed(chargeSpeed);
-        activated->SetChargeCompleteMoveSpeed(chargeCompleteSpeed);
         source->SetActivatedAbility(activated);
 
         if(pSkill->FunctionID)
@@ -524,7 +522,16 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
                 source->SetSpecialActivations(activated->GetActivationID(),
                     activated);
             }
+
+            if(pSkill->FunctionID == SVR_CONST.SKILL_REST)
+            {
+                // Rest has a special no movement rule after charging
+                chargeCompleteSpeed = 0;
+            }
         }
+
+        activated->SetChargeMoveSpeed(chargeSpeed);
+        activated->SetChargeCompleteMoveSpeed(chargeCompleteSpeed);
 
         SendActivateSkill(pSkill);
 
@@ -902,6 +909,24 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
 
         SendCompleteSkill(activated, cancelType);
         return true;
+    }
+}
+
+void SkillManager::CancelActiveSkills(
+    const std::shared_ptr<ChannelClientConnection> client)
+{
+    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+
+    for(auto eState : { std::dynamic_pointer_cast<ActiveEntityState>(cState),
+        std::dynamic_pointer_cast<ActiveEntityState>(dState) })
+    {
+        auto activated = eState->GetActivatedAbility();
+        if(activated)
+        {
+            CancelSkill(eState, activated->GetActivationID());
+        }
     }
 }
 
@@ -2052,6 +2077,10 @@ bool SkillManager::DetermineNormalCosts(
     bulletCost = 0;
     itemCosts.clear();
 
+    // Only characters and partner demons have to pay item costs
+    bool noItem = source->GetEntityType() != EntityType_t::CHARACTER &&
+        source->GetEntityType() != EntityType_t::PARTNER_DEMON;
+
     uint32_t hpCostPercent = 0, mpCostPercent = 0;
     for(auto cost : skillData->GetCondition()->GetCosts())
     {
@@ -2081,30 +2110,36 @@ bool SkillManager::DetermineNormalCosts(
             }
             break;
         case objects::MiCostTbl::Type_t::ITEM:
-            if(percentCost)
+            if(!noItem)
             {
-                LOG_ERROR("Item percent cost encountered.\n");
-                return false;
-            }
-            else
-            {
-                auto itemID = cost->GetItem();
-                if(itemCosts.find(itemID) == itemCosts.end())
+                if(percentCost)
                 {
-                    itemCosts[itemID] = 0;
+                    LOG_ERROR("Item percent cost encountered.\n");
+                    return false;
                 }
-                itemCosts[itemID] = (uint32_t)(itemCosts[itemID] + num);
+                else
+                {
+                    auto itemID = cost->GetItem();
+                    if(itemCosts.find(itemID) == itemCosts.end())
+                    {
+                        itemCosts[itemID] = 0;
+                    }
+                    itemCosts[itemID] = (uint32_t)(itemCosts[itemID] + num);
+                }
             }
             break;
         case objects::MiCostTbl::Type_t::BULLET:
-            if(percentCost)
+            if(!noItem)
             {
-                LOG_ERROR("Bullet percent cost encountered.\n");
-                return false;
-            }
-            else
-            {
-                bulletCost = (uint16_t)(bulletCost + num);
+                if(percentCost)
+                {
+                    LOG_ERROR("Bullet percent cost encountered.\n");
+                    return false;
+                }
+                else
+                {
+                    bulletCost = (uint16_t)(bulletCost + num);
+                }
             }
             break;
         default:
@@ -2390,7 +2425,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             effectiveTargets.push_back(effectiveSource);
             break;
         case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS:
-            if(!skill.Reflected)
+            if(!initialHitReflect)
             {
                 effectiveTargets = zone->GetActiveEntitiesInRadius(
                     effectiveSource->GetCurrentX(), effectiveSource->GetCurrentY(), aoeRange);
@@ -2408,7 +2443,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_1:
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_2:
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_3:
-            if(!skill.Reflected)
+            if(!initialHitReflect)
             {
                 /// @todo: figure out how these 3 differ
 
@@ -2435,7 +2470,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             }
             break;
         case objects::MiEffectiveRangeData::AreaType_t::STRAIGHT_LINE:
-            if(!skill.Reflected && primaryTarget &&
+            if(!initialHitReflect && primaryTarget &&
                 skillRange->GetAoeLineWidth() > 0)
             {
                 // Create a rotated rectangle to represent the line with
@@ -2909,15 +2944,17 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 }
             }
 
-            // Always heal HP even if value is 0
-            selfTarget->Damage1Type = DAMAGE_TYPE_HEALING;
-            selfTarget->Damage1 = hpDrain;
+            // Heal HP/MP if part of the skill even if value is 0
+            if(hpDrainPercent)
+            {
+                selfTarget->Damage1Type = DAMAGE_TYPE_HEALING;
+                selfTarget->Damage1 = hpDrain < 0 ? hpDrain : 0;
+            }
 
-            // Heal MP only if the value is less than 0
-            if(mpDrain < 0)
+            if(mpDrainPercent)
             {
                 selfTarget->Damage2Type = DAMAGE_TYPE_HEALING;
-                selfTarget->Damage2 = mpDrain;
+                selfTarget->Damage2 = mpDrain < 0 ? mpDrain : 0;
             }
         }
     }
@@ -4406,7 +4443,7 @@ bool SkillManager::EvaluateTokuseiSkillCondition(
         // Current skill is the specified expertise type
         return ((int32_t)skill.ExpertiseType == condition->GetValue()) == !negate;
     case TokuseiSkillConditionType::ENEMY_DIGITALIZED:
-        // Enemy is digitalized (must be a character)
+        // Enemy is digitalized (must be a player entity)
         if(!otherState)
         {
             // Error
@@ -4414,7 +4451,9 @@ bool SkillManager::EvaluateTokuseiSkillCondition(
         }
         else
         {
-            auto cState = std::dynamic_pointer_cast<CharacterState>(otherState);
+            auto state = ClientState::GetEntityClientState(otherState
+                ->GetEntityID(), false);
+            auto cState = state ? state->GetCharacterState() : nullptr;
             return (cState && cState->GetDigitalizeState()) == !negate;
         }
         break;
@@ -5525,7 +5564,6 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 
             auto lootBody = lState->GetEntity();
             auto eBase = lootBody->GetEnemy();
-            auto spawn = eBase->GetSpawnSource();
 
             auto enemy = std::dynamic_pointer_cast<objects::Enemy>(eBase);
 
@@ -5606,7 +5644,31 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 }
             }
 
-            auto drops = GetItemDrops(source, spawn, zone);
+            auto drops = GetItemDrops(source, eState, zone);
+
+            // Remove cooldown restricted drops
+            std::set<int32_t> invalid;
+            for(auto& pair : drops)
+            {
+                for(auto loot : pair.second)
+                {
+                    int32_t cd = loot->GetCooldownRestrict();
+                    if(cd)
+                    {
+                        if(sourceCooldowns.find(cd) == sourceCooldowns.end())
+                        {
+                            invalid.insert(cd);
+                        }
+                    }
+                }
+
+                pair.second.remove_if([invalid](
+                    const std::shared_ptr<objects::ItemDrop>& drop)
+                    {
+                        return invalid.find(drop->GetCooldownRestrict()) !=
+                            invalid.end();
+                    });
+            }
 
             if(validLooterIDs.size() > 0)
             {
@@ -5617,30 +5679,6 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                     // The last 60 seconds are fair game for everyone
                     uint64_t delayedlootTime = (uint64_t)(now + 60000000);
                     delayedLootEntityIDs[delayedlootTime].push_back(lootEntityID);
-                }
-
-                // Remove cooldown restricted drops
-                std::set<int32_t> invalid;
-                for(auto& pair : drops)
-                {
-                    for(auto loot : pair.second)
-                    {
-                        int32_t cd = loot->GetCooldownRestrict();
-                        if(cd)
-                        {
-                            if(sourceCooldowns.find(cd) == sourceCooldowns.end())
-                            {
-                                invalid.insert(cd);
-                            }
-                        }
-                    }
-
-                    pair.second.remove_if([invalid](
-                        const std::shared_ptr<objects::ItemDrop>& drop)
-                        {
-                            return invalid.find(drop->GetCooldownRestrict()) !=
-                                invalid.end();
-                        });
                 }
             }
 
@@ -6776,8 +6814,7 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
                     lBox->SetType(objects::LootBox::Type_t::GIFT_BOX);
                     lBox->SetEnemy(enemy);
 
-                    auto drops = GetItemDrops(source, enemy->GetSpawnSource(),
-                        zone, true);
+                    auto drops = GetItemDrops(source, eState, zone, true);
                     auto gifts = drops[(uint8_t)objects::DropSet::Type_t::NORMAL];
                     characterManager->CreateLootFromDrops(lBox, gifts,
                         source->GetLUCK(), true);
@@ -8329,11 +8366,14 @@ int8_t SkillManager::CalculateStatusEffectStack(int8_t minStack, int8_t maxStack
 std::unordered_map<uint8_t, std::list<
     std::shared_ptr<objects::ItemDrop>>> SkillManager::GetItemDrops(
     const std::shared_ptr<ActiveEntityState>& source,
-    const std::shared_ptr<objects::Spawn>& spawn,
+    const std::shared_ptr<ActiveEntityState>& eState,
     const std::shared_ptr<Zone>& zone, bool giftMode)
 {
     std::unordered_map<uint8_t,
         std::list<std::shared_ptr<objects::ItemDrop>>> drops;
+
+    auto eBase = eState ? eState->GetEnemyBase() : nullptr;
+    auto spawn = eBase ? eBase->GetSpawnSource() : nullptr;
     if(!spawn)
     {
         return drops;
@@ -8446,7 +8486,7 @@ std::unordered_map<uint8_t, std::list<
 
                         uint16_t min = copy->GetMinStack();
                         uint16_t max = copy->GetMaxStack();
-                        float multiplier = (float)GetSpawnLevel(spawn) *
+                        float multiplier = (float)eState->GetLevel() *
                             copy->GetModifier();
 
                         copy->SetMinStack((uint16_t)((float)min * multiplier));
@@ -8456,9 +8496,9 @@ std::unordered_map<uint8_t, std::list<
                     }
                     break;
                 case objects::ItemDrop::Type_t::RELATIVE_LEVEL_MIN:
-                    // Only add if the relative spawn's level is at least the
-                    // same as the source's level + the modifier
-                    if((int32_t)GetSpawnLevel(spawn) >=
+                    // Only add if the (non-source) relative entity's level is
+                    // at least the same as the source's level + the modifier
+                    if(eState != source && (int32_t)eState->GetLevel() >=
                         (int32_t)(source->GetLevel() + drop->GetModifier()))
                     {
                         drops[type].push_back(drop);
@@ -9009,7 +9049,7 @@ bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activat
             reply.WritePacketCode(
                 ChannelToClientPacketCode_t::PACKET_DEMON_COMPENDIUM_ADD);
             reply.WriteS32Little(0);   // Success
-            reply.WriteU32Little(demon->GetType());
+            reply.WriteU32Little(bookData->GetShiftValue());
 
             client->QueuePacket(reply);
 
@@ -11253,27 +11293,6 @@ bool SkillManager::IsTalkSkill(const std::shared_ptr<
     }
 
     return false;
-}
-
-int8_t SkillManager::GetSpawnLevel(
-    const std::shared_ptr<objects::Spawn>& spawn)
-{
-    if(spawn)
-    {
-        if(spawn->GetLevel() != -1)
-        {
-            return spawn->GetLevel();
-        }
-
-        auto devilData = mServer.lock()->GetDefinitionManager()->GetDevilData(
-            spawn->GetEnemyType());
-        if(devilData)
-        {
-            return (int8_t)devilData->GetGrowth()->GetBaseLevel();
-        }
-    }
-
-    return 0;
 }
 
 bool SkillManager::IFramesEnabled()

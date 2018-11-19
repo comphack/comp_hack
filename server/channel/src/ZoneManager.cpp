@@ -111,6 +111,7 @@
 #include "ManagerConnection.h"
 #include "MatchManager.h"
 #include "PlasmaState.h"
+#include "SkillManager.h"
 #include "TokuseiManager.h"
 #include "Zone.h"
 #include "ZoneInstance.h"
@@ -899,6 +900,8 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         return false;
     }
 
+    server->GetSkillManager()->CancelActiveSkills(client);
+
     cState->SetZone(nextZone);
     dState->SetZone(nextZone);
 
@@ -1304,6 +1307,8 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
             ZoneTrigger_t::ON_ZONE_OUT, client);
         server->GetTokuseiManager()->RecalculateParty(
             state->GetParty());
+
+        server->GetSkillManager()->CancelActiveSkills(client);
 
         // Update tracking
         UpdateTrackedZone(zone, state->GetTeam());
@@ -3917,8 +3922,12 @@ bool ZoneManager::UpdatePlasma(const std::shared_ptr<Zone>& zone, uint64_t now)
         return false;
     }
 
-    auto spots = mServer.lock()->GetDefinitionManager()
-        ->GetSpotData(zone->GetDefinition()->GetDynamicMapID());
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    auto zoneData = definitionManager->GetZoneData(zone->GetDefinitionID());
+
+    auto spots = definitionManager->GetSpotData(zone->GetDefinition()
+        ->GetDynamicMapID());
     for(auto plasmaPair : zone->GetPlasma())
     {
         auto pState = plasmaPair.second;
@@ -3931,7 +3940,8 @@ bool ZoneManager::UpdatePlasma(const std::shared_ptr<Zone>& zone, uint64_t now)
             auto hiddenPoints = pState->PopRespawnPoints(now);
 
             libcomp::Packet notify;
-            notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_REPOP);
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_PLASMA_REPOP);
             notify.WriteS32Little(pState->GetEntityID());
             notify.WriteS8((int8_t)hiddenPoints.size());
 
@@ -3939,7 +3949,9 @@ bool ZoneManager::UpdatePlasma(const std::shared_ptr<Zone>& zone, uint64_t now)
             {
                 if(spotIter != spots.end())
                 {
-                    Point rPoint = GetRandomSpotPoint(spotIter->second);
+                    Point rPoint = GetRandomSpotPoint(spotIter->second,
+                        zoneData);
+
                     point->SetX(rPoint.x);
                     point->SetY(rPoint.y);
                 }

@@ -397,6 +397,9 @@ struct Data
     /// Status effect ID of the extended demon riding mounted state
     uint32_t STATUS_MOUNT_SUPER;
 
+    /// Status effect ID of the XP preserving reunion effect
+    uint32_t STATUS_REUNION_XP_SAVE;
+
     /// Status effect ID of the sleep effect
     uint32_t STATUS_SLEEP;
 

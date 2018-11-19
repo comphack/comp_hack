@@ -162,6 +162,13 @@ public:
         int8_t activationID, uint8_t cancelType = 1);
 
     /**
+     * Cancel any skills pending execution for both the character and demon.
+     * @param client Pointer to a client connection
+     */
+    void CancelActiveSkills(
+        const std::shared_ptr<ChannelClientConnection> client);
+
+    /**
      * Notify the client that a skill failed activation or execution.
      * @param source Pointer of the entity that the skill failed for
      * @param skillID ID of the skill to activate
@@ -792,8 +799,8 @@ private:
      * Gather drops for a specific enemy spawn from its own drops, global drops
      * and demon family drops.
      * @param source Pointer to the entity that activated the skill
-     * @param spawn Pointer to the spawn information for the enemy which may
-     *  or may not exist (ex: GM created enemy)
+     * @param eState Pointer to enemy which may or may not have spawn
+     *  information (ex: GM created enemy)
      * @param zone Pointer to the zone the entities belong to
      * @param giftMode true if the enemy's negotation gifts should be gathered
      *  instead of their normal drops
@@ -802,7 +809,7 @@ private:
      */
     std::unordered_map<uint8_t, std::list<std::shared_ptr<objects::ItemDrop>>>
         GetItemDrops(const std::shared_ptr<ActiveEntityState>& source,
-            const std::shared_ptr<objects::Spawn>& spawn,
+            const std::shared_ptr<ActiveEntityState>& eState,
             const std::shared_ptr<Zone>& zone, bool giftMode = false);
 
     /**
@@ -1262,14 +1269,6 @@ private:
      */
     bool IsTalkSkill(const std::shared_ptr<objects::MiSkillData>& skillData,
         bool primaryOnly);
-
-    /**
-     * Get the level associated to the supplied spawn. Defaults to the enemy
-     * type's normal level if none specified.
-     * @param spawn Pointer to a spawn
-     * @return Level for the spawn
-     */
-    int8_t GetSpawnLevel(const std::shared_ptr<objects::Spawn>& spawn);
 
     /**
      * Determine if invincibility frames are enabled for the server to

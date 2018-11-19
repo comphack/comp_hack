@@ -72,18 +72,41 @@ bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto srcDemon = std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
+    auto destDemon = destBox
+        ? destBox->GetDemons((size_t)destSlot).Get() : nullptr;
 
     int8_t srcSlot = srcDemon->GetBoxSlot();
     auto srcBox = std::dynamic_pointer_cast<objects::DemonBox>(
         libcomp::PersistentObject::GetObjectByUUID(srcDemon->GetDemonBox()));
 
     uint8_t maxDestSlots = destBoxID == 0 ? progress->GetMaxCOMPSlots() : 50;
+
+    bool fail = false;
     if(!srcBox || srcBoxID != srcBox->GetBoxID() || !destBox ||
         srcDemon != srcBox->GetDemons((size_t)srcSlot).Get() || destSlot >= maxDestSlots)
     {
         LOG_DEBUG(libcomp::String("DemonBoxMove request failed. Notifying"
             " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
 
+        fail = true;
+    }
+    else if(srcBox != destBox)
+    {
+        // Make sure nothing is being moved into an expired box (allow
+        // reorganize because why not?)
+        uint32_t now = (uint32_t)std::time(0);
+        if((srcDemon && destBox->GetRentalExpiration() &&
+            destBox->GetRentalExpiration() < now) ||
+            (destDemon && srcBox->GetRentalExpiration() &&
+                srcBox->GetRentalExpiration() < now))
+        {
+            fail = true;
+        }
+    }
+
+    if(fail)
+    {
+        // Request client rollback and quit here
         libcomp::Packet err;
         err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);
         err.WriteS32Little((int32_t)
@@ -99,8 +122,10 @@ bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
         ->GetAccountUID());
 
     // If the active demon is being moved to a non-COMP box, store it first
-    if(srcDemon != nullptr && srcDemon == character->GetActiveDemon().Get()
-        && destBoxID != 0)
+    if((srcDemon && srcDemon == character->GetActiveDemon().Get()
+        && destBoxID != 0) ||
+        (destDemon && destDemon == character->GetActiveDemon().Get()
+            && srcBoxID != 0))
     {
         characterManager->StoreDemon(client);
         dbChanges->Update(character);
@@ -110,15 +135,13 @@ bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
     dbChanges->Update(srcBox);
     dbChanges->Update(destBox);
 
-    auto destDemon = destBox->GetDemons((size_t)destSlot);
-
     srcDemon->SetBoxSlot(destSlot);
     srcDemon->SetDemonBox(destBox->GetUUID());
-    if(!destDemon.IsNull())
+    if(destDemon)
     {
         destDemon->SetBoxSlot(srcSlot);
         destDemon->SetDemonBox(srcBox->GetUUID());
-        dbChanges->Update(destDemon.Get());
+        dbChanges->Update(destDemon);
     }
 
     srcBox->SetDemons((size_t)srcSlot, destDemon);
@@ -131,7 +154,7 @@ bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
 
         // Clear all quests
         auto dQuest = character->GetDemonQuest().Get();
-        for(auto& d : { srcDemon, destDemon.Get() })
+        for(auto& d : { srcDemon, destDemon })
         {
             if(d && d->GetHasQuest())
             {

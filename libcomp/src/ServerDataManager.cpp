@@ -851,11 +851,10 @@ namespace libcomp
 
         if(id == 0)
         {
-            // Warn about any unsupported parts (spawns and spawn groups are
-            // used for global spawn skills)
+            // Warn about any unsupported parts (spawns are used for global
+            // spawn skills)
             if(prt->DynamicMapIDsCount() || prt->NPCsCount() ||
-                prt->ObjectsCount() || prt->SpawnLocationGroupsCount() ||
-                prt->SpotsCount())
+                prt->ObjectsCount() || prt->SpotsCount())
             {
                 LOG_WARNING("Direct global partial zone definitions specified"
                     " but will be ignored\n");

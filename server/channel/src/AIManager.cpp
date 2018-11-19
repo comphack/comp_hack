@@ -1397,6 +1397,10 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
     if((spawnLocation || spotID > 0) && eState->CanMove())
     {
         auto zone = eState->GetZone();
+        if(!zone)
+        {
+            return;
+        }
 
         Point source(eState->GetCurrentX(), eState->GetCurrentY());
 

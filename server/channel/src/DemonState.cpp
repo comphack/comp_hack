@@ -150,17 +150,17 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
     std::unordered_map<uint8_t, uint16_t> compendiumRaceCounts;
     if(cShiftValues.size() > 0)
     {
-        size_t read = 0;
         for(auto& dbPair : definitionManager->GetDevilBookData())
         {
             auto dBook = dbPair.second;
             if(cShiftValues.find(dBook->GetShiftValue()) !=
-                cShiftValues.end())
+                cShiftValues.end() && dBook->GetUnk1() &&
+                compendiumEntries.find(dBook->GetEntryID()) ==
+                compendiumEntries.end())
             {
                 auto devilData = definitionManager->GetDevilData(
                     dBook->GetBaseID1());
-                if(compendiumEntries.find(dBook->GetEntryID()) ==
-                    compendiumEntries.end() && devilData && dBook->GetUnk1())
+                if(devilData)
                 {
                     uint8_t familyID = (uint8_t)devilData->GetCategory()
                         ->GetFamily();
@@ -186,16 +186,9 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
                     {
                         compendiumRaceCounts[raceID]++;
                     }
-
-                    compendiumEntries.insert(dBook->GetEntryID());
                 }
 
-                read++;
-
-                if(read >= cShiftValues.size())
-                {
-                    break;
-                }
+                compendiumEntries.insert(dBook->GetEntryID());
             }
         }
     }

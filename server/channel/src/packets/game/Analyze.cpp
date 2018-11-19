@@ -155,7 +155,7 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
                     reply.WriteS8(reunionRank);
                 }
 
-                reply.WriteU8(0);   // Unknown
+                reply.WriteU8(d->GetGrowthType());
 
                 for(uint16_t forceStack : d->GetForceStack())
                 {
@@ -177,20 +177,17 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
                     auto equip = d->GetEquippedItems(i).Get();
                     if(equip)
                     {
-                        reply.WriteS64Little(state->GetObjectID(
-                            equip->GetUUID()));
                         reply.WriteU32Little(equip->GetType());
                     }
                     else
                     {
-                        reply.WriteS64Little(-1);
                         reply.WriteU32Little(static_cast<uint32_t>(-1));
                     }
                 }
             }
             else
             {
-                reply.WriteBlank(179);
+                reply.WriteBlank(174);
             }
 
             client->SendPacket(reply);

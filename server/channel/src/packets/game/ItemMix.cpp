@@ -108,7 +108,8 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
             bool failure = !extData;
             if(!failure)
             {
-                if(extData->GetGroupID() != blendData->GetExtensionGroupID() ||
+                if((extData->GetGroupID() && extData->GetGroupID() !=
+                    blendData->GetExtensionGroupID()) ||
                     itemExt->GetItemBox() != inventory->GetUUID() ||
                     itemExt->GetStackSize() == 0)
                 {
@@ -424,12 +425,21 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
             for(auto existing : characterManager->GetExistingItems(character,
                 itemType, inventory))
             {
-                if((uint16_t)(existing->GetStackSize() + itemCount) <=
+                uint16_t stackSize = existing->GetStackSize();
+
+                // Make sure we don't cancel an existing change
+                auto it = updateItems.find(existing);
+                if(it != updateItems.end())
+                {
+                    stackSize = it->second;
+                }
+
+                if((uint16_t)(stackSize + itemCount) <=
                     itemData->GetPossession()->GetStackSize())
                 {
                     newItem = existing;
                     updateItems[newItem] = (uint16_t)(
-                        newItem->GetStackSize() + itemCount);
+                        stackSize + itemCount);
                     break;
                 }
             }

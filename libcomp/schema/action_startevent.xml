@@ -4,5 +4,10 @@
         scriptenabled="true">
         <member type="enum" name="actionType" inherited="true" default="START_EVENT"/>
         <member type="string" name="eventID"/>
+        <member type="enum" name="allowInterrupt" underlying="uint8_t">
+            <value>INHERIT</value>
+            <value>YES</value>
+            <value>NO</value>
+        </member>
     </object>
 </objgen>

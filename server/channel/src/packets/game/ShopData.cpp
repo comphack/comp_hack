@@ -209,7 +209,8 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
                     : nullptr;
 
                 uint8_t pTrend = 0;
-                if(trendAdjust > 0.f && !characterManager->IsCPItem(def))
+                if(trendAdjust > 0.f && !product->GetTrendDisabled() &&
+                    !characterManager->IsCPItem(def))
                 {
                     std::uniform_int_distribution<uint32_t> dis(0, 1000);
                     trend = (uint8_t)(dis(rand) % 3);

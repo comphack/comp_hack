@@ -7,6 +7,19 @@
 <para>These settings apply to the world server configuration as well as any channels that connect to it.</para>
 
 <section>
+<title>TimeOffset</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 540</para>
+<para>Number of minutes to offset the functional system time actions by from the normal GMT based time, defaulting to JST (GMT+9). Adjusts both time of day as well as what the current day is (can fastforward to weekend etc). This will affect all system time based events and triggers as well as when the servers consider it to be midnight.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="TimeOffset">-180</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- TimeOffset -->
+
+<section>
 <title>GreetMessage</title>
 <para><emphasis role="strong">Type:</emphasis> string</para>
 <para><emphasis role="strong">Default:</emphasis> Welcome to the COMP_hack Server!</para>

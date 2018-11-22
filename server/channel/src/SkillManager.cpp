@@ -912,24 +912,6 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
     }
 }
 
-void SkillManager::CancelActiveSkills(
-    const std::shared_ptr<ChannelClientConnection> client)
-{
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto dState = state->GetDemonState();
-
-    for(auto eState : { std::dynamic_pointer_cast<ActiveEntityState>(cState),
-        std::dynamic_pointer_cast<ActiveEntityState>(dState) })
-    {
-        auto activated = eState->GetActivatedAbility();
-        if(activated)
-        {
-            CancelSkill(eState, activated->GetActivationID());
-        }
-    }
-}
-
 void SkillManager::SendFailure(const std::shared_ptr<ActiveEntityState> source,
     uint32_t skillID, const std::shared_ptr<ChannelClientConnection> client,
     uint8_t errorCode, int8_t activationID)
@@ -6140,20 +6122,26 @@ void SkillManager::HandleEncounterDefeat(const std::shared_ptr<
 
         if(zone->EncounterDefeated(ePair.first, defeatActions))
         {
-            // If the defeatActionSource has actions, those override the group's default
+            ActionOptions options;
+            options.GroupID = ePair.first;
+            options.NoEventInterrupt = true;
+
+            // If the defeatActionSource has actions, those override the
+            // group's default
             if(defeatActions.size() > 0)
             {
                 actionManager->PerformActions(sourceClient, defeatActions,
-                    source->GetEntityID(), zone, ePair.first);
+                    source->GetEntityID(), zone, options);
             }
             else
             {
-                auto group = zone->GetDefinition()->GetSpawnGroups(ePair.second);
+                auto group = zone->GetDefinition()->GetSpawnGroups(
+                    ePair.second);
                 if(group && group->DefeatActionsCount() > 0)
                 {
                     actionManager->PerformActions(sourceClient,
-                        group->GetDefeatActions(), source->GetEntityID(), zone,
-                        ePair.first);
+                        group->GetDefeatActions(), source->GetEntityID(),
+                        zone, options);
                 }
             }
         }

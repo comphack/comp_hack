@@ -7171,7 +7171,7 @@ void CharacterManager::AdjustMitamaStats(const std::shared_ptr<
             for(auto& pair : bonusStats)
             {
                 bool baseStat = (uint8_t)pair.first <= (uint8_t)CorrectTbl::LUCK;
-                if(baseStat == (reunionMode == 1))
+                if(baseStat != (reunionMode == 1))
                 {
                     removes.insert((uint8_t)pair.first);
                 }
@@ -7396,12 +7396,6 @@ void CharacterManager::CalculateDependentStats(
             (int16_t)floorl((stats[CorrectTbl::INT] * 0.1) + (level * 0.1)));
     }
 
-    // Calculate HP/MP regen
-    adjusted[CorrectTbl::HP_REGEN] = (int16_t)(stats[CorrectTbl::HP_REGEN] +
-        (int16_t)floor(((stats[CorrectTbl::VIT] * 3) + stats[CorrectTbl::HP_MAX]) * 0.01));
-    adjusted[CorrectTbl::MP_REGEN] = (int16_t)(stats[CorrectTbl::MP_REGEN] +
-        (int16_t)floor(((stats[CorrectTbl::INT] * 3) + stats[CorrectTbl::MP_MAX]) * 0.01));
-
     for(auto pair : adjusted)
     {
         // Since any negative value used for a calculation here is not valid, any result
@@ -7434,12 +7428,6 @@ void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& s
         {
             { CorrectTbl::HP_MAX, 1 },
             { CorrectTbl::MP_MAX, 1 },
-            { CorrectTbl::STR, 1 },
-            { CorrectTbl::MAGIC, 1 },
-            { CorrectTbl::VIT, 1 },
-            { CorrectTbl::INT, 1 },
-            { CorrectTbl::SPEED, 1 },
-            { CorrectTbl::LUCK, 1 },
             { CorrectTbl::CLSR, 0 },
             { CorrectTbl::LNGR, 0 },
             { CorrectTbl::SPELL, 0 },
@@ -7453,7 +7441,15 @@ void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& s
             { CorrectTbl::RATE_PC, 0 },
             { CorrectTbl::RATE_DEMON, 0 },
             { CorrectTbl::RATE_PC_TAKEN, 0 },
-            { CorrectTbl::RATE_DEMON_TAKEN, 0 }
+            { CorrectTbl::RATE_DEMON_TAKEN, 0 },
+
+            // Core stats can actually reach zero even though its uncommon
+            { CorrectTbl::STR, 0 },
+            { CorrectTbl::MAGIC, 0 },
+            { CorrectTbl::VIT, 0 },
+            { CorrectTbl::INT, 0 },
+            { CorrectTbl::SPEED, 0 },
+            { CorrectTbl::LUCK, 0 }
         };
     
     static libcomp::EnumMap<CorrectTbl, int16_t> maxStats =

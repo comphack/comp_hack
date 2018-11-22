@@ -162,13 +162,6 @@ public:
         int8_t activationID, uint8_t cancelType = 1);
 
     /**
-     * Cancel any skills pending execution for both the character and demon.
-     * @param client Pointer to a client connection
-     */
-    void CancelActiveSkills(
-        const std::shared_ptr<ChannelClientConnection> client);
-
-    /**
      * Notify the client that a skill failed activation or execution.
      * @param source Pointer of the entity that the skill failed for
      * @param skillID ID of the skill to activate

@@ -61,6 +61,27 @@ enum ActionRunScriptResult_t : int8_t
 };
 
 /**
+ * Struct containing optional parameters supplied to
+ * ActionManager::PerformActions to simplify the function signature.
+ */
+struct ActionOptions
+{
+    // Action group ID used for specific action logic
+    uint32_t GroupID = 0;
+
+    // Forces an auto-only context when processing events. Does not apply
+    // when context switching.
+    bool AutoEventsOnly = false;
+
+    // Keep track of the current EventPeformActions index for the client
+    bool IncrementEventIndex = false;
+
+    // Disallow interruption of any events started from the action set.
+    // Overrides option on ActionStartEvent.
+    bool NoEventInterrupt = false;
+};
+
+/**
  * Class to manage actions when triggering a spot or interacting with
  * an object/NPC.
  */
@@ -84,17 +105,12 @@ public:
      * @param actions List of actions to perform.
      * @param sourceEntityID ID of the entity performing the actions.
      * @param zone Pointer to the current zone the action is being performed in
-     * @param groupID Optional action group ID used for specific action logic
-     * @param autoEventsOnly Optional parameter to force an auto-only context
-     *  when processing events. Does not apply when context switching.
-     * @param incrementEventIndex Optional paramater to keep track of the
-     *  current EventPeformActions index for the client
+     * @param options Optional parameters to modify action execution
      */
     void PerformActions(const std::shared_ptr<ChannelClientConnection>& client,
         const std::list<std::shared_ptr<objects::Action>>& actions,
         int32_t sourceEntityID, const std::shared_ptr<Zone>& zone = nullptr,
-        uint32_t groupID = 0, bool autoEventsOnly = false,
-        bool incrementEventIndex = false);
+        ActionOptions options = {});
 
     /**
      * Send a stage effect notification to the client.
@@ -115,10 +131,9 @@ private:
     {
         std::shared_ptr<ChannelClientConnection> Client;
         std::shared_ptr<objects::Action> Action;
+        ActionOptions Options;
         int32_t SourceEntityID = 0;
-        uint32_t GroupID = 0;
         std::shared_ptr<Zone> CurrentZone;
-        bool AutoEventsOnly = false;
         bool ChannelChanged = false;
     };
 

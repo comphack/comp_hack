@@ -38,6 +38,7 @@
 // object Includes
 #include <Account.h>
 #include <ChannelConfig.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "AccountManager.h"
@@ -828,10 +829,19 @@ const WorldClock ChannelServer::GetWorldClockTime()
     bool eventPassed = mWorldClock.SystemTime < mNextEventTime &&
         mNextEventTime <= (uint32_t)systemTime;
 
+    // Set the GMT system time
+    WorldClock newClock;
+    newClock.SystemTime = (uint32_t)systemTime;
+
+    // Adjust the time offset to get relative real time values
+    int32_t offset = GetServerTimeOffset();
+    if(offset)
+    {
+        systemTime = (systemTime + offset);
+    }
+
     tm* t = gmtime(&systemTime);
 
-    // Set the real time values
-    WorldClock newClock;
     newClock.WeekDay = (int8_t)(t->tm_wday + 1);
     newClock.Month = (int8_t)(t->tm_mon + 1);
     newClock.Day = (int8_t)t->tm_mday;
@@ -839,10 +849,8 @@ const WorldClock ChannelServer::GetWorldClockTime()
     newClock.SystemMin = (int8_t)t->tm_min;
     newClock.SystemSec = (int8_t)t->tm_sec;
 
-    newClock.SystemTime = (uint32_t)systemTime;
-    newClock.GameOffset = mWorldClock.GameOffset;
-
     // Now calculate the game relative times
+    newClock.GameOffset = mWorldClock.GameOffset;
 
     // Every 4 days, 15 full moon cycles will elapse and the same game time
     // will occur on the same time offset.
@@ -1244,32 +1252,37 @@ bool ChannelServer::SendSystemMessage(const std::shared_ptr<
     return true;
 }
 
+int32_t ChannelServer::GetServerTimeOffset()
+{
+    const static int32_t offset = GetWorldSharedConfig()->GetTimeOffset() * 60;
+    return offset;
+}
+
 int32_t ChannelServer::GetPAttributeDeadline()
 {
-    time_t systemTime = std::time(0);
-    tm* t = gmtime(&systemTime);
+    auto clock = GetWorldClockTime();
 
-    int systemDay = t->tm_wday;
-    int systemHour = t->tm_hour;
-    int systemMinutes = t->tm_min;
-    int systemSeconds = t->tm_sec;
+    int systemDay = clock.WeekDay - 1;
+    int systemHour = clock.SystemHour;
+    int systemMinutes = clock.SystemMin;
+    int systemSeconds = clock.SystemSec;
 
     // Get the system time for midnight of the next Monday
-    int32_t deadlineDelta = ((7 - systemDay) * 86400) + ((23 - systemHour) * 3600) +
+    int32_t deadlineDelta = ((7 - systemDay) * 86400) +
+        ((23 - systemHour) * 3600) +
         ((59 - systemMinutes) * 60) + systemSeconds;
-    int32_t deadline = (int32_t)systemTime + deadlineDelta;
+    int32_t deadline = (int32_t)clock.SystemTime + deadlineDelta;
 
     return deadline;
 }
 
 uint32_t ChannelServer::GetTimeUntilMidnight()
 {
-    time_t systemTime = std::time(0);
-    tm* t = gmtime(&systemTime);
+    auto clock = GetWorldClockTime();
 
-    int systemHour = t->tm_hour;
-    int systemMinutes = t->tm_min;
-    int systemSeconds = t->tm_sec;
+    int systemHour = clock.SystemHour;
+    int systemMinutes = clock.SystemMin;
+    int systemSeconds = clock.SystemSec;
 
     return (uint32_t)(((23 - systemHour) * 3600) +
         ((59 - systemMinutes) * 60) + systemSeconds);

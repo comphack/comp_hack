@@ -3003,7 +3003,7 @@ void MatchManager::UltimateBattleTick(uint32_t zoneID, uint32_t dynamicMapID,
         if(!eventID.IsEmpty())
         {
             server->GetEventManager()->HandleEvent(nullptr,
-                eventID, 0, zone, 0, true);
+                eventID, 0, zone);
         }
 
         // Get the new expiratin if set
@@ -3150,7 +3150,7 @@ void MatchManager::SendUltimateBattleRankings(
     auto server = mServer.lock();
     auto state = client->GetClientState();
 
-    time_t systemTime = std::time(0);
+    time_t systemTime = std::time(0) + server->GetServerTimeOffset();
     tm* t = gmtime(&systemTime);
 
     libcomp::Packet p;
@@ -4739,7 +4739,7 @@ void MatchManager::FirePhaseTriggers(const std::shared_ptr<Zone>& zone,
             if(trigger->GetValue() == (int32_t)phase)
             {
                 actionManager->PerformActions(nullptr, trigger->GetActions(),
-                    0, zone, 0);
+                    0, zone);
             }
         }
     }

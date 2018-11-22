@@ -156,6 +156,7 @@ void HandleMitamaReunion(const std::shared_ptr<ChannelServer> server,
             // Add the bonus
             newIdx = (size_t)(reunionIdx * 8 + rTotal);
             demon->SetMitamaReunion(newIdx, (uint8_t)bonusID);
+            characterManager->CalculateDemonBaseStats(demon);
 
             auto dbChanges = libcomp::DatabaseChangeSet::Create(state
                 ->GetAccountUID());

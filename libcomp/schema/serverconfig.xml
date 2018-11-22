@@ -29,6 +29,7 @@
         <member type="string" name="ServerConstantsPath"/>
     </object>
     <object name="WorldSharedConfig" persistent="false">
+        <member type="s32" name="TimeOffset" default="540"/>
         <member type="string" name="GreetMessage"
            default="Welcome to the COMP_hack Server!"/>
         <member type="string" name="COMPShopMessage"

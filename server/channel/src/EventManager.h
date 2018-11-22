@@ -61,6 +61,24 @@ namespace channel
 class ChannelServer;
 
 /**
+ * Struct containing optional parameters supplied to EventManager::HandleEvent
+ * to simplify the function signature.
+ */
+struct EventOptions
+{
+    // Action group ID, set when performing a "start event" action so any later
+    // sets can pick up where the others left off
+    uint32_t ActionGroupID = 0;
+
+    // Force an auto-only context, regardless of its the client is specified
+    bool AutoOnly = false;
+
+    // Disallow interruption of any events in the set. Events that are queued
+    // but not started can still be interrupted if another is active.
+    bool NoInterrupt = false;
+};
+
+/**
  * Manager class in charge of processing event sequences as well as quest
  * phase progression and condition evaluation. Events include things like
  * NPC dialogue, player choice prompts, cinematics and context sensitive
@@ -89,17 +107,13 @@ public:
      * @param sourceEntityID Optional source of an event to focus on
      * @param zone Pointer to the zone where the event is executing. If
      *  the client is specified this will be overridden
-     * @param actionGroupID Optional action group ID, set when performing
-     *  a "start event" action so any later sets can pick up where the
-     *  others left off
-     * @param autoOnly Optional parameter to force an auto-only context,
-     *  regardless of its the client is specified
+     * @param options Optional parameters to modify event execution
      * @return true on success, false on failure
      */
     bool HandleEvent(const std::shared_ptr<ChannelClientConnection>& client,
         const libcomp::String& eventID, int32_t sourceEntityID,
-        const std::shared_ptr<Zone>& zone = nullptr, uint32_t actionGroupID = 0,
-        bool autoOnly = false);
+        const std::shared_ptr<Zone>& zone = nullptr,
+        EventOptions options = {});
 
     /**
      * Prepare a new event based upon the supplied ID, relative to an

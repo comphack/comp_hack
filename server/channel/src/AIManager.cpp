@@ -319,7 +319,7 @@ void AIManager::CombatSkillHit(
                 "combatSkillHit");
 
             Sqrat::Function f(Sqrat::RootTable(aiState->GetScript()->GetVM()),
-                !fOverride.IsEmpty() ? "combatSkillHit" : fOverride.C());
+                fOverride.IsEmpty() ? "combatSkillHit" : fOverride.C());
 
             /// @todo: bind MiSkillData and pass that
             auto scriptResult = !f.IsNull()
@@ -525,8 +525,12 @@ bool AIManager::StartEvent(const std::shared_ptr<ActiveEntityState>& eState,
     if(eState)
     {
         auto eventManager = mServer.lock()->GetEventManager();
+
+        EventOptions options;
+        options.AutoOnly = true;
+
         return eventManager->HandleEvent(nullptr, eventID, eState
-            ->GetEntityID(), eState->GetZone(), 0, true);
+            ->GetEntityID(), eState->GetZone(), options);
     }
 
     return false;
@@ -2130,7 +2134,7 @@ bool AIManager::PrepareSkillUsage(
             "prepareSkill");
 
         Sqrat::Function f(Sqrat::RootTable(aiState->GetScript()->GetVM()),
-            !fOverride.IsEmpty() ? "prepareSkill" : fOverride.C());
+            fOverride.IsEmpty() ? "prepareSkill" : fOverride.C());
 
         auto scriptResult = !f.IsNull()
             ? f.Evaluate<int32_t>(eState, this, target) : 0;

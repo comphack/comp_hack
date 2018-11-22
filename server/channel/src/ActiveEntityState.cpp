@@ -2471,8 +2471,9 @@ void ActiveEntityState::AdjustStats(
     std::set<CorrectTbl> removed;
     libcomp::EnumMap<CorrectTbl, int32_t> maxPercents;
 
-    // Keep track of percent increases to sum up and boost at the end. These
+    // Keep track of each increase to sum up and boost at the end. Percentages
     // are applied in 2 layers though most are typically in the first group.
+    libcomp::EnumMap<CorrectTbl, int32_t> numericSums;
     std::array<libcomp::EnumMap<CorrectTbl, int32_t>, 2> percentSums;
     for(auto ct : adjustments)
     {
@@ -2557,9 +2558,8 @@ void ActiveEntityState::AdjustStats(
         }
         else
         {
-            bool allowNegate = false;
+            libcomp::EnumMap<CorrectTbl, int32_t>* map = 0;
 
-            int16_t adjusted = stats[tblID];
             switch(effectiveType)
             {
             case 1:
@@ -2569,26 +2569,17 @@ void ActiveEntityState::AdjustStats(
                 if(effectiveValue == 0)
                 {
                     removed.insert(tblID);
-                    adjusted = 0;
+                    stats[tblID] = 0;
+                    numericSums.erase(tblID);
                     percentSums[0].erase(tblID);
                     percentSums[1].erase(tblID);
                     maxPercents.erase(tblID);
-                    allowNegate = true;
                 }
                 else
                 {
-                    // Store percent sums to apply at the end
                     size_t pIdx = (size_t)(effectiveType - 1);
-                    if(percentSums[pIdx].find(tblID) == percentSums[pIdx].end())
-                    {
-                        percentSums[pIdx][tblID] = effectiveValue;
-                    }
-                    else
-                    {
-                        percentSums[pIdx][tblID] += effectiveValue;
-                    }
 
-                    // Store max percents
+                    // Store max percents separately
                     if(maxPercents.find(tblID) == maxPercents.end())
                     {
                         maxPercents[tblID] = effectiveValue;
@@ -2597,56 +2588,120 @@ void ActiveEntityState::AdjustStats(
                     {
                         maxPercents[tblID] = effectiveValue;
                     }
+
+                    map = &percentSums[pIdx];
                 }
                 break;
             case 0:
-                adjusted = (int16_t)(adjusted + effectiveValue);
-                allowNegate = (effectiveValue < 0) != (stats[tblID] < 0);
+                map = &numericSums;
                 break;
             default:
                 break;
             }
 
-            // Prevent overflow
-            if(!allowNegate && (stats[tblID] < 0) != (adjusted < 0))
+            if(map)
             {
-                if(adjusted >= 0)
+                if(map->find(tblID) == map->end())
                 {
-                    // Negative overflow
-                    stats[tblID] = std::numeric_limits<int16_t>::min();
+                    (*map)[tblID] = effectiveValue;
                 }
                 else
                 {
-                    // Positive overflow
-                    stats[tblID] = std::numeric_limits<int16_t>::max();
+                    (*map)[tblID] += effectiveValue;
                 }
-            }
-            else
-            {
-                stats[tblID] = adjusted;
             }
         }
     }
 
-    // Loop through and apply percent sums (in 2 layers)
-    for(auto percentLayer : percentSums)
+    // Now that we have all the sums, calculate stats in order
+    for(size_t i = 0; i < 126; i++)
     {
-        for(auto ctPair : percentLayer)
-        {
-            auto tblID = ctPair.first;
+        CorrectTbl tblID = (CorrectTbl)i;
 
-            int16_t adjusted = stats[tblID];
-            if(ctPair.second <= -100)
+        if(baseMode != (BASE_STATS.find(tblID) != BASE_STATS.end())) continue;
+
+        // Stats are applied in a specific order. Starting with the base
+        // value it is as follows:
+        // 1) Percentage adjustments (layer 1)
+        // 2) Numeric adjustments
+        // 3) Percentage adjustments (layer 2)
+        // HP/MP regen are special as they are dependent stats calculated from
+        // Max HP/MP after step 2.
+        for(size_t layer = 0; layer < 3; layer++)
+        {
+            if(layer == 1)
             {
-                adjusted = 0;
+                // Numeric adjust
+                auto it = numericSums.find(tblID);
+                if(it != numericSums.end())
+                {
+                    int32_t adjusted = (int32_t)(stats[tblID] + it->second);
+
+                    // Prevent overflow
+                    if(adjusted > (int32_t)std::numeric_limits<int16_t>::max())
+                    {
+                        adjusted = std::numeric_limits<int16_t>::max();
+                    }
+                    else if(adjusted <
+                        (int32_t)std::numeric_limits<int16_t>::min())
+                    {
+                        adjusted = std::numeric_limits<int16_t>::min();
+                    }
+
+                    stats[tblID] = (int16_t)adjusted;
+                }
+
+                switch(tblID)
+                {
+                case CorrectTbl::HP_MAX:
+                    // Determine base HP regen (if not 0%)
+                    if(removed.find(CorrectTbl::HP_REGEN) == removed.end())
+                    {
+                        int16_t hpMax = stats[CorrectTbl::HP_MAX];
+                        int16_t vit = stats[CorrectTbl::VIT];
+                        stats[CorrectTbl::HP_REGEN] = (int16_t)(
+                            stats[CorrectTbl::HP_REGEN] +
+                            (int16_t)floor(((vit * 3) + hpMax) * 0.01));
+                    }
+                    break;
+                case CorrectTbl::MP_MAX:
+                    // Determine base MP regen (if not 0%)
+                    if(removed.find(CorrectTbl::MP_REGEN) == removed.end())
+                    {
+                        int16_t mpMax = stats[CorrectTbl::MP_MAX];
+                        int16_t intel = stats[CorrectTbl::INT];
+                        stats[CorrectTbl::MP_REGEN] = (int16_t)(
+                            stats[CorrectTbl::MP_REGEN] +
+                            (int16_t)floor(((intel * 3) + mpMax) * 0.01));
+                    }
+                    break;
+                default:
+                    break;
+                }
             }
             else
             {
-                adjusted = (int16_t)(adjusted +
-                    (int16_t)(adjusted * (ctPair.second * 0.01)));
-            }
+                // Percentage adjust
+                size_t idx = layer == 0 ? 0 : 1;
+                auto it = percentSums[idx].find(tblID);
+                if(it != percentSums[idx].end())
+                {
+                    int32_t sum = it->second;
 
-            stats[tblID] = adjusted;
+                    int16_t adjusted = stats[tblID];
+                    if(sum <= -100)
+                    {
+                        adjusted = 0;
+                    }
+                    else
+                    {
+                        adjusted = (int16_t)(adjusted +
+                            (int16_t)(adjusted * (sum * 0.01)));
+                    }
+
+                    stats[tblID] = adjusted;
+                }
+            }
         }
     }
 
@@ -2654,8 +2709,9 @@ void ActiveEntityState::AdjustStats(
     CharacterManager::AdjustStatBounds(stats,
         GetEntityType() != EntityType_t::ENEMY);
 
-    // Always limit max speed based on direct percentage boosts
-    if(!baseMode)
+    // Limit max speed based on direct percentage boosts (player entities only)
+    if(!baseMode && (GetEntityType() == EntityType_t::CHARACTER ||
+        GetEntityType() == EntityType_t::PARTNER_DEMON))
     {
         for(CorrectTbl tblID : { CorrectTbl::MOVE1, CorrectTbl::MOVE2 })
         {
@@ -2667,7 +2723,7 @@ void ActiveEntityState::AdjustStats(
                 maxSpeed = (int16_t)moveIter->second;
             }
 
-            maxSpeed = (int16_t)ceil((double)GetCombatRunSpeed() *
+            maxSpeed = (int16_t)ceil((double)STAT_DEFAULT_SPEED *
                 (1.0 + (double)maxSpeed * 0.01));
             if(stats[tblID] > maxSpeed)
             {
@@ -2843,12 +2899,16 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
     bool selfState = calcState == GetCalculatedState();
-
-    if(selfState && !mInitialCalc)
+    if(selfState)
     {
-        SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
+        // Combat run speed can change from unadjusted stats
         SetCombatRunSpeed(stats[CorrectTbl::MOVE2]);
-        mInitialCalc = true;
+
+        if(!mInitialCalc)
+        {
+            SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
+            mInitialCalc = true;
+        }
     }
 
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;

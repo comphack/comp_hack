@@ -351,6 +351,12 @@ public:
         libcomp::String message, int8_t type, bool broadcast);
 
     /**
+     * Get the configured server time offset in seconds.
+     * @return Server time offset in seconds
+     */
+    int32_t GetServerTimeOffset();
+
+    /**
      * Get the system time deadline for all punitive attributes
      * which matches midnight of the next Monday. Punitive atributes
      * are used for time restricted actions such as participation in

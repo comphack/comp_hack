@@ -915,12 +915,6 @@ uint8_t CharacterState::RecalculateStats(
     }
 
     auto stats = CharacterManager::GetCharacterBaseStats(cs);
-    if(selfState && !mInitialCalc)
-    {
-        SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
-        SetCombatRunSpeed(stats[CorrectTbl::MOVE2]);
-        mInitialCalc = true;
-    }
 
     // Adjust base stats based on digitalize
     auto dgState = mDigitalizeState;
@@ -930,6 +924,19 @@ uint8_t CharacterState::RecalculateStats(
         {
             stats[(CorrectTbl)pair.first] = (int16_t)(
                 stats[(CorrectTbl)pair.first] + pair.second);
+        }
+    }
+
+    if(selfState)
+    {
+        // Combat run speed can change from unadjusted stats (nothing
+        // natively does this)
+        SetCombatRunSpeed(stats[CorrectTbl::MOVE2]);
+
+        if(!mInitialCalc)
+        {
+            SetKnockbackResist((float)stats[CorrectTbl::KNOCKBACK_RESIST]);
+            mInitialCalc = true;
         }
     }
 

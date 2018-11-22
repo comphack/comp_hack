@@ -133,15 +133,16 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
     auto worldChanges = libcomp::DatabaseChangeSet::Create();
 
     uint32_t lastLogin = character->GetLastLogin();
-    auto now = std::time(0);
 
-    // Get the beginning of today (UTC)
-    std::tm localTime = *std::localtime(&now);
-    localTime.tm_hour = 0;
-    localTime.tm_min = 0;
-    localTime.tm_sec = 0;
+    // Get the relative day offset
+    const static int32_t timeAdjust = (std::dynamic_pointer_cast<
+        objects::WorldConfig>(server->GetConfig())->GetWorldSharedConfig()
+        ->GetTimeOffset() * 60) % 86400;
 
-    uint32_t today = (uint32_t)std::mktime(&localTime);
+    // Get the relative beginning of today (offset cannot be in the future)
+    time_t now = std::time(0);
+    uint32_t today = (uint32_t)((now / 86400 * 86400) -
+        (timeAdjust >= 0 ? timeAdjust : (86400 + timeAdjust)));
     if(lastLogin && today > lastLogin)
     {
         // This is the character's first login of the day, increase

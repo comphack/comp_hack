@@ -63,6 +63,7 @@
         <member type="set" name="DisabledChoices">
             <element type="u8"/>
         </member>
+        <member type="bool" name="NoInterrupt"/>
     </object>
     <object name="PlayerExchangeSession" persistent="false">
         <member type="s32" name="SourceEntityID"/>

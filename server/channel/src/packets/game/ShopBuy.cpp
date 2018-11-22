@@ -139,9 +139,16 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
             {
                 productFound = true;
                 price = p->GetBasePrice();
+                if(p->GetTrendDisabled())
+                {
+                    // Nothing to adjust
+                    trendAdjust = 0.f;
+                }
+
                 break;
             }
             else if(!cpPurchase && trendAdjust > 0.f &&
+                !p->GetTrendDisabled() &&
                 trendOffset.find(p->GetProductID()) == trendOffset.end())
             {
                 // Increase the trend offset if its a non-CP item so the trend

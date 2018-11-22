@@ -176,13 +176,12 @@ void ActionManager::PerformActions(
     const std::shared_ptr<ChannelClientConnection>& client,
     const std::list<std::shared_ptr<objects::Action>>& actions,
     int32_t sourceEntityID, const std::shared_ptr<Zone>& zone,
-    uint32_t groupID, bool autoEventsOnly, bool incrementEventIndex)
+    ActionOptions options)
 {
     ActionContext ctx;
     ctx.Client = client;
     ctx.SourceEntityID = sourceEntityID;
-    ctx.GroupID = groupID;
-    ctx.AutoEventsOnly = autoEventsOnly;
+    ctx.Options = options;
 
     if(zone)
     {
@@ -268,7 +267,7 @@ void ActionManager::PerformActions(
                         ActionContext copyCtx = ctx;
                         copyCtx.Client = nullptr;
                         copyCtx.SourceEntityID = enemy->GetEntityID();
-                        copyCtx.AutoEventsOnly = false;
+                        copyCtx.Options.AutoEventsOnly = true;
 
                         failure |= !it->second(*this, copyCtx);
                     }
@@ -280,7 +279,7 @@ void ActionManager::PerformActions(
                 ActionContext copyCtx = ctx;
                 copyCtx.Client = nullptr;
                 copyCtx.SourceEntityID = 0;
-                copyCtx.AutoEventsOnly = true;
+                copyCtx.Options.AutoEventsOnly = true;
 
                 failure |= !it->second(*this, copyCtx);
             }
@@ -349,7 +348,7 @@ void ActionManager::PerformActions(
 
                             // Auto-events only setting only applies to direct
                             // execution context
-                            copyCtx.AutoEventsOnly = false;
+                            copyCtx.Options.AutoEventsOnly = false;
 
                             failure |= !it->second(*this, copyCtx);
                         }
@@ -363,7 +362,7 @@ void ActionManager::PerformActions(
                 if(ctx.Client)
                 {
                     auto state = ctx.Client->GetClientState();
-                    if(incrementEventIndex)
+                    if(options.IncrementEventIndex)
                     {
                         auto current = state->GetEventState()->GetCurrent();
                         if(current)
@@ -610,8 +609,25 @@ bool ActionManager::StartEvent(ActionContext& ctx)
     auto server = mServer.lock();
     auto eventManager = server->GetEventManager();
 
+    EventOptions options;
+    options.ActionGroupID = ctx.Options.GroupID;
+    options.AutoOnly = ctx.Options.AutoEventsOnly;
+    options.NoInterrupt = ctx.Options.NoEventInterrupt;
+
+    switch(act->GetAllowInterrupt())
+    {
+    case objects::ActionStartEvent::AllowInterrupt_t::YES:
+        options.NoInterrupt = false;
+        break;
+    case objects::ActionStartEvent::AllowInterrupt_t::NO:
+        options.NoInterrupt = true;
+        break;
+    default:
+        break;
+    }
+
     eventManager->HandleEvent(ctx.Client, act->GetEventID(),
-        ctx.SourceEntityID, ctx.CurrentZone, ctx.GroupID, ctx.AutoEventsOnly);
+        ctx.SourceEntityID, ctx.CurrentZone, options);
     
     return true;
 }
@@ -2595,7 +2611,7 @@ bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
                 if(trigger->GetValue() == triggerFlag)
                 {
                     PerformActions(ctx.Client, trigger->GetActions(),
-                        ctx.SourceEntityID, ctx.CurrentZone, 0);
+                        ctx.SourceEntityID, ctx.CurrentZone);
                 }
             }
         }
@@ -3034,7 +3050,7 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
         lState->SetEntityID(server->GetNextEntityID());
         entityIDs.push_back(lState->GetEntityID());
 
-        zone->AddLootBox(lState, ctx.GroupID);
+        zone->AddLootBox(lState, ctx.Options.GroupID);
 
         if(firstClient)
         {
@@ -3087,9 +3103,12 @@ bool ActionManager::Delay(ActionContext& ctx)
                         auto client = pWorldCID
                             ? pZone->GetConnections()[pWorldCID] : nullptr;
 
+                        ActionOptions options;
+                        options.GroupID = pGroupID;
+
                         actionManager->PerformActions(client,
                             pAct->GetActions(), pSourceEntityID, pZone,
-                            pGroupID);
+                            options);
 
                         // Fire action delay triggers
                         if(pAct->GetDelayID() &&
@@ -3101,13 +3120,13 @@ bool ActionManager::Delay(ActionContext& ctx)
                                 {
                                     actionManager->PerformActions(client,
                                         trigger->GetActions(), pSourceEntityID,
-                                        pZone, 0);
+                                        pZone);
                                 }
                             }
                         }
                     }
                 }, server, act, ctx.CurrentZone, ctx.SourceEntityID, worldCID,
-                    ctx.GroupID);
+                    ctx.Options.GroupID);
         }
     }
     else if(act->GetType() == objects::ActionDelay::Type_t::TIMER_EXTEND)

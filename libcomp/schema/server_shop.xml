@@ -37,5 +37,6 @@
         <member type="s32" name="BasePrice"/>
         <member type="u16" name="MoonRestrict"/>
         <member type="u8" name="FilterGroups" max="0x0F"/>
+        <member type="bool" name="TrendDisabled"/>
     </object>
 </objgen>

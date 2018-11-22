@@ -900,8 +900,6 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         return false;
     }
 
-    server->GetSkillManager()->CancelActiveSkills(client);
-
     cState->SetZone(nextZone);
     dState->SetZone(nextZone);
 
@@ -1307,8 +1305,6 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
             ZoneTrigger_t::ON_ZONE_OUT, client);
         server->GetTokuseiManager()->RecalculateParty(
             state->GetParty());
-
-        server->GetSkillManager()->CancelActiveSkills(client);
 
         // Update tracking
         UpdateTrackedZone(zone, state->GetTeam());
@@ -3719,8 +3715,11 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         // Fire spawn group actions
         for(auto sg : spawnActionGroups)
         {
+            ActionOptions options;
+            options.GroupID = sg->GetID();
+
             server->GetActionManager()->PerformActions(nullptr,
-                sg->GetSpawnActions(), 0, zone, sg->GetID());
+                sg->GetSpawnActions(), 0, zone, options);
         }
 
         return true;
@@ -4538,7 +4537,7 @@ void ZoneManager::HandleTimedActions(const WorldClock& clock,
                         " in zone %1\n").Arg(zone->GetDefinitionID()));
 
                     mServer.lock()->GetActionManager()->PerformActions(nullptr,
-                        trigger->GetActions(), 0, zone, 0);
+                        trigger->GetActions(), 0, zone);
                     updated.insert(zone->GetID());
                 }
             }
@@ -4551,7 +4550,7 @@ void ZoneManager::HandleTimedActions(const WorldClock& clock,
             {
                 LOG_DEBUG("Triggering global timed actions\n");
                 mServer.lock()->GetActionManager()->PerformActions(nullptr,
-                    trigger->GetActions(), 0, nullptr, 0);
+                    trigger->GetActions(), 0);
             }
         }
     }
@@ -4998,10 +4997,14 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
         auto eventManager = mServer.lock()->GetEventManager();
         for(auto client : instance->GetConnections())
         {
+            EventOptions options;
+            options.NoInterrupt = true;
+
             auto state = client->GetClientState();
             auto entityID = state->GetCharacterState()->GetEntityID();
             eventManager->HandleEvent(client,
-                instance->GetTimerExpirationEventID(), entityID);
+                instance->GetTimerExpirationEventID(), entityID, nullptr,
+                options);
         }
     }
 
@@ -6145,11 +6148,14 @@ bool ZoneManager::HandleZoneTriggers(const std::shared_ptr<Zone>& zone,
     {
         auto actionManager = mServer.lock()->GetActionManager();
 
+        ActionOptions options;
+        options.AutoEventsOnly = true;
+
         int32_t entityID = entity ? entity->GetEntityID() : 0;
         for(auto tr : triggers)
         {
             actionManager->PerformActions(client,
-                tr->GetActions(), entityID, zone, 0, true);
+                tr->GetActions(), entityID, zone, options);
             executed = true;
         }
     }

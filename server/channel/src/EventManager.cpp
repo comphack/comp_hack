@@ -135,19 +135,20 @@ EventManager::~EventManager()
 bool EventManager::HandleEvent(
     const std::shared_ptr<ChannelClientConnection>& client,
     const libcomp::String& eventID, int32_t sourceEntityID,
-    const std::shared_ptr<Zone>& zone, uint32_t actionGroupID, bool autoOnly)
+    const std::shared_ptr<Zone>& zone, EventOptions options)
 {
     auto instance = PrepareEvent(eventID, sourceEntityID);
     if(instance)
     {
-        instance->SetActionGroupID(actionGroupID);
+        instance->SetActionGroupID(options.ActionGroupID);
+        instance->SetNoInterrupt(options.NoInterrupt);
 
         EventContext ctx;
         ctx.Client = client;
         ctx.EventInstance = instance;
         ctx.CurrentZone = client ? client->GetClientState()
             ->GetCharacterState()->GetZone() : zone;
-        ctx.AutoOnly = autoOnly || !client;
+        ctx.AutoOnly = options.AutoOnly || !client;
 
         return HandleEvent(ctx);
     }
@@ -209,9 +210,13 @@ int32_t EventManager::InterruptEvent(const std::shared_ptr<
     auto eState = state->GetEventState();
     auto current = eState->GetCurrent();
 
-    EndEvent(client);
+    bool interrupt = current && !current->GetNoInterrupt();
+    if(interrupt)
+    {
+        EndEvent(client);
+    }
 
-    return current ? current->GetSourceEntityID() : 0;
+    return interrupt ? current->GetSourceEntityID() : 0;
 }
 
 bool EventManager::RequestMenu(const std::shared_ptr<
@@ -536,8 +541,12 @@ bool EventManager::ContinueChannelChangeEvent(
         // Jump into the next action we left off on
         if(actions.size() > 0)
         {
+            ActionOptions options;
+            options.IncrementEventIndex = true;
+            options.NoEventInterrupt = true;
+
             mServer.lock()->GetActionManager()->PerformActions(client,
-                actions, 0, state->GetZone(), 0, false, true);
+                actions, 0, state->GetZone(), options);
         }
     }
 
@@ -3917,6 +3926,8 @@ void EventManager::HandleNext(EventContext& ctx)
             ctx.EventInstance->GetSourceEntityID());
         if(queue)
         {
+            queue->SetNoInterrupt(ctx.EventInstance &&
+                ctx.EventInstance->GetNoInterrupt());
             eState->AppendQueued(queue);
         }
     }
@@ -3975,9 +3986,13 @@ void EventManager::HandleNext(EventContext& ctx)
             eState->SetCurrent(nullptr);
         }
 
+        EventOptions options;
+        options.ActionGroupID = ctx.EventInstance->GetActionGroupID();
+        options.AutoOnly = ctx.AutoOnly;
+        options.NoInterrupt = ctx.EventInstance->GetNoInterrupt();
+
         HandleEvent(ctx.Client, nextEventID,
-            ctx.EventInstance->GetSourceEntityID(), ctx.CurrentZone,
-            ctx.EventInstance->GetActionGroupID(), ctx.AutoOnly);
+            ctx.EventInstance->GetSourceEntityID(), ctx.CurrentZone, options);
     }
 }
 
@@ -4210,9 +4225,14 @@ bool EventManager::PerformActions(EventContext& ctx)
     auto actionManager = server->GetActionManager();
     auto actions = e->GetActions();
 
+    ActionOptions options;
+    options.AutoEventsOnly = ctx.AutoOnly;
+    options.GroupID = ctx.EventInstance->GetActionGroupID();
+    options.IncrementEventIndex = true;
+    options.NoEventInterrupt = ctx.EventInstance->GetNoInterrupt();
+
     actionManager->PerformActions(ctx.Client, actions,
-        ctx.EventInstance->GetSourceEntityID(), ctx.CurrentZone,
-        ctx.EventInstance->GetActionGroupID(), ctx.AutoOnly, true);
+        ctx.EventInstance->GetSourceEntityID(), ctx.CurrentZone, options);
 
     HandleNext(ctx);
 

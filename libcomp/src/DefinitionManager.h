@@ -28,7 +28,9 @@
 #define LIBCOMP_SRC_DEFINITIONMANAGER_H
 
 // Standard C++14 Includes
+#include <PushIgnore.h>
 #include <gsl/gsl>
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include "CString.h"

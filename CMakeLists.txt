@@ -302,6 +302,11 @@ ELSE(${LIBCOMP_ENDIAN})
     ADD_DEFINITIONS(-DLIBCOMP_LITTLEENDIAN)
 ENDIF(${LIBCOMP_ENDIAN})
 
+# Require C++14 to build the project.
+SET(CMAKE_CXX_STANDARD 14)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
+SET(CMAKE_CXX_EXTENSIONS OFF)
+
 # Default Linux (gcc/clang) builds to debug and MinGW builds to release.
 IF(NOT MSVC)
     # Ensure C++14 support is on.

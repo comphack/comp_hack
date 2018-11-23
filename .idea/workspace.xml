@@ -1,0 +1,840 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
+    <generated>
+      <config projectName="comp_hack" targetName="comp_encrypt" />
+      <config projectName="comp_hack" targetName="comp" />
+      <config projectName="comp_hack" targetName="TestMariaDB" />
+      <config projectName="comp_hack" targetName="Experimental" />
+      <config projectName="comp_hack" targetName="Nightly" />
+      <config projectName="comp_hack" targetName="comp_world" />
+      <config projectName="comp_hack" targetName="TestUUID" />
+      <config projectName="comp_hack" targetName="guide-images" />
+      <config projectName="comp_hack" targetName="ExperimentalUpdate" />
+      <config projectName="comp_hack" targetName="comp_bgmtool" />
+      <config projectName="comp_hack" targetName="TestMetaObject" />
+      <config projectName="comp_hack" targetName="ContinuousConfigure" />
+      <config projectName="comp_hack" targetName="comp_map" />
+      <config projectName="comp_hack" targetName="physfs-lib" />
+      <config projectName="comp_hack" targetName="comp_bdpatch" />
+      <config projectName="comp_hack" targetName="comp_updater_headless" />
+      <config projectName="comp_hack" targetName="TestVectorStream" />
+      <config projectName="comp_hack" targetName="ExperimentalMemCheck" />
+      <config projectName="comp_hack" targetName="comp_rehash" />
+      <config projectName="comp_hack" targetName="zlib-lib" />
+      <config projectName="comp_hack" targetName="TestConvert" />
+      <config projectName="comp_hack" targetName="civet" />
+      <config projectName="comp_hack" targetName="TestMetaVariable" />
+      <config projectName="comp_hack" targetName="googletest" />
+      <config projectName="comp_hack" targetName="comp_logger" />
+      <config projectName="comp_hack" targetName="ExperimentalSubmit" />
+      <config projectName="comp_hack" targetName="tinyxml2-ex" />
+      <config projectName="comp_hack" targetName="NightlySubmit" />
+      <config projectName="comp_hack" targetName="ContinuousMemCheck" />
+      <config projectName="comp_hack" targetName="ExperimentalBuild" />
+      <config projectName="comp_hack" targetName="TestLobby" />
+      <config projectName="comp_hack" targetName="ExperimentalStart" />
+      <config projectName="comp_hack" targetName="openssl" />
+      <config projectName="comp_hack" targetName="client-test" />
+      <config projectName="comp_hack" targetName="doc" />
+      <config projectName="comp_hack" targetName="comp_patcher" />
+      <config projectName="comp_hack" targetName="ExperimentalConfigure" />
+      <config projectName="comp_hack" targetName="comp_bdpatch_autogen" />
+      <config projectName="comp_hack" targetName="TestChannelLogin" />
+      <config projectName="comp_hack" targetName="NightlyBuild" />
+      <config projectName="comp_hack" targetName="git-version" />
+      <config projectName="comp_hack" targetName="TestString" />
+      <config projectName="comp_hack" targetName="NightlyStart" />
+      <config projectName="comp_hack" targetName="TestScriptEngine" />
+      <config projectName="comp_hack" targetName="comp_logger_autogen" />
+      <config projectName="comp_hack" targetName="comp_updater_headless_autogen" />
+      <config projectName="comp_hack" targetName="ContinuousStart" />
+      <config projectName="comp_hack" targetName="comp_manager" />
+      <config projectName="comp_hack" targetName="ContinuousSubmit" />
+      <config projectName="comp_hack" targetName="comp_logger_headless_autogen" />
+      <config projectName="comp_hack" targetName="guide" />
+      <config projectName="comp_hack" targetName="ContinuousTest" />
+      <config projectName="comp_hack" targetName="jsonbox-ex" />
+      <config projectName="comp_hack" targetName="NightlyMemoryCheck" />
+      <config projectName="comp_hack" targetName="NightlyCoverage" />
+      <config projectName="comp_hack" targetName="ContinuousUpdate" />
+      <config projectName="comp_hack" targetName="sqlite3" />
+      <config projectName="comp_hack" targetName="TestPacket" />
+      <config projectName="comp_hack" targetName="comp_map_autogen" />
+      <config projectName="comp_hack" targetName="Continuous" />
+      <config projectName="comp_hack" targetName="comp_logger_headless" />
+      <config projectName="comp_hack" targetName="ContinuousCoverage" />
+      <config projectName="comp_hack" targetName="comp_objgen" />
+      <config projectName="comp_hack" targetName="ContinuousBuild" />
+      <config projectName="comp_hack" targetName="comp_client" />
+      <config projectName="comp_hack" targetName="tester" />
+      <config projectName="comp_hack" targetName="comp_lobby" />
+      <config projectName="comp_hack" targetName="NightlyMemCheck" />
+      <config projectName="comp_hack" targetName="TestDecrypt" />
+      <config projectName="comp_hack" targetName="comp_decrypt" />
+      <config projectName="comp_hack" targetName="comp_nifcrypt" />
+      <config projectName="comp_hack" targetName="TestGeneratedObjects" />
+      <config projectName="comp_hack" targetName="ttvfs-ex" />
+      <config projectName="comp_hack" targetName="mariadb" />
+      <config projectName="comp_hack" targetName="NightlyUpdate" />
+      <config projectName="comp_hack" targetName="NightlyTest" />
+      <config projectName="comp_hack" targetName="NightlyConfigure" />
+      <config projectName="comp_hack" targetName="comp_capgrep_autogen" />
+      <config projectName="comp_hack" targetName="asio" />
+      <config projectName="comp_hack" targetName="objgen" />
+      <config projectName="comp_hack" targetName="comp_capgrep" />
+      <config projectName="comp_hack" targetName="ExperimentalCoverage" />
+      <config projectName="comp_hack" targetName="gsl" />
+      <config projectName="comp_hack" targetName="squirrel3" />
+      <config projectName="comp_hack" targetName="comp_channel" />
+      <config projectName="comp_hack" targetName="ExperimentalTest" />
+    </generated>
+  </component>
+  <component name="CMakeSettings">
+    <configurations>
+      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
+    </configurations>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="ad3831f2-d319-4397-8ae3-a0c7122c8daf" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libcomp/src/BaseServer.h" beforeDir="false" afterPath="$PROJECT_DIR$/libcomp/src/BaseServer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libcomp/src/DefinitionManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/libcomp/src/DefinitionManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libcomp/src/EncryptedConnection.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/libcomp/src/EncryptedConnection.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libcomp/src/ServerDataManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/libcomp/src/ServerDataManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/channel/src/ChatManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/server/channel/src/ChatManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/channel/src/SkillManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/server/channel/src/SkillManager.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/channel/src/packets/game/ObjectInteraction.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/server/channel/src/packets/game/ObjectInteraction.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/channel/src/packets/game/Pivot.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/server/channel/src/packets/game/Pivot.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/channel/src/packets/game/SpotTriggered.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/server/channel/src/packets/game/SpotTriggered.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tools/capgrep/src/MainWindow.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/tools/capgrep/src/MainWindow.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tools/nifcrypt/src/nifcrypt.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/tools/nifcrypt/src/nifcrypt.cpp" afterDir="false" />
+    </list>
+    <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
+  <component name="FileEditorManager">
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/server/channel/src/SkillManager.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="302">
+              <caret line="4831" column="27" selection-start-line="4831" selection-start-column="27" selection-end-line="4831" selection-end-column="27" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/server/channel/src/packets/game/Pivot.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="276">
+              <caret line="70" column="14" selection-start-line="70" selection-start-column="14" selection-end-line="70" selection-end-column="14" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>NO_WARNINGS</find>
+    </findStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$PROJECT_DIR$/cmake-build-debug/CMakeCache.txt" />
+        <option value="$PROJECT_DIR$/server/channel/src/packets/game/Pivot.cpp" />
+        <option value="$PROJECT_DIR$/server/channel/src/SkillManager.cpp" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="-1" />
+    <option name="width" value="1602" />
+    <option name="height" value="876" />
+  </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="Scope" />
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="comp_hack" type="b2602c69:ProjectViewProjectNode" />
+              <item name="comp_hack" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="comp_hack" type="b2602c69:ProjectViewProjectNode" />
+              <item name="comp_hack" type="462c0819:PsiDirectoryNode" />
+              <item name="libcomp" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="comp_hack" type="b2602c69:ProjectViewProjectNode" />
+              <item name="comp_hack" type="462c0819:PsiDirectoryNode" />
+              <item name="libcomp" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="comp_hack" type="b2602c69:ProjectViewProjectNode" />
+              <item name="comp_hack" type="462c0819:PsiDirectoryNode" />
+              <item name="server" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="comp_hack" type="b2602c69:ProjectViewProjectNode" />
+              <item name="comp_hack" type="462c0819:PsiDirectoryNode" />
+              <item name="server" type="462c0819:PsiDirectoryNode" />
+              <item name="channel" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="comp_hack" type="b2602c69:ProjectViewProjectNode" />
+              <item name="comp_hack" type="462c0819:PsiDirectoryNode" />
+              <item name="server" type="462c0819:PsiDirectoryNode" />
+              <item name="channel" type="462c0819:PsiDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="RunManager" selected="Application.ContinuousBuild">
+    <configuration name="TestChannelLogin" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestChannelLogin" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestChannelLogin" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestConvert" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestConvert" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestConvert" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestDecrypt" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestDecrypt" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestDecrypt" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestGeneratedObjects" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestGeneratedObjects" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestGeneratedObjects" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestLobby" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestLobby" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestLobby" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestMariaDB" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestMariaDB" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestMariaDB" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestMetaObject" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestMetaObject" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestMetaObject" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestMetaVariable" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestMetaVariable" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestMetaVariable" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestPacket" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestPacket" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestPacket" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestScriptEngine" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestScriptEngine" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestScriptEngine" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestString" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestString" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestString" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestUUID" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestUUID" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestUUID" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestVectorStream" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="TestVectorStream" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="TestVectorStream" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_client" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_client" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_client" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Continuous" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="Continuous" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ContinuousBuild" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ContinuousBuild" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ContinuousBuild">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ContinuousConfigure" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ContinuousConfigure" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ContinuousConfigure">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ContinuousCoverage" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ContinuousCoverage" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ContinuousCoverage">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ContinuousMemCheck" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ContinuousMemCheck" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ContinuousMemCheck">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ContinuousStart" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ContinuousStart" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ContinuousStart">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ContinuousSubmit" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ContinuousSubmit" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ContinuousSubmit">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ContinuousTest" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ContinuousTest" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ContinuousTest">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ContinuousUpdate" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ContinuousUpdate" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ContinuousUpdate">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Experimental" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="Experimental" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExperimentalBuild" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ExperimentalBuild" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ExperimentalBuild">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExperimentalConfigure" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ExperimentalConfigure" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ExperimentalConfigure">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExperimentalCoverage" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ExperimentalCoverage" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ExperimentalCoverage">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExperimentalMemCheck" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ExperimentalMemCheck" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ExperimentalMemCheck">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExperimentalStart" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ExperimentalStart" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ExperimentalStart">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExperimentalSubmit" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ExperimentalSubmit" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ExperimentalSubmit">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExperimentalTest" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ExperimentalTest" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ExperimentalTest">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ExperimentalUpdate" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ExperimentalUpdate" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="ExperimentalUpdate">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Nightly" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="Nightly" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="NightlyBuild" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="NightlyBuild" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="NightlyBuild">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="NightlyConfigure" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="NightlyConfigure" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="NightlyConfigure">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="NightlyCoverage" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="NightlyCoverage" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="NightlyCoverage">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="NightlyMemCheck" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="NightlyMemCheck" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="NightlyMemCheck">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="NightlyMemoryCheck" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="NightlyMemoryCheck" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="NightlyMemoryCheck">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="NightlyStart" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="NightlyStart" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="NightlyStart">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="NightlySubmit" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="NightlySubmit" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="NightlySubmit">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="NightlyTest" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="NightlyTest" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="NightlyTest">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="NightlyUpdate" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="NightlyUpdate" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="NightlyUpdate">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="asio" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="asio" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="civet" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="civet" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="client-test" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="client-test" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_bdpatch" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_bdpatch" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_bdpatch">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_bdpatch_autogen" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_bdpatch_autogen" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_bgmtool" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_bgmtool" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_bgmtool">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_capgrep" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_capgrep" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_capgrep">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_capgrep_autogen" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_capgrep_autogen" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_channel" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_channel" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_channel">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_decrypt" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_decrypt" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_decrypt">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_encrypt" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_encrypt" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_encrypt">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_lobby" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_lobby" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_lobby">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_logger" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_logger" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_logger">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_logger_autogen" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_logger_autogen" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_logger_headless" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_logger_headless" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_logger_headless">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_logger_headless_autogen" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_logger_headless_autogen" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_manager" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_manager" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_manager">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_map" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_map" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_map">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_map_autogen" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_map_autogen" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_nifcrypt" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_nifcrypt" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_nifcrypt">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_objgen" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_objgen" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_objgen">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_patcher" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_patcher" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_patcher">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_rehash" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_rehash" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_rehash">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_updater_headless" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_updater_headless" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_updater_headless">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_updater_headless_autogen" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_updater_headless_autogen" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="comp_world" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="comp_world" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="comp_hack" RUN_TARGET_NAME="comp_world">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="doc" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="doc" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="git-version" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="git-version" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="googletest" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="googletest" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="gsl" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="gsl" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="guide-images" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="guide-images" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="guide" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="guide" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="jsonbox-ex" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="jsonbox-ex" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="mariadb" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="mariadb" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="objgen" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="objgen" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="openssl" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="openssl" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="physfs-lib" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="physfs-lib" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="sqlite3" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="sqlite3" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="squirrel3" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="squirrel3" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="tester" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="tester" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="tinyxml2-ex" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="tinyxml2-ex" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ttvfs-ex" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="ttvfs-ex" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="zlib-lib" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="comp_hack" TARGET_NAME="zlib-lib" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="Application.asio" />
+      <item itemvalue="Application.civet" />
+      <item itemvalue="Application.Continuous" />
+      <item itemvalue="Application.ContinuousBuild" />
+      <item itemvalue="Application.ContinuousConfigure" />
+      <item itemvalue="Application.ContinuousCoverage" />
+      <item itemvalue="Application.ContinuousMemCheck" />
+      <item itemvalue="Application.ContinuousStart" />
+      <item itemvalue="Application.ContinuousSubmit" />
+      <item itemvalue="Application.ContinuousTest" />
+      <item itemvalue="Application.ContinuousUpdate" />
+      <item itemvalue="Application.doc" />
+      <item itemvalue="Application.Experimental" />
+      <item itemvalue="Application.ExperimentalBuild" />
+      <item itemvalue="Application.ExperimentalConfigure" />
+      <item itemvalue="Application.ExperimentalCoverage" />
+      <item itemvalue="Application.ExperimentalMemCheck" />
+      <item itemvalue="Application.ExperimentalStart" />
+      <item itemvalue="Application.ExperimentalSubmit" />
+      <item itemvalue="Application.ExperimentalTest" />
+      <item itemvalue="Application.ExperimentalUpdate" />
+      <item itemvalue="Application.googletest" />
+      <item itemvalue="Application.gsl" />
+      <item itemvalue="Application.jsonbox-ex" />
+      <item itemvalue="Application.mariadb" />
+      <item itemvalue="Application.Nightly" />
+      <item itemvalue="Application.NightlyBuild" />
+      <item itemvalue="Application.NightlyConfigure" />
+      <item itemvalue="Application.NightlyCoverage" />
+      <item itemvalue="Application.NightlyMemCheck" />
+      <item itemvalue="Application.NightlyMemoryCheck" />
+      <item itemvalue="Application.NightlyStart" />
+      <item itemvalue="Application.NightlySubmit" />
+      <item itemvalue="Application.NightlyTest" />
+      <item itemvalue="Application.NightlyUpdate" />
+      <item itemvalue="Application.openssl" />
+      <item itemvalue="Application.physfs-lib" />
+      <item itemvalue="Application.squirrel3" />
+      <item itemvalue="Application.tinyxml2-ex" />
+      <item itemvalue="Application.ttvfs-ex" />
+      <item itemvalue="Application.zlib-lib" />
+      <item itemvalue="Application.sqlite3" />
+      <item itemvalue="Application.guide" />
+      <item itemvalue="Application.guide-images" />
+      <item itemvalue="Application.comp" />
+      <item itemvalue="Application.git-version" />
+      <item itemvalue="Application.objgen" />
+      <item itemvalue="Application.client-test" />
+      <item itemvalue="Application.tester" />
+      <item itemvalue="Application.comp_channel" />
+      <item itemvalue="Application.comp_lobby" />
+      <item itemvalue="Application.comp_world" />
+      <item itemvalue="Application.comp_bdpatch" />
+      <item itemvalue="Application.comp_bdpatch_autogen" />
+      <item itemvalue="Application.comp_bgmtool" />
+      <item itemvalue="Application.comp_capgrep" />
+      <item itemvalue="Application.comp_capgrep_autogen" />
+      <item itemvalue="Application.comp_decrypt" />
+      <item itemvalue="Application.comp_encrypt" />
+      <item itemvalue="Application.comp_logger" />
+      <item itemvalue="Application.comp_logger_autogen" />
+      <item itemvalue="Application.comp_logger_headless" />
+      <item itemvalue="Application.comp_logger_headless_autogen" />
+      <item itemvalue="Application.comp_manager" />
+      <item itemvalue="Application.comp_map" />
+      <item itemvalue="Application.comp_map_autogen" />
+      <item itemvalue="Application.comp_nifcrypt" />
+      <item itemvalue="Application.comp_objgen" />
+      <item itemvalue="Application.comp_patcher" />
+      <item itemvalue="Application.comp_rehash" />
+      <item itemvalue="Application.comp_updater_headless" />
+      <item itemvalue="Application.comp_updater_headless_autogen" />
+      <item itemvalue="Google Test.comp_client" />
+      <item itemvalue="Google Test.TestConvert" />
+      <item itemvalue="Google Test.TestDecrypt" />
+      <item itemvalue="Google Test.TestGeneratedObjects" />
+      <item itemvalue="Google Test.TestMariaDB" />
+      <item itemvalue="Google Test.TestPacket" />
+      <item itemvalue="Google Test.TestScriptEngine" />
+      <item itemvalue="Google Test.TestString" />
+      <item itemvalue="Google Test.TestVectorStream" />
+      <item itemvalue="Google Test.TestMetaObject" />
+      <item itemvalue="Google Test.TestMetaVariable" />
+      <item itemvalue="Google Test.TestUUID" />
+      <item itemvalue="Google Test.TestChannelLogin" />
+      <item itemvalue="Google Test.TestLobby" />
+    </list>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="ad3831f2-d319-4397-8ae3-a0c7122c8daf" name="Default Changelist" comment="" />
+      <created>1542258826169</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1542258826169</updated>
+      <workItem from="1542258836026" duration="52000" />
+      <workItem from="1542258947452" duration="1984000" />
+      <workItem from="1542758185715" duration="3217000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TimeTrackingManager">
+    <option name="totallyTimeSpent" value="5253000" />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="-1" y="0" width="1602" height="876" extended-state="6" />
+    <editor active="true" />
+    <layout>
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.25611326" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info id="Favorites" order="2" side_tool="true" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="bottom" id="Database Changes" order="7" />
+      <window_info anchor="bottom" id="Terminal" order="8" />
+      <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
+      <window_info anchor="bottom" id="Version Control" order="10" />
+      <window_info anchor="bottom" id="CMake" order="11" weight="0.3275862" />
+      <window_info active="true" anchor="bottom" id="Messages" order="12" visible="true" weight="0.32891247" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="Database" order="3" />
+    </layout>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/cmake-build-debug/CMakeCache.txt">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="177">
+          <caret line="341" column="19" selection-start-line="341" selection-start-column="19" selection-end-line="341" selection-end-column="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/server/channel/src/AccountManager.cpp">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/server/channel/src/packets/game/Pivot.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="276">
+          <caret line="70" column="14" selection-start-line="70" selection-start-column="14" selection-end-line="70" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/server/channel/src/SkillManager.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="4831" column="27" selection-start-line="4831" selection-start-column="27" selection-end-line="4831" selection-end-column="27" />
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>

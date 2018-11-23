@@ -2134,7 +2134,7 @@ bool SkillManager::DetermineNormalCosts(
     // Get final HP cost
     if(hpCost != 0 || hpCostPercent != 0)
     {
-        hpCost = (int32_t)(hpCost + ceil(((float)hpCostPercent * 0.01f) *
+        hpCost = (int32_t)((float)hpCost + ceil(((float)hpCostPercent * 0.01f) *
             (float)source->GetMaxHP()));
 
         double multiplier = 1.0;
@@ -2157,7 +2157,7 @@ bool SkillManager::DetermineNormalCosts(
     // Get final MP cost
     if(mpCost != 0 || mpCostPercent != 0)
     {
-        mpCost = (int32_t)(mpCost + ceil(((float)mpCostPercent * 0.01f) *
+        mpCost = (int32_t)((float)mpCost + ceil(((float)mpCostPercent * 0.01f) *
             (float)source->GetMaxMP()));
 
         double multiplier = 1.0;
@@ -4829,6 +4829,7 @@ bool SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
                     return true;
                 }
             }
+            // fall through
         case objects::MiSkillBasicData::ActionType_t::SPIN:
             cancelType = 3; // Display counter break animation
             break;

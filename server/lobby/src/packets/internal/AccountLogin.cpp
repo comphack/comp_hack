@@ -139,6 +139,7 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
             libcomp::String("%1:%2").Arg(channel->GetIP()).Arg(
             channel->GetPort()), true);
         reply.WriteU8(cid);
+        reply.WriteS32Little(0); // Bazaars broke == false
 
         clientConnection->SendPacket(reply);
 

@@ -157,11 +157,12 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
 
     server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<
         ActiveEntityState> pSource, uint32_t pSkillID, int64_t pActivationObjectID,
-        int64_t pTargetObjectID)
+        int64_t pTargetObjectID, uint8_t pTargetType)
         {
             pSkillManager->ActivateSkill(pSource, pSkillID, pActivationObjectID,
-                pTargetObjectID);
-        }, skillManager, source, skillID, activationObjectID, targetObjectID);
+                pTargetObjectID, pTargetType);
+        }, skillManager, source, skillID, activationObjectID, targetObjectID,
+        (uint8_t)targetType);
 
     return true;
 }

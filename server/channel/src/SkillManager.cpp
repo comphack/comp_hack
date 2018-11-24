@@ -325,7 +325,7 @@ SkillManager::~SkillManager()
 
 bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source,
     uint32_t skillID, int64_t activationObjectID, int64_t targetObjectID,
-    std::shared_ptr<SkillExecutionContext> ctx)
+    uint8_t targetType, std::shared_ptr<SkillExecutionContext> ctx)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -401,6 +401,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     activated->SetSourceEntity(source);
     activated->SetActivationObjectID(activationObjectID);
     activated->SetTargetObjectID(targetObjectID);
+    activated->SetActivationTargetType(targetType);
     activated->SetActivationTime(now);
 
     if(instantExecution)
@@ -416,11 +417,14 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     auto pSkill = GetProcessingSkill(activated, nullptr);
     auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
 
+    // Fusion skills have special adjustment restrictions
+    bool fusionSkill = pSkill->FunctionID == SVR_CONST.SKILL_DEMON_FUSION;
+
     // Stack adjust is affected by 2 sources if not an item skill or just
     // explicit item including adjustments if it is an item skill
     // (Ignore activation type special (3) and toggle (4))
     uint8_t maxStacks = castBasic->GetUseCount();
-    if((castBasic->GetAdjustRestrictions() & 0x01) == 0 &&
+    if((castBasic->GetAdjustRestrictions() & 0x01) == 0 && !fusionSkill &&
         def->GetBasic()->GetActivationType() != 3 &&
         def->GetBasic()->GetActivationType() != 4)
     {
@@ -456,8 +460,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
             executeNow = false;
         }
-        else if(chargeTime > 0 &&
-            pSkill->FunctionID != SVR_CONST.SKILL_DEMON_FUSION &&
+        else if(chargeTime > 0 && !fusionSkill &&
             (castBasic->GetAdjustRestrictions() & 0x04) == 0)
         {
             int16_t chargeAdjust = (int16_t)(source->GetCorrectValue(
@@ -985,6 +988,31 @@ bool SkillManager::SkillRestricted(const std::shared_ptr<ActiveEntityState> sour
     }
 }
 
+bool SkillManager::TargetInRange(
+    const std::shared_ptr<ActiveEntityState> source,
+    const std::shared_ptr<objects::MiSkillData>& skillData,
+    const std::shared_ptr<ActiveEntityState>& target)
+{
+    if(!target)
+    {
+        return false;
+    }
+    else if(target == source)
+    {
+        // Sanity check
+        return true;
+    }
+
+    target->RefreshCurrentPosition(ChannelServer::GetServerTime());
+
+    float distance = source->GetDistance(target->GetCurrentX(),
+        target->GetCurrentY());
+    uint16_t maxTargetRange = (uint16_t)(400 +
+        (skillData->GetTarget()->GetRange() * 10));
+
+    return (float)maxTargetRange >= distance;
+}
+
 int8_t SkillManager::ValidateSkillTarget(
     const std::shared_ptr<ActiveEntityState> source,
     const std::shared_ptr<objects::MiSkillData>& skillData,
@@ -1354,17 +1382,27 @@ bool SkillManager::PrepareFusionSkill(
 
     // Skill converted, check target as fusion skills cannot have their
     // target set after activation
+    auto target = zone && targetEntityID > 0
+        ? zone->GetActiveEntity(targetEntityID) : nullptr;
     skillData = definitionManager->GetSkillData(skillID);
-    if(skillData && (targetEntityID > 0 || skillData->GetTarget()
+    if(skillData && (target || skillData->GetTarget()
         ->GetType() == objects::MiTargetData::Type_t::NONE))
     {
+        cState->RefreshCurrentPosition(ChannelServer::GetServerTime());
+
+        // Ranges are checked at activation time instead of execution time
+        if(target && !TargetInRange(cState, skillData, target))
+        {
+            SendFailure(cState, skillID, client,
+                (uint8_t)SkillErrorCodes_t::TOO_FAR);
+            return false;
+        }
+
         auto zoneManager = server->GetZoneManager();
 
-        // Hide the partner demon now
+        // Hide the partner demon now then calculate the demon's position
+        // that will be warped to
         dState->SetAIIgnored(true);
-
-        // Calculate the demon's position they will be warped to
-        cState->RefreshCurrentPosition(ChannelServer::GetServerTime());
 
         Point cPoint(cState->GetCurrentX(), cState->GetCurrentY());
         Point dPoint(cPoint.x + 150.f, cPoint.y + 100.f);
@@ -1372,7 +1410,7 @@ bool SkillManager::PrepareFusionSkill(
 
         dPoint = zoneManager->RotatePoint(dPoint, cPoint, rot);
 
-        // Make sure its out not out of bounds
+        // Make sure its not out of bounds
         if(zone->Collides(Line(cPoint, dPoint), dPoint))
         {
             // Correct to character position
@@ -1467,23 +1505,15 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
                     break;
                 }
 
-                if(targetEntity != source && !ctx->CounteredSkill)
+                if(pSkill->FunctionID != SVR_CONST.SKILL_DEMON_FUSION &&
+                    targetEntity != source && !ctx->CounteredSkill &&
+                    !TargetInRange(source, pSkill->Definition, targetEntity))
                 {
-                    // Make sure the target is in range
-                    targetEntity->RefreshCurrentPosition(
-                        ChannelServer::GetServerTime());
-
-                    float distance = source->GetDistance(targetEntity
-                        ->GetCurrentX(), targetEntity->GetCurrentY());
-                    uint16_t maxTargetRange = (uint16_t)(400 +
-                        (pSkill->Definition->GetTarget()->GetRange() * 10));
-                    if((float)maxTargetRange < distance)
-                    {
-                        // Out of range, fail execution
-                        SendFailure(activated, client,
-                            (uint8_t)SkillErrorCodes_t::TOO_FAR);
-                        return false;
-                    }
+                    // Out of range, fail execution (checked at activation time
+                    // for fusion skills)
+                    SendFailure(activated, client,
+                        (uint8_t)SkillErrorCodes_t::TOO_FAR);
+                    return false;
                 }
 
                 SkillTargetResult target;
@@ -1755,6 +1785,15 @@ void SkillManager::SendFailure(
             activated->GetSourceEntity());
         SendFailure(source, activated->GetSkillID(), client, errorCode,
             activated->GetActivationID());
+    }
+
+    if(activated->GetActivationTargetType() == ACTIVATION_FUSION)
+    {
+        // All failures for fusion skills sent once we have an activated
+        // ability need to be cancelled or the client will get stuck
+        auto source = std::dynamic_pointer_cast<ActiveEntityState>(
+            activated->GetSourceEntity());
+        CancelSkill(source, activated->GetActivationID());
     }
 }
 

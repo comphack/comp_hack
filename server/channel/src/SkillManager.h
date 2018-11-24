@@ -122,12 +122,14 @@ public:
      *  typically only set for instant activation skills at this phase. If
      *  a call to ExecuteSkill is performed after activation, the supplied
      *  targetObjectID will override this value.
+     * @param targetType Type of entity/object being targeted by the
+     *  activationObjectID (and sometimes targetObjectID as well)
      * @param ctx Special execution state for the skill (ex: free cast, counter)
      * @return true if the skill was activated successfully, false otherwise
      */
     bool ActivateSkill(const std::shared_ptr<ActiveEntityState> source,
         uint32_t skillID, int64_t activationObjectID, int64_t targetObjectID,
-        std::shared_ptr<SkillExecutionContext> ctx = 0);
+        uint8_t targetType, std::shared_ptr<SkillExecutionContext> ctx = 0);
 
     /**
      * Target/retarget the skill of a character or demon. No response is sent
@@ -182,6 +184,18 @@ public:
      */
     bool SkillRestricted(const std::shared_ptr<ActiveEntityState> source,
         const std::shared_ptr<objects::MiSkillData>& skillData);
+
+    /**
+     * Determine if the skill target supplied is in range for a specific skill
+     * @param source Entity that is attempting to use the skill
+     * @param skillData Pointer to the skill's definition
+     * @param target Pointer to the targeted entity
+     * @return true if the target entity is in range, false if it is not
+     */
+    bool TargetInRange(
+        const std::shared_ptr<ActiveEntityState> source,
+        const std::shared_ptr<objects::MiSkillData>& skillData,
+        const std::shared_ptr<ActiveEntityState>& target);
 
     /**
      * Determine if the skill target supplied is valid for a specific skill

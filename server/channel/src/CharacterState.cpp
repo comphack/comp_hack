@@ -1254,7 +1254,7 @@ void CharacterState::AdjustFuseBonus(libcomp::DefinitionManager* definitionManag
                 correctTypes[0] = (int8_t)CorrectTbl::LNGR;
             }
 
-            correctTypes[1] = (int8_t)CorrectTbl::MAGIC;
+            correctTypes[1] = (int8_t)CorrectTbl::SPELL;
             correctTypes[2] = (int8_t)CorrectTbl::SUPPORT;
 
             growthTable = &growth;

@@ -1087,7 +1087,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                     // Activate the skill
                     if(skillManager->ActivateSkill(eState, cmdSkill
                         ->GetSkillID(), cmdSkill->GetTargetEntityID(),
-                        cmdSkill->GetTargetEntityID()))
+                        cmdSkill->GetTargetEntityID(), ACTIVATION_TARGET))
                     {
                         auto skillData = cmdSkill->GetSkillData();
                         if(skillData->GetBasic()->GetActivationType() == 5)

@@ -60,11 +60,16 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto zoneManager = server->GetZoneManager();
+    auto worldDB = server->GetWorldDatabase();
 
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto zone = cState->GetZone();
+
+    // Always reload
+    auto bazaarData = objects::BazaarData::LoadBazaarDataByAccount(worldDB,
+        state->GetAccountUID());
 
     auto currentEvent = state->GetEventState()->GetCurrent();
     uint32_t marketID = (uint32_t)state->GetCurrentMenuShopID();
@@ -72,9 +77,22 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
         ? zone->GetBazaar(currentEvent->GetSourceEntityID()) : nullptr;
 
     bool success = marketID != 0 && bazaar;
-    if(success && maccaCost > 0)
+    if(success)
     {
-        success = server->GetCharacterManager()->PayMacca(client, (uint64_t)maccaCost);
+        if(bazaarData && bazaarData->GetMarketID() == marketID &&
+            bazaarData->GetZone() == zone->GetDefinitionID() &&
+            bazaarData->GetChannelID() == server->GetChannelID())
+        {
+            LOG_ERROR(libcomp::String("Player attempted to open the same"
+                " bazaar market multiple times in a row: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
+            success = false;
+        }
+        else if(maccaCost > 0)
+        {
+            success = server->GetCharacterManager()->PayMacca(client,
+                (uint64_t)maccaCost);
+        }
     }
 
     libcomp::Packet reply;
@@ -84,12 +102,6 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
         uint32_t timeLeft = (uint32_t)(zone->GetDefinition()->GetBazaarMarketTime() * 60);
         uint32_t timestamp = (uint32_t)time(0);
         uint32_t expirationTime = (uint32_t)(timestamp + (uint32_t)timeLeft);
-
-        auto worldDB = server->GetWorldDatabase();
-
-        // Always reload
-        auto bazaarData = objects::BazaarData::LoadBazaarDataByAccount(worldDB,
-            state->GetAccountUID());
 
         bool isNew = bazaarData == nullptr;
         if(isNew)

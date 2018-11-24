@@ -179,6 +179,7 @@
             nulldefault="true"/>
         <member type="s64" name="ActivationObjectID"/>
         <member type="s64" name="TargetObjectID"/>
+        <member type="u8" name="ActivationTargetType"/>
         <member type="bool" name="EntityTargeted"/>
         <member type="s8" name="ActivationID"/>
         <member type="u64" name="ActivationTime"/>

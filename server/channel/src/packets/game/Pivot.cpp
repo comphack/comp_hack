@@ -68,7 +68,7 @@ bool Parsers::Pivot::Parse(libcomp::ManagerPacket *pPacketManager,
 
     // Make sure the request is not in the future
     ServerTime now = ChannelServer::GetServerTime();
-    if((float)now >= startTime)
+    if(now >= state->ToServerTime(startTime))
     {
         entity->SetOriginX(x);
         entity->SetOriginY(y);

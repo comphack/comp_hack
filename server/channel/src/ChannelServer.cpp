@@ -1415,8 +1415,9 @@ void ChannelServer::HandleDemonQuestReset()
         }
     }
 
-    // Reset timer to run again
-    mTimerManager.ScheduleEventIn((int)GetTimeUntilMidnight(), []
+    // Reset timer to run again (24 hours from now if still midnight)
+    uint32_t next = GetTimeUntilMidnight();
+    mTimerManager.ScheduleEventIn((int)(next ? next : 86400), []
         (ChannelServer* pServer)
         {
             pServer->HandleDemonQuestReset();

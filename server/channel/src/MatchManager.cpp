@@ -1829,7 +1829,7 @@ void MatchManager::CompleteBaseCapture(int32_t entityID, int32_t baseID,
         notify.WritePacketCode(
             ChannelToClientPacketCode_t::PACKET_PVP_BASE_CAPTURED);
         notify.WriteS32Little(baseID);
-        notify.WriteS32Little((int32_t)teamID);
+        notify.WriteS8((int8_t)teamID);
         notify.WriteS32Little(entityID);
 
         zoneManager->BroadcastPacket(zone, notify);

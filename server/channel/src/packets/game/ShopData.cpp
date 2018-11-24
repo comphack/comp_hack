@@ -186,7 +186,9 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
                 flags = (uint8_t)(product->GetFilterGroups() << 1);
             }
 
-            if(product->GetMoonRestrict() != 0xFFFF)
+            bool moonRestricted = product->GetMoonRestrict() &&
+                product->GetMoonRestrict() != 0xFFFF;
+            if(moonRestricted)
             {
                 flags |= 0x40;
             }
@@ -263,7 +265,7 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
 
             reply.WriteU8(trend);
 
-            if(product->GetMoonRestrict() != 0xFFFF)
+            if(moonRestricted)
             {
                 reply.WriteU16Little(product->GetMoonRestrict());
             }

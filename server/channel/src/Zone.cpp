@@ -38,6 +38,7 @@
 #include <Ally.h>
 #include <CultureMachineState.h>
 #include <DiasporaBase.h>
+#include <EnemyBase.h>
 #include <Loot.h>
 #include <LootBox.h>
 #include <Match.h>
@@ -272,7 +273,6 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
         std::lock_guard<std::mutex> lock(mLock);
 
         std::shared_ptr<ActiveEntityState> removeSpawn;
-        uint32_t sgID = 0, slgID = 0, encounterID = 0;
         switch(state->GetEntityType())
         {
         case EntityType_t::ALLY:
@@ -283,13 +283,8 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                         return a->GetEntityID() == entityID;
                     });
 
-                auto aState = std::dynamic_pointer_cast<AllyState>(state);
-                auto ally = aState->GetEntity();
-
-                removeSpawn = aState;
-                sgID = ally->GetSpawnGroupID();
-                slgID = ally->GetSpawnLocationGroupID();
-                encounterID = ally->GetEncounterID();
+                removeSpawn = std::dynamic_pointer_cast<
+                    ActiveEntityState>(state);
             }
             break;
         case EntityType_t::ENEMY:
@@ -300,15 +295,10 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                         return e->GetEntityID() == entityID;
                     });
 
-                auto eState = std::dynamic_pointer_cast<EnemyState>(state);
-                auto enemy = eState->GetEntity();
+                removeSpawn = std::dynamic_pointer_cast<
+                    ActiveEntityState>(state);
 
-                removeSpawn = eState;
-                sgID = enemy->GetSpawnGroupID();
-                slgID = enemy->GetSpawnLocationGroupID();
-                encounterID = enemy->GetEncounterID();
-
-                mBossIDs.insert(eState->GetEntityID());
+                mBossIDs.erase(entityID);
             }
             break;
         case EntityType_t::LOOT_BOX:
@@ -349,6 +339,9 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
 
         if(removeSpawn)
         {
+            auto eBase = removeSpawn->GetEnemyBase();
+
+            uint32_t sgID = eBase->GetSpawnGroupID();
             if(sgID)
             {
                 mSpawnGroups[sgID].remove_if([removeSpawn](
@@ -358,6 +351,7 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                     });
             }
 
+            uint32_t slgID = eBase->GetSpawnLocationGroupID();
             if(slgID)
             {
                 mSpawnLocationGroups[slgID].remove_if([removeSpawn](
@@ -408,6 +402,7 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                 }
             }
 
+            uint32_t encounterID = eBase->GetEncounterID();
             if(encounterID)
             {
                 // Remove if the encounter exists but do not remove
@@ -420,9 +415,22 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                 }
             }
 
+            // If the enemy has not been displayed yet, remove it from the
+            // staggered spawns
+            if(removeSpawn->GetDisplayState() != ActiveDisplayState_t::ACTIVE)
+            {
+                for(auto& pair : mStaggeredSpawns)
+                {
+                    pair.second.remove_if([entityID]
+                        (const std::shared_ptr<ActiveEntityState>& e)
+                        {
+                            return e->GetEntityID() == entityID;
+                        });
+                }
+            }
+
             // If the spawn has a summoning enemy, remove from its minions
-            auto eBase = removeSpawn->GetEnemyBase();
-            if(eBase && eBase->GetSummonerID())
+            if(eBase->GetSummonerID())
             {
                 auto it = mAllEntities.find(eBase->GetSummonerID());
                 if(it != mAllEntities.end())

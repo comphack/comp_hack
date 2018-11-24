@@ -139,10 +139,15 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
         objects::WorldConfig>(server->GetConfig())->GetWorldSharedConfig()
         ->GetTimeOffset() * 60) % 86400;
 
-    // Get the relative beginning of today (offset cannot be in the future)
+    // Get the relative beginning of today
     time_t now = std::time(0);
-    uint32_t today = (uint32_t)((now / 86400 * 86400) -
-        (timeAdjust >= 0 ? timeAdjust : (86400 + timeAdjust)));
+    uint32_t today = (uint32_t)((now / 86400 * 86400) - timeAdjust);
+    if(today > now)
+    {
+        // Adjusted time is still a day behind GMT
+        today = (uint32_t)(today - 86400);
+    }
+
     if(lastLogin && today > lastLogin)
     {
         // This is the character's first login of the day, increase

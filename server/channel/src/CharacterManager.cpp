@@ -3498,6 +3498,9 @@ std::shared_ptr<objects::Demon> CharacterManager::GenerateDemon(
     d->SetGrowthType(demonData->GetGrowth()->GetGrowthType());
     d->SetFamiliarity(familiarity);
 
+    // Default all skill types to "on" as well as same target attack
+    d->SetAttackSettings(0xFFFF);
+
     int8_t level = (int8_t)growth->GetBaseLevel();
 
     // Don't create over max level, even if base is higher

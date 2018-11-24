@@ -746,6 +746,17 @@ public:
      */
     void Cleanup();
 
+    /**
+     * Determine based on the supplied clock time if a spawn restriction
+     * is active or not
+     * @param clock World clock set to the current time
+     * @param restriction Pointer to the spawn restriction to evaluate
+     * @return true if the current time is valid for the restriction,
+     *  false if it is not
+     */
+    static bool TimeRestrictionActive(const WorldClock& clock,
+        const std::shared_ptr<objects::SpawnRestriction>& restriction);
+
 private:
     /**
      * Register an entity as one that currently exists in the zone
@@ -758,17 +769,6 @@ private:
      * @param entityID ID of an entity to remove
      */
     void UnregisterEntityState(int32_t entityID);
-
-    /**
-     * Determine based on the supplied clock time if a spawn restriction
-     * is active or not
-     * @param clock World clock set to the current time
-     * @param restriction Pointer to the spawn restriction to evaluate
-     * @return true if the current time is valid for the restriction,
-     *  false if it is not
-     */
-    bool TimeRestrictionActive(const WorldClock& clock,
-        const std::shared_ptr<objects::SpawnRestriction>& restriction);
 
     /**
      * Register a new spawned entity to the zone stored spots and group field

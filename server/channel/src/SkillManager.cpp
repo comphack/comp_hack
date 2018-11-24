@@ -457,6 +457,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
             executeNow = false;
         }
         else if(chargeTime > 0 &&
+            pSkill->FunctionID != SVR_CONST.SKILL_DEMON_FUSION &&
             (castBasic->GetAdjustRestrictions() & 0x04) == 0)
         {
             int16_t chargeAdjust = (int16_t)(source->GetCorrectValue(
@@ -1545,7 +1546,7 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
         // as these kick off immediately. This happens at projectile hit for
         // anything with a projectile.
         if(pSkill->PrimaryTarget && pSkill->PrimaryTarget != source &&
-            pSkill->Definition->GetBasic()->GetDefensible() &&
+            pSkill->Definition->GetBasic()->GetCombatSkill() &&
             !pSkill->Nulled && !pSkill->Reflected && !pSkill->Absorbed)
         {
             ApplyPrimaryCounter(source, pSkill, true);
@@ -1729,7 +1730,7 @@ void SkillManager::ProjectileHit(std::shared_ptr<ProcessingSkill> pSkill,
     // projectile will hit. Under normal circumstances this will only result
     // in a dodge.
     if(!pSkill->Nulled && !pSkill->Reflected && !pSkill->Absorbed &&
-        pSkill->Definition->GetBasic()->GetDefensible())
+        pSkill->Definition->GetBasic()->GetCombatSkill())
     {
         ApplyPrimaryCounter(pSkill->EffectiveSource, pSkill, true);
     }
@@ -2134,8 +2135,8 @@ bool SkillManager::DetermineNormalCosts(
     // Get final HP cost
     if(hpCost != 0 || hpCostPercent != 0)
     {
-        hpCost = (int32_t)((float)hpCost + ceil(((float)hpCostPercent * 0.01f) *
-            (float)source->GetMaxHP()));
+        hpCost = (int32_t)(hpCost + (int32_t)ceil(
+            ((float)hpCostPercent * 0.01f) * (float)source->GetMaxHP()));
 
         double multiplier = 1.0;
         for(double adjust : mServer.lock()->GetTokuseiManager()
@@ -2157,8 +2158,8 @@ bool SkillManager::DetermineNormalCosts(
     // Get final MP cost
     if(mpCost != 0 || mpCostPercent != 0)
     {
-        mpCost = (int32_t)((float)mpCost + ceil(((float)mpCostPercent * 0.01f) *
-            (float)source->GetMaxMP()));
+        mpCost = (int32_t)(mpCost + (int32_t)ceil(
+            ((float)mpCostPercent * 0.01f) * (float)source->GetMaxMP()));
 
         double multiplier = 1.0;
         for(double adjust : mServer.lock()->GetTokuseiManager()
@@ -2711,7 +2712,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 aoeReflect++;
             }
 
-            if(!target.HitNull && !target.HitAbsorb && !target.HitReflect)
+            if(!target.HitNull && !target.HitAbsorb && !target.HitReflect &&
+                skill.Definition->GetBasic()->GetCombatSkill())
             {
                 // Check if the target dodges or guards the skill. Counters
                 // only apply for the primary target and are handled earlier.
@@ -4829,7 +4831,7 @@ bool SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
                     return true;
                 }
             }
-            // fall through
+            break;
         case objects::MiSkillBasicData::ActionType_t::SPIN:
             cancelType = 3; // Display counter break animation
             break;
@@ -7493,7 +7495,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
             {
                 auto calcState = GetCalculatedState(source, pSkill, false, target.EntityState);
 
-                uint8_t critLevel = !isHeal ? GetCritLevel(source, target, pSkill) : 0;
+                uint8_t critLevel = !effectiveHeal ? GetCritLevel(source, target, pSkill) : 0;
 
                 CorrectTbl resistCorrectType = (CorrectTbl)(skill.EffectiveAffinity + RES_OFFSET);
 
@@ -8720,6 +8722,9 @@ std::shared_ptr<objects::ActivatedAbility> SkillManager::FinalizeSkill(
 
         // Proceed with the copy
         activated = copy;
+
+        // Reset the upkeep counter
+        source->ResetUpkeep();
     }
     else if(pSkill->FunctionID != SVR_CONST.SKILL_REST)
     {

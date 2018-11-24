@@ -3157,6 +3157,9 @@ bool ZoneManager::AddEnemiesToZone(
         }
     }
 
+    // Spawn staggering only happens when zones are active
+    staggerSpawn &= mActiveZones.find(zone->GetID()) != mActiveZones.end();
+
     auto server = mServer.lock();
     auto aiManager = server->GetAIManager();
 

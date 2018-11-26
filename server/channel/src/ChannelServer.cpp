@@ -686,6 +686,10 @@ bool ChannelServer::Initialize()
     clientPacketManager->AddParser<Parsers::ReunionInject>(
         to_underlying(ClientToChannelPacketCode_t::PACKET_REUNION_INJECT));
 
+    // Map Amala Network packet parsers to supported packets
+    clientPacketManager->AddParser<Parsers::AmalaAccountDumpRequest>(
+        to_underlying(ClientToChannelPacketCode_t::PACKET_AMALA_REQ_ACCOUNT_DUMP));
+
     // Map the Unsupported packet parser to unsupported packets or packets that
     // the server does not need to react to
     clientPacketManager->AddParser<Parsers::Unsupported>(

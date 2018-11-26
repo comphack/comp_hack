@@ -27,8 +27,10 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Git.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
+#include <PacketCodes.h>
 
 // channel Includes
 #include "AccountManager.h"
@@ -40,6 +42,38 @@ void AuthenticateAccount(AccountManager* accountManager,
     const std::shared_ptr<ChannelClientConnection> client)
 {
     accountManager->Authenticate(client);
+
+    auto state = client->GetClientState();
+
+    if(nullptr != state)
+    {
+        auto enc = libcomp::Convert::Encoding_t::ENCODING_UTF8;
+
+        libcomp::Packet reply;
+        reply.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_AMALA_SERVER_VERSION);
+        reply.WriteU8(VERSION_MAJOR);
+        reply.WriteU8(VERSION_MINOR);
+        reply.WriteU8(VERSION_PATCH);
+        reply.WriteString16Little(enc, VERSION_CODENAME, true);
+
+#if 1 == HAVE_GIT
+        (void)szGitDescription;
+        (void)szGitDate;
+        (void)szGitAuthor;
+        (void)szGitBranch;
+
+        reply.WriteString16Little(enc, szGitCommittish, true);
+        reply.WriteString16Little(enc, szGitRemoteURL, true);
+#else
+        reply.WriteString16Little(enc, "", true);
+        reply.WriteString16Little(enc, "", true);
+#endif
+
+        reply.WriteS32Little(state->GetUserLevel());
+
+        client->SendPacket(reply);
+    }
 }
 
 bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,

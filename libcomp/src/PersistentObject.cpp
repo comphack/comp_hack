@@ -350,6 +350,24 @@ bool PersistentObject::Delete(const std::shared_ptr<Database>& db)
     return false;
 }
 
+bool PersistentObject::SaveWithUUID(tinyxml2::XMLDocument& doc,
+    tinyxml2::XMLElement& root, bool append) const
+{
+    bool result = Save(doc, root, append);
+
+    if(result)
+    {
+        tinyxml2::XMLElement *pMember = doc.NewElement("member");
+        pMember->SetAttribute("name", "UUID");
+        pMember->InsertEndChild(doc.NewText(GetUUID().ToString().c_str()));
+
+        tinyxml2::XMLElement *pElement = root.LastChild()->ToElement();
+        pElement->InsertFirstChild(pMember);
+    }
+
+    return result;
+}
+
 namespace libcomp
 {
     template<>

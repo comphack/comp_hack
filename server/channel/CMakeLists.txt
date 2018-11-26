@@ -434,6 +434,9 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/ReunionExtract.cpp         # 0x0434
     src/packets/game/ReunionInject.cpp          # 0x0436
 
+    # Amala Network packets
+    src/packets/amala/AccountDumpRequest.cpp    # 0x1000
+
     #Internal packets
     src/packets/internal/SetWorldInfo.cpp          # 0x1002
     src/packets/internal/SetOtherChannelInfo.cpp   # 0x1003

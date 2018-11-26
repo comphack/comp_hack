@@ -192,7 +192,23 @@ public:
         std::list<std::shared_ptr<objects::CharacterLogin>> updates,
         std::list<std::shared_ptr<objects::CharacterLogin>> removes);
 
+    /**
+     * Dump the account and return it. This account data can then be
+     * imported into another server.
+     * @param state ClientState object for the account to dump.
+     * @returns Dump of the account or an empty string on error.
+     */
+    libcomp::String DumpAccount(channel::ClientState *state);
+
 private:
+    /**
+     * Delete a <member> from an object in the XML DOM.
+     * @param pElement Object element to delete the <member> from.
+     * @param field Name of the member field to delete.
+     */
+    void WipeMember(tinyxml2::XMLElement *pElement,
+        const std::string& field);
+
     /**
      * Create/load character data for use upon logging in.
      * @param character Character to initialize

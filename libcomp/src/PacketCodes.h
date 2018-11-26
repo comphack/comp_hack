@@ -334,6 +334,11 @@ enum class ClientToChannelPacketCode_t : uint16_t
     PACKET_UNUSED_FFEB = 0xFFEB,    //!< Unused and never seen, possibly a debug packet.
     PACKET_UNUSED_FFEC = 0xFFEC,    //!< Unused and never seen, possibly a debug packet.
     PACKET_UNUSED_FFED = 0xFFED,    //!< Unused and never seen, possibly a debug packet.
+
+    //
+    // Custom Packets (Amala Network)
+    //
+    PACKET_AMALA_REQ_ACCOUNT_DUMP = 0x1000,  //!< Request a dump of the account data.
 };
 
 /**
@@ -531,7 +536,7 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_CLAN_NAME_UPDATED = 0x0169,  //!< Notification that a character's clan name has updated.
     PACKET_SKILL_EXECUTED_INSTANT = 0x016C,  //!< Notification that a skill is executing, bypassing normal activation.
     PACKET_RESET_SKILL_POINTS = 0x0170, //!< Notification that the player character's skill points have been reset.
-    PACKET_SYSTEM_MSG = 0x0171, //!< Message containing announcement ticker data. 
+    PACKET_SYSTEM_MSG = 0x0171, //!< Message containing announcement ticker data.
     PACKET_SYNC_CHARACTER = 0x017F,  //!< Response to the request to sync a client entity's basic information.
     PACKET_ASSORT_DEVELOP = 0x0180, //!< Unknown. Your guess is as good as mine.
     PACKET_COMP_SIZE_UPDATED = 0x0182,  //!< Notifies the client that their COMP size has changed.
@@ -807,6 +812,13 @@ enum class ChannelToClientPacketCode_t : uint16_t
     PACKET_REUNION_POINTS = 0x0433, //!< Response to the request to retrieve the player's reunion conversion points.
     PACKET_REUNION_EXTRACT = 0x0435,    //!< Request to extract reunion conversion points from a demon.
     PACKET_REUNION_INJECT = 0x0437, //!< Request to inject reunion conversion points into a demon.
+
+    //
+    // Custom Packets (Amala Network)
+    //
+    PACKET_AMALA_SERVER_VERSION = 0x1000,  //!< Server version and user level
+    PACKET_AMALA_ACCOUNT_DUMP_HEADER = 0x1001,  //!< Header info about the account dump
+    PACKET_AMALA_ACCOUNT_DUMP_PART = 0x1002,  //!< Part of the account dump data
 };
 
 /**

@@ -325,6 +325,18 @@ public:
      */
     bool Delete(const std::shared_ptr<Database>& db);
 
+    /**
+     * Save the object's data members to an XML file including the UUID.
+     * @param doc XML document to save the definition to
+     * @param root Root XML node to save the definition to
+     * @param append true if the root node should be appended to,
+     *  false if an object node should be added to the root then
+     *  appended to
+     * @return true if saving was successful, false if it was not
+     */
+    bool SaveWithUUID(tinyxml2::XMLDocument& doc,
+        tinyxml2::XMLElement& root, bool append = false) const;
+
 protected:
     /**
      * Register a derived class type with a function to describe it to the

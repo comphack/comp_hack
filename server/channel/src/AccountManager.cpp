@@ -1645,3 +1645,279 @@ bool AccountManager::LogoutCharacter(channel::ClientState* state)
     return mServer.lock()->GetWorldDatabase()
         ->ProcessChangeSet(dbChanges);
 }
+
+void AccountManager::WipeMember(tinyxml2::XMLElement *pElement,
+    const std::string& field)
+{
+    if(!pElement)
+    {
+        return;
+    }
+
+    tinyxml2::XMLElement *pChild = pElement->FirstChildElement("member");
+
+    while(pChild)
+    {
+        auto childField = pChild->Attribute("name");
+
+        if( childField && childField == field )
+        {
+            pElement->DeleteChild(pChild);
+
+            return;
+        }
+
+        // Move to the next child.
+        pChild = pChild->NextSiblingElement("member");
+    }
+}
+
+libcomp::String AccountManager::DumpAccount(channel::ClientState *state)
+{
+    auto db = mServer.lock()->GetWorldDatabase();
+
+    if(!state)
+    {
+        return {};
+    }
+
+    // DOM for the dump XML.
+    tinyxml2::XMLDocument doc;
+
+    tinyxml2::XMLElement *pRoot = doc.NewElement("objects");
+    doc.InsertEndChild(pRoot);
+
+    // First load and dump some account information.
+    auto account = libcomp::PersistentObject::LoadObjectByUUID<
+        objects::Account>(mServer.lock()->GetLobbyDatabase(),
+            state->GetAccountUID(), true);
+
+    if(!account || !account->SaveWithUUID(doc, *pRoot))
+    {
+        return {};
+    }
+
+    for(auto character : account->GetCharacters())
+    {
+        // There may be a few characters that are not there since this is
+        // an array and not a list.
+        if(!character)
+        {
+            continue;
+        }
+
+        auto cstate = new channel::ClientState;
+        cstate->SetAccountLogin(state->GetAccountLogin());
+
+        if(!InitializeCharacter(character, cstate))
+        {
+            return {};
+        }
+
+        if(!character->SaveWithUUID(doc, *pRoot))
+        {
+            return {};
+        }
+
+        auto pCharacterElement = pRoot->LastChildElement();
+
+        WipeMember(pCharacterElement, "Clan");
+        WipeMember(pCharacterElement, "DemonQuest");
+        WipeMember(pCharacterElement, "CultureData");
+        WipeMember(pCharacterElement, "PvPData");
+
+        if(!character->GetCoreStats()->SaveWithUUID(doc, *pRoot))
+        {
+            return {};
+        }
+
+        if(!character->GetProgress().IsNull() &&
+            !character->GetProgress()->SaveWithUUID(doc, *pRoot))
+        {
+            return {};
+        }
+
+        if(!character->GetFriendSettings().IsNull() &&
+            !character->GetFriendSettings()->SaveWithUUID(doc, *pRoot))
+        {
+            return {};
+        }
+        else if(!character->GetFriendSettings().IsNull())
+        {
+            WipeMember(pRoot->LastChildElement(), "Friends");
+        }
+
+        std::list<libcomp::ObjectReference<objects::ItemBox>> allBoxes;
+
+        for(auto itemBox : character->GetItemBoxes())
+        {
+            if(itemBox.IsNull())
+            {
+                continue;
+            }
+
+            if(!itemBox->SaveWithUUID(doc, *pRoot))
+            {
+                return {};
+            }
+
+            for(size_t i = 0; i < 50; i++)
+            {
+                auto item = itemBox->GetItems(i);
+
+                if(!item.IsNull() && !item->SaveWithUUID(doc, *pRoot))
+                {
+                    return {};
+                }
+            }
+        }
+
+        for(auto expertise : character->GetExpertises())
+        {
+            if(!expertise.IsNull() && !expertise->SaveWithUUID(doc, *pRoot))
+            {
+                return {};
+            }
+        }
+
+        auto box = character->GetCOMP();
+
+        if(!box.IsNull() && !box->SaveWithUUID(doc, *pRoot))
+        {
+            return {};
+        }
+        else if(!box.IsNull())
+        {
+            for(auto demon : box->GetDemons())
+            {
+                if(!demon.IsNull() && !demon->SaveWithUUID(doc, *pRoot))
+                {
+                    return {};
+                }
+                else if(!demon.IsNull())
+                {
+                    if(!demon->GetCoreStats()->SaveWithUUID(doc, *pRoot))
+                    {
+                        return {};
+                    }
+
+                    for(auto iSkill : demon->GetInheritedSkills())
+                    {
+                        if(!iSkill.IsNull() &&
+                            !iSkill->SaveWithUUID(doc, *pRoot))
+                        {
+                            return {};
+                        }
+                    }
+
+                    for(size_t i = 0; i < 4; i++)
+                    {
+                        auto equipment = demon->GetEquippedItems(i);
+
+                        if(!equipment.IsNull() &&
+                            !equipment->SaveWithUUID(doc, *pRoot))
+                        {
+                            return {};
+                        }
+                    }
+                }
+            }
+        }
+
+        for(auto hotbar : character->GetHotbars())
+        {
+            if(!hotbar.IsNull() && !hotbar->SaveWithUUID(doc, *pRoot))
+            {
+                return {};
+            }
+        }
+
+        for(auto qPair : character->GetQuests())
+        {
+            auto quest = qPair.second;
+
+            if(!quest.IsNull() && !quest->SaveWithUUID(doc, *pRoot))
+            {
+                return {};
+            }
+        }
+
+        delete cstate;
+    }
+
+    // World Data
+    auto worldData = state->GetAccountWorldData();
+
+    for(auto itemBox : worldData->GetItemBoxes())
+    {
+        if(itemBox.IsNull())
+        {
+            continue;
+        }
+
+        if(!itemBox->SaveWithUUID(doc, *pRoot))
+        {
+            return {};
+        }
+
+        for(size_t i = 0; i < 50; i++)
+        {
+            auto item = itemBox->GetItems(i);
+
+            if(!item.IsNull() && !item->SaveWithUUID(doc, *pRoot))
+            {
+                return {};
+            }
+        }
+    }
+
+    for(auto box : worldData->GetDemonBoxes())
+    {
+        if(!box.IsNull() && !box->SaveWithUUID(doc, *pRoot))
+        {
+            return {};
+        }
+        else if(!box.IsNull())
+        {
+            for(auto demon : box->GetDemons())
+            {
+                if(!demon.IsNull() && !demon->SaveWithUUID(doc, *pRoot))
+                {
+                    return {};
+                }
+                else if(!demon.IsNull())
+                {
+                    if(!demon->GetCoreStats()->SaveWithUUID(doc, *pRoot))
+                    {
+                        return {};
+                    }
+
+                    for(auto iSkill : demon->GetInheritedSkills())
+                    {
+                        if(!iSkill.IsNull() &&
+                            !iSkill->SaveWithUUID(doc, *pRoot))
+                        {
+                            return {};
+                        }
+                    }
+
+                    for(size_t i = 0; i < 4; i++)
+                    {
+                        auto equipment = demon->GetEquippedItems(i);
+
+                        if(!equipment.IsNull() &&
+                            !equipment->SaveWithUUID(doc, *pRoot))
+                        {
+                            return {};
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    tinyxml2::XMLPrinter printer;
+    doc.Print(&printer);
+
+    return printer.CStr();
+}

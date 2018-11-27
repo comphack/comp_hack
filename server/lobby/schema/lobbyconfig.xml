@@ -17,5 +17,9 @@
         <member type="bool" name="RegistrationAccountEnabled" default="true"/>
         <member type="string" name="CharacterNameRegex"/>
         <member type="bool" name="PlayOpeningMovie" default="true"/>
+        <member type="bool" name="AllowImport" default="true"/>
+        <member type="bool" name="ImportStripUserLevel" default="true"/>
+        <member type="bool" name="ImportStripCP" default="true"/>
+        <member type="u8" name="ImportWorld" default="0"/>
     </object>
 </objgen>

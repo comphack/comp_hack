@@ -35,6 +35,7 @@
 
 // Object Includes
 #include "Account.h"
+#include "Character.h"
 #include "LobbyConfig.h"
 #include "RegisteredWorld.h"
 
@@ -588,3 +589,223 @@ libcomp::String LobbyServer::GetFakeAccountSalt(
     }
 }
 
+libcomp::String LobbyServer::ImportAccount(const libcomp::String& data,
+    uint8_t worldID)
+{
+    tinyxml2::XMLDocument doc;
+
+    if(tinyxml2::XML_SUCCESS != doc.Parse(data.C()))
+    {
+        return "Failed to parse account data.";
+    }
+
+    const tinyxml2::XMLElement *pImportObject = doc.RootElement(
+        )->FirstChildElement("object");
+
+    std::shared_ptr<libcomp::Database> lobbyDB, worldDB;
+
+    {
+        lobbyDB = GetMainDatabase();
+
+        auto world = GetWorldByID(worldID);
+
+        if(world)
+        {
+            worldDB = world->GetWorldDatabase();
+        }
+    }
+
+    if(!lobbyDB || !worldDB)
+    {
+        return "Failed to connect to database.";
+    }
+
+    std::list<std::pair<libobjgen::UUID,
+        std::shared_ptr<libcomp::PersistentObject>>> lobbyObjects;
+    std::list<std::pair<libobjgen::UUID,
+        std::shared_ptr<libcomp::PersistentObject>>> worldObjects;
+
+    while(nullptr != pImportObject)
+    {
+        std::string objectType(pImportObject->Attribute("name"));
+
+        auto typeExists = false;
+        auto typeHash = libcomp::PersistentObject::GetTypeHashByName(
+            objectType, typeExists);
+
+        if(!typeExists)
+        {
+            return libcomp::String("Failed to parse unknown "
+                "object '%1'.").Arg(objectType);
+        }
+
+        // Grab the UUID for the object.
+        std::string uuidText;
+        libobjgen::UUID uuid;
+
+        const tinyxml2::XMLElement *pMember =
+            pImportObject->FirstChildElement("member");
+
+        while(nullptr != pMember)
+        {
+            if("uuid" == libcomp::String(pMember->Attribute(
+                "name")).ToLower())
+            {
+                uuidText = pMember->GetText();
+                uuid = libobjgen::UUID(uuidText);
+
+                break;
+            }
+
+            pMember = pMember->NextSiblingElement("member");
+        }
+
+        // Make sure every object has a UUID.
+        if(uuid.IsNull())
+        {
+            return libcomp::String("Bad UUID '%1' for object "
+                "'%2'").Arg(uuidText).Arg(objectType);
+        }
+
+        auto obj = libcomp::PersistentObject::New(typeHash);
+
+        if(!obj || !obj->Load(doc, *pImportObject))
+        {
+            return libcomp::String("Failed to load object '%1' with "
+                "UUID %2.").Arg(objectType).Arg(uuid.ToString());
+        }
+
+        std::shared_ptr<libcomp::Database> db;
+
+        if("Account" == objectType)
+        {
+            db = lobbyDB;
+
+            lobbyObjects.push_back(std::make_pair(uuid, obj));
+        }
+        else
+        {
+            db = worldDB;
+
+            worldObjects.push_back(std::make_pair(uuid, obj));
+        }
+
+        if(!db)
+        {
+            return "Failed to connect to database.";
+        }
+
+        auto existingObject = libcomp::PersistentObject::LoadObjectByUUID(
+            typeHash, db, uuid);
+
+        if(existingObject)
+        {
+            return libcomp::String("Object with UUID '%1' already exists "
+                "in database.").Arg(uuid.ToString());
+        }
+
+        libcomp::String importError = CheckImportObject(objectType, obj,
+            lobbyDB, worldDB);
+
+        if(!importError.IsEmpty())
+        {
+            return importError;
+        }
+
+        pImportObject = pImportObject->NextSiblingElement("object");
+    }
+
+    for(auto pair : lobbyObjects)
+    {
+        if(!pair.second->Register(pair.second, pair.first))
+        {
+            return "Failed to register an object.";
+        }
+    }
+
+    for(auto pair : worldObjects)
+    {
+        if(!pair.second->Register(pair.second, pair.first))
+        {
+            return "Failed to register an object.";
+        }
+    }
+
+    auto lobbyChangeSet = libcomp::DatabaseChangeSet::Create();
+
+    for(auto pair : lobbyObjects)
+    {
+        lobbyChangeSet->Insert(pair.second);
+    }
+
+    if(!lobbyDB->ProcessChangeSet(lobbyChangeSet))
+    {
+        LOG_ERROR(libcomp::String("Import failed with lobby database error: "
+            "%1\n").Arg(lobbyDB->GetLastError()));
+
+        return "Failed to write account into database.";
+    }
+
+    auto worldChangeSet = libcomp::DatabaseChangeSet::Create();
+
+    for(auto pair : worldObjects)
+    {
+        worldChangeSet->Insert(pair.second);
+    }
+
+    if(!worldDB->ProcessChangeSet(worldChangeSet))
+    {
+        LOG_ERROR(libcomp::String("Import failed with world database error: "
+            "%1\n").Arg(worldDB->GetLastError()));
+
+        return "Failed to write account into database.";
+    }
+
+    return {};
+}
+
+libcomp::String LobbyServer::CheckImportObject(
+    const libcomp::String& objectType,
+    const std::shared_ptr<libcomp::PersistentObject>& obj,
+    const std::shared_ptr<libcomp::Database>& lobbyDB,
+    const std::shared_ptr<libcomp::Database>& worldDB)
+{
+    if("Account" == objectType)
+    {
+        auto account = std::dynamic_pointer_cast<objects::Account>(obj);
+        auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
+
+        if(objects::Account::LoadAccountByUsername(
+                lobbyDB, account->GetUsername()) ||
+            objects::Account::LoadAccountByEmail(
+                lobbyDB, account->GetEmail()))
+        {
+            return libcomp::String("Account '%1' exists").Arg(
+                account->GetUsername());
+        }
+
+        if(conf->GetImportStripCP())
+        {
+            account->SetCP(0);
+        }
+
+        if(conf->GetImportStripUserLevel())
+        {
+            account->SetUserLevel(0);
+        }
+    }
+
+    if("Character" == objectType)
+    {
+        auto character = std::dynamic_pointer_cast<objects::Character>(obj);
+
+        if(objects::Character::LoadCharacterByName(
+            worldDB, character->GetName()))
+        {
+            return libcomp::String("Character '%1' exists").Arg(
+                character->GetName());
+        }
+    }
+
+    return {};
+}

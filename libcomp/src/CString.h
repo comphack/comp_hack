@@ -198,6 +198,20 @@ public:
     bool Contains(const String& other) const;
 
     /**
+     * Get the text preceding a sub-string.
+     * @param other Sub-string to look for.
+     * @reuturns Text preceding a sub-string.
+     */
+    String LeftOf(const String& other) const;
+
+    /**
+     * Get the text following a sub-string.
+     * @param other Sub-string to look for.
+     * @reuturns Text following a sub-string.
+     */
+    String RightOf(const String& other) const;
+
+    /**
      * Return a copy of the string data.
      * @param nullTerminate If the string data should be null terminated.
      * @returns A copy of the string data.

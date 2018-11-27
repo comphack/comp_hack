@@ -194,8 +194,9 @@ std::shared_ptr<PersistentObject> PersistentObject::GetObjectByUUID(const libobj
     return nullptr;
 }
 
-std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(size_t typeHash,
-    const std::shared_ptr<Database>& db,  const libobjgen::UUID& uuid, bool reload)
+std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(
+    size_t typeHash, const std::shared_ptr<Database>& db,
+    const libobjgen::UUID& uuid, bool reload, bool reportError)
 {
     auto obj = !reload ? GetObjectByUUID(uuid) : nullptr;
 
@@ -207,7 +208,7 @@ std::shared_ptr<PersistentObject> PersistentObject::LoadObjectByUUID(size_t type
 
         delete bind;
 
-        if(nullptr == obj)
+        if(reportError && nullptr == obj)
         {
             LOG_ERROR(String("Unknown UUID '%1' for '%2' failed to load\n")
                 .Arg(uuid.ToString()).Arg(sTypeMap[typeHash]->GetName()));

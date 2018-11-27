@@ -498,6 +498,30 @@ bool String::Contains(const String& other) const
     return std::string::npos != d->mString.find(other.d->mString);
 }
 
+String String::LeftOf(const String& other) const
+{
+    auto pos = d->mString.find(other.d->mString);
+
+    if(std::string::npos == pos)
+    {
+        return d->mString;
+    }
+
+    return d->mString.substr(0, pos);
+}
+
+String String::RightOf(const String& other) const
+{
+    auto pos = d->mString.find(other.d->mString);
+
+    if(std::string::npos == pos)
+    {
+        return {};
+    }
+
+    return d->mString.substr(pos + other.d->mString.size());
+}
+
 String String::LeftTrimmed() const
 {
     std::string s = d->mString;

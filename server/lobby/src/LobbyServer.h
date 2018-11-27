@@ -43,7 +43,7 @@ class SetupConfig;
 
 namespace lobby
 {
-    
+
 class AccountManager;
 class LobbySyncManager;
 class ManagerConnection;
@@ -148,6 +148,28 @@ public:
      * @return A fake salt for an account that does not exist.
      */
     libcomp::String GetFakeAccountSalt(const libcomp::String& username);
+
+    /**
+     * Import an account into the database.
+     * @param data XML data for the account.
+     * @param worldID ID of the world to import the characters into.
+     * @returns Error string or an empty string on success.
+     */
+    libcomp::String ImportAccount(const libcomp::String& data,
+        uint8_t worldID = 0);
+
+    /**
+     * Check if an import object may be imported.
+     * @param objectType Type string for the object.
+     * @param obj Object to check.
+     * @param lobbyDB Database for the lobby.
+     * @param worldDB Database for the world.
+     * @returns Error string or an empty string if the object is good.
+     */
+    libcomp::String CheckImportObject(const libcomp::String& objectType,
+        const std::shared_ptr<libcomp::PersistentObject>& obj,
+        const std::shared_ptr<libcomp::Database>& lobbyDB,
+        const std::shared_ptr<libcomp::Database>& worldDB);
 
 protected:
     /**

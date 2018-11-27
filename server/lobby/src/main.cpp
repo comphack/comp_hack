@@ -28,6 +28,7 @@
 #include "AccountManager.h"
 #include "ApiHandler.h"
 #include "Config.h"
+#include "ImportHandler.h"
 #include "LoginWebHandler.h"
 #include "LobbyConfig.h"
 #include "LobbyServer.h"
@@ -150,9 +151,12 @@ int main(int argc, const char *argv[])
     auto pApiHandler = new lobby::ApiHandler(config, server);
     pApiHandler->SetAccountManager(server->GetAccountManager());
 
+    auto pImportHandler = new lobby::ImportHandler(config, server);
+
     CivetServer webServer(options);
     webServer.addHandler("/", pLoginHandler);
     webServer.addHandler("/api", pApiHandler);
+    webServer.addHandler("/import", pImportHandler);
 
     // Set this for the signal handler.
     libcomp::Shutdown::Configure(server.get());

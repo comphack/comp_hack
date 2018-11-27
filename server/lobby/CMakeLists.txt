@@ -34,6 +34,7 @@ SET(${PROJECT_NAME}_SRCS
     src/AccountManager.cpp
     src/ApiHandler.cpp
     src/ClientState.cpp
+    src/ImportHandler.cpp
     src/LobbyClientConnection.cpp
     src/LobbyServer.cpp
     src/LoginHandlerThread.cpp

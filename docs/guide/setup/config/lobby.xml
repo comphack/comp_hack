@@ -162,4 +162,56 @@
 
 </section><!-- PlayOpeningMovie -->
 
+<section>
+<title>AllowImport</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Allow importing of account data.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="AllowImport">false</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- AllowImport -->
+
+<section>
+<title>ImportStripUserLevel</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Reset the user level of imported accounts to 0.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="ImportStripUserLevel">false</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- ImportStripUserLevel -->
+
+<section>
+<title>ImportStripCP</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Reset the CP of imported accounts to 0.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="ImportStripCP">false</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- ImportStripCP -->
+
+<section>
+<title>ImportWorld</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 0</para>
+<para>ID of the world to import characters into when importing account data.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="ImportWorld">1</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- ImportWorld -->
+
 </section>

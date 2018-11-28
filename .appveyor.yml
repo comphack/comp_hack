@@ -36,11 +36,11 @@ build_script:
   - 7z x external.zip
   - del external.zip
   - mv external* ..\binaries
-  - appveyor DownloadFile https://github.com/comphack/objgen/releases/download/v1.0.0/objgen-win64.zip -FileName objgen.zip
+  - appveyor DownloadFile https://github.com/comphack/objgen/releases/download/v1.0.1/objgen-win64.zip -FileName objgen.zip
   - 7z x objgen.zip
   - del objgen.zip
   - mv objgen* ..\deps\objgen
-  - appveyor DownloadFile https://github.com/comphack/libobjects/releases/download/v1.0.10/libobjects-win64.zip -FileName libobjects.zip
+  - appveyor DownloadFile https://github.com/comphack/libobjects/releases/download/v1.0.11/libobjects-win64.zip -FileName libobjects.zip
   - 7z x libobjects.zip
   - del libobjects.zip
   - mv libobjects* ..\deps\libobjects

@@ -47,7 +47,8 @@
 using namespace libtester;
 
 ChannelClient::ChannelClient() : TestClient(), mEntityID(-1),
-    mPartnerEntityID(-1), mZoneID(-1), mActivationID(-1)
+    mPartnerEntityID(-1), mZoneID(-1), mActivationID(-1), mAccountDumpParts(0),
+    mLastAccountDumpPart(0)
 {
     for(int i = 0; i < 10; ++i)
     {
@@ -185,6 +186,33 @@ bool ChannelClient::SendPopulateZone()
 
     ClearMessages();
     GetConnection()->SendPacket(p);
+
+    return true;
+}
+
+bool ChannelClient::AmalaRequestAccountDump()
+{
+    double waitTime;
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_AMALA_REQ_ACCOUNT_DUMP);
+    p.HexDump();
+
+    libcomp::ReadOnlyPacket reply;
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    ASSERT_TRUE_OR_RETURN(WaitForPacket(
+        ChannelToClientPacketCode_t::PACKET_AMALA_ACCOUNT_DUMP_HEADER,
+        reply, waitTime));
+
+    while(mLastAccountDumpPart < mAccountDumpParts)
+    {
+        ASSERT_TRUE_OR_RETURN(WaitForPacket(
+            ChannelToClientPacketCode_t::PACKET_AMALA_ACCOUNT_DUMP_PART,
+            reply, waitTime));
+    }
 
     return true;
 }
@@ -328,6 +356,17 @@ void ChannelClient::HandlePacket(ChannelToClientPacketCode_t cmd,
         case ChannelToClientPacketCode_t::PACKET_DEMON_BOX_DATA:
             HandleDemonBoxData(p);
             break;
+
+        case ChannelToClientPacketCode_t::PACKET_AMALA_SERVER_VERSION:
+            HandleAmalaServerVersion(p);
+            break;
+        case ChannelToClientPacketCode_t::PACKET_AMALA_ACCOUNT_DUMP_HEADER:
+            HandleAmalaAccountDumpHeader(p);
+            break;
+        case ChannelToClientPacketCode_t::PACKET_AMALA_ACCOUNT_DUMP_PART:
+            HandleAmalaAccountDumpPart(p);
+            break;
+
         default:
             break;
     }
@@ -371,6 +410,8 @@ namespace libcomp
             binding.Func("SendState", &ChannelClient::SendState);
             binding.Func("SendPopulateZone",
                 &ChannelClient::SendPopulateZone);
+            binding.Func("AmalaRequestAccountDump",
+                &ChannelClient::AmalaRequestAccountDump);
             binding.Func("GetEntityID", &ChannelClient::GetEntityID);
             binding.Func("GetDemonID", &ChannelClient::GetDemonID);
             binding.Func("ContractDemon", &ChannelClient::ContractDemon);

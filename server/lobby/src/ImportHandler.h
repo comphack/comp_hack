@@ -56,6 +56,9 @@ public:
         struct mg_connection *pConnection);
 
 private:
+    libcomp::String ExtractFile(const libcomp::String& contentType,
+        const libcomp::String& contentData);
+
     std::shared_ptr<objects::LobbyConfig> mConfig;
     std::shared_ptr<lobby::LobbyServer> mServer;
 };

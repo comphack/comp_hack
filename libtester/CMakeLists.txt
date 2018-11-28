@@ -23,14 +23,19 @@ MESSAGE("** Configuring ${PROJECT_NAME} **")
 
 SET(${PROJECT_NAME}_SRCS
     src/ChannelClient.cpp
-    src/ChannelClient_HandleCharacterData.cpp
-    src/ChannelClient_HandleDemonBoxData.cpp
-    src/ChannelClient_HandleZoneChange.cpp
     src/HttpConnection.cpp
     src/LobbyClient.cpp
     src/Login.cpp
     src/ServerTest.cpp
     src/TestClient.cpp
+
+    src/ChannelClient_HandleCharacterData.cpp
+    src/ChannelClient_HandleDemonBoxData.cpp
+    src/ChannelClient_HandleZoneChange.cpp
+
+    src/ChannelClient_HandleAmalaServerVersion.cpp
+    src/ChannelClient_HandleAmalaAccountDumpHeader.cpp
+    src/ChannelClient_HandleAmalaAccountDumpPart.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS

@@ -133,6 +133,12 @@ int EncryptFile(const char *szIn, const char *szOut)
     {
         fprintf(stderr, "Failed to read input file.\n");
 
+        // Free the input and output buffers.
+        delete[] pData;
+        delete[] pDataOut;
+        pDataOut = 0;
+        pData = 0;
+
         return EXIT_FAILURE;
     }
 
@@ -146,6 +152,12 @@ int EncryptFile(const char *szIn, const char *szOut)
         fprintf(stderr, "Failed to compress NIF file!\n");
         fprintf(stderr, "Size: %d\n", compSize);
 
+        // Free the input and output buffers.
+        delete[] pData;
+        delete[] pDataOut;
+        pDataOut = 0;
+        pData = 0;
+
         return EXIT_FAILURE;
     }
 
@@ -154,6 +166,12 @@ int EncryptFile(const char *szIn, const char *szOut)
     {
         fprintf(stderr, "Input file is too big!\n");
 
+        // Free the input and output buffers.
+        delete[] pData;
+        delete[] pDataOut;
+        pDataOut = 0;
+        pData = 0;
+
         return EXIT_FAILURE;
     }
 
@@ -161,6 +179,12 @@ int EncryptFile(const char *szIn, const char *szOut)
     if(compSize > (int32_t)sz)
     {
         fprintf(stderr, "Input file is too big!\n");
+
+        // Free the input and output buffers.
+        delete[] pData;
+        delete[] pDataOut;
+        pDataOut = 0;
+        pData = 0;
 
         return EXIT_FAILURE;
     }
@@ -176,6 +200,12 @@ int EncryptFile(const char *szIn, const char *szOut)
     {
         fprintf(stderr, "Failed to write output file.\n");
 
+        // Free the input and output buffers.
+        delete[] pData;
+        delete[] pDataOut;
+        pDataOut = 0;
+        pData = 0;
+
         return EXIT_FAILURE;
     }
 
@@ -183,6 +213,12 @@ int EncryptFile(const char *szIn, const char *szOut)
     if(1 != fwrite(&cryptDecompSize, 4, 1, pOut))
     {
         fprintf(stderr, "Failed to write output file.\n");
+
+        // Free the input and output buffers.
+        delete[] pData;
+        delete[] pDataOut;
+        pDataOut = 0;
+        pData = 0;
 
         return EXIT_FAILURE;
     }
@@ -192,6 +228,12 @@ int EncryptFile(const char *szIn, const char *szOut)
     {
         fprintf(stderr, "Failed to write output file.\n");
 
+        // Free the input and output buffers.
+        delete[] pData;
+        delete[] pDataOut;
+        pDataOut = 0;
+        pData = 0;
+
         return EXIT_FAILURE;
     }
 
@@ -199,6 +241,12 @@ int EncryptFile(const char *szIn, const char *szOut)
     if(1 != fwrite(pDataOut, (size_t)compSize, 1, pOut))
     {
         fprintf(stderr, "Failed to write output file.\n");
+
+        // Free the input and output buffers.
+        delete[] pData;
+        delete[] pDataOut;
+        pDataOut = 0;
+        pData = 0;
 
         return EXIT_FAILURE;
     }
@@ -339,6 +387,12 @@ int DecryptFile(const char *szIn, const char *szOut)
     {
         fprintf(stderr, "Failed to read input file.\n");
 
+        // Free the input and output buffers.
+        delete[] pData;
+        delete[] pDataOut;
+        pDataOut = 0;
+        pData = 0;
+
         return EXIT_FAILURE;
     }
 
@@ -348,6 +402,12 @@ int DecryptFile(const char *szIn, const char *szOut)
     {
         fprintf(stderr, "Failed to decompress NIF file!\n");
 
+        // Free the input and output buffers.
+        delete[] pData;
+        delete[] pDataOut;
+        pDataOut = 0;
+        pData = 0;
+
         return EXIT_FAILURE;
     }
 
@@ -355,6 +415,12 @@ int DecryptFile(const char *szIn, const char *szOut)
     if(1 != fwrite(pDataOut, decompSize, 1, pOut))
     {
         fprintf(stderr, "Failed to write output file.\n");
+
+        // Free the input and output buffers.
+        delete[] pData;
+        delete[] pDataOut;
+        pDataOut = 0;
+        pData = 0;
 
         return EXIT_FAILURE;
     }

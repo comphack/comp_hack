@@ -30,6 +30,9 @@
 // libtester Includes
 #include "TestClient.h"
 
+// Standard C++11 Includes
+#include <vector>
+
 namespace libtester
 {
 
@@ -55,6 +58,8 @@ public:
     bool SendData();
     bool SendState();
     bool SendPopulateZone();
+
+    bool AmalaRequestAccountDump();
 
     bool Say(const libcomp::String& msg);
 
@@ -91,11 +96,21 @@ private:
     void HandleDemonBoxData(libcomp::ReadOnlyPacket& p);
     void HandleZoneChange(libcomp::ReadOnlyPacket& p);
 
+    void HandleAmalaServerVersion(libcomp::ReadOnlyPacket& p);
+    void HandleAmalaAccountDumpHeader(libcomp::ReadOnlyPacket& p);
+    void HandleAmalaAccountDumpPart(libcomp::ReadOnlyPacket& p);
+
     int32_t mEntityID;
     int32_t mPartnerEntityID;
     int32_t mZoneID;
     int8_t mActivationID;
     int64_t mDemonIDs[10];
+
+    uint32_t mAccountDumpParts;
+    uint32_t mLastAccountDumpPart;
+    libcomp::String mAccountDumpChecksum;
+    libcomp::String mAccountDumpAccountName;
+    std::vector<char> mAccountDumpData;
 };
 
 } // namespace libtester

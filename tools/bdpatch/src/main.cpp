@@ -70,7 +70,7 @@
 #include <MiEquipmentSetData.h>
 #include <MiEventDirectionData.h>
 #include <MiExchangeData.h>
-#include <MiExpertClassData.h>
+#include <MiExpertData.h>
 #include <MiGuardianAssistData.h>
 #include <MiGuardianLevelData.h>
 #include <MiGuardianSpecialData.h>
@@ -513,7 +513,7 @@ int main(int argc, char *argv[])
     ADD_TYPE    ("  equipset        Format for EquipmentSetData.sbin", "equipset", MiEquipmentSetData);
     ADD_TYPE    ("  eventdirection  Format for EventDirectionData.bin", "eventdirection", MiEventDirectionData);
     ADD_TYPE    ("  exchange        Format for ExchangeData.sbin", "exchange", MiExchangeData);
-    ADD_TYPE    ("  expertclass     Format for ExpertClassData.sbin", "expertclass", MiExpertClassData);
+    ADD_TYPE    ("  expert          Format for ExpertClassData.sbin", "expert", MiExpertData);
     ADD_TYPE    ("  guardianassist  Format for GuardianAssistData.sbin", "guardianassist", MiGuardianAssistData);
     ADD_TYPE    ("  guardianlevel   Format for GuardianLevelData.sbin", "guardianlevel", MiGuardianLevelData);
     ADD_TYPE    ("  guardianspecial Format for GuardianSpecialData.sbin", "guardianspecial", MiGuardianSpecialData);
@@ -537,12 +537,11 @@ int main(int argc, char *argv[])
     ADD_TYPE    ("  timelimit       Format for TimeLimitData.sbin", "timelimit", MiTimeLimitData);
     ADD_TYPE    ("  title           Format for CodeNameData.sbin", "title", MiTitleData);
     ADD_TYPE    ("  triunionspecial Format for TriUnionSpecialData.sbin", "triunionspecial", MiTriUnionSpecialData);
-    ADD_TYPE    ("  urafieldtower   Format for UraFieldTowerData.sbin", "urafieldtower", MiUraFieldTowerData);
     ADD_TYPE    ("  warppoint       Format for WarpPointData.sbin", "warppoint", MiWarpPointData);
     ADD_TYPE_EX ("  citem           Format for CItemData.sbin", "citem", MiCItemData, GetBaseData()->GetID());
     ADD_TYPE_EX ("  cmodel          Format for CModelData.sbin", "cmodel", MiCModelData, GetBase()->GetID());
     ADD_TYPE_EX ("  devil           Format for DevilData.sbin", "devil", MiDevilData, GetBasic()->GetID());
-    ADD_TYPE_EX ("  devilboostextra Format for DevilBoostExtraData.sbin", "devilboostextra", MiDevilBoostExtraData, GetItemID());
+    ADD_TYPE_EX ("  devilboostextra Format for DevilBoostExtraData.sbin", "devilboostextra", MiDevilBoostExtraData, GetStackID());
     ADD_TYPE_EX ("  devilboostitem  Format for DevilBoostItemData.sbin", "devilboostitem", MiDevilBoostItemData, GetItemID());
     ADD_TYPE_EX ("  devilboostlot   Format for DevilBoostLotData.sbin", "devilboostlot", MiDevilBoostLotData, GetLot());
     ADD_TYPE_EX ("  devilequip      Format for DevilEquipmentData.sbin", "devilequip", MiDevilEquipmentData, GetSkillID());
@@ -550,11 +549,12 @@ int main(int argc, char *argv[])
     ADD_TYPE_EX ("  devilfusion     Format for DevilFusionData.sbin", "devilfusion", MiDevilFusionData, GetSkillID());
     ADD_TYPE_EX ("  hnpc            Format for hNPCData.sbin", "hnpc", MiHNPCData, GetBasic()->GetID());
     ADD_TYPE_EX ("  item            Format for ItemData.sbin", "item", MiItemData, GetCommon()->GetID());
-    ADD_TYPE_EX ("  modexteffect    Format for ModificationExtEffectData.sbin", "modexteffect", MiModificationExtEffectData, GetSubID());
     ADD_TYPE_EX ("  skill           Format for SkillData.sbin", "skill", MiSkillData, GetCommon()->GetID());
     ADD_TYPE_EX ("  status          Format for StatusData.sbin", "status", MiStatusData, GetCommon()->GetID());
     ADD_TYPE_EX ("  zone            Format for ZoneData.sbin", "zone", MiZoneData, GetBasic()->GetID());
     ADD_TYPE_SEQ("  cpolygonmovie   Format for CPolygonMoveData.sbin", "cpolygonmovie", MiCPolygonMovieData);
+    ADD_TYPE_SEQ("  modexteffect    Format for ModificationExtEffectData.sbin", "modexteffect", MiModificationExtEffectData);
+    ADD_TYPE_SEQ("  urafieldtower   Format for UraFieldTowerData.sbin", "urafieldtower", MiUraFieldTowerData);
 
     if(5 != argc)
     {

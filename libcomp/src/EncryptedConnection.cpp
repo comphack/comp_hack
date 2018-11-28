@@ -145,10 +145,11 @@ void EncryptedConnection::ConnectionEncrypted()
             std::time_t now = std::time(nullptr);
             std::tm *pTM = std::localtime(&now);
 
-            char szTimeStamp[15];
+            char szTimeStamp[32];
             std::memset(szTimeStamp, 0, sizeof(szTimeStamp));
 
-            std::strftime(szTimeStamp, 32, "%Y%m%d%H%M%S", pTM);
+            std::strftime(szTimeStamp, sizeof(szTimeStamp),
+                "%Y%m%d%H%M%S", pTM);
 
             auto captureFilePath = libcomp::String("%1/%2-%3-%4.hack").Arg(
                 capturePath).Arg(szTimeStamp).Arg(

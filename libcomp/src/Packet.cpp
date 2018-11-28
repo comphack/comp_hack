@@ -330,7 +330,7 @@ void Packet::WriteS16Big(int16_t value)
 void Packet::WriteS16Little(int16_t value)
 {
     // Convert the value to little endian byte order and then write it.
-    WriteS16((int16_t)htole16(value));
+    WriteS16((int16_t)htole16((uint16_t)value));
 }
 
 void Packet::WriteU32(uint32_t value)
@@ -372,7 +372,7 @@ void Packet::WriteS32Big(int32_t value)
 void Packet::WriteS32Little(int32_t value)
 {
     // Convert the value to little endian byte order and then write it.
-    WriteS32((int32_t)htole32(value));
+    WriteS32((int32_t)htole32((uint32_t)value));
 }
 
 void Packet::WriteU64(uint64_t value)
@@ -414,7 +414,7 @@ void Packet::WriteS64Big(int64_t value)
 void Packet::WriteS64Little(int64_t value)
 {
     // Convert the value to little endian byte order and then write it.
-    WriteS64((int64_t)htole64(value));
+    WriteS64((int64_t)htole64((uint64_t)value));
 }
 
 void Packet::WriteFloat(float value)

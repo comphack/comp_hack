@@ -133,6 +133,7 @@
         <!-- Format: item ID => function, 2 contextual params -->
         <!-- Function 1: Enchantment success, param 3 = 1 stops crystal loss -->
         <!-- Function 2: Destiny box reward assist (ChanceItemData), can choose and item count -->
+        <!-- Function 3: Crystallization any demon item -->
         <pair>
             <key>395</key>
             <value>1,10,1</value>
@@ -152,6 +153,10 @@
         <pair>
             <key>489</key>
             <value>1,15,1</value>
+        </pair>
+        <pair>
+            <key>715</key>
+            <value>3,10,0</value>
         </pair>
         <pair>
             <key>1056</key>

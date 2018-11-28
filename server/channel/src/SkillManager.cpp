@@ -1380,13 +1380,15 @@ bool SkillManager::PrepareFusionSkill(
         }
     }
 
+    bool targeted = skillData->GetTarget()
+        ->GetType() != objects::MiTargetData::Type_t::NONE;
+    auto target = zone && targetEntityID > 0 && targeted
+        ? zone->GetActiveEntity(targetEntityID) : nullptr;
+
     // Skill converted, check target as fusion skills cannot have their
     // target set after activation
-    auto target = zone && targetEntityID > 0
-        ? zone->GetActiveEntity(targetEntityID) : nullptr;
     skillData = definitionManager->GetSkillData(skillID);
-    if(skillData && (target || skillData->GetTarget()
-        ->GetType() == objects::MiTargetData::Type_t::NONE))
+    if(skillData && (target || !targeted))
     {
         cState->RefreshCurrentPosition(ChannelServer::GetServerTime());
 
@@ -2947,23 +2949,28 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         // Now that damage is calculated, apply drain
         uint8_t hpDrainPercent = battleDamage->GetHPDrainPercent();
         uint8_t mpDrainPercent = battleDamage->GetMPDrainPercent();
-        if(hpDrainPercent > 0 || mpDrainPercent > 0)
+        if(skill.Targets.size() > 0 &&
+            (hpDrainPercent > 0 || mpDrainPercent > 0))
         {
             auto selfTarget = GetSelfTarget(source, skill.Targets, true);
 
             int32_t hpDrain = 0, mpDrain = 0;
             for(SkillTargetResult& target : skill.Targets)
             {
-                if(target.Damage1Type == DAMAGE_TYPE_GENERIC && hpDrainPercent > 0)
+                if(target.Damage1Type == DAMAGE_TYPE_GENERIC &&
+                    hpDrainPercent > 0)
                 {
                     hpDrain = (int32_t)(hpDrain -
-                        (int32_t)floorl((float)target.Damage1 * (float)hpDrainPercent * 0.01f));
+                        (int32_t)floorl((float)target.Damage1 *
+                            (float)hpDrainPercent * 0.01f));
                 }
-                
-                if(target.Damage2Type == DAMAGE_TYPE_GENERIC && mpDrainPercent > 0)
+
+                if(target.Damage2Type == DAMAGE_TYPE_GENERIC &&
+                    mpDrainPercent > 0)
                 {
                     mpDrain = (int32_t)(mpDrain -
-                        (int32_t)floorl((float)target.Damage2 * (float)mpDrainPercent * 0.01f));
+                        (int32_t)floorl((float)target.Damage2 *
+                            (float)mpDrainPercent * 0.01f));
                 }
             }
 
@@ -3440,6 +3447,15 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     {
         for(SkillTargetResult& target : skill.Targets)
         {
+            bool ailmentDamage = target.AilmentDamage != 0;
+            if(ailmentDamage && target.Damage1Type == DAMAGE_TYPE_NONE)
+            {
+                // This will display zero normal damage but it appears to be
+                // the only way to get ailment damage to show when its the only
+                // damage dealt using the late-game damage timing
+                target.Damage1Type = DAMAGE_TYPE_GENERIC;
+            }
+
             if(target.AddedStatuses.size() > 0)
             {
                 auto removed = target.EntityState->AddStatusEffects(
@@ -3704,8 +3720,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     break;
                 }
 
-                target.EntityState->SetStatusTimes(STATUS_KNOCKBACK,
-                    target.EntityState->GetDestinationTicks());
+                target.EntityState->SetStatusTimes(STATUS_KNOCKBACK, hitStopTime);
 
                 p.WriteFloat(kbPoint.x);
                 p.WriteFloat(kbPoint.y);
@@ -3783,6 +3798,14 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     hitTimings[2] = hitTimings[1] = hitStopTime;
 
                     target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
+                        hitTimings[2]);
+                }
+                else if(target.AilmentDamageType != 0)
+                {
+                    // Only apply ailment stun time
+                    hitTimings[2] = hitStopTime + target.AilmentDamageTime;
+
+                    target.EntityState->SetStatusTimes(STATUS_KNOCKBACK,
                         hitTimings[2]);
                 }
                 else
@@ -4244,7 +4267,8 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
 
         // Magic control lowers charge time
         uint8_t mcRank = cSource->GetExpertiseRank(EXPERTISE_MAGIC_CONTROL);
-        skill->ChargeReduce = (int16_t)(skill->ChargeReduce + mcRank * 4);
+        skill->ChargeReduce = (int16_t)(skill->ChargeReduce +
+            (uint8_t)(mcRank / 10) * 4);
     }
 
     if(ctx)
@@ -7815,6 +7839,11 @@ uint8_t SkillManager::GetCritLevel(const std::shared_ptr<ActiveEntityState>& sou
     channel::ProcessingSkill>& pSkill)
 {
     uint8_t critLevel = 0;
+    if(target.GuardModifier > 0)
+    {
+        // Cannot receive crit or LB while guarding
+        return critLevel;
+    }
 
     auto calcState = GetCalculatedState(source, pSkill, false,
         target.EntityState);
@@ -8028,8 +8057,7 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         calc = calc + (float)skill.ExpertiseRankBoost * 0.5f;
 
         // Subtract the enemy defense, unless its a critical or limit break
-        // in which case only the guard modifier applies
-        calc = calc - (float)(critLevel > 0 ? target.GuardModifier : def);
+        calc = calc - (float)(critLevel > 0 ? 0 : def);
 
         if(calc > 0.f)
         {

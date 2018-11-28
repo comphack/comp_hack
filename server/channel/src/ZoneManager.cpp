@@ -5659,62 +5659,60 @@ void ZoneManager::EndInstanceTimer(
             // when the timer stops whether they're alive or not
             bool success = zone->GetInstance() == instance &&
                 instance->GetTimerStop();
-            if(isSuccess != success)
+            if(!isSuccess || !success)
             {
+                // Do not send failure state for this instance type
                 return;
             }
 
-            float elapsed = 0.f;
             int8_t result = 0;
-            if(success)
+
+            float elapsed = (float)(((double)instance->GetTimerStop() -
+                (double)instance->GetTimerStart()) / 1000000.0);
+
+            uint16_t rankB = instVariant->GetTimePoints(0);
+            uint16_t rankA = instVariant->GetTimePoints(1);
+
+            if(elapsed <= (float)rankA)
             {
-                elapsed = (float)(((double)instance->GetTimerStop() -
-                    (double)instance->GetTimerStart()) / 1000000.0);
+                // Rank A
+                result = 0;
 
-                uint16_t rankB = instVariant->GetTimePoints(0);
-                uint16_t rankA = instVariant->GetTimePoints(1);
-
-                if(elapsed <= (float)rankA)
+                auto dgState = state->GetCharacterState()->GetDigitalizeState();
+                uint8_t raceID = dgState ? dgState->GetRaceID() : 0;
+                if(raceID)
                 {
-                    // Rank A
-                    result = 0;
-
-                    auto dgState = state->GetCharacterState()->GetDigitalizeState();
-                    uint8_t raceID = dgState ? dgState->GetRaceID() : 0;
-                    if(raceID)
+                    // Only rank A grants points
+                    int32_t gain = (int32_t)instVariant->GetFixedReward();
+                    int32_t rewardModifier = instVariant->GetRewardModifier();
+                    if(rewardModifier)
                     {
-                        // Only rank A grants points
-                        int32_t gain = (int32_t)instVariant->GetFixedReward();
-                        int32_t rewardModifier = instVariant->GetRewardModifier();
-                        if(rewardModifier)
-                        {
-                            float globalDXPBonus = mServer.lock()
-                                ->GetWorldSharedConfig()->GetDigitalizePointBonus();
-                            float timePercent = rankA
-                                ? (elapsed / (float)rankA) : 1.f;
+                        float globalDXPBonus = mServer.lock()
+                            ->GetWorldSharedConfig()->GetDigitalizePointBonus();
+                        float timePercent = rankA
+                            ? (elapsed / (float)rankA) : 1.f;
 
-                            gain = gain + (int32_t)ceil((double)
-                                (rankA * rewardModifier) * (double)timePercent *
-                                (1.0 + globalDXPBonus));
-                        }
-
-                        std::unordered_map<uint8_t, int32_t> points;
-                        points[raceID] = gain;
-
-                        mServer.lock()->GetCharacterManager()
-                            ->UpdateDigitalizePoints(client, points, true);
+                        gain = gain + (int32_t)ceil((double)
+                            (rankA * rewardModifier) * (double)timePercent *
+                            (1.0 + globalDXPBonus));
                     }
+
+                    std::unordered_map<uint8_t, int32_t> points;
+                    points[raceID] = gain;
+
+                    mServer.lock()->GetCharacterManager()
+                        ->UpdateDigitalizePoints(client, points, true);
                 }
-                else if(elapsed <= (float)rankB)
-                {
-                    // Rank B
-                    result = 1;
-                }
-                else
-                {
-                    // Rank C
-                    result = 2;
-                }
+            }
+            else if(elapsed <= (float)rankB)
+            {
+                // Rank B
+                result = 1;
+            }
+            else
+            {
+                // Rank C
+                result = 2;
             }
 
             notify.WritePacketCode(

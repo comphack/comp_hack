@@ -139,11 +139,15 @@ void TeamInvite(std::shared_ptr<WorldServer> server,
         }
         else if(team->GetID() != teamID)
         {
-            errorCode = (int8_t)TeamErrorCodes_t::TEAM_OVER;
+            errorCode = (int8_t)TeamErrorCodes_t::GENERIC_ERROR;
         }
         else if(team->GetLeaderCID() != cLogin->GetWorldCID())
         {
             errorCode = (int8_t)TeamErrorCodes_t::LEADER_REQUIRED;
+        }
+        else if(targetLogin->GetTeamID())
+        {
+            errorCode = (int8_t)TeamErrorCodes_t::OTHER_TEAM;
         }
         else if(targetLogin->GetPartyID())
         {

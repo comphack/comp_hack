@@ -1930,14 +1930,10 @@ void CharacterManager::TeamKick(std::shared_ptr<objects::CharacterLogin> cLogin,
         std::list<int32_t> includeCIDs = { targetCID };
         SendTeamInfo(team->GetID(), includeCIDs);
 
-        if(team->MemberIDsCount() <= 1)
-        {
-            TeamDisband(team->GetID());
-        }
-
         libcomp::Packet relay;
         auto cidOffset = WorldServer::GetRelayPacket(relay);
-        relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_KICKED);
+        relay.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_TEAM_KICKED);
         relay.WriteS32Little(teamID);
         relay.WriteS32Little(targetCID);
 
@@ -1959,6 +1955,11 @@ bool CharacterManager::TeamZiotiteUpdate(int32_t teamID,
             " for invalid team from character: %1\n").Arg(source
                 ? source->GetCharacter().GetUUID().ToString() : "NONE"));
         return false;
+    }
+    else if(team->GetCategory() != objects::Team::Category_t::CATHEDRAL)
+    {
+        // No ziotite
+        return sZiotite == 0 && lZiotite == 0;
     }
 
     int32_t newSAmount = 0;

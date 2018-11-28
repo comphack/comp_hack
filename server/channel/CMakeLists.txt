@@ -177,6 +177,7 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     ZoneObject.cpp
 )
 
+SOURCE_GROUP("Source Files\\Packets\\Amala" src/packets/amala/*)
 SOURCE_GROUP("Source Files\\Packets\\Game" src/packets/game/*)
 SOURCE_GROUP("Source Files\\Packets\\Internal" src/packets/internal/*)
 

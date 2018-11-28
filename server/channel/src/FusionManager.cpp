@@ -973,7 +973,47 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
     size_t race1Idx = GetRaceIndex(race1, found1);
     size_t race2Idx = GetRaceIndex(race2, found2);
 
-    if(race1 == eRace || race2 == eRace)
+    if(race1 == mRace || race2 == mRace)
+    {
+        // Mitama source fusion (overrides elemental)
+
+        if(race1 == race2)
+        {
+            // Cannot fuse two mitamas
+            return 0;
+        }
+
+        std::shared_ptr<objects::Demon> demon;
+        uint32_t mitamaType = 0;
+        if(race1 == mRace)
+        {
+            mitamaType = baseDemonType1;
+            demon = demon2;
+        }
+        else
+        {
+            mitamaType = baseDemonType2;
+            demon = demon1;
+        }
+
+        // Ensure the non-mitama demon has the minimum reunion
+        // rank total
+        if(server->GetCharacterManager()->GetReunionRankTotal(demon) < 48)
+        {
+            return 0;
+        }
+
+        // Double check to make sure the mitama type is valid
+        GetMitamaIndex(mitamaType, found1);
+        if(!found1)
+        {
+            return 0;
+        }
+
+        auto def = definitionManager->GetDevilData(demon->GetType());
+        return def ? def->GetUnionData()->GetMitamaFusionID() : 0;
+    }
+    else if(race1 == eRace || race2 == eRace)
     {
         // Elemental source fusion
 
@@ -1017,46 +1057,6 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
         }
 
         return result;
-    }
-    else if(race1 == mRace || race2 == mRace)
-    {
-        // Mitama source fusion
-
-        if(race1 == race2)
-        {
-            // Cannot fuse two mitamas
-            return 0;
-        }
-
-        std::shared_ptr<objects::Demon> demon;
-        uint32_t mitamaType = 0;
-        if(race1 == mRace)
-        {
-            mitamaType = baseDemonType1;
-            demon = demon2;
-        }
-        else
-        {
-            mitamaType = baseDemonType2;
-            demon = demon1;
-        }
-
-        // Ensure the non-mitama demon has the minimum reunion
-        // rank total
-        if(server->GetCharacterManager()->GetReunionRankTotal(demon) < 48)
-        {
-            return 0;
-        }
-
-        // Double check to make sure the mitama type is valid
-        GetMitamaIndex(mitamaType, found1);
-        if(!found1)
-        {
-            return 0;
-        }
-
-        auto def = definitionManager->GetDevilData(demon->GetType());
-        return def ? def->GetUnionData()->GetMitamaFusionID() : 0;
     }
     else
     {

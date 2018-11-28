@@ -909,8 +909,11 @@ void CharacterManager::SendEntityStats(std::shared_ptr<
     auto state = client->GetClientState();
     auto eState = state->GetEntityState(entityID);
 
-    if(!eState || !eState->Ready())
+    if(!eState || !eState->Ready(true))
     {
+        // Don't bother sending if entity is not valid however the entity's
+        // display state should be ignored in case they are between zones or
+        // hidden via a system effect
         return;
     }
 
@@ -5294,12 +5297,25 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
                 return false;
             }
 
-            // Make sure the crystal being used is valid
-            auto it = SVR_CONST.DEMON_CRYSTALS.find(inputItem->GetType());
-            if(it == SVR_CONST.DEMON_CRYSTALS.end() || it->second.find(
-                (uint8_t)demonData->GetCategory()->GetRace()) == it->second.end())
+            double boostRate = 0.0;
+
+            auto it = SVR_CONST.ADJUSTMENT_ITEMS.find(inputItem->GetType());
+            if(it != SVR_CONST.ADJUSTMENT_ITEMS.end() && it->second[0] == 3)
             {
-                return false;
+                // Adjustment item useable by any race
+                boostRate = (double)it->second[1];
+            }
+            else
+            {
+                // Make sure the crystal being used is valid
+                uint8_t raceID = (uint8_t)demonData->GetCategory()->GetRace();
+
+                auto it2 = SVR_CONST.DEMON_CRYSTALS.find(inputItem->GetType());
+                if(it2 == SVR_CONST.DEMON_CRYSTALS.end() ||
+                    it2->second.find(raceID) == it2->second.end())
+                {
+                    return false;
+                }
             }
 
             outcomeItemType = enchantData->GetDevilCrystal()->GetItemID();
@@ -5313,7 +5329,7 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
 
             rates.push_back(floor((double)cState->GetINTEL() / 10.0 +
                 (double)cState->GetLUCK() / 10.0 + expRank / 2.0 + (100.0 - diff) +
-                (fam - 10000.0) / 100.0));
+                (fam - 10000.0) / 100.0) + boostRate);
         }
     }
     else
@@ -7099,10 +7115,21 @@ void CharacterManager::AdjustMitamaStats(const std::shared_ptr<
         auto uBonus = definitionManager->GetMitamaUnionBonusData(bonusID);
         if(uBonus)
         {
+            // Rank bonuses add up to a total sum at max level
+            int8_t level = demon->GetCoreStats()->GetLevel();
             for(size_t i = 0; i < uBonus->BonusCount(); )
             {
                 int32_t type = uBonus->GetBonus(i);
-                int32_t val = uBonus->GetBonus((size_t)(i + 1));
+                int32_t val = 0;
+
+                int32_t baseVal = uBonus->GetBonus((size_t)(i + 1));
+                if(baseVal)
+                {
+                    double valTotal = ceil(1.25 * pow(baseVal, 2) +
+                        (double)baseVal);
+                    val = (int32_t)round(((double)level / 99.0) * valTotal);
+                }
+
                 if(val)
                 {
                     bonusStats[(CorrectTbl)type].push_back(val);

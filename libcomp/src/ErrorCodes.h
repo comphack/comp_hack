@@ -162,7 +162,7 @@ enum class TeamErrorCodes_t : int8_t
     LEADER_REQUIRED = -3,   //!< Leader required update attempted by non-leader
     INVALID_TARGET  = -4,   //!< Target is invalid
     NO_TEAM = -5,   //!< No current team exists
-    TEAM_OVER = -6, //!< Requested team no longer exists
+    OTHER_TEAM = -6, //!< A different team already exists
     INVALID_TARGET_STATE = -7,  //!< Target is not in a valid team request state
     MATCH_ACTIVE = -8,  //!< A match is currently active and the operation is not allowed
     INVALID_TEAM = -9,  //!< Requested team is not valid

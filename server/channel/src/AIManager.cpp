@@ -1508,7 +1508,7 @@ uint8_t AIManager::SkillAdvance(
     }
 
     uint16_t normalRange = skillData->GetTarget()->GetRange();
-    uint16_t maxTargetRange = (uint16_t)(400 + (normalRange * 10));
+    uint16_t maxTargetRange = (uint16_t)(SKILL_DISTANCE_OFFSET + (normalRange * 10));
 
     Point src(eState->GetCurrentX(), eState->GetCurrentY());
     Point dest(target->GetCurrentX(), target->GetCurrentY());
@@ -1519,7 +1519,8 @@ uint8_t AIManager::SkillAdvance(
     {
         // Either run up to max range if a ranged attack or to a close melee
         // distance
-        float minDistance = normalRange ? (float)maxTargetRange - 20.f : 350.f;
+        float minDistance = normalRange ? (float)maxTargetRange - 20.f
+            : (float)(SKILL_DISTANCE_OFFSET - 50);
 
         // Stop at de-aggro distance
         float maxDistance = aiState->GetAggroValue(0, false, 2000.f) * 1.5f;

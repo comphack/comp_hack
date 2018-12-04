@@ -3073,7 +3073,13 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
         server->GetAIManager()->Prepare(eState, aiType);
         zone->AddEnemy(eState);
 
-        TriggerZoneActions(zone, { eState }, ZoneTrigger_t::ON_SPAWN);
+        if(TriggerZoneActions(zone, { eState }, ZoneTrigger_t::ON_SPAWN))
+        {
+            // Make sure they still have max HP/MP to start
+            auto cs = eState->GetCoreStats();
+            cs->SetHP(eState->GetMaxHP());
+            cs->SetMP(eState->GetMaxMP());
+        }
 
         SendEnemyData(eState, nullptr, zone, false);
 
@@ -3221,10 +3227,19 @@ bool ZoneManager::AddEnemiesToZone(
         server->GetTokuseiManager()->UpdateDiasporaMinibossCount(zone);
     }
 
-    TriggerZoneActions(zone, eStates, ZoneTrigger_t::ON_SPAWN);
+    bool actionsExecuted = TriggerZoneActions(zone, eStates,
+        ZoneTrigger_t::ON_SPAWN);
 
     for(auto& eState : eStates)
     {
+        if(actionsExecuted)
+        {
+            // Make sure they still have max HP/MP to start
+            auto cs = eState->GetCoreStats();
+            cs->SetHP(eState->GetMaxHP());
+            cs->SetMP(eState->GetMaxMP());
+        }
+
         if(eState->Ready())
         {
             if(eState->GetEntityType() == EntityType_t::ENEMY)
@@ -7283,7 +7298,8 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             auto restriction = pSpawn->GetRestrictions();
             if(restriction && restriction->GetDisabled())
             {
-                state->Toggle(false);
+                // Explicitly deactivate it to start
+                state->Toggle(false, true);
             }
 
             zone->AddPlasma(state);

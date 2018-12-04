@@ -217,6 +217,10 @@ public:
     bool HardStrike = false;
     bool InPvP = false;
 
+    // Only used for rushes
+    uint64_t RushStartTime = 0;
+    std::shared_ptr<Point> RushStartPoint;
+
     std::shared_ptr<Zone> CurrentZone;
     std::shared_ptr<ActiveEntityState> EffectiveSource;
     std::list<channel::SkillTargetResult> Targets;
@@ -1007,7 +1011,10 @@ bool SkillManager::TargetInRange(
 
     float distance = source->GetDistance(target->GetCurrentX(),
         target->GetCurrentY());
-    uint16_t maxTargetRange = (uint16_t)(400 +
+
+    // The client sends requests from a distance slightly outside of the
+    // stationary offset distance sometimes so give it some wiggle room
+    uint16_t maxTargetRange = (uint16_t)(SKILL_DISTANCE_OFFSET + 100 +
         (skillData->GetTarget()->GetRange() * 10));
 
     return (float)maxTargetRange >= distance;
@@ -1450,16 +1457,20 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
 
     // Complete delay does not appear to adjust the actual hit timing just
     // if you can counter it before it completes. If its not specified
-    // no delay applies at all.
+    // no delay applies at all unless it is also a projectile.
     uint32_t completeDelay = pSkill->Definition->GetDischarge()
         ->GetCompleteDelay();
-    bool skipDelay = ctx->FastTrack || !completeDelay;
+    bool skipDelay = ctx->FastTrack ||
+        (!completeDelay && !pSkill->IsProjectile);
+
+    uint64_t now = ChannelServer::GetServerTime();
+    source->RefreshCurrentPosition(now);
 
     uint64_t processTime = 0;
     if(!skipDelay)
     {
         // If hitstunned, don't start the skill
-        source->ExpireStatusTimes(ChannelServer::GetServerTime());
+        source->ExpireStatusTimes(now);
         if(source->StatusTimesKeyExists(STATUS_HIT_STUN))
         {
             SendFailure(activated, client);
@@ -1587,8 +1598,44 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
 
     FinalizeSkillExecution(client, ctx, activated);
 
+    // If the target is rushing back at the source and this skill is not also
+    // a rush, interrupt the rush (projectiles cannot interrupt at this point)
+    // Skip if using a defense skill, the hit is nulled, absorbed or the target
+    // has hitstun null
+    if(!ctx->CounteredSkill && !pSkill->IsProjectile && pSkill->PrimaryTarget &&
+        pSkill->PrimaryTarget != source && !pSkill->RushStartPoint &&
+        !pSkill->Nulled && !pSkill->Absorbed && !pSkill->PrimaryTarget
+        ->GetCalculatedState()->ExistingTokuseiAspectsContains((int8_t)
+            TokuseiAspectType::HITSTUN_NULL))
+    {
+        auto definitionManager = server->GetDefinitionManager();
+
+        auto tActivated = pSkill->PrimaryTarget->GetActivatedAbility();
+        auto tSkillData = tActivated ? definitionManager
+            ->GetSkillData(tActivated->GetSkillID()) : nullptr;
+        auto tDischarge = tSkillData ? tSkillData->GetDischarge() : nullptr;
+        if(tSkillData && tSkillData->GetBasic()->GetActionType() ==
+            objects::MiSkillBasicData::ActionType_t::RUSH &&
+            tDischarge->GetShotInterruptible() &&
+            source->GetEntityID() == (int32_t)tActivated->GetTargetObjectID())
+        {
+            // The last X% of the rush is not interruptible
+            uint64_t hitWindowAdjust = (uint64_t)(500000.0 *
+                (double)tDischarge->GetCompleteDelay() * 0.01);
+            uint64_t hitTime = (uint64_t)(tActivated->GetHitTime()
+                - hitWindowAdjust);
+            if(now < hitTime)
+            {
+                CancelSkill(pSkill->PrimaryTarget,
+                    tActivated->GetActivationID());
+            }
+        }
+    }
+
     if(!skipDelay)
     {
+        // Re-pull the process time to handle an updated delay
+        processTime = activated->GetHitTime();
         server->ScheduleWork(processTime, []
             (std::shared_ptr<ChannelServer> pServer,
             std::shared_ptr<ProcessingSkill> prSkill,
@@ -1700,32 +1747,27 @@ bool SkillManager::CompleteSkillExecution(
                 double distance = (double)source->GetDistance(target
                     ->GetCurrentX(), target->GetCurrentY());
 
+                // Projectile speed is measured in how many 10ths of
+                // a unit the projectile will traverse per millisecond
+                double distAdjust = distance >= SKILL_DISTANCE_OFFSET
+                    ? distance - (double)SKILL_DISTANCE_OFFSET : 0.0;
+
                 auto discharge = pSkill->Definition->GetDischarge();
-                if(discharge->GetShotInterruptible())
-                {
-                    // Normal projectile speed is measured in how many 10ths of
-                    // a unit the projectile will traverse per millisecond
-                    // (with a half second delay for the default cast to
-                    // projectile move speed)
-                    uint32_t projectileSpeed = discharge->GetProjectileSpeed();
-                    uint64_t projectileTime = (uint64_t)(distance /
-                        (double)(projectileSpeed * 10 + 400) * 1000000.0);
+                uint32_t projectileSpeed = discharge->GetProjectileSpeed();
+                uint64_t projectileTime = (uint64_t)(distAdjust /
+                    (double)(projectileSpeed * 10) *
+                    1000000.0);
 
-                    delay = (uint64_t)(delay + projectileTime);
-                }
-                else
+                if(projectileTime < 100000)
                 {
-                    // Non-interruptible projectiles are unique in the sense
-                    // that they process timing at the same points as normal
-                    // ones but they do not have an effective projectile time
-                    delay = (uint64_t)(delay + 1);
+                    // Projectiles require a delay, even if its miniscule. If
+                    // the projectile will take less than a server tick to
+                    // hit, let it hit as fast as possible to make timing look
+                    // more accurate.
+                    projectileTime = 1;
                 }
 
-                if(!delay)
-                {
-                    // Projectiles require a delay, even if its miniscule
-                    delay = 1;
-                }
+                delay = (uint64_t)(delay + projectileTime);
             }
         }
 
@@ -3349,6 +3391,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         keepEffects.insert(SVR_CONST.STATUS_SLEEP);
     }
 
+    // Handle status and skill interruptions
     for(SkillTargetResult& target : skill.Targets)
     {
         if(target.EffectCancellations)
@@ -3361,76 +3404,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             auto keep = eState->IsAlive() ? keepEffects : std::set<uint32_t>();
             eState->CancelStatusEffects(cancelFlags, cancelled, keep);
 
-            // Check for skills that need to be cancelled
-            if(cancelFlags & (EFFECT_CANCEL_DAMAGE | EFFECT_CANCEL_KNOCKBACK) &&
-                target.CanHitstun)
-            {
-                auto tActivated = eState->GetActivatedAbility();
-                auto tSkillData = tActivated
-                    ? definitionManager->GetSkillData(tActivated->GetSkillID()) : nullptr;
-                if(tSkillData)
-                {
-                    auto tCancel = tSkillData->GetCast()->GetCancel();
-                    auto tDischarge = tSkillData->GetDischarge();
-
-                    bool applyInterrupt = false;
-                    if((cancelFlags & EFFECT_CANCEL_DAMAGE) != 0 &&
-                        tCancel->GetDamageCancel())
-                    {
-                        // Interrupted from damage
-                        applyInterrupt = true;
-                    }
-                    else if((cancelFlags & EFFECT_CANCEL_KNOCKBACK) != 0 &&
-                        tCancel->GetKnockbackCancel())
-                    {
-                        // Interrupted from knockback
-                        applyInterrupt = true;
-                    }
-
-                    if(!applyInterrupt && tDischarge->GetShotInterruptible() &&
-                        tActivated->GetHitTime() > now)
-                    {
-                        // Determine which part of the skill can be interrupted
-                        // (all but last X percent)
-                        uint64_t hitWindowAdjust = (uint64_t)(500000.0 *
-                            (double)tDischarge->GetCompleteDelay() * 0.01);
-                        if(now < tActivated->GetHitTime() - hitWindowAdjust)
-                        {
-                            // Interrupted during shot
-                            applyInterrupt = true;
-                        }
-                    }
-
-                    // If an interrupt would happen but the skill is a countering
-                    // skill. Do not cancel.
-                    if(applyInterrupt)
-                    {
-                        for(auto counteringSkill : ctx->CounteringSkills)
-                        {
-                            if(counteringSkill->Activated == tActivated)
-                            {
-                                applyInterrupt = false;
-                                break;
-                            }
-                        }
-                    }
-
-                    if(applyInterrupt)
-                    {
-                        int32_t interruptNull = (int32_t)tokuseiManager->GetAspectSum(
-                            source, TokuseiAspectType::CAST_INTERRUPT_NULL,
-                            GetCalculatedState(eState, pSkill, true, source)) * 100;
-
-                        bool cancelInterrupt = interruptNull >= 10000 ||
-                            (interruptNull > 0 && RNG(int32_t, 1, 10000) <= interruptNull);
-
-                        if(!cancelInterrupt)
-                        {
-                            CancelSkill(eState, tActivated->GetActivationID());
-                        }
-                    }
-                }
-            }
+            HandleSkillInterrupt(source, target, pSkill);
 
             if(cancelled)
             {
@@ -3539,8 +3513,10 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         FinalizeSkill(ctx, activated);
     }
 
-    bool isGuard = skill.Definition->GetBasic()->GetActionType() ==
-        objects::MiSkillBasicData::ActionType_t::GUARD && skill.PrimaryTarget;
+    bool isDefense = (skill.Definition->GetBasic()->GetActionType() ==
+        objects::MiSkillBasicData::ActionType_t::GUARD ||
+        skill.Definition->GetBasic()->GetActionType() ==
+        objects::MiSkillBasicData::ActionType_t::DODGE) && skill.PrimaryTarget;
 
     bool doRush = skill.Definition->GetBasic()->GetActionType() ==
         objects::MiSkillBasicData::ActionType_t::RUSH && skill.PrimaryTarget;
@@ -3662,7 +3638,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             p.WriteS32Little(abs(target.AilmentDamage));
 
             bool rushing = false, knockedBack = false;
-            bool guarded = isGuard && target.EntityState == skill.PrimaryTarget;
+            bool defended = isDefense && target.EntityState == skill.PrimaryTarget;
             if(target.Flags1 & FLAG1_KNOCKBACK)
             {
                 uint8_t kbEffectiveType = kbType;
@@ -3757,9 +3733,9 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
             else if(target.CanHitstun)
             {
-                if(target.Damage1 || guarded)
+                if(target.Damage1 || defended)
                 {
-                    // Damage dealt (or guarded), determine stun time
+                    // Damage dealt (or defended), determine stun time
                     bool extendHitStun = target.AilmentDamageType != 0 || knockedBack;
                     if(extendHitStun)
                     {
@@ -3774,12 +3750,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                         }
                         else
                         {
-                            // Apply ailment damage after hit stop and extend
-                            // knockback time
+                            // Apply ailment damage after hit stop
                             hitTimings[2] = hitStopTime + target.AilmentDamageTime;
-
-                            target.EntityState->SetStatusTimes(STATUS_KNOCKBACK,
-                                hitTimings[2]);
                         }
                     }
                     else
@@ -3805,7 +3777,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     // Only apply ailment stun time
                     hitTimings[2] = hitStopTime + target.AilmentDamageTime;
 
-                    target.EntityState->SetStatusTimes(STATUS_KNOCKBACK,
+                    target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
                         hitTimings[2]);
                 }
                 else
@@ -4951,6 +4923,118 @@ bool SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
     }
 
     CancelSkill(target.EntityState, activationID);
+    return false;
+}
+
+bool SkillManager::HandleSkillInterrupt(const std::shared_ptr<
+    ActiveEntityState>& source, SkillTargetResult& target,
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+{
+    auto eState = target.EntityState;
+    uint8_t cancelFlags = target.EffectCancellations;
+
+    // Check for skills that need to be cancelled
+    if(cancelFlags & (EFFECT_CANCEL_DAMAGE | EFFECT_CANCEL_KNOCKBACK))
+    {
+        auto definitionManager = mServer.lock()->GetDefinitionManager();
+
+        auto tActivated = eState->GetActivatedAbility();
+        auto tSkillData = tActivated
+            ? definitionManager->GetSkillData(tActivated->GetSkillID()) : nullptr;
+        bool applyInterrupt = false;
+        if(tSkillData)
+        {
+            auto tDischarge = tSkillData->GetDischarge();
+            if(!tActivated->GetExecutionRequestTime())
+            {
+                // Not executed yet, apply charge cancellations
+                auto tCancel = tSkillData->GetCast()->GetCancel();
+
+                if((cancelFlags & EFFECT_CANCEL_DAMAGE) != 0 &&
+                    tCancel->GetDamageCancel())
+                {
+                    // Interrupted from damage
+                    applyInterrupt = true;
+                }
+                else if((cancelFlags & EFFECT_CANCEL_KNOCKBACK) != 0 &&
+                    tCancel->GetKnockbackCancel())
+                {
+                    // Interrupted from knockback
+                    applyInterrupt = true;
+                }
+
+                if(applyInterrupt)
+                {
+                    // Cast interrupt must exist regardless of hitstun null
+                    auto tokuseiManager = mServer.lock()->GetTokuseiManager();
+
+                    int32_t interruptNull = (int32_t)tokuseiManager->GetAspectSum(
+                        source, TokuseiAspectType::CAST_INTERRUPT_NULL,
+                        GetCalculatedState(eState, pSkill, true, source)) * 100;
+
+                    applyInterrupt = interruptNull < 10000 &&
+                        (interruptNull < 0 || RNG(int32_t, 1, 10000) > interruptNull);
+                }
+            }
+            else if(target.CanHitstun && tDischarge->GetShotInterruptible())
+            {
+                // Determine which part of the skill can be interrupted
+                uint64_t hit = pSkill->Activated->GetHitTime();
+                if(tActivated->GetHitTime() == 0)
+                {
+                    // Interrupted before shot
+                    applyInterrupt = true;
+                }
+                else if(hit < tActivated->GetHitTime())
+                {
+                    uint64_t hitWindowAdjust = (uint64_t)(500000.0 *
+                        (double)tDischarge->GetCompleteDelay() * 0.01);
+                    uint64_t hitTime = 0;
+                    if(tSkillData->GetBasic()->GetActionType() ==
+                        objects::MiSkillBasicData::ActionType_t::RUSH)
+                    {
+                        // The last X% of rush skills is not interruptible
+                        hitTime = (uint64_t)(tActivated->GetHitTime()
+                            - hitWindowAdjust);
+                    }
+                    else
+                    {
+                        // The first X% of non-rush skills is interruptible
+                        hitTime = (uint64_t)((tActivated->GetHitTime() -
+                            500000ULL) + hitWindowAdjust);
+                    }
+
+                    if(hit < hitTime)
+                    {
+                        // Interrupted during shot
+                        applyInterrupt = true;
+                    }
+                }
+            }
+        }
+
+        // If an interrupt would happen but the skill is a countering
+        // skill, do not cancel
+        if(applyInterrupt)
+        {
+            auto ctx = pSkill->ExecutionContext;
+            for(auto counteringSkill : ctx->CounteringSkills)
+            {
+                if(counteringSkill->Activated == tActivated)
+                {
+                    applyInterrupt = false;
+                    break;
+                }
+            }
+        }
+
+        if(applyInterrupt)
+        {
+            CancelSkill(eState, tActivated->GetActivationID());
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -8685,7 +8769,46 @@ void SkillManager::FinalizeSkillExecution(
         }
     }
 
-    activated->SetExecutionTime(ChannelServer::GetServerTime());
+    uint64_t now = ChannelServer::GetServerTime();
+    if(pSkill->Definition->GetBasic()->GetActionType() ==
+        objects::MiSkillBasicData::ActionType_t::RUSH)
+    {
+        // Move the source to the rush point and bump the execution and hit
+        // times forward
+        uint64_t rushExecTime = now;
+        uint64_t hitTime = activated->GetHitTime();
+
+        Point sourcePoint(source->GetCurrentX(), source->GetCurrentY());
+        pSkill->RushStartTime = now;
+        pSkill->RushStartPoint = std::make_shared<Point>(sourcePoint);
+
+        if(pSkill->PrimaryTarget && pSkill->PrimaryTarget != source)
+        {
+            // Rush forward to the melee attack distance for 500ms
+            Point targetPoint(pSkill->PrimaryTarget->GetCurrentX(),
+                pSkill->PrimaryTarget->GetCurrentY());
+            float dist = source->GetDistance(targetPoint.x, targetPoint.y);
+            if(dist > 200.f)
+            {
+                Point rushStart = server->GetZoneManager()->GetLinearPoint(
+                    targetPoint.x, targetPoint.y, sourcePoint.x, sourcePoint.y,
+                    200.f, false, zone);
+                pSkill->RushStartPoint->x = rushStart.x;
+                pSkill->RushStartPoint->y = rushStart.y;
+            }
+
+            uint64_t offset = 500000ULL;
+            hitTime = (uint64_t)(hitTime + offset);
+            rushExecTime = (uint64_t)(rushExecTime + offset);
+        }
+
+        activated->SetHitTime(hitTime);
+        activated->SetExecutionTime(rushExecTime);
+    }
+    else
+    {
+        activated->SetExecutionTime(now);
+    }
 
     if(skillData->GetBasic()->GetCombatSkill() &&
         activated->GetEntityTargeted() && zone)
@@ -11170,29 +11293,28 @@ void SkillManager::SendExecuteSkill(
         p.WriteU32Little((uint32_t)activated->GetHPCost());
         p.WriteU32Little((uint32_t)activated->GetMPCost());
 
-        // Rush skills have additional execution point values however the
-        // animation is smoother without this at all
-        /*if(isRush)
+        // Rush skills have additional execution point values as well as
+        // an offset to their normal hit timing
+        if(pSkill->RushStartPoint)
         {
             p.WriteU8(1);   // Rush flag
 
-            // Originally this was used to "speed up" the source to the
-            // correct rush starting point but I'm pretty sure this was
-            // a server concession for timing
-            p.WriteFloat(source->GetCurrentX());
-            p.WriteFloat(source->GetCurrentY());
+            // Source will "speed up" to this point if not already there
+            p.WriteFloat(pSkill->RushStartPoint->x);
+            p.WriteFloat(pSkill->RushStartPoint->y);
 
             p.WriteFloat(0);    // Always 0
 
             // Usage timing
-            timeMap[44] = timeMap[48] = activated->GetExecutionTime();
+            timeMap[44] = pSkill->RushStartTime;
+            timeMap[48] = activated->GetExecutionTime();
             p.WriteFloat(0.f);
             p.WriteFloat(0.f);
         }
         else
-        {*/
+        {
             p.WriteBlank(21);
-        //}
+        }
 
         p.WriteU8(pSkill->HardStrike ? 1 : 0);
         p.WriteU8(0xFF);   // Always the same value

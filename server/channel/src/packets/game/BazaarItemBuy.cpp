@@ -111,9 +111,9 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
             }
         }
 
-        if(totalMacca < (uint64_t)bItem->GetCost())
+        if(!bItem || totalMacca < (uint64_t)bItem->GetCost())
         {
-            // No new error code for this one
+            // No new error code for these
         }
         else if(destSlot == -1)
         {

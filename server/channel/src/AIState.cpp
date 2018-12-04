@@ -187,7 +187,7 @@ float AIState::GetAggroValue(uint8_t mode, bool fov, float defaultVal)
 
         float val = fov
             ? ((float)fInfo->GetFOV() / 360.f * 3.14f)
-            : (400.f + (float)fInfo->GetDistance() * 10.f);
+            : (float)fInfo->GetDistance() * 10.f;
         return val * GetAwareness();
     }
 

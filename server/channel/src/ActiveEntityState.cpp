@@ -434,13 +434,15 @@ bool ActiveEntityState::UpdatePendingCombatants(int32_t entityID,
             {
                 // Combatants are only valid if they're still in the zone
                 // and still have an ability targeting this entity with the
-                // same execution timestamp registered here
+                // same execution timestamp registered here and there is no
+                // error on the skill
                 auto eState = zone->GetActiveEntity(pair.first);
                 auto activated = eState
                     ? eState->GetActivatedAbility() : nullptr;
                 if(!eState || !activated ||
                     activated->GetTargetObjectID() != selfID ||
-                    activated->GetExecutionRequestTime() != pair.second)
+                    activated->GetExecutionRequestTime() != pair.second ||
+                    activated->GetErrorCode() != -1)
                 {
                     RemovePendingCombatants(pair.first);
                 }

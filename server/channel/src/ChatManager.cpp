@@ -1106,8 +1106,8 @@ bool ChatManager::GMCommand_Enchant(const std::shared_ptr<
     }
 
     // No restrictions enforced here except validity checks
-    if(!definitionManager->GetEnchantData(tarot) ||
-        !definitionManager->GetEnchantData(soul))
+    if((tarot && !definitionManager->GetEnchantData(tarot)) ||
+        (soul && !definitionManager->GetEnchantData(soul)))
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
             "Invalid tarot or soul effect specified");

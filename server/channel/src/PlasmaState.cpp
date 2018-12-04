@@ -53,6 +53,7 @@ namespace libcomp
             Sqrat::DerivedClass<PlasmaState, objects::EntityStateObject,
                 Sqrat::NoConstructor<PlasmaState>> binding(mVM, "PlasmaState");
             binding
+                .Func("IsActive", &PlasmaState::IsActive)
                 .Func("Toggle", &PlasmaState::Toggle);
 
             Bind<PlasmaState>("PlasmaState", binding);
@@ -105,7 +106,7 @@ std::shared_ptr<objects::LootBox> PlasmaPoint::GetLoot() const
 PlasmaState::PlasmaState(const std::shared_ptr<objects::PlasmaSpawn>& plasma)
     : EntityState<objects::PlasmaSpawn>(plasma)
 {
-    mDisabled = false;
+    mDeactivated = mDisabled = false;
 }
 
 bool PlasmaState::CreatePoints()
@@ -152,10 +153,30 @@ std::list<std::shared_ptr<PlasmaPoint>> PlasmaState::GetActivePoints()
     return results;
 }
 
-void PlasmaState::Toggle(bool enable)
+bool PlasmaState::IsActive(bool visible)
+{
+    if(visible)
+    {
+        return GetActivePoints().size() > 0;
+    }
+    else
+    {
+        return !mDeactivated;
+    }
+}
+
+void PlasmaState::Toggle(bool enable, bool activation)
 {
     std::lock_guard<std::mutex> lock(mLock);
-    if(mDisabled == enable)
+    if(activation)
+    {
+        if(mDeactivated == enable)
+        {
+            mDeactivated = !enable;
+            return;
+        }
+    }
+    else if(mDisabled == enable)
     {
         mDisabled = !enable;
         if(!enable)
@@ -179,7 +200,8 @@ bool PlasmaState::HasStateChangePoints(bool respawn, uint64_t now)
 
     if(respawn)
     {
-        if(mDisabled)
+        // Do not spawn if enabled but still deactivated
+        if(mDisabled || mDeactivated)
         {
             return false;
         }

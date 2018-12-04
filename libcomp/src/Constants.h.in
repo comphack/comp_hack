@@ -263,6 +263,9 @@ namespace libcomp
 /// The skill activation contains fusion skill parameters.
 #define ACTIVATION_FUSION   (7)
 
+/// Minimum distance for all skills added to the target distance formula
+#define SKILL_DISTANCE_OFFSET (200)
+
 /// Macca note value
 #define ITEM_MACCA_NOTE_AMOUNT (50000)
 

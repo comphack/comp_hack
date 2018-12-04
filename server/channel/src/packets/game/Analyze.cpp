@@ -113,7 +113,7 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 if(progress)
                 {
-                    reply.WriteS8(progress->GetTimeTrialID());
+                    reply.WriteS8(0);   // Success
 
                     reply.WriteS8((int8_t)progress->TimeTrialRecordsCount());
                     for (uint16_t trialTime : progress->GetTimeTrialRecords())
@@ -124,7 +124,7 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
                 }
                 else
                 {
-                    reply.WriteBlank(6);
+                    reply.WriteS8(-1);  // Failure
                 }
 
                 client->SendPacket(reply);

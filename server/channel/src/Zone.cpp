@@ -1213,12 +1213,12 @@ bool Zone::UpdateTimedSpawns(const WorldClock& clock,
         {
             if(TimeRestrictionActive(clock, restriction))
             {
-                // Plasma active
+                // Plasma enabled
                 pPair.second->Toggle(true);
             }
             else
             {
-                // Plasma inactive
+                // Plasma disabled
                 pPair.second->Toggle(false);
             }
         }

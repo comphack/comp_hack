@@ -466,7 +466,7 @@ private:
      * Execute or cancel the guard skill currently being used by the
      * supplied target from being hit by the source entity
      * @param source Pointer to the state of the source entity
-     * @param target Pointer to the state of the target entity
+     * @param target Skill targeted entity
      * @param pSkill Skill processing state of the skill being guarded
      * @return true if the skill was guarded against, false if it was not
      */
@@ -484,7 +484,7 @@ private:
      * CounteringSkills list, since technically multiple skills can
      * counter one.
      * @param source Pointer to the state of the source entity
-     * @param target Pointer to the state of the target entity
+     * @param target Skill targeted entity
      * @param pSkill Skill processing state of the skill being countered
      * @return true if the skill was countered, false if it was not
      */
@@ -496,7 +496,7 @@ private:
      * Execute or cancel the dodge skill currently being used by the
      * supplied target from being hit by the source entity
      * @param source Pointer to the state of the source entity
-     * @param target Pointer to the state of the target entity
+     * @param target Skill targeted entity
      * @param pSkill Skill processing state of the skill being dodged
      * @return true if the skill was dodged, false if it was not
      */
@@ -505,9 +505,22 @@ private:
         channel::ProcessingSkill>& pSkill);
 
     /**
+     * Apply target skill interrupt based upon timing and state of the target
+     * entity's skill being charged or executed
+     * @param source Pointer to the state of the source entity
+     * @param target Skill targeted entity
+     * @param pSkill Skill processing state of the skill being guarded
+     * @return true if the target had a skill that was interrupted, false if
+     *  they did not
+     */
+    bool HandleSkillInterrupt(const std::shared_ptr<ActiveEntityState>& source,
+        SkillTargetResult& target, const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill);
+
+    /**
      * Handle all status effect application logic for a specific target
      * @param source Pointer to the state of the source entity
-     * @param target Pointer to the state of the target entity
+     * @param target Skill targeted entity
      * @param pSkill Skill processing state of the skill being executed
      * @return Set of status effects being applied that will be cancelled
      *  if the entity is killed as a result of the skill
@@ -579,7 +592,7 @@ private:
      * Determine if the supplied target should receive any negotation
      * related effects from the skill used and apply them if applicable.
      * @param source Pointer to the state of the source entity
-     * @param target Pointer to the state of the target entity
+     * @param target Skill targeted entity
      * @param pSkill Skill processing state of the skill being executed
      * @return true if the negotation has completed
      */

@@ -49,7 +49,7 @@ build_script:
   - 7z x ..\doxygen.zip
   - cd ..
   - del doxygen.zip
-  - set PAT%APPVEYOR_BUILD_FOLDER%\build\doxygen;%PATH%
+  - set PATH=%APPVEYOR_BUILD_FOLDER%\build\doxygen;%PATH%
   - cmake -DUSE_PREBUILT_OBJECTS=ON -DGENERATE_DOCUMENTATION=ON -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CUSTOM_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
   - cmake --build . --config %configuration% --target package
   - cmake --build . --config %configuration% --target doc

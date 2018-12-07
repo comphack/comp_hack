@@ -14,8 +14,7 @@ configuration:
   - RelWithDebInfo
 
 install:
-  - cinst doxygen.portable
-  - cinst doxygen.portable graphviz.portable
+  - cinst graphviz.portable
 
 init:
   - if %platform%==x64 (set CMAKE_PREFIX_PATH=C:\Qt\5.10.1\msvc2015_64) else (set CMAKE_PREFIX_PATH=C:\Qt\5.10.1\msvc2015)
@@ -44,6 +43,12 @@ build_script:
   - 7z x libobjects.zip
   - del libobjects.zip
   - mv libobjects* ..\deps\libobjects
+  - appveyor DownloadFile http://doxygen.nl/files/doxygen-1.8.14.windows.x64.bin.zip -FileName doxygen.zip
+  - mkdir doxygen
+  - cd doxygen
+  - 7z x doxygen.zip
+  - cd ..
+  - set PAT%APPVEYOR_BUILD_FOLDER%\build\doxygen;%PATH%
   - cmake -DUSE_PREBUILT_OBJECTS=ON -DGENERATE_DOCUMENTATION=ON -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CUSTOM_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..
   - cmake --build . --config %configuration% --target package
   - cmake --build . --config %configuration% --target doc

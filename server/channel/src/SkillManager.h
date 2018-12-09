@@ -186,6 +186,15 @@ public:
         const std::shared_ptr<objects::MiSkillData>& skillData);
 
     /**
+     * Determine if the specified skill is locked from use in the current zone.
+     * @param skillID ID of the skill being checked
+     * @param zone Pointer to the current zone
+     * @return true if the skill is restricted from being used
+     */
+    bool SkillZoneRestricted(uint32_t skillID,
+        const std::shared_ptr<Zone> zone);
+
+    /**
      * Determine if the skill target supplied is in range for a specific skill
      * @param source Entity that is attempting to use the skill
      * @param skillData Pointer to the skill's definition

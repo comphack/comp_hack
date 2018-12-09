@@ -78,9 +78,9 @@
     </object>
     <object name="MiAIRelationData" persistent="false" scriptenabled="true">
         <member type="u16" name="type"/>
-        <member type="u16" name="ai2"/>
-        <member type="u16" name="ai3"/>
-        <member type="u16" name="ai4"/>
+        <member type="array" size="3" name="logicGroupIDs">
+            <element type="u16"/>
+        </member>
     </object>
     <object name="MiNegotiationData" persistent="false" scriptenabled="true">
         <member type="u8" name="affabilityThreshold"/>
@@ -95,7 +95,7 @@
         <member type="u8" name="fusionDifficulty"/>
         <member type="u8" name="fusionOptions" pad="2"/>
         <member type="u32" name="baseDemonID"/>
-        <member type="array" size="5" name="union5">
+        <member type="array" size="5" name="unionRates">
             <element type="float"/>
         </member>
         <member type="u32" name="mitamaFusionID"/>
@@ -127,7 +127,7 @@
         </member>
     </object>
     <object name="MiDevilBattleData" persistent="false" scriptenabled="true">
-        <member type="u32" name="battle1"/>
+        <member type="u32" name="hitboxSize"/>
         <member type="u32" name="digitalizeXP"/>
         <member type="u8" name="enemyLevel"/>
         <member type="bool" name="isFloating" pad="2"/>

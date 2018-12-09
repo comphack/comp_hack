@@ -1186,13 +1186,22 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
 
         for(auto& pair : hpRestores)
         {
-            if(pair.first->SetHPMP(pair.second, -1, false))
+            auto eState = pair.first;
+            if(eState->SetHPMP(pair.second, -1, false))
             {
-                displayState.insert(pair.first);
+                displayState.insert(eState);
 
                 // Trigger revival actions
-                zoneManager->TriggerZoneActions(zone, { pair.first },
+                zoneManager->TriggerZoneActions(zone, { eState },
                     ZoneTrigger_t::ON_REVIVAL, client);
+
+                if(!newZoneID)
+                {
+                    // If no warp is involved, add 20s AI ignore
+                    eState->SetStatusTimes(STATUS_IGNORE,
+                        ChannelServer::GetServerTime() +
+                        (uint64_t)20000000ULL);
+                }
             }
         }
 

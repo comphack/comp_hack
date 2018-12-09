@@ -94,6 +94,9 @@ const uint8_t STATUS_LOCKOUT = 0x20;
 /// Entity is waiting (used by AI controlled entity)
 const uint8_t STATUS_WAITING = 0x40;
 
+/// Entity is ignoring other entities and will not be seen by searching AI
+const uint8_t STATUS_IGNORE = 0x80;
+
 namespace libcomp
 {
 class DefinitionManager;
@@ -382,6 +385,13 @@ public:
      * @return Movement speed of the entity
      */
     float GetMovementSpeed(bool altSpeed = false);
+
+    /**
+     * Get the hitbox size for the current entity as defined by MiDevilData.
+     * The value returned is not converted to relative server units.
+     * @return Hitbox size
+     */
+    uint32_t GetHitboxSize() const;
 
     /**
      * Update the entity's current position and rotation values based

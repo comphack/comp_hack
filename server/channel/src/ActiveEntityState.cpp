@@ -330,6 +330,13 @@ float ActiveEntityState::GetMovementSpeed(bool altSpeed)
     return (float)(speed + GetSpeedBoost()) * 10.f;
 }
 
+uint32_t ActiveEntityState::GetHitboxSize() const
+{
+    auto devilData = GetDevilData();
+    return devilData ? devilData->GetBattleData()->GetHitboxSize()
+        : PLAYER_HITBOX_SIZE;
+}
+
 void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
 {
     if(now != mLastRefresh)

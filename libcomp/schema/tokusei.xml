@@ -142,6 +142,7 @@
             <!-- Misc -->
             <value>CONSTANT_STATUS</value>
             <value>DEATH_PENALTY</value>
+            <value>SKILL_LOCK</value>
             <value>SUMMON_STATUS</value>
             <value>SUMMON_SYNC_EXTEND</value>
             <value>ZONE_INSTANCE_POISON</value>

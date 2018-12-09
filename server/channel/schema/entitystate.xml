@@ -174,7 +174,7 @@
         </member>
     </object>
     <object name="ActivatedAbility" scriptenabled="true" persistent="false">
-        <member type="u32" name="SkillID"/>
+        <member type="MiSkillData*" name="SkillData"/>
         <member type="EntityStateObject*" name="SourceEntity"
             nulldefault="true"/>
         <member type="s64" name="ActivationObjectID"/>

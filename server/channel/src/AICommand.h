@@ -93,6 +93,19 @@ public:
     void SetDelay(uint64_t delay);
 
     /**
+     * Get the delay ignore flag to determine if the entity should be
+     * put into the ignore state while delaying
+     * @return true if the ignore flag is set, false if it is not
+     */
+    bool GetIgnoredDelay() const;
+
+    /**
+     * Set the delay ignore flag
+     * @param ignore true if the state should be set
+     */
+    void SetIgnoredDelay(bool ignore);
+
+    /**
      * Get the server time set when the command started
      * @return Server time in microseconds
      */
@@ -127,6 +140,9 @@ protected:
 
     /// Entity ID being targeted by the command (can be unset as -1)
     int32_t mTargetEntityID;
+
+    /// If true the entity will be put into the ignore state during the delay
+    bool mIgnoredDelay;
 };
 
 /**
@@ -238,11 +254,9 @@ public:
 
     /**
      * Create a new use skill command for a skill that has already been activated
-     * @param skillData Pointer to the definition of the skill being used
      * @param activated Pointer to the ActivatedAbility of a skill to execute
      */
-    AIUseSkillCommand(const std::shared_ptr<objects::MiSkillData>& skillData,
-        const std::shared_ptr<objects::ActivatedAbility>& activated);
+    AIUseSkillCommand(const std::shared_ptr<objects::ActivatedAbility>& activated);
 
     /**
      * Clean up the use skill command

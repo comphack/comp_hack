@@ -38,6 +38,7 @@
 
 // object Includes
 #include <ActivatedAbility.h>
+#include <AILogicGroup.h>
 #include <Ally.h>
 #include <MiAIData.h>
 #include <MiAIRelationData.h>
@@ -65,6 +66,7 @@
 #include "CharacterManager.h"
 #include "EventManager.h"
 #include "SkillManager.h"
+#include "TokuseiManager.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -135,11 +137,14 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
         }
     }
 
+    auto demonData = eState->GetDevilData();
     auto spawn = eBase ? eBase->GetSpawnSource() : nullptr;
     uint16_t baseAIType = spawn ? spawn->GetBaseAIType() : 0;
 
-    auto demonData = eState->GetDevilData();
-    auto aiData = demonData ? mServer.lock()->GetDefinitionManager()->GetAIData(
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
+
+    auto aiData = demonData ? server->GetDefinitionManager()->GetAIData(
         baseAIType ? baseAIType : demonData->GetAI()->GetType()) : nullptr;
     if(!aiData)
     {
@@ -147,29 +152,52 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
         return false;
     }
 
+    // Logic group 1 corresponds to idle/wander logic, group 2 is used
+    // for aggro and combat, 3 is unknown and potentially unused as all
+    // known instances of it match group 1. For our purposes custom AI
+    // and group 2 are all that are actually needed.
+    uint16_t logicGroupID = demonData->GetAI()->GetLogicGroupIDs(1);
+    if(spawn && spawn->GetLogicGroupID())
+    {
+        logicGroupID = spawn->GetLogicGroupID();
+    }
+
+    auto logicGroup = logicGroupID ? serverDataManager
+        ->GetAILogicGroup(logicGroupID) : nullptr;
+    if(!logicGroup && logicGroupID)
+    {
+        // Default to the type 0 default group if one exists
+        logicGroup = serverDataManager->GetAILogicGroup(0);
+    }
+
     // Set all default values now so any call to the script prepare function
     // can modify them
     aiState->SetBaseAI(aiData);
+    aiState->SetLogicGroup(logicGroup);
     aiState->SetAggroLevelLimit(aiData->GetAggroLevelLimit());
     aiState->SetThinkSpeed(aiData->GetThinkSpeed());
+    aiState->SetDeaggroScale((uint8_t)aiData->GetDeaggroScale());
+    aiState->SetStrikeFirst(aiData->GetStrikeFirst());
+    aiState->SetNormalSkillUse(aiData->GetNormalSkillUse());
+    aiState->SetAggroLimit((uint8_t)aiData->GetAggroLimit());
 
-    if(spawn)
+    libcomp::String finalAIType = aiType;
+    if(aiType.IsEmpty() && logicGroup)
     {
-        aiState->SetAggression(spawn->GetAggression());
+        finalAIType = logicGroup->GetDefaultScriptID();
     }
 
     std::shared_ptr<libcomp::ScriptEngine> aiEngine;
-    if(!aiType.IsEmpty())
+    if(!finalAIType.IsEmpty())
     {
-        auto it = sPreparedScripts.find(aiType.C());
+        auto it = sPreparedScripts.find(finalAIType.C());
         if(it == sPreparedScripts.end())
         {
-            auto script = mServer.lock()->GetServerDataManager()
-                ->GetAIScript(aiType);
+            auto script = serverDataManager->GetAIScript(finalAIType);
             if(!script)
             {
                 LOG_ERROR(libcomp::String("AI type '%1' does not exist\n")
-                    .Arg(aiType));
+                    .Arg(finalAIType));
                 return false;
             }
 
@@ -179,11 +207,11 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
             if(!aiEngine->Eval(script->Source))
             {
                 LOG_ERROR(libcomp::String("AI type '%1' is not a valid AI script\n")
-                    .Arg(aiType));
+                    .Arg(finalAIType));
                 return false;
             }
 
-            sPreparedScripts[aiType.C()] = aiEngine;
+            sPreparedScripts[finalAIType.C()] = aiEngine;
         }
         else
         {
@@ -197,7 +225,7 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
             if(!result || (*result != 0))
             {
                 LOG_ERROR(libcomp::String("Failed to prepare AI type '%1'\n")
-                    .Arg(aiType));
+                    .Arg(finalAIType));
                 return false;
             }
         }
@@ -206,7 +234,10 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
     aiState->SetScript(aiEngine);
 
     // The first command all AI perform is a wait command for a set time
-    QueueWaitCommand(aiState, 3000);
+    auto wait = GetWaitCommand(3000);
+    wait->SetIgnoredDelay(true);
+    aiState->QueueCommand(wait);
+
     aiState->ResetStatusChanged();
 
     return true;
@@ -321,10 +352,8 @@ void AIManager::CombatSkillHit(
             Sqrat::Function f(Sqrat::RootTable(aiState->GetScript()->GetVM()),
                 fOverride.IsEmpty() ? "combatSkillHit" : fOverride.C());
 
-            /// @todo: bind MiSkillData and pass that
             auto scriptResult = !f.IsNull()
-                ? f.Evaluate<int32_t>(eState, this, source,
-                    skillData->GetCommon()->GetID()) : 0;
+                ? f.Evaluate<int32_t>(eState, this, source, skillData) : 0;
             if(!scriptResult || *scriptResult == 0)
             {
                 // Do not continue
@@ -395,9 +424,11 @@ void AIManager::CombatSkillComplete(
 
             if(target->GetStatusTimes(STATUS_HIT_STUN))
             {
-                // If the target is hitstunned, always use again to attempt
-                // to combo into knockback
-                combo = true;
+                // If the target is hitstunned, use again to attempt to combo
+                // into knockback most of the time. Even if no combo occurs,
+                // do not wait to use the next skill.
+                combo = RNG(int32_t, 1, 10) <= 9;
+                wait = false;
             }
             else
             {
@@ -431,8 +462,8 @@ void AIManager::CombatSkillComplete(
                 wait = false;
                 break;
             default:
-                // Other skills should be staggered by thinkspeed unless
-                // more executions exist
+                // Other skills should be staggered unless more
+                // executions exist
                 reset = activated->GetExecuteCount() >= activated
                     ->GetMaxUseCount();
                 break;
@@ -445,7 +476,11 @@ void AIManager::CombatSkillComplete(
         aiState->ClearCommands();
         if(wait)
         {
-            QueueWaitCommand(aiState, (uint32_t)aiState->GetThinkSpeed());
+            auto logicGroup = aiState->GetLogicGroup();
+            if(logicGroup && logicGroup->GetSkillResetStagger())
+            {
+                QueueWaitCommand(aiState, logicGroup->GetSkillResetStagger());
+            }
         }
     }
 }
@@ -621,7 +656,7 @@ bool AIManager::Chase(const std::shared_ptr<ActiveEntityState>& eState,
     auto point = zoneManager->GetLinearPoint(src.x, src.y,
         dest.x, dest.y, src.GetDistance(dest), false);
 
-    auto cmd = GetMoveCommand(eState, point);
+    auto cmd = GetMoveCommand(eState, point, minDistance);
     if(cmd)
     {
         cmd->SetTargetEntityID(targetEntityID);
@@ -780,8 +815,43 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
 
     eState->ExpireStatusTimes(now);
 
+    bool canAct = eState->CanAct();
+
+    // If no target exists and the next target time has passed, search now
+    if(canAct && aiState->GetTargetEntityID() <= 0 &&
+        eState->GetOpponentIDs().size() == 0 &&
+        (!aiState->GetNextTargetTime() || aiState->GetNextTargetTime() <= now))
+    {
+        // If still in the ignore state, fail to target until it expires
+        auto newTarget = !eState->GetStatusTimes(STATUS_IGNORE)
+            ? Retarget(eState, now, isNight) : nullptr;
+        if(newTarget)
+        {
+            // Stop movement and clear existing commands but continue the current
+            // wait command if active
+            eState->Stop(now);
+
+            auto current = aiState->GetCurrentCommand();
+            aiState->ClearCommands();
+
+            if(current && current->GetType() == AICommandType_t::NONE &&
+                eState->GetStatusTimes(STATUS_WAITING))
+            {
+                aiState->QueueCommand(current);
+            }
+
+            return true;
+        }
+        else
+        {
+            // Push the next target time based on think speed and move on
+            aiState->SetNextTargetTime(now +
+                (uint64_t)(aiState->GetThinkSpeed() * 1000));
+        }
+    }
+
     // If the entity cannot act or is waiting, stop if moving and quit here
-    if(!eState->CanAct() || eState->GetStatusTimes(STATUS_WAITING))
+    if(!canAct || eState->GetStatusTimes(STATUS_WAITING))
     {
         if(eState->IsMoving() && !eState->GetStatusTimes(STATUS_KNOCKBACK))
         {
@@ -891,7 +961,14 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             cmd->Start();
             if(cmd->GetDelay() > 0)
             {
-                eState->SetStatusTimes(STATUS_WAITING, now + cmd->GetDelay());
+                uint64_t statusTime = now + cmd->GetDelay();
+                eState->SetStatusTimes(STATUS_WAITING, statusTime);
+
+                if(cmd->GetIgnoredDelay() &&
+                    eState->GetStatusTimes(STATUS_IGNORE) < statusTime)
+                {
+                    eState->SetStatusTimes(STATUS_IGNORE, statusTime);
+                }
 
                 return false;
             }
@@ -1058,12 +1135,13 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                 {
                     targetEntity->ExpireStatusTimes(now);
 
-                    if(AggroLimitEnabled() &&
-                        targetEntity->GetStatusTimes(STATUS_KNOCKBACK))
+                    uint64_t kbTime = targetEntity->GetStatusTimes(
+                        STATUS_KNOCKBACK);
+                    if(AggroLimitEnabled() && kbTime)
                     {
                         // Delay execution or activation
-                        QueueWaitCommand(aiState, (uint32_t)aiState
-                            ->GetThinkSpeed(), true);
+                        QueueWaitCommand(aiState, (uint32_t)((kbTime - now) /
+                            1000 + 500), true);
                         return false;
                     }
                 }
@@ -1085,16 +1163,9 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                 else
                 {
                     // Activate the skill
-                    if(skillManager->ActivateSkill(eState, cmdSkill
-                        ->GetSkillID(), cmdSkill->GetTargetEntityID(),
-                        cmdSkill->GetTargetEntityID(), ACTIVATION_TARGET))
-                    {
-                        auto skillData = cmdSkill->GetSkillData();
-                        if(skillData->GetBasic()->GetActivationType() == 5)
-                        {
-                            aiState->SetSkillWaitStart(now);
-                        }
-                    }
+                    skillManager->ActivateSkill(eState, cmdSkill->GetSkillID(),
+                        cmdSkill->GetTargetEntityID(),
+                        cmdSkill->GetTargetEntityID(), ACTIVATION_TARGET);
                 }
 
                 aiState->PopCommand(cmdSkill);
@@ -1142,18 +1213,6 @@ bool AIManager::UpdateEnemyState(
     bool isNight)
 {
     auto aiState = eState->GetAIState();
-    if(aiState->GetTargetEntityID() <= 0 &&
-        eState->GetOpponentIDs().size() == 0)
-    {
-        auto newTarget = Retarget(eState, now, isNight);
-        if(newTarget)
-        {
-            // First target always results in a 3s wait
-            QueueWaitCommand(aiState, 3000);
-            return false;
-        }
-    }
-
     if(aiState->GetStatus() == AIStatus_t::WANDERING && eBase)
     {
         Wander(eState, eBase);
@@ -1190,9 +1249,9 @@ bool AIManager::UpdateEnemyState(
 
     auto server = mServer.lock();
 
-    // If the target is 1.5x the aggro distance, de-aggro
     bool targetChanged = false;
-    if(targetDist >= aiState->GetAggroValue(isNight ? 1 : 0, false, 2000.f) * 1.5f)
+    float deaggroDist = aiState->GetDeaggroDistance(isNight);
+    if(deaggroDist && targetDist >= deaggroDist)
     {
         // De-aggro on that one target and find a new one
         server->GetCharacterManager()->AddRemoveOpponent(false,
@@ -1232,51 +1291,54 @@ bool AIManager::UpdateEnemyState(
             return false;
         }
 
+        auto logicGroup = aiState->GetLogicGroup();
+        uint64_t minCharge = activated->GetChargedTime() +
+            (uint64_t)(logicGroup ? logicGroup->GetPostChargeStagger() : 0) *
+            (uint64_t)1000ULL;
+        if(now < minCharge)
+        {
+            return false;
+        }
+
         bool cancelAndReset = false;
         if(!CanRetrySkill(eState, activated))
         {
             // Somehow we have an error
             cancelAndReset = true;
         }
-        else if(aiState->GetSkillWaitStart())
+        else if(now > activated->GetActivationTime() + 15000000ULL &&
+            RNG(uint16_t, 1, 2) == 1)
         {
-            // If we have a skill waiting on being hit and we've been
-            // waiting a decent amount of time, check if we should cancel
-            int32_t thinkSpeedAdjust = aiState->GetThinkSpeed()
-                ? aiState->GetThinkSpeed() : 1000;
-            int32_t minWait = thinkSpeedAdjust * 2 * 1000;
-            if(now > aiState->GetSkillWaitStart() + (uint64_t)minWait &&
-                RNG(uint16_t, 1, 2) == 1)
-            {
-                cancelAndReset = true;
-            }
-            else
-            {
-                if(target && aiState->GetDefensiveDistance() > 0.f)
-                {
-                    // Circle the target
-                    Circle(eState, targetX, targetY, true,
-                        aiState->GetDefensiveDistance());
-                }
-
-                // Wait no matter what
-                QueueWaitCommand(aiState, (uint32_t)thinkSpeedAdjust);
-                return false;
-            }
+            // Skill activation has been active for at least 15s, cancel
+            // and reset
+            cancelAndReset = true;
         }
-        
+        else if(activated->GetSkillData()->GetBasic()
+            ->GetActivationType() == 5 && target &&
+            aiState->GetDefensiveDistance() > 0.f)
+        {
+            // If we have a skill waiting on being hit, either circle the
+            // target or just wait
+            if(target && aiState->GetDefensiveDistance() > 0.f)
+            {
+                // Circle the target
+                Circle(eState, targetX, targetY, true,
+                    aiState->GetDefensiveDistance());
+            }
+
+            // Wait no matter what
+            int32_t thinkSpeedAdjust = aiState->GetThinkSpeed() && aiState
+                ->GetThinkSpeed() > 2000 ? aiState->GetThinkSpeed() : 2000;
+            QueueWaitCommand(aiState, (uint32_t)thinkSpeedAdjust);
+            return false;
+        }
+
         if(cancelAndReset)
         {
-            aiState->SetSkillWaitStart(0);
             server->GetSkillManager()->CancelSkill(eState, activated
                 ->GetActivationID());
             activated = nullptr;
         }
-    }
-    else if(aiState->GetSkillWaitStart())
-    {
-        // Shouldn't be set anymore
-        aiState->SetSkillWaitStart(0);
     }
 
     if(activated)
@@ -1294,9 +1356,7 @@ bool AIManager::UpdateEnemyState(
             return false;
         }
 
-        auto definitionManager = server->GetDefinitionManager();
-        auto skillData = definitionManager->GetSkillData(activated
-            ->GetSkillID());
+        auto skillData = activated->GetSkillData();
 
         // Move forward if needed and execute when close enough
         uint8_t moveResponse = SkillAdvance(eState, skillData);
@@ -1312,20 +1372,34 @@ bool AIManager::UpdateEnemyState(
         }
         else if(CanRetrySkill(eState, activated))
         {
-            // Execute the skill
-            auto cmd = std::make_shared<AIUseSkillCommand>(skillData,
-                activated);
-            aiState->QueueCommand(cmd);
+            auto logicGroup = aiState->GetLogicGroup();
+            uint32_t retryStagger = logicGroup
+                ? logicGroup->GetSkillRetryStagger() : 0;
+            if(retryStagger && activated->GetErrorCode() ==
+                (int8_t)SkillErrorCodes_t::ACTION_RETRY &&
+                activated->GetActivationTime())
+            {
+                // Clear the activation time and wait
+                activated->SetActivationTime(0);
+                QueueWaitCommand(aiState, retryStagger, true);
+            }
+            else
+            {
+                // Execute the skill
+                auto cmd = std::make_shared<AIUseSkillCommand>(activated);
+                aiState->QueueCommand(cmd);
+            }
         }
     }
     else
     {
-        // 20% chance to just wait (lower for high aggression)
-        int16_t waitChance = (int16_t)(100.f *
-            (float)aiState->GetAggression() * 0.01f);
+        uint32_t waitTime = 0;
+
+        int16_t waitChance = (int16_t)(100.f * aiState->GetAggression());
         if(RNG(int16_t, 1, waitChance > 25 ? waitChance : 25) <= 20)
         {
-            QueueWaitCommand(aiState, (uint32_t)aiState->GetThinkSpeed());
+            // 20% chance to just wait (lower for high aggression)
+            waitTime = 1000;
         }
         else if(eState->CurrentSkillsCount() > 0)
         {
@@ -1334,27 +1408,33 @@ bool AIManager::UpdateEnemyState(
             if(target)
             {
                 target->ExpireStatusTimes(now);
-                if(AggroLimitEnabled() &&
-                    target->GetStatusTimes(STATUS_KNOCKBACK))
+                uint64_t kbTime = target->GetStatusTimes(STATUS_KNOCKBACK);
+                if(AggroLimitEnabled() && kbTime)
                 {
-                    QueueWaitCommand(aiState,
-                        (uint32_t)aiState->GetThinkSpeed());
-                    return false;
+                    waitTime = (uint32_t)((kbTime - now) / 1000 + 500);
                 }
             }
 
-            // All normal movement is based off skill usage, determine which
-            // skill to use next
-            if(!PrepareSkillUsage(eState))
+            if(!waitTime)
             {
-                // No skill can be used, drop aggro
-                UpdateAggro(eState, -1);
-
-                // Run away if defensive distance specified
-                if(aiState->GetDefensiveDistance() > 0.f)
+                // All normal movement is based off skill usage, determine
+                // which skill to use next
+                if(!PrepareSkillUsage(eState))
                 {
-                    Retreat(eState, targetX, targetY, aiState
-                        ->GetDefensiveDistance(), true);
+                    // No skill can be used, drop aggro
+                    UpdateAggro(eState, -1);
+
+                    // Run away if defensive distance specified
+                    if(aiState->GetDefensiveDistance() > 0.f)
+                    {
+                        Retreat(eState, targetX, targetY, aiState
+                            ->GetDefensiveDistance(), true);
+                    }
+                }
+                else if(!aiState->GetCurrentCommand())
+                {
+                    // Nothing was queued, wait instead
+                    waitTime = (uint32_t)aiState->GetThinkSpeed();
                 }
             }
         }
@@ -1362,6 +1442,11 @@ bool AIManager::UpdateEnemyState(
         {
             // No skills exist, drop aggro
             UpdateAggro(eState, -1);
+        }
+
+        if(waitTime)
+        {
+            QueueWaitCommand(aiState, waitTime);
         }
     }
 
@@ -1397,7 +1482,6 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
     auto spawnLocation = eBase->GetSpawnLocation();
     uint32_t spotID = eBase->GetSpawnSpotID();
 
-    int32_t thinkSpeed = aiState->GetThinkSpeed();
     if((spawnLocation || spotID > 0) && eState->CanMove())
     {
         auto zone = eState->GetZone();
@@ -1448,10 +1532,9 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
             wanderBack &= !zoneManager->PointInPolygon(source, spot->Vertices);
         }
 
-        // Use the destination as a direction to head and either
-        // limit/extend to think speed distance (minimum 500ms)
+        // Use the destination as a direction to head, move for 2s max
         float moveDistance = (float)((float)eState->GetMovementSpeed() *
-            (float)(thinkSpeed < 500 ? 500 : thinkSpeed) * 0.001f);
+            2.f);
 
         Point finalDest = zoneManager->GetLinearPoint(source.x, source.y,
             dest.x, dest.y, moveDistance, false, zone);
@@ -1489,15 +1572,23 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
         }
     }
 
-    QueueWaitCommand(aiState, (uint32_t)(thinkSpeed * RNG(int32_t, 1, 3)));
+    // Wait between 5-12s
+    QueueWaitCommand(aiState, (uint32_t)(RNG(int32_t, 5, 12) * 1000));
 }
 
 uint8_t AIManager::SkillAdvance(
     const std::shared_ptr<ActiveEntityState>& eState,
-    const std::shared_ptr<objects::MiSkillData>& skillData)
+    const std::shared_ptr<objects::MiSkillData>& skillData, float distOverride)
 {
     auto zone = eState->GetZone();
     auto aiState = eState->GetAIState();
+
+    if(skillData->GetRange()->GetValidType() !=
+        objects::MiEffectiveRangeData::ValidType_t::ENEMY)
+    {
+        // No need to advance
+        return 2;
+    }
 
     int32_t targetEntityID = aiState->GetTargetEntityID();
     auto target = zone && targetEntityID > 0
@@ -1507,23 +1598,27 @@ uint8_t AIManager::SkillAdvance(
         return 1;
     }
 
-    uint16_t normalRange = skillData->GetTarget()->GetRange();
-    uint16_t maxTargetRange = (uint16_t)(SKILL_DISTANCE_OFFSET + (normalRange * 10));
-
     Point src(eState->GetCurrentX(), eState->GetCurrentY());
     Point dest(target->GetCurrentX(), target->GetCurrentY());
-    float targetDist = src.GetDistance(dest);
 
-    // Move within range (keep a bit of a buffer for movement)
-    if(targetDist > (maxTargetRange - 20.f))
+    // Convert distance to a whole number to simplify movement
+    float targetDist = (float)floor(src.GetDistance(dest));
+
+    float minDistance = distOverride;
+    if(distOverride == 0.f)
     {
-        // Either run up to max range if a ranged attack or to a close melee
-        // distance
-        float minDistance = normalRange ? (float)maxTargetRange - 20.f
-            : (float)(SKILL_DISTANCE_OFFSET - 50);
+        // Move within range (keep a bit of a buffer for movement)
+        uint16_t normalRange = skillData->GetTarget()->GetRange();
+        uint32_t maxTargetRange = (uint32_t)(SKILL_DISTANCE_OFFSET +
+            (target->GetHitboxSize() * 10) +
+            (uint32_t)(normalRange * 10));
+        minDistance = (float)maxTargetRange - 20.f;
+    }
 
+    if(targetDist > minDistance)
+    {
         // Stop at de-aggro distance
-        float maxDistance = aiState->GetAggroValue(0, false, 2000.f) * 1.5f;
+        float maxDistance = aiState->GetDeaggroDistance(false);
 
         if(Chase(eState, targetEntityID, minDistance, maxDistance, false))
         {
@@ -1564,8 +1659,10 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
     std::list<std::shared_ptr<ActiveEntityState>> possibleTargets;
     if(opponentIDs.size() > 0)
     {
-        float aggroNormal = aiState->GetAggroValue(isNight ? 1 : 0, false, 2000.f);
-        float aggroCast = aiState->GetAggroValue(2, false, 2000.f);
+        float aggroNormal = aiState->GetAggroValue(isNight ? 1 : 0, false,
+            AI_DEFAULT_AGGRO_RANGE);
+        float aggroCast = aiState->GetAggroValue(2, false,
+            AI_DEFAULT_AGGRO_RANGE);
         float aggroMax = aggroNormal > aggroCast ? aggroNormal : aggroCast;
 
         // Currently in combat, only pull from opponents
@@ -1587,8 +1684,8 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
         // Not in combat, find a target to pursue
 
         // If the entity has a low aggression level, check if targetting should occur
-        uint8_t aggression = aiState->GetAggression();
-        if(aggression < 100 && RNG(int32_t, 1, 100) > aggression)
+        uint8_t aggroChance = (uint8_t)(aiState->GetAggression() * 100.f);
+        if(aggroChance < 100 && RNG(int32_t, 1, 100) > aggroChance)
         {
             if(currentTarget > 0)
             {
@@ -1603,9 +1700,9 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
 
         // Get aggro values, default to 2000 units and 80 degree FoV angle (in radians)
         std::pair<float, float> aggroNormal(aiState->GetAggroValue(isNight ? 1 : 0, false,
-            2000.f), aiState->GetAggroValue(isNight ? 1 : 0, true, 1.395f));
-        std::pair<float, float> aggroCast(aiState->GetAggroValue(2, false, 2000.f),
-            aiState->GetAggroValue(2, true, 1.395f));
+            AI_DEFAULT_AGGRO_RANGE), aiState->GetAggroValue(isNight ? 1 : 0, true, 1.395f));
+        std::pair<float, float> aggroCast(aiState->GetAggroValue(2, false,
+            AI_DEFAULT_AGGRO_RANGE), aiState->GetAggroValue(2, true, 1.395f));
 
         // Get all active entities in range and FoV (cast aggro first,
         // leaving in doubles for higher chances when closer)
@@ -1618,11 +1715,13 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
                 sourceY, (double)aggro.first);
 
             // Remove allies, entities not ready yet or in an invalid state
-            filtered.remove_if([eState, castingOnly](
+            filtered.remove_if([eState, castingOnly, now](
                 const std::shared_ptr<ActiveEntityState>& entity)
                 {
+                    entity->ExpireStatusTimes(now);
                     return eState->SameFaction(entity) ||
                         (castingOnly && !entity->GetStatusTimes(STATUS_CHARGING)) ||
+                        entity->GetStatusTimes(STATUS_IGNORE) ||
                         !entity->Ready() || entity->GetAIIgnored() ||
                         !entity->IsAlive();
                 });
@@ -1640,7 +1739,7 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
 
             // If aggro limiting is enabled, remove targets based upon level
             // limit
-            if(AggroLimitEnabled() && !aiState->GetIgnoreAggroLimit())
+            if(AggroLimitEnabled())
             {
                 for(auto f : filtered)
                 {
@@ -1660,10 +1759,29 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
 
                 // Do not pursue if they're already being pursued by too
                 // many enemies (this is ignored for opponents)
-                size_t max = 1;
-                if(aggroLevelLimit >= 99)
+                uint8_t aggroLimit = aiState->GetAggroLimit();
+                size_t max = 0;
+                if(aggroLimit)
                 {
-                    max = 2;
+                    // Aggro limits dictate both max count and priority. The
+                    // count is determined by the sum of bit shift values and
+                    // the priority is determined by the numeric value. For
+                    // example both 0x03 (byte position 1 and 2) and 0x04 (byte
+                    // position 3) designate an aggro limit of 3 but 0x04 takes
+                    // priority over 0x03. Only the count designation is
+                    // currently supported.
+                    for(uint8_t i = 0; i < 8; i++)
+                    {
+                        if((aggroLimit >> i) & 0x01)
+                        {
+                            max = (size_t)(max + i + 1);
+                        }
+                    }
+                }
+                else
+                {
+                    // Default to 1
+                    max = 1;
                 }
 
                 filtered.remove_if([max](
@@ -1764,18 +1882,11 @@ void AIManager::RefreshSkillMap(const std::shared_ptr<ActiveEntityState>& eState
         return;
     }
 
+    auto zone = eState->GetZone();
     bool isEnemy = eState->GetEnemyBase() != nullptr;
+    auto logicGroup = aiState->GetLogicGroup();
 
     AISkillMap_t skillMap;
-
-    // AI entities have the concept of skills that can completely outclass
-    // another. To be eligible to outclass another skill, the first attribute
-    // it must have is that it must always be useable therefore it must have no
-    // cost and no cooldown time. Beyond this the skill must be seen as one
-    // that serves the same function but does so better than the other. This
-    // adds both variance and predictability depending on the skill set and
-    // can be disabled per entity at any time.
-    std::set<uint32_t> outclassEligible;
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -1784,7 +1895,11 @@ void AIManager::RefreshSkillMap(const std::shared_ptr<ActiveEntityState>& eState
     {
         auto skillData = definitionManager->GetSkillData(skillID);
 
-        if(!SkillIsValid(skillData)) continue;
+        if(!SkillIsValid(skillData) ||
+            skillManager->SkillZoneRestricted(skillID, zone))
+        {
+            continue;
+        }
 
         int16_t targetType = -1;
         switch(skillData->GetRange()->GetValidType())
@@ -1882,156 +1997,40 @@ void AIManager::RefreshSkillMap(const std::shared_ptr<ActiveEntityState>& eState
                 }
 
                 // Skill is valid. Calculate the weight (higher for more
-                // preferable skills). Defense is hardly weighted and cannot
-                // outclass anything else.
-                int32_t weight = 2;
-                if(skillType == AI_SKILL_TYPE_DEF)
+                // preferable skills).
+                int32_t weight = skillType == AI_SKILL_TYPE_DEF ? 1 : 2;
+                if(logicGroup)
                 {
-                    weight = 1;
-                }
-                else
-                {
-                    // Determine if the skill can outclass anything while
-                    // calculating the weight
-                    bool canOutclass = skillData->GetCondition()
-                        ->GetCooldownTime() == 0;
+                    // Calculate the weight generic skill weight
 
                     // Having no charge time adds weight
                     if(!skillData->GetCast()->GetBasic()->GetChargeTime())
                     {
-                        weight += aiState->GetSkillWeightCharge();
+                        weight += logicGroup->GetSkillWeightCharge();
                     }
 
                     // Having no cost adds weight
                     if(hpCost == 0 && mpCost == 0)
                     {
-                        weight += aiState->GetSkillWeightCost();
-                    }
-                    else
-                    {
-                        canOutclass = false;
+                        weight += logicGroup->GetSkillWeightCost();
                     }
 
                     // Heal skills are weighted more only when the heal threshold
                     // is active as they are not chosen otherwise
                     if(skillType == AI_SKILL_TYPE_HEAL)
                     {
-                        weight += aiState->GetSkillWeightHeal();
+                        weight += logicGroup->GetSkillWeightHeal();
                     }
 
                     // Ranged attacks add weight
                     if(skillData->GetTarget()->GetRange() > 0)
                     {
-                        weight += aiState->GetSkillWeightRange();
-                    }
-
-                    if(canOutclass)
-                    {
-                        outclassEligible.insert(skillData->GetCommon()->GetID());
+                        weight += logicGroup->GetSkillWeightRange();
                     }
                 }
 
                 skillMap[(uint16_t)skillType].push_back(std::make_pair(
                     skillData, weight));
-            }
-        }
-    }
-
-    if(outclassEligible.size() > 0)
-    {
-        // Determine which skills are considered outclassed
-        for(auto& pair : skillMap)
-        {
-            int16_t validType = -1;
-            if(pair.first == AI_SKILL_TYPE_HEAL)
-            {
-                // Healing skills can only outclass healing skills,
-                // regardless of if they can provide healing
-                validType = AI_SKILL_TYPE_HEAL;
-            }
-
-            for(auto& weightPair : pair.second)
-            {
-                auto def1 = weightPair.first;
-                if(outclassEligible.find(def1->GetCommon()->GetID()) ==
-                    outclassEligible.end())
-                {
-                    continue;
-                }
-
-                // Compare against all other skills not already outclassed
-                for(auto& pair2 : skillMap)
-                {
-                    std::list<std::shared_ptr<objects::MiSkillData>> others;
-                    if(validType != -1 && (int16_t)pair2.first != validType)
-                    {
-                        continue;
-                    }
-
-                    for(auto& weightPair2 : pair2.second)
-                    {
-                        auto def2 = weightPair2.first;
-                        if(def2 != def1 && !aiState->OutclassedSkillsContains(
-                            def2->GetCommon()->GetID()))
-                        {
-                            others.push_back(def2);
-                        }
-                    }
-
-                    for(auto def2 : others)
-                    {
-                        if(def2->GetRange()->GetAoeRange())
-                        {
-                            // Never outclass AoE
-                            continue;
-                        }
-                        else if(def2->GetDamage()->AddStatusesCount())
-                        {
-                            // Never outclass status effect adding skills
-                            continue;
-                        }
-
-                        auto damage1 = def1->GetDamage()->GetBattleDamage();
-                        auto damage2 = def2->GetDamage()->GetBattleDamage();
-                        if(damage1->GetFormula() != damage2->GetFormula())
-                        {
-                            // Damage formulas must match
-                            continue;
-                        }
-                        else if(damage1->GetModifier1() &&
-                            damage1->GetModifier1() < damage2->GetModifier1())
-                        {
-                            // Can't have lower damage potential (HP)
-                            continue;
-                        }
-                        else if(!damage1->GetModifier1() &&
-                            damage1->GetModifier2() &&
-                            damage1->GetModifier2() < damage2->GetModifier2())
-                        {
-                            // If no HP damage, can't have lower damage
-                            // potential (MP)
-                            continue;
-                        }
-
-                        if((pair.first == AI_SKILL_TYPE_CLSR ||
-                            pair.first == AI_SKILL_TYPE_LNGR) &&
-                            def1->GetTarget()->GetRange() <=
-                            def2->GetTarget()->GetRange())
-                        {
-                            // Can't be shorter or same range
-                            continue;
-                        }
-                        else if(def1->GetCast()->GetBasic()->GetUseCount() <
-                            def2->GetCast()->GetBasic()->GetUseCount())
-                        {
-                            // Don't outclass more uses
-                            continue;
-                        }
-
-                        aiState->InsertOutclassedSkills(def2->GetCommon()
-                            ->GetID());
-                    }
-                }
             }
         }
     }
@@ -2118,6 +2117,7 @@ bool AIManager::PrepareSkillUsage(
 {
     auto zone = eState->GetZone();
     auto aiState = eState->GetAIState();
+    auto logicGroup = aiState->GetLogicGroup();
     auto cs = eState->GetCoreStats();
     if(!zone || !cs)
     {
@@ -2151,27 +2151,46 @@ bool AIManager::PrepareSkillUsage(
         }
     }
 
+    if(!aiState->GetNormalSkillUse())
+    {
+        // Do not select a skill via normal logic
+        return false;
+    }
+
     auto skillMap = aiState->GetSkillMap();
 
-    bool canFight = target != nullptr;
-    bool canHeal = (float)cs->GetHP() / (float)cs->GetMaxHP() <=
-        (float)aiState->GetHealThreshold() * 0.01f;
-    bool canSupport = skillMap[AI_SKILL_TYPE_SUPPORT].size() > 0;
-    if(skillMap.size() > 0 && (canFight || canHeal || canSupport))
-    {
-        auto skillManager = mServer.lock()->GetSkillManager();
+    // Non-defensive/support combat skills are only accessible to first
+    // strike entities unless combat has already started
+    bool canFight = target && (aiState->GetStrikeFirst() ||
+        aiState->GetStatus() == AIStatus_t::COMBAT);
 
-        uint16_t totalWeight = 0;
+    bool canHeal = logicGroup && (float)cs->GetHP() /
+        (float)cs->GetMaxHP() <= (float)logicGroup->GetHealThreshold() * 0.01f;
+    bool canSupport = skillMap[AI_SKILL_TYPE_SUPPORT].size() > 0;
+    bool canDefend = skillMap[AI_SKILL_TYPE_DEF].size() > 0;
+    if(skillMap.size() > 0 && (canFight || canHeal || canSupport || canDefend))
+    {
+        auto server = mServer.lock();
+        auto skillManager = server->GetSkillManager();
+
+        std::set<uint32_t> lockedSkills;
+        for(double val : server->GetTokuseiManager()->GetAspectValueList(
+            eState, TokuseiAspectType::SKILL_LOCK))
+        {
+            lockedSkills.insert((uint32_t)val);
+        }
+
         std::list<AISkillWeight_t> weightedSkills;
         std::unordered_map<uint32_t, uint16_t> skillTypes;
         for(auto& pair : skillMap)
         {
             // Make sure the skill type is valid for the current state
             bool isHeal = pair.first == AI_SKILL_TYPE_HEAL;
+            bool isDefense = pair.first == AI_SKILL_TYPE_DEF;
             bool isSupport = pair.first == AI_SKILL_TYPE_SUPPORT;
             if((aiState->GetSkillSettings() & pair.first) != 0 &&
                 ((isHeal && canHeal) ||
-                (!isHeal && !isSupport && canFight) ||
+                (!isHeal && !isSupport && (isDefense || canFight)) ||
                 isSupport)) // No special requirement
             {
                 for(auto& weight : pair.second)
@@ -2179,17 +2198,11 @@ bool AIManager::PrepareSkillUsage(
                     auto skillData = weight.first;
                     uint32_t skillID = skillData->GetCommon()->GetID();
 
-                    // Remove outclassed skills
-                    if(aiState->GetSkipOutclassedSkills() &&
-                        aiState->OutclassedSkillsContains(skillID))
-                    {
-                        continue;
-                    }
-
                     // Make sure its not cooling down or restricted
                     if(eState->SkillCooldownsKeyExists(skillData
                         ->GetBasic()->GetCooldownID()) ||
-                        skillManager->SkillRestricted(eState, skillData))
+                        skillManager->SkillRestricted(eState, skillData) ||
+                        lockedSkills.find(skillID) != lockedSkills.end())
                     {
                         continue;
                     }
@@ -2217,8 +2230,67 @@ bool AIManager::PrepareSkillUsage(
 
                     weightedSkills.push_back(weight);
                     skillTypes[skillID] = pair.first;
-                    totalWeight = (uint16_t)(totalWeight + weight.second);
                 }
+            }
+        }
+
+        if(logicGroup && logicGroup->GetActionTypeWeighted())
+        {
+            // Action type weights exist. Choose which action type we will
+            // use and filter to just that type. If no skill exists that
+            // matches any type configured, no skill will be selected but
+            // the AI will NO deaggro/retreat.
+            std::set<uint8_t> actionTypes;
+            for(auto& pair : weightedSkills)
+            {
+                actionTypes.insert((uint8_t)pair.first->GetBasic()
+                    ->GetActionType());
+            }
+
+            uint16_t totalWeight = 0;
+            std::list<std::pair<uint8_t, uint16_t>> actionTypeWeights;
+            for(uint8_t i = 0; i < 12; i++)
+            {
+                if(actionTypes.find(i) != actionTypes.end())
+                {
+                    uint16_t val = (uint16_t)logicGroup
+                        ->GetActionTypeWeights(i);
+                    actionTypeWeights.push_back(std::make_pair(i, val));
+                    totalWeight = (uint16_t)(totalWeight + val);
+                }
+            }
+
+            uint8_t selectedActionType = 0;
+            if(totalWeight > 0)
+            {
+                uint16_t rVal = RNG(uint16_t, 1, totalWeight);
+                for(auto& pair : actionTypeWeights)
+                {
+                    if(pair.second >= rVal)
+                    {
+                        selectedActionType = pair.first;
+                        break;
+                    }
+                    else
+                    {
+                        rVal = (uint16_t)(rVal - pair.second);
+                    }
+                }
+            }
+
+            if(selectedActionType)
+            {
+                weightedSkills.remove_if([selectedActionType](
+                    const AISkillWeight_t& wSkill)
+                    {
+                        return (uint8_t)wSkill.first->GetBasic()
+                            ->GetActionType() != selectedActionType;
+                    });
+            }
+            else
+            {
+                // Do not act but do not deaggro
+                return true;
             }
         }
 
@@ -2236,20 +2308,34 @@ bool AIManager::PrepareSkillUsage(
             });
 
         std::shared_ptr<objects::MiSkillData> skillData;
-
-        // Pull a random number between 1 and the total weight and use the
-        // first one that exceeds the value that we reduce by weight as we go
-        uint16_t rVal = RNG(uint16_t, 1, totalWeight);
-        for(auto& wSkill : weightedSkills)
+        if(weightedSkills.size() == 1)
         {
-            if(wSkill.second >= rVal)
+            // Only one valid skill left
+            skillData = weightedSkills.begin()->first;
+        }
+        else
+        {
+            // Pull a random number between 1 and the total weight and use
+            // the first one that exceeds the value that we reduce by weight
+            // as we go
+            uint16_t totalWeight = 0;
+            for(auto& wSkill : weightedSkills)
             {
-                skillData = wSkill.first;
-                break;
+                totalWeight = (uint16_t)(totalWeight + wSkill.second);
             }
-            else
+
+            uint16_t rVal = RNG(uint16_t, 1, totalWeight);
+            for(auto& wSkill : weightedSkills)
             {
-                rVal = (uint16_t)(rVal - wSkill.second);
+                if(wSkill.second >= rVal)
+                {
+                    skillData = wSkill.first;
+                    break;
+                }
+                else
+                {
+                    rVal = (uint16_t)(rVal - wSkill.second);
+                }
             }
         }
 
@@ -2270,11 +2356,21 @@ bool AIManager::PrepareSkillUsage(
             switch(skillData->GetBasic()->GetActionType())
             {
             case objects::MiSkillBasicData::ActionType_t::SPIN:
-            case objects::MiSkillBasicData::ActionType_t::RAPID:
+                if(skillTargetID != eState->GetEntityID())
+                {
+                    // Move up to the target first
+                    SkillAdvance(eState, skillData);
+                }
+                break;
+            case objects::MiSkillBasicData::ActionType_t::GUARD:
             case objects::MiSkillBasicData::ActionType_t::COUNTER:
             case objects::MiSkillBasicData::ActionType_t::DODGE:
-                // Move up to the target first
-                SkillAdvance(eState, skillData);
+                if(targetID && aiState->GetDefensiveDistance() > 0.f)
+                {
+                    // Move up to defensive distance
+                    SkillAdvance(eState, skillData, aiState
+                        ->GetDefensiveDistance());
+                }
                 break;
             default:
                 break;

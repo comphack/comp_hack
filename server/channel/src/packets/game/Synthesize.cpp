@@ -40,6 +40,8 @@
 #include <ActivatedAbility.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiSkillData.h>
+#include <MiSkillItemStatusCommonData.h>
 #include <MiSynthesisData.h>
 #include <MiSynthesisItemData.h>
 #include <PlayerExchangeSession.h>
@@ -257,8 +259,9 @@ bool Parsers::Synthesize::Parse(libcomp::ManagerPacket *pPacketManager,
         // Boost the skill execution expertise growth rate based upon
         // success or failure
         auto activated = cState->GetActivatedAbility();
-        if(activated &&
-            activated->GetSkillID() == synthData->GetBaseSkillID())
+        uint32_t activatedSkillID = activated ? activated->GetSkillData()
+            ->GetCommon()->GetID() : 0;
+        if(activatedSkillID && activatedSkillID == synthData->GetBaseSkillID())
         {
             activated->SetExpertiseBoost(synthData->GetExpertBoosts(
                 success ? 1 : 0));

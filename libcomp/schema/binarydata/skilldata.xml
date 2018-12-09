@@ -2,7 +2,7 @@
 <objgen>
     <include path="binarydata/shared.xml"/>
     
-    <object name="MiSkillBasicData" persistent="false">
+    <object name="MiSkillBasicData" persistent="false" scriptenabled="true">
         <member type="u8" name="dependencyType"/>
         <member type="enum" name="actionType" underlying="uint8_t">
             <value num="0">ATTACK</value>
@@ -25,7 +25,7 @@
         <member type="u8" name="basic7" pad="1"/>
         <member type="u32" name="cooldownID"/>
     </object>
-    <object name="MiRestrictionData" persistent="false">
+    <object name="MiRestrictionData" persistent="false" scriptenabled="true">
         <member type="u32" name="restriction1"/>
         <member type="enum" name="weaponType" underlying="uint8_t">
             <value>NONE</value>
@@ -48,7 +48,7 @@
             <value>LONG_RANGE</value>
         </member>
     </object>
-    <object name="MiCostTbl" persistent="false">
+    <object name="MiCostTbl" persistent="false" scriptenabled="true">
         <member type="enum" name="type" underlying="uint8_t">
             <value>HP</value>
             <value>MP</value>
@@ -63,7 +63,7 @@
         <member type="u16" name="cost"/>
         <member type="u32" name="item"/>
     </object>
-    <object name="MiConditionData" persistent="false">
+    <object name="MiConditionData" persistent="false" scriptenabled="true">
         <member type="MiRestrictionData*" name="restriction"/>
         <member type="list" name="costs">
             <element type="MiCostTbl*"/>
@@ -72,21 +72,21 @@
         <member type="s16" name="activeMPDrain"/>
         <member type="u16" name="condition3"/>
     </object>
-    <object name="MiCastBasicData" persistent="false">
+    <object name="MiCastBasicData" persistent="false" scriptenabled="true">
         <member type="u32" name="chargeTime"/>
         <member type="u8" name="useCount"/>
         <member type="u8" name="adjustRestrictions" pad="2"/>
     </object>
-    <object name="MiCastCancelData" persistent="false">
+    <object name="MiCastCancelData" persistent="false" scriptenabled="true">
         <member type="bool" name="damageCancel"/>
         <member type="bool" name="knockbackCancel" pad="2"/>
         <member type="u32" name="autoCancelTime"/>
     </object>
-    <object name="MiCastData" persistent="false">
+    <object name="MiCastData" persistent="false" scriptenabled="true">
         <member type="MiCastBasicData*" name="basic"/>
         <member type="MiCastCancelData*" name="cancel"/>
     </object>
-    <object name="MiTargetData" persistent="false">
+    <object name="MiTargetData" persistent="false" scriptenabled="true">
         <member type="u16" name="range"/>
         <member type="enum" name="type" underlying="uint8_t" pad="1">
             <value num="0">NONE</value>
@@ -104,14 +104,14 @@
             <value num="14">PLAYER</value>
         </member>
     </object>
-    <object name="MiDischargeData" persistent="false">
+    <object name="MiDischargeData" persistent="false" scriptenabled="true">
         <member type="u32" name="completeDelay"/>
         <member type="u32" name="projectileSpeed"/>
         <member type="u32" name="hitDelay"/>
         <member type="u32" name="stiffness"/>
         <member type="bool" name="shotInterruptible" pad="3"/>
     </object>
-    <object name="MiEffectiveRangeData" persistent="false">
+    <object name="MiEffectiveRangeData" persistent="false" scriptenabled="true">
         <member type="enum" name="areaType" underlying="uint8_t">
             <value num="0">NONE</value>
             <value num="1">TARGET_RADIUS</value>
@@ -134,7 +134,7 @@
         <member type="s32" name="aoeRange"/>
         <member type="s32" name="aoeLineWidth"/>
     </object>
-    <object name="MiBattleDamageData" persistent="false">
+    <object name="MiBattleDamageData" persistent="false" scriptenabled="true">
         <member type="enum" name="formula" underlying="uint8_t">
             <value num="0">NONE</value>
             <value num="1">DMG_NORMAL</value>
@@ -155,22 +155,22 @@
         <member type="u8" name="HPDrainPercent"/>
         <member type="u8" name="MPDrainPercent" pad="2"/>
     </object>
-    <object name="MiNegotiationDamageData" persistent="false">
+    <object name="MiNegotiationDamageData" persistent="false" scriptenabled="true">
         <member type="s8" name="successAffability"/>
         <member type="s8" name="failureAffability"/>
         <member type="s8" name="successFear"/>
         <member type="s8" name="failureFear"/>
     </object>
-    <object name="MiBreakData" persistent="false">
+    <object name="MiBreakData" persistent="false" scriptenabled="true">
         <member type="u16" name="weapon"/>
         <member type="u16" name="armor"/>
     </object>
-    <object name="MiKnockBackData" persistent="false">
+    <object name="MiKnockBackData" persistent="false" scriptenabled="true">
         <member type="u8" name="knockBackType"/>
         <member type="s8" name="modifier"/>
         <member type="u16" name="distance"/>
     </object>
-    <object name="MiAddStatusTbl" persistent="false">
+    <object name="MiAddStatusTbl" persistent="false" scriptenabled="true">
         <member type="u32" name="statusID"/>
         <member type="s8" name="maxStack" max="100"/>
         <member type="s8" name="minStack" max="100"/>
@@ -178,7 +178,7 @@
         <member type="bool" name="isReplace"/>
         <member type="u16" name="successRate" pad="2"/>
     </object>
-    <object name="MiDamageData" persistent="false">
+    <object name="MiDamageData" persistent="false" scriptenabled="true">
         <member type="MiBattleDamageData*" name="battleDamage"/>
         <member type="MiNegotiationDamageData*" name="negotiationDamage"/>
         <member type="MiBreakData*" name="breakData"/>
@@ -189,26 +189,26 @@
         </member>
         <member type="u16" name="functionID" pad="2"/>
     </object>
-    <object name="MiAcquisitionData" persistent="false">
+    <object name="MiAcquisitionData" persistent="false" scriptenabled="true">
         <member type="u8" name="inheritanceRestriction"/>
         <member type="s8" name="inheritanceModifier" pad="2"/>
     </object>
-    <object name="MiExpertGrowthTbl" persistent="false">
+    <object name="MiExpertGrowthTbl" persistent="false" scriptenabled="true">
         <member type="u8" name="expertiseID"/>
         <member type="s8" name="growthRate"/>
         <member type="u16" name="expertGrowth3"/>
     </object>
-    <object name="MiSkillCharasticData" persistent="false">
+    <object name="MiSkillCharasticData" persistent="false" scriptenabled="true">
         <member type="array" size="4" name="charastic">
             <element type="s32"/>
         </member>
     </object>
-    <object name="MiSkillSpecialParams" persistent="false">
+    <object name="MiSkillSpecialParams" persistent="false" scriptenabled="true">
         <member type="array" size="4" name="specialParams">
             <element type="s32"/>
         </member>
     </object>
-    <object name="MiSkillPvPData" persistent="false">
+    <object name="MiSkillPvPData" persistent="false" scriptenabled="true">
         <member type="enum" name="PVPRestriction" underlying="uint8_t">
             <value>NONE</value>
             <value>PVP_RESTRICTED</value>
@@ -216,7 +216,7 @@
         </member>
         <member type="u8" name="pvp2" pad="2"/>
     </object>
-    <object name="MiSkillData" persistent="false">
+    <object name="MiSkillData" persistent="false" scriptenabled="true">
         <member type="MiSkillItemStatusCommonData*" name="common"/>
         <member type="MiSkillBasicData*" name="basic"/>
         <member type="MiConditionData*" name="condition"/>

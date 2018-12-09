@@ -360,6 +360,29 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
             (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
     }
+    else if(SkillZoneRestricted(skillID, source->GetZone()))
+    {
+        if(def->GetDamage()->GetFunctionID() == SVR_CONST.SKILL_SPAWN)
+        {
+            // Special error message
+            SendFailure(source, skillID, client,
+                (uint8_t)SkillErrorCodes_t::NOTHING_HAPPENED_HERE);
+        }
+        else
+        {
+            SendFailure(source, skillID, client,
+                (uint8_t)SkillErrorCodes_t::RESTRICED_USE);
+        }
+
+        return false;
+    }
+    else if(tokuseiManager->AspectValueExists(source,
+        TokuseiAspectType::SKILL_LOCK, (double)skillID))
+    {
+        SendFailure(source, skillID, client,
+            (uint8_t)SkillErrorCodes_t::RESTRICED_USE);
+        return false;
+    }
 
     uint8_t activationType = def->GetBasic()->GetActivationType();
 
@@ -401,7 +424,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     }
 
     activated = std::make_shared<objects::ActivatedAbility>();
-    activated->SetSkillID(skillID);
+    activated->SetSkillData(def);
     activated->SetSourceEntity(source);
     activated->SetActivationObjectID(activationObjectID);
     activated->SetTargetObjectID(targetObjectID);
@@ -624,8 +647,8 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
             activated->GetErrorCode() == -1)
         {
             // Currently being used or not ready to execute again
-            SendFailure(source, activated->GetSkillID(), client,
-                (uint8_t)SkillErrorCodes_t::SILENT_FAIL);
+            SendFailure(source, activated->GetSkillData()->GetCommon()
+                ->GetID(), client, (uint8_t)SkillErrorCodes_t::SILENT_FAIL);
             return false;
         }
 
@@ -645,19 +668,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     const std::shared_ptr<ChannelClientConnection> client,
     std::shared_ptr<SkillExecutionContext> ctx)
 {
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-
-    uint32_t skillID = activated->GetSkillID();
-    auto skillData = definitionManager->GetSkillData(skillID);
-    if(nullptr == skillData)
-    {
-        LOG_ERROR(libcomp::String("Unknown skill ID encountered: %1\n")
-            .Arg(skillID));
-        SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
-        return false;
-    }
-
+    auto skillData = activated->GetSkillData();
     auto zone = source ? source->GetZone() : nullptr;
     if(nullptr == zone)
     {
@@ -685,7 +696,8 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         if(state)
         {
             LOG_ERROR(libcomp::String("Invalid source player entity"
-                " attempted to use skill %1: %2\n").Arg(skillID)
+                " attempted to use skill %1: %2\n")
+                .Arg(skillData->GetCommon()->GetID())
                 .Arg(state->GetAccountUID().ToString()));
         }
 
@@ -707,6 +719,14 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     if(skillCategory == 0 || SkillRestricted(source, skillData))
     {
         SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
+        return false;
+    }
+    else if(mServer.lock()->GetTokuseiManager()->AspectValueExists(source,
+        TokuseiAspectType::SKILL_LOCK, (double)skillData->GetCommon()->GetID()))
+    {
+        // Skill may have been locked between activation and execution
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::RESTRICED_USE);
         return false;
     }
 
@@ -881,19 +901,16 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
     }
     else
     {
-        auto server = mServer.lock();
-        auto definitionManager = server->GetDefinitionManager();
-        auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
-
         // If the skill is a special toggle, fire its function again
+        auto skillData = activated->GetSkillData();
         auto functionID = skillData->GetDamage()->GetFunctionID();
         auto fIter = mSkillFunctions.find(functionID);
         if(fIter != mSkillFunctions.end() &&
             skillData->GetBasic()->GetActivationType() == 4)
         {
             auto ctx = std::make_shared<SkillExecutionContext>();
-            auto client = server->GetManagerConnection()->GetEntityClient(
-                source->GetEntityID());
+            auto client = mServer.lock()->GetManagerConnection()
+                ->GetEntityClient(source->GetEntityID());
             fIter->second(*this, activated, ctx, client);
         }
 
@@ -992,6 +1009,33 @@ bool SkillManager::SkillRestricted(const std::shared_ptr<ActiveEntityState> sour
     }
 }
 
+bool SkillManager::SkillZoneRestricted(uint32_t skillID,
+    const std::shared_ptr<Zone> zone)
+{
+    if(!zone)
+    {
+        return true;
+    }
+
+    auto instance = zone->GetInstance();
+    auto variant = instance ? instance->GetVariant() : nullptr;
+    bool whitelistOnly = variant && variant->GetWhitelistSkillsOnly();
+
+    bool blacklisted = zone->GetDefinition()->SkillBlacklistContains(skillID);
+    bool whitelisted = zone->GetDefinition()->SkillWhitelistContains(skillID);
+
+    auto globalDef = mServer.lock()->GetServerDataManager()
+        ->GetZonePartialData(0);
+    if(globalDef)
+    {
+        blacklisted |= globalDef->SkillBlacklistContains(skillID);
+        whitelisted |= globalDef->SkillWhitelistContains(skillID);
+    }
+
+    return whitelistOnly ? !whitelisted : (blacklisted && !whitelisted);
+
+}
+
 bool SkillManager::TargetInRange(
     const std::shared_ptr<ActiveEntityState> source,
     const std::shared_ptr<objects::MiSkillData>& skillData,
@@ -1012,10 +1056,9 @@ bool SkillManager::TargetInRange(
     float distance = source->GetDistance(target->GetCurrentX(),
         target->GetCurrentY());
 
-    // The client sends requests from a distance slightly outside of the
-    // stationary offset distance sometimes so give it some wiggle room
-    uint16_t maxTargetRange = (uint16_t)(SKILL_DISTANCE_OFFSET + 100 +
-        (skillData->GetTarget()->GetRange() * 10));
+    uint32_t maxTargetRange = (uint32_t)(SKILL_DISTANCE_OFFSET +
+        (target->GetHitboxSize() * 10) +
+        (uint32_t)(skillData->GetTarget()->GetRange() * 10));
 
     return (float)maxTargetRange >= distance;
 }
@@ -1608,11 +1651,8 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
         ->GetCalculatedState()->ExistingTokuseiAspectsContains((int8_t)
             TokuseiAspectType::HITSTUN_NULL))
     {
-        auto definitionManager = server->GetDefinitionManager();
-
         auto tActivated = pSkill->PrimaryTarget->GetActivatedAbility();
-        auto tSkillData = tActivated ? definitionManager
-            ->GetSkillData(tActivated->GetSkillID()) : nullptr;
+        auto tSkillData = tActivated ? tActivated->GetSkillData() : nullptr;
         auto tDischarge = tSkillData ? tSkillData->GetDischarge() : nullptr;
         if(tSkillData && tSkillData->GetBasic()->GetActionType() ==
             objects::MiSkillBasicData::ActionType_t::RUSH &&
@@ -1827,8 +1867,8 @@ void SkillManager::SendFailure(
     {
         auto source = std::dynamic_pointer_cast<ActiveEntityState>(
             activated->GetSourceEntity());
-        SendFailure(source, activated->GetSkillID(), client, errorCode,
-            activated->GetActivationID());
+        SendFailure(source, activated->GetSkillData()->GetCommon()->GetID(),
+            client, errorCode, activated->GetActivationID());
     }
 
     if(activated->GetActivationTargetType() == ACTIVATION_FUSION)
@@ -2282,9 +2322,7 @@ bool SkillManager::ExecuteNormalSkill(
         return false;
     }
 
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto skillData = activated->GetSkillData();
 
     bool retry = false;
     if(!ctx->FastTrack && IFramesEnabled() &&
@@ -2340,9 +2378,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         activated->GetSourceEntity());
 
     auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-    auto skillID = activated->GetSkillID();
-    auto skillData = definitionManager->GetSkillData(skillID);
+    auto skillData = activated->GetSkillData();
 
     auto pSkill = GetProcessingSkill(activated, ctx);
     auto zone = pSkill->CurrentZone;
@@ -2555,7 +2591,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 if(skill.Definition->GetBasic()->GetActionType() !=
                     objects::MiSkillBasicData::ActionType_t::RUSH)
                 {
-                    dest = mServer.lock()->GetZoneManager()->GetLinearPoint(
+                    dest = server->GetZoneManager()->GetLinearPoint(
                         src.x, src.y, dest.x, dest.y, (float)aoeRange, false);
                 }
                 
@@ -2803,8 +2839,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 auto tActivated = target.EntityState->GetActivatedAbility();
                 if(tActivated && target.EntityState != source)
                 {
-                    auto tSkillData = definitionManager->GetSkillData(
-                        tActivated->GetSkillID());
+                    auto tSkillData = tActivated->GetSkillData();
                     switch(tSkillData->GetBasic()->GetActionType())
                     {
                     case objects::MiSkillBasicData::ActionType_t::GUARD:
@@ -3053,6 +3088,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         auto calcState = GetCalculatedState(source, pSkill, false, target.EntityState);
 
         target.EntityState->RefreshCurrentPosition(now);
+        target.EntityState->ExpireStatusTimes(now);
 
         bool hpMpSet = false;
         int32_t hpDamage = target.TechnicalDamage + target.PursuitDamage;
@@ -3127,10 +3163,18 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
         }
 
-        if(applyKnockback && target.GuardModifier)
+        if(applyKnockback)
         {
-            // Guarding prevents all knockback increases
-            applyKnockback = false;
+            if(target.EntityState->GetStatusTimes(STATUS_KNOCKBACK))
+            {
+                // Cannot knockback during knockback (or active rush)
+                applyKnockback = false;
+            }
+            else if(target.GuardModifier)
+            {
+                // Guarding prevents all knockback increases
+                applyKnockback = false;
+            }
         }
 
         if(applyKnockback)
@@ -3639,6 +3683,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
             bool rushing = false, knockedBack = false;
             bool defended = isDefense && target.EntityState == skill.PrimaryTarget;
+            hitTimings[0] = hitTimings[1] = hitTimings[2] = 0;
             if(target.Flags1 & FLAG1_KNOCKBACK)
             {
                 uint8_t kbEffectiveType = kbType;
@@ -3709,8 +3754,17 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 float dist = source->GetDistance(primaryTarget->GetCurrentX(),
                     primaryTarget->GetCurrentY());
 
-                Point rushPoint = zoneManager->MoveRelative(source, primaryTarget->GetCurrentX(),
-                    primaryTarget->GetCurrentY(), dist + 250.f, false, now, completeTime);
+                hitTimings[0] = now;
+                hitTimings[1] = now + 200000ULL;
+
+                // Count rushing as knockback because functionally the same
+                // AI and skill rules apply
+                target.EntityState->SetStatusTimes(STATUS_KNOCKBACK,
+                    hitTimings[1]);
+
+                Point rushPoint = zoneManager->MoveRelative(source,
+                    primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(),
+                    dist + 250.f, false, now, hitTimings[1]);
 
                 p.WriteFloat(rushPoint.x);
                 p.WriteFloat(rushPoint.y);
@@ -3725,11 +3779,9 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             p.WriteFloat(0);    // Unused additional timing value
 
             // Calculate hit timing
-            hitTimings[0] = hitTimings[1] = hitTimings[2] = 0;
             if(rushing)
             {
-                hitTimings[0] = activated->GetExecutionTime();
-                hitTimings[1] = activated->GetExecutionTime() + 200000ULL;
+                // Timing calculated above
             }
             else if(target.CanHitstun)
             {
@@ -3911,6 +3963,10 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             (target.Flags1 & FLAG1_REVIVAL) != 0)
         {
             revived.insert(eState);
+
+            // Set AI ignore for 5s
+            target.EntityState->SetStatusTimes(STATUS_IGNORE,
+                now + (uint64_t)5000000ULL);
         }
         else if((target.Flags1 & FLAG1_LETHAL) != 0)
         {
@@ -4088,12 +4144,12 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto skillData = activated->GetSkillData();
     auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
     auto cSource = std::dynamic_pointer_cast<CharacterState>(source);
 
     auto skill = std::make_shared<ProcessingSkill>();
-    skill->SkillID = activated->GetSkillID();
+    skill->SkillID = skillData->GetCommon()->GetID();
     skill->Definition = skillData;
     skill->Activated = activated;
     skill->BaseAffinity = skill->EffectiveAffinity = skillData->GetCommon()->GetAffinity();
@@ -4719,13 +4775,12 @@ bool SkillManager::ApplyPrimaryCounter(
     }
 
     SkillTargetResult target;
+    target.PrimaryTarget = true;
     target.EntityState = pSkill->PrimaryTarget;
     target.CalcState = GetCalculatedState(pSkill->PrimaryTarget, pSkill,
         true, source);
 
-    auto server = mServer.lock();
-    auto tSkillData = server->GetDefinitionManager()
-        ->GetSkillData(tActivated->GetSkillID());
+    auto tSkillData = tActivated->GetSkillData();
     switch(tSkillData->GetBasic()->GetActionType())
     {
     case objects::MiSkillBasicData::ActionType_t::COUNTER:
@@ -4795,8 +4850,7 @@ bool SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
     if(guardValid &&
         tActivated->GetChargedTime() <= pSkill->Activated->GetHitTime())
     {
-        auto tSkillData = mServer.lock()->GetDefinitionManager()
-            ->GetSkillData(tActivated->GetSkillID());
+        auto tSkillData = tActivated->GetSkillData();
 
         target.Flags1 |= FLAG1_GUARDED;
         target.GuardModifier = tSkillData->GetDamage()
@@ -4842,9 +4896,7 @@ bool SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
     int8_t activationID = tActivated->GetActivationID();
     if(pSkill->Definition->GetBasic()->GetDefensible())
     {
-        auto server = mServer.lock();
-        auto definitionManager = server->GetDefinitionManager();
-        auto tSkillData = definitionManager->GetSkillData(tActivated->GetSkillID());
+        auto tSkillData = tActivated->GetSkillData();
         switch(pSkill->Definition->GetBasic()->GetActionType())
         {
         case objects::MiSkillBasicData::ActionType_t::ATTACK:
@@ -4891,9 +4943,7 @@ bool SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
     int8_t activationID = tActivated->GetActivationID();
     if(pSkill->Definition->GetBasic()->GetDefensible())
     {
-        auto server = mServer.lock();
-        auto definitionManager = server->GetDefinitionManager();
-        auto tSkillData = definitionManager->GetSkillData(tActivated->GetSkillID());
+        auto tSkillData = tActivated->GetSkillData();
         switch(pSkill->Definition->GetBasic()->GetActionType())
         {
         case objects::MiSkillBasicData::ActionType_t::SHOT:
@@ -4917,6 +4967,7 @@ bool SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
                     return true;
                 }
             }
+            break;
         default:
             break;
         }
@@ -4936,11 +4987,8 @@ bool SkillManager::HandleSkillInterrupt(const std::shared_ptr<
     // Check for skills that need to be cancelled
     if(cancelFlags & (EFFECT_CANCEL_DAMAGE | EFFECT_CANCEL_KNOCKBACK))
     {
-        auto definitionManager = mServer.lock()->GetDefinitionManager();
-
         auto tActivated = eState->GetActivatedAbility();
-        auto tSkillData = tActivated
-            ? definitionManager->GetSkillData(tActivated->GetSkillID()) : nullptr;
+        auto tSkillData = tActivated ? tActivated->GetSkillData() : nullptr;
         bool applyInterrupt = false;
         if(tSkillData)
         {
@@ -4976,9 +5024,11 @@ bool SkillManager::HandleSkillInterrupt(const std::shared_ptr<
                         (interruptNull < 0 || RNG(int32_t, 1, 10000) > interruptNull);
                 }
             }
-            else if(target.CanHitstun && tDischarge->GetShotInterruptible())
+            else if(target.CanHitstun && tDischarge->GetShotInterruptible() &&
+                !pSkill->IsProjectile)
             {
-                // Determine which part of the skill can be interrupted
+                // Determine which part of the skill can be interrupted (not
+                // possible for projectile sources past charge)
                 uint64_t hit = pSkill->Activated->GetHitTime();
                 if(tActivated->GetHitTime() == 0)
                 {
@@ -7366,17 +7416,16 @@ void SkillManager::InterruptEvents(const std::set<int32_t>& worldCIDs)
     }
 }
 
-bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnection> client,
+bool SkillManager::ToggleSwitchSkill(
+    const std::shared_ptr<ChannelClientConnection> client,
     std::shared_ptr<objects::ActivatedAbility> activated,
     const std::shared_ptr<SkillExecutionContext>& ctx)
 {
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
 
-    auto characterManager = server->GetCharacterManager();
-    auto skillID = activated->GetSkillID();
-    auto skillData = definitionManager->GetSkillData(skillID);
+    auto skillData = activated->GetSkillData();
+    uint32_t skillID = skillData->GetCommon()->GetID();
 
     bool toggleOn = false;
     if(source->ActiveSwitchSkillsContains(skillID))
@@ -7402,12 +7451,16 @@ bool SkillManager::ToggleSwitchSkill(const std::shared_ptr<ChannelClientConnecti
 
         client->QueuePacket(p);
 
-        characterManager->RecalculateTokuseiAndStats(source, client);
+        mServer.lock()->GetCharacterManager()->RecalculateTokuseiAndStats(
+            source, client);
 
         client->FlushOutgoing();
     }
     else
     {
+        auto server = mServer.lock();
+        auto definitionManager = server->GetDefinitionManager();
+
         server->GetTokuseiManager()->Recalculate(source, false);
         source->RecalculateStats(definitionManager);
     }
@@ -8784,10 +8837,12 @@ void SkillManager::FinalizeSkillExecution(
 
         if(pSkill->PrimaryTarget && pSkill->PrimaryTarget != source)
         {
-            // Rush forward to the melee attack distance for 500ms
-            Point targetPoint(pSkill->PrimaryTarget->GetCurrentX(),
-                pSkill->PrimaryTarget->GetCurrentY());
-            float dist = source->GetDistance(targetPoint.x, targetPoint.y);
+            // Rush forward to the melee attack distance for 500ms. Use
+            // destination coordinates instead of current in case they
+            // are also rushing right now.
+            Point targetPoint(pSkill->PrimaryTarget->GetDestinationX(),
+                pSkill->PrimaryTarget->GetDestinationY());
+            float dist = sourcePoint.GetDistance(targetPoint);
             if(dist > 200.f)
             {
                 Point rushStart = server->GetZoneManager()->GetLinearPoint(
@@ -8855,7 +8910,7 @@ void SkillManager::FinalizeSkillExecution(
 
         multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
 
-        characterManager->UpdateExpertise(client, activated->GetSkillID(),
+        characterManager->UpdateExpertise(client, pSkill->SkillID,
             activated->GetExpertiseBoost(), multiplier);
     }
 
@@ -9025,15 +9080,18 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
     return !executed || !moreUses;
 }
 
-bool SkillManager::SpecialSkill(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::SpecialSkill(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     (void)ctx;
     (void)client;
 
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
-    if(source->GetSpecialActivations(activated->GetActivationID()) == activated)
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
+    if(source->GetSpecialActivations(activated
+        ->GetActivationID()) == activated)
     {
         // Clean up the special activation
         source->RemoveSpecialActivations(activated->GetActivationID());
@@ -9044,11 +9102,13 @@ bool SkillManager::SpecialSkill(const std::shared_ptr<objects::ActivatedAbility>
     return true;
 }
 
-bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::Cameo(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -9068,7 +9128,8 @@ bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activ
         return false;
     }
 
-    // Drop the durability of the equipped ring by 1000 points, fail if we can't
+    // Drop the durability of the equipped ring by 1000 points,
+    // fail if we can't
     auto item = character->GetEquippedItems(
         (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING).Get();
 
@@ -9117,7 +9178,8 @@ bool SkillManager::Cameo(const std::shared_ptr<objects::ActivatedAbility>& activ
     return true;
 }
 
-bool SkillManager::Cloak(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::Cloak(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
@@ -9133,10 +9195,8 @@ bool SkillManager::Cloak(const std::shared_ptr<objects::ActivatedAbility>& activ
     }
 
     // Check game time
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
-    auto worldClock = server->GetWorldClockTime();
+    auto skillData = activated->GetSkillData();
+    auto worldClock = mServer.lock()->GetWorldClockTime();
     int32_t gameTime = (int32_t)((worldClock.Hour * 100) + worldClock.Min);
 
     auto special = skillData->GetSpecial();
@@ -9164,11 +9224,13 @@ bool SkillManager::Cloak(const std::shared_ptr<objects::ActivatedAbility>& activ
     }
 }
 
-bool SkillManager::DCM(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::DCM(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -9540,11 +9602,13 @@ bool SkillManager::DigitalizeCancel(
     return true;
 }
 
-bool SkillManager::DirectStatus(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::DirectStatus(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -9618,11 +9682,13 @@ bool SkillManager::DirectStatus(const std::shared_ptr<objects::ActivatedAbility>
     return true;
 }
 
-bool SkillManager::EquipItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::EquipItem(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -9658,11 +9724,13 @@ bool SkillManager::EquipItem(const std::shared_ptr<objects::ActivatedAbility>& a
     return true;
 }
 
-bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::FamiliarityUp(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -9694,7 +9762,7 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto skillData = activated->GetSkillData();
     
     // Present is retrieved after updating the familiarity for an update but
     // the skill errors if any present will be given based on the starting
@@ -9711,8 +9779,8 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
         return false;
     }
 
-    // Skills of this type add a "cooldown status effect". If the player character
-    // already has it, do not allow the skill's usage
+    // Skills of this type add a "cooldown status effect". If the player
+    // character already has it, do not allow the skill's usage
     auto statusEffects = cState->GetStatusEffects();
     for(auto addStatus : skillData->GetDamage()->GetAddStatuses())
     {
@@ -9794,17 +9862,19 @@ bool SkillManager::FamiliarityUp(const std::shared_ptr<objects::ActivatedAbility
         uint32_t presentType = characterManager->GetDemonPresent(demon->GetType(),
             demon->GetCoreStats()->GetLevel(), demon->GetFamiliarity(), rarity);
         GiveDemonPresent(client, demon->GetType(), presentType, rarity,
-            activated->GetSkillID());
+            skillData->GetCommon()->GetID());
     }
 
     return true;
 }
 
-bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::FamiliarityUpItem(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -9832,10 +9902,7 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
         return false;
     }
 
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
-
+    auto skillData = activated->GetSkillData();
     auto special = skillData->GetSpecial();
 
     int32_t maxFamiliarity = special->GetSpecialParams(0);
@@ -9843,7 +9910,8 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
     int32_t minIncrease = special->GetSpecialParams(2);
     int32_t raceRestrict = special->GetSpecialParams(3);
 
-    if(raceRestrict && (int32_t)demonData->GetCategory()->GetRace() != raceRestrict)
+    if(raceRestrict &&
+        (int32_t)demonData->GetCategory()->GetRace() != raceRestrict)
     {
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_INCOMPATIBLE);
@@ -9864,7 +9932,8 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
         if(maxFamiliarity && deltaPercent)
         {
             fPoints = (int32_t)ceill(
-                floorl((float)(maxFamiliarity - currentVal) * deltaPercent * 0.01f) - 1);
+                floorl((float)(maxFamiliarity - currentVal) *
+                    deltaPercent * 0.01f) - 1);
         }
 
         if(minIncrease && fPoints < minIncrease)
@@ -9872,7 +9941,8 @@ bool SkillManager::FamiliarityUpItem(const std::shared_ptr<objects::ActivatedAbi
             fPoints = minIncrease;
         }
 
-        server->GetCharacterManager()->UpdateFamiliarity(client, fPoints, true);
+        mServer.lock()->GetCharacterManager()->UpdateFamiliarity(client,
+            fPoints, true);
     }
 
     return true;
@@ -9883,7 +9953,8 @@ bool SkillManager::ForgetAllExpertiseSkills(
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -9971,9 +10042,7 @@ bool SkillManager::MinionDespawn(
         return false;
     }
 
-    auto definitionManager = mServer.lock()->GetDefinitionManager();
-
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto skillData = activated->GetSkillData();
     auto params = skillData->GetSpecial()->GetSpecialParams();
 
     auto zoneDef = zone->GetDefinition();
@@ -10018,10 +10087,7 @@ bool SkillManager::MinionSpawn(
         return false;
     }
 
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto skillData = activated->GetSkillData();
     auto params = skillData->GetSpecial()->GetSpecialParams();
 
     // Pull the spawn location group information from the current zone
@@ -10037,8 +10103,8 @@ bool SkillManager::MinionSpawn(
     auto slg = zoneDef->GetSpawnLocationGroups((uint32_t)params[1]);
     if(!slg)
     {
-        LOG_ERROR(libcomp::String("Failed to use MinionSpawn skill from invalid"
-            " SpawnLocationGroup: %1\n").Arg(params[1]));
+        LOG_ERROR(libcomp::String("Failed to use MinionSpawn skill from"
+            " invalid SpawnLocationGroup: %1\n").Arg(params[1]));
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
@@ -10046,7 +10112,7 @@ bool SkillManager::MinionSpawn(
 
     if(ProcessSkillResult(activated, ctx))
     {
-        auto zoneManager = server->GetZoneManager();
+        auto zoneManager = mServer.lock()->GetZoneManager();
         
         uint32_t sgID = libcomp::Randomizer::GetEntry(slg->GetGroupIDs());
 
@@ -10104,11 +10170,13 @@ bool SkillManager::MinionSpawn(
     return true;
 }
 
-bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::Mooch(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -10139,7 +10207,7 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto skillData = activated->GetSkillData();
 
     if(characterManager->GetFamiliarityRank(demon->GetFamiliarity()) < 3)
     {
@@ -10212,12 +10280,13 @@ bool SkillManager::Mooch(const std::shared_ptr<objects::ActivatedAbility>& activ
     }
 
     GiveDemonPresent(client, demon->GetType(), presentType, rarity,
-        activated->GetSkillID());
+        skillData->GetCommon()->GetID());
 
     return true;
 }
 
-bool SkillManager::Mount(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::Mount(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
@@ -10249,6 +10318,9 @@ bool SkillManager::Mount(const std::shared_ptr<objects::ActivatedAbility>& activ
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
+
+    auto skillData = activated->GetSkillData();
+    uint32_t skillID = skillData->GetCommon()->GetID();
 
     bool end = false;
     if(cState->StatusEffectActive(SVR_CONST.STATUS_MOUNT) ||
@@ -10315,8 +10387,6 @@ bool SkillManager::Mount(const std::shared_ptr<objects::ActivatedAbility>& activ
             return false;
         }
 
-        auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
-
         // Match the demon to the mount skill and item
         std::set<uint32_t> validDemons;
         for(int32_t demonType : skillData->GetSpecial()->GetSpecialParams())
@@ -10339,7 +10409,7 @@ bool SkillManager::Mount(const std::shared_ptr<objects::ActivatedAbility>& activ
                 for(auto aspect : tokusei->GetAspects())
                 {
                     if(aspect->GetType() == TokuseiAspectType::SKILL_ADD &&
-                        (uint32_t)aspect->GetValue() == activated->GetSkillID())
+                        (uint32_t)aspect->GetValue() == skillID)
                     {
                         ringValid = true;
                         break;
@@ -10379,8 +10449,8 @@ bool SkillManager::Mount(const std::shared_ptr<objects::ActivatedAbility>& activ
         else
         {
             // Toggle the skill on character and demon
-            cState->InsertActiveSwitchSkills(activated->GetSkillID());
-            dState->InsertActiveSwitchSkills(activated->GetSkillID());
+            cState->InsertActiveSwitchSkills(skillID);
+            dState->InsertActiveSwitchSkills(skillID);
 
             // Update the demon's display state and warp it
             dState->SetDisplayState(ActiveDisplayState_t::MOUNT);
@@ -10401,7 +10471,8 @@ bool SkillManager::Mount(const std::shared_ptr<objects::ActivatedAbility>& activ
     }
 }
 
-bool SkillManager::RandomItem(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::RandomItem(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
@@ -10489,7 +10560,8 @@ bool SkillManager::RandomItem(const std::shared_ptr<objects::ActivatedAbility>& 
     return true;
 }
 
-bool SkillManager::Randomize(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::Randomize(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
@@ -10499,9 +10571,7 @@ bool SkillManager::Randomize(const std::shared_ptr<objects::ActivatedAbility>& a
 
     // No validation needed for this one
 
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto skillData = activated->GetSkillData();
 
     ProcessSkillResult(activated, ctx);
 
@@ -10526,16 +10596,18 @@ bool SkillManager::Randomize(const std::shared_ptr<objects::ActivatedAbility>& a
             (uint32_t)params[1]));
     }
 
-    server->GetZoneManager()->BroadcastPacket(client, notify);
+    mServer.lock()->GetZoneManager()->BroadcastPacket(client, notify);
 
     return true;
 }
 
-bool SkillManager::Respec(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::Respec(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -10633,18 +10705,18 @@ bool SkillManager::Respec(const std::shared_ptr<objects::ActivatedAbility>& acti
     }
 }
 
-bool SkillManager::Rest(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::Rest(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
     (void)ctx;
 
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     // Do not call SpecialSkill as this needs to persist as a special activation
 
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto skillData = activated->GetSkillData();
 
     source->ExpireStatusTimes(ChannelServer::GetServerTime());
     if(source->StatusTimesKeyExists(STATUS_RESTING))
@@ -10672,12 +10744,15 @@ bool SkillManager::Rest(const std::shared_ptr<objects::ActivatedAbility>& activa
             effects[addStatus->GetStatusID()] = StatusEffectChange(
                 addStatus->GetStatusID(), stack, addStatus->GetIsReplace());
         }
+
+        auto definitionManager = mServer.lock()->GetDefinitionManager();
         source->AddStatusEffects(effects, definitionManager);
 
         source->SetStatusTimes(STATUS_RESTING, 0);
     }
 
-    server->GetCharacterManager()->RecalculateTokuseiAndStats(source, client);
+    mServer.lock()->GetCharacterManager()->RecalculateTokuseiAndStats(source,
+        client);
 
     // Active toggle skill "Rest" only activates and cancels, it never executes
     return true;
@@ -10701,7 +10776,6 @@ bool SkillManager::Spawn(
     }
 
     auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
     auto serverDataManager = server->GetServerDataManager();
 
     // Zone independent spawns are restricted to fields
@@ -10723,7 +10797,7 @@ bool SkillManager::Spawn(
         return false;
     }
 
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto skillData = activated->GetSkillData();
     auto params = skillData->GetSpecial()->GetSpecialParams();
 
     // Pull the spawn group information from the global partial
@@ -10825,10 +10899,7 @@ bool SkillManager::SpawnZone(
         return false;
     }
 
-    auto server = mServer.lock();
-    auto definitionManager = server->GetDefinitionManager();
-
-    auto skillData = definitionManager->GetSkillData(activated->GetSkillID());
+    auto skillData = activated->GetSkillData();
     auto params = skillData->GetSpecial()->GetSpecialParams();
 
     // Pull the spawn group information from the current zone
@@ -10860,7 +10931,7 @@ bool SkillManager::SpawnZone(
 
     if(ProcessSkillResult(activated, ctx))
     {
-        auto zoneManager = server->GetZoneManager();
+        auto zoneManager = mServer.lock()->GetZoneManager();
 
         Point center(source->GetCurrentX(), source->GetCurrentY());
 
@@ -10920,11 +10991,13 @@ bool SkillManager::SpawnZone(
     return true;
 }
 
-bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::SummonDemon(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -10982,11 +11055,13 @@ bool SkillManager::SummonDemon(const std::shared_ptr<objects::ActivatedAbility>&
     return true;
 }
 
-bool SkillManager::StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::StoreDemon(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -11028,11 +11103,13 @@ bool SkillManager::StoreDemon(const std::shared_ptr<objects::ActivatedAbility>& 
     return true;
 }
 
-bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::Traesto(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -11120,11 +11197,13 @@ bool SkillManager::Traesto(const std::shared_ptr<objects::ActivatedAbility>& act
     }
 }
 
-bool SkillManager::XPUp(const std::shared_ptr<objects::ActivatedAbility>& activated,
+bool SkillManager::XPUp(
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<SkillExecutionContext>& ctx,
     const std::shared_ptr<ChannelClientConnection>& client)
 {
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     SpecialSkill(activated, ctx, client);
 
     if(!client)
@@ -11172,7 +11251,8 @@ bool SkillManager::XPUp(const std::shared_ptr<objects::ActivatedAbility>& activa
     }
 }
 
-void SkillManager::GiveDemonPresent(const std::shared_ptr<ChannelClientConnection>& client,
+void SkillManager::GiveDemonPresent(
+    const std::shared_ptr<ChannelClientConnection>& client,
     uint32_t demonType, uint32_t itemType, int8_t rarity, uint32_t skillID)
 {
     if(!client || itemType == 0)
@@ -11221,7 +11301,7 @@ void SkillManager::SendActivateSkill(
         p.WritePacketCode(
             ChannelToClientPacketCode_t::PACKET_SKILL_ACTIVATED);
         p.WriteS32Little(source->GetEntityID());
-        p.WriteU32Little(activated->GetSkillID());
+        p.WriteU32Little(pSkill->SkillID);
         p.WriteS8(activated->GetActivationID());
 
         timeMap[11] = activated->GetChargedTime();
@@ -11281,7 +11361,7 @@ void SkillManager::SendExecuteSkill(
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTED);
         p.WriteS32Little(source->GetEntityID());
-        p.WriteU32Little(activated->GetSkillID());
+        p.WriteU32Little(pSkill->SkillID);
         p.WriteS8(activated->GetActivationID());
         p.WriteS32Little(targetedEntityID);
 
@@ -11346,7 +11426,7 @@ void SkillManager::SendExecuteSkillInstant(
             ChannelToClientPacketCode_t::PACKET_SKILL_EXECUTED_INSTANT);
         p.WriteU8(errorCode);
         p.WriteS32Little(source->GetEntityID());
-        p.WriteU32Little(activated->GetSkillID());
+        p.WriteU32Little(pSkill->SkillID);
         p.WriteS32Little(targetedEntityID);
 
         uint64_t cooldown = errorCode == 0 ? activated->GetCooldownTime() : 0;
@@ -11369,19 +11449,21 @@ void SkillManager::SendExecuteSkillInstant(
     }
 }
 
-void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> activated,
-    uint8_t mode)
+void SkillManager::SendCompleteSkill(
+    std::shared_ptr<objects::ActivatedAbility> activated, uint8_t mode)
 {
-    // Instant executions are not completed as they are not technically activated
+    // Instant executions are not completed as they are not technically
+    // activated
     if(activated->GetActivationID() == -1)
     {
         return;
     }
 
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     auto zone = source ? source->GetZone() : nullptr;
-    auto zConnections = zone
-        ? zone->GetConnectionList() : std::list<std::shared_ptr<ChannelClientConnection>>();
+    auto zConnections = zone ? zone->GetConnectionList()
+        : std::list<std::shared_ptr<ChannelClientConnection>>();
     if(zConnections.size() > 0)
     {
         RelativeTimeMap timeMap;
@@ -11389,10 +11471,11 @@ void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> 
         libcomp::Packet p;
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_COMPLETED);
         p.WriteS32Little(source->GetEntityID());
-        p.WriteU32Little(activated->GetSkillID());
+        p.WriteU32Little(activated->GetSkillData()->GetCommon()->GetID());
         p.WriteS8(activated->GetActivationID());
 
-        // Write the cooldown time if cancelling in case its set (mostly for multi-use skills)
+        // Write the cooldown time if cancelling in case its set
+        // (mostly for multi-use skills)
         uint64_t cooldown = mode == 1 ? activated->GetCooldownTime() : 0;
         timeMap[p.Size()] = cooldown;
         p.WriteFloat(0.f);
@@ -11404,7 +11487,8 @@ void SkillManager::SendCompleteSkill(std::shared_ptr<objects::ActivatedAbility> 
         if(cooldown)
         {
             // Relative times are only needed if a cooldown is set
-            ChannelClientConnection::SendRelativeTimePacket(zConnections, p, timeMap);
+            ChannelClientConnection::SendRelativeTimePacket(zConnections, p,
+                timeMap);
         }
         else
         {

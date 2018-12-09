@@ -221,6 +221,17 @@ public:
         TokuseiAspectType type, std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
     /**
+     * Determine if the supplied value exists for a specified aspect type on
+     * an entity.
+     * @param eState Pointer to the tokusei source
+     * @param type Aspect type to gather values from
+     * @param value Value to check for
+     * @return true if the value exists, false if it does not
+     */
+    bool AspectValueExists(const std::shared_ptr<ActiveEntityState>& eState,
+        TokuseiAspectType type, double value);
+
+    /**
      * Recalculate all time restricted tokusei based on the current world time
      * @param clock World clock set to the current time
      */

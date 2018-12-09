@@ -31,10 +31,10 @@ SET(VERSION_MAJOR 3)
 SET(VERSION_MINOR 9)
 
 # Patch version (a hotfix).
-SET(VERSION_PATCH 9)
+SET(VERSION_PATCH 10)
 
 # Codename for the version.
-SET(VERSION_CODENAME "Hathor (Unstable)")
+SET(VERSION_CODENAME "Hathor (RC2)")
 
 #
 # END OF VERSION CONSTANTS

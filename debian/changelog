@@ -1,3 +1,15 @@
+comphack (3.9.10) xenial; urgency=low
+
+  * Hathor Release Candidate 2 includes:
+  * More skill timing corrections
+  * AI corrections
+  * Bazaar fix for most systems
+  * Custom packet support
+  * Server time offset customization
+  * Various bug fixes
+
+ -- COMP Omega <compomega@tutanota.com>  Sun, 09 Dec 2018 15:20:00 -0700
+
 comphack (3.9.1.1) xenial; urgency=low
 
   * Removed the old utility comp_capfilter from the Debian package scripts.

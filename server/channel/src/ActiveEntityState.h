@@ -941,6 +941,23 @@ protected:
      * a change occurred.
      * @param stats Map of correct table IDs to calculated stats to set on the
      *  entity
+     * @param dependentBase If true, only dependent stat base values will be
+     *  checked and set. If false, final stats will be checked and set.
+     * @param extraHP Extra HP amount to add to the base MaxHP. Only applies
+     *  when not applying dependent base stats. Used by enemies.
+     * @return 1 if the calculation resulted in a change to the stats that should
+     *  be sent to the client, 2 if one of the changes should be communicated to
+     *  the world (for party members etc), 0 if no change resulted from the
+     *  recalculation
+     */
+    uint8_t CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        bool dependentBase, int32_t extraHP = 0);
+
+    /**
+     * Compare and set the entity's current stats and also keep track of if
+     * a change occurred.
+     * @param stats Map of correct table IDs to calculated stats to set on the
+     *  entity
      * @param extraHP Extra HP amount to add to the base MaxHP. Used by enemies.
      * @return 1 if the calculation resulted in a change to the stats that should
      *  be sent to the client, 2 if one of the changes should be communicated to

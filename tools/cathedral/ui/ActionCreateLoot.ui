@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ActionCreateLoot</class>
+ <widget class="QWidget" name="ActionCreateLoot">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="margin">
+    <number>0</number>
+   </property>
+   <item>
+    <layout class="QFormLayout" name="formLayout">
+     <property name="fieldGrowthPolicy">
+      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Source Context:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="sourceContext">
+       <item>
+        <property name="text">
+         <string>Source</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Party</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>All</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Location:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QComboBox" name="location">
+       <item>
+        <property name="text">
+         <string>World</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Channel</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Instance</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Zone</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_5">
+       <property name="text">
+        <string>Spawn Location Group IDs:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="ActionIDs" name="spawnLocationGroupIDs" native="true"/>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>Spot ID:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QComboBox" name="spotID">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Spawn Group IDs:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="ActionMap" name="spawnGroupIDs" native="true"/>
+     </item>
+     <item row="5" column="1">
+      <widget class="QComboBox" name="mode">
+       <item>
+        <property name="text">
+         <string>Normal</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>One-Time</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>One-Time Random</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>None Exist</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Despawn</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Enable Group</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Disable Group</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Mode:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="QLabel" name="label_7">
+       <property name="text">
+        <string>Defeat Actions:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="ActionList" name="defeatActions" native="true"/>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ActionMap</class>
+   <extends>QWidget</extends>
+   <header>ActionMap.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ActionIDs</class>
+   <extends>QWidget</extends>
+   <header>ActionIDs.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ActionList</class>
+   <extends>QWidget</extends>
+   <header>ActionList.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

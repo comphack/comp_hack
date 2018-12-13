@@ -37,11 +37,14 @@ SET(${PROJECT_NAME}_SRCS
     src/ActionMapItem.cpp
     src/ActionAddRemoveItemsUI.cpp
     src/ActionAddRemoveStatusUI.cpp
+    src/ActionCreateLootUI.cpp
+    src/ActionDelayUI.cpp
     src/ActionDisplayMessageUI.cpp
     src/ActionGrantSkillsUI.cpp
     src/ActionGrantXPUI.cpp
     src/ActionPlayBGMUI.cpp
     src/ActionPlaySoundEffectUI.cpp
+    src/ActionRunScriptUI.cpp
     src/ActionSetHomepointUI.cpp
     src/ActionSetNPCStateUI.cpp
     src/ActionSpawnUI.cpp
@@ -55,6 +58,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ActionUpdateQuestUI.cpp
     src/ActionUpdateZoneFlagsUI.cpp
     src/ActionZoneChangeUI.cpp
+    src/ActionZoneInstanceUI.cpp
     src/MainWindow.cpp
     src/NPCListWindow.cpp
     src/ObjectListModel.cpp
@@ -71,11 +75,14 @@ SET(${PROJECT_NAME}_HDRS
     src/ActionMapItem.h
     src/ActionAddRemoveItemsUI.h
     src/ActionAddRemoveStatusUI.h
+    src/ActionCreateLootUI.h
+    src/ActionDelayUI.h
     src/ActionDisplayMessageUI.h
     src/ActionGrantSkillsUI.h
     src/ActionGrantXPUI.h
     src/ActionPlayBGMUI.h
     src/ActionPlaySoundEffectUI.h
+    src/ActionRunScriptUI.h
     src/ActionSetHomepointUI.h
     src/ActionSetNPCStateUI.h
     src/ActionSpawnUI.h
@@ -89,6 +96,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ActionUpdateQuestUI.h
     src/ActionUpdateZoneFlagsUI.h
     src/ActionZoneChangeUI.h
+    src/ActionZoneInstanceUI.h
     src/MainWindow.h
     src/NPCListWindow.h
     src/ObjectListModel.h
@@ -110,11 +118,14 @@ SET(${PROJECT_NAME}_UIS
     ui/ActionMapItem.ui
     ui/ActionAddRemoveItems.ui
     ui/ActionAddRemoveStatus.ui
+    ui/ActionCreateLoot.ui
+    ui/ActionDelay.ui
     ui/ActionDisplayMessage.ui
     ui/ActionGrantSkills.ui
     ui/ActionGrantXP.ui
     ui/ActionPlayBGM.ui
     ui/ActionPlaySoundEffect.ui
+    ui/ActionRunScript.ui
     ui/ActionSetHomepoint.ui
     ui/ActionSetNPCState.ui
     ui/ActionSpawn.ui
@@ -128,6 +139,7 @@ SET(${PROJECT_NAME}_UIS
     ui/ActionUpdateQuest.ui
     ui/ActionUpdateZoneFlags.ui
     ui/ActionZoneChange.ui
+    ui/ActionZoneInstance.ui
     ui/MainWindow.ui
     ui/ObjectListWindow.ui
 

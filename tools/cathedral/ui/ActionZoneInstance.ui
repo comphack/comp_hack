@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ActionCreateLoot</class>
- <widget class="QWidget" name="ActionCreateLoot">
+ <class>ActionZoneInstance</class>
+ <widget class="QWidget" name="ActionZoneInstance">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -85,94 +85,129 @@
        </item>
       </widget>
      </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="lblDropSetIDs">
+     <item row="2" column="0">
+      <widget class="QLabel" name="lblInstanceID">
        <property name="text">
-        <string>Drop Set IDs:</string>
+        <string>Instance ID:</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
-      <widget class="ActionIDs" name="dropSetIDs" native="true"/>
+     <item row="3" column="0">
+      <widget class="QLabel" name="lblMode">
+       <property name="text">
+        <string>Mode:</string>
+       </property>
+      </widget>
      </item>
      <item row="4" column="0">
-      <widget class="QLabel" name="lblIsBossBox">
+      <widget class="QLabel" name="lblVariantID">
        <property name="text">
-        <string>Boss Box:</string>
+        <string>Variant ID:</string>
        </property>
       </widget>
      </item>
      <item row="5" column="0">
-      <widget class="QLabel" name="lblExpirationTime">
+      <widget class="QLabel" name="lblTimerID">
        <property name="text">
-        <string>Expiration Time:</string>
+        <string>Timer ID:</string>
        </property>
       </widget>
      </item>
      <item row="6" column="0">
-      <widget class="QLabel" name="lblPosition">
+      <widget class="QLabel" name="lblTimerExpirationEvent">
        <property name="text">
-        <string>Position:</string>
+        <string>Timer Expiration Event:</string>
        </property>
       </widget>
      </item>
-     <item row="7" column="0">
-      <widget class="QLabel" name="lblLocations">
-       <property name="text">
-        <string>Locations:</string>
+     <item row="2" column="1">
+      <widget class="QSpinBox" name="instanceID">
+       <property name="maximum">
+        <number>2147483647</number>
        </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QComboBox" name="mode">
+       <item>
+        <property name="text">
+         <string>Create</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Join</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Start Timer</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Stop Timer</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Team PvP</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Team Join</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Clan Join</string>
+        </property>
+       </item>
       </widget>
      </item>
      <item row="4" column="1">
-      <widget class="QCheckBox" name="isBossBox">
-       <property name="text">
-        <string/>
+      <widget class="QSpinBox" name="variantID">
+       <property name="maximum">
+        <number>2147483647</number>
        </property>
       </widget>
      </item>
      <item row="5" column="1">
-      <widget class="QDoubleSpinBox" name="expirationTime">
-       <property name="minimum">
-        <double>-10000.000000000000000</double>
-       </property>
+      <widget class="QSpinBox" name="timerID">
        <property name="maximum">
-        <double>10000.000000000000000</double>
+        <number>2147483647</number>
        </property>
       </widget>
      </item>
      <item row="6" column="1">
-      <widget class="QComboBox" name="position">
+      <layout class="QHBoxLayout" name="layoutTimerExpirationEvent">
        <item>
-        <property name="text">
-         <string>Absolute</string>
-        </property>
+        <widget class="QComboBox" name="timerExpirationEvent">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="editable">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
        <item>
-        <property name="text">
-         <string>Source Relative</string>
-        </property>
+        <widget class="QPushButton" name="timerExpirationEventGo">
+         <property name="text">
+          <string>Go</string>
+         </property>
+        </widget>
        </item>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="lblDrops">
-       <property name="text">
-        <string>Drops:</string>
-       </property>
-      </widget>
+      </layout>
      </item>
     </layout>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>ActionIDs</class>
-   <extends>QWidget</extends>
-   <header>ActionIDs.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/ActionZoneChangeUI.cpp
+ * @file tools/cathedral/src/ActionDelayUI.cpp
  * @ingroup cathedral
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Implementation for a zone change action.
+ * @brief Implementation for a delay action.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,7 +22,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ActionZoneChangeUI.h"
+#include "ActionDelayUI.h"
 
 // Cathedral Includes
 #include "MainWindow.h"
@@ -32,32 +32,33 @@
 #include <QLineEdit>
 
 #include "ui_Action.h"
-#include "ui_ActionZoneChange.h"
+#include "ui_ActionDelay.h"
 #include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionZoneChange::ActionZoneChange(ActionList *pList, MainWindow *pMainWindow,
-    QWidget *pParent) : Action(pList, pMainWindow, pParent)
+ActionDelay::ActionDelay(ActionList *pList,
+    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
+    pMainWindow, pParent)
 {
     QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionZoneChange;
+    prop = new Ui::ActionDelay;
     prop->setupUi(pWidget);
 
-    ui->actionTitle->setText(tr("<b>Zone Change</b>"));
+    ui->actionTitle->setText(tr("<b>Delay</b>"));
     ui->actionLayout->insertWidget(2, pWidget);
 }
 
-ActionZoneChange::~ActionZoneChange()
+ActionDelay::~ActionDelay()
 {
     delete prop;
 }
 
-void ActionZoneChange::Load(const std::shared_ptr<objects::Action>& act)
+void ActionDelay::Load(const std::shared_ptr<objects::Action>& act)
 {
-    mAction = std::dynamic_pointer_cast<objects::ActionZoneChange>(act);
+    mAction = std::dynamic_pointer_cast<objects::ActionDelay>(act);
 
     if(!mAction)
     {
@@ -68,17 +69,15 @@ void ActionZoneChange::Load(const std::shared_ptr<objects::Action>& act)
         mAction->GetSourceContext()));
     prop->location->setCurrentIndex(to_underlying(
         mAction->GetLocation()));
-    prop->zone->setValue(mAction->GetZoneID());
-    prop->dynamicMap->setValue(mAction->GetDynamicMapID());
-    prop->spot->lineEdit()->setText(
-        QString::number(mAction->GetSpotID()));
 
-    prop->x->setValue(mAction->GetDestinationX());
-    prop->y->setValue(mAction->GetDestinationY());
-    prop->rot->setValue(mAction->GetDestinationRotation());
+    prop->type->setCurrentIndex(to_underlying(
+        mAction->GetType()));
+    prop->delayID->setValue(mAction->GetDelayID());
+    prop->duration->setValue(mAction->GetDuration());
+    prop->actions->Load(mAction->GetActions());
 }
 
-std::shared_ptr<objects::Action> ActionZoneChange::Save() const
+std::shared_ptr<objects::Action> ActionDelay::Save() const
 {
     return mAction;
 }

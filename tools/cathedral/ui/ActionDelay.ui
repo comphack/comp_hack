@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ActionCreateLoot</class>
- <widget class="QWidget" name="ActionCreateLoot">
+ <class>ActionDelay</class>
+ <widget class="QWidget" name="ActionDelay">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -85,79 +85,78 @@
        </item>
       </widget>
      </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="lblDropSetIDs">
+     <item row="2" column="0">
+      <widget class="QLabel" name="lblType">
        <property name="text">
-        <string>Drop Set IDs:</string>
+        <string>Type:</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
-      <widget class="ActionIDs" name="dropSetIDs" native="true"/>
+     <item row="2" column="1">
+      <widget class="QComboBox" name="type">
+       <item>
+        <property name="text">
+         <string>Action Delay</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Character Cooldown</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Account Cooldown</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Timer Extend</string>
+        </property>
+       </item>
+      </widget>
      </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="lblIsBossBox">
+     <item row="3" column="0">
+      <widget class="QLabel" name="lblDelayID">
        <property name="text">
-        <string>Boss Box:</string>
+        <string>Delay ID:</string>
        </property>
       </widget>
      </item>
      <item row="5" column="0">
-      <widget class="QLabel" name="lblExpirationTime">
+      <widget class="QLabel" name="lblActions">
        <property name="text">
-        <string>Expiration Time:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0">
-      <widget class="QLabel" name="lblPosition">
-       <property name="text">
-        <string>Position:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="7" column="0">
-      <widget class="QLabel" name="lblLocations">
-       <property name="text">
-        <string>Locations:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QCheckBox" name="isBossBox">
-       <property name="text">
-        <string/>
+        <string>Actions:</string>
        </property>
       </widget>
      </item>
      <item row="5" column="1">
-      <widget class="QDoubleSpinBox" name="expirationTime">
+      <widget class="ActionList" name="actions" native="true"/>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="lblDuration">
+       <property name="text">
+        <string>Duration:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QSpinBox" name="delayID">
        <property name="minimum">
-        <double>-10000.000000000000000</double>
+        <number>-2147483647</number>
        </property>
        <property name="maximum">
-        <double>10000.000000000000000</double>
+        <number>2147483647</number>
        </property>
       </widget>
      </item>
-     <item row="6" column="1">
-      <widget class="QComboBox" name="position">
-       <item>
-        <property name="text">
-         <string>Absolute</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Source Relative</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="lblDrops">
-       <property name="text">
-        <string>Drops:</string>
+     <item row="4" column="1">
+      <widget class="QSpinBox" name="duration">
+       <property name="minimum">
+        <number>0</number>
+       </property>
+       <property name="maximum">
+        <number>2147483647</number>
        </property>
       </widget>
      </item>
@@ -167,9 +166,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ActionIDs</class>
+   <class>ActionList</class>
    <extends>QWidget</extends>
-   <header>ActionIDs.h</header>
+   <header>ActionList.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

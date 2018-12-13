@@ -28,11 +28,14 @@
 #include "ActionUI.h"
 #include "ActionAddRemoveItemsUI.h"
 #include "ActionAddRemoveStatusUI.h"
+#include "ActionCreateLootUI.h"
+#include "ActionDelayUI.h"
 #include "ActionDisplayMessageUI.h"
 #include "ActionGrantSkillsUI.h"
 #include "ActionGrantXPUI.h"
 #include "ActionPlayBGMUI.h"
 #include "ActionPlaySoundEffectUI.h"
+#include "ActionRunScriptUI.h"
 #include "ActionSetHomepointUI.h"
 #include "ActionSetNPCStateUI.h"
 #include "ActionSpawnUI.h"
@@ -46,6 +49,7 @@
 #include "ActionUpdateQuestUI.h"
 #include "ActionUpdateZoneFlagsUI.h"
 #include "ActionZoneChangeUI.h"
+#include "ActionZoneInstanceUI.h"
 #include "MainWindow.h"
 
 // objects Includes
@@ -104,6 +108,16 @@ ActionList::ActionList(QWidget *pParent) : QWidget(pParent)
         objects::Action::ActionType_t::ADD_REMOVE_STATUS));
     connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
 
+    pAction = pAddMenu->addAction("Create Loot");
+    pAction->setData(to_underlying(
+        objects::Action::ActionType_t::CREATE_LOOT));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
+
+    pAction = pAddMenu->addAction("Delay");
+    pAction->setData(to_underlying(
+        objects::Action::ActionType_t::DELAY));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
+
     pAction = pAddMenu->addAction("Display Message");
     pAction->setData(to_underlying(
         objects::Action::ActionType_t::DISPLAY_MESSAGE));
@@ -127,6 +141,11 @@ ActionList::ActionList(QWidget *pParent) : QWidget(pParent)
     pAction = pAddMenu->addAction("Play Sound Effect");
     pAction->setData(to_underlying(
         objects::Action::ActionType_t::PLAY_SOUND_EFFECT));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
+
+    pAction = pAddMenu->addAction("Run Script");
+    pAction->setData(to_underlying(
+        objects::Action::ActionType_t::RUN_SCRIPT));
     connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
 
     pAction = pAddMenu->addAction("Set Homepoint");
@@ -192,6 +211,11 @@ ActionList::ActionList(QWidget *pParent) : QWidget(pParent)
     pAction = pAddMenu->addAction("Zone Change");
     pAction->setData(to_underlying(
         objects::Action::ActionType_t::ZONE_CHANGE));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
+
+    pAction = pAddMenu->addAction("Zone Instance");
+    pAction->setData(to_underlying(
+        objects::Action::ActionType_t::ZONE_INSTANCE));
     connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
 
     ui->actionAdd->setMenu(pAddMenu);
@@ -273,8 +297,20 @@ void ActionList::Load(const std::list<std::shared_ptr<
             case objects::Action::ActionType_t::UPDATE_ZONE_FLAGS:
                 AddAction(act, new ActionUpdateZoneFlags(this, mMainWindow));
                 break;
+            case objects::Action::ActionType_t::ZONE_INSTANCE:
+                AddAction(act, new ActionZoneInstance(this, mMainWindow));
+                break;
             case objects::Action::ActionType_t::SPAWN:
                 AddAction(act, new ActionSpawn(this, mMainWindow));
+                break;
+            case objects::Action::ActionType_t::CREATE_LOOT:
+                AddAction(act, new ActionCreateLoot(this, mMainWindow));
+                break;
+            case objects::Action::ActionType_t::DELAY:
+                AddAction(act, new ActionDelay(this, mMainWindow));
+                break;
+            case objects::Action::ActionType_t::RUN_SCRIPT:
+                AddAction(act, new ActionRunScript(this, mMainWindow));
                 break;
             default:
                 /// @todo Error out here.
@@ -474,9 +510,25 @@ void ActionList::AddNewAction()
             AddAction(std::make_shared<objects::ActionUpdateZoneFlags>(),
                 new ActionUpdateZoneFlags(this, mMainWindow));
             break;
+        case objects::Action::ActionType_t::ZONE_INSTANCE:
+            AddAction(std::make_shared<objects::ActionZoneInstance>(),
+                new ActionZoneInstance(this, mMainWindow));
+            break;
         case objects::Action::ActionType_t::SPAWN:
             AddAction(std::make_shared<objects::ActionSpawn>(),
                 new ActionSpawn(this, mMainWindow));
+            break;
+        case objects::Action::ActionType_t::CREATE_LOOT:
+            AddAction(std::make_shared<objects::ActionCreateLoot>(),
+                new ActionCreateLoot(this, mMainWindow));
+            break;
+        case objects::Action::ActionType_t::DELAY:
+            AddAction(std::make_shared<objects::ActionDelay>(),
+                new ActionDelay(this, mMainWindow));
+            break;
+        case objects::Action::ActionType_t::RUN_SCRIPT:
+            AddAction(std::make_shared<objects::ActionRunScript>(),
+                new ActionRunScript(this, mMainWindow));
             break;
         default:
             break;

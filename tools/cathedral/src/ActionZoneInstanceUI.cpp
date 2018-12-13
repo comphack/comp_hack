@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/ActionZoneChangeUI.cpp
+ * @file tools/cathedral/src/ActionZoneInstanceUI.cpp
  * @ingroup cathedral
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Implementation for a zone change action.
+ * @brief Implementation for a spawn action.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,7 +22,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ActionZoneChangeUI.h"
+#include "ActionZoneInstanceUI.h"
 
 // Cathedral Includes
 #include "MainWindow.h"
@@ -32,32 +32,33 @@
 #include <QLineEdit>
 
 #include "ui_Action.h"
-#include "ui_ActionZoneChange.h"
+#include "ui_ActionZoneInstance.h"
 #include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionZoneChange::ActionZoneChange(ActionList *pList, MainWindow *pMainWindow,
-    QWidget *pParent) : Action(pList, pMainWindow, pParent)
+ActionZoneInstance::ActionZoneInstance(ActionList *pList,
+    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
+    pMainWindow, pParent)
 {
     QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionZoneChange;
+    prop = new Ui::ActionZoneInstance;
     prop->setupUi(pWidget);
 
-    ui->actionTitle->setText(tr("<b>Zone Change</b>"));
+    ui->actionTitle->setText(tr("<b>Zone Instance</b>"));
     ui->actionLayout->insertWidget(2, pWidget);
 }
 
-ActionZoneChange::~ActionZoneChange()
+ActionZoneInstance::~ActionZoneInstance()
 {
     delete prop;
 }
 
-void ActionZoneChange::Load(const std::shared_ptr<objects::Action>& act)
+void ActionZoneInstance::Load(const std::shared_ptr<objects::Action>& act)
 {
-    mAction = std::dynamic_pointer_cast<objects::ActionZoneChange>(act);
+    mAction = std::dynamic_pointer_cast<objects::ActionZoneInstance>(act);
 
     if(!mAction)
     {
@@ -68,17 +69,16 @@ void ActionZoneChange::Load(const std::shared_ptr<objects::Action>& act)
         mAction->GetSourceContext()));
     prop->location->setCurrentIndex(to_underlying(
         mAction->GetLocation()));
-    prop->zone->setValue(mAction->GetZoneID());
-    prop->dynamicMap->setValue(mAction->GetDynamicMapID());
-    prop->spot->lineEdit()->setText(
-        QString::number(mAction->GetSpotID()));
 
-    prop->x->setValue(mAction->GetDestinationX());
-    prop->y->setValue(mAction->GetDestinationY());
-    prop->rot->setValue(mAction->GetDestinationRotation());
+    prop->mode->setCurrentIndex(to_underlying(
+        mAction->GetMode()));
+    prop->variantID->setValue(mAction->GetVariantID());
+    prop->timerID->setValue(mAction->GetTimerID());
+    prop->timerExpirationEvent->lineEdit()->setText(
+        qs(mAction->GetTimerExpirationEventID()));
 }
 
-std::shared_ptr<objects::Action> ActionZoneChange::Save() const
+std::shared_ptr<objects::Action> ActionZoneInstance::Save() const
 {
     return mAction;
 }

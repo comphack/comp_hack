@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ActionCreateLoot</class>
- <widget class="QWidget" name="ActionCreateLoot">
+ <class>ActionRunScript</class>
+ <widget class="QWidget" name="ActionRunScript">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -85,79 +85,17 @@
        </item>
       </widget>
      </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="lblDropSetIDs">
-       <property name="text">
-        <string>Drop Set IDs:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="ActionIDs" name="dropSetIDs" native="true"/>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="lblIsBossBox">
-       <property name="text">
-        <string>Boss Box:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="lblExpirationTime">
-       <property name="text">
-        <string>Expiration Time:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0">
-      <widget class="QLabel" name="lblPosition">
-       <property name="text">
-        <string>Position:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="7" column="0">
-      <widget class="QLabel" name="lblLocations">
-       <property name="text">
-        <string>Locations:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QCheckBox" name="isBossBox">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="1">
-      <widget class="QDoubleSpinBox" name="expirationTime">
-       <property name="minimum">
-        <double>-10000.000000000000000</double>
-       </property>
-       <property name="maximum">
-        <double>10000.000000000000000</double>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="1">
-      <widget class="QComboBox" name="position">
-       <item>
-        <property name="text">
-         <string>Absolute</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Source Relative</string>
-        </property>
-       </item>
-      </widget>
-     </item>
      <item row="2" column="0">
-      <widget class="QLabel" name="lblDrops">
+      <widget class="QLabel" name="lblScriptID">
        <property name="text">
-        <string>Drops:</string>
+        <string>Script ID:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="lblParams">
+       <property name="text">
+        <string>Params:</string>
        </property>
       </widget>
      </item>
@@ -165,14 +103,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>ActionIDs</class>
-   <extends>QWidget</extends>
-   <header>ActionIDs.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

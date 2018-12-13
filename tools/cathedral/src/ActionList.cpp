@@ -149,7 +149,7 @@ ActionList::ActionList(QWidget *pParent) : QWidget(pParent)
         objects::Action::ActionType_t::SPECIAL_DIRECTION));
     connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
 
-    pAction = pAddMenu->addAction("Stage Event");
+    pAction = pAddMenu->addAction("Stage Effect");
     pAction->setData(to_underlying(
         objects::Action::ActionType_t::STAGE_EFFECT));
     connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
@@ -413,6 +413,7 @@ void ActionList::AddNewAction()
         case objects::Action::ActionType_t::SET_NPC_STATE:
             AddAction(std::make_shared<objects::ActionSetNPCState>(),
                 new ActionSetNPCState(this, mMainWindow));
+            break;
         case objects::Action::ActionType_t::ADD_REMOVE_ITEMS:
             AddAction(std::make_shared<objects::ActionAddRemoveItems>(),
                 new ActionAddRemoveItems(this, mMainWindow));

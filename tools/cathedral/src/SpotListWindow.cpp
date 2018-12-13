@@ -79,7 +79,6 @@ void SpotListWindow::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
     }
 
     prop->id->setValue((int)spot->GetID());
-    prop->triggerOnLeave->setChecked(spot->GetTriggerOnLeave());
 
     auto area = spot->GetSpawnArea();
 
@@ -99,6 +98,7 @@ void SpotListWindow::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
     }
 
     prop->actionList->Load(spot->GetActions());
+    /// @todo: add more
 }
 
 void SpotListWindow::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)

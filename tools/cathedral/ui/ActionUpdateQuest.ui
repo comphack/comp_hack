@@ -11,7 +11,16 @@
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
-   <property name="margin">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
     <number>0</number>
    </property>
    <item>
@@ -20,7 +29,7 @@
       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
      </property>
      <item row="0" column="0">
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="lblSourceContext">
        <property name="text">
         <string>Source Context:</string>
        </property>
@@ -46,7 +55,7 @@
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="label_3">
+      <widget class="QLabel" name="lblLocation">
        <property name="text">
         <string>Location:</string>
        </property>
@@ -77,21 +86,21 @@
       </widget>
      </item>
      <item row="3" column="0">
-      <widget class="QLabel" name="label_7">
+      <widget class="QLabel" name="lblPhase">
        <property name="text">
         <string>Phase:</string>
        </property>
       </widget>
      </item>
      <item row="4" column="0">
-      <widget class="QLabel" name="label_5">
+      <widget class="QLabel" name="lblForceUpdate">
        <property name="text">
         <string>Force Update:</string>
        </property>
       </widget>
      </item>
      <item row="5" column="0">
-      <widget class="QLabel" name="label_4">
+      <widget class="QLabel" name="lblFlagSetMode">
        <property name="text">
         <string>Flag Set Mode:</string>
        </property>
@@ -117,7 +126,7 @@
       </widget>
      </item>
      <item row="6" column="0">
-      <widget class="QLabel" name="label">
+      <widget class="QLabel" name="lblFlagStates">
        <property name="text">
         <string>Flag States:</string>
        </property>
@@ -127,7 +136,7 @@
       <widget class="ActionMap" name="flagStates" native="true"/>
      </item>
      <item row="2" column="0">
-      <widget class="QLabel" name="label_6">
+      <widget class="QLabel" name="lblQuestID">
        <property name="text">
         <string>Quest ID:</string>
        </property>

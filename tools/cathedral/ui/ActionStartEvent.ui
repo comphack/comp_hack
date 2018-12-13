@@ -26,7 +26,7 @@
    <item>
     <layout class="QFormLayout" name="formLayout">
      <item row="0" column="0">
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="lblSourceContext">
        <property name="text">
         <string>Source Context:</string>
        </property>
@@ -52,7 +52,7 @@
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="label_3">
+      <widget class="QLabel" name="lblLocation">
        <property name="text">
         <string>Location:</string>
        </property>
@@ -83,14 +83,14 @@
       </widget>
      </item>
      <item row="2" column="0">
-      <widget class="QLabel" name="label_5">
+      <widget class="QLabel" name="lblEvent">
        <property name="text">
         <string>Event:</string>
        </property>
       </widget>
      </item>
      <item row="2" column="1">
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <layout class="QHBoxLayout" name="layoutEvent">
        <item>
         <widget class="QComboBox" name="event">
          <property name="sizePolicy">
@@ -112,6 +112,32 @@
         </widget>
        </item>
       </layout>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="lblAllowInterrupt">
+       <property name="text">
+        <string>Allow Interrupt:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QComboBox" name="allowInterrupt">
+       <item>
+        <property name="text">
+         <string>Inherit</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Yes</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>No</string>
+        </property>
+       </item>
+      </widget>
      </item>
     </layout>
    </item>

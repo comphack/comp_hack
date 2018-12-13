@@ -11,13 +11,22 @@
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
-   <property name="margin">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
     <number>0</number>
    </property>
    <item>
     <layout class="QFormLayout" name="formLayout">
      <item row="0" column="0">
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="lblSourceContext">
        <property name="text">
         <string>Source Context:</string>
        </property>
@@ -43,7 +52,7 @@
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="label_3">
+      <widget class="QLabel" name="lblLocation">
        <property name="text">
         <string>Location:</string>
        </property>
@@ -74,14 +83,14 @@
       </widget>
      </item>
      <item row="2" column="0">
-      <widget class="QLabel" name="label_5">
+      <widget class="QLabel" name="lblZone">
        <property name="text">
         <string>Zone:</string>
        </property>
       </widget>
      </item>
      <item row="2" column="1">
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <layout class="QHBoxLayout" name="layoutZone">
        <item>
         <widget class="QComboBox" name="zone">
          <property name="sizePolicy">
@@ -105,7 +114,7 @@
       </layout>
      </item>
      <item row="3" column="1">
-      <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <layout class="QHBoxLayout" name="layoutSpot">
        <item>
         <widget class="QComboBox" name="spot">
          <property name="sizePolicy">
@@ -129,7 +138,7 @@
       </layout>
      </item>
      <item row="3" column="0">
-      <widget class="QLabel" name="label">
+      <widget class="QLabel" name="lblSpot">
        <property name="text">
         <string>Spot:</string>
        </property>

@@ -74,15 +74,23 @@ void ActionAddRemoveStatus::Load(const std::shared_ptr<objects::Action>& act)
     prop->targetType->setCurrentIndex(to_underlying(
         mAction->GetTargetType()));
     prop->isReplace->setChecked(mAction->GetIsReplace());
+    prop->allowNull->setChecked(mAction->GetAllowNull());
 
     std::unordered_map<uint32_t, int32_t> stacks;
+    std::unordered_map<uint32_t, int32_t> times;
 
     for(auto stack : mAction->GetStatusStacks())
     {
         stacks[stack.first] = stack.second;
     }
 
+    for(auto time : mAction->GetStatusTimes())
+    {
+        times[time.first] = time.second;
+    }
+
     prop->statusStacks->Load(stacks);
+    prop->statusTimes->Load(times);
 }
 
 std::shared_ptr<objects::Action> ActionAddRemoveStatus::Save() const

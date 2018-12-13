@@ -11,7 +11,16 @@
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
-   <property name="margin">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
     <number>0</number>
    </property>
    <item>
@@ -20,7 +29,7 @@
       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
      </property>
      <item row="0" column="0">
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="lblSourceContext">
        <property name="text">
         <string>Source Context:</string>
        </property>
@@ -46,7 +55,7 @@
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="label_3">
+      <widget class="QLabel" name="lblLocation">
        <property name="text">
         <string>Location:</string>
        </property>
@@ -76,35 +85,8 @@
        </item>
       </widget>
      </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Value:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QSpinBox" name="value">
-       <property name="minimum">
-        <number>-32768</number>
-       </property>
-       <property name="maximum">
-        <number>32767</number>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>Set:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QCheckBox" name="isSet"/>
-     </item>
      <item row="2" column="0">
-      <widget class="QLabel" name="label_4">
+      <widget class="QLabel" name="lblPointType">
        <property name="text">
         <string>Point Type:</string>
        </property>
@@ -127,7 +109,89 @@
          <string>Digitalize Points</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>Coins</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>I-Time</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>BP</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Kill Value</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>PvP Points</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>UB Points</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Cowrie</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Bethel</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Ziotite</string>
+        </property>
+       </item>
       </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="lblValue">
+       <property name="text">
+        <string>Value:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QSpinBox" name="value">
+       <property name="minimum">
+        <number>-32768</number>
+       </property>
+       <property name="maximum">
+        <number>32767</number>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QCheckBox" name="isSet"/>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="lblIsSet">
+       <property name="text">
+        <string>Set:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="lblModifier">
+       <property name="text">
+        <string>Modifier:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QSpinBox" name="modifier"/>
      </item>
     </layout>
    </item>

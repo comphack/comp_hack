@@ -71,8 +71,8 @@ void ActionStageEffect::Load(const std::shared_ptr<objects::Action>& act)
         mAction->GetLocation()));
     prop->messageID->lineEdit()->setText(
         QString::number(mAction->GetMessageID()));
-    prop->effect1->setValue(mAction->GetEffect1());
-    prop->effect2->setValue(mAction->GetEffect2());
+    prop->effectType->setValue(mAction->GetEffectType());
+    prop->messageValue->setValue(mAction->GetMessageValue());
     prop->includeMessage->setChecked(mAction->GetIncludeMessage());
 }
 

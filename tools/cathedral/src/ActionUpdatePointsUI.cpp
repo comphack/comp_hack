@@ -72,6 +72,7 @@ void ActionUpdatePoints::Load(const std::shared_ptr<objects::Action>& act)
     prop->pointType->setCurrentIndex(to_underlying(
         mAction->GetPointType()));
     prop->value->setValue((int32_t)mAction->GetValue());
+    prop->modifier->setValue((int32_t)mAction->GetModifier());
     prop->isSet->setChecked(mAction->GetIsSet());
 }
 

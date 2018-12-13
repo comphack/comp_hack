@@ -72,10 +72,12 @@ void ActionAddRemoveItems::Load(const std::shared_ptr<objects::Action>& act)
         mAction->GetLocation()));
     prop->notify->setChecked(mAction->GetNotify());
     prop->stopOnFailure->setChecked(mAction->GetStopOnFailure());
-    prop->notify->setChecked(mAction->GetNotify());
     prop->onFailureEvent->lineEdit()->setText(
         qs(mAction->GetOnFailureEvent()));
+    prop->fromDropSet->setChecked(mAction->GetFromDropSet());
     prop->items->Load(mAction->GetItems());
+    prop->mode->setCurrentIndex(to_underlying(
+        mAction->GetMode()));
 }
 
 std::shared_ptr<objects::Action> ActionAddRemoveItems::Save() const

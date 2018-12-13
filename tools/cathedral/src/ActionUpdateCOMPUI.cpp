@@ -74,6 +74,7 @@ void ActionUpdateCOMP::Load(const std::shared_ptr<objects::Action>& act)
     prop->location->setCurrentIndex(to_underlying(
         mAction->GetLocation()));
     prop->addSlot->setValue(mAction->GetAddSlot());
+    prop->unsummon->setChecked(mAction->GetUnsummon());
 
     std::unordered_map<uint32_t, int32_t> add, remove;
 

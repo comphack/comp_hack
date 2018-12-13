@@ -11,7 +11,16 @@
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
-   <property name="margin">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
     <number>0</number>
    </property>
    <item>
@@ -20,7 +29,7 @@
       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
      </property>
      <item row="0" column="0">
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="lblSourceContext">
        <property name="text">
         <string>Source Context:</string>
        </property>
@@ -46,7 +55,7 @@
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="label_3">
+      <widget class="QLabel" name="lblLocation">
        <property name="text">
         <string>Location:</string>
        </property>
@@ -77,7 +86,7 @@
       </widget>
      </item>
      <item row="2" column="0">
-      <widget class="QLabel" name="label_4">
+      <widget class="QLabel" name="lblMessageID">
        <property name="text">
         <string>Message ID:</string>
        </property>
@@ -97,21 +106,21 @@
       </widget>
      </item>
      <item row="3" column="0">
-      <widget class="QLabel" name="label">
+      <widget class="QLabel" name="lblEffectType">
        <property name="text">
-        <string>Effect 1:</string>
+        <string>Effect Type:</string>
        </property>
       </widget>
      </item>
      <item row="4" column="0">
-      <widget class="QLabel" name="label_5">
+      <widget class="QLabel" name="lblMessageValue">
        <property name="text">
-        <string>Effect 2:</string>
+        <string>Message Value:</string>
        </property>
       </widget>
      </item>
      <item row="5" column="0">
-      <widget class="QLabel" name="label_6">
+      <widget class="QLabel" name="lblIncludeMessage">
        <property name="text">
         <string>Include Message:</string>
        </property>
@@ -121,7 +130,7 @@
       <widget class="QCheckBox" name="includeMessage"/>
      </item>
      <item row="3" column="1">
-      <widget class="QSpinBox" name="effect1">
+      <widget class="QSpinBox" name="effectType">
        <property name="minimum">
         <number>-128</number>
        </property>
@@ -131,7 +140,7 @@
       </widget>
      </item>
      <item row="4" column="1">
-      <widget class="QSpinBox" name="effect2">
+      <widget class="QSpinBox" name="messageValue">
        <property name="minimum">
         <number>-2147483647</number>
        </property>

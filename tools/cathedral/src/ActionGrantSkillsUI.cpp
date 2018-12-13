@@ -73,6 +73,8 @@ void ActionGrantSkills::Load(const std::shared_ptr<objects::Action>& act)
         mAction->GetTargetType()));
     prop->skillPoints->setValue(mAction->GetSkillPoints());
     prop->skillIDs->Load(mAction->GetSkillIDs());
+    prop->expertiseMax->setValue(mAction->GetExpertiseMax());
+    prop->expertiseSet->setChecked(mAction->GetExpertiseSet());
 
     std::unordered_map<uint32_t, int32_t> points;
 

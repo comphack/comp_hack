@@ -69,6 +69,8 @@ void ActionStartEvent::Load(const std::shared_ptr<objects::Action>& act)
     prop->location->setCurrentIndex(to_underlying(
         mAction->GetLocation()));
     prop->event->lineEdit()->setText(qs(mAction->GetEventID()));
+    prop->allowInterrupt->setCurrentIndex(to_underlying(
+        mAction->GetAllowInterrupt()));
 }
 
 std::shared_ptr<objects::Action> ActionStartEvent::Save() const

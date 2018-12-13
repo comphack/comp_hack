@@ -87,6 +87,7 @@ void ActionSpawn::Load(const std::shared_ptr<objects::Action>& act)
     prop->mode->setCurrentIndex(to_underlying(
         mAction->GetMode()));
     prop->defeatActions->Load(mAction->GetDefeatActions());
+    prop->noStagger->setChecked(mAction->GetNoStagger());
 }
 
 std::shared_ptr<objects::Action> ActionSpawn::Save() const

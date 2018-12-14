@@ -48,7 +48,7 @@ ActionUpdateLNC::ActionUpdateLNC(ActionList *pList,
     prop->setupUi(pWidget);
 
     ui->actionTitle->setText(tr("<b>Update LNC</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionUpdateLNC::~ActionUpdateLNC()
@@ -65,15 +65,15 @@ void ActionUpdateLNC::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
+
     prop->value->setValue(mAction->GetValue());
     prop->isSet->setChecked(mAction->GetIsSet());
 }
 
 std::shared_ptr<objects::Action> ActionUpdateLNC::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

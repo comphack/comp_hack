@@ -29,105 +29,27 @@
       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
      </property>
      <item row="0" column="0">
-      <widget class="QLabel" name="lblSourceContext">
-       <property name="text">
-        <string>Source Context:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="sourceContext">
-       <item>
-        <property name="text">
-         <string>Source</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Party</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>All</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="lblLocation">
-       <property name="text">
-        <string>Location:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QComboBox" name="location">
-       <item>
-        <property name="text">
-         <string>World</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Channel</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Instance</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Zone</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="2" column="0">
       <widget class="QLabel" name="lblInstanceID">
        <property name="text">
         <string>Instance ID:</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="lblMode">
-       <property name="text">
-        <string>Mode:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="lblVariantID">
-       <property name="text">
-        <string>Variant ID:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="lblTimerID">
-       <property name="text">
-        <string>Timer ID:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0">
-      <widget class="QLabel" name="lblTimerExpirationEvent">
-       <property name="text">
-        <string>Timer Expiration Event:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
+     <item row="0" column="1">
       <widget class="QSpinBox" name="instanceID">
        <property name="maximum">
         <number>2147483647</number>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
+     <item row="1" column="0">
+      <widget class="QLabel" name="lblMode">
+       <property name="text">
+        <string>Mode:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
       <widget class="QComboBox" name="mode">
        <item>
         <property name="text">
@@ -166,21 +88,42 @@
        </item>
       </widget>
      </item>
-     <item row="4" column="1">
+     <item row="2" column="0">
+      <widget class="QLabel" name="lblVariantID">
+       <property name="text">
+        <string>Variant ID:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
       <widget class="QSpinBox" name="variantID">
        <property name="maximum">
         <number>2147483647</number>
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
+     <item row="3" column="0">
+      <widget class="QLabel" name="lblTimerID">
+       <property name="text">
+        <string>Timer ID:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
       <widget class="QSpinBox" name="timerID">
        <property name="maximum">
         <number>2147483647</number>
        </property>
       </widget>
      </item>
-     <item row="6" column="1">
+     <item row="4" column="0">
+      <widget class="QLabel" name="lblTimerExpirationEvent">
+       <property name="text">
+        <string>Timer Expiration Event:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
       <layout class="QHBoxLayout" name="layoutTimerExpirationEvent">
        <item>
         <widget class="QComboBox" name="timerExpirationEvent">

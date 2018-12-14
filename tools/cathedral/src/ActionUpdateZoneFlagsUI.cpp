@@ -49,7 +49,7 @@ ActionUpdateZoneFlags::ActionUpdateZoneFlags(ActionList *pList,
     prop->flagStates->SetValueName(tr("State:"));
 
     ui->actionTitle->setText(tr("<b>Update Zone Flags</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionUpdateZoneFlags::~ActionUpdateZoneFlags()
@@ -66,10 +66,7 @@ void ActionUpdateZoneFlags::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
 
     prop->type->setCurrentIndex(to_underlying(
         mAction->GetType()));
@@ -88,5 +85,7 @@ void ActionUpdateZoneFlags::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionUpdateZoneFlags::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

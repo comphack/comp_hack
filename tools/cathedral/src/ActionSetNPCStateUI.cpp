@@ -48,7 +48,7 @@ ActionSetNPCState::ActionSetNPCState(ActionList *pList,
     prop->setupUi(pWidget);
 
     ui->actionTitle->setText(tr("<b>Set NPC State</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionSetNPCState::~ActionSetNPCState()
@@ -65,10 +65,8 @@ void ActionSetNPCState::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
+
     prop->state->setValue(mAction->GetState());
     prop->from->setValue(mAction->GetFrom());
     prop->actor->lineEdit()->setText(QString::number(mAction->GetActorID()));
@@ -77,5 +75,7 @@ void ActionSetNPCState::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionSetNPCState::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

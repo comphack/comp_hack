@@ -48,7 +48,7 @@ ActionStageEffect::ActionStageEffect(ActionList *pList,
     prop->setupUi(pWidget);
 
     ui->actionTitle->setText(tr("<b>Stage Effect</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionStageEffect::~ActionStageEffect()
@@ -65,10 +65,8 @@ void ActionStageEffect::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
+
     prop->messageID->lineEdit()->setText(
         QString::number(mAction->GetMessageID()));
     prop->effectType->setValue(mAction->GetEffectType());
@@ -78,5 +76,7 @@ void ActionStageEffect::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionStageEffect::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

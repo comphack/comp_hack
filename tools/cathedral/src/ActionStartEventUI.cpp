@@ -47,7 +47,7 @@ ActionStartEvent::ActionStartEvent(ActionList *pList, MainWindow *pMainWindow,
     prop->setupUi(pWidget);
 
     ui->actionTitle->setText(tr("<b>Start Event</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionStartEvent::~ActionStartEvent()
@@ -64,10 +64,8 @@ void ActionStartEvent::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
+
     prop->event->lineEdit()->setText(qs(mAction->GetEventID()));
     prop->allowInterrupt->setCurrentIndex(to_underlying(
         mAction->GetAllowInterrupt()));
@@ -75,5 +73,7 @@ void ActionStartEvent::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionStartEvent::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

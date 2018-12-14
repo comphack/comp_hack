@@ -35,6 +35,7 @@
 
 // libcomp Includes
 #include <Log.h>
+#include <PacketCodes.h>
 
 Action::Action(ActionList *pList, MainWindow *pMainWindow, QWidget *pParent) :
     QWidget(pParent), mList(pList), mMainWindow(pMainWindow)
@@ -42,14 +43,25 @@ Action::Action(ActionList *pList, MainWindow *pMainWindow, QWidget *pParent) :
     ui = new Ui::Action;
     ui->setupUi(this);
 
+    ui->layoutBaseBody->setVisible(false);
+
     connect(ui->remove, SIGNAL(clicked(bool)), this, SLOT(Remove()));
     connect(ui->up, SIGNAL(clicked(bool)), this, SLOT(MoveUp()));
     connect(ui->down, SIGNAL(clicked(bool)), this, SLOT(MoveDown()));
+    connect(ui->toggleBaseDisplay, SIGNAL(clicked(bool)), this,
+        SLOT(ToggleBaseDisplay()));
 }
 
 Action::~Action()
 {
     delete ui;
+}
+
+void Action::UpdatePosition(bool isFirst, bool isLast)
+{
+    ui->up->setEnabled(!isFirst);
+    ui->down->setEnabled(!isLast);
+    ui->actionListDiv->setVisible(!isLast);
 }
 
 void Action::Remove()
@@ -76,9 +88,49 @@ void Action::MoveDown()
     }
 }
 
-void Action::UpdatePosition(bool isFirst, bool isLast)
+void Action::ToggleBaseDisplay()
 {
-    ui->up->setEnabled(!isFirst);
-    ui->down->setEnabled(!isLast);
-    ui->actionListDiv->setVisible(!isLast);
+    if(ui->layoutBaseBody->isVisible())
+    {
+        ui->layoutBaseBody->setVisible(false);
+        ui->toggleBaseDisplay->setText(">");
+    }
+    else
+    {
+        ui->layoutBaseBody->setVisible(true);
+        ui->toggleBaseDisplay->setText("v");
+    }
+}
+
+void Action::LoadBaseProperties(const std::shared_ptr<objects::Action>& action)
+{
+    ui->sourceContext->setCurrentIndex(to_underlying(
+        action->GetSourceContext()));
+    ui->location->setCurrentIndex(to_underlying(
+        action->GetLocation()));
+    ui->stopOnFailure->setChecked(action->GetStopOnFailure());
+
+    /// @todo: set failure event
+
+    // If any non-base values are set, display the base values section
+    if(!ui->layoutBaseBody->isVisible() &&
+        (action->GetSourceContext() != objects::Action::SourceContext_t::SOURCE ||
+            action->GetLocation() != objects::Action::Location_t::ZONE ||
+            !action->GetStopOnFailure() ||
+            !action->GetOnFailureEvent().IsEmpty()))
+    {
+        ToggleBaseDisplay();
+    }
+}
+
+void Action::SaveBaseProperties(const std::shared_ptr<
+    objects::Action>& action) const
+{
+    action->SetSourceContext((objects::Action::SourceContext_t)ui
+        ->sourceContext->currentIndex());
+    action->SetLocation((objects::Action::Location_t)ui->location
+        ->currentIndex());
+    action->SetStopOnFailure(ui->stopOnFailure->isChecked());
+
+    /// @todo: set failure event
 }

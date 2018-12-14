@@ -49,7 +49,7 @@ ActionUpdateQuest::ActionUpdateQuest(ActionList *pList,
     prop->flagStates->SetValueName(tr("State:"));
 
     ui->actionTitle->setText(tr("<b>Update Quest</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionUpdateQuest::~ActionUpdateQuest()
@@ -66,10 +66,7 @@ void ActionUpdateQuest::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
 
     prop->questID->lineEdit()->setText(
         QString::number(mAction->GetQuestID()));
@@ -90,5 +87,7 @@ void ActionUpdateQuest::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionUpdateQuest::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

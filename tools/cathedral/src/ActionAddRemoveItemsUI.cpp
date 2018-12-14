@@ -49,7 +49,7 @@ ActionAddRemoveItems::ActionAddRemoveItems(ActionList *pList,
     prop->items->SetValueName(tr("Qty:"));
 
     ui->actionTitle->setText(tr("<b>Add/Remove Items</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionAddRemoveItems::~ActionAddRemoveItems()
@@ -66,14 +66,9 @@ void ActionAddRemoveItems::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
+
     prop->notify->setChecked(mAction->GetNotify());
-    prop->stopOnFailure->setChecked(mAction->GetStopOnFailure());
-    prop->onFailureEvent->lineEdit()->setText(
-        qs(mAction->GetOnFailureEvent()));
     prop->fromDropSet->setChecked(mAction->GetFromDropSet());
     prop->items->Load(mAction->GetItems());
     prop->mode->setCurrentIndex(to_underlying(
@@ -82,5 +77,7 @@ void ActionAddRemoveItems::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionAddRemoveItems::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

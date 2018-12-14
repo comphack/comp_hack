@@ -48,7 +48,7 @@ ActionDelay::ActionDelay(ActionList *pList,
     prop->setupUi(pWidget);
 
     ui->actionTitle->setText(tr("<b>Delay</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionDelay::~ActionDelay()
@@ -65,10 +65,7 @@ void ActionDelay::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
 
     prop->type->setCurrentIndex(to_underlying(
         mAction->GetType()));
@@ -79,5 +76,7 @@ void ActionDelay::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionDelay::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

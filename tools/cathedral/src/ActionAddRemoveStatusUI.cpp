@@ -50,7 +50,7 @@ ActionAddRemoveStatus::ActionAddRemoveStatus(ActionList *pList,
     prop->statusStacks->SetMinMax(0, 255);
 
     ui->actionTitle->setText(tr("<b>Add/Remove Status</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionAddRemoveStatus::~ActionAddRemoveStatus()
@@ -67,10 +67,8 @@ void ActionAddRemoveStatus::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
+
     prop->targetType->setCurrentIndex(to_underlying(
         mAction->GetTargetType()));
     prop->isReplace->setChecked(mAction->GetIsReplace());
@@ -95,5 +93,7 @@ void ActionAddRemoveStatus::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionAddRemoveStatus::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

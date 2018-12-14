@@ -52,7 +52,7 @@ ActionUpdateCOMP::ActionUpdateCOMP(ActionList *pList,
     prop->removeDemons->SetMinMax(0, 255);
 
     ui->actionTitle->setText(tr("<b>Update COMP</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionUpdateCOMP::~ActionUpdateCOMP()
@@ -69,10 +69,8 @@ void ActionUpdateCOMP::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
+
     prop->addSlot->setValue(mAction->GetAddSlot());
     prop->unsummon->setChecked(mAction->GetUnsummon());
 
@@ -94,5 +92,7 @@ void ActionUpdateCOMP::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionUpdateCOMP::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

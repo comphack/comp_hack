@@ -48,7 +48,7 @@ ActionCreateLoot::ActionCreateLoot(ActionList *pList,
     prop->setupUi(pWidget);
 
     ui->actionTitle->setText(tr("<b>Create Loot</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionCreateLoot::~ActionCreateLoot()
@@ -65,10 +65,7 @@ void ActionCreateLoot::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
 
     prop->dropSetIDs->Load(mAction->GetDropSetIDs());
     prop->isBossBox->setChecked(mAction->GetIsBossBox());
@@ -79,5 +76,7 @@ void ActionCreateLoot::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionCreateLoot::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

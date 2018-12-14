@@ -48,7 +48,7 @@ ActionDisplayMessage::ActionDisplayMessage(ActionList *pList,
     prop->setupUi(pWidget);
 
     ui->actionTitle->setText(tr("<b>Display Message</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionDisplayMessage::~ActionDisplayMessage()
@@ -65,10 +65,7 @@ void ActionDisplayMessage::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
 
     std::list<uint32_t> ids;
 
@@ -82,5 +79,7 @@ void ActionDisplayMessage::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionDisplayMessage::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

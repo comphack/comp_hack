@@ -48,7 +48,7 @@ ActionPlayBGM::ActionPlayBGM(ActionList *pList,
     prop->setupUi(pWidget);
 
     ui->actionTitle->setText(tr("<b>Play BGM</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionPlayBGM::~ActionPlayBGM()
@@ -65,10 +65,8 @@ void ActionPlayBGM::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
+
     prop->isStop->setChecked(mAction->GetIsStop());
     prop->musicID->lineEdit()->setText(
         QString::number(mAction->GetMusicID()));
@@ -78,5 +76,7 @@ void ActionPlayBGM::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionPlayBGM::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

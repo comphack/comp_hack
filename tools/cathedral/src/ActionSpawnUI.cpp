@@ -49,7 +49,7 @@ ActionSpawn::ActionSpawn(ActionList *pList,
     prop->spawnGroupIDs->SetValueName(tr("Spot ID:"));
 
     ui->actionTitle->setText(tr("<b>Spawn</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionSpawn::~ActionSpawn()
@@ -66,10 +66,7 @@ void ActionSpawn::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
 
     prop->spawnLocationGroupIDs->Load(mAction->GetSpawnLocationGroupIDs());
     prop->spotID->lineEdit()->setText(
@@ -92,5 +89,7 @@ void ActionSpawn::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionSpawn::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

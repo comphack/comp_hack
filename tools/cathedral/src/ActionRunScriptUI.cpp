@@ -48,7 +48,7 @@ ActionRunScript::ActionRunScript(ActionList *pList,
     prop->setupUi(pWidget);
 
     ui->actionTitle->setText(tr("<b>Run Script</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionRunScript::~ActionRunScript()
@@ -65,13 +65,12 @@ void ActionRunScript::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
 }
 
 std::shared_ptr<objects::Action> ActionRunScript::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

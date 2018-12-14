@@ -48,7 +48,7 @@ ActionGrantXP::ActionGrantXP(ActionList *pList,
     prop->setupUi(pWidget);
 
     ui->actionTitle->setText(tr("<b>Grant XP</b>"));
-    ui->actionLayout->insertWidget(2, pWidget);
+    ui->layoutMain->addWidget(pWidget);
 }
 
 ActionGrantXP::~ActionGrantXP()
@@ -65,10 +65,8 @@ void ActionGrantXP::Load(const std::shared_ptr<objects::Action>& act)
         return;
     }
 
-    prop->sourceContext->setCurrentIndex(to_underlying(
-        mAction->GetSourceContext()));
-    prop->location->setCurrentIndex(to_underlying(
-        mAction->GetLocation()));
+    LoadBaseProperties(mAction);
+
     prop->targetType->setCurrentIndex(to_underlying(
         mAction->GetTargetType()));
     prop->xp->setValue((int32_t)mAction->GetXP());
@@ -77,5 +75,7 @@ void ActionGrantXP::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionGrantXP::Save() const
 {
+    SaveBaseProperties(mAction);
+
     return mAction;
 }

@@ -61,8 +61,12 @@ public slots:
     virtual void Remove();
     virtual void MoveUp();
     virtual void MoveDown();
+    virtual void ToggleBaseDisplay();
 
 protected:
+    void LoadBaseProperties(const std::shared_ptr<objects::Action>& action);
+    void SaveBaseProperties(const std::shared_ptr<objects::Action>& action) const;
+
     Ui::Action *ui;
 
     ActionList *mList;

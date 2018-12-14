@@ -25,6 +25,7 @@
 #include "ActionStartEventUI.h"
 
 // Cathedral Includes
+#include "EventRef.h"
 #include "MainWindow.h"
 
 // Qt Includes
@@ -66,7 +67,7 @@ void ActionStartEvent::Load(const std::shared_ptr<objects::Action>& act)
 
     LoadBaseProperties(mAction);
 
-    prop->event->lineEdit()->setText(qs(mAction->GetEventID()));
+    prop->event->SetEvent(mAction->GetEventID());
     prop->allowInterrupt->setCurrentIndex(to_underlying(
         mAction->GetAllowInterrupt()));
 }

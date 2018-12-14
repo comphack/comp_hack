@@ -100,7 +100,7 @@
      <item row="5" column="0">
       <widget class="QLabel" name="lblExpertiseSet">
        <property name="text">
-        <string>TextLabel</string>
+        <string>Expertise Set:</string>
        </property>
       </widget>
      </item>

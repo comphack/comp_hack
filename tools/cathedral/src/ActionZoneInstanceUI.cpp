@@ -71,8 +71,8 @@ void ActionZoneInstance::Load(const std::shared_ptr<objects::Action>& act)
         mAction->GetMode()));
     prop->variantID->setValue(mAction->GetVariantID());
     prop->timerID->setValue(mAction->GetTimerID());
-    prop->timerExpirationEvent->lineEdit()->setText(
-        qs(mAction->GetTimerExpirationEventID()));
+    prop->timerExpirationEvent->SetEvent(mAction
+        ->GetTimerExpirationEventID());
 }
 
 std::shared_ptr<objects::Action> ActionZoneInstance::Save() const

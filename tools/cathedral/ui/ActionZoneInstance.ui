@@ -124,33 +124,20 @@
       </widget>
      </item>
      <item row="4" column="1">
-      <layout class="QHBoxLayout" name="layoutTimerExpirationEvent">
-       <item>
-        <widget class="QComboBox" name="timerExpirationEvent">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="editable">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="timerExpirationEventGo">
-         <property name="text">
-          <string>Go</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
+      <widget class="EventRef" name="timerExpirationEvent" native="true"/>
      </item>
     </layout>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>EventRef</class>
+   <extends>QWidget</extends>
+   <header>EventRef.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

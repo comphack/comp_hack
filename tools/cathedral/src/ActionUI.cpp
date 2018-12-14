@@ -109,8 +109,7 @@ void Action::LoadBaseProperties(const std::shared_ptr<objects::Action>& action)
     ui->location->setCurrentIndex(to_underlying(
         action->GetLocation()));
     ui->stopOnFailure->setChecked(action->GetStopOnFailure());
-
-    /// @todo: set failure event
+    ui->failureEvent->SetEvent(action->GetOnFailureEvent());
 
     // If any non-base values are set, display the base values section
     if(!ui->layoutBaseBody->isVisible() &&
@@ -131,6 +130,5 @@ void Action::SaveBaseProperties(const std::shared_ptr<
     action->SetLocation((objects::Action::Location_t)ui->location
         ->currentIndex());
     action->SetStopOnFailure(ui->stopOnFailure->isChecked());
-
-    /// @todo: set failure event
+    action->SetOnFailureEvent(ui->failureEvent->GetEvent());
 }

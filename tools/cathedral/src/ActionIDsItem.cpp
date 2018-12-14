@@ -68,8 +68,12 @@ ActionIDsItem::~ActionIDsItem()
 
 uint32_t ActionIDsItem::GetValue() const
 {
-    /// @todo Fix this
-    return 0;
+    QString txt = ui->item->currentText();
+
+    bool valid = false;
+    uint32_t val = txt.toInt(&valid);
+
+    return valid ? val : 0;
 }
 
 void ActionIDsItem::Remove()

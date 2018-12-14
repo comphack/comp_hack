@@ -255,6 +255,9 @@
               </property>
              </widget>
             </item>
+            <item row="3" column="1">
+             <widget class="EventRef" name="failureEvent" native="true"/>
+            </item>
            </layout>
           </item>
          </layout>
@@ -283,6 +286,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>EventRef</class>
+   <extends>QWidget</extends>
+   <header>EventRef.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

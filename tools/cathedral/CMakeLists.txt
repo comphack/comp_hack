@@ -59,6 +59,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ActionUpdateZoneFlagsUI.cpp
     src/ActionZoneChangeUI.cpp
     src/ActionZoneInstanceUI.cpp
+    src/EventRef.cpp
     src/MainWindow.cpp
     src/NPCListWindow.cpp
     src/ObjectListModel.cpp
@@ -97,6 +98,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ActionUpdateZoneFlagsUI.h
     src/ActionZoneChangeUI.h
     src/ActionZoneInstanceUI.h
+    src/EventRef.h
     src/MainWindow.h
     src/NPCListWindow.h
     src/ObjectListModel.h
@@ -140,6 +142,7 @@ SET(${PROJECT_NAME}_UIS
     ui/ActionUpdateZoneFlags.ui
     ui/ActionZoneChange.ui
     ui/ActionZoneInstance.ui
+    ui/EventRef.ui
     ui/MainWindow.ui
     ui/ObjectListWindow.ui
 

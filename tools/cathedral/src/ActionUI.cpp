@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file tools/cathedral/src/ActionUI.cpp
  * @ingroup cathedral
  *
@@ -93,12 +93,12 @@ void Action::ToggleBaseDisplay()
     if(ui->layoutBaseBody->isVisible())
     {
         ui->layoutBaseBody->setVisible(false);
-        ui->toggleBaseDisplay->setText(">");
+        ui->toggleBaseDisplay->setText(u8"►");
     }
     else
     {
         ui->layoutBaseBody->setVisible(true);
-        ui->toggleBaseDisplay->setText("v");
+        ui->toggleBaseDisplay->setText(u8"▼");
     }
 }
 
@@ -110,13 +110,16 @@ void Action::LoadBaseProperties(const std::shared_ptr<objects::Action>& action)
         action->GetLocation()));
     ui->stopOnFailure->setChecked(action->GetStopOnFailure());
     ui->failureEvent->SetEvent(action->GetOnFailureEvent());
+    ui->transformScript->SetScriptID(action->GetTransformScriptID());
+    ui->transformScript->SetParams(action->GetTransformScriptParams());
 
     // If any non-base values are set, display the base values section
     if(!ui->layoutBaseBody->isVisible() &&
         (action->GetSourceContext() != objects::Action::SourceContext_t::SOURCE ||
             action->GetLocation() != objects::Action::Location_t::ZONE ||
             !action->GetStopOnFailure() ||
-            !action->GetOnFailureEvent().IsEmpty()))
+            !action->GetOnFailureEvent().IsEmpty() ||
+            !action->GetTransformScriptID().IsEmpty()))
     {
         ToggleBaseDisplay();
     }
@@ -131,4 +134,6 @@ void Action::SaveBaseProperties(const std::shared_ptr<
         ->currentIndex());
     action->SetStopOnFailure(ui->stopOnFailure->isChecked());
     action->SetOnFailureEvent(ui->failureEvent->GetEvent());
+    action->SetTransformScriptID(ui->transformScript->GetScriptID());
+    action->SetTransformScriptParams(ui->transformScript->GetParams());
 }

@@ -47,6 +47,8 @@ ActionGrantSkills::ActionGrantSkills(ActionList *pList,
     prop = new Ui::ActionGrantSkills;
     prop->setupUi(pWidget);
 
+    prop->skillIDs->SetItemType(DynamicItemType_t::PRIMITIVE_UINT);
+
     ui->actionTitle->setText(tr("<b>Grant Skills</b>"));
     ui->layoutMain->addWidget(pWidget);
 }
@@ -70,7 +72,12 @@ void ActionGrantSkills::Load(const std::shared_ptr<objects::Action>& act)
     prop->targetType->setCurrentIndex(to_underlying(
         mAction->GetTargetType()));
     prop->skillPoints->setValue(mAction->GetSkillPoints());
-    prop->skillIDs->Load(mAction->GetSkillIDs());
+    
+    for(uint32_t skillID : mAction->GetSkillIDs())
+    {
+        prop->skillIDs->AddUnsignedInteger(skillID);
+    }
+
     prop->expertiseMax->setValue(mAction->GetExpertiseMax());
     prop->expertiseSet->setChecked(mAction->GetExpertiseSet());
 

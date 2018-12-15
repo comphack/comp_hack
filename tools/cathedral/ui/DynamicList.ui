@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ActionMap</class>
- <widget class="QWidget" name="ActionMap">
+ <class>DynamicList</class>
+ <widget class="QWidget" name="DynamicList">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>637</width>
+    <width>400</width>
     <height>300</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
@@ -31,10 +37,10 @@
     </widget>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="actionMapLayout"/>
+    <layout class="QVBoxLayout" name="layoutItems"/>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <layout class="QHBoxLayout" name="layoutControls">
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">

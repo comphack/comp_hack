@@ -30,8 +30,6 @@ MESSAGE("** Configuring ${PROJECT_NAME} **")
 SET(${PROJECT_NAME}_SRCS
     src/main.cpp
     src/ActionUI.cpp
-    src/ActionIDs.cpp
-    src/ActionIDsItem.cpp
     src/ActionList.cpp
     src/ActionMap.cpp
     src/ActionMapItem.cpp
@@ -59,18 +57,21 @@ SET(${PROJECT_NAME}_SRCS
     src/ActionUpdateZoneFlagsUI.cpp
     src/ActionZoneChangeUI.cpp
     src/ActionZoneInstanceUI.cpp
+    src/DynamicList.cpp
+    src/DynamicListItem.cpp
     src/EventRef.cpp
+    src/ItemDropUI.cpp
     src/MainWindow.cpp
     src/NPCListWindow.cpp
     src/ObjectListModel.cpp
     src/ObjectListWindow.cpp
+    src/ObjectPositionUI.cpp
+    src/ServerScript.cpp
     src/SpotListWindow.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
     src/ActionUI.h
-    src/ActionIDs.h
-    src/ActionIDsItem.h
     src/ActionList.h
     src/ActionMap.h
     src/ActionMapItem.h
@@ -98,11 +99,16 @@ SET(${PROJECT_NAME}_HDRS
     src/ActionUpdateZoneFlagsUI.h
     src/ActionZoneChangeUI.h
     src/ActionZoneInstanceUI.h
+    src/DynamicList.h
+    src/DynamicListItem.h
     src/EventRef.h
+    src/ItemDropUI.h
     src/MainWindow.h
     src/NPCListWindow.h
     src/ObjectListModel.h
     src/ObjectListWindow.h
+    src/ObjectPositionUI.h
+    src/ServerScript.h
     src/SpotListWindow.h
 )
 
@@ -113,8 +119,6 @@ qt5_add_resources(${PROJECT_NAME}_RCC_SRCS ${${PROJECT_NAME}_RCC})
 
 SET(${PROJECT_NAME}_UIS
     ui/Action.ui
-    ui/ActionIDs.ui
-    ui/ActionIDsItem.ui
     ui/ActionList.ui
     ui/ActionMap.ui
     ui/ActionMapItem.ui
@@ -142,9 +146,14 @@ SET(${PROJECT_NAME}_UIS
     ui/ActionUpdateZoneFlags.ui
     ui/ActionZoneChange.ui
     ui/ActionZoneInstance.ui
+    ui/DynamicList.ui
+    ui/DynamicListItem.ui
     ui/EventRef.ui
+    ui/ItemDrop.ui
     ui/MainWindow.ui
     ui/ObjectListWindow.ui
+    ui/ObjectPosition.ui
+    ui/ServerScript.ui
 
     # Properties for each object.
     ui/NPCProperties.ui

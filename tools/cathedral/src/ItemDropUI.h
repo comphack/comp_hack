@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/EventRefUI.h
+ * @file tools/cathedral/src/ItemDropUI.h
  * @ingroup cathedral
  *
  * @author HACKfrost
  *
- * @brief Definition for an event being referenced from all known events.
+ * @brief Definition for a configured ItemDrop.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,40 +22,44 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_CATHEDRAL_SRC_EVENTREF_H
-#define TOOLS_CATHEDRAL_SRC_EVENTREF_H
+#ifndef TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H
+#define TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H
 
 // Qt Includes
 #include <PushIgnore.h>
 #include <QWidget>
 #include <PopIgnore.h>
 
-// libcomp Includes
-#include <CString.h>
+// Standard C++11 Includes
+#include <memory>
+
+namespace objects
+{
+
+class ItemDrop;
+
+} // namespace objects
 
 namespace Ui
 {
 
-class EventRef;
+class ItemDrop;
 
 } // namespace Ui
 
-class EventRef : public QWidget
+class ItemDrop : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit EventRef(QWidget *pParent = 0);
-    virtual ~EventRef();
+    explicit ItemDrop(QWidget *pParent = 0);
+    virtual ~ItemDrop();
 
-    void SetEvent(const libcomp::String& event);
-    libcomp::String GetEvent() const;
-
-public slots:
-    void Go();
+    void Load(const std::shared_ptr<objects::ItemDrop>& drop);
+    std::shared_ptr<objects::ItemDrop> Save() const;
 
 protected:
-    Ui::EventRef *ui;
+    Ui::ItemDrop *prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_EVENTREF_H
+#endif // TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H

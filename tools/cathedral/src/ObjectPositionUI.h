@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/EventRefUI.h
+ * @file tools/cathedral/src/ObjectPositionUI.h
  * @ingroup cathedral
  *
  * @author HACKfrost
  *
- * @brief Definition for an event being referenced from all known events.
+ * @brief Definition for a configured ObjectPosition.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,40 +22,48 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_CATHEDRAL_SRC_EVENTREF_H
-#define TOOLS_CATHEDRAL_SRC_EVENTREF_H
+#ifndef TOOLS_CATHEDRAL_SRC_OBJECTPOSITIONUI_H
+#define TOOLS_CATHEDRAL_SRC_OBJECTPOSITIONUI_H
 
 // Qt Includes
 #include <PushIgnore.h>
 #include <QWidget>
 #include <PopIgnore.h>
 
-// libcomp Includes
-#include <CString.h>
+// Standard C++11 Includes
+#include <memory>
+
+namespace objects
+{
+
+class ObjectPosition;
+
+} // namespace objects
 
 namespace Ui
 {
 
-class EventRef;
+class ObjectPosition;
 
 } // namespace Ui
 
-class EventRef : public QWidget
+class ObjectPosition : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit EventRef(QWidget *pParent = 0);
-    virtual ~EventRef();
+    explicit ObjectPosition(QWidget *pParent = 0);
+    virtual ~ObjectPosition();
 
-    void SetEvent(const libcomp::String& event);
-    libcomp::String GetEvent() const;
+    void Load(const std::shared_ptr<objects::ObjectPosition>& pos);
+    void Load(uint32_t spotID, float x, float y, float rot);
+    std::shared_ptr<objects::ObjectPosition> Save() const;
 
-public slots:
-    void Go();
+protected slots:
+    void RadioToggle();
 
 protected:
-    Ui::EventRef *ui;
+    Ui::ObjectPosition *prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_EVENTREF_H
+#endif // TOOLS_CATHEDRAL_SRC_OBJECTPOSITIONUI_H

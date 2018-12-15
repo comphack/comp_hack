@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ActionDisplayMessage</class>
- <widget class="QWidget" name="ActionDisplayMessage">
+ <class>ServerScript</class>
+ <widget class="QWidget" name="ServerScript">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>483</width>
+    <height>111</height>
    </rect>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QFormLayout" name="formLayout">
    <property name="leftMargin">
     <number>0</number>
    </property>
@@ -23,22 +23,21 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
-   <item>
-    <layout class="QFormLayout" name="formLayout">
-     <property name="fieldGrowthPolicy">
-      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+   <item row="2" column="1">
+    <widget class="QComboBox" name="scriptID">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
      </property>
-     <item row="0" column="0">
-      <widget class="QLabel" name="lblMessageIDs">
-       <property name="text">
-        <string>Message IDs:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="DynamicList" name="messageIDs" native="true"/>
-     </item>
-    </layout>
+     <property name="editable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="DynamicList" name="params" native="true"/>
    </item>
   </layout>
  </widget>

@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/ActionIDsItem.h
+ * @file tools/cathedral/src/DynamicListItem.h
  * @ingroup cathedral
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Definition for an item in an action IDs list.
+ * @brief Definition for a dynamic list item.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,49 +22,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_CATHEDRAL_SRC_ACTIONIDSITEM_H
-#define TOOLS_CATHEDRAL_SRC_ACTIONIDSITEM_H
+#ifndef TOOLS_CATHEDRAL_SRC_DYNAMICLISTITEM_H
+#define TOOLS_CATHEDRAL_SRC_DYNAMICLISTITEM_H
 
 // Qt Includes
 #include <PushIgnore.h>
 #include <QWidget>
 #include <PopIgnore.h>
 
-// objects Includes
-#include <Action.h>
-
-// Standard C++11 Includes
-#include <map>
-
 namespace Ui
 {
 
-class ActionIDsItem;
+class DynamicListItem;
 
 } // namespace Ui
 
-class ActionIDs;
-class MainWindow;
-
-class ActionIDsItem : public QWidget
+class DynamicListItem : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit ActionIDsItem(ActionIDs *pIDs, uint32_t value,
-        QWidget *pParent = 0);
-    explicit ActionIDsItem(ActionIDs *pIDs, QWidget *pParent = 0);
-    virtual ~ActionIDsItem();
+    explicit DynamicListItem(QWidget *pParent = 0);
+    virtual ~DynamicListItem();
 
-    uint32_t GetValue() const;
-
-public slots:
-    void Remove();
-
-protected:
-    Ui::ActionIDsItem *ui;
-
-    ActionIDs *mIDs;
+    Ui::DynamicListItem *ui;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONIDSITEM_H
+#endif // TOOLS_CATHEDRAL_SRC_DYNAMICLISTITEM_H

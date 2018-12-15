@@ -48,6 +48,8 @@ ActionSpawn::ActionSpawn(ActionList *pList,
     prop->setupUi(pWidget);
     prop->spawnGroupIDs->SetValueName(tr("Spot ID:"));
 
+    prop->spawnLocationGroupIDs->SetItemType(DynamicItemType_t::PRIMITIVE_UINT);
+
     ui->actionTitle->setText(tr("<b>Spawn</b>"));
     ui->layoutMain->addWidget(pWidget);
 }
@@ -67,8 +69,12 @@ void ActionSpawn::Load(const std::shared_ptr<objects::Action>& act)
     }
 
     LoadBaseProperties(mAction);
+    
+    for(uint32_t slgID : mAction->GetSpawnLocationGroupIDs())
+    {
+        prop->spawnLocationGroupIDs->AddUnsignedInteger(slgID);
+    }
 
-    prop->spawnLocationGroupIDs->Load(mAction->GetSpawnLocationGroupIDs());
     prop->spotID->lineEdit()->setText(
         QString::number(mAction->GetSpotID()));
 

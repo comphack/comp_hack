@@ -68,12 +68,10 @@ void ActionZoneChange::Load(const std::shared_ptr<objects::Action>& act)
 
     prop->zone->setValue(mAction->GetZoneID());
     prop->dynamicMap->setValue(mAction->GetDynamicMapID());
-    prop->spot->lineEdit()->setText(
-        QString::number(mAction->GetSpotID()));
 
-    prop->x->setValue(mAction->GetDestinationX());
-    prop->y->setValue(mAction->GetDestinationY());
-    prop->rot->setValue(mAction->GetDestinationRotation());
+    prop->destination->Load(mAction->GetSpotID(),
+        mAction->GetDestinationX(), mAction->GetDestinationY(),
+        mAction->GetDestinationRotation());
 }
 
 std::shared_ptr<objects::Action> ActionZoneChange::Save() const

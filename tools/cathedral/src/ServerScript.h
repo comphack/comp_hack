@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/ActionIDs.h
+ * @file tools/cathedral/src/ServerScript.h
  * @ingroup cathedral
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Definition for a list of IDs (for use in actions).
+ * @brief Definition for a server script usage with optional parameters.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,59 +22,43 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_CATHEDRAL_SRC_ACTIONIDS_H
-#define TOOLS_CATHEDRAL_SRC_ACTIONIDS_H
+#ifndef TOOLS_CATHEDRAL_SRC_SERVERSCRIPT_H
+#define TOOLS_CATHEDRAL_SRC_SERVERSCRIPT_H
 
 // Qt Includes
 #include <PushIgnore.h>
 #include <QWidget>
 #include <PopIgnore.h>
 
-// objects Includes
-#include <Action.h>
+// libcomp Includes
+#include <CString.h>
 
 // Standard C++11 Includes
-#include <set>
+#include <list>
 
 namespace Ui
 {
 
-class ActionIDs;
+class ServerScript;
 
 } // namespace Ui
 
-class ActionIDsItem;
-class MainWindow;
-
-class ActionIDs : public QWidget
+class ServerScript : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit ActionIDs(QWidget *pParent = 0);
-    virtual ~ActionIDs();
+    explicit ServerScript(QWidget *pParent = 0);
+    virtual ~ServerScript();
 
-    void SetMainWindow(MainWindow *pMainWindow);
+    void SetScriptID(const libcomp::String& scriptID);
+    libcomp::String GetScriptID() const;
 
-    void Load(const std::set<uint32_t>& values);
-    std::set<uint32_t> SaveSet() const;
-
-    void Load(const std::list<uint32_t>& values);
-    std::list<uint32_t> SaveList() const;
-
-    void RemoveValue(ActionIDsItem *pValue);
-
-protected slots:
-    void AddNewValue();
+    void SetParams(std::list<libcomp::String>& params);
+    std::list<libcomp::String> GetParams() const;
 
 protected:
-    void AddValue(ActionIDsItem *pValue);
-    void ClearValues();
-
-    Ui::ActionIDs *ui;
-
-    MainWindow *mMainWindow;
-    std::list<ActionIDsItem*> mValues;
+    Ui::ServerScript *ui;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONIDS_H
+#endif // TOOLS_CATHEDRAL_SRC_SERVERSCRIPT_H

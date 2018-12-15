@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/EventRefUI.h
+ * @file tools/cathedral/src/DynamicListItem.cpp
  * @ingroup cathedral
  *
  * @author HACKfrost
  *
- * @brief Definition for an event being referenced from all known events.
+ * @brief Implementation for a dynamic list item.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,40 +22,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_CATHEDRAL_SRC_EVENTREF_H
-#define TOOLS_CATHEDRAL_SRC_EVENTREF_H
+#include "DynamicListItem.h"
 
 // Qt Includes
 #include <PushIgnore.h>
-#include <QWidget>
+#include "ui_DynamicListItem.h"
 #include <PopIgnore.h>
 
-// libcomp Includes
-#include <CString.h>
-
-namespace Ui
+DynamicListItem::DynamicListItem(QWidget *pParent) : QWidget(pParent)
 {
+    ui = new Ui::DynamicListItem;
+    ui->setupUi(this);
+}
 
-class EventRef;
-
-} // namespace Ui
-
-class EventRef : public QWidget
+DynamicListItem::~DynamicListItem()
 {
-    Q_OBJECT
-
-public:
-    explicit EventRef(QWidget *pParent = 0);
-    virtual ~EventRef();
-
-    void SetEvent(const libcomp::String& event);
-    libcomp::String GetEvent() const;
-
-public slots:
-    void Go();
-
-protected:
-    Ui::EventRef *ui;
-};
-
-#endif // TOOLS_CATHEDRAL_SRC_EVENTREF_H
+    delete ui;
+}

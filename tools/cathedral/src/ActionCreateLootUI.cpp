@@ -47,6 +47,10 @@ ActionCreateLoot::ActionCreateLoot(ActionList *pList,
     prop = new Ui::ActionCreateLoot;
     prop->setupUi(pWidget);
 
+    prop->drops->SetItemType(DynamicItemType_t::OBJ_ITEM_DROP);
+    prop->dropSetIDs->SetItemType(DynamicItemType_t::PRIMITIVE_UINT);
+    prop->locations->SetItemType(DynamicItemType_t::OBJ_OBJECT_POSITION);
+
     ui->actionTitle->setText(tr("<b>Create Loot</b>"));
     ui->layoutMain->addWidget(pWidget);
 }
@@ -67,11 +71,25 @@ void ActionCreateLoot::Load(const std::shared_ptr<objects::Action>& act)
 
     LoadBaseProperties(mAction);
 
-    prop->dropSetIDs->Load(mAction->GetDropSetIDs());
+    for(auto drop : mAction->GetDrops())
+    {
+        prop->dropSetIDs->AddObject(drop);
+    }
+
+    for(uint32_t dropSetID : mAction->GetDropSetIDs())
+    {
+        prop->dropSetIDs->AddUnsignedInteger(dropSetID);
+    }
+
     prop->isBossBox->setChecked(mAction->GetIsBossBox());
     prop->expirationTime->setValue(mAction->GetExpirationTime());
     prop->position->setCurrentIndex(to_underlying(
         mAction->GetPosition()));
+
+    for(auto loc : mAction->GetLocations())
+    {
+        prop->locations->AddObject(loc);
+    }
 }
 
 std::shared_ptr<objects::Action> ActionCreateLoot::Save() const

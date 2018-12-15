@@ -44,144 +44,8 @@
 #include <PopIgnore.h>
 
 // libcomp Includes
+#include <BinaryDataSet.h>
 #include <Log.h>
-
-// tinyxml2 Includes
-#include <PushIgnore.h>
-#include <tinyxml2.h>
-#include <PopIgnore.h>
-
-namespace libcomp
-{
-class BinaryDataSet
-{
-public:
-    BinaryDataSet(std::function<std::shared_ptr<libcomp::Object>()> allocator,
-        std::function<uint32_t(const std::shared_ptr<
-            libcomp::Object>&)> mapper);
-
-    bool Load(std::istream& file);
-    bool Save(std::ostream& file) const;
-
-    bool LoadXml(tinyxml2::XMLDocument& doc);
-
-    std::string GetXml() const;
-
-    std::list<std::shared_ptr<libcomp::Object>> GetObjects() const;
-    std::shared_ptr<libcomp::Object> GetObjectByID(uint32_t id) const;
-
-private:
-    std::function<std::shared_ptr<libcomp::Object>()> mObjectAllocator;
-    std::function<uint32_t(const std::shared_ptr<
-        libcomp::Object>&)> mObjectMapper;
-
-    std::list<std::shared_ptr<libcomp::Object>> mObjects;
-    std::map<uint32_t, std::shared_ptr<libcomp::Object>> mObjectMap;
-};
-}
-
-libcomp::BinaryDataSet::BinaryDataSet(std::function<std::shared_ptr<
-    libcomp::Object>()> allocator, std::function<uint32_t(
-    const std::shared_ptr<libcomp::Object>&)> mapper) :
-    mObjectAllocator(allocator), mObjectMapper(mapper)
-{
-}
-
-
-bool libcomp::BinaryDataSet::Load(std::istream& file)
-{
-    mObjects = libcomp::Object::LoadBinaryData(file,
-        mObjectAllocator);
-
-    for(auto obj : mObjects)
-    {
-        mObjectMap[mObjectMapper(obj)] = obj;
-    }
-
-    return !mObjects.empty();
-}
-
-bool libcomp::BinaryDataSet::Save(std::ostream& file) const
-{
-    return libcomp::Object::SaveBinaryData(file, mObjects);
-}
-
-bool libcomp::BinaryDataSet::LoadXml(tinyxml2::XMLDocument& doc)
-{
-    std::list<std::shared_ptr<libcomp::Object>> objs;
-
-    auto pRoot = doc.RootElement();
-
-    if(nullptr == pRoot)
-    {
-        return false;
-    }
-
-    auto objElement = pRoot->FirstChildElement("object");
-
-    while(nullptr != objElement)
-    {
-        auto obj = mObjectAllocator();
-
-        if(!obj->Load(doc, *objElement))
-        {
-            return false;
-        }
-
-        objs.push_back(obj);
-
-        objElement = objElement->NextSiblingElement("object");
-    }
-
-    mObjects = objs;
-    mObjectMap.clear();
-
-    for(auto obj : mObjects)
-    {
-        mObjectMap[mObjectMapper(obj)] = obj;
-    }
-
-    return !mObjects.empty();
-}
-
-std::string libcomp::BinaryDataSet::GetXml() const
-{
-    tinyxml2::XMLDocument doc;
-
-    tinyxml2::XMLElement *pRoot = doc.NewElement("objects");
-    doc.InsertEndChild(pRoot);
-
-    for(auto obj : mObjects)
-    {
-        if(!obj->Save(doc, *pRoot))
-        {
-            return {};
-        }
-    }
-
-    tinyxml2::XMLPrinter printer;
-    doc.Print(&printer);
-
-    return printer.CStr();
-}
-
-std::list<std::shared_ptr<libcomp::Object>> libcomp::BinaryDataSet::GetObjects() const
-{
-    return mObjects;
-}
-
-std::shared_ptr<libcomp::Object> libcomp::BinaryDataSet::GetObjectByID(
-    uint32_t id) const
-{
-    auto it = mObjectMap.find(id);
-
-    if(mObjectMap.end() != it)
-    {
-        return it->second;
-    }
-
-    return {};
-}
 
 MainWindow::MainWindow(QWidget *pParent) : QWidget(pParent)
 {
@@ -392,7 +256,7 @@ void MainWindow::BrowseZone()
         return;
     }
 
-    libcomp::BinaryDataSet *pSet = new libcomp::BinaryDataSet([]()
+    libcomp::BinaryDataSet pSet([]()
         {
             return std::make_shared<objects::ServerZone>();
         },
@@ -404,7 +268,7 @@ void MainWindow::BrowseZone()
         }
     );
 
-    if(!pSet->LoadXml(doc))
+    if(!pSet.LoadXml(doc))
     {
         LOG_ERROR(libcomp::String("Failed to load file: %1\n").Arg(
             path.toLocal8Bit().constData()));
@@ -412,7 +276,7 @@ void MainWindow::BrowseZone()
         return;
     }
 
-    auto objs = pSet->GetObjects();
+    auto objs = pSet.GetObjects();
 
     if(1 != objs.size())
     {

@@ -356,6 +356,8 @@ void ActionList::RemoveAction(Action *pAction)
     }
 
     pAction->deleteLater();
+
+    RefreshPositions();
 }
 
 void ActionList::MoveUp(Action *pAction)

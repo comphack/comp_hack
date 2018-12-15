@@ -66,6 +66,9 @@ void ActionRunScript::Load(const std::shared_ptr<objects::Action>& act)
     }
 
     LoadBaseProperties(mAction);
+
+    prop->script->SetScriptID(mAction->GetScriptID());
+    prop->script->SetParams(mAction->GetParams());
 }
 
 std::shared_ptr<objects::Action> ActionRunScript::Save() const

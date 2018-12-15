@@ -271,13 +271,6 @@
     </layout>
    </item>
    <item>
-    <widget class="Line" name="lineBottom">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="Line" name="actionListDiv">
      <property name="frameShadow">
       <enum>QFrame::Plain</enum>

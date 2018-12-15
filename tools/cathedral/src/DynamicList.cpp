@@ -368,7 +368,7 @@ void DynamicList::RemoveRow()
         if(exists)
         {
             ui->layoutItems->removeWidget((QWidget*)parent);
-            delete parent;
+            parent->deleteLater();
 
             RefreshPositions();
         }

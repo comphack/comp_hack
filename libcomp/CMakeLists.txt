@@ -56,6 +56,7 @@ CONFIGURE_FILE(src/Constants.h.in "${CMAKE_CURRENT_BINARY_DIR}/Constants.h"
 SET(${PROJECT_NAME}_SRCS
     src/ArgumentParser.cpp
     src/BaseServer.cpp
+    src/BinaryDataSet.cpp
     src/ChannelConnection.cpp
     src/Compress.cpp
     src/Convert.cpp
@@ -141,6 +142,7 @@ SET(${PROJECT_NAME}_HDRS
 
     src/ArgumentParser.h
     src/BaseServer.h
+    src/BinaryDataSet.h
     src/ChannelConnection.h
     src/Compress.h
     src/ConnectionMessage.h

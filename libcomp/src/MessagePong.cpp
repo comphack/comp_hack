@@ -40,3 +40,8 @@ Message::MessageType Message::Pong::GetType() const
 {
     return MessageType::MESSAGE_TYPE_CONNECTION;
 }
+
+libcomp::String Message::Pong::Dump() const
+{
+    return "Message: Pong";
+}

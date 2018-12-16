@@ -86,6 +86,8 @@ public:
 
     virtual MessageType GetType() const;
 
+    virtual libcomp::String Dump() const override;
+
 private:
     /// The received packet
     ReadOnlyPacket mPacket;

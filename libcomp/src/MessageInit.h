@@ -57,6 +57,8 @@ public:
     virtual ~Init();
 
     virtual MessageType GetType() const;
+
+    virtual libcomp::String Dump() const override;
 };
 
 } // namespace Message

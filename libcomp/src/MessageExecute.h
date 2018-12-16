@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include "CString.h"
+#include "Exception.h"
 #include "Message.h"
 
 // Standard C++11 Includes
@@ -72,6 +73,8 @@ public:
     explicit ExecuteImpl(std::function<void(Function...)> f, Args&&... args) :
         Execute(), mBind(std::move(f), std::forward<Args>(args)...)
     {
+        libcomp::Exception e("Execute Message", __FILE__, __LINE__);
+        mBacktrace = String::Join(e.Backtrace(), "\n");
     }
 
     /**
@@ -86,6 +89,12 @@ public:
         return MessageType::MESSAGE_TYPE_SYSTEM;
     }
 
+    virtual libcomp::String Dump() const override
+    {
+        return libcomp::String("Message: Execute\n"
+            "%1").Arg(mBacktrace);
+    }
+
     virtual void Run()
     {
         mBind();
@@ -93,6 +102,7 @@ public:
 
 private:
     BindType_t mBind;
+    libcomp::String mBacktrace;
 };
 
 } // namespace Message

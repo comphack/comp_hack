@@ -48,6 +48,8 @@ public:
 
     virtual ConnectionMessageType GetConnectionMessageType() const;
 
+    virtual libcomp::String Dump() const override;
+
 private:
     std::shared_ptr<TcpConnection> mConnection;
 };

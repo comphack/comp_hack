@@ -40,3 +40,8 @@ Message::MessageType Message::Init::GetType() const
 {
     return MessageType::MESSAGE_TYPE_SYSTEM;
 }
+
+libcomp::String Message::Init::Dump() const
+{
+    return "Message: Init";
+}

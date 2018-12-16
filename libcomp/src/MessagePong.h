@@ -57,6 +57,8 @@ public:
     virtual ~Pong();
 
     virtual MessageType GetType() const;
+
+    virtual libcomp::String Dump() const override;
 };
 
 } // namespace Message

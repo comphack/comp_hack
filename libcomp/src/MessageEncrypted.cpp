@@ -26,6 +26,9 @@
 
 #include "MessageEncrypted.h"
 
+// libcomp Includes
+#include "TcpConnection.h"
+
 using namespace libcomp;
 
 Message::Encrypted::Encrypted(const std::shared_ptr<
@@ -45,4 +48,17 @@ std::shared_ptr<TcpConnection> Message::Encrypted::GetConnection() const
 Message::ConnectionMessageType Message::Encrypted::GetConnectionMessageType() const
 {
     return ConnectionMessageType::CONNECTION_MESSAGE_ENCRYPTED;
+}
+
+libcomp::String Message::Encrypted::Dump() const
+{
+    if(mConnection)
+    {
+        return libcomp::String("Message: Connection Encrypted\nConnection: %1"
+            ).Arg(mConnection->GetName());
+    }
+    else
+    {
+        return "Message: Connection Encrypted";
+    }
 }

@@ -26,6 +26,9 @@
 
 #include "MessageWorldNotification.h"
 
+// libcomp Includes
+#include "TcpConnection.h"
+
 using namespace libcomp;
 
 Message::WorldNotification::WorldNotification(const libcomp::String& address,
@@ -50,4 +53,10 @@ uint16_t Message::WorldNotification::GetPort() const
 Message::ConnectionMessageType Message::WorldNotification::GetConnectionMessageType() const
 {
     return ConnectionMessageType::CONNECTION_MESSAGE_WORLD_NOTIFICATION;
+}
+
+libcomp::String Message::WorldNotification::Dump() const
+{
+    return libcomp::String("Message: World Notification\n"
+        "Address: %1:%2").Arg(mAddress).Arg(mPort);
 }

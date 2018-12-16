@@ -72,6 +72,12 @@
         <member type="set" name="DropSetIDs">
             <element type="u32"/>
         </member>
+        <member type="set" name="SkillBlacklist">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="SkillWhitelist">
+            <element type="u32"/>
+        </member>
         <member type="list" name="NPCs">
             <element type="ServerNPC*"/>
         </member>
@@ -115,6 +121,12 @@
         </member>
         <member type="bool" name="AutoApply" default="true"/>
         <member type="set" name="DropSetIDs">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="SkillBlacklist">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="SkillWhitelist">
             <element type="u32"/>
         </member>
         <member type="list" name="NPCs">
@@ -190,6 +202,7 @@
         <member type="s32" name="RewardModifier"/>
         <member type="u8" name="DestinyBoxSize" max="100"/>
         <member type="bool" name="DestinyBoxShared"/>
+        <member type="bool" name="WhitelistSkillsOnly"/>
     </object>
     <object name="PvPInstanceVariant" baseobject="ServerZoneInstanceVariant"
         persistent="false" scriptenabled="true">

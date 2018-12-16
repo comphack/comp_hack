@@ -15,6 +15,7 @@
     <!-- common classes -->
     <include path="account.xml"/>
     <include path="accountlogin.xml"/>
+    <include path="ailogic.xml"/>
     <include path="character.xml"/>
     <include path="clan.xml"/>
     <include path="demon.xml"/>

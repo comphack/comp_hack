@@ -39,7 +39,7 @@
 using namespace channel;
 
 AICommand::AICommand() : mType(AICommandType_t::NONE), mStartTime(0),
-    mDelay(0), mTargetEntityID(-1)
+    mDelay(0), mTargetEntityID(-1), mIgnoredDelay(false)
 {
 }
 
@@ -60,6 +60,16 @@ uint64_t AICommand::GetDelay() const
 void AICommand::SetDelay(uint64_t delay)
 {
     mDelay = delay;
+}
+
+bool AICommand::GetIgnoredDelay() const
+{
+    return mIgnoredDelay;
+}
+
+void AICommand::SetIgnoredDelay(bool ignore)
+{
+    mIgnoredDelay = ignore;
 }
 
 uint64_t AICommand::GetStartTime()
@@ -185,11 +195,10 @@ AIUseSkillCommand::AIUseSkillCommand(
 }
 
 AIUseSkillCommand::AIUseSkillCommand(
-    const std::shared_ptr<objects::MiSkillData>& skillData,
     const std::shared_ptr<objects::ActivatedAbility>& activated)
 {
     mType = AICommandType_t::USE_SKILL;
-    mSkillData = skillData;
+    mSkillData = activated ? activated->GetSkillData() : nullptr;
     mActivated = activated;
     if(activated)
     {

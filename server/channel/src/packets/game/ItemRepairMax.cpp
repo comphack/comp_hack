@@ -27,7 +27,6 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <DefinitionManager.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
@@ -77,7 +76,6 @@ bool Parsers::ItemRepairMax::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto characterManager = server->GetCharacterManager();
-    auto definitionManager = server->GetDefinitionManager();
 
     auto item = std::dynamic_pointer_cast<objects::Item>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
@@ -96,7 +94,7 @@ bool Parsers::ItemRepairMax::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        auto skillData = definitionManager->GetSkillData(activatedAbility->GetSkillID());
+        auto skillData = activatedAbility->GetSkillData();
         if(skillData)
         {
             int32_t adjust = 0;

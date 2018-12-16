@@ -330,6 +330,13 @@ float ActiveEntityState::GetMovementSpeed(bool altSpeed)
     return (float)(speed + GetSpeedBoost()) * 10.f;
 }
 
+uint32_t ActiveEntityState::GetHitboxSize() const
+{
+    auto devilData = GetDevilData();
+    return devilData ? devilData->GetBattleData()->GetHitboxSize()
+        : PLAYER_HITBOX_SIZE;
+}
+
 void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
 {
     if(now != mLastRefresh)
@@ -2923,6 +2930,12 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     CharacterManager::CalculateDependentStats(stats,
         GetCoreStats()->GetLevel(), true);
 
+    uint8_t result = 0;
+    if(selfState)
+    {
+        result = CompareAndResetStats(stats, true);
+    }
+
     AdjustStats(correctTbls, stats, calcState, false);
 
     int32_t extraHP = 0;
@@ -2933,7 +2946,7 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
 
     if(selfState)
     {
-        return CompareAndResetStats(stats, extraHP);
+        return result | CompareAndResetStats(stats, false, extraHP);
     }
     else
     {
@@ -3123,79 +3136,106 @@ const std::set<CorrectTbl> VISIBLE_STATS =
         CorrectTbl::MDEF
     };
 
-uint8_t ActiveEntityState::CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+uint8_t ActiveEntityState::CompareAndResetStats(
+    libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool dependentBase,
     int32_t extraHP)
 {
     uint8_t result = 0;
-
-    auto cs = GetCoreStats();
-    int32_t hp = cs->GetHP();
-    int32_t mp = cs->GetMP();
-    int32_t newMaxHP = (int32_t)(extraHP + (int32_t)stats[CorrectTbl::HP_MAX]);
-    int32_t newMaxMP = (int32_t)stats[CorrectTbl::MP_MAX];
-
-    if(hp > newMaxHP)
+    if(dependentBase)
     {
-        hp = newMaxHP;
-    }
+        if(GetCLSRBase() != stats[CorrectTbl::CLSR]
+            || GetLNGRBase() != stats[CorrectTbl::LNGR]
+            || GetSPELLBase() != stats[CorrectTbl::SPELL]
+            || GetSUPPORTBase() != stats[CorrectTbl::SUPPORT]
+            || GetPDEFBase() != stats[CorrectTbl::PDEF]
+            || GetMDEFBase() != stats[CorrectTbl::MDEF])
+        {
+            result |= ENTITY_CALC_STAT_LOCAL;
+        }
 
-    if(mp > newMaxMP)
-    {
-        mp = newMaxMP;
-    }
+        SetCLSRBase(stats[CorrectTbl::CLSR]);
+        SetLNGRBase(stats[CorrectTbl::LNGR]);
+        SetSPELLBase(stats[CorrectTbl::SPELL]);
+        SetSUPPORTBase(stats[CorrectTbl::SUPPORT]);
+        SetPDEFBase(stats[CorrectTbl::PDEF]);
+        SetMDEFBase(stats[CorrectTbl::MDEF]);
 
-    auto calcState = GetCalculatedState();
-    if(calcState->GetCorrectTbl((size_t)CorrectTbl::MOVE1) != stats[CorrectTbl::MOVE1] ||
-        calcState->GetCorrectTbl((size_t)CorrectTbl::MOVE2) != stats[CorrectTbl::MOVE2])
-    {
-        result |= ENTITY_CALC_MOVE_SPEED;
+        return result;
     }
+    else
+    {
+        auto cs = GetCoreStats();
+        int32_t hp = cs->GetHP();
+        int32_t mp = cs->GetMP();
+        int32_t newMaxHP = (int32_t)(extraHP +
+            (int32_t)stats[CorrectTbl::HP_MAX]);
+        int32_t newMaxMP = (int32_t)stats[CorrectTbl::MP_MAX];
 
-    for(auto statPair : stats)
-    {
-        calcState->SetCorrectTbl((size_t)statPair.first, statPair.second);
-    }
+        if(hp > newMaxHP)
+        {
+            hp = newMaxHP;
+        }
 
-    if(hp != cs->GetHP()
-        || mp != cs->GetMP()
-        || GetMaxHP() != newMaxHP
-        || GetMaxMP() != newMaxMP)
-    {
-        result |= ENTITY_CALC_STAT_WORLD |
-            ENTITY_CALC_STAT_LOCAL;
-    }
-    else if(GetSTR() != stats[CorrectTbl::STR]
-        || GetMAGIC() != stats[CorrectTbl::MAGIC]
-        || GetVIT() != stats[CorrectTbl::VIT]
-        || GetINTEL() != stats[CorrectTbl::INT]
-        || GetSPEED() != stats[CorrectTbl::SPEED]
-        || GetLUCK() != stats[CorrectTbl::LUCK]
-        || GetCLSR() != stats[CorrectTbl::CLSR]
-        || GetLNGR() != stats[CorrectTbl::LNGR]
-        || GetSPELL() != stats[CorrectTbl::SPELL]
-        || GetSUPPORT() != stats[CorrectTbl::SUPPORT]
-        || GetPDEF() != stats[CorrectTbl::PDEF]
-        || GetMDEF() != stats[CorrectTbl::MDEF])
-    {
-        result |= ENTITY_CALC_STAT_LOCAL;
-    }
+        if(mp > newMaxMP)
+        {
+            mp = newMaxMP;
+        }
 
-    cs->SetHP(hp);
-    cs->SetMP(mp);
-    SetMaxHP(newMaxHP);
-    SetMaxMP(newMaxMP);
-    SetSTR(stats[CorrectTbl::STR]);
-    SetMAGIC(stats[CorrectTbl::MAGIC]);
-    SetVIT(stats[CorrectTbl::VIT]);
-    SetINTEL(stats[CorrectTbl::INT]);
-    SetSPEED(stats[CorrectTbl::SPEED]);
-    SetLUCK(stats[CorrectTbl::LUCK]);
-    SetCLSR(stats[CorrectTbl::CLSR]);
-    SetLNGR(stats[CorrectTbl::LNGR]);
-    SetSPELL(stats[CorrectTbl::SPELL]);
-    SetSUPPORT(stats[CorrectTbl::SUPPORT]);
-    SetPDEF(stats[CorrectTbl::PDEF]);
-    SetMDEF(stats[CorrectTbl::MDEF]);
+        auto calcState = GetCalculatedState();
+        if(calcState->GetCorrectTbl((size_t)CorrectTbl::MOVE1) !=
+            stats[CorrectTbl::MOVE1] ||
+            calcState->GetCorrectTbl((size_t)CorrectTbl::MOVE2) !=
+            stats[CorrectTbl::MOVE2])
+        {
+            result |= ENTITY_CALC_MOVE_SPEED;
+        }
+
+        for(auto statPair : stats)
+        {
+            calcState->SetCorrectTbl((size_t)statPair.first, statPair.second);
+        }
+
+        if(hp != cs->GetHP()
+            || mp != cs->GetMP()
+            || GetMaxHP() != newMaxHP
+            || GetMaxMP() != newMaxMP)
+        {
+            result |= ENTITY_CALC_STAT_WORLD |
+                ENTITY_CALC_STAT_LOCAL;
+        }
+        else if(GetSTR() != stats[CorrectTbl::STR]
+            || GetMAGIC() != stats[CorrectTbl::MAGIC]
+            || GetVIT() != stats[CorrectTbl::VIT]
+            || GetINTEL() != stats[CorrectTbl::INT]
+            || GetSPEED() != stats[CorrectTbl::SPEED]
+            || GetLUCK() != stats[CorrectTbl::LUCK]
+            || GetCLSR() != stats[CorrectTbl::CLSR]
+            || GetLNGR() != stats[CorrectTbl::LNGR]
+            || GetSPELL() != stats[CorrectTbl::SPELL]
+            || GetSUPPORT() != stats[CorrectTbl::SUPPORT]
+            || GetPDEF() != stats[CorrectTbl::PDEF]
+            || GetMDEF() != stats[CorrectTbl::MDEF])
+        {
+            result |= ENTITY_CALC_STAT_LOCAL;
+        }
+
+        cs->SetHP(hp);
+        cs->SetMP(mp);
+        SetMaxHP(newMaxHP);
+        SetMaxMP(newMaxMP);
+        SetSTR(stats[CorrectTbl::STR]);
+        SetMAGIC(stats[CorrectTbl::MAGIC]);
+        SetVIT(stats[CorrectTbl::VIT]);
+        SetINTEL(stats[CorrectTbl::INT]);
+        SetSPEED(stats[CorrectTbl::SPEED]);
+        SetLUCK(stats[CorrectTbl::LUCK]);
+        SetCLSR(stats[CorrectTbl::CLSR]);
+        SetLNGR(stats[CorrectTbl::LNGR]);
+        SetSPELL(stats[CorrectTbl::SPELL]);
+        SetSUPPORT(stats[CorrectTbl::SUPPORT]);
+        SetPDEF(stats[CorrectTbl::PDEF]);
+        SetMDEF(stats[CorrectTbl::MDEF]);
+    }
 
     return result;
 }

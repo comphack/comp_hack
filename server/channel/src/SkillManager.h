@@ -64,6 +64,10 @@ protected:
     /// have been handled elsewhere
     bool ApplyStatusEffects = true;
 
+    /// true if normal skill aggro should be applied, false if it should
+    /// not be applied or has already been handled
+    bool ApplyAggro = true;
+
     /// Indicates that the skill's has already been executed
     bool Executed = false;
 
@@ -184,6 +188,15 @@ public:
      */
     bool SkillRestricted(const std::shared_ptr<ActiveEntityState> source,
         const std::shared_ptr<objects::MiSkillData>& skillData);
+
+    /**
+     * Determine if the specified skill is locked from use in the current zone.
+     * @param skillID ID of the skill being checked
+     * @param zone Pointer to the current zone
+     * @return true if the skill is restricted from being used
+     */
+    bool SkillZoneRestricted(uint32_t skillID,
+        const std::shared_ptr<Zone> zone);
 
     /**
      * Determine if the skill target supplied is in range for a specific skill
@@ -1232,6 +1245,13 @@ private:
         uint32_t demonType, uint32_t itemType, int8_t rarity, uint32_t skillID);
 
     /**
+     * Fizzle a skill that has already started processing and perform any
+     * necessary cleanup steps.
+     * @param ctx Special execution state for the skill
+     */
+    void Fizzle(const std::shared_ptr<SkillExecutionContext>& ctx);
+
+    /**
      * Notify the client that a skill has been activated.  The client will notify
      * the server when the specified charge time has elapsed for execution if
      * applicable.
@@ -1300,11 +1320,19 @@ private:
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;
 
-    /// Map of skill function IDs mapped to manager functions.
+    /// Map of skill function IDs mapped to manager functions that execute
+    /// in place of the normal skill handler.
     std::unordered_map<uint16_t, std::function<bool(SkillManager&,
         const std::shared_ptr<objects::ActivatedAbility>&,
         const std::shared_ptr<SkillExecutionContext>&,
         const std::shared_ptr<ChannelClientConnection>&)>> mSkillFunctions;
+
+    /// Map of skill function IDs mapped to manager functions that perform
+    /// special actions after the normal skill processing completes.
+    std::unordered_map<uint16_t, std::function<bool(SkillManager&,
+        const std::shared_ptr<objects::ActivatedAbility>&,
+        const std::shared_ptr<SkillExecutionContext>&,
+        const std::shared_ptr<ChannelClientConnection>&)>> mSkillEffectFunctions;
 };
 
 } // namespace channel

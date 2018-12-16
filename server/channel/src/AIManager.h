@@ -294,11 +294,14 @@ private:
      * Queue a command that will move the entity into range with its target
      * @param eState Pointer to the entity state
      * @param skillData Pointer to the skill that will be used
+     * @param distOverride Optional target distance to use as the minimum
+     *  distance in place of the normal skill range
      * @return 0 if the entity queued a move command to the target, 1 if the
      *  move was not possible, 2 if no move was needed
      */
     uint8_t SkillAdvance(const std::shared_ptr<ActiveEntityState>& eState,
-        const std::shared_ptr<objects::MiSkillData>& skillData);
+        const std::shared_ptr<objects::MiSkillData>& skillData,
+        float distOverride = 0.f);
 
     /**
      * Clear an entity's AIState current target and find the next target to focus on

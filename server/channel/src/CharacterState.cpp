@@ -977,6 +977,11 @@ uint8_t CharacterState::RecalculateStats(
 
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), false);
 
+    if(selfState)
+    {
+        result = result | CompareAndResetStats(stats, true);
+    }
+
     AdjustStats(correctTbls, stats, calcState, false);
 
     if(GetStatusTimes(STATUS_RESTING))
@@ -996,7 +1001,7 @@ uint8_t CharacterState::RecalculateStats(
 
     if(selfState)
     {
-        return result | CompareAndResetStats(stats);
+        return result | CompareAndResetStats(stats, false);
     }
     else
     {

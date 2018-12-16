@@ -1186,13 +1186,22 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
 
         for(auto& pair : hpRestores)
         {
-            if(pair.first->SetHPMP(pair.second, -1, false))
+            auto eState = pair.first;
+            if(eState->SetHPMP(pair.second, -1, false))
             {
-                displayState.insert(pair.first);
+                displayState.insert(eState);
 
                 // Trigger revival actions
-                zoneManager->TriggerZoneActions(zone, { pair.first },
+                zoneManager->TriggerZoneActions(zone, { eState },
                     ZoneTrigger_t::ON_REVIVAL, client);
+
+                if(!newZoneID)
+                {
+                    // If no warp is involved, add 20s AI ignore
+                    eState->SetStatusTimes(STATUS_IGNORE,
+                        ChannelServer::GetServerTime() +
+                        (uint64_t)20000000ULL);
+                }
             }
         }
 
@@ -2973,6 +2982,13 @@ void CharacterManager::EquipItem(const std::shared_ptr<
         // Unequip from anywhere
         equipSlot.SetReference(nullptr);
         unequip = true;
+
+        // If mounted and this is a ring, cancel mount
+        if(slot == objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING &&
+            cState->IsMounted())
+        {
+            CancelMount(state);
+        }
     }
     else if(!inInventory)
     {
@@ -6703,6 +6719,11 @@ bool CharacterManager::DigitalizeStart(const std::shared_ptr<
 bool CharacterManager::DigitalizeEnd(const std::shared_ptr<
     channel::ChannelClientConnection>& client)
 {
+    if(!client)
+    {
+        return false;
+    }
+
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dgState = cState->GetDigitalizeState();
@@ -7789,24 +7810,42 @@ void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
                     baseOnly ? coreStats->GetMaxMP() : state->GetMaxMP()));
             }
 
-            p.WriteS16Little(coreStats->GetCLSR());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetCLSR() - coreStats->GetCLSR())));
-            p.WriteS16Little(coreStats->GetLNGR());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetLNGR() - coreStats->GetLNGR())));
-            p.WriteS16Little(coreStats->GetSPELL());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetSPELL() - coreStats->GetSPELL())));
-            p.WriteS16Little(coreStats->GetSUPPORT());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetSUPPORT() - coreStats->GetSUPPORT())));
-            p.WriteS16Little(coreStats->GetPDEF());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetPDEF() - coreStats->GetPDEF())));
-            p.WriteS16Little(coreStats->GetMDEF());
-            p.WriteS16Little(static_cast<int16_t>(
-                baseOnly ? 0 : (state->GetMDEF() - coreStats->GetMDEF())));
+            if(baseOnly)
+            {
+                p.WriteS16Little(coreStats->GetCLSR());
+                p.WriteS16Little(0);
+                p.WriteS16Little(coreStats->GetLNGR());
+                p.WriteS16Little(0);
+                p.WriteS16Little(coreStats->GetSPELL());
+                p.WriteS16Little(0);
+                p.WriteS16Little(coreStats->GetSUPPORT());
+                p.WriteS16Little(0);
+                p.WriteS16Little(coreStats->GetPDEF());
+                p.WriteS16Little(0);
+                p.WriteS16Little(coreStats->GetMDEF());
+                p.WriteS16Little(0);
+            }
+            else
+            {
+                p.WriteS16Little(state->GetCLSRBase());
+                p.WriteS16Little(static_cast<int16_t>(state->GetCLSR() -
+                    state->GetCLSRBase()));
+                p.WriteS16Little(state->GetLNGRBase());
+                p.WriteS16Little(static_cast<int16_t>(state->GetLNGR() -
+                    state->GetLNGRBase()));
+                p.WriteS16Little( state->GetSPELLBase());
+                p.WriteS16Little(static_cast<int16_t>(state->GetSPELL() -
+                    state->GetSPELLBase()));
+                p.WriteS16Little(state->GetSUPPORTBase());
+                p.WriteS16Little(static_cast<int16_t>(state->GetSUPPORT() -
+                    state->GetSUPPORTBase()));
+                p.WriteS16Little(state->GetPDEFBase());
+                p.WriteS16Little(static_cast<int16_t>(state->GetPDEF() -
+                    state->GetPDEFBase()));
+                p.WriteS16Little(state->GetMDEFBase());
+                p.WriteS16Little(static_cast<int16_t>(state->GetMDEF() -
+                    state->GetMDEFBase()));
+            }
         }
         break;
     case 2:
@@ -7830,17 +7869,17 @@ void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
             p.WriteS16Little((int16_t)state->GetMaxHP());
             p.WriteS16Little((int16_t)state->GetMaxMP());
             p.WriteS16Little(static_cast<int16_t>(
-                state->GetCLSR() - coreStats->GetCLSR()));
+                state->GetCLSR() - state->GetCLSRBase()));
             p.WriteS16Little(static_cast<int16_t>(
-                state->GetLNGR() - coreStats->GetLNGR()));
+                state->GetLNGR() - state->GetLNGRBase()));
             p.WriteS16Little(static_cast<int16_t>(
-                state->GetSPELL() - coreStats->GetSPELL()));
+                state->GetSPELL() - state->GetSPELLBase()));
             p.WriteS16Little(static_cast<int16_t>(
-                state->GetSUPPORT() - coreStats->GetSUPPORT()));
+                state->GetSUPPORT() - state->GetSUPPORTBase()));
             p.WriteS16Little(static_cast<int16_t>(
-                state->GetPDEF() - coreStats->GetPDEF()));
+                state->GetPDEF() - state->GetPDEFBase()));
             p.WriteS16Little(static_cast<int16_t>(
-                state->GetMDEF() - coreStats->GetMDEF()));
+                state->GetMDEF() - state->GetMDEFBase()));
 
             if(format == 3)
             {
@@ -7857,12 +7896,12 @@ void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
                 }
             }
 
-            p.WriteS16Little(coreStats->GetCLSR());
-            p.WriteS16Little(coreStats->GetLNGR());
-            p.WriteS16Little(coreStats->GetSPELL());
-            p.WriteS16Little(coreStats->GetSUPPORT());
-            p.WriteS16Little(coreStats->GetPDEF());
-            p.WriteS16Little(coreStats->GetMDEF());
+            p.WriteS16Little(state->GetCLSRBase());
+            p.WriteS16Little(state->GetLNGRBase());
+            p.WriteS16Little(state->GetSPELLBase());
+            p.WriteS16Little(state->GetSUPPORTBase());
+            p.WriteS16Little(state->GetPDEFBase());
+            p.WriteS16Little(state->GetMDEFBase());
         }
         break;
     default:

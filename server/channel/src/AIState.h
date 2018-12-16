@@ -152,7 +152,7 @@ public:
     void SetScript(const std::shared_ptr<libcomp::ScriptEngine>& aiScript);
 
     /**
-     * Get the AI's aggro value from its base AI definition represnting
+     * Get the AI's aggro value from its base AI definition representing
      * day, night and enemy casting distances and FoVs
      * @param mode AI aggro type:
      *  0) Normal
@@ -165,6 +165,14 @@ public:
      * @return Aggro distance or FoV corresponding to the requested mode
      */
     float GetAggroValue(uint8_t mode, bool fov, float defaultVal);
+
+    /**
+     * Get the AI's de-aggro distnace from its base AI definition.
+     * @param isNight If true, the entity's night search distance will be
+     *  used for the calculation. If false, the normal distance will be used.
+     * @return De-aggro distance for the entity
+     */
+    float GetDeaggroDistance(bool isNight);
 
     /**
      * Get the current command or next command that has not been started

@@ -108,11 +108,10 @@ bool AIState::SetStatus(AIStatus_t status, bool isDefault)
         return false;
     }
 
-    bool startDespawnTimer = false;
-    bool endDespawnTimer = false;
+    bool statusChanged = false;
     {
         std::lock_guard<std::mutex> lock(mFieldLock);
-        mStatusChanged = mStatus != status;
+        mStatusChanged = statusChanged = mStatus != status;
 
         mPreviousStatus = mStatus;
         mStatus = status;
@@ -121,30 +120,32 @@ bool AIState::SetStatus(AIStatus_t status, bool isDefault)
         {
             mDefaultStatus = status;
         }
-        else if(mStatusChanged)
-        {
-            if(status == AIStatus_t::WANDERING)
-            {
-                // Set if switching to wandering
-                startDespawnTimer = GetDespawnWhenLost();
-            }
-            else if(GetDespawnTimeout())
-            {
-                // Clear if switching to anything else
-                endDespawnTimer = true;
-            }
-        }
     }
 
-    if(startDespawnTimer)
+    if(statusChanged)
     {
-        // Most entities despawn when switching to wandering after 5 minutes
-        // if they don't make their way back to their spawn location
-        SetDespawnTimeout(ChannelServer::GetServerTime() + 300000000ULL);
-    }
-    else if(endDespawnTimer)
-    {
-        SetDespawnTimeout(0);
+        // Always reset next target time
+        SetNextTargetTime(0);
+
+        if(status == AIStatus_t::WANDERING)
+        {
+            uint64_t now = ChannelServer::GetServerTime();
+            if(GetDespawnWhenLost())
+            {
+                // Most entities despawn when switching to wandering after 5
+                // minutes if they don't make their way back to their spawn
+                // location
+                SetDespawnTimeout(now + 300000000ULL);
+            }
+
+            // Set next target time based on think speed
+            SetNextTargetTime(now + (uint64_t)(GetThinkSpeed() * 1000));
+        }
+        else if(GetDespawnTimeout())
+        {
+            // Clear if switching to anything else
+            SetDespawnTimeout(0);
+        }
     }
 
     return true;
@@ -192,6 +193,12 @@ float AIState::GetAggroValue(uint8_t mode, bool fov, float defaultVal)
     }
 
     return defaultVal;
+}
+
+float AIState::GetDeaggroDistance(bool isNight)
+{
+    float dist = GetAggroValue(isNight ? 1 : 0, false, AI_DEFAULT_AGGRO_RANGE);
+    return (dist < 200.f ? 200.f : dist) * (float)GetDeaggroScale();
 }
 
 std::shared_ptr<AICommand> AIState::GetCurrentCommand() const

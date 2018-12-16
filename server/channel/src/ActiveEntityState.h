@@ -94,6 +94,9 @@ const uint8_t STATUS_LOCKOUT = 0x20;
 /// Entity is waiting (used by AI controlled entity)
 const uint8_t STATUS_WAITING = 0x40;
 
+/// Entity is ignoring other entities and will not be seen by searching AI
+const uint8_t STATUS_IGNORE = 0x80;
+
 namespace libcomp
 {
 class DefinitionManager;
@@ -382,6 +385,13 @@ public:
      * @return Movement speed of the entity
      */
     float GetMovementSpeed(bool altSpeed = false);
+
+    /**
+     * Get the hitbox size for the current entity as defined by MiDevilData.
+     * The value returned is not converted to relative server units.
+     * @return Hitbox size
+     */
+    uint32_t GetHitboxSize() const;
 
     /**
      * Update the entity's current position and rotation values based
@@ -925,6 +935,23 @@ protected:
      */
     std::set<uint32_t> GetEffectiveTokuseiSkills(
         libcomp::DefinitionManager* definitionManager);
+
+    /**
+     * Compare and set the entity's current stats and also keep track of if
+     * a change occurred.
+     * @param stats Map of correct table IDs to calculated stats to set on the
+     *  entity
+     * @param dependentBase If true, only dependent stat base values will be
+     *  checked and set. If false, final stats will be checked and set.
+     * @param extraHP Extra HP amount to add to the base MaxHP. Only applies
+     *  when not applying dependent base stats. Used by enemies.
+     * @return 1 if the calculation resulted in a change to the stats that should
+     *  be sent to the client, 2 if one of the changes should be communicated to
+     *  the world (for party members etc), 0 if no change resulted from the
+     *  recalculation
+     */
+    uint8_t CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        bool dependentBase, int32_t extraHP = 0);
 
     /**
      * Compare and set the entity's current stats and also keep track of if

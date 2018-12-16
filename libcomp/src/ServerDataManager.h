@@ -49,6 +49,7 @@
 namespace objects
 {
 class Action;
+class AILogicGroup;
 class DemonPresent;
 class DemonQuestReward;
 class DropSet;
@@ -199,6 +200,13 @@ public:
      * @return List of COMP shop definition IDs
      */
     std::list<uint32_t> GetCompShopIDs() const;
+
+    /**
+     * Get an AI logic group by definition ID
+     * @param id Definition ID of an AI logic group
+     * @return Pointer to the AI logic group matching the specified id
+     */
+    const std::shared_ptr<objects::AILogicGroup> GetAILogicGroup(uint16_t id);
 
     /**
      * Get a demon present entry by definition ID
@@ -480,6 +488,10 @@ private:
 
     /// List of all COMP shop definition IDs
     std::list<uint32_t> mCompShopIDs;
+
+    /// Map of AI logic groups by definition ID
+    std::unordered_map<uint16_t,
+        std::shared_ptr<objects::AILogicGroup>> mAILogicGroups;
 
     /// Map of demon present entries by definition ID
     std::unordered_map<uint32_t,

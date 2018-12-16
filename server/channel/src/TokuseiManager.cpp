@@ -200,7 +200,8 @@ bool TokuseiManager::Initialize()
                     aspect->GetType() == TokuseiAspectType::KNOCKBACK_RECOVERY ||
                     aspect->GetType() == TokuseiAspectType::SOUL_POINT_RATE ||
                     aspect->GetType() == TokuseiAspectType::EQUIP_MOVE_DECAY ||
-                    aspect->GetType() == TokuseiAspectType::EQUIP_DECAY_XP)
+                    aspect->GetType() == TokuseiAspectType::EQUIP_DECAY_XP ||
+                    aspect->GetType() == TokuseiAspectType::SKILL_LOCK)
                 {
                     invalidSkillAdjust = true;
                     break;
@@ -1825,6 +1826,20 @@ std::list<double> TokuseiManager::GetAspectValueList(const std::shared_ptr<
     }
 
     return result;
+}
+
+bool TokuseiManager::AspectValueExists(const std::shared_ptr<
+    ActiveEntityState>& eState, TokuseiAspectType type, double value)
+{
+    for(double val : GetAspectValueList(eState, type))
+    {
+        if(val == value)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void TokuseiManager::RecalcTimedTokusei(WorldClock& clock)

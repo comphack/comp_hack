@@ -42,6 +42,8 @@
 #include <ItemBox.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
+#include <MiSkillData.h>
+#include <MiSkillItemStatusCommonData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -252,7 +254,9 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            server->GetSkillManager()->SendFailure(cState, activatedAbility->GetSkillID(),
+            uint32_t skillID = activatedAbility->GetSkillData()->GetCommon()
+                ->GetID();
+            server->GetSkillManager()->SendFailure(cState, skillID,
                 client);
         }
     }

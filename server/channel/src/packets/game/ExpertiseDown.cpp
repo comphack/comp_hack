@@ -28,7 +28,6 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <DefinitionManager.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
@@ -79,7 +78,6 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto definitionManager = server->GetDefinitionManager();
     auto skillManager = server->GetSkillManager();
 
     auto activatedAbility = cState->GetSpecialActivations(activationID);
@@ -92,7 +90,7 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
         bool failure = false;
 
         auto exp = character->GetExpertises((size_t)expertiseID).Get();
-        auto skillData = definitionManager->GetSkillData(activatedAbility->GetSkillID());
+        auto skillData = activatedAbility->GetSkillData();
         if(exp && skillData)
         {
             int32_t points = exp->GetPoints();

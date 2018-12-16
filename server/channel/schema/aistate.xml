@@ -2,15 +2,17 @@
 <objgen>
     <object name="AIStateObject" scriptenabled="true" persistent="false">
         <member type="s32" name="TargetEntityID"/>
-        <member type="MiAIData*" name="BaseAI"/>
+        <member type="MiAIData*" name="BaseAI" nulldefault="true"/>
+        <member type="AILogicGroup*" name="LogicGroup" nulldefault="true"/>
         <member type="u64" name="DespawnTimeout"/>
-        <member type="u64" name="SkillWaitStart"/>
-        <member type="u8" name="Aggression" default="100"/>
+        <member type="u64" name="NextTargetTime"/>
+        <member type="float" name="Aggression" default="1.0"/>
         <member type="float" name="Awareness" default="1.0"/>
         <member type="s32" name="AggroLevelLimit" default="99"/>
         <member type="s32" name="ThinkSpeed" default="2000"/>
+        <member type="u8" name="DeaggroScale" default="2"/>
+        <member type="u8" name="AggroLimit" default="0x01"/>
         <member type="u16" name="SkillSettings" default="0x1F"/>
-        <member type="u8" name="HealThreshold" default="30"/>
         <member type="float" name="DefensiveDistance" default="800.0"/>
         <member type="map" name="ActionOverrides">
             <key type="string"/>
@@ -20,16 +22,9 @@
             <key type="string"/>
             <value type="u64"/>
         </member>
-        <member type="u8" name="SkillWeightCharge" default="0"/>
-        <member type="u8" name="SkillWeightCost" default="2"/>
-        <member type="u8" name="SkillWeightHeal" default="4"/>
-        <member type="u8" name="SkillWeightRange" default="1"/>
+        <member type="bool" name="StrikeFirst" default="true"/>
+        <member type="bool" name="NormalSkillUse" default="true"/>
         <member type="bool" name="SkillsMapped"/>
-        <member type="set" name="OutclassedSkills">
-            <element type="u32"/>
-        </member>
         <member type="bool" name="DespawnWhenLost" default="true"/>
-        <member type="bool" name="SkipOutclassedSkills" default="true"/>
-        <member type="bool" name="IgnoreAggroLimit"/>
     </object>
 </objgen>

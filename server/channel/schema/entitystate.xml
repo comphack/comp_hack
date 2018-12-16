@@ -111,11 +111,17 @@
         <member type="s16" name="SPEED"/>
         <member type="s16" name="LUCK"/>
         <member type="s16" name="CLSR"/>
+        <member type="s16" name="CLSRBase"/>
         <member type="s16" name="LNGR"/>
+        <member type="s16" name="LNGRBase"/>
         <member type="s16" name="SPELL"/>
+        <member type="s16" name="SPELLBase"/>
         <member type="s16" name="SUPPORT"/>
+        <member type="s16" name="SUPPORTBase"/>
         <member type="s16" name="PDEF"/>
+        <member type="s16" name="PDEFBase"/>
         <member type="s16" name="MDEF"/>
+        <member type="s16" name="MDEFBase"/>
         <member type="s16" name="CombatRunSpeed"/>
         <member type="s16" name="SpeedBoost"/>
         <member type="CalculatedEntityState*" name="CalculatedState"/>
@@ -174,7 +180,7 @@
         </member>
     </object>
     <object name="ActivatedAbility" scriptenabled="true" persistent="false">
-        <member type="u32" name="SkillID"/>
+        <member type="MiSkillData*" name="SkillData"/>
         <member type="EntityStateObject*" name="SourceEntity"
             nulldefault="true"/>
         <member type="s64" name="ActivationObjectID"/>

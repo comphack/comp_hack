@@ -36,9 +36,9 @@
             <value>ZIOTITE</value>
         </member>
 
-        <member type="u8" name="Aggression" default="100"/>
         <member type="u16" name="BaseAIType"/>
         <member type="string" name="AIScriptID"/>
+        <member type="u16" name="LogicGroupID"/>
 
         <member type="u8" name="TalkResist"/>
         <!-- Flags: 1 = Can join, 2 = Can gift -->

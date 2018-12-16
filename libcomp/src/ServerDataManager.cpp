@@ -37,6 +37,7 @@
 #include <ActionSpawn.h>
 #include <ActionZoneChange.h>
 #include <ActionZoneInstance.h>
+#include <AILogicGroup.h>
 #include <DemonPresent.h>
 #include <DemonQuestReward.h>
 #include <DropSet.h>
@@ -344,6 +345,11 @@ std::list<uint32_t> ServerDataManager::GetCompShopIDs() const
     return mCompShopIDs;
 }
 
+const std::shared_ptr<objects::AILogicGroup> ServerDataManager::GetAILogicGroup(uint16_t id)
+{
+    return GetObjectByID<uint16_t, objects::AILogicGroup>(id, mAILogicGroups);
+}
+
 const std::shared_ptr<objects::DemonPresent> ServerDataManager::GetDemonPresentData(uint32_t id)
 {
     return GetObjectByID<uint32_t, objects::DemonPresent>(id, mDemonPresentData);
@@ -385,6 +391,14 @@ bool ServerDataManager::LoadData(DataStore *pDataStore,
     if(definitionManager)
     {
         // Load definition dependent server definitions from path or file
+        if(!failure)
+        {
+            LOG_DEBUG("Loading AI logic group server definitions...\n");
+            failure = !LoadObjects<objects::AILogicGroup>(
+                pDataStore, "/data/ailogicgroup", definitionManager, false,
+                true);
+        }
+
         if(!failure)
         {
             LOG_DEBUG("Loading demon present server definitions...\n");
@@ -536,6 +550,18 @@ bool ServerDataManager::ApplyZonePartial(std::shared_ptr<objects::ServerZone> zo
     for(uint32_t dropSetID : partial->GetDropSetIDs())
     {
         zone->InsertDropSetIDs(dropSetID);
+    }
+
+    // Add whitelist skills
+    for(uint32_t skillID : partial->GetSkillWhitelist())
+    {
+        zone->InsertSkillWhitelist(skillID);
+    }
+
+    // Add blacklist skills
+    for(uint32_t skillID : partial->GetSkillBlacklist())
+    {
+        zone->InsertSkillBlacklist(skillID);
     }
 
     // Build new NPC set
@@ -1187,6 +1213,31 @@ namespace libcomp
         {
             mCompShopIDs.push_back(id);
         }
+
+        return true;
+    }
+
+    template<>
+    bool ServerDataManager::LoadObject<objects::AILogicGroup>(const tinyxml2::XMLDocument& doc,
+        const tinyxml2::XMLElement *objNode, DefinitionManager* definitionManager)
+    {
+        (void)definitionManager;
+
+        auto grp = std::shared_ptr<objects::AILogicGroup>(new objects::AILogicGroup);
+        if(!grp->Load(doc, *objNode))
+        {
+            return false;
+        }
+
+        uint16_t id = grp->GetID();
+        if(mAILogicGroups.find(id) != mAILogicGroups.end())
+        {
+            LOG_ERROR(libcomp::String("Duplicate AI logic group entry"
+                " encountered: %1\n").Arg(id));
+            return false;
+        }
+
+        mAILogicGroups[id] = grp;
 
         return true;
     }

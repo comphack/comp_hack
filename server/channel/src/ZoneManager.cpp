@@ -900,6 +900,16 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         return false;
     }
 
+    // Both player characters and demons start with a 20s AI ignore delay
+    // upon entering the first zone on the channel
+    if(!currentZone)
+    {
+        uint64_t delay = ChannelServer::GetServerTime() +
+            (uint64_t)20000000ULL;
+        cState->SetStatusTimes(STATUS_IGNORE, delay);
+        dState->SetStatusTimes(STATUS_IGNORE, delay);
+    }
+
     cState->SetZone(nextZone);
     dState->SetZone(nextZone);
 
@@ -3120,7 +3130,7 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
             Point p = GetRandomSpotPoint(spotIter->second, zoneData);
             x = p.x;
             y = p.y;
-            rot = RNG_DEC(float, -3.14f, 3.14f, 2);
+            rot = spotIter->second->GetRotation();
         }
     }
 
@@ -3627,7 +3637,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                     break;
                 }
 
-                float x = 0.f, y = 0.f;
+                float x = 0.f, y = 0.f, rot = 0.f;
                 if(useSpotID)
                 {
                     // Get a random point in the polygon
@@ -3642,6 +3652,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
                     x = p.x;
                     y = p.y;
+                    rot = spot->Definition->GetRotation();
                 }
                 else
                 {
@@ -3650,9 +3661,8 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                     auto rPoint = GetRandomPoint(location->GetWidth(), location->GetHeight());
                     x = location->GetX() + rPoint.x;
                     y = location->GetY() - rPoint.y;
+                    rot = RNG_DEC(float, -3.14f, 3.14f, 2);
                 }
-
-                float rot = RNG_DEC(float, -3.14f, 3.14f, 2);
 
                 // Create the entity state
                 auto state = CreateEnemy(zone, spawn->GetEnemyType(), spawn, x, y, rot);

@@ -342,6 +342,9 @@ ELSE()
         -Wconversion -Wsign-conversion -g)
 ENDIF()
 
+# Ignore the warning about mixed use of override.
+ADD_COMPILER_FLAGS(AUTO -Wno-inconsistent-missing-override)
+
 # Warning level 4 and treat warnings as errors (MSVC).
 # ADD_COMPILER_FLAGS(AUTO /W4 /WX)
 

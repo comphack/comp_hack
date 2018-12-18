@@ -25,10 +25,12 @@
 #include "MainWindow.h"
 
 // Cathedral Includes
+#include "EventWindow.h"
 #include "NPCListWindow.h"
 #include "SpotListWindow.h"
 
 // objects Includes
+#include <MiCEventMessageData.h>
 #include <MiONPCData.h>
 #include <ServerNPC.h>
 #include <ServerZoneSpot.h>
@@ -44,15 +46,16 @@
 #include <PopIgnore.h>
 
 // libcomp Includes
-#include <BinaryDataSet.h>
 #include <Log.h>
 
 MainWindow::MainWindow(QWidget *pParent) : QWidget(pParent)
 {
     // Set these first in case the window wants to query for IDs from another.
+    mEventWindow = nullptr;
     mNPCWindow = nullptr;
     mSpotWindow = nullptr;
 
+    mEventWindow = new EventWindow(this);
     mNPCWindow = new NPCListWindow(this);
     mSpotWindow = new SpotListWindow(this);
 
@@ -61,6 +64,7 @@ MainWindow::MainWindow(QWidget *pParent) : QWidget(pParent)
 
     connect(ui->zoneBrowse, SIGNAL(clicked(bool)), this, SLOT(BrowseZone()));
 
+    connect(ui->eventsView, SIGNAL(clicked(bool)), this, SLOT(OpenEvents()));
     connect(ui->openNPCs, SIGNAL(clicked(bool)), this, SLOT(OpenNPCs()));
     connect(ui->openSpots, SIGNAL(clicked(bool)), this, SLOT(OpenSpots()));
 }
@@ -150,6 +154,14 @@ bool MainWindow::Init()
     {
         err = "Failed to load oNPC data.";
     }
+    else if(!LoadCMessageData(mCEventMessageData, "CEventMessageData.xml"))
+    {
+        err = "Failed to load CEventMessageData.xml";
+    }
+    else if(!LoadCMessageData(mCEventMessageData2, "CEventMessageData2.xml"))
+    {
+        err = "Failed to load CEventMessageData2.xml";
+    }
 
     if(err.length() > 0)
     {
@@ -180,6 +192,11 @@ std::shared_ptr<libcomp::DefinitionManager> MainWindow::GetDefinitions() const
     return mDefinitions;
 }
 
+EventWindow* MainWindow::GetEvents() const
+{
+    return mEventWindow;
+}
+
 NPCListWindow* MainWindow::GetNPCList() const
 {
     return mNPCWindow;
@@ -188,6 +205,18 @@ NPCListWindow* MainWindow::GetNPCList() const
 SpotListWindow* MainWindow::GetSpotList() const
 {
     return mSpotWindow;
+}
+
+std::shared_ptr<objects::MiCEventMessageData> MainWindow::GetEventMessage(
+    uint32_t msgID) const
+{
+    auto msg = mCEventMessageData->GetObjectByID(msgID);
+    if(!msg)
+    {
+        msg = mCEventMessageData2->GetObjectByID(msgID);
+    }
+
+    return std::dynamic_pointer_cast<objects::MiCEventMessageData>(msg);
 }
 
 void MainWindow::ReloadZoneData()
@@ -220,6 +249,37 @@ void MainWindow::ReloadZoneData()
 
     // Reset all links in the combo boxes.
     mNPCWindow->ResetSpotList();
+}
+
+bool MainWindow::LoadCMessageData(std::shared_ptr<
+    libcomp::BinaryDataSet>& dataset, const libcomp::String& file)
+{
+    dataset = std::make_shared<libcomp::BinaryDataSet>([]()
+        {
+            return std::make_shared<objects::MiCEventMessageData>();
+        },
+
+        [](const std::shared_ptr<libcomp::Object>& obj)
+        {
+            return std::dynamic_pointer_cast<objects::MiCEventMessageData>(
+                obj)->GetID();
+        });
+
+    tinyxml2::XMLDocument doc;
+    if(tinyxml2::XML_NO_ERROR == doc.LoadFile(file.C()) && dataset->LoadXml(doc))
+    {
+        LOG_DEBUG(libcomp::String("Loaded %1 MiCEventMessageData records from"
+            " %2\n").Arg(dataset->GetObjects().size()).Arg(file));
+        return true;
+    }
+
+    return false;
+}
+
+void MainWindow::OpenEvents()
+{
+    mEventWindow->show();
+    mEventWindow->raise();
 }
 
 void MainWindow::OpenNPCs()

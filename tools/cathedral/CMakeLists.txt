@@ -59,7 +59,18 @@ SET(${PROJECT_NAME}_SRCS
     src/ActionZoneInstanceUI.cpp
     src/DynamicList.cpp
     src/DynamicListItem.cpp
+    src/EventUI.cpp
+    src/EventDirectionUI.cpp
+    src/EventExNPCMessageUI.cpp
+    src/EventITimeUI.cpp
+    src/EventMultitalkUI.cpp
+    src/EventNPCMessageUI.cpp
+    src/EventOpenMenuUI.cpp
+    src/EventPerformActionsUI.cpp
+    src/EventPlaySceneUI.cpp
+    src/EventPromptUI.cpp
     src/EventRef.cpp
+    src/EventWindow.cpp
     src/ItemDropUI.cpp
     src/MainWindow.cpp
     src/NPCListWindow.cpp
@@ -101,7 +112,18 @@ SET(${PROJECT_NAME}_HDRS
     src/ActionZoneInstanceUI.h
     src/DynamicList.h
     src/DynamicListItem.h
+    src/EventUI.h
+    src/EventDirectionUI.h
+    src/EventExNPCMessageUI.h
+    src/EventITimeUI.h
+    src/EventMultitalkUI.h
+    src/EventNPCMessageUI.h
+    src/EventOpenMenuUI.h
+    src/EventPerformActionsUI.h
+    src/EventPlaySceneUI.h
+    src/EventPromptUI.h
     src/EventRef.h
+    src/EventWindow.h
     src/ItemDropUI.h
     src/MainWindow.h
     src/NPCListWindow.h
@@ -148,7 +170,18 @@ SET(${PROJECT_NAME}_UIS
     ui/ActionZoneInstance.ui
     ui/DynamicList.ui
     ui/DynamicListItem.ui
+    ui/Event.ui
+    ui/EventDirection.ui
+    ui/EventExNPCMessage.ui
+    ui/EventITime.ui
+    ui/EventMultitalk.ui
+    ui/EventNPCMessage.ui
+    ui/EventOpenMenu.ui
+    ui/EventPerformActions.ui
+    ui/EventPlayScene.ui
+    ui/EventPrompt.ui
     ui/EventRef.ui
+    ui/EventWindow.ui
     ui/ItemDrop.ui
     ui/MainWindow.ui
     ui/ObjectListWindow.ui

@@ -15,13 +15,13 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <widget class="QGroupBox" name="groupBox">
+    <widget class="QGroupBox" name="groupZone">
      <property name="title">
       <string>Zone</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout">
+       <layout class="QHBoxLayout" name="zoneCurrentLayout">
         <item>
          <widget class="QLabel" name="zonePath">
           <property name="sizePolicy">
@@ -52,9 +52,9 @@
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <layout class="QHBoxLayout" name="zoneControlLayout">
         <item>
-         <spacer name="horizontalSpacer">
+         <spacer name="spacerZoneLeft">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -127,7 +127,7 @@
          </widget>
         </item>
         <item>
-         <spacer name="horizontalSpacer_2">
+         <spacer name="spacerZoneRight">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -140,6 +140,35 @@
          </spacer>
         </item>
        </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupEvent">
+     <property name="title">
+      <string>Event</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QLabel" name="eventCount">
+        <property name="text">
+         <string>No events are loaded.</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="eventsView">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>View</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

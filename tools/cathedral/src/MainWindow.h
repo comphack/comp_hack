@@ -31,11 +31,19 @@
 #include <PopIgnore.h>
 
 // libcomp Includes
+#include <BinaryDataSet.h>
 #include <DataStore.h>
 #include <DefinitionManager.h>
 
 // objects Includes
 #include <ServerZone.h>
+
+namespace objects
+{
+
+class MiCEventMessageData;
+
+}
 
 namespace Ui
 {
@@ -44,6 +52,7 @@ class MainWindow;
 
 } // namespace Ui
 
+class EventWindow;
 class NPCListWindow;
 class SpotListWindow;
 
@@ -60,20 +69,29 @@ public:
     std::shared_ptr<libcomp::DataStore> GetDatastore() const;
     std::shared_ptr<libcomp::DefinitionManager> GetDefinitions() const;
 
+    EventWindow* GetEvents() const;
     NPCListWindow* GetNPCList() const;
     SpotListWindow* GetSpotList() const;
 
+    std::shared_ptr<objects::MiCEventMessageData> GetEventMessage(
+        uint32_t msgID) const;
+
 protected slots:
+    void OpenEvents();
     void OpenNPCs();
     void OpenSpots();
 
 protected:
     void ReloadZoneData();
 
+    bool LoadCMessageData(std::shared_ptr<libcomp::BinaryDataSet>& dataset,
+        const libcomp::String& file);
+
 private slots:
     void BrowseZone();
 
 protected:
+    EventWindow *mEventWindow;
     NPCListWindow *mNPCWindow;
     SpotListWindow *mSpotWindow;
 
@@ -82,6 +100,9 @@ private:
 
     std::shared_ptr<libcomp::DataStore> mDatastore;
     std::shared_ptr<libcomp::DefinitionManager> mDefinitions;
+
+    std::shared_ptr<libcomp::BinaryDataSet> mCEventMessageData;
+    std::shared_ptr<libcomp::BinaryDataSet> mCEventMessageData2;
 
     QString mActiveZonePath;
     std::shared_ptr<objects::ServerZone> mActiveZone;

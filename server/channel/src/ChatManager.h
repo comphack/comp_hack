@@ -762,7 +762,7 @@ private:
      * @return true if the client has the necessary user level
      */
     bool HaveUserLevel(const std::shared_ptr<
-        channel::ChannelClientConnection>& client, int32_t requiredLevel);
+        channel::ChannelClientConnection>& client, uint32_t requiredLevel);
 
     /**
      * Get channel accessible character, account and client pointers based

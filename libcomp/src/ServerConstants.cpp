@@ -1055,7 +1055,7 @@ bool ServerConstants::Initialize(const String& filePath)
         LOG_ERROR("SPIRIT_FUSION_BOOST not found\n");
         return false;
     }
-    
+
     complexIter = complexConstants.find("SYNTH_SKILLS");
     if(complexIter != complexConstants.end())
     {
@@ -1286,6 +1286,124 @@ bool ServerConstants::Initialize(const String& filePath)
         LOG_ERROR("VA_ADD_ITEMS not found\n");
         return false;
     }
+
+    //
+    // GM Command Levels
+    //
+    success &= LoadInteger(constants["GM_CMD_LVL_ADD_CP"],
+        sConstants.GM_CMD_LVL_ADD_CP);
+    success &= LoadInteger(constants["GM_CMD_LVL_ANNOUNCE"],
+        sConstants.GM_CMD_LVL_ANNOUNCE);
+    success &= LoadInteger(constants["GM_CMD_LVL_BAN"],
+        sConstants.GM_CMD_LVL_BAN);
+    success &= LoadInteger(constants["GM_CMD_LVL_BATTLE_POINTS"],
+        sConstants.GM_CMD_LVL_BATTLE_POINTS);
+    success &= LoadInteger(constants["GM_CMD_LVL_BETHEL"],
+        sConstants.GM_CMD_LVL_BETHEL);
+    success &= LoadInteger(constants["GM_CMD_LVL_COIN"],
+        sConstants.GM_CMD_LVL_COIN);
+    success &= LoadInteger(constants["GM_CMD_LVL_CONTRACT"],
+        sConstants.GM_CMD_LVL_CONTRACT);
+    success &= LoadInteger(constants["GM_CMD_LVL_COUNTER"],
+        sConstants.GM_CMD_LVL_COUNTER);
+    success &= LoadInteger(constants["GM_CMD_LVL_COWRIE"],
+        sConstants.GM_CMD_LVL_COWRIE);
+    success &= LoadInteger(constants["GM_CMD_LVL_CRASH"],
+        sConstants.GM_CMD_LVL_CRASH);
+    success &= LoadInteger(constants["GM_CMD_LVL_DIGITALIZE_POINTS"],
+        sConstants.GM_CMD_LVL_DIGITALIZE_POINTS);
+    success &= LoadInteger(constants["GM_CMD_LVL_EFFECT"],
+        sConstants.GM_CMD_LVL_EFFECT);
+    success &= LoadInteger(constants["GM_CMD_LVL_ENCHANT"],
+        sConstants.GM_CMD_LVL_ENCHANT);
+    success &= LoadInteger(constants["GM_CMD_LVL_ENEMY"],
+        sConstants.GM_CMD_LVL_ENEMY);
+    success &= LoadInteger(constants["GM_CMD_LVL_EVENT"],
+        sConstants.GM_CMD_LVL_EVENT);
+    success &= LoadInteger(constants["GM_CMD_LVL_EXPERTISE_EXTEND"],
+        sConstants.GM_CMD_LVL_EXPERTISE_EXTEND);
+    success &= LoadInteger(constants["GM_CMD_LVL_EXPERTISE_SET"],
+        sConstants.GM_CMD_LVL_EXPERTISE_SET);
+    success &= LoadInteger(constants["GM_CMD_LVL_FAMILIARITY"],
+        sConstants.GM_CMD_LVL_FAMILIARITY);
+    success &= LoadInteger(constants["GM_CMD_LVL_FLAG"],
+        sConstants.GM_CMD_LVL_FLAG);
+    success &= LoadInteger(constants["GM_CMD_LVL_FUSION_GAUGE"],
+        sConstants.GM_CMD_LVL_FUSION_GAUGE);
+    success &= LoadInteger(constants["GM_CMD_LVL_GOTO"],
+        sConstants.GM_CMD_LVL_GOTO);
+    success &= LoadInteger(constants["GM_CMD_LVL_GRADE_POINTS"],
+        sConstants.GM_CMD_LVL_GRADE_POINTS);
+    success &= LoadInteger(constants["GM_CMD_LVL_HELP"],
+        sConstants.GM_CMD_LVL_HELP);
+    success &= LoadInteger(constants["GM_CMD_LVL_HOMEPOINT"],
+        sConstants.GM_CMD_LVL_HOMEPOINT);
+    success &= LoadInteger(constants["GM_CMD_LVL_INSTANCE"],
+        sConstants.GM_CMD_LVL_INSTANCE);
+    success &= LoadInteger(constants["GM_CMD_LVL_ITEM"],
+        sConstants.GM_CMD_LVL_ITEM);
+    success &= LoadInteger(constants["GM_CMD_LVL_KICK"],
+        sConstants.GM_CMD_LVL_KICK);
+    success &= LoadInteger(constants["GM_CMD_LVL_KILL"],
+        sConstants.GM_CMD_LVL_KILL);
+    success &= LoadInteger(constants["GM_CMD_LVL_LEVEL_UP"],
+        sConstants.GM_CMD_LVL_LEVEL_UP);
+    success &= LoadInteger(constants["GM_CMD_LVL_LNC"],
+        sConstants.GM_CMD_LVL_LNC);
+    success &= LoadInteger(constants["GM_CMD_LVL_MAP"],
+        sConstants.GM_CMD_LVL_MAP);
+    success &= LoadInteger(constants["GM_CMD_LVL_ONLINE"],
+        sConstants.GM_CMD_LVL_ONLINE);
+    success &= LoadInteger(constants["GM_CMD_LVL_PENALTY_RESET"],
+        sConstants.GM_CMD_LVL_PENALTY_RESET);
+    success &= LoadInteger(constants["GM_CMD_LVL_PLUGIN"],
+        sConstants.GM_CMD_LVL_PLUGIN);
+    success &= LoadInteger(constants["GM_CMD_LVL_POSITION"],
+        sConstants.GM_CMD_LVL_POSITION);
+    success &= LoadInteger(constants["GM_CMD_LVL_POST"],
+        sConstants.GM_CMD_LVL_POST);
+    success &= LoadInteger(constants["GM_CMD_LVL_REPORTED"],
+        sConstants.GM_CMD_LVL_REPORTED);
+    success &= LoadInteger(constants["GM_CMD_LVL_RESOLVE"],
+        sConstants.GM_CMD_LVL_RESOLVE);
+    success &= LoadInteger(constants["GM_CMD_LVL_REUNION"],
+        sConstants.GM_CMD_LVL_REUNION);
+    success &= LoadInteger(constants["GM_CMD_LVL_QUEST"],
+        sConstants.GM_CMD_LVL_QUEST);
+    success &= LoadInteger(constants["GM_CMD_LVL_SCRAP"],
+        sConstants.GM_CMD_LVL_SCRAP);
+    success &= LoadInteger(constants["GM_CMD_LVL_SKILL"],
+        sConstants.GM_CMD_LVL_SKILL);
+    success &= LoadInteger(constants["GM_CMD_LVL_SKILL_POINT"],
+        sConstants.GM_CMD_LVL_SKILL_POINT);
+    success &= LoadInteger(constants["GM_CMD_LVL_SLOT_ADD"],
+        sConstants.GM_CMD_LVL_SLOT_ADD);
+    success &= LoadInteger(constants["GM_CMD_LVL_SOUL_POINTS"],
+        sConstants.GM_CMD_LVL_SOUL_POINTS);
+    success &= LoadInteger(constants["GM_CMD_LVL_SPAWN"],
+        sConstants.GM_CMD_LVL_SPAWN);
+    success &= LoadInteger(constants["GM_CMD_LVL_SPEED"],
+        sConstants.GM_CMD_LVL_SPEED);
+    success &= LoadInteger(constants["GM_CMD_LVL_SPIRIT"],
+        sConstants.GM_CMD_LVL_SPIRIT);
+    success &= LoadInteger(constants["GM_CMD_LVL_SUPPORT"],
+        sConstants.GM_CMD_LVL_SUPPORT);
+    success &= LoadInteger(constants["GM_CMD_LVL_TICKER_MESSAGE"],
+        sConstants.GM_CMD_LVL_TICKER_MESSAGE);
+    success &= LoadInteger(constants["GM_CMD_LVL_TITLE"],
+        sConstants.GM_CMD_LVL_TITLE);
+    success &= LoadInteger(constants["GM_CMD_LVL_TOKUSEI"],
+        sConstants.GM_CMD_LVL_TOKUSEI);
+    success &= LoadInteger(constants["GM_CMD_LVL_VALUABLE"],
+        sConstants.GM_CMD_LVL_VALUABLE);
+    success &= LoadInteger(constants["GM_CMD_LVL_WORLD_TIME"],
+        sConstants.GM_CMD_LVL_WORLD_TIME);
+    success &= LoadInteger(constants["GM_CMD_LVL_ZIOTITE"],
+        sConstants.GM_CMD_LVL_ZIOTITE);
+    success &= LoadInteger(constants["GM_CMD_LVL_ZONE"],
+        sConstants.GM_CMD_LVL_ZONE);
+    success &= LoadInteger(constants["GM_CMD_LVL_XP"],
+        sConstants.GM_CMD_LVL_XP);
 
     return success;
 }

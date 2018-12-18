@@ -538,6 +538,125 @@ struct Data
 
     /// Item IDs that allow creation of VA items from a normal one
     std::set<uint32_t> VA_ADD_ITEMS;
+
+    //
+    // GM Command Levels
+    //
+
+    /// Required user level for the @addcp GM command.
+    uint32_t GM_CMD_LVL_ADD_CP;
+    /// Required user level for the @announce GM command.
+    uint32_t GM_CMD_LVL_ANNOUNCE;
+    /// Required user level for the @ban GM command.
+    uint32_t GM_CMD_LVL_BAN;
+    /// Required user level for the @bp GM command.
+    uint32_t GM_CMD_LVL_BATTLE_POINTS;
+    /// Required user level for the @bethel GM command.
+    uint32_t GM_CMD_LVL_BETHEL;
+    /// Required user level for the @coin GM command.
+    uint32_t GM_CMD_LVL_COIN;
+    /// Required user level for the @contract GM command.
+    uint32_t GM_CMD_LVL_CONTRACT;
+    /// Required user level for the @counter GM command.
+    uint32_t GM_CMD_LVL_COUNTER;
+    /// Required user level for the @cowrie GM command.
+    uint32_t GM_CMD_LVL_COWRIE;
+    /// Required user level for the @crash GM command.
+    uint32_t GM_CMD_LVL_CRASH;
+    /// Required user level for the @dxp GM command.
+    uint32_t GM_CMD_LVL_DIGITALIZE_POINTS;
+    /// Required user level for the @effect GM command.
+    uint32_t GM_CMD_LVL_EFFECT;
+    /// Required user level for the @enchant GM command.
+    uint32_t GM_CMD_LVL_ENCHANT;
+    /// Required user level for the @enemy GM command.
+    uint32_t GM_CMD_LVL_ENEMY;
+    /// Required user level for the @event GM command.
+    uint32_t GM_CMD_LVL_EVENT;
+    /// Required user level for the @expertisemax GM command.
+    uint32_t GM_CMD_LVL_EXPERTISE_EXTEND;
+    /// Required user level for the @expertise GM command.
+    uint32_t GM_CMD_LVL_EXPERTISE_SET;
+    /// Required user level for the @familiarity GM command.
+    uint32_t GM_CMD_LVL_FAMILIARITY;
+    /// Required user level for the @flag GM command.
+    uint32_t GM_CMD_LVL_FLAG;
+    /// Required user level for the @fgauge GM command.
+    uint32_t GM_CMD_LVL_FUSION_GAUGE;
+    /// Required user level for the @goto GM command.
+    uint32_t GM_CMD_LVL_GOTO;
+    /// Required user level for the @gp GM command.
+    uint32_t GM_CMD_LVL_GRADE_POINTS;
+    /// Required user level for the @help GM command.
+    uint32_t GM_CMD_LVL_HELP;
+    /// Required user level for the @homepoint GM command.
+    uint32_t GM_CMD_LVL_HOMEPOINT;
+    /// Required user level for the @instance GM command.
+    uint32_t GM_CMD_LVL_INSTANCE;
+    /// Required user level for the @item GM command.
+    uint32_t GM_CMD_LVL_ITEM;
+    /// Required user level for the @kick GM command.
+    uint32_t GM_CMD_LVL_KICK;
+    /// Required user level for the @kill GM command.
+    uint32_t GM_CMD_LVL_KILL;
+    /// Required user level for the @levelup GM command.
+    uint32_t GM_CMD_LVL_LEVEL_UP;
+    /// Required user level for the @lnc GM command.
+    uint32_t GM_CMD_LVL_LNC;
+    /// Required user level for the @map GM command.
+    uint32_t GM_CMD_LVL_MAP;
+    /// Required user level for the @online GM command.
+    uint32_t GM_CMD_LVL_ONLINE;
+    /// Required user level for the @penalty GM command.
+    uint32_t GM_CMD_LVL_PENALTY_RESET;
+    /// Required user level for the @plugin GM command.
+    uint32_t GM_CMD_LVL_PLUGIN;
+    /// Required user level for the @pos GM command.
+    uint32_t GM_CMD_LVL_POSITION;
+    /// Required user level for the @post GM command.
+    uint32_t GM_CMD_LVL_POST;
+    /// Required user level for the @reported GM command.
+    uint32_t GM_CMD_LVL_REPORTED;
+    /// Required user level for the @resolve GM command.
+    uint32_t GM_CMD_LVL_RESOLVE;
+    /// Required user level for the @reunion GM command.
+    uint32_t GM_CMD_LVL_REUNION;
+    /// Required user level for the @quest GM command.
+    uint32_t GM_CMD_LVL_QUEST;
+    /// Required user level for the @scrap GM command.
+    uint32_t GM_CMD_LVL_SCRAP;
+    /// Required user level for the @skill GM command.
+    uint32_t GM_CMD_LVL_SKILL;
+    /// Required user level for the @skillpoint GM command.
+    uint32_t GM_CMD_LVL_SKILL_POINT;
+    /// Required user level for the @slotadd GM command.
+    uint32_t GM_CMD_LVL_SLOT_ADD;
+    /// Required user level for the @sp GM command.
+    uint32_t GM_CMD_LVL_SOUL_POINTS;
+    /// Required user level for the @spawn GM command.
+    uint32_t GM_CMD_LVL_SPAWN;
+    /// Required user level for the @speed GM command.
+    uint32_t GM_CMD_LVL_SPEED;
+    /// Required user level for the @spirit GM command.
+    uint32_t GM_CMD_LVL_SPIRIT;
+    /// Required user level for the @support GM command.
+    uint32_t GM_CMD_LVL_SUPPORT;
+    /// Required user level for the @tickermessage GM command.
+    uint32_t GM_CMD_LVL_TICKER_MESSAGE;
+    /// Required user level for the @title GM command.
+    uint32_t GM_CMD_LVL_TITLE;
+    /// Required user level for the @tokusei GM command.
+    uint32_t GM_CMD_LVL_TOKUSEI;
+    /// Required user level for the @valuable GM command.
+    uint32_t GM_CMD_LVL_VALUABLE;
+    /// Required user level for the @worldtime GM command.
+    uint32_t GM_CMD_LVL_WORLD_TIME;
+    /// Required user level for the @ziotite GM command.
+    uint32_t GM_CMD_LVL_ZIOTITE;
+    /// Required user level for the @zone GM command.
+    uint32_t GM_CMD_LVL_ZONE;
+    /// Required user level for the @xp GM command.
+    uint32_t GM_CMD_LVL_XP;
 };
 
 public:

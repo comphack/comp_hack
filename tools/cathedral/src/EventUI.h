@@ -53,6 +53,9 @@ public:
     virtual void Load(const std::shared_ptr<objects::Event>& e);
     virtual std::shared_ptr<objects::Event> Save() const;
 
+public slots:
+    virtual void ToggleBaseDisplay();
+
 protected:
     Ui::Event *ui;
 

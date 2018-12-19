@@ -46,6 +46,8 @@ EventITime::EventITime(MainWindow *pMainWindow, QWidget *pParent)
     prop = new Ui::EventITime;
     prop->setupUi(pWidget);
 
+    prop->giftIDs->SetItemType(DynamicItemType_t::PRIMITIVE_UINT);
+
     ui->eventTitle->setText(tr("<b>I-Time</b>"));
     ui->layoutMain->addWidget(pWidget);
 }
@@ -66,7 +68,16 @@ void EventITime::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    /// @todo
+    prop->iTimeID->setValue(mEvent->GetITimeID());
+    prop->reactionID->setValue(mEvent->GetReactionID());
+    prop->timeLimit->setValue(mEvent->GetTimeLimit());
+
+    for(uint32_t giftID : mEvent->GetGiftIDs())
+    {
+        prop->giftIDs->AddUnsignedInteger(giftID);
+    }
+
+    prop->startActions->SetEvent(mEvent->GetStartActions());
 }
 
 std::shared_ptr<objects::Event> EventITime::Save() const

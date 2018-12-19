@@ -66,7 +66,9 @@ void EventPrompt::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    /// @todo
+    prop->message->lineEdit()->setText(
+        QString::number(mEvent->GetMessageID()));
+    /// @todo: choices
 }
 
 std::shared_ptr<objects::Event> EventPrompt::Save() const

@@ -66,7 +66,9 @@ void EventExNPCMessage::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    /// @todo
+    prop->message->lineEdit()->setText(
+        QString::number(mEvent->GetMessageID()));
+    prop->messageValue->setValue(mEvent->GetMessageValue());
 }
 
 std::shared_ptr<objects::Event> EventExNPCMessage::Save() const

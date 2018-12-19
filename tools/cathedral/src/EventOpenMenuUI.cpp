@@ -66,7 +66,8 @@ void EventOpenMenu::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    /// @todo
+    prop->menuType->setValue(mEvent->GetMenuType());
+    prop->shopID->setValue(mEvent->GetShopID());
 }
 
 std::shared_ptr<objects::Event> EventOpenMenu::Save() const

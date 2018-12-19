@@ -66,7 +66,7 @@ void EventDirection::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    /// @todo
+    prop->direction->setValue(mEvent->GetDirection());
 }
 
 std::shared_ptr<objects::Event> EventDirection::Save() const

@@ -29,99 +29,43 @@
       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
      </property>
      <item row="0" column="0">
-      <widget class="QLabel" name="lblDrops">
+      <widget class="QLabel" name="lblScene">
        <property name="text">
-        <string>Drops:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="lblDropSetIDs">
-       <property name="text">
-        <string>Drop Set IDs:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="DynamicList" name="dropSetIDs" native="true"/>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="lblIsBossBox">
-       <property name="text">
-        <string>Boss Box:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QCheckBox" name="isBossBox">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="lblExpirationTime">
-       <property name="text">
-        <string>Expiration Time:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QDoubleSpinBox" name="expirationTime">
-       <property name="minimum">
-        <double>-10000.000000000000000</double>
-       </property>
-       <property name="maximum">
-        <double>10000.000000000000000</double>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="lblPosition">
-       <property name="text">
-        <string>Position:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QComboBox" name="position">
-       <item>
-        <property name="text">
-         <string>Absolute</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Source Relative</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="lblLocations">
-       <property name="text">
-        <string>Locations:</string>
+        <string>Scene:</string>
        </property>
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="DynamicList" name="drops" native="true"/>
+      <widget class="QSpinBox" name="scene">
+       <property name="minimum">
+        <number>-2147483647</number>
+       </property>
+       <property name="maximum">
+        <number>2147483647</number>
+       </property>
+      </widget>
      </item>
-     <item row="5" column="1">
-      <widget class="DynamicList" name="locations" native="true"/>
+     <item row="1" column="0">
+      <widget class="QLabel" name="lblUnknown">
+       <property name="text">
+        <string>Unknown:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QSpinBox" name="unknown">
+       <property name="minimum">
+        <number>-128</number>
+       </property>
+       <property name="maximum">
+        <number>127</number>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>DynamicList</class>
-   <extends>QWidget</extends>
-   <header>DynamicList.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

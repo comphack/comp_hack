@@ -66,7 +66,7 @@ void EventPerformActions::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    /// @todo
+    prop->actions->Load(mEvent->GetActions());
 }
 
 std::shared_ptr<objects::Event> EventPerformActions::Save() const

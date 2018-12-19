@@ -88,10 +88,11 @@ protected slots:
     void MoveDown();
 
 protected:
-    QWidget* AddIntegerWidget(int32_t val);
-    QWidget* AddUnsignedIntegerWidget(uint32_t val);
-    QWidget* AddStringWidget(const libcomp::String& val);
-    template<class T> QWidget* AddObjectWidget(const std::shared_ptr<T>& obj);
+    void AddItem(QWidget* ctrl, bool canReorder);
+    QWidget* GetIntegerWidget(int32_t val);
+    QWidget* GetUnsignedIntegerWidget(uint32_t val);
+    QWidget* GetStringWidget(const libcomp::String& val);
+    template<class T> QWidget* GetObjectWidget(const std::shared_ptr<T>& obj);
 
     void RefreshPositions();
 

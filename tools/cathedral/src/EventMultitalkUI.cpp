@@ -66,7 +66,8 @@ void EventMultitalk::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    /// @todo
+    prop->message->setValue(mEvent->GetMessageID());
+    prop->playerSource->setChecked(mEvent->GetPlayerSource());
 }
 
 std::shared_ptr<objects::Event> EventMultitalk::Save() const

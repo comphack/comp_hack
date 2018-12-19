@@ -43,6 +43,11 @@ Event::Event(MainWindow *pMainWindow, QWidget *pParent) :
     ui->setupUi(this);
 
     ui->eventTitle->setText(tr("<b>Fork</b>"));
+
+    ui->layoutBaseBody->setVisible(false);
+
+    connect(ui->toggleBaseDisplay, SIGNAL(clicked(bool)), this,
+        SLOT(ToggleBaseDisplay()));
 }
 
 Event::~Event()
@@ -59,10 +64,42 @@ void Event::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    /// @todo
+    ui->eventID->setText(qs(e->GetID()));
+    ui->next->SetEvent(e->GetNext());
+    ui->queueNext->SetEvent(e->GetQueueNext());
+    ui->pop->setChecked(e->GetPop());
+    ui->popNext->setChecked(e->GetPopNext());
+    ui->branchScript->SetScriptID(e->GetBranchScriptID());
+    ui->branchScript->SetParams(e->GetBranchScriptParams());
+    ui->transformScript->SetScriptID(e->GetTransformScriptID());
+    ui->transformScript->SetParams(e->GetTransformScriptParams());
+
+    // If any non-base values are set, display the base values section
+    if(!ui->layoutBaseBody->isVisible() &&
+        (!e->GetQueueNext().IsEmpty() ||
+            e->GetPop() ||
+            e->GetPopNext() ||
+            !e->GetTransformScriptID().IsEmpty()))
+    {
+        ToggleBaseDisplay();
+    }
 }
 
 std::shared_ptr<objects::Event> Event::Save() const
 {
     return mEventBase;
+}
+
+void Event::ToggleBaseDisplay()
+{
+    if(ui->layoutBaseBody->isVisible())
+    {
+        ui->layoutBaseBody->setVisible(false);
+        ui->toggleBaseDisplay->setText(u8"►");
+    }
+    else
+    {
+        ui->layoutBaseBody->setVisible(true);
+        ui->toggleBaseDisplay->setText(u8"▼");
+    }
 }

@@ -46,6 +46,8 @@ EventNPCMessage::EventNPCMessage(MainWindow *pMainWindow, QWidget *pParent)
     prop = new Ui::EventNPCMessage;
     prop->setupUi(pWidget);
 
+    prop->messages->SetItemType(DynamicItemType_t::PRIMITIVE_INT);
+
     ui->eventTitle->setText(tr("<b>NPC Message</b>"));
     ui->layoutMain->addWidget(pWidget);
 }
@@ -66,7 +68,10 @@ void EventNPCMessage::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    /// @todo
+    for(int32_t messageID : mEvent->GetMessageIDs())
+    {
+        prop->messages->AddInteger(messageID);
+    }
 }
 
 std::shared_ptr<objects::Event> EventNPCMessage::Save() const

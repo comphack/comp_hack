@@ -82,14 +82,23 @@ bool DynamicList::AddInteger(int32_t val)
         return false;
     }
 
-    return AddIntegerWidget(val) != nullptr;
+    auto ctrl = GetIntegerWidget(val);
+    if(ctrl)
+    {
+        AddItem(ctrl, false);
+        return true;
+    }
+
+    return false;
 }
 
-QWidget* DynamicList::AddIntegerWidget(int32_t val)
+QWidget* DynamicList::GetIntegerWidget(int32_t val)
 {
     QSpinBox* spin = new QSpinBox;
     spin->setMaximum(2147483647);
     spin->setMinimum(-2147483647);
+
+    spin->setValue(val);
 
     return spin;
 }
@@ -103,14 +112,23 @@ bool DynamicList::AddUnsignedInteger(uint32_t val)
         return false;
     }
 
-    return AddUnsignedIntegerWidget(val) != nullptr;
+    auto ctrl = GetUnsignedIntegerWidget(val);
+    if(ctrl)
+    {
+        AddItem(ctrl, false);
+        return true;
+    }
+
+    return false;
 }
 
-QWidget* DynamicList::AddUnsignedIntegerWidget(uint32_t val)
+QWidget* DynamicList::GetUnsignedIntegerWidget(uint32_t val)
 {
     QSpinBox* spin = new QSpinBox;
     spin->setMaximum(2147483647);
     spin->setMinimum(0);
+
+    spin->setValue(val);
 
     return spin;
 }
@@ -124,10 +142,17 @@ bool DynamicList::AddString(const libcomp::String& val)
         return false;
     }
 
-    return AddStringWidget(val) != nullptr;
+    auto ctrl = GetStringWidget(val);
+    if(ctrl)
+    {
+        AddItem(ctrl, false);
+        return true;
+    }
+
+    return false;
 }
 
-QWidget* DynamicList::AddStringWidget(const libcomp::String& val)
+QWidget* DynamicList::GetStringWidget(const libcomp::String& val)
 {
     QLineEdit* txt = new QLineEdit;
     txt->setPlaceholderText("[Empty]");
@@ -136,7 +161,7 @@ QWidget* DynamicList::AddStringWidget(const libcomp::String& val)
 }
 
 template<>
-QWidget* DynamicList::AddObjectWidget<objects::ItemDrop>(
+QWidget* DynamicList::GetObjectWidget<objects::ItemDrop>(
     const std::shared_ptr<objects::ItemDrop>& obj)
 {
     ItemDrop* drop = new ItemDrop;
@@ -156,11 +181,18 @@ bool DynamicList::AddObject<objects::ItemDrop>(
         return false;
     }
 
-    return AddObjectWidget(obj) != nullptr;
+    auto ctrl = GetObjectWidget(obj);
+    if(ctrl)
+    {
+        AddItem(ctrl, true);
+        return true;
+    }
+
+    return false;
 }
 
 template<>
-QWidget* DynamicList::AddObjectWidget<objects::ObjectPosition>(
+QWidget* DynamicList::GetObjectWidget<objects::ObjectPosition>(
     const std::shared_ptr<objects::ObjectPosition>& obj)
 {
     ObjectPosition* ctrl = new ObjectPosition;
@@ -180,7 +212,14 @@ bool DynamicList::AddObject<objects::ObjectPosition>(
         return false;
     }
 
-    return AddObjectWidget(obj) != nullptr;
+    auto ctrl = GetObjectWidget(obj);
+    if(ctrl)
+    {
+        AddItem(ctrl, true);
+        return true;
+    }
+
+    return false;
 }
 
 std::list<int32_t> DynamicList::GetIntegerList() const
@@ -300,20 +339,20 @@ void DynamicList::AddRow()
     switch(mType)
     {
     case DynamicItemType_t::PRIMITIVE_INT:
-        ctrl = AddIntegerWidget(0);
+        ctrl = GetIntegerWidget(0);
         break;
     case DynamicItemType_t::PRIMITIVE_UINT:
-        ctrl = AddUnsignedIntegerWidget(0);
+        ctrl = GetUnsignedIntegerWidget(0);
         break;
     case DynamicItemType_t::PRIMITIVE_STRING:
-        ctrl = AddStringWidget("");
+        ctrl = GetStringWidget("");
         break;
     case DynamicItemType_t::OBJ_ITEM_DROP:
-        ctrl = AddObjectWidget(std::make_shared<objects::ItemDrop>());
+        ctrl = GetObjectWidget(std::make_shared<objects::ItemDrop>());
         canReorder = true;
         break;
     case DynamicItemType_t::OBJ_OBJECT_POSITION:
-        ctrl = AddObjectWidget(std::make_shared<objects::ObjectPosition>());
+        ctrl = GetObjectWidget(std::make_shared<objects::ObjectPosition>());
         canReorder = true;
         break;
     case DynamicItemType_t::NONE:
@@ -324,26 +363,31 @@ void DynamicList::AddRow()
 
     if(ctrl)
     {
-        DynamicListItem* item = new DynamicListItem(this);
-        item->ui->layoutBody->addWidget(ctrl);
-
-        if(canReorder)
-        {
-            connect(item->ui->up, SIGNAL(clicked(bool)), this, SLOT(MoveUp()));
-            connect(item->ui->down, SIGNAL(clicked(bool)), this, SLOT(MoveDown()));
-        }
-        else
-        {
-            item->ui->down->setVisible(false);
-            item->ui->up->setVisible(false);
-        }
-
-        ui->layoutItems->addWidget(item);
-
-        connect(item->ui->remove, SIGNAL(clicked(bool)), this, SLOT(RemoveRow()));
-
-        RefreshPositions();
+        AddItem(ctrl, canReorder);
     }
+}
+
+void DynamicList::AddItem(QWidget* ctrl, bool canReorder)
+{
+    DynamicListItem* item = new DynamicListItem(this);
+    item->ui->layoutBody->addWidget(ctrl);
+
+    if(canReorder)
+    {
+        connect(item->ui->up, SIGNAL(clicked(bool)), this, SLOT(MoveUp()));
+        connect(item->ui->down, SIGNAL(clicked(bool)), this, SLOT(MoveDown()));
+    }
+    else
+    {
+        item->ui->down->setVisible(false);
+        item->ui->up->setVisible(false);
+    }
+
+    ui->layoutItems->addWidget(item);
+
+    connect(item->ui->remove, SIGNAL(clicked(bool)), this, SLOT(RemoveRow()));
+
+    RefreshPositions();
 }
 
 void DynamicList::RemoveRow()

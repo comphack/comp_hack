@@ -47,7 +47,7 @@ ActionDisplayMessage::ActionDisplayMessage(ActionList *pList,
     prop = new Ui::ActionDisplayMessage;
     prop->setupUi(pWidget);
 
-    prop->messageIDs->SetItemType(DynamicItemType_t::PRIMITIVE_UINT);
+    prop->messageIDs->SetItemType(DynamicItemType_t::PRIMITIVE_INT);
 
     ui->actionTitle->setText(tr("<b>Display Message</b>"));
     ui->layoutMain->addWidget(pWidget);
@@ -69,9 +69,9 @@ void ActionDisplayMessage::Load(const std::shared_ptr<objects::Action>& act)
 
     LoadBaseProperties(mAction);
 
-    for(uint32_t messageID : mAction->GetMessageIDs())
+    for(int32_t messageID : mAction->GetMessageIDs())
     {
-        prop->messageIDs->AddUnsignedInteger(messageID);
+        prop->messageIDs->AddInteger(messageID);
     }
 }
 

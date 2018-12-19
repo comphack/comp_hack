@@ -44,6 +44,8 @@ Event::Event(MainWindow *pMainWindow, QWidget *pParent) :
 
     ui->eventTitle->setText(tr("<b>Fork</b>"));
 
+    ui->conditions->SetItemType(DynamicItemType_t::OBJ_EVENT_CONDITION);
+
     ui->layoutBaseBody->setVisible(false);
 
     connect(ui->toggleBaseDisplay, SIGNAL(clicked(bool)), this,
@@ -73,6 +75,11 @@ void Event::Load(const std::shared_ptr<objects::Event>& e)
     ui->branchScript->SetParams(e->GetBranchScriptParams());
     ui->transformScript->SetScriptID(e->GetTransformScriptID());
     ui->transformScript->SetParams(e->GetTransformScriptParams());
+
+    for(auto condition : e->GetConditions())
+    {
+        ui->conditions->AddObject(condition);
+    }
 
     // If any non-base values are set, display the base values section
     if(!ui->layoutBaseBody->isVisible() &&

@@ -60,6 +60,7 @@ SET(${PROJECT_NAME}_SRCS
     src/DynamicList.cpp
     src/DynamicListItem.cpp
     src/EventUI.cpp
+    src/EventConditionUI.cpp
     src/EventDirectionUI.cpp
     src/EventExNPCMessageUI.cpp
     src/EventITimeUI.cpp
@@ -113,6 +114,7 @@ SET(${PROJECT_NAME}_HDRS
     src/DynamicList.h
     src/DynamicListItem.h
     src/EventUI.h
+    src/EventConditionUI.h
     src/EventDirectionUI.h
     src/EventExNPCMessageUI.h
     src/EventITimeUI.h
@@ -171,6 +173,7 @@ SET(${PROJECT_NAME}_UIS
     ui/DynamicList.ui
     ui/DynamicListItem.ui
     ui/Event.ui
+    ui/EventCondition.ui
     ui/EventDirection.ui
     ui/EventExNPCMessage.ui
     ui/EventITime.ui

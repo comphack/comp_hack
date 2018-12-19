@@ -57,6 +57,7 @@ enum class DynamicItemType_t : uint8_t
     PRIMITIVE_INT,
     PRIMITIVE_UINT,
     PRIMITIVE_STRING,
+    OBJ_EVENT_CONDITION,
     OBJ_ITEM_DROP,
     OBJ_OBJECT_POSITION,
 };

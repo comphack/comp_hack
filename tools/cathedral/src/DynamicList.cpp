@@ -26,7 +26,9 @@
 
 // cathedral Includes
 #include "DynamicListItem.h"
+#include "EventConditionUI.h"
 #include "ItemDropUI.h"
+#include "MainWindow.h"
 #include "ObjectPositionUI.h"
 
 // Qt Includes
@@ -40,6 +42,7 @@
 #include <PopIgnore.h>
 
 // objects Includes
+#include <EventCondition.h>
 #include <ItemDrop.h>
 #include <ObjectPosition.h>
 
@@ -157,7 +160,40 @@ QWidget* DynamicList::GetStringWidget(const libcomp::String& val)
     QLineEdit* txt = new QLineEdit;
     txt->setPlaceholderText("[Empty]");
 
+    txt->setText(qs(val));
+
     return txt;
+}
+
+template<>
+QWidget* DynamicList::GetObjectWidget<objects::EventCondition>(
+    const std::shared_ptr<objects::EventCondition>& obj)
+{
+    EventCondition* ctrl = new EventCondition;
+    ctrl->Load(obj);
+
+    return ctrl;
+}
+
+template<>
+bool DynamicList::AddObject<objects::EventCondition>(
+    const std::shared_ptr<objects::EventCondition>& obj)
+{
+    if(mType != DynamicItemType_t::OBJ_EVENT_CONDITION)
+    {
+        LOG_ERROR("Attempted to assign an EventCondition object to a differing"
+            " DynamicList type\n");
+        return false;
+    }
+
+    auto ctrl = GetObjectWidget(obj);
+    if(ctrl)
+    {
+        AddItem(ctrl, true);
+        return true;
+    }
+
+    return false;
 }
 
 template<>
@@ -346,6 +382,10 @@ void DynamicList::AddRow()
         break;
     case DynamicItemType_t::PRIMITIVE_STRING:
         ctrl = GetStringWidget("");
+        break;
+    case DynamicItemType_t::OBJ_EVENT_CONDITION:
+        ctrl = GetObjectWidget(std::make_shared<objects::EventCondition>());
+        canReorder = true;
         break;
     case DynamicItemType_t::OBJ_ITEM_DROP:
         ctrl = GetObjectWidget(std::make_shared<objects::ItemDrop>());

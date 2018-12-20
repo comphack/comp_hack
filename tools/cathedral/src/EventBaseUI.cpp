@@ -1,10 +1,10 @@
 ﻿/**
- * @file tools/cathedral/src/EventUI.cpp
+ * @file tools/cathedral/src/EventBaseUI.cpp
  * @ingroup cathedral
  *
  * @author HACKfrost
  *
- * @brief Implementation for an event.
+ * @brief Implementation for an event base object.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,29 +22,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "EventUI.h"
+#include "EventBaseUI.h"
 
 // Cathedral Includes
 #include "MainWindow.h"
 
 // Qt Includes
 #include <PushIgnore.h>
-#include "ui_Event.h"
+#include "ui_EventBase.h"
 #include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-Event::Event(MainWindow *pMainWindow, QWidget *pParent) :
+EventBase::EventBase(MainWindow *pMainWindow, QWidget *pParent) :
     QWidget(pParent), mMainWindow(pMainWindow)
 {
-    ui = new Ui::Event;
+    ui = new Ui::EventBase;
     ui->setupUi(this);
 
-    ui->eventTitle->setText(tr("<b>Fork</b>"));
-
-    ui->branches->Setup(DynamicItemType_t::OBJ_EVENT_BASE, pMainWindow);
     ui->conditions->Setup(DynamicItemType_t::OBJ_EVENT_CONDITION, pMainWindow);
 
     ui->layoutBaseBody->setVisible(false);
@@ -53,12 +50,12 @@ Event::Event(MainWindow *pMainWindow, QWidget *pParent) :
         SLOT(ToggleBaseDisplay()));
 }
 
-Event::~Event()
+EventBase::~EventBase()
 {
     delete ui;
 }
 
-void Event::Load(const std::shared_ptr<objects::Event>& e)
+void EventBase::Load(const std::shared_ptr<objects::EventBase>& e)
 {
     mEventBase = e;
 
@@ -67,20 +64,10 @@ void Event::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    ui->eventID->setText(qs(e->GetID()));
     ui->next->SetEvent(e->GetNext());
     ui->queueNext->SetEvent(e->GetQueueNext());
     ui->pop->setChecked(e->GetPop());
     ui->popNext->setChecked(e->GetPopNext());
-    ui->branchScript->SetScriptID(e->GetBranchScriptID());
-    ui->branchScript->SetParams(e->GetBranchScriptParams());
-    ui->transformScript->SetScriptID(e->GetTransformScriptID());
-    ui->transformScript->SetParams(e->GetTransformScriptParams());
-
-    for(auto branch : e->GetBranches())
-    {
-        ui->branches->AddObject(branch);
-    }
 
     for(auto condition : e->GetConditions())
     {
@@ -91,19 +78,18 @@ void Event::Load(const std::shared_ptr<objects::Event>& e)
     if(!ui->layoutBaseBody->isVisible() &&
         (!e->GetQueueNext().IsEmpty() ||
             e->GetPop() ||
-            e->GetPopNext() ||
-            !e->GetTransformScriptID().IsEmpty()))
+            e->GetPopNext()))
     {
         ToggleBaseDisplay();
     }
 }
 
-std::shared_ptr<objects::Event> Event::Save() const
+std::shared_ptr<objects::EventBase> EventBase::Save() const
 {
     return mEventBase;
 }
 
-void Event::ToggleBaseDisplay()
+void EventBase::ToggleBaseDisplay()
 {
     if(ui->layoutBaseBody->isVisible())
     {

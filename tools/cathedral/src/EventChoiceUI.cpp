@@ -1,10 +1,10 @@
-/**
- * @file tools/cathedral/src/EventNPCMessageUI.cpp
+﻿/**
+ * @file tools/cathedral/src/EventChoiceUI.cpp
  * @ingroup cathedral
  *
  * @author HACKfrost
  *
- * @brief Implementation for an NPC message event.
+ * @brief Implementation for an event choice.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,59 +22,60 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "EventNPCMessageUI.h"
+#include "EventChoiceUI.h"
 
 // Cathedral Includes
+#include "DynamicList.h"
 #include "MainWindow.h"
 
 // Qt Includes
 #include <PushIgnore.h>
-#include <QLineEdit>
-
-#include "ui_Event.h"
-#include "ui_EventNPCMessage.h"
+#include "ui_EventBase.h"
 #include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-EventNPCMessage::EventNPCMessage(MainWindow *pMainWindow, QWidget *pParent)
-    : Event(pMainWindow, pParent)
+EventChoice::EventChoice(MainWindow *pMainWindow, QWidget *pParent) :
+    EventBase(pMainWindow, pParent), mMessage(0), mBranches(0)
 {
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::EventNPCMessage;
-    prop->setupUi(pWidget);
+    mMessage = new QSpinBox;
+    mMessage->setMaximum(2147483647);
+    mMessage->setMinimum(-2147483647);
 
-    prop->messages->Setup(DynamicItemType_t::PRIMITIVE_INT, pMainWindow);
+    mBranches = new DynamicList;
 
-    ui->eventTitle->setText(tr("<b>NPC Message</b>"));
-    ui->layoutMain->addWidget(pWidget);
+    mBranches->Setup(DynamicItemType_t::OBJ_EVENT_BASE, pMainWindow);
+
+    ui->formCore->insertRow(0, "Message", mMessage);
+    ui->formBranch->addRow("Branches:", mBranches);
 }
 
-EventNPCMessage::~EventNPCMessage()
+EventChoice::~EventChoice()
 {
-    delete prop;
 }
 
-void EventNPCMessage::Load(const std::shared_ptr<objects::Event>& e)
+void EventChoice::Load(const std::shared_ptr<objects::EventChoice>& e)
 {
-    Event::Load(e);
+    EventBase::Load(e);
 
-    mEvent = std::dynamic_pointer_cast<objects::EventNPCMessage>(e);
+    mEventBase = e;
 
-    if(!mEvent)
+    if(!mEventBase)
     {
         return;
     }
 
-    for(int32_t messageID : mEvent->GetMessageIDs())
+    mMessage->setValue(e->GetMessageID());
+
+    for(auto branch : e->GetBranches())
     {
-        prop->messages->AddInteger(messageID);
+        mBranches->AddObject(branch);
     }
 }
 
-std::shared_ptr<objects::Event> EventNPCMessage::Save() const
+std::shared_ptr<objects::EventChoice> EventChoice::Save() const
 {
-    return mEvent;
+    return nullptr;
 }

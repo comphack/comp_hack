@@ -26,6 +26,8 @@
 
 // cathedral Includes
 #include "DynamicListItem.h"
+#include "EventBaseUI.h"
+#include "EventChoiceUI.h"
 #include "EventConditionUI.h"
 #include "ItemDropUI.h"
 #include "MainWindow.h"
@@ -42,6 +44,8 @@
 #include <PopIgnore.h>
 
 // objects Includes
+#include <EventBase.h>
+#include <EventChoice.h>
 #include <EventCondition.h>
 #include <ItemDrop.h>
 #include <ObjectPosition.h>
@@ -64,11 +68,12 @@ DynamicList::~DynamicList()
     delete ui;
 }
 
-void DynamicList::SetItemType(DynamicItemType_t type)
+void DynamicList::Setup(DynamicItemType_t type, MainWindow *pMainWindow)
 {
     if(mType == DynamicItemType_t::NONE)
     {
         mType = type;
+        mMainWindow = pMainWindow;
     }
     else
     {
@@ -163,6 +168,74 @@ QWidget* DynamicList::GetStringWidget(const libcomp::String& val)
     txt->setText(qs(val));
 
     return txt;
+}
+
+template<>
+QWidget* DynamicList::GetObjectWidget<objects::EventBase>(
+    const std::shared_ptr<objects::EventBase>& obj)
+{
+    EventBase* ctrl = new EventBase(mMainWindow);
+    if(obj)
+    {
+        ctrl->Load(obj);
+    }
+
+    return ctrl;
+}
+
+template<>
+bool DynamicList::AddObject<objects::EventBase>(
+    const std::shared_ptr<objects::EventBase>& obj)
+{
+    if(mType != DynamicItemType_t::OBJ_EVENT_BASE)
+    {
+        LOG_ERROR("Attempted to assign an EventBase object to a differing"
+            " DynamicList type\n");
+        return false;
+    }
+
+    auto ctrl = GetObjectWidget(obj);
+    if(ctrl)
+    {
+        AddItem(ctrl, true);
+        return true;
+    }
+
+    return false;
+}
+
+template<>
+QWidget* DynamicList::GetObjectWidget<objects::EventChoice>(
+    const std::shared_ptr<objects::EventChoice>& obj)
+{
+    EventChoice* ctrl = new EventChoice(mMainWindow);
+    if(obj)
+    {
+        ctrl->Load(obj);
+    }
+
+    return ctrl;
+}
+
+template<>
+bool DynamicList::AddObject<objects::EventChoice>(
+    const std::shared_ptr<objects::EventChoice>& obj)
+{
+    if(mType != DynamicItemType_t::OBJ_EVENT_CHOICE)
+    {
+        LOG_ERROR("Attempted to assign an EventChoice object to a differing"
+            " DynamicList type\n");
+        return false;
+    }
+
+    auto ctrl = GetObjectWidget(obj);
+    if(ctrl)
+    {
+        AddItem(ctrl, true);
+        return true;
+    }
+
+    return false;
 }
 
 template<>
@@ -391,6 +464,14 @@ void DynamicList::AddRow()
         break;
     case DynamicItemType_t::PRIMITIVE_STRING:
         ctrl = GetStringWidget("");
+        break;
+    case DynamicItemType_t::OBJ_EVENT_BASE:
+        ctrl = GetObjectWidget<objects::EventBase>(nullptr);
+        canReorder = true;
+        break;
+    case DynamicItemType_t::OBJ_EVENT_CHOICE:
+        ctrl = GetObjectWidget<objects::EventChoice>(nullptr);
+        canReorder = true;
         break;
     case DynamicItemType_t::OBJ_EVENT_CONDITION:
         ctrl = GetObjectWidget<objects::EventCondition>(nullptr);

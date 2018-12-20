@@ -48,6 +48,8 @@ EventPerformActions::EventPerformActions(MainWindow *pMainWindow,
 
     ui->eventTitle->setText(tr("<b>Perform Actions</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    prop->actions->SetMainWindow(pMainWindow);
 }
 
 EventPerformActions::~EventPerformActions()

@@ -47,7 +47,7 @@ ActionGrantSkills::ActionGrantSkills(ActionList *pList,
     prop = new Ui::ActionGrantSkills;
     prop->setupUi(pWidget);
 
-    prop->skillIDs->SetItemType(DynamicItemType_t::PRIMITIVE_UINT);
+    prop->skillIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT, pMainWindow);
 
     ui->actionTitle->setText(tr("<b>Grant Skills</b>"));
     ui->layoutMain->addWidget(pWidget);

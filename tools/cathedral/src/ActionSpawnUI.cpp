@@ -48,7 +48,8 @@ ActionSpawn::ActionSpawn(ActionList *pList,
     prop->setupUi(pWidget);
     prop->spawnGroupIDs->SetValueName(tr("Spot ID:"));
 
-    prop->spawnLocationGroupIDs->SetItemType(DynamicItemType_t::PRIMITIVE_UINT);
+    prop->spawnLocationGroupIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT,
+        pMainWindow);
 
     ui->actionTitle->setText(tr("<b>Spawn</b>"));
     ui->layoutMain->addWidget(pWidget);

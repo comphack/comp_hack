@@ -47,9 +47,10 @@ ActionCreateLoot::ActionCreateLoot(ActionList *pList,
     prop = new Ui::ActionCreateLoot;
     prop->setupUi(pWidget);
 
-    prop->drops->SetItemType(DynamicItemType_t::OBJ_ITEM_DROP);
-    prop->dropSetIDs->SetItemType(DynamicItemType_t::PRIMITIVE_UINT);
-    prop->locations->SetItemType(DynamicItemType_t::OBJ_OBJECT_POSITION);
+    prop->drops->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
+    prop->dropSetIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT, pMainWindow);
+    prop->locations->Setup(DynamicItemType_t::OBJ_OBJECT_POSITION,
+        pMainWindow);
 
     ui->actionTitle->setText(tr("<b>Create Loot</b>"));
     ui->layoutMain->addWidget(pWidget);

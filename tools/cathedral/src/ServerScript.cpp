@@ -39,7 +39,7 @@ ServerScript::ServerScript(QWidget *pParent) : QWidget(pParent)
     ui = new Ui::ServerScript;
     ui->setupUi(this);
 
-    ui->params->SetItemType(DynamicItemType_t::PRIMITIVE_STRING);
+    ui->params->Setup(DynamicItemType_t::PRIMITIVE_STRING, nullptr);
 }
 
 ServerScript::~ServerScript()

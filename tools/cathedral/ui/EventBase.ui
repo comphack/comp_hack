@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>EventBase</class>
+ <widget class="QWidget" name="EventBase">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>231</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <layout class="QVBoxLayout" name="actionLayout">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <layout class="QVBoxLayout" name="layoutDefinition">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetDefaultConstraint</enum>
+     </property>
+     <item>
+      <layout class="QVBoxLayout" name="layoutCore">
+       <item>
+        <layout class="QFormLayout" name="formCore">
+         <item row="0" column="0">
+          <widget class="QLabel" name="lblNext">
+           <property name="text">
+            <string>Next:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="EventRef" name="next" native="true"/>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="layoutBranch">
+       <item>
+        <layout class="QFormLayout" name="formBranch">
+         <item row="0" column="0">
+          <widget class="QLabel" name="lblConditions">
+           <property name="text">
+            <string>Conditions:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="DynamicList" name="conditions" native="true"/>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="layoutBaseHeader">
+       <item>
+        <widget class="QPushButton" name="toggleBaseDisplay">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>►</string>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="lineBaseHeader">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QWidget" name="layoutBaseBody" native="true">
+       <layout class="QVBoxLayout" name="grpBaseBodyLayout">
+        <item>
+         <layout class="QFormLayout" name="formBase">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblQueueNext">
+            <property name="text">
+             <string>Queue Next:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="EventRef" name="queueNext" native="true"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblBranchScript">
+            <property name="text">
+             <string>Branch Script:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="ServerScript" name="branchScript" native="true"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblPop">
+            <property name="text">
+             <string>Pop:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="pop">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="lblPopNext">
+            <property name="text">
+             <string>Pop Next:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QCheckBox" name="popNext">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ServerScript</class>
+   <extends>QWidget</extends>
+   <header>ServerScript.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DynamicList</class>
+   <extends>QWidget</extends>
+   <header>DynamicList.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>EventRef</class>
+   <extends>QWidget</extends>
+   <header>EventRef.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

@@ -46,7 +46,7 @@ EventITime::EventITime(MainWindow *pMainWindow, QWidget *pParent)
     prop = new Ui::EventITime;
     prop->setupUi(pWidget);
 
-    prop->giftIDs->SetItemType(DynamicItemType_t::PRIMITIVE_UINT);
+    prop->giftIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT, pMainWindow);
 
     ui->eventTitle->setText(tr("<b>I-Time</b>"));
     ui->layoutMain->addWidget(pWidget);

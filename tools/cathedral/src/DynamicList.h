@@ -51,12 +51,16 @@ class DynamicList;
 
 } // namespace Ui
 
+class MainWindow;
+
 enum class DynamicItemType_t : uint8_t
 {
     NONE,
     PRIMITIVE_INT,
     PRIMITIVE_UINT,
     PRIMITIVE_STRING,
+    OBJ_EVENT_BASE,
+    OBJ_EVENT_CHOICE,
     OBJ_EVENT_CONDITION,
     OBJ_ITEM_DROP,
     OBJ_OBJECT_POSITION,
@@ -70,7 +74,7 @@ public:
     explicit DynamicList(QWidget *pParent = 0);
     virtual ~DynamicList();
 
-    void SetItemType(DynamicItemType_t type);
+    void Setup(DynamicItemType_t type, MainWindow *pMainWindow);
 
     bool AddInteger(int32_t val);
     bool AddUnsignedInteger(uint32_t val);
@@ -98,6 +102,8 @@ protected:
     void RefreshPositions();
 
     Ui::DynamicList *ui;
+
+    MainWindow *mMainWindow;
 
     DynamicItemType_t mType;
 };

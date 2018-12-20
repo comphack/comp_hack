@@ -29,11 +29,8 @@
       <layout class="QHBoxLayout" name="layoutBody"/>
      </item>
      <item>
-      <layout class="QVBoxLayout" name="layoutControls">
-       <property name="spacing">
-        <number>6</number>
-       </property>
-       <item>
+      <layout class="QFormLayout" name="formLayout">
+       <item row="0" column="0">
         <widget class="QPushButton" name="remove">
          <property name="maximumSize">
           <size>
@@ -46,7 +43,7 @@
          </property>
         </widget>
        </item>
-       <item>
+       <item row="1" column="0">
         <widget class="QPushButton" name="up">
          <property name="maximumSize">
           <size>
@@ -59,7 +56,7 @@
          </property>
         </widget>
        </item>
-       <item>
+       <item row="2" column="0">
         <widget class="QPushButton" name="down">
          <property name="maximumSize">
           <size>

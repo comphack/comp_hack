@@ -47,7 +47,8 @@ ActionDisplayMessage::ActionDisplayMessage(ActionList *pList,
     prop = new Ui::ActionDisplayMessage;
     prop->setupUi(pWidget);
 
-    prop->messageIDs->Setup(DynamicItemType_t::PRIMITIVE_INT, pMainWindow);
+    prop->messageIDs->Setup(DynamicItemType_t::COMPLEX_EVENT_MESSAGE,
+        pMainWindow);
 
     ui->actionTitle->setText(tr("<b>Display Message</b>"));
     ui->layoutMain->addWidget(pWidget);

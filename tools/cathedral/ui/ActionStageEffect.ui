@@ -35,19 +35,6 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="messageID">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="editable">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
      <item row="1" column="0">
       <widget class="QLabel" name="lblEffectType">
        <property name="text">
@@ -92,10 +79,21 @@
      <item row="3" column="1">
       <widget class="QCheckBox" name="includeMessage"/>
      </item>
+     <item row="0" column="1">
+      <widget class="EventMessageRef" name="message" native="true"/>
+     </item>
     </layout>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>EventMessageRef</class>
+   <extends>QWidget</extends>
+   <header>EventMessageRef.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

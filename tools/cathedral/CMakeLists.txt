@@ -66,6 +66,7 @@ SET(${PROJECT_NAME}_SRCS
     src/EventDirectionUI.cpp
     src/EventExNPCMessageUI.cpp
     src/EventITimeUI.cpp
+    src/EventMessageRef.cpp
     src/EventMultitalkUI.cpp
     src/EventNPCMessageUI.cpp
     src/EventOpenMenuUI.cpp
@@ -122,6 +123,7 @@ SET(${PROJECT_NAME}_HDRS
     src/EventDirectionUI.h
     src/EventExNPCMessageUI.h
     src/EventITimeUI.h
+    src/EventMessageRef.h
     src/EventMultitalkUI.h
     src/EventNPCMessageUI.h
     src/EventOpenMenuUI.h
@@ -182,6 +184,7 @@ SET(${PROJECT_NAME}_UIS
     ui/EventDirection.ui
     ui/EventExNPCMessage.ui
     ui/EventITime.ui
+    ui/EventMessageRef.ui
     ui/EventMultitalk.ui
     ui/EventNPCMessage.ui
     ui/EventOpenMenu.ui

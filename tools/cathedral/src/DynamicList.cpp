@@ -29,6 +29,7 @@
 #include "EventBaseUI.h"
 #include "EventChoiceUI.h"
 #include "EventConditionUI.h"
+#include "EventMessageRef.h"
 #include "ItemDropUI.h"
 #include "MainWindow.h"
 #include "ObjectPositionUI.h"
@@ -83,18 +84,30 @@ void DynamicList::Setup(DynamicItemType_t type, MainWindow *pMainWindow)
 
 bool DynamicList::AddInteger(int32_t val)
 {
-    if(mType != DynamicItemType_t::PRIMITIVE_INT)
+    if(mType == DynamicItemType_t::COMPLEX_EVENT_MESSAGE)
     {
-        LOG_ERROR("Attempted to assign a signed integer value to a differing"
-            " DynamicList type\n");
-        return false;
+        auto ctrl = GetEventMessageWidget(val);
+        if(ctrl)
+        {
+            AddItem(ctrl, true);
+            return true;
+        }
     }
-
-    auto ctrl = GetIntegerWidget(val);
-    if(ctrl)
+    else
     {
-        AddItem(ctrl, false);
-        return true;
+        if(mType != DynamicItemType_t::PRIMITIVE_INT)
+        {
+            LOG_ERROR("Attempted to assign a signed integer value to a differing"
+                " DynamicList type\n");
+            return false;
+        }
+
+        auto ctrl = GetIntegerWidget(val);
+        if(ctrl)
+        {
+            AddItem(ctrl, false);
+            return true;
+        }
     }
 
     return false;
@@ -115,8 +128,8 @@ bool DynamicList::AddUnsignedInteger(uint32_t val)
 {
     if(mType != DynamicItemType_t::PRIMITIVE_UINT)
     {
-        LOG_ERROR("Attempted to assign a unsigned integer value to a differing"
-            " DynamicList type\n");
+        LOG_ERROR("Attempted to assign a unsigned integer value to a"
+            " differing DynamicList type\n");
         return false;
     }
 
@@ -340,22 +353,45 @@ bool DynamicList::AddObject<objects::ObjectPosition>(
     return false;
 }
 
+QWidget* DynamicList::GetEventMessageWidget(int32_t val)
+{
+    EventMessageRef* msg = new EventMessageRef;
+    msg->SetMainWindow(mMainWindow);
+
+    msg->SetValue(val);
+
+    return msg;
+}
+
 std::list<int32_t> DynamicList::GetIntegerList() const
 {
     std::list<int32_t> result;
-    if(mType != DynamicItemType_t::PRIMITIVE_INT)
+    if(mType == DynamicItemType_t::COMPLEX_EVENT_MESSAGE)
     {
-        LOG_ERROR("Attempted to retrieve signed integer list from a differing"
-            " DynamicList type\n");
-        return result;
+        size_t total = ui->layoutItems->count();
+        for(int childIdx = 0; childIdx < total; childIdx++)
+        {
+            EventMessageRef* spin = ui->layoutItems->itemAt(childIdx)->widget()
+                ->findChild<EventMessageRef*>();
+            result.push_back(spin->GetValue());
+        }
     }
-    
-    size_t total = ui->layoutItems->count();
-    for(int childIdx = 0; childIdx < total; childIdx++)
+    else
     {
-        QSpinBox* spin = ui->layoutItems->itemAt(childIdx)->widget()
-            ->findChild<QSpinBox*>();
-        result.push_back((int32_t)spin->value());
+        if(mType != DynamicItemType_t::PRIMITIVE_INT)
+        {
+            LOG_ERROR("Attempted to retrieve signed integer list from a"
+                " differing DynamicList type\n");
+            return result;
+        }
+    
+        size_t total = ui->layoutItems->count();
+        for(int childIdx = 0; childIdx < total; childIdx++)
+        {
+            QSpinBox* spin = ui->layoutItems->itemAt(childIdx)->widget()
+                ->findChild<QSpinBox*>();
+            result.push_back((int32_t)spin->value());
+        }
     }
 
     return result;
@@ -366,11 +402,11 @@ std::list<uint32_t> DynamicList::GetUnsignedIntegerList() const
     std::list<uint32_t> result;
     if(mType != DynamicItemType_t::PRIMITIVE_UINT)
     {
-        LOG_ERROR("Attempted to retrieve unsigned integer list from a"
-            " differing DynamicList type\n");
+        LOG_ERROR("Attempted to retrieve unsigned integer list from a differing"
+            " DynamicList type\n");
         return result;
     }
-    
+
     size_t total = ui->layoutItems->count();
     for(int childIdx = 0; childIdx < total; childIdx++)
     {
@@ -464,6 +500,10 @@ void DynamicList::AddRow()
         break;
     case DynamicItemType_t::PRIMITIVE_STRING:
         ctrl = GetStringWidget("");
+        break;
+    case DynamicItemType_t::COMPLEX_EVENT_MESSAGE:
+        ctrl = GetEventMessageWidget(0);
+        canReorder = true;
         break;
     case DynamicItemType_t::OBJ_EVENT_BASE:
         ctrl = GetObjectWidget<objects::EventBase>(nullptr);

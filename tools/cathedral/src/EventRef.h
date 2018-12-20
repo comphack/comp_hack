@@ -1,5 +1,5 @@
 /**
- * @file tools/cathedral/src/EventRefUI.h
+ * @file tools/cathedral/src/EventRef.h
  * @ingroup cathedral
  *
  * @author HACKfrost

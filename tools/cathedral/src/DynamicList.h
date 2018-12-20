@@ -59,6 +59,7 @@ enum class DynamicItemType_t : uint8_t
     PRIMITIVE_INT,
     PRIMITIVE_UINT,
     PRIMITIVE_STRING,
+    COMPLEX_EVENT_MESSAGE,
     OBJ_EVENT_BASE,
     OBJ_EVENT_CHOICE,
     OBJ_EVENT_CONDITION,
@@ -98,6 +99,7 @@ protected:
     QWidget* GetUnsignedIntegerWidget(uint32_t val);
     QWidget* GetStringWidget(const libcomp::String& val);
     template<class T> QWidget* GetObjectWidget(const std::shared_ptr<T>& obj);
+    QWidget* GetEventMessageWidget(int32_t val);
 
     void RefreshPositions();
 

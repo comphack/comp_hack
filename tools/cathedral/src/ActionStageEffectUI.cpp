@@ -49,6 +49,8 @@ ActionStageEffect::ActionStageEffect(ActionList *pList,
 
     ui->actionTitle->setText(tr("<b>Stage Effect</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    prop->message->SetMainWindow(pMainWindow);
 }
 
 ActionStageEffect::~ActionStageEffect()
@@ -67,8 +69,7 @@ void ActionStageEffect::Load(const std::shared_ptr<objects::Action>& act)
 
     LoadBaseProperties(mAction);
 
-    prop->messageID->lineEdit()->setText(
-        QString::number(mAction->GetMessageID()));
+    prop->message->SetValue(mAction->GetMessageID());
     prop->effectType->setValue(mAction->GetEffectType());
     prop->messageValue->setValue(mAction->GetMessageValue());
     prop->includeMessage->setChecked(mAction->GetIncludeMessage());

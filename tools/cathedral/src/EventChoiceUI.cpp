@@ -26,6 +26,7 @@
 
 // Cathedral Includes
 #include "DynamicList.h"
+#include "EventMessageRef.h"
 #include "MainWindow.h"
 
 // Qt Includes
@@ -40,11 +41,10 @@
 EventChoice::EventChoice(MainWindow *pMainWindow, QWidget *pParent) :
     EventBase(pMainWindow, pParent), mMessage(0), mBranches(0)
 {
-    mMessage = new QSpinBox;
-    mMessage->setMaximum(2147483647);
-    mMessage->setMinimum(-2147483647);
-
+    mMessage = new EventMessageRef;
     mBranches = new DynamicList;
+
+    mMessage->SetMainWindow(pMainWindow);
 
     mBranches->Setup(DynamicItemType_t::OBJ_EVENT_BASE, pMainWindow);
 
@@ -67,7 +67,7 @@ void EventChoice::Load(const std::shared_ptr<objects::EventChoice>& e)
         return;
     }
 
-    mMessage->setValue(e->GetMessageID());
+    mMessage->SetValue(e->GetMessageID());
 
     for(auto branch : e->GetBranches())
     {

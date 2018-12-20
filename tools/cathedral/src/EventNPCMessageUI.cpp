@@ -46,7 +46,8 @@ EventNPCMessage::EventNPCMessage(MainWindow *pMainWindow, QWidget *pParent)
     prop = new Ui::EventNPCMessage;
     prop->setupUi(pWidget);
 
-    prop->messages->Setup(DynamicItemType_t::PRIMITIVE_INT, pMainWindow);
+    prop->messages->Setup(DynamicItemType_t::COMPLEX_EVENT_MESSAGE,
+        pMainWindow);
 
     ui->eventTitle->setText(tr("<b>NPC Message</b>"));
     ui->layoutMain->addWidget(pWidget);

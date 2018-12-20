@@ -48,6 +48,8 @@ EventExNPCMessage::EventExNPCMessage(MainWindow *pMainWindow, QWidget *pParent)
 
     ui->eventTitle->setText(tr("<b>EX-NPC Message</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    prop->message->SetMainWindow(pMainWindow);
 }
 
 EventExNPCMessage::~EventExNPCMessage()
@@ -66,8 +68,7 @@ void EventExNPCMessage::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    prop->message->lineEdit()->setText(
-        QString::number(mEvent->GetMessageID()));
+    prop->message->SetValue(mEvent->GetMessageID());
     prop->messageValue->setValue(mEvent->GetMessageValue());
 }
 

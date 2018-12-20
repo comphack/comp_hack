@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/EventChoiceUI.h
+ * @file tools/cathedral/src/EventMessageRef.h
  * @ingroup cathedral
  *
  * @author HACKfrost
  *
- * @brief Definition for an event choice.
+ * @brief Definition for an event message being referenced.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,37 +22,43 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_CATHEDRAL_SRC_EVENTCHOICEUI_H
-#define TOOLS_CATHEDRAL_SRC_EVENTCHOICEUI_H
-
-// Cathedral Includes
-#include "EventBaseUI.h"
+#ifndef TOOLS_CATHEDRAL_SRC_EVENTMESSAGEREF_H
+#define TOOLS_CATHEDRAL_SRC_EVENTMESSAGEREF_H
 
 // Qt Includes
 #include <PushIgnore.h>
 #include <QWidget>
 #include <PopIgnore.h>
 
-// objects Includes
-#include <EventChoice.h>
+namespace Ui
+{
 
-class DynamicList;
 class EventMessageRef;
 
-class EventChoice : public EventBase
+} // namespace Ui
+
+class MainWindow;
+
+class EventMessageRef : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit EventChoice(MainWindow *pMainWindow, QWidget *pParent = 0);
-    virtual ~EventChoice();
+    explicit EventMessageRef(QWidget *pParent = 0);
+    virtual ~EventMessageRef();
 
-    void Load(const std::shared_ptr<objects::EventChoice>& e);
-    std::shared_ptr<objects::EventChoice> Save() const;
+    void SetMainWindow(MainWindow *pMainWindow);
+
+    void SetValue(int32_t value);
+    int32_t GetValue() const;
+
+private slots:
+    void MessageIDChanged();
 
 protected:
-    EventMessageRef *mMessage;
-    DynamicList *mBranches;
+    Ui::EventMessageRef *ui;
+
+    MainWindow *mMainWindow;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_EVENTCHOICEUI_H
+#endif // TOOLS_CATHEDRAL_SRC_EVENTMESSAGEREF_H

@@ -55,6 +55,8 @@ EventPrompt::EventPrompt(MainWindow *pMainWindow, QWidget *pParent)
     ui->layoutMain->addWidget(pWidget);
 
     prop->choices->Setup(DynamicItemType_t::OBJ_EVENT_CHOICE, pMainWindow);
+
+    prop->message->SetMainWindow(pMainWindow);
 }
 
 EventPrompt::~EventPrompt()
@@ -73,8 +75,7 @@ void EventPrompt::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    prop->message->lineEdit()->setText(
-        QString::number(mEvent->GetMessageID()));
+    prop->message->SetValue(mEvent->GetMessageID());
 
     for(auto choice : mEvent->GetChoices())
     {

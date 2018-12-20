@@ -53,11 +53,17 @@ public:
 
 protected slots:
     void RadioToggle();
+    void CompareModeSelectionChanged();
+    void TypeSelectionChanged();
 
 private:
+    objects::EventCondition::Type_t GetCurrentType() const;
     void RefreshAvailableOptions();
+    void RefreshTypeContext();
 
     Ui::EventCondition *ui;
+
+    bool mRebuilding;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_EVENTCONDITIONUI_H

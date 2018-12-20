@@ -170,7 +170,10 @@ QWidget* DynamicList::GetObjectWidget<objects::EventCondition>(
     const std::shared_ptr<objects::EventCondition>& obj)
 {
     EventCondition* ctrl = new EventCondition;
-    ctrl->Load(obj);
+    if(obj)
+    {
+        ctrl->Load(obj);
+    }
 
     return ctrl;
 }
@@ -200,10 +203,13 @@ template<>
 QWidget* DynamicList::GetObjectWidget<objects::ItemDrop>(
     const std::shared_ptr<objects::ItemDrop>& obj)
 {
-    ItemDrop* drop = new ItemDrop;
-    drop->Load(obj);
+    ItemDrop* ctrl = new ItemDrop;
+    if(obj)
+    {
+        ctrl->Load(obj);
+    }
 
-    return drop;
+    return ctrl;
 }
 
 template<>
@@ -232,7 +238,10 @@ QWidget* DynamicList::GetObjectWidget<objects::ObjectPosition>(
     const std::shared_ptr<objects::ObjectPosition>& obj)
 {
     ObjectPosition* ctrl = new ObjectPosition;
-    ctrl->Load(obj);
+    if(obj)
+    {
+        ctrl->Load(obj);
+    }
 
     return ctrl;
 }
@@ -384,15 +393,15 @@ void DynamicList::AddRow()
         ctrl = GetStringWidget("");
         break;
     case DynamicItemType_t::OBJ_EVENT_CONDITION:
-        ctrl = GetObjectWidget(std::make_shared<objects::EventCondition>());
+        ctrl = GetObjectWidget<objects::EventCondition>(nullptr);
         canReorder = true;
         break;
     case DynamicItemType_t::OBJ_ITEM_DROP:
-        ctrl = GetObjectWidget(std::make_shared<objects::ItemDrop>());
+        ctrl = GetObjectWidget<objects::ItemDrop>(nullptr);
         canReorder = true;
         break;
     case DynamicItemType_t::OBJ_OBJECT_POSITION:
-        ctrl = GetObjectWidget(std::make_shared<objects::ObjectPosition>());
+        ctrl = GetObjectWidget<objects::ObjectPosition>(nullptr);
         canReorder = true;
         break;
     case DynamicItemType_t::NONE:

@@ -57,6 +57,9 @@ public:
     void Load(const std::shared_ptr<objects::Action>& act) override;
     std::shared_ptr<objects::Action> Save() const override;
 
+protected slots:
+    void PointTypeChanged();
+
 protected:
     Ui::ActionUpdatePoints *prop;
 

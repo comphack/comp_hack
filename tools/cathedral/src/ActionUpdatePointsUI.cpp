@@ -49,6 +49,9 @@ ActionUpdatePoints::ActionUpdatePoints(ActionList *pList,
 
     ui->actionTitle->setText(tr("<b>Update Points</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    connect(prop->pointType, SIGNAL(currentIndexChanged(const QString&)), this,
+        SLOT(PointTypeChanged()));
 }
 
 ActionUpdatePoints::~ActionUpdatePoints()
@@ -79,4 +82,80 @@ std::shared_ptr<objects::Action> ActionUpdatePoints::Save() const
     SaveBaseProperties(mAction);
 
     return mAction;
+}
+
+void ActionUpdatePoints::PointTypeChanged()
+{
+    prop->value->setEnabled(true);
+    prop->modifier->setEnabled(true);
+    prop->isSet->setEnabled(true);
+
+    prop->value->setMinimum(0);
+    prop->modifier->setMinimum(0);
+    prop->value->setMaximum(2147483647);
+    prop->modifier->setMaximum(2147483647);
+
+    prop->lblValue->setText("Value:");
+    prop->lblModifier->setText("Modifier:");
+    prop->lblIsSet->setText("Set:");
+
+    switch((objects::ActionUpdatePoints::PointType_t)
+        prop->pointType->currentIndex())
+    {
+    case objects::ActionUpdatePoints::PointType_t::BETHEL:
+        prop->lblModifier->setText("Set Type:");
+        prop->value->setMinimum(-2147483647);
+        prop->modifier->setMaximum(4);
+        break;
+    case objects::ActionUpdatePoints::PointType_t::CP:
+        prop->isSet->setEnabled(false);
+        break;
+    case objects::ActionUpdatePoints::PointType_t::ITIME:
+        prop->lblModifier->setText("I-Time ID:");
+        prop->value->setMinimum(-1);
+        break;
+    case objects::ActionUpdatePoints::PointType_t::PVP_POINTS:
+        prop->value->setMinimum(-2147483647);
+        prop->modifier->setEnabled(false);
+        prop->isSet->setEnabled(false);
+        break;
+    case objects::ActionUpdatePoints::PointType_t::ZIOTITE:
+        prop->lblValue->setText("Small Ziotite:");
+        prop->lblModifier->setText("Large Ziotite:");
+        prop->value->setMinimum(-2147483647);
+        break;
+    case objects::ActionUpdatePoints::PointType_t::BP:
+    case objects::ActionUpdatePoints::PointType_t::COINS:
+    case objects::ActionUpdatePoints::PointType_t::KILL_VALUE:
+    case objects::ActionUpdatePoints::PointType_t::SOUL_POINTS:
+        prop->value->setMinimum(-2147483647);
+        prop->modifier->setEnabled(false);
+        break;
+    case objects::ActionUpdatePoints::PointType_t::COWRIE:
+    case objects::ActionUpdatePoints::PointType_t::UB_POINTS:
+        prop->value->setMinimum(-2147483647);
+        prop->modifier->setEnabled(false);
+        prop->isSet->setEnabled(false);
+        break;
+    case objects::ActionUpdatePoints::PointType_t::DIGITALIZE_POINTS:
+        prop->modifier->setEnabled(false);
+        break;
+    default:
+        break;
+    }
+
+    if(!prop->value->isEnabled())
+    {
+        prop->value->setValue(0);
+    }
+
+    if(!prop->modifier->isEnabled())
+    {
+        prop->modifier->setValue(0);
+    }
+
+    if(!prop->isSet->isEnabled())
+    {
+        prop->isSet->setChecked(false);
+    }
 }

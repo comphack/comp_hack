@@ -1,5 +1,5 @@
 <CPackWiXPatch>
-    <CPackWiXFragment Id="CM_CP_comp_lobby.exe">
+    <CPackWiXFragment Id="CM_CP_lobby.comp_lobby.exe">
         <ServiceInstall
             Id="comp_lobby"
             Type="ownProcess"
@@ -13,7 +13,7 @@
              <ServiceDependency Id="LmHosts"/>
         </ServiceInstall>
     </CPackWiXFragment>
-    <CPackWiXFragment Id="CM_FP_comp_lobby.exe">
+    <CPackWiXFragment Id="CM_FP_lobby.comp_lobby.exe">
         <FirewallException xmlns="http://schemas.microsoft.com/wix/FirewallExtension"
             Id="firewall_comp_lobby"
             Description="Firewall rule for the COMP_hack Lobby server."
@@ -21,7 +21,7 @@
             Profile="all"
             Scope="any"/>
     </CPackWiXFragment>
-    <CPackWiXFragment Id="CM_CP_comp_world.exe">
+    <CPackWiXFragment Id="CM_CP_world.comp_world.exe">
         <ServiceInstall
             Id="comp_world"
             Type="ownProcess"
@@ -35,7 +35,7 @@
              <ServiceDependency Id="comp_lobby"/>
         </ServiceInstall>
     </CPackWiXFragment>
-    <CPackWiXFragment Id="CM_FP_comp_world.exe">
+    <CPackWiXFragment Id="CM_FP_world.comp_world.exe">
         <FirewallException xmlns="http://schemas.microsoft.com/wix/FirewallExtension"
             Id="firewall_comp_world"
             Description="Firewall rule for the COMP_hack World server."
@@ -43,7 +43,7 @@
             Profile="all"
             Scope="any"/>
     </CPackWiXFragment>
-    <CPackWiXFragment Id="CM_CP_comp_channel.exe">
+    <CPackWiXFragment Id="CM_CP_channel.comp_channel.exe">
         <ServiceInstall
             Id="comp_channel"
             Type="ownProcess"
@@ -58,7 +58,7 @@
         </ServiceInstall>
         <!-- <ServiceControl Id="comp_channel" Start="install" Stop="both" Remove="uninstall" Name="comp_channel" Wait="yes"/> -->
     </CPackWiXFragment>
-    <CPackWiXFragment Id="CM_FP_comp_channel.exe">
+    <CPackWiXFragment Id="CM_FP_channel.comp_channel.exe">
         <FirewallException xmlns="http://schemas.microsoft.com/wix/FirewallExtension"
             Id="firewall_comp_channel"
             Description="Firewall rule for the COMP_hack Channel server."

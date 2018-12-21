@@ -44,7 +44,34 @@
         </widget>
        </item>
        <item>
-        <widget class="QComboBox" name="files"/>
+        <layout class="QHBoxLayout" name="layoutFiles">
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QComboBox" name="files">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="newFile">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>New File</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item>
         <layout class="QHBoxLayout" name="layoutControls">
@@ -74,6 +101,20 @@
            </property>
           </spacer>
          </item>
+         <item>
+          <widget class="QPushButton" name="addEvent">
+           <property name="text">
+            <string>Add Event</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="refresh">
+           <property name="text">
+            <string>Refresh</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
       </layout>
@@ -93,7 +134,7 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>201</width>
+         <width>198</width>
          <height>410</height>
         </rect>
        </property>

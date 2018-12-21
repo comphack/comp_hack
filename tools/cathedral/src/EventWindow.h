@@ -32,8 +32,9 @@
 #include <QWidget>
 #include <PopIgnore.h>
 
- // objects Includes
+// objects Includes
 #include <CString.h>
+#include <Event.h>
 #include <Object.h>
 
 // Standard C++11 Includes
@@ -67,12 +68,18 @@ private slots:
     void FileSelectionChanged();
     void LoadDirectory();
     void LoadFile();
+    void NewFile();
+    void NewEvent();
+    void Refresh();
     void TreeSelectionChanged();
 
 private:
     void LoadFilesFromPaths(const QStringList& inPaths);
     bool LoadFileFromPath(const libcomp::String& path);
     bool SelectFile(const libcomp::String& path);
+
+    std::shared_ptr<objects::Event> GetNewEvent(
+        objects::Event::EventType_t type) const;
 
     void AddEventToTree(const libcomp::String& id, EventTreeItem* parent,
         const std::shared_ptr<EventFile>& file,

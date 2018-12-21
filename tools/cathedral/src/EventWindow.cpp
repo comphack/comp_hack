@@ -45,6 +45,7 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
@@ -67,6 +68,7 @@
 
 // libcomp Includes
 #include <Log.h>
+#include <PacketCodes.h>
 
 class EventTreeItem : public QTreeWidgetItem
 {
@@ -76,10 +78,12 @@ public:
     {
         EventID = eventID;
         FileIdx = fileIdx;
+        HasUpdates = false;
     }
 
     libcomp::String EventID;
     int32_t FileIdx;
+    bool HasUpdates;
 };
 
 class EventFile
@@ -88,6 +92,7 @@ public:
     libcomp::String Path;
     std::list<std::shared_ptr<objects::Event>> Events;
     std::unordered_map<libcomp::String, int32_t> EventIDMap;
+    std::set<libcomp::String> PendingRemovals;
 };
 
 EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
@@ -98,16 +103,72 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
 
     QAction *pAction = nullptr;
 
-    QMenu *pLoadMenu = new QMenu(tr("Load"));
+    QMenu *pMenu = new QMenu(tr("Load"));
 
-    pAction = pLoadMenu->addAction("File");
+    pAction = pMenu->addAction("File");
     connect(pAction, SIGNAL(triggered()), this, SLOT(LoadFile()));
 
-    pAction = pLoadMenu->addAction("Directory");
+    pAction = pMenu->addAction("Directory");
     connect(pAction, SIGNAL(triggered()), this, SLOT(LoadDirectory()));
 
-    ui->load->setMenu(pLoadMenu);
+    ui->load->setMenu(pMenu);
 
+    pMenu = new QMenu(tr("Add Event"));
+
+    pAction = pMenu->addAction("Fork");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::FORK));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(NewEvent()));
+
+    pAction = pMenu->addAction("Direction");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::DIRECTION));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(NewEvent()));
+
+    pAction = pMenu->addAction("EX NPC Message");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::EX_NPC_MESSAGE));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(NewEvent()));
+
+    pAction = pMenu->addAction("I-Time");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::ITIME));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(NewEvent()));
+
+    pAction = pMenu->addAction("Multitalk");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::MULTITALK));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(NewEvent()));
+
+    pAction = pMenu->addAction("NPC Message");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::NPC_MESSAGE));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(NewEvent()));
+
+    pAction = pMenu->addAction("Open Menu");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::OPEN_MENU));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(NewEvent()));
+
+    pAction = pMenu->addAction("Perform Actions");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::PERFORM_ACTIONS));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(NewEvent()));
+
+    pAction = pMenu->addAction("Play Scene");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::PLAY_SCENE));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(NewEvent()));
+
+    pAction = pMenu->addAction("Prompt");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::PROMPT));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(NewEvent()));
+
+    ui->addEvent->setMenu(pMenu);
+
+    connect(ui->newFile, SIGNAL(clicked()), this, SLOT(NewFile()));
+    connect(ui->refresh, SIGNAL(clicked()), this, SLOT(Refresh()));
     connect(ui->files, SIGNAL(currentIndexChanged(const QString&)), this,
         SLOT(FileSelectionChanged()));
     connect(ui->treeWidget, SIGNAL(itemSelectionChanged()), this,
@@ -133,7 +194,7 @@ bool EventWindow::GoToEvent(const libcomp::String& eventID)
     }
 
     libcomp::String currentPath(ui->files
-        ->currentText().toLocal8Bit().constData());
+        ->currentText().toUtf8().constData());
     libcomp::String path = iter->second;
 
     if(currentPath != path)
@@ -184,9 +245,7 @@ size_t EventWindow::GetLoadedEventCount() const
 
 void EventWindow::FileSelectionChanged()
 {
-    libcomp::String path(ui->files->currentText().toLocal8Bit().constData());
-
-    SelectFile(path);
+    Refresh();
 }
 
 void EventWindow::LoadDirectory()
@@ -204,12 +263,12 @@ void EventWindow::LoadDirectory()
 
     QDirIterator it(qPath, QStringList() << "*.xml", QDir::Files,
         QDirIterator::Subdirectories);
-    libcomp::String currentPath(ui->files->currentText().toLocal8Bit()
+    libcomp::String currentPath(ui->files->currentText().toUtf8()
         .constData());
     libcomp::String selectPath = currentPath;
     while(it.hasNext())
     {
-        libcomp::String path(it.next().toLocal8Bit().constData());
+        libcomp::String path(it.next().toUtf8().constData());
         if(LoadFileFromPath(path) && selectPath.IsEmpty())
         {
             selectPath = path;
@@ -222,7 +281,7 @@ void EventWindow::LoadDirectory()
     mMainWindow->ResetEventCount();
 
     // Refresh selection even if it didnt change
-    FileSelectionChanged();
+    Refresh();
 }
 
 void EventWindow::LoadFile()
@@ -238,7 +297,7 @@ void EventWindow::LoadFile()
 
     ui->files->blockSignals(true);
 
-    libcomp::String path(qPath.toLocal8Bit().constData());
+    libcomp::String path(qPath.toUtf8().constData());
     if(LoadFileFromPath(path))
     {
         RebuildGlobalIDMap();
@@ -253,13 +312,216 @@ void EventWindow::LoadFile()
         else
         {
             // Just refresh
-            FileSelectionChanged();
+            Refresh();
         }
     }
     else
     {
         ui->files->blockSignals(false);
     }
+}
+
+void EventWindow::NewFile()
+{
+    QSettings settings;
+
+    QString qPath = QFileDialog::getSaveFileName(this,
+        tr("Create new Event file"), settings.value("datastore").toString(),
+        tr("Event XML (*.xml)"));
+    if(qPath.isEmpty())
+    {
+        return;
+    }
+
+    QFileInfo fi(qPath);
+    if(fi.exists() && fi.isFile())
+    {
+        LOG_ERROR(libcomp::String("Attempted to overwrite existing file with"
+            " new event file: %1").Arg(qPath.toUtf8().constData()));
+        return;
+    }
+
+    // Save new document with root objects node only
+    tinyxml2::XMLDocument doc;
+
+    tinyxml2::XMLElement* pRoot = doc.NewElement("objects");
+    doc.InsertEndChild(pRoot);
+
+    doc.SaveFile(qPath.toUtf8().constData());
+
+    // Select new file
+    if(LoadFileFromPath(qPath.toUtf8().constData()))
+    {
+        ui->files->setCurrentText(qPath);
+    }
+}
+
+void EventWindow::NewEvent()
+{
+    QAction *pAction = qobject_cast<QAction*>(sender());
+    if(!pAction)
+    {
+        return;
+    }
+
+    auto fIter = mFiles.find(libcomp::String(ui->files
+        ->currentText().toUtf8().constData()));
+    if(fIter == mFiles.end())
+    {
+        // No file
+        return;
+    }
+
+    auto file = fIter->second;
+    auto eventType = (objects::Event::EventType_t)pAction->data().toUInt();
+
+    // Suggest an ID that is not already taken based off current IDs in
+    // the file and cross checked against other loaded files
+    libcomp::String commonPrefix;
+
+    auto eIter = file->Events.begin();
+    if(eIter != file->Events.end())
+    {
+        commonPrefix = (*eIter)->GetID();
+        eIter++;
+    }
+
+    for(; eIter != file->Events.end(); eIter++)
+    {
+        auto id = (*eIter)->GetID();
+        while(commonPrefix.Length() > 0 &&
+            commonPrefix != id.Left(commonPrefix.Length()))
+        {
+            commonPrefix = commonPrefix.Left((size_t)(
+                commonPrefix.Length() - 1));
+        }
+
+        if(commonPrefix.Length() == 0)
+        {
+            // No common prefix
+            break;
+        }
+    }
+
+    if(commonPrefix.Length() > 0)
+    {
+        // Add type abbreviation and increase number until new ID is found
+        if(commonPrefix.Right(1) == "_")
+        {
+            // Remove double underscore
+            commonPrefix = commonPrefix.Left((size_t)(
+                commonPrefix.Length() - 1));
+        }
+
+        switch(eventType)
+        {
+        case objects::Event::EventType_t::NPC_MESSAGE:
+            commonPrefix += "_NM";
+            break;
+        case objects::Event::EventType_t::EX_NPC_MESSAGE:
+            commonPrefix += "_EX";
+            break;
+        case objects::Event::EventType_t::MULTITALK:
+            commonPrefix += "_ML";
+            break;
+        case objects::Event::EventType_t::PROMPT:
+            commonPrefix += "_PR";
+            break;
+        case objects::Event::EventType_t::PERFORM_ACTIONS:
+            commonPrefix += "_PA";
+            break;
+        case objects::Event::EventType_t::OPEN_MENU:
+            commonPrefix += "_ME";
+            break;
+        case objects::Event::EventType_t::PLAY_SCENE:
+            commonPrefix += "_SC";
+            break;
+        case objects::Event::EventType_t::DIRECTION:
+            commonPrefix += "_DR";
+            break;
+        case objects::Event::EventType_t::ITIME:
+            commonPrefix += "_IT";
+            break;
+        case objects::Event::EventType_t::FORK:
+        default:
+            commonPrefix += "_";
+            break;
+        }
+    }
+
+    libcomp::String suggestedID(commonPrefix);
+    if(suggestedID.Length() > 0)
+    {
+        // Add sequence number to the event and make sure its not already
+        // taken
+        bool validFound = false;
+        for(size_t i = 1; i < 1000; i++)
+        {
+            // Zero pad the number
+            auto str = libcomp::String("%1%2").Arg(suggestedID)
+                .Arg(libcomp::String("%1").Arg(1000 + i).Right(3));
+            if(mGlobalIDMap.find(str) == mGlobalIDMap.end())
+            {
+                suggestedID = str;
+                validFound = true;
+                break;
+            }
+        }
+
+        if(!validFound)
+        {
+            // No suggested ID
+            suggestedID.Clear();
+        }
+    }
+
+    libcomp::String eventID;
+    while(true)
+    {
+        QString qEventID = QInputDialog::getText(this, "Enter an ID", "New ID",
+            QLineEdit::Normal, qs(suggestedID));
+        if(qEventID.isEmpty())
+        {
+            return;
+        }
+
+        eventID = libcomp::String(qEventID.toUtf8().constData());
+
+        auto globalIter = mGlobalIDMap.find(eventID);
+        if(globalIter != mGlobalIDMap.end())
+        {
+            QMessageBox err;
+            err.setText(qs(libcomp::String("Event ID '%1' already exists in"
+                " file: %2").Arg(eventID).Arg(globalIter->second)));
+            err.exec();
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    // Create and add the event
+    auto e = GetNewEvent(eventType);
+    e->SetID(eventID);
+
+    file->EventIDMap[eventID] = (int32_t)file->Events.size();
+    file->Events.push_back(e);
+
+    // Rebuild the global map and update the main window
+    RebuildGlobalIDMap();
+    mMainWindow->ResetEventCount();
+
+    // Refresh the file and select the new event
+    Refresh();
+    GoToEvent(eventID);
+}
+
+void EventWindow::Refresh()
+{
+    libcomp::String path(ui->files->currentText().toUtf8().constData());
+
+    SelectFile(path);
 }
 
 void EventWindow::TreeSelectionChanged()
@@ -475,7 +737,8 @@ bool EventWindow::LoadFileFromPath(const libcomp::String& path)
         objNode = objNode->NextSiblingElement("object");
     }
 
-    if(events.size() > 0)
+    // Add the file if if has events or no child nodes
+    if(events.size() > 0 || rootElem->FirstChild() == nullptr)
     {
         if(mFiles.find(path) != mFiles.end())
         {
@@ -570,6 +833,35 @@ bool EventWindow::SelectFile(const libcomp::String& path)
     ui->treeWidget->resizeColumnToContents(0);
 
     return true;
+}
+
+std::shared_ptr<objects::Event> EventWindow::GetNewEvent(
+    objects::Event::EventType_t type) const
+{
+    switch(type)
+    {
+    case objects::Event::EventType_t::NPC_MESSAGE:
+        return std::make_shared<objects::EventNPCMessage>();
+    case objects::Event::EventType_t::EX_NPC_MESSAGE:
+        return std::make_shared<objects::EventExNPCMessage>();
+    case objects::Event::EventType_t::MULTITALK:
+        return std::make_shared<objects::EventMultitalk>();
+    case objects::Event::EventType_t::PROMPT:
+        return std::make_shared<objects::EventPrompt>();
+    case objects::Event::EventType_t::PERFORM_ACTIONS:
+        return std::make_shared<objects::EventPerformActions>();
+    case objects::Event::EventType_t::OPEN_MENU:
+        return std::make_shared<objects::EventOpenMenu>();
+    case objects::Event::EventType_t::PLAY_SCENE:
+        return std::make_shared<objects::EventPlayScene>();
+    case objects::Event::EventType_t::DIRECTION:
+        return std::make_shared<objects::EventDirection>();
+    case objects::Event::EventType_t::ITIME:
+        return std::make_shared<objects::EventITime>();
+    case objects::Event::EventType_t::FORK:
+    default:
+        return std::make_shared<objects::Event>();
+    }
 }
 
 void EventWindow::AddEventToTree(const libcomp::String& id,

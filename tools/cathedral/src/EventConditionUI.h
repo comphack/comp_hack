@@ -62,8 +62,6 @@ private:
     void RefreshTypeContext();
 
     Ui::EventCondition *ui;
-
-    bool mRebuilding;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_EVENTCONDITIONUI_H

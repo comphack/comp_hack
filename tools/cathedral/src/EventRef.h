@@ -40,6 +40,8 @@ class EventRef;
 
 } // namespace Ui
 
+class MainWindow;
+
 class EventRef : public QWidget
 {
     Q_OBJECT
@@ -47,6 +49,8 @@ class EventRef : public QWidget
 public:
     explicit EventRef(QWidget *pParent = 0);
     virtual ~EventRef();
+
+    void SetMainWindow(MainWindow *pMainWindow);
 
     void SetEvent(const libcomp::String& event);
     libcomp::String GetEvent() const;
@@ -56,6 +60,8 @@ public slots:
 
 protected:
     Ui::EventRef *ui;
+
+    MainWindow *mMainWindow;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_EVENTREF_H

@@ -154,14 +154,6 @@ bool MainWindow::Init()
     {
         err = "Failed to load oNPC data.";
     }
-    else if(!LoadCMessageData(mCEventMessageData, "CEventMessageData.xml"))
-    {
-        err = "Failed to load CEventMessageData.xml";
-    }
-    else if(!LoadCMessageData(mCEventMessageData2, "CEventMessageData2.xml"))
-    {
-        err = "Failed to load CEventMessageData2.xml";
-    }
 
     if(err.length() > 0)
     {
@@ -170,6 +162,17 @@ bool MainWindow::Init()
         Msgbox.exec();
 
         return false;
+    }
+
+    // Load some "nice to haves"
+    if(!LoadCMessageData(mCEventMessageData, "CEventMessageData.xml"))
+    {
+        LOG_ERROR("Failed to load CEventMessageData.xml\n");
+    }
+
+    if(!LoadCMessageData(mCEventMessageData2, "CEventMessageData2.xml"))
+    {
+        LOG_ERROR("Failed to load CEventMessageData2.xml\n");
     }
 
     if(settingPath)
@@ -217,6 +220,13 @@ std::shared_ptr<objects::MiCEventMessageData> MainWindow::GetEventMessage(
     }
 
     return std::dynamic_pointer_cast<objects::MiCEventMessageData>(msg);
+}
+
+void MainWindow::ResetEventCount()
+{
+    size_t total = mEventWindow->GetLoadedEventCount();
+    ui->eventCount->setText(qs(libcomp::String("%1 event(s) loaded")
+        .Arg(total)));
 }
 
 void MainWindow::ReloadZoneData()

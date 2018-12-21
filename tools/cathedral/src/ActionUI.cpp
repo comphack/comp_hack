@@ -45,6 +45,8 @@ Action::Action(ActionList *pList, MainWindow *pMainWindow, QWidget *pParent) :
 
     ui->layoutBaseBody->setVisible(false);
 
+    ui->failureEvent->SetMainWindow(pMainWindow);
+
     connect(ui->remove, SIGNAL(clicked(bool)), this, SLOT(Remove()));
     connect(ui->up, SIGNAL(clicked(bool)), this, SLOT(MoveUp()));
     connect(ui->down, SIGNAL(clicked(bool)), this, SLOT(MoveDown()));

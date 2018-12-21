@@ -49,6 +49,9 @@ Event::Event(MainWindow *pMainWindow, QWidget *pParent) :
 
     ui->layoutBaseBody->setVisible(false);
 
+    ui->next->SetMainWindow(pMainWindow);
+    ui->queueNext->SetMainWindow(pMainWindow);
+
     connect(ui->toggleBaseDisplay, SIGNAL(clicked(bool)), this,
         SLOT(ToggleBaseDisplay()));
 }

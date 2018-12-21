@@ -44,8 +44,7 @@
 #include <Log.h>
 #include <PacketCodes.h>
 
-EventCondition::EventCondition(QWidget *pParent) : QWidget(pParent),
-    mRebuilding(false)
+EventCondition::EventCondition(QWidget *pParent) : QWidget(pParent)
 {
     ui = new Ui::EventCondition;
     ui->setupUi(this);
@@ -270,47 +269,38 @@ std::shared_ptr<objects::EventCondition> EventCondition::Save() const
 
 void EventCondition::RadioToggle()
 {
-    if(!mRebuilding)
+    // Reset values if switching from flags mode
+    if(ui->typeFlags->isEnabled() &&
+        !ui->radFlags->isChecked())
     {
-        // Reset values if switching from flags mode
-        if(ui->typeFlags->isEnabled() &&
-            !ui->radFlags->isChecked())
-        {
-            ui->value1->setMinimum(0);
-            ui->value1->setMaximum(0);
-            ui->value1->setValue(0);
+        ui->value1->setMinimum(0);
+        ui->value1->setMaximum(0);
+        ui->value1->setValue(0);
 
-            ui->value2->setMinimum(0);
-            ui->value2->setMaximum(0);
-            ui->value2->setValue(0);
-        }
-
-        RefreshAvailableOptions();
+        ui->value2->setMinimum(0);
+        ui->value2->setMaximum(0);
+        ui->value2->setValue(0);
     }
+
+    RefreshAvailableOptions();
 }
 
 void EventCondition::CompareModeSelectionChanged()
 {
-    if(!mRebuilding)
+    // Only certain compare modes affect type context
+    auto type = GetCurrentType();
+    if(type == objects::EventCondition::Type_t::DEMON_BOOK ||
+        type == objects::EventCondition::Type_t::DESTINY_BOX ||
+        type == objects::EventCondition::Type_t::INSTANCE_ACCESS ||
+        type == objects::EventCondition::Type_t::MOON_PHASE)
     {
-        // Only certain compare modes affect type context
-        auto type = GetCurrentType();
-        if(type == objects::EventCondition::Type_t::DEMON_BOOK ||
-            type == objects::EventCondition::Type_t::DESTINY_BOX ||
-            type == objects::EventCondition::Type_t::INSTANCE_ACCESS ||
-            type == objects::EventCondition::Type_t::MOON_PHASE)
-        {
-            RefreshTypeContext();
-        }
+        RefreshTypeContext();
     }
 }
 
 void EventCondition::TypeSelectionChanged()
 {
-    if(!mRebuilding)
-    {
-        RefreshTypeContext();
-    }
+    RefreshTypeContext();
 }
 
 objects::EventCondition::Type_t EventCondition::GetCurrentType() const
@@ -367,7 +357,13 @@ void EventCondition::RefreshAvailableOptions()
 
 void EventCondition::RefreshTypeContext()
 {
-    mRebuilding = true;
+    // Turn off control signals
+    ui->radNormal->blockSignals(true);
+    ui->radFlags->blockSignals(true);
+    ui->radScript->blockSignals(true);
+    ui->compareMode->blockSignals(true);
+    ui->typeNormal->blockSignals(true);
+    ui->typeFlags->blockSignals(true);
 
     // Rebuild valid compare modes
     QVariant currentData = ui->compareMode->currentData();
@@ -921,5 +917,11 @@ void EventCondition::RefreshTypeContext()
 
     // Min/max automatically fix existing values
 
-    mRebuilding = false;
+    // Turn on control signals
+    ui->radNormal->blockSignals(false);
+    ui->radFlags->blockSignals(false);
+    ui->radScript->blockSignals(false);
+    ui->compareMode->blockSignals(false);
+    ui->typeNormal->blockSignals(false);
+    ui->typeFlags->blockSignals(false);
 }

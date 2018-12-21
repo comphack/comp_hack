@@ -49,6 +49,8 @@ ActionStartEvent::ActionStartEvent(ActionList *pList, MainWindow *pMainWindow,
 
     ui->actionTitle->setText(tr("<b>Start Event</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    prop->event->SetMainWindow(pMainWindow);
 }
 
 ActionStartEvent::~ActionStartEvent()

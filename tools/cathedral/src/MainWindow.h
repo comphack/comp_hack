@@ -76,6 +76,8 @@ public:
     std::shared_ptr<objects::MiCEventMessageData> GetEventMessage(
         uint32_t msgID) const;
 
+    void ResetEventCount();
+
 protected slots:
     void OpenEvents();
     void OpenNPCs();

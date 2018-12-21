@@ -35,6 +35,7 @@
 #include "EventPerformActionsUI.h"
 #include "EventPlaySceneUI.h"
 #include "EventPromptUI.h"
+#include "EventRef.h"
 #include "MainWindow.h"
 
 // Qt Includes
@@ -68,22 +69,23 @@
 class EventTreeItem : public QTreeWidgetItem
 {
 public:
-    EventTreeItem(QTreeWidgetItem* parent, const libcomp::String& eventID = "")
-        : QTreeWidgetItem(parent)
+    EventTreeItem(QTreeWidgetItem* parent, const libcomp::String& eventID = "",
+        int32_t fileIdx = -1) : QTreeWidgetItem(parent)
     {
         EventID = eventID;
+        FileIdx = fileIdx;
     }
 
     libcomp::String EventID;
+    int32_t FileIdx;
 };
 
 class EventFile
 {
 public:
     libcomp::String Path;
-    std::unordered_map<libcomp::String,
-        std::shared_ptr<objects::Event>> Events;
-    std::list<libcomp::String> EventOrder;
+    std::list<std::shared_ptr<objects::Event>> Events;
+    std::unordered_map<libcomp::String, int32_t> EventIDMap;
 };
 
 EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
@@ -106,6 +108,69 @@ EventWindow::~EventWindow()
     delete ui;
 }
 
+bool EventWindow::GoToEvent(const libcomp::String& eventID)
+{
+    auto iter = mGlobalIDMap.find(eventID);
+    if(iter == mGlobalIDMap.end())
+    {
+        QMessageBox err;
+        err.setText(qs(libcomp::String("Event '%1' is not currently loaded")
+            .Arg(eventID)));
+        err.exec();
+
+        return false;
+    }
+
+    libcomp::String currentPath(ui->files
+        ->currentText().toLocal8Bit().constData());
+    libcomp::String path = iter->second;
+
+    if(currentPath != path)
+    {
+        // Switch current file
+        ui->files->setCurrentText(qs(path));
+    }
+
+    auto file = mFiles[path];
+    auto eIter = file->EventIDMap.find(eventID);
+    if(eIter != file->EventIDMap.end())
+    {
+        QList<QTreeWidgetItem*> items = ui->treeWidget->findItems(
+            QString("*"), Qt::MatchWrap | Qt::MatchWildcard | Qt::MatchRecursive);
+        for(auto item : items)
+        {
+            auto treeItem = (EventTreeItem*)item;
+            if(treeItem->EventID == eventID)
+            {
+                // Block signals and clear current selection
+                ui->treeWidget->blockSignals(true);
+                ui->treeWidget->clearSelection();
+                ui->treeWidget->blockSignals(false);
+
+                // Select new item and display (if not already)
+                ui->treeWidget->setItemSelected(treeItem, true);
+                show();
+                raise();
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+size_t EventWindow::GetLoadedEventCount() const
+{
+    size_t total = 0;
+    for(auto& pair : mFiles)
+    {
+        auto file = pair.second;
+        total = (size_t)(total + file->Events.size());
+    }
+
+    return total;
+}
+
 void EventWindow::FileSelectionChanged()
 {
     libcomp::String path(ui->files->currentText().toLocal8Bit().constData());
@@ -124,16 +189,29 @@ void EventWindow::LoadDirectory()
         return;
     }
 
+    ui->files->blockSignals(true);
+
     QDirIterator it(qPath, QStringList() << "*.xml", QDir::Files,
         QDirIterator::Subdirectories);
+    libcomp::String currentPath(ui->files->currentText().toLocal8Bit()
+        .constData());
+    libcomp::String selectPath = currentPath;
     while(it.hasNext())
     {
         libcomp::String path(it.next().toLocal8Bit().constData());
-        if(LoadFileFromPath(path) && ui->files->currentText().isEmpty())
+        if(LoadFileFromPath(path) && selectPath.IsEmpty())
         {
-            ui->files->setCurrentText(qs(path));
+            selectPath = path;
         }
     }
+
+    ui->files->blockSignals(false);
+
+    RebuildGlobalIDMap();
+    mMainWindow->ResetEventCount();
+
+    // Refresh selection even if it didnt change
+    FileSelectionChanged();
 }
 
 void EventWindow::LoadFile()
@@ -147,10 +225,21 @@ void EventWindow::LoadFile()
         return;
     }
 
+    ui->files->blockSignals(true);
+
     libcomp::String path(qPath.toLocal8Bit().constData());
     if(LoadFileFromPath(path))
     {
+        RebuildGlobalIDMap();
+        mMainWindow->ResetEventCount();
+
+        ui->files->blockSignals(false);
+
         ui->files->setCurrentText(qs(path));
+    }
+    else
+    {
+        ui->files->blockSignals(false);
     }
 }
 
@@ -171,10 +260,139 @@ void EventWindow::TreeSelectionChanged()
     auto file = mFiles[libcomp::String(ui->files
         ->currentText().toUtf8().constData())];
 
-    auto e = file->Events[selected->EventID];
+    QWidget* eNode = 0;
 
-    ui->lblNoCurrent->hide();
+    // Find the event
+    int32_t fileIdx = selected->FileIdx;
+    if(fileIdx == -1)
+    {
+        auto eIter = file->EventIDMap.find(selected->EventID);
+        if(eIter != file->EventIDMap.end())
+        {
+            fileIdx = eIter->second;
+        }
+        else
+        {
+            // See if it's in a different file
+            auto fIter = mGlobalIDMap.find(selected->EventID);
+            if(fIter != mGlobalIDMap.end())
+            {
+                // Just add a manual link to it
+                auto ref = new EventRef;
+                ref->SetMainWindow(mMainWindow);
+                ref->SetEvent(selected->EventID);
 
+                auto line = ref->findChild<QLineEdit*>();
+                if(line)
+                {
+                    line->setDisabled(true);
+                }
+
+                eNode = ref;
+            }
+        }
+    }
+
+    if(!eNode)
+    {
+        std::shared_ptr<objects::Event> e;
+        if(fileIdx != -1 && file->Events.size() > (size_t)fileIdx)
+        {
+            auto eIter2 = file->Events.begin();
+            std::advance(eIter2, fileIdx);
+            e = *eIter2;
+        }
+
+        if(e)
+        {
+            switch(e->GetEventType())
+            {
+            case objects::Event::EventType_t::FORK:
+                {
+                    auto eUI = new Event(mMainWindow);
+                    eUI->Load(e);
+
+                    eNode = eUI;
+                }
+                break;
+            case objects::Event::EventType_t::NPC_MESSAGE:
+                {
+                    auto eUI = new EventNPCMessage(mMainWindow);
+                    eUI->Load(e);
+
+                    eNode = eUI;
+                }
+                break;
+            case objects::Event::EventType_t::EX_NPC_MESSAGE:
+                {
+                    auto eUI = new EventExNPCMessage(mMainWindow);
+                    eUI->Load(e);
+
+                    eNode = eUI;
+                }
+                break;
+            case objects::Event::EventType_t::MULTITALK:
+                {
+                    auto eUI = new EventMultitalk(mMainWindow);
+                    eUI->Load(e);
+
+                    eNode = eUI;
+                }
+                break;
+            case objects::Event::EventType_t::PROMPT:
+                {
+                    auto eUI = new EventPrompt(mMainWindow);
+                    eUI->Load(e);
+
+                    eNode = eUI;
+                }
+                break;
+            case objects::Event::EventType_t::PERFORM_ACTIONS:
+                {
+                    auto eUI = new EventPerformActions(mMainWindow);
+                    eUI->Load(e);
+
+                    eNode = eUI;
+                }
+                break;
+            case objects::Event::EventType_t::OPEN_MENU:
+                {
+                    auto eUI = new EventOpenMenu(mMainWindow);
+                    eUI->Load(e);
+
+                    eNode = eUI;
+                }
+                break;
+            case objects::Event::EventType_t::PLAY_SCENE:
+                {
+                    auto eUI = new EventPlayScene(mMainWindow);
+                    eUI->Load(e);
+
+                    eNode = eUI;
+                }
+                break;
+            case objects::Event::EventType_t::DIRECTION:
+                {
+                    auto eUI = new EventDirection(mMainWindow);
+                    eUI->Load(e);
+
+                    eNode = eUI;
+                }
+                break;
+            case objects::Event::EventType_t::ITIME:
+                {
+                    auto eUI = new EventITime(mMainWindow);
+                    eUI->Load(e);
+
+                    eNode = eUI;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    
     // Clear any existing (should be only one)
     while(ui->layoutView->count() >= 3)
     {
@@ -183,96 +401,15 @@ void EventWindow::TreeSelectionChanged()
         current->deleteLater();
     }
 
-    Event* eNode = 0;
-    switch(e->GetEventType())
-    {
-    case objects::Event::EventType_t::FORK:
-        {
-            auto eUI = new Event(mMainWindow);
-            eUI->Load(e);
-
-            eNode = eUI;
-        }
-        break;
-    case objects::Event::EventType_t::NPC_MESSAGE:
-        {
-            auto eUI = new EventNPCMessage(mMainWindow);
-            eUI->Load(e);
-
-            eNode = eUI;
-        }
-        break;
-    case objects::Event::EventType_t::EX_NPC_MESSAGE:
-        {
-            auto eUI = new EventExNPCMessage(mMainWindow);
-            eUI->Load(e);
-
-            eNode = eUI;
-        }
-        break;
-    case objects::Event::EventType_t::MULTITALK:
-        {
-            auto eUI = new EventMultitalk(mMainWindow);
-            eUI->Load(e);
-
-            eNode = eUI;
-        }
-        break;
-    case objects::Event::EventType_t::PROMPT:
-        {
-            auto eUI = new EventPrompt(mMainWindow);
-            eUI->Load(e);
-
-            eNode = eUI;
-        }
-        break;
-    case objects::Event::EventType_t::PERFORM_ACTIONS:
-        {
-            auto eUI = new EventPerformActions(mMainWindow);
-            eUI->Load(e);
-
-            eNode = eUI;
-        }
-        break;
-    case objects::Event::EventType_t::OPEN_MENU:
-        {
-            auto eUI = new EventOpenMenu(mMainWindow);
-            eUI->Load(e);
-
-            eNode = eUI;
-        }
-        break;
-    case objects::Event::EventType_t::PLAY_SCENE:
-        {
-            auto eUI = new EventPlayScene(mMainWindow);
-            eUI->Load(e);
-
-            eNode = eUI;
-        }
-        break;
-    case objects::Event::EventType_t::DIRECTION:
-        {
-            auto eUI = new EventDirection(mMainWindow);
-            eUI->Load(e);
-
-            eNode = eUI;
-        }
-        break;
-    case objects::Event::EventType_t::ITIME:
-        {
-            auto eUI = new EventITime(mMainWindow);
-            eUI->Load(e);
-
-            eNode = eUI;
-        }
-        break;
-    default:
-        break;
-    }
-
     if(eNode)
     {
+        ui->lblNoCurrent->hide();
+
         ui->layoutView->insertWidget(1, eNode);
+    }
+    else
+    {
+        ui->lblNoCurrent->show();
     }
 }
 
@@ -330,11 +467,22 @@ bool EventWindow::LoadFileFromPath(const libcomp::String& path)
         }
 
         auto file = std::make_shared<EventFile>();
+        file->Path = path;
 
         for(auto e : events)
         {
-            file->Events[e->GetID()] = e;
-            file->EventOrder.push_back(e->GetID());
+            if(file->EventIDMap.find(e->GetID()) == file->EventIDMap.end())
+            {
+                // Don't add it twice
+                file->EventIDMap[e->GetID()] = (int32_t)file->Events.size();
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Duplicate event ID %1 encountered"
+                    " in file: %2\n").Arg(e->GetID()).Arg(path));
+            }
+
+            file->Events.push_back(e);
         }
 
         mFiles[path] = file;
@@ -378,13 +526,22 @@ bool EventWindow::SelectFile(const libcomp::String& path)
     // Add events to the tree
     auto file = iter->second;
 
+    int32_t fileIdx = 0;
     std::set<libcomp::String> seen;
-    for(auto eventID : file->EventOrder)
+    std::set<libcomp::String> dupeCheck;
+    for(auto e : file->Events)
     {
-        if(seen.find(eventID) == seen.end())
+        if(seen.find(e->GetID()) == seen.end())
         {
-            AddEventToTree(eventID, nullptr, file, seen);
+            AddEventToTree(e->GetID(), nullptr, file, seen);
         }
+        else if(dupeCheck.find(e->GetID()) != dupeCheck.end())
+        {
+            AddEventToTree(e->GetID(), nullptr, file, seen, fileIdx);
+        }
+
+        fileIdx++;
+        dupeCheck.insert(e->GetID());
     }
 
     ui->treeWidget->expandAll();
@@ -394,39 +551,73 @@ bool EventWindow::SelectFile(const libcomp::String& path)
 
 void EventWindow::AddEventToTree(const libcomp::String& id,
     EventTreeItem* parent, const std::shared_ptr<EventFile>& file,
-    std::set<libcomp::String>& seen)
+    std::set<libcomp::String>& seen, int32_t eventIdx)
 {
-    EventTreeItem* item = 0;
-    if(seen.find(id) != seen.end())
+    if(id.IsEmpty())
     {
-        // Add as "goto"
-        item = new EventTreeItem(parent, id);
-
-        item->setText(0, qs(libcomp::String("Go to: %1").Arg(id)));
-        item->setText(1, "Reference");
-    }
-    else if(file->Events.find(id) == file->Events.end())
-    {
-        // Not in the file
-        item = new EventTreeItem(parent, id);
-
-        item->setText(0, qs(id));
-        item->setText(1, "External");
-    }
-
-    if(item)
-    {
-        if(!parent)
-        {
-            ui->treeWidget->addTopLevelItem(item);
-        }
-
         return;
     }
 
-    auto e = file->Events[id];
-    item = new EventTreeItem(parent, id);
-    item->setText(0, qs(id));
+    EventTreeItem* item = 0;
+    std::shared_ptr<objects::Event> e;
+    if(eventIdx == -1)
+    {
+        // Adding normal node
+        if(seen.find(id) != seen.end())
+        {
+            // Add as "goto"
+            item = new EventTreeItem(parent, id);
+
+            item->setText(0, qs(libcomp::String("Go to: %1").Arg(id)));
+            item->setText(1, "Reference");
+        }
+        else if(file->EventIDMap.find(id) == file->EventIDMap.end())
+        {
+            // Not in the file
+            item = new EventTreeItem(parent, id);
+
+            item->setText(0, qs(id));
+
+            auto it = mGlobalIDMap.find(id);
+            if(it != mGlobalIDMap.end())
+            {
+                item->setText(1, qs(libcomp::String("External Reference to %1")
+                    .Arg(it->second)));
+            }
+            else
+            {
+                item->setText(1, "Invalid");
+                item->setTextColor(1, QColor(255, 0, 0));
+            }
+        }
+
+        if(item)
+        {
+            if(!parent)
+            {
+                ui->treeWidget->addTopLevelItem(item);
+            }
+
+            return;
+        }
+
+        auto eIter = file->Events.begin();
+        std::advance(eIter, file->EventIDMap[id]);
+
+        e = *eIter;
+        item = new EventTreeItem(parent, id);
+        item->setText(0, qs(id));
+    }
+    else
+    {
+        auto eIter = file->Events.begin();
+        std::advance(eIter, eventIdx);
+
+        e = *eIter;
+        item = new EventTreeItem(parent, "", eventIdx);
+        item->setText(0, qs(libcomp::String("%1 [Duplicate]").Arg(id)));
+        item->setTextColor(0, QColor(255, 0, 0));
+    }
 
     seen.insert(id);
 
@@ -577,6 +768,24 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
         for(auto b : e->GetBranches())
         {
             AddEventToTree(b->GetNext(), bNode, file, seen);
+        }
+    }
+}
+
+void EventWindow::RebuildGlobalIDMap()
+{
+    mGlobalIDMap.clear();
+
+    for(auto& pair : mFiles)
+    {
+        auto file = pair.second;
+        for(auto& pair2 : file->EventIDMap)
+        {
+            auto eventID = pair2.first;
+            if(mGlobalIDMap.find(eventID) == mGlobalIDMap.end())
+            {
+                mGlobalIDMap[eventID] = file->Path;
+            }
         }
     }
 }

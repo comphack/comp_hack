@@ -153,7 +153,7 @@
       <item>
        <widget class="QLabel" name="eventCount">
         <property name="text">
-         <string>No events are loaded.</string>
+         <string>No events have been loaded.</string>
         </property>
        </widget>
       </item>

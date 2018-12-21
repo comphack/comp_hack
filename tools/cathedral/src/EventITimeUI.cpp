@@ -50,6 +50,8 @@ EventITime::EventITime(MainWindow *pMainWindow, QWidget *pParent)
 
     ui->eventTitle->setText(tr("<b>I-Time</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    prop->startActions->SetMainWindow(pMainWindow);
 }
 
 EventITime::~EventITime()

@@ -59,6 +59,10 @@ public:
     explicit EventWindow(MainWindow *pMainWindow, QWidget *pParent = 0);
     virtual ~EventWindow();
 
+    bool GoToEvent(const libcomp::String& eventID);
+
+    size_t GetLoadedEventCount() const;
+
 private slots:
     void FileSelectionChanged();
     void LoadDirectory();
@@ -69,15 +73,19 @@ private:
     void LoadFilesFromPaths(const QStringList& inPaths);
     bool LoadFileFromPath(const libcomp::String& path);
     bool SelectFile(const libcomp::String& path);
+
     void AddEventToTree(const libcomp::String& id, EventTreeItem* parent,
         const std::shared_ptr<EventFile>& file,
-        std::set<libcomp::String>& seen);
+        std::set<libcomp::String>& seen, int32_t eventIdx = -1);
+
+    void RebuildGlobalIDMap();
 
     libcomp::String GetInlineMessageText(const libcomp::String& raw);
 
     MainWindow *mMainWindow;
 
     std::unordered_map<libcomp::String, std::shared_ptr<EventFile>> mFiles;
+    std::unordered_map<libcomp::String, libcomp::String> mGlobalIDMap;
 
     std::weak_ptr<libcomp::Object> mActiveObject;
 

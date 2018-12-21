@@ -25,6 +25,7 @@
 #include "EventRef.h"
 
 // Cathedral Includes
+#include "EventWindow.h"
 #include "MainWindow.h"
 
 // Qt Includes
@@ -47,6 +48,11 @@ EventRef::~EventRef()
     delete ui;
 }
 
+void EventRef::SetMainWindow(MainWindow *pMainWindow)
+{
+    mMainWindow = pMainWindow;
+}
+
 void EventRef::SetEvent(const libcomp::String& event)
 {
     ui->eventID->lineEdit()->setText(qs(event));
@@ -59,5 +65,10 @@ libcomp::String EventRef::GetEvent() const
 
 void EventRef::Go()
 {
-    /// @todo
+    auto event = GetEvent();
+    if(mMainWindow && !event.IsEmpty())
+    {
+        auto eventWindow = mMainWindow->GetEvents();
+        eventWindow->GoToEvent(event);
+    }
 }

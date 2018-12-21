@@ -49,6 +49,8 @@ ActionZoneInstance::ActionZoneInstance(ActionList *pList,
 
     ui->actionTitle->setText(tr("<b>Zone Instance</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    prop->timerExpirationEvent->SetMainWindow(pMainWindow);
 }
 
 ActionZoneInstance::~ActionZoneInstance()

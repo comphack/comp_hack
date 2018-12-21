@@ -40,6 +40,7 @@
 // object Includes
 #include <Character.h>
 #include <CharacterProgress.h>
+#include <Promo.h>
 #include <WebGameSession.h>
 
 // lobby Includes
@@ -72,6 +73,9 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
     mParsers["/admin/get_account"] = &ApiHandler::Admin_GetAccount;
     mParsers["/admin/delete_account"] = &ApiHandler::Admin_DeleteAccount;
     mParsers["/admin/update_account"] = &ApiHandler::Admin_UpdateAccount;
+    mParsers["/admin/get_promos"] = &ApiHandler::Admin_GetPromos;
+    mParsers["/admin/create_promo"] = &ApiHandler::Admin_CreatePromo;
+    mParsers["/admin/delete_promo"] = &ApiHandler::Admin_DeletePromo;
     mParsers["/webgame/get_character"] = &ApiHandler::WebGame_GetCharacter;
     mParsers["/webgame/update_coins"] = &ApiHandler::WebGame_UpdateCoins;
 }
@@ -734,6 +738,254 @@ bool ApiHandler::Admin_UpdateAccount(const JsonBox::Object& request,
     {
         response["error"] = "Failed to update account.";
     }
+
+    return true;
+}
+
+bool ApiHandler::Admin_GetPromos(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)request;
+    (void)session;
+
+    auto promos = libcomp::PersistentObject::LoadAll<objects::Promo>(
+        GetDatabase());
+
+    JsonBox::Array promoObjects;
+
+    for(auto promo : promos)
+    {
+        JsonBox::Object obj;
+        JsonBox::Array items;
+
+        obj["code"] = promo->GetCode().ToUtf8();
+        obj["startTime"] = (int)promo->GetStartTime();
+        obj["endTime"] = (int)promo->GetEndTime();
+        obj["useLimit"] = (int)promo->GetUseLimit();
+
+        switch(promo->GetLimitType())
+        {
+            case objects::Promo::LimitType_t::PER_CHARACTER:
+                obj["limitType"] = "character";
+                break;
+            case objects::Promo::LimitType_t::PER_WORLD:
+                obj["limitType"] = "world";
+                break;
+            default:
+                obj["limitType"] = "account";
+                break;
+        }
+
+        for(auto item : promo->GetPostItems())
+        {
+            JsonBox::Value val;
+            val = (int)item;
+
+            items.push_back(val);
+        }
+
+        obj["items"] = items;
+
+        promoObjects.push_back(obj);
+    }
+
+    response["promos"] = promoObjects;
+
+    return true;
+}
+
+bool ApiHandler::Admin_CreatePromo(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)session;
+
+    libcomp::String code;
+    libcomp::String limitType;
+    int32_t startTime = 0;
+    int32_t endTime = 0;
+    int32_t useLimit = 0;
+    objects::Promo::LimitType_t limitEnum;
+    JsonBox::Array items;
+
+    auto it = request.find("code");
+
+    if(it != request.end())
+    {
+        code = it->second.getString();
+    }
+
+    if(code.IsEmpty())
+    {
+        response["error"] = "Invalid promo code.";
+
+        return true;
+    }
+
+    it = request.find("startTime");
+
+    if(it != request.end())
+    {
+        startTime = it->second.getInteger();
+    }
+
+    it = request.find("endTime");
+
+    if(it != request.end())
+    {
+        endTime = it->second.getInteger();
+    }
+
+    if(0 == startTime || 0 == endTime || endTime < startTime)
+    {
+        response["error"] = "Invalid start or end timestamp.";
+
+        return true;
+    }
+
+    it = request.find("useLimit");
+
+    if(it != request.end())
+    {
+        useLimit = it->second.getInteger();
+    }
+
+    if(0 > useLimit || 255 < useLimit)
+    {
+        response["error"] = "Invalid use limit.";
+
+        return true;
+    }
+
+    it = request.find("limitType");
+
+    if(it != request.end())
+    {
+        limitType = it->second.getString();
+    }
+
+    if("character" == limitType)
+    {
+        limitEnum = objects::Promo::LimitType_t::PER_CHARACTER;
+    }
+    else if("world" == limitType)
+    {
+        limitEnum = objects::Promo::LimitType_t::PER_WORLD;
+    }
+    else if("account" == limitType)
+    {
+        limitEnum = objects::Promo::LimitType_t::PER_ACCOUNT;
+    }
+    else
+    {
+        response["error"] = "Invalid limit type.";
+
+        return true;
+    }
+
+    it = request.find("items");
+
+    if(it != request.end())
+    {
+        items = it->second.getArray();
+    }
+
+    if(items.empty())
+    {
+        response["error"] = "Promo has no item.";
+
+        return true;
+    }
+
+    for(auto item : items)
+    {
+        int32_t productID = item.getInteger();
+
+        /// @todo Check the shop product ID is valid.
+
+        if(0 == productID)
+        {
+            response["error"] = "Invalid item.";
+
+            return true;
+        }
+    }
+
+    // Check if the promo code exists.
+    auto promos = objects::Promo::LoadPromoListByCode(GetDatabase(), code);
+
+    if(!promos.empty())
+    {
+        response["error"] = "Promotion with that code already exists. "
+            "Another will be made.";
+    }
+    else
+    {
+        response["error"] = "Success";
+    }
+
+    std::shared_ptr<objects::Promo> promo(new objects::Promo);
+    promo->SetCode(code);
+    promo->SetStartTime((uint32_t)startTime);
+    promo->SetEndTime((uint32_t)endTime);
+    promo->SetUseLimit((uint8_t)useLimit);
+    promo->SetLimitType(limitEnum);
+
+    for(auto item : items)
+    {
+        promo->AppendPostItems((uint32_t)item.getInteger());
+    }
+
+    promo->Register(std::dynamic_pointer_cast<
+        libcomp::PersistentObject>(promo));
+
+    if(!promo->Insert(GetDatabase()))
+    {
+        response["error"] = "Failed to create promotion.";
+    }
+
+    return true;
+}
+
+bool ApiHandler::Admin_DeletePromo(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)session;
+
+    libcomp::String code;
+    int promoCount = 0;
+
+    auto it = request.find("code");
+
+    if(it != request.end())
+    {
+        code = it->second.getString();
+    }
+
+    if(code.IsEmpty())
+    {
+        response["error"] = "Invalid promo code.";
+
+        return true;
+    }
+
+    // Get the list of promos with that code.
+    auto promos = objects::Promo::LoadPromoListByCode(GetDatabase(), code);
+    auto db = GetDatabase();
+
+    for(auto promo : promos)
+    {
+        if(!promo->Delete(db))
+        {
+            response["error"] = "Failed to delete promo.";
+
+            return true;
+        }
+
+        promoCount++;
+    }
+
+    response["error"] = libcomp::String(
+        "Deleted %1 promotions.").Arg(promoCount).ToUtf8();
 
     return true;
 }

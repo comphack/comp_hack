@@ -41,6 +41,7 @@ EventMessageRef::EventMessageRef(QWidget *pParent) : QWidget(pParent),
     ui = new Ui::EventMessageRef;
     ui->setupUi(this);
 
+    ui->message->setFontPointSize(10);
     ui->message->setText("[Empty]");
 
     connect(ui->messageID, SIGNAL(valueChanged(int)), this,

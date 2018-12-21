@@ -821,6 +821,7 @@ void EventCondition::RefreshTypeContext()
     case objects::EventCondition::Type_t::ZONE_INSTANCE_FLAGS:
     case objects::EventCondition::Type_t::ZONE_INSTANCE_CHARACTER_FLAGS:
         value1Ignored = value2Ignored = true;
+        defaultCompareTxt = "Equal";
         cmpBetween = false;
         break;
     case objects::EventCondition::Type_t::SCRIPT:

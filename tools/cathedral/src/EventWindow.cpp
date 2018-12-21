@@ -45,6 +45,8 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QFileDialog>
+#include <QLineEdit>
+#include <QMenu>
 #include <QMessageBox>
 #include <QSettings>
 #include <PopIgnore.h>
@@ -94,9 +96,18 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
     ui = new Ui::EventWindow;
     ui->setupUi(this);
 
-    connect(ui->loadDirectory, SIGNAL(clicked(bool)), this,
-        SLOT(LoadDirectory()));
-    connect(ui->loadFile, SIGNAL(clicked(bool)), this, SLOT(LoadFile()));
+    QAction *pAction = nullptr;
+
+    QMenu *pLoadMenu = new QMenu(tr("Load"));
+
+    pAction = pLoadMenu->addAction("File");
+    connect(pAction, SIGNAL(triggered()), this, SLOT(LoadFile()));
+
+    pAction = pLoadMenu->addAction("Directory");
+    connect(pAction, SIGNAL(triggered()), this, SLOT(LoadDirectory()));
+
+    ui->load->setMenu(pLoadMenu);
+
     connect(ui->files, SIGNAL(currentIndexChanged(const QString&)), this,
         SLOT(FileSelectionChanged()));
     connect(ui->treeWidget, SIGNAL(itemSelectionChanged()), this,
@@ -235,7 +246,15 @@ void EventWindow::LoadFile()
 
         ui->files->blockSignals(false);
 
-        ui->files->setCurrentText(qs(path));
+        if(ui->files->currentText() != qs(path))
+        {
+            ui->files->setCurrentText(qs(path));
+        }
+        else
+        {
+            // Just refresh
+            FileSelectionChanged();
+        }
     }
     else
     {
@@ -251,25 +270,27 @@ void EventWindow::TreeSelectionChanged()
         selected = (EventTreeItem*)node;
     }
 
-    if(selected == nullptr)
+    std::shared_ptr<EventFile> file;
+    if(selected)
     {
-        // Nothing selected
-        return;
+        auto iter = mFiles.find(libcomp::String(ui->files
+            ->currentText().toUtf8().constData()));
+        if(iter != mFiles.end())
+        {
+            file = iter->second;
+        }
     }
-    
-    auto file = mFiles[libcomp::String(ui->files
-        ->currentText().toUtf8().constData())];
 
     QWidget* eNode = 0;
 
     // Find the event
-    int32_t fileIdx = selected->FileIdx;
-    if(fileIdx == -1)
+    int32_t fileIdx = selected ? selected->FileIdx : -1;
+    if(fileIdx == -1 && selected)
     {
-        auto eIter = file->EventIDMap.find(selected->EventID);
-        if(eIter != file->EventIDMap.end())
+        if(file && file->EventIDMap.find(selected->EventID) !=
+            file->EventIDMap.end())
         {
-            fileIdx = eIter->second;
+            fileIdx = file->EventIDMap[selected->EventID];
         }
         else
         {
@@ -296,7 +317,8 @@ void EventWindow::TreeSelectionChanged()
     if(!eNode)
     {
         std::shared_ptr<objects::Event> e;
-        if(fileIdx != -1 && file->Events.size() > (size_t)fileIdx)
+        if(fileIdx != -1 && file &&
+            file->Events.size() > (size_t)fileIdx)
         {
             auto eIter2 = file->Events.begin();
             std::advance(eIter2, fileIdx);
@@ -545,6 +567,7 @@ bool EventWindow::SelectFile(const libcomp::String& path)
     }
 
     ui->treeWidget->expandAll();
+    ui->treeWidget->resizeColumnToContents(0);
 
     return true;
 }
@@ -586,7 +609,7 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
             }
             else
             {
-                item->setText(1, "Invalid");
+                item->setText(1, "Event not found");
                 item->setTextColor(1, QColor(255, 0, 0));
             }
         }
@@ -644,9 +667,13 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
 
             auto cMessage = mMainWindow->GetEventMessage(msg
                 ->GetMessageIDs(0));
+            libcomp::String moreTxt = msg->MessageIDsCount() > 1
+                ? libcomp::String(" [+%1 More]")
+                .Arg(msg->MessageIDsCount() - 1) : "";
             item->setText(1, "NPC Message");
-            item->setText(2, cMessage
-                ? qs(GetInlineMessageText(cMessage->GetLines(0))) : "");
+            item->setText(2, cMessage ? qs(GetInlineMessageText(
+                libcomp::String::Join(cMessage->GetLines(), "  ")) +
+                moreTxt) : "");
         }
         break;
     case objects::Event::EventType_t::EX_NPC_MESSAGE:
@@ -657,8 +684,8 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
             auto cMessage = mMainWindow->GetEventMessage(msg
                 ->GetMessageID());
             item->setText(1, "EX NPC Message");
-            item->setText(2, cMessage
-                ? qs(GetInlineMessageText(cMessage->GetLines(0))) : "");
+            item->setText(2, cMessage ? qs(GetInlineMessageText(
+                libcomp::String::Join(cMessage->GetLines(), "  "))) : "");
         }
         break;
     case objects::Event::EventType_t::MULTITALK:
@@ -677,8 +704,8 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
             auto cMessage = mMainWindow->GetEventMessage(prompt
                 ->GetMessageID());
             item->setText(1, "Prompt");
-            item->setText(2, cMessage
-                ? qs(GetInlineMessageText(cMessage->GetLines(0))) : "");
+            item->setText(2, cMessage ? qs(GetInlineMessageText(
+                libcomp::String::Join(cMessage->GetLines(), "  "))) : "");
 
             for(size_t i = 0; i < prompt->ChoicesCount(); i++)
             {
@@ -690,8 +717,8 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
                     ->GetMessageID());
                 cNode->setText(0, qs(libcomp::String("[%1]").Arg(i + 1)));
                 cNode->setText(1, "Prompt Choice");
-                cNode->setText(2, cMessage
-                    ? qs(GetInlineMessageText(cMessage->GetLines(0))) : "");
+                cNode->setText(2, cMessage ? qs(GetInlineMessageText(
+                    libcomp::String::Join(cMessage->GetLines(), "  "))) : "");
 
                 // Add regardless of next results
                 if(!choice->GetNext().IsEmpty())
@@ -790,7 +817,16 @@ void EventWindow::RebuildGlobalIDMap()
     }
 }
 
-libcomp::String EventWindow::GetInlineMessageText(const libcomp::String& raw)
+libcomp::String EventWindow::GetInlineMessageText(const libcomp::String& raw,
+    size_t limit)
 {
-    return raw.Replace("\n", "  ").Replace("\r", "  ").Left(50);
+    libcomp::String txt = raw.Replace("\n", "  ").Replace("\r", "  ");
+    if(limit && txt.Length() > limit)
+    {
+        return txt.Left(limit) + "...";
+    }
+    else
+    {
+        return txt;
+    }
 }

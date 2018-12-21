@@ -80,7 +80,8 @@ private:
 
     void RebuildGlobalIDMap();
 
-    libcomp::String GetInlineMessageText(const libcomp::String& raw);
+    libcomp::String GetInlineMessageText(const libcomp::String& raw,
+        size_t limit = 0);
 
     MainWindow *mMainWindow;
 

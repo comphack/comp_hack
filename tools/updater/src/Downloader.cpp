@@ -176,6 +176,8 @@ void Downloader::startUpdate()
 
 void Downloader::requestError(QNetworkReply::NetworkError code)
 {
+    (void)code;
+
     auto errorString = mCurrentReq->errorString();
 
     if(!errorString.isEmpty())

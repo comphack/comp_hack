@@ -89,6 +89,19 @@ void EventBase::Load(const std::shared_ptr<objects::EventBase>& e)
 
 std::shared_ptr<objects::EventBase> EventBase::Save() const
 {
+    if(!mEventBase)
+    {
+        return nullptr;
+    }
+
+    mEventBase->SetNext(ui->next->GetEvent());
+    mEventBase->SetQueueNext(ui->next->GetEvent());
+    mEventBase->SetPop(ui->pop->isChecked());
+    mEventBase->SetPopNext(ui->popNext->isChecked());
+
+    mEventBase->SetConditions(ui->conditions->GetObjectList<
+        objects::EventCondition>());
+
     return mEventBase;
 }
 

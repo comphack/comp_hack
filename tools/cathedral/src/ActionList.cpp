@@ -342,6 +342,8 @@ void ActionList::AddAction(const std::shared_ptr<objects::Action>& act,
 
     ui->actionListLayout->insertWidget(ui->actionListLayout->count() - 1,
         pAction);
+
+    emit rowEdit();
 }
 
 void ActionList::RemoveAction(Action *pAction)
@@ -358,6 +360,8 @@ void ActionList::RemoveAction(Action *pAction)
     pAction->deleteLater();
 
     RefreshPositions();
+
+    emit rowEdit();
 }
 
 void ActionList::MoveUp(Action *pAction)
@@ -383,6 +387,8 @@ void ActionList::MoveUp(Action *pAction)
     ui->actionListLayout->insertWidget(idx - 1, pAction);
 
     RefreshPositions();
+
+    emit rowEdit();
 }
 
 void ActionList::MoveDown(Action *pAction)
@@ -409,6 +415,8 @@ void ActionList::MoveDown(Action *pAction)
     ui->actionListLayout->insertWidget(idx + 1, pAction);
 
     RefreshPositions();
+
+    emit rowEdit();
 }
 
 void ActionList::ClearActions()
@@ -421,6 +429,8 @@ void ActionList::ClearActions()
     }
 
     mActions.clear();
+
+    emit rowEdit();
 }
 
 void ActionList::AddNewAction()

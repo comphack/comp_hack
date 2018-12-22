@@ -72,5 +72,15 @@ void EventPlayScene::Load(const std::shared_ptr<objects::Event>& e)
 
 std::shared_ptr<objects::Event> EventPlayScene::Save() const
 {
+    if(!mEvent)
+    {
+        return nullptr;
+    }
+
+    Event::Save();
+
+    mEvent->SetSceneID(prop->scene->value());
+    mEvent->SetUnknown(prop->unknown->value());
+
     return mEvent;
 }

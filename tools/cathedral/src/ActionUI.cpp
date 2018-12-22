@@ -137,5 +137,11 @@ void Action::SaveBaseProperties(const std::shared_ptr<
     action->SetStopOnFailure(ui->stopOnFailure->isChecked());
     action->SetOnFailureEvent(ui->failureEvent->GetEvent());
     action->SetTransformScriptID(ui->transformScript->GetScriptID());
-    action->SetTransformScriptParams(ui->transformScript->GetParams());
+
+    action->ClearTransformScriptParams();
+    if(!action->GetTransformScriptID().IsEmpty())
+    {
+        // Ignore params if no script is set
+        action->SetTransformScriptParams(ui->transformScript->GetParams());
+    }
 }

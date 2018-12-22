@@ -76,7 +76,18 @@ void ActionDelay::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionDelay::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetType((objects::ActionDelay::Type_t)
+        prop->type->currentIndex());
+    mAction->SetDelayID(prop->delayID->value());
+    mAction->SetDuration((uint32_t)prop->duration->value());
+    mAction->SetActions(prop->actions->Save());
 
     return mAction;
 }

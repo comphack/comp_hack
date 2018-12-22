@@ -264,7 +264,46 @@ void EventCondition::Load(const std::shared_ptr<objects::EventCondition>& e)
 
 std::shared_ptr<objects::EventCondition> EventCondition::Save() const
 {
-    return nullptr;
+    std::shared_ptr<objects::EventCondition> condition;
+    if(ui->radFlags->isChecked())
+    {
+        // Flag condition
+        auto fCondition = std::make_shared<objects::EventFlagCondition>();
+        for(auto pair : ui->flagStates->Save())
+        {
+            fCondition->SetFlagStates((int32_t)pair.first, pair.second);
+        }
+
+        condition = fCondition;
+    }
+    else if(ui->radScript->isChecked())
+    {
+        // Script condition
+        auto sCondition = std::make_shared<objects::EventScriptCondition>();
+
+        sCondition->SetScriptID(ui->script->GetScriptID());
+        if(!sCondition->GetScriptID().IsEmpty())
+        {
+            // Ignore params if no script is set
+            sCondition->SetParams(ui->script->GetParams());
+        }
+
+        condition = sCondition;
+    }
+    else
+    {
+        // Normal condition
+        condition = std::make_shared<objects::EventCondition>();
+    }
+
+    condition->SetType(GetCurrentType());
+    condition->SetValue1(ui->value1->value());
+    condition->SetValue2(ui->value2->value());
+    condition->SetCompareMode((objects::EventCondition::CompareMode_t)ui
+        ->compareMode->currentData().value<int>());
+    condition->SetNegate(ui->negate->isChecked());
+
+    return condition;
 }
 
 void EventCondition::RadioToggle()

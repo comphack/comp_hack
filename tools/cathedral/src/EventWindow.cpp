@@ -25,6 +25,9 @@
 #include "EventWindow.h"
 
 // Cathedral Includes
+#include "ActionList.h"
+#include "ActionMap.h"
+#include "DynamicList.h"
 #include "EventUI.h"
 #include "EventDirectionUI.h"
 #include "EventExNPCMessageUI.h"
@@ -42,14 +45,18 @@
 #include <PushIgnore.h>
 #include "ui_EventWindow.h"
 
+#include <QCheckBox>
 #include <QDir>
 #include <QDirIterator>
+#include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
+#include <QRadioButton>
 #include <QSettings>
+#include <QSpinBox>
 #include <PopIgnore.h>
 
 // object Includes
@@ -78,11 +85,31 @@ public:
     {
         EventID = eventID;
         FileIdx = fileIdx;
-        HasUpdates = false;
     }
 
     libcomp::String EventID;
     int32_t FileIdx;
+};
+
+class FileEvent
+{
+public:
+    FileEvent(const std::shared_ptr<objects::Event>& e, bool isNew = false)
+    {
+        Event = e;
+        if(isNew)
+        {
+            HasUpdates = true;
+        }
+        else
+        {
+            FileEventID = e->GetID();
+            HasUpdates = false;
+        }
+    }
+
+    std::shared_ptr<objects::Event> Event;
+    libcomp::String FileEventID;
     bool HasUpdates;
 };
 
@@ -90,7 +117,7 @@ class EventFile
 {
 public:
     libcomp::String Path;
-    std::list<std::shared_ptr<objects::Event>> Events;
+    std::list<std::shared_ptr<FileEvent>> Events;
     std::unordered_map<libcomp::String, int32_t> EventIDMap;
     std::set<libcomp::String> PendingRemovals;
 };
@@ -193,8 +220,7 @@ bool EventWindow::GoToEvent(const libcomp::String& eventID)
         return false;
     }
 
-    libcomp::String currentPath(ui->files
-        ->currentText().toUtf8().constData());
+    libcomp::String currentPath = cs(ui->files->currentText());
     libcomp::String path = iter->second;
 
     if(currentPath != path)
@@ -268,7 +294,7 @@ void EventWindow::LoadDirectory()
     libcomp::String selectPath = currentPath;
     while(it.hasNext())
     {
-        libcomp::String path(it.next().toUtf8().constData());
+        libcomp::String path = cs(it.next());
         if(LoadFileFromPath(path) && selectPath.IsEmpty())
         {
             selectPath = path;
@@ -297,7 +323,7 @@ void EventWindow::LoadFile()
 
     ui->files->blockSignals(true);
 
-    libcomp::String path(qPath.toUtf8().constData());
+    libcomp::String path = cs(qPath);
     if(LoadFileFromPath(path))
     {
         RebuildGlobalIDMap();
@@ -337,7 +363,7 @@ void EventWindow::NewFile()
     if(fi.exists() && fi.isFile())
     {
         LOG_ERROR(libcomp::String("Attempted to overwrite existing file with"
-            " new event file: %1").Arg(qPath.toUtf8().constData()));
+            " new event file: %1").Arg(cs(qPath)));
         return;
     }
 
@@ -347,10 +373,10 @@ void EventWindow::NewFile()
     tinyxml2::XMLElement* pRoot = doc.NewElement("objects");
     doc.InsertEndChild(pRoot);
 
-    doc.SaveFile(qPath.toUtf8().constData());
+    doc.SaveFile(cs(qPath).C());
 
     // Select new file
-    if(LoadFileFromPath(qPath.toUtf8().constData()))
+    if(LoadFileFromPath(cs(qPath)))
     {
         ui->files->setCurrentText(qPath);
     }
@@ -364,8 +390,7 @@ void EventWindow::NewEvent()
         return;
     }
 
-    auto fIter = mFiles.find(libcomp::String(ui->files
-        ->currentText().toUtf8().constData()));
+    auto fIter = mFiles.find(cs(ui->files->currentText()));
     if(fIter == mFiles.end())
     {
         // No file
@@ -382,13 +407,13 @@ void EventWindow::NewEvent()
     auto eIter = file->Events.begin();
     if(eIter != file->Events.end())
     {
-        commonPrefix = (*eIter)->GetID();
+        commonPrefix = (*eIter)->Event->GetID();
         eIter++;
     }
 
     for(; eIter != file->Events.end(); eIter++)
     {
-        auto id = (*eIter)->GetID();
+        auto id = (*eIter)->Event->GetID();
         while(commonPrefix.Length() > 0 &&
             commonPrefix != id.Left(commonPrefix.Length()))
         {
@@ -485,7 +510,7 @@ void EventWindow::NewEvent()
             return;
         }
 
-        eventID = libcomp::String(qEventID.toUtf8().constData());
+        eventID = cs(qEventID);
 
         auto globalIter = mGlobalIDMap.find(eventID);
         if(globalIter != mGlobalIDMap.end())
@@ -506,7 +531,7 @@ void EventWindow::NewEvent()
     e->SetID(eventID);
 
     file->EventIDMap[eventID] = (int32_t)file->Events.size();
-    file->Events.push_back(e);
+    file->Events.push_back(std::make_shared<FileEvent>(e, true));
 
     // Rebuild the global map and update the main window
     RebuildGlobalIDMap();
@@ -519,24 +544,227 @@ void EventWindow::NewEvent()
 
 void EventWindow::Refresh()
 {
-    libcomp::String path(ui->files->currentText().toUtf8().constData());
+    libcomp::String path = cs(ui->files->currentText());
 
     SelectFile(path);
 }
 
+void EventWindow::CurrentEventEdited()
+{
+    if(!mCurrentEvent || mCurrentEvent->HasUpdates)
+    {
+        return;
+    }
+
+    mCurrentEvent->HasUpdates = true;
+
+    // Update the matching tree node
+    QList<QTreeWidgetItem*> items = ui->treeWidget->findItems(
+        QString("*"), Qt::MatchWrap | Qt::MatchWildcard | Qt::MatchRecursive);
+    for(auto item : items)
+    {
+        auto treeItem = (EventTreeItem*)item;
+        if(treeItem->EventID == mCurrentEvent->FileEventID &&
+            cs(treeItem->text(0)) == mCurrentEvent->FileEventID)
+        {
+            QFont font;
+            font.setBold(true);
+            font.setItalic(true);
+            treeItem->setFont(0, font);
+            break;
+        }
+    }
+}
+
 void EventWindow::TreeSelectionChanged()
 {
+    BindSelectedEvent();
+}
+
+bool EventWindow::LoadFileFromPath(const libcomp::String& path)
+{
+    tinyxml2::XMLDocument doc;
+    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+    {
+        LOG_ERROR(libcomp::String("Failed to parse file: %1\n").Arg(path));
+        return false;
+    }
+    
+    auto rootElem = doc.RootElement();
+    if(!rootElem)
+    {
+        LOG_ERROR(libcomp::String("No root element in file: %1\n").Arg(path));
+        return false;
+    }
+
+    std::list<std::shared_ptr<objects::Event>> events;
+
+    auto objNode = rootElem->FirstChildElement("object");
+    while(objNode)
+    {
+        auto event = objects::Event::InheritedConstruction(objNode
+            ->Attribute("name"));
+        if(!event || !event->Load(doc, *objNode))
+        {
+            break;
+        }
+
+        if(event->GetID().IsEmpty())
+        {
+            LOG_ERROR(libcomp::String("Event with no ID encountered in"
+                " file: %1\n").Arg(path));
+            break;
+        }
+
+        events.push_back(event);
+
+        objNode = objNode->NextSiblingElement("object");
+    }
+
+    // Add the file if if has events or no child nodes
+    if(events.size() > 0 || rootElem->FirstChild() == nullptr)
+    {
+        if(mFiles.find(path) != mFiles.end())
+        {
+            LOG_INFO(libcomp::String("Reloaded %1 event(s) from"
+                " file: %2\n").Arg(events.size()).Arg(path));
+        }
+        else
+        {
+            LOG_INFO(libcomp::String("Loaded %1 event(s) from"
+                " file: %2\n").Arg(events.size()).Arg(path));
+        }
+
+        auto file = std::make_shared<EventFile>();
+        file->Path = path;
+
+        for(auto e : events)
+        {
+            if(file->EventIDMap.find(e->GetID()) == file->EventIDMap.end())
+            {
+                // Don't add it twice
+                file->EventIDMap[e->GetID()] = (int32_t)file->Events.size();
+            }
+            else
+            {
+                LOG_ERROR(libcomp::String("Duplicate event ID %1 encountered"
+                    " in file: %2\n").Arg(e->GetID()).Arg(path));
+            }
+
+            file->Events.push_back(std::make_shared<FileEvent>(e));
+        }
+
+        mFiles[path] = file;
+
+        // Rebuild the context menu
+        ui->files->clear();
+
+        std::set<libcomp::String> filenames;
+        for(auto& pair : mFiles)
+        {
+            filenames.insert(pair.first);
+        }
+
+        for(auto filename : filenames)
+        {
+            ui->files->addItem(qs(filename));
+        }
+
+        return true;
+    }
+    else
+    {
+        LOG_WARNING(libcomp::String("No events found in file: %1\n")
+            .Arg(path));
+    }
+
+    return false;
+}
+
+bool EventWindow::SelectFile(const libcomp::String& path)
+{
+    auto iter = mFiles.find(path);
+    if(iter == mFiles.end())
+    {
+        return false;
+    }
+
+    // Clean up the current tree
+    ui->treeWidget->clear();
+
+    // Add events to the tree
+    auto file = iter->second;
+
+    int32_t fileIdx = 0;
+    std::set<libcomp::String> seen;
+    std::set<libcomp::String> dupeCheck;
+    for(auto lEvent : file->Events)
+    {
+        auto e = lEvent->Event;
+        if(seen.find(e->GetID()) == seen.end())
+        {
+            AddEventToTree(e->GetID(), nullptr, file, seen);
+        }
+        else if(dupeCheck.find(e->GetID()) != dupeCheck.end())
+        {
+            AddEventToTree(e->GetID(), nullptr, file, seen, fileIdx);
+        }
+
+        fileIdx++;
+        dupeCheck.insert(e->GetID());
+    }
+
+    ui->treeWidget->expandAll();
+    ui->treeWidget->resizeColumnToContents(0);
+
+    return true;
+}
+
+std::shared_ptr<objects::Event> EventWindow::GetNewEvent(
+    objects::Event::EventType_t type) const
+{
+    switch(type)
+    {
+    case objects::Event::EventType_t::NPC_MESSAGE:
+        return std::make_shared<objects::EventNPCMessage>();
+    case objects::Event::EventType_t::EX_NPC_MESSAGE:
+        return std::make_shared<objects::EventExNPCMessage>();
+    case objects::Event::EventType_t::MULTITALK:
+        return std::make_shared<objects::EventMultitalk>();
+    case objects::Event::EventType_t::PROMPT:
+        return std::make_shared<objects::EventPrompt>();
+    case objects::Event::EventType_t::PERFORM_ACTIONS:
+        return std::make_shared<objects::EventPerformActions>();
+    case objects::Event::EventType_t::OPEN_MENU:
+        return std::make_shared<objects::EventOpenMenu>();
+    case objects::Event::EventType_t::PLAY_SCENE:
+        return std::make_shared<objects::EventPlayScene>();
+    case objects::Event::EventType_t::DIRECTION:
+        return std::make_shared<objects::EventDirection>();
+    case objects::Event::EventType_t::ITIME:
+        return std::make_shared<objects::EventITime>();
+    case objects::Event::EventType_t::FORK:
+    default:
+        return std::make_shared<objects::Event>();
+    }
+}
+
+void EventWindow::BindSelectedEvent()
+{
+    auto previousEvent = mCurrentEvent;
+    mCurrentEvent = nullptr;
+
     EventTreeItem* selected = 0;
     for(auto node : ui->treeWidget->selectedItems())
     {
         selected = (EventTreeItem*)node;
+        break;
     }
 
     std::shared_ptr<EventFile> file;
     if(selected)
     {
-        auto iter = mFiles.find(libcomp::String(ui->files
-            ->currentText().toUtf8().constData()));
+        auto iter = mFiles.find(cs(ui->files->currentText()));
         if(iter != mFiles.end())
         {
             file = iter->second;
@@ -544,6 +772,7 @@ void EventWindow::TreeSelectionChanged()
     }
 
     QWidget* eNode = 0;
+    bool editListen = false;
 
     // Find the event
     int32_t fileIdx = selected ? selected->FileIdx : -1;
@@ -584,7 +813,9 @@ void EventWindow::TreeSelectionChanged()
         {
             auto eIter2 = file->Events.begin();
             std::advance(eIter2, fileIdx);
-            e = *eIter2;
+            mCurrentEvent = *eIter2;
+            e = mCurrentEvent->Event;
+            editListen = !mCurrentEvent->HasUpdates;
         }
 
         if(e)
@@ -676,8 +907,18 @@ void EventWindow::TreeSelectionChanged()
             }
         }
     }
-    
-    // Clear any existing (should be only one)
+
+    // If the previous current event was updated, update the event definition
+    // from the current control
+    if(previousEvent && previousEvent->HasUpdates)
+    {
+        for(auto eCtrl : ui->splitter->findChildren<Event*>())
+        {
+            eCtrl->Save();
+        }
+    }
+
+    // Clear any existing controls (should be only one)
     while(ui->layoutView->count() >= 3)
     {
         auto current = ui->layoutView->itemAt(1)->widget();
@@ -689,6 +930,11 @@ void EventWindow::TreeSelectionChanged()
     {
         ui->lblNoCurrent->hide();
 
+        if(editListen)
+        {
+            BindEventEditControls(eNode);
+        }
+
         ui->layoutView->insertWidget(1, eNode);
     }
     else
@@ -697,170 +943,63 @@ void EventWindow::TreeSelectionChanged()
     }
 }
 
-bool EventWindow::LoadFileFromPath(const libcomp::String& path)
+void EventWindow::BindEventEditControls(QWidget* eNode)
 {
-    tinyxml2::XMLDocument doc;
-    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+    // Wire all sub controls to the edit event. This only needs to execute
+    // at most once per binding so controls created after this point do not
+    // need to be re-bound
+    for(auto ctrl : eNode->findChildren<ActionList*>())
     {
-        LOG_ERROR(libcomp::String("Failed to parse file: %1\n").Arg(path));
-        return false;
-    }
-    
-    auto rootElem = doc.RootElement();
-    if(!rootElem)
-    {
-        LOG_ERROR(libcomp::String("No root element in file: %1\n").Arg(path));
-        return false;
+        connect(ctrl, SIGNAL(rowEdit()), this,
+            SLOT(CurrentEventEdited()));
     }
 
-    std::list<std::shared_ptr<objects::Event>> events;
-
-    auto objNode = rootElem->FirstChildElement("object");
-    while(objNode)
+    for(auto ctrl : eNode->findChildren<ActionMap*>())
     {
-        auto event = objects::Event::InheritedConstruction(objNode
-            ->Attribute("name"));
-        if(!event || !event->Load(doc, *objNode))
-        {
-            break;
-        }
-
-        if(event->GetID().IsEmpty())
-        {
-            LOG_ERROR(libcomp::String("Event with no ID encountered in"
-                " file: %1\n").Arg(path));
-            break;
-        }
-
-        events.push_back(event);
-
-        objNode = objNode->NextSiblingElement("object");
+        connect(ctrl, SIGNAL(rowEdit()), this,
+            SLOT(CurrentEventEdited()));
     }
 
-    // Add the file if if has events or no child nodes
-    if(events.size() > 0 || rootElem->FirstChild() == nullptr)
+    for(auto ctrl : eNode->findChildren<DynamicList*>())
     {
-        if(mFiles.find(path) != mFiles.end())
-        {
-            LOG_INFO(libcomp::String("Reloaded %1 event(s) from"
-                " file: %2\n").Arg(events.size()).Arg(path));
-        }
-        else
-        {
-            LOG_INFO(libcomp::String("Loaded %1 event(s) from"
-                " file: %2\n").Arg(events.size()).Arg(path));
-        }
-
-        auto file = std::make_shared<EventFile>();
-        file->Path = path;
-
-        for(auto e : events)
-        {
-            if(file->EventIDMap.find(e->GetID()) == file->EventIDMap.end())
-            {
-                // Don't add it twice
-                file->EventIDMap[e->GetID()] = (int32_t)file->Events.size();
-            }
-            else
-            {
-                LOG_ERROR(libcomp::String("Duplicate event ID %1 encountered"
-                    " in file: %2\n").Arg(e->GetID()).Arg(path));
-            }
-
-            file->Events.push_back(e);
-        }
-
-        mFiles[path] = file;
-
-        // Rebuild the context menu
-        ui->files->clear();
-
-        std::set<libcomp::String> filenames;
-        for(auto& pair : mFiles)
-        {
-            filenames.insert(pair.first);
-        }
-
-        for(auto filename : filenames)
-        {
-            ui->files->addItem(qs(filename));
-        }
-
-        return true;
-    }
-    else
-    {
-        LOG_WARNING(libcomp::String("No events found in file: %1\n")
-            .Arg(path));
+        connect(ctrl, SIGNAL(rowEdit()), this,
+            SLOT(CurrentEventEdited()));
     }
 
-    return false;
-}
-
-bool EventWindow::SelectFile(const libcomp::String& path)
-{
-    auto iter = mFiles.find(path);
-    if(iter == mFiles.end())
+    for(auto ctrl : eNode->findChildren<QCheckBox*>())
     {
-        return false;
+        connect(ctrl, SIGNAL(toggled(bool)), this,
+            SLOT(CurrentEventEdited()));
     }
 
-    // Clean up the current tree
-    ui->treeWidget->clear();
-
-    // Add events to the tree
-    auto file = iter->second;
-
-    int32_t fileIdx = 0;
-    std::set<libcomp::String> seen;
-    std::set<libcomp::String> dupeCheck;
-    for(auto e : file->Events)
+    for(auto ctrl : eNode->findChildren<QComboBox*>())
     {
-        if(seen.find(e->GetID()) == seen.end())
-        {
-            AddEventToTree(e->GetID(), nullptr, file, seen);
-        }
-        else if(dupeCheck.find(e->GetID()) != dupeCheck.end())
-        {
-            AddEventToTree(e->GetID(), nullptr, file, seen, fileIdx);
-        }
-
-        fileIdx++;
-        dupeCheck.insert(e->GetID());
+        connect(ctrl, SIGNAL(currentIndexChanged(const QString&)), this,
+            SLOT(CurrentEventEdited()));
     }
 
-    ui->treeWidget->expandAll();
-    ui->treeWidget->resizeColumnToContents(0);
-
-    return true;
-}
-
-std::shared_ptr<objects::Event> EventWindow::GetNewEvent(
-    objects::Event::EventType_t type) const
-{
-    switch(type)
+    for(auto ctrl : eNode->findChildren<QLineEdit*>())
     {
-    case objects::Event::EventType_t::NPC_MESSAGE:
-        return std::make_shared<objects::EventNPCMessage>();
-    case objects::Event::EventType_t::EX_NPC_MESSAGE:
-        return std::make_shared<objects::EventExNPCMessage>();
-    case objects::Event::EventType_t::MULTITALK:
-        return std::make_shared<objects::EventMultitalk>();
-    case objects::Event::EventType_t::PROMPT:
-        return std::make_shared<objects::EventPrompt>();
-    case objects::Event::EventType_t::PERFORM_ACTIONS:
-        return std::make_shared<objects::EventPerformActions>();
-    case objects::Event::EventType_t::OPEN_MENU:
-        return std::make_shared<objects::EventOpenMenu>();
-    case objects::Event::EventType_t::PLAY_SCENE:
-        return std::make_shared<objects::EventPlayScene>();
-    case objects::Event::EventType_t::DIRECTION:
-        return std::make_shared<objects::EventDirection>();
-    case objects::Event::EventType_t::ITIME:
-        return std::make_shared<objects::EventITime>();
-    case objects::Event::EventType_t::FORK:
-    default:
-        return std::make_shared<objects::Event>();
+        connect(ctrl, SIGNAL(textChanged(const QString&)), this,
+            SLOT(CurrentEventEdited()));
+    }
+
+    for(auto ctrl : eNode->findChildren<QDoubleSpinBox*>())
+    {
+        connect(ctrl, SIGNAL(valueChanged(double)), this,
+            SLOT(CurrentEventEdited()));
+    }
+
+    for(auto ctrl : eNode->findChildren<QRadioButton*>())
+    {
+        connect(ctrl, SIGNAL(toggled(bool)), this,
+            SLOT(CurrentEventEdited()));
+    }
+
+    for(auto ctrl : eNode->findChildren<QSpinBox*>())
+    {
+        connect(ctrl, SIGNAL(valueChanged(int)), this,
+            SLOT(CurrentEventEdited()));
     }
 }
 
@@ -919,19 +1058,36 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
         auto eIter = file->Events.begin();
         std::advance(eIter, file->EventIDMap[id]);
 
-        e = *eIter;
+        e = (*eIter)->Event;
         item = new EventTreeItem(parent, id);
+
         item->setText(0, qs(id));
+
+        if((*eIter)->HasUpdates)
+        {
+            QFont font;
+            font.setBold(true);
+            font.setItalic(true);
+            item->setFont(0, font);
+        }
     }
     else
     {
         auto eIter = file->Events.begin();
         std::advance(eIter, eventIdx);
 
-        e = *eIter;
+        e = (*eIter)->Event;
         item = new EventTreeItem(parent, "", eventIdx);
         item->setText(0, qs(libcomp::String("%1 [Duplicate]").Arg(id)));
         item->setTextColor(0, QColor(255, 0, 0));
+
+        if((*eIter)->HasUpdates)
+        {
+            QFont font;
+            font.setBold(true);
+            font.setItalic(true);
+            item->setFont(0, font);
+        }
     }
 
     seen.insert(id);

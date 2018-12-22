@@ -72,7 +72,15 @@ void ActionSetHomepoint::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionSetHomepoint::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetZoneID((uint32_t)prop->zone->currentText().toInt());
+    mAction->SetSpotID((uint32_t)prop->spot->currentText().toInt());
 
     return mAction;
 }

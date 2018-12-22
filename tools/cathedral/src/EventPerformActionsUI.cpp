@@ -73,5 +73,14 @@ void EventPerformActions::Load(const std::shared_ptr<objects::Event>& e)
 
 std::shared_ptr<objects::Event> EventPerformActions::Save() const
 {
+    if(!mEvent)
+    {
+        return nullptr;
+    }
+
+    Event::Save();
+
+    mEvent->SetActions(prop->actions->Save());
+
     return mEvent;
 }

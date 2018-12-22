@@ -440,6 +440,75 @@ std::list<libcomp::String> DynamicList::GetStringList() const
 }
 
 template<>
+std::list<std::shared_ptr<objects::EventBase>>
+    DynamicList::GetObjectList() const
+{
+    std::list<std::shared_ptr<objects::EventBase>> result;
+    if(mType != DynamicItemType_t::OBJ_EVENT_BASE)
+    {
+        LOG_ERROR("Attempted to retrieve an EventBase list from a differing"
+            " DynamicList type\n");
+        return result;
+    }
+
+    size_t total = ui->layoutItems->count();
+    for(int childIdx = 0; childIdx < total; childIdx++)
+    {
+        EventBase* ctrl = ui->layoutItems->itemAt(childIdx)->widget()
+            ->findChild<EventBase*>();
+        result.push_back(ctrl->Save());
+    }
+
+    return result;
+}
+
+template<>
+std::list<std::shared_ptr<objects::EventChoice>>
+    DynamicList::GetObjectList() const
+{
+    std::list<std::shared_ptr<objects::EventChoice>> result;
+    if(mType != DynamicItemType_t::OBJ_EVENT_CHOICE)
+    {
+        LOG_ERROR("Attempted to retrieve an EventChoice list from a differing"
+            " DynamicList type\n");
+        return result;
+    }
+
+    size_t total = ui->layoutItems->count();
+    for(int childIdx = 0; childIdx < total; childIdx++)
+    {
+        EventChoice* ctrl = ui->layoutItems->itemAt(childIdx)->widget()
+            ->findChild<EventChoice*>();
+        result.push_back(ctrl->Save());
+    }
+
+    return result;
+}
+
+template<>
+std::list<std::shared_ptr<objects::EventCondition>>
+    DynamicList::GetObjectList() const
+{
+    std::list<std::shared_ptr<objects::EventCondition>> result;
+    if(mType != DynamicItemType_t::OBJ_EVENT_CONDITION)
+    {
+        LOG_ERROR("Attempted to retrieve an EventCondition list from a"
+            " differing DynamicList type\n");
+        return result;
+    }
+
+    size_t total = ui->layoutItems->count();
+    for(int childIdx = 0; childIdx < total; childIdx++)
+    {
+        EventCondition* ctrl = ui->layoutItems->itemAt(childIdx)->widget()
+            ->findChild<EventCondition*>();
+        result.push_back(ctrl->Save());
+    }
+
+    return result;
+}
+
+template<>
 std::list<std::shared_ptr<objects::ItemDrop>>
     DynamicList::GetObjectList() const
 {
@@ -506,13 +575,15 @@ void DynamicList::AddRow()
         canReorder = true;
         break;
     case DynamicItemType_t::OBJ_EVENT_BASE:
-        ctrl = GetObjectWidget<objects::EventBase>(nullptr);
+        ctrl = GetObjectWidget(std::make_shared<objects::EventBase>());
         canReorder = true;
         break;
     case DynamicItemType_t::OBJ_EVENT_CHOICE:
-        ctrl = GetObjectWidget<objects::EventChoice>(nullptr);
+        ctrl = GetObjectWidget(std::make_shared<objects::EventChoice>());
         canReorder = true;
         break;
+    // Allow the controls below this point to default (the object is created on
+    // save anyway)
     case DynamicItemType_t::OBJ_EVENT_CONDITION:
         ctrl = GetObjectWidget<objects::EventCondition>(nullptr);
         canReorder = true;
@@ -558,6 +629,8 @@ void DynamicList::AddItem(QWidget* ctrl, bool canReorder)
     connect(item->ui->remove, SIGNAL(clicked(bool)), this, SLOT(RemoveRow()));
 
     RefreshPositions();
+
+    emit rowEdit();
 }
 
 void DynamicList::RemoveRow()
@@ -585,6 +658,8 @@ void DynamicList::RemoveRow()
             parent->deleteLater();
 
             RefreshPositions();
+
+            emit rowEdit();
         }
     }
 }
@@ -614,6 +689,8 @@ void DynamicList::MoveUp()
             ui->layoutItems->insertWidget((childIdx - 1), (QWidget*)parent);
 
             RefreshPositions();
+
+            emit rowEdit();
         }
     }
 }
@@ -643,6 +720,8 @@ void DynamicList::MoveDown()
             ui->layoutItems->insertWidget((childIdx + 1), (QWidget*)parent);
 
             RefreshPositions();
+
+            emit rowEdit();
         }
     }
 }

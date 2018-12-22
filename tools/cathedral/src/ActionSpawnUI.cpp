@@ -96,7 +96,27 @@ void ActionSpawn::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionSpawn::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetSpawnLocationGroupIDs(prop->spawnLocationGroupIDs
+        ->GetUnsignedIntegerList());
+
+    mAction->SetSpotID((uint32_t)prop->spotID->currentText().toInt());
+
+    mAction->ClearSpawnGroupIDs();
+    for(auto pair : prop->spawnGroupIDs->Save())
+    {
+        mAction->SetSpawnGroupIDs(pair.first, (uint32_t)pair.second);
+    }
+
+    mAction->SetMode((objects::ActionSpawn::Mode_t)prop->mode->currentIndex());
+    mAction->SetDefeatActions(prop->defeatActions->Save());
+    mAction->SetNoStagger(prop->noStagger->isChecked());
 
     return mAction;
 }

@@ -84,5 +84,18 @@ void EventITime::Load(const std::shared_ptr<objects::Event>& e)
 
 std::shared_ptr<objects::Event> EventITime::Save() const
 {
+    if(!mEvent)
+    {
+        return nullptr;
+    }
+
+    Event::Save();
+
+    mEvent->SetITimeID((int8_t)prop->iTimeID->value());
+    mEvent->SetReactionID(prop->reactionID->value());
+    mEvent->SetTimeLimit((int16_t)prop->timeLimit->value());
+    mEvent->SetGiftIDs(prop->giftIDs->GetUnsignedIntegerList());
+    mEvent->SetStartActions(prop->startActions->GetEvent());
+
     return mEvent;
 }

@@ -103,6 +103,37 @@ void Event::Load(const std::shared_ptr<objects::Event>& e)
 
 std::shared_ptr<objects::Event> Event::Save() const
 {
+    if(!mEventBase)
+    {
+        return nullptr;
+    }
+
+    mEventBase->SetID(cs(ui->eventID->text()));
+    mEventBase->SetNext(ui->next->GetEvent());
+    mEventBase->SetQueueNext(ui->next->GetEvent());
+    mEventBase->SetPop(ui->pop->isChecked());
+    mEventBase->SetPopNext(ui->popNext->isChecked());
+
+    mEventBase->SetBranchScriptID(ui->branchScript->GetScriptID());
+    mEventBase->SetTransformScriptID(ui->transformScript->GetScriptID());
+
+    // Ignore params if no script is set
+    mEventBase->ClearBranchScriptParams();
+    if(!mEventBase->GetBranchScriptID().IsEmpty())
+    {
+        mEventBase->SetBranchScriptParams(ui->branchScript->GetParams());
+    }
+
+    mEventBase->ClearTransformScriptParams();
+    if(!mEventBase->GetTransformScriptID().IsEmpty())
+    {
+        mEventBase->SetTransformScriptParams(ui->transformScript->GetParams());
+    }
+
+    mEventBase->SetBranches(ui->branches->GetObjectList<objects::EventBase>());
+    mEventBase->SetConditions(ui->conditions->GetObjectList<
+        objects::EventCondition>());
+
     return mEventBase;
 }
 

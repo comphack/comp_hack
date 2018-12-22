@@ -77,5 +77,14 @@ void EventNPCMessage::Load(const std::shared_ptr<objects::Event>& e)
 
 std::shared_ptr<objects::Event> EventNPCMessage::Save() const
 {
+    if(!mEvent)
+    {
+        return nullptr;
+    }
+
+    Event::Save();
+
+    mEvent->SetMessageIDs(prop->messages->GetIntegerList());
+
     return mEvent;
 }

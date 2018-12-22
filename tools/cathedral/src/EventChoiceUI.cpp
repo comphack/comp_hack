@@ -28,6 +28,7 @@
 #include "DynamicList.h"
 #include "EventMessageRef.h"
 #include "MainWindow.h"
+#include "ServerScript.h"
 
 // Qt Includes
 #include <PushIgnore.h>
@@ -39,17 +40,20 @@
 #include <PacketCodes.h>
 
 EventChoice::EventChoice(MainWindow *pMainWindow, QWidget *pParent) :
-    EventBase(pMainWindow, pParent), mMessage(0), mBranches(0)
+    EventBase(pMainWindow, pParent), mMessage(0), mBranches(0),
+    mBranchScript(0)
 {
     mMessage = new EventMessageRef;
     mBranches = new DynamicList;
+    mBranchScript = new ServerScript;
 
     mMessage->SetMainWindow(pMainWindow);
 
     mBranches->Setup(DynamicItemType_t::OBJ_EVENT_BASE, pMainWindow);
 
-    ui->formCore->insertRow(0, "Message", mMessage);
+    ui->formCore->insertRow(0, "Message:", mMessage);
     ui->formBranch->addRow("Branches:", mBranches);
+    ui->formBase->insertRow(1, "Branch Script:", mBranchScript);
 }
 
 EventChoice::~EventChoice()
@@ -59,8 +63,6 @@ EventChoice::~EventChoice()
 void EventChoice::Load(const std::shared_ptr<objects::EventChoice>& e)
 {
     EventBase::Load(e);
-
-    mEventBase = e;
 
     if(!mEventBase)
     {
@@ -73,9 +75,31 @@ void EventChoice::Load(const std::shared_ptr<objects::EventChoice>& e)
     {
         mBranches->AddObject(branch);
     }
+
+    mBranchScript->SetScriptID(e->GetBranchScriptID());
+    mBranchScript->SetParams(e->GetBranchScriptParams());
 }
 
 std::shared_ptr<objects::EventChoice> EventChoice::Save() const
 {
-    return nullptr;
+    if(!mEventBase)
+    {
+        return nullptr;
+    }
+
+    EventBase::Save();
+
+    auto choice = std::dynamic_pointer_cast<objects::EventChoice>(mEventBase);
+    choice->SetMessageID(mMessage->GetValue());
+    choice->SetBranches(mBranches->GetObjectList<objects::EventBase>());
+    
+    choice->SetBranchScriptID(mBranchScript->GetScriptID());
+    choice->ClearBranchScriptParams();
+    if(!choice->GetBranchScriptID().IsEmpty())
+    {
+        // Ignore params if no script is set
+        choice->SetBranchScriptParams(mBranchScript->GetParams());
+    }
+
+    return choice;
 }

@@ -66,6 +66,9 @@ public:
 protected slots:
     void AddNewValue();
 
+signals:
+    void rowEdit();
+
 protected:
     void AddValue(ActionMapItem *pValue);
     void ClearValues();

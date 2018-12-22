@@ -94,6 +94,8 @@ void ActionMap::RemoveValue(ActionMapItem *pValue)
     }
 
     pValue->deleteLater();
+
+    emit rowEdit();
 }
 
 void ActionMap::SetValueName(const QString& name)
@@ -120,6 +122,8 @@ void ActionMap::AddValue(ActionMapItem *pValue)
 
     ui->actionMapLayout->insertWidget(
         ui->actionMapLayout->count() - 1, pValue);
+
+    emit rowEdit();
 }
 
 void ActionMap::ClearValues()
@@ -132,4 +136,6 @@ void ActionMap::ClearValues()
     }
 
     mValues.clear();
+
+    emit rowEdit();
 }

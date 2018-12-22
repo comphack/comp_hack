@@ -75,7 +75,16 @@ void ActionSpecialDirection::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionSpecialDirection::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetDirection(prop->direction->currentText().toInt());
+    mAction->SetSpecial1((uint8_t)prop->special1->value());
+    mAction->SetSpecial2((uint8_t)prop->special2->value());
 
     return mAction;
 }

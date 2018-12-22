@@ -92,7 +92,27 @@ void ActionUpdateCOMP::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionUpdateCOMP::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetAddSlot((uint8_t)prop->addSlot->value());
+    mAction->SetUnsummon(prop->unsummon->isChecked());
+
+    mAction->ClearAddDemons();
+    for(auto pair : prop->addDemons->Save())
+    {
+        mAction->SetAddDemons(pair.first, (uint8_t)pair.second);
+    }
+
+    mAction->ClearRemoveDemons();
+    for(auto pair : prop->removeDemons->Save())
+    {
+        mAction->SetRemoveDemons(pair.first, (uint8_t)pair.second);
+    }
 
     return mAction;
 }

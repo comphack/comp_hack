@@ -76,7 +76,16 @@ void ActionStartEvent::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionStartEvent::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetEventID(prop->event->GetEvent());
+    mAction->SetAllowInterrupt((objects::ActionStartEvent::AllowInterrupt_t)
+        prop->allowInterrupt->currentIndex());
 
     return mAction;
 }

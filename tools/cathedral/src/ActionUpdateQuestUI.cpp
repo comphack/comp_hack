@@ -77,6 +77,7 @@ void ActionUpdateQuest::Load(const std::shared_ptr<objects::Action>& act)
 
     std::unordered_map<uint32_t, int32_t> states;
 
+    /// @todo: fix
     for(auto state : mAction->GetFlagStates())
     {
         states[(uint32_t)state.first] = state.second;
@@ -87,7 +88,24 @@ void ActionUpdateQuest::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionUpdateQuest::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetQuestID((int16_t)prop->questID->currentText().toInt());
+    mAction->SetPhase((int8_t)prop->phase->value());
+    mAction->SetForceUpdate(prop->forceUpdate->isChecked());
+    mAction->SetFlagSetMode((objects::ActionUpdateQuest::FlagSetMode_t)
+        prop->flagSetMode->currentIndex());
+
+    mAction->ClearFlagStates();
+    for(auto pair : prop->flagStates->Save())
+    {
+        mAction->SetFlagStates((int32_t)pair.first, pair.second);
+    }
 
     return mAction;
 }

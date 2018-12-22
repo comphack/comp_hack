@@ -74,7 +74,7 @@ void ActionCreateLoot::Load(const std::shared_ptr<objects::Action>& act)
 
     for(auto drop : mAction->GetDrops())
     {
-        prop->dropSetIDs->AddObject(drop);
+        prop->drops->AddObject(drop);
     }
 
     for(uint32_t dropSetID : mAction->GetDropSetIDs())
@@ -95,7 +95,21 @@ void ActionCreateLoot::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionCreateLoot::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetDrops(prop->drops->GetObjectList<objects::ItemDrop>());
+    mAction->SetDropSetIDs(prop->dropSetIDs->GetUnsignedIntegerList());
+    mAction->SetIsBossBox(prop->isBossBox->isChecked());
+    mAction->SetExpirationTime((float)prop->expirationTime->value());
+    mAction->SetPosition((objects::ActionCreateLoot::Position_t)
+        prop->position->currentIndex());
+    mAction->SetLocations(prop->drops
+        ->GetObjectList<objects::ObjectPosition>());
 
     return mAction;
 }

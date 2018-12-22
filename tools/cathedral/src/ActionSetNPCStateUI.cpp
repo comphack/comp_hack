@@ -75,7 +75,17 @@ void ActionSetNPCState::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionSetNPCState::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetState((uint8_t)prop->state->value());
+    mAction->SetFrom((int16_t)prop->from->value());
+    mAction->SetActorID(prop->actor->currentText().toInt());
+    mAction->SetSourceClientOnly(prop->sourceClientOnly->isChecked());
 
     return mAction;
 }

@@ -77,7 +77,17 @@ void ActionStageEffect::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionStageEffect::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetMessageID(prop->message->GetValue());
+    mAction->SetEffectType((int8_t)prop->effectType->value());
+    mAction->SetMessageValue(prop->messageValue->value());
+    mAction->SetIncludeMessage(prop->includeMessage->isChecked());
 
     return mAction;
 }

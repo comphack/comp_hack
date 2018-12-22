@@ -77,7 +77,18 @@ void ActionAddRemoveItems::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionAddRemoveItems::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetNotify(prop->notify->isChecked());
+    mAction->SetFromDropSet(prop->fromDropSet->isChecked());
+    mAction->SetItems(prop->items->Save());
+    mAction->SetMode((objects::ActionAddRemoveItems::Mode_t)
+        prop->mode->currentIndex());
 
     return mAction;
 }

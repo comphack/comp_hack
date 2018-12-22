@@ -67,6 +67,9 @@ protected slots:
     void AddNewAction();
     void RefreshPositions();
 
+signals:
+    void rowEdit();
+
 protected:
     void AddAction(const std::shared_ptr<objects::Action>& act,
         Action *pAction);

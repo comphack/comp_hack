@@ -75,7 +75,17 @@ void ActionGrantXP::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionGrantXP::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetTargetType((objects::ActionGrantXP::TargetType_t)
+        prop->targetType->currentIndex());
+    mAction->SetXP(prop->xp->value());
+    mAction->SetAdjustable(prop->adjustable->isChecked());
 
     return mAction;
 }

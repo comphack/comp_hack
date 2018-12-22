@@ -49,6 +49,7 @@ class EventWindow;
 
 class EventFile;
 class EventTreeItem;
+class FileEvent;
 class MainWindow;
 class QTreeWidgetItem;
 
@@ -71,6 +72,7 @@ private slots:
     void NewFile();
     void NewEvent();
     void Refresh();
+    void CurrentEventEdited();
     void TreeSelectionChanged();
 
 private:
@@ -80,6 +82,9 @@ private:
 
     std::shared_ptr<objects::Event> GetNewEvent(
         objects::Event::EventType_t type) const;
+
+    void BindSelectedEvent();
+    void BindEventEditControls(QWidget* eNode);
 
     void AddEventToTree(const libcomp::String& id, EventTreeItem* parent,
         const std::shared_ptr<EventFile>& file,
@@ -95,7 +100,7 @@ private:
     std::unordered_map<libcomp::String, std::shared_ptr<EventFile>> mFiles;
     std::unordered_map<libcomp::String, libcomp::String> mGlobalIDMap;
 
-    std::weak_ptr<libcomp::Object> mActiveObject;
+    std::shared_ptr<FileEvent> mCurrentEvent;
 
     Ui::EventWindow *ui;
 };

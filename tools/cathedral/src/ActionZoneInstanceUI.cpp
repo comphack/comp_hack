@@ -79,7 +79,18 @@ void ActionZoneInstance::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionZoneInstance::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetMode((objects::ActionZoneInstance::Mode_t)
+        prop->mode->currentIndex());
+    mAction->SetVariantID((uint32_t)prop->variantID->value());
+    mAction->SetTimerID((uint32_t)prop->timerID->value());
+    mAction->SetTimerExpirationEventID(prop->timerExpirationEvent->GetEvent());
 
     return mAction;
 }

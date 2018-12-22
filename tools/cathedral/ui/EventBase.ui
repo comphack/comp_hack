@@ -119,37 +119,27 @@
            <widget class="EventRef" name="queueNext" native="true"/>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="lblBranchScript">
-            <property name="text">
-             <string>Branch Script:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="ServerScript" name="branchScript" native="true"/>
-          </item>
-          <item row="2" column="0">
            <widget class="QLabel" name="lblPop">
             <property name="text">
              <string>Pop:</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="1" column="1">
            <widget class="QCheckBox" name="pop">
             <property name="text">
              <string/>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="2" column="0">
            <widget class="QLabel" name="lblPopNext">
             <property name="text">
              <string>Pop Next:</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="2" column="1">
            <widget class="QCheckBox" name="popNext">
             <property name="text">
              <string/>
@@ -166,12 +156,6 @@
   </layout>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>ServerScript</class>
-   <extends>QWidget</extends>
-   <header>ServerScript.h</header>
-   <container>1</container>
-  </customwidget>
   <customwidget>
    <class>DynamicList</class>
    <extends>QWidget</extends>

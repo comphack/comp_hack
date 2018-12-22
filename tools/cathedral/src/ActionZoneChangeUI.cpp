@@ -35,6 +35,9 @@
 #include "ui_ActionZoneChange.h"
 #include <PopIgnore.h>
 
+// object Includes
+#include <ObjectPosition.h>
+
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
@@ -76,7 +79,21 @@ void ActionZoneChange::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionZoneChange::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetZoneID((uint32_t)prop->zone->value());
+    mAction->SetDynamicMapID((uint32_t)prop->dynamicMap->value());
+
+    auto pos = prop->destination->Save();
+    mAction->SetSpotID(pos->GetSpotID());
+    mAction->SetDestinationX(pos->GetX());
+    mAction->SetDestinationY(pos->GetY());
+    mAction->SetDestinationRotation(pos->GetRotation());
 
     return mAction;
 }

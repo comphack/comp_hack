@@ -93,7 +93,29 @@ void ActionAddRemoveStatus::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionAddRemoveStatus::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetTargetType((objects::ActionAddRemoveStatus::TargetType_t)
+        prop->targetType->currentIndex());
+    mAction->SetIsReplace(prop->isReplace->isChecked());
+    mAction->SetAllowNull(prop->allowNull->isChecked());
+
+    mAction->ClearStatusStacks();
+    for(auto pair : prop->statusStacks->Save())
+    {
+        mAction->SetStatusStacks(pair.first, (int8_t)pair.second);
+    }
+
+    mAction->ClearStatusTimes();
+    for(auto pair : prop->statusTimes->Save())
+    {
+        mAction->SetStatusTimes(pair.first, (uint32_t)pair.second);
+    }
 
     return mAction;
 }

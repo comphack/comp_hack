@@ -93,6 +93,9 @@ protected slots:
     void MoveUp();
     void MoveDown();
 
+signals:
+    void rowEdit();
+
 protected:
     void AddItem(QWidget* ctrl, bool canReorder);
     QWidget* GetIntegerWidget(int32_t val);

@@ -76,7 +76,17 @@ void ActionPlayBGM::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionPlayBGM::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetIsStop(prop->isStop->isChecked());
+    mAction->SetMusicID(prop->musicID->currentText().toInt());
+    mAction->SetFadeInDelay(prop->fadeInDelay->value());
+    mAction->SetUnknown(prop->unknown->value());
 
     return mAction;
 }

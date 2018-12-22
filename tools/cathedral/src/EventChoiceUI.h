@@ -38,6 +38,7 @@
 
 class DynamicList;
 class EventMessageRef;
+class ServerScript;
 
 class EventChoice : public EventBase
 {
@@ -53,6 +54,7 @@ public:
 protected:
     EventMessageRef *mMessage;
     DynamicList *mBranches;
+    ServerScript *mBranchScript;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_EVENTCHOICEUI_H

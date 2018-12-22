@@ -93,7 +93,31 @@ void ActionGrantSkills::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionGrantSkills::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetTargetType((objects::ActionGrantSkills::TargetType_t)
+        prop->targetType->currentIndex());
+    mAction->SetSkillPoints((uint16_t)prop->skillPoints->value());
+
+    mAction->ClearSkillIDs();
+    for(uint32_t skillID : prop->skillIDs->GetUnsignedIntegerList())
+    {
+        mAction->InsertSkillIDs(skillID);
+    }
+
+    mAction->SetExpertiseMax((uint8_t)prop->expertiseMax->value());
+    mAction->SetExpertiseSet(prop->expertiseSet->isChecked());
+
+    mAction->ClearExpertisePoints();
+    for(auto pair : prop->expertisePoints->Save())
+    {
+        mAction->SetExpertisePoints((uint8_t)pair.first, pair.second);
+    }
 
     return mAction;
 }

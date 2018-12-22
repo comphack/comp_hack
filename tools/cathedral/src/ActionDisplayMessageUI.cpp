@@ -78,7 +78,14 @@ void ActionDisplayMessage::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionDisplayMessage::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetMessageIDs(prop->messageIDs->GetIntegerList());
 
     return mAction;
 }

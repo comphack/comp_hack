@@ -75,7 +75,17 @@ void ActionUpdateFlag::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionUpdateFlag::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetFlagType((objects::ActionUpdateFlag::FlagType_t)
+        prop->flagType->currentIndex());
+    mAction->SetID((uint16_t)prop->id->value());
+    mAction->SetRemove(prop->remove->isChecked());
 
     return mAction;
 }

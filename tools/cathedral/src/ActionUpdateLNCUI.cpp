@@ -73,7 +73,15 @@ void ActionUpdateLNC::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionUpdateLNC::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetValue((int16_t)prop->value->value());
+    mAction->SetIsSet(prop->isSet->isChecked());
 
     return mAction;
 }

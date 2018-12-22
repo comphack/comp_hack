@@ -85,5 +85,15 @@ void EventPrompt::Load(const std::shared_ptr<objects::Event>& e)
 
 std::shared_ptr<objects::Event> EventPrompt::Save() const
 {
+    if(!mEvent)
+    {
+        return nullptr;
+    }
+
+    Event::Save();
+
+    mEvent->SetMessageID(prop->message->GetValue());
+    mEvent->SetChoices(prop->choices->GetObjectList<objects::EventChoice>());
+
     return mEvent;
 }

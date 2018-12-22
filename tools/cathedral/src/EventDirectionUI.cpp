@@ -71,5 +71,14 @@ void EventDirection::Load(const std::shared_ptr<objects::Event>& e)
 
 std::shared_ptr<objects::Event> EventDirection::Save() const
 {
+    if(!mEvent)
+    {
+        return nullptr;
+    }
+
+    Event::Save();
+
+    mEvent->SetDirection(prop->direction->value());
+
     return mEvent;
 }

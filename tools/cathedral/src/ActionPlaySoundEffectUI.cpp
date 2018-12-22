@@ -74,7 +74,15 @@ void ActionPlaySoundEffect::Load(const std::shared_ptr<objects::Action>& act)
 
 std::shared_ptr<objects::Action> ActionPlaySoundEffect::Save() const
 {
+    if(!mAction)
+    {
+        return nullptr;
+    }
+
     SaveBaseProperties(mAction);
+
+    mAction->SetSoundID(prop->soundID->currentText().toInt());
+    mAction->SetDelay(prop->delay->value());
 
     return mAction;
 }

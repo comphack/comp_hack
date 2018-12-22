@@ -85,7 +85,8 @@ std::shared_ptr<objects::Action> ActionDisplayMessage::Save() const
 
     SaveBaseProperties(mAction);
 
-    mAction->SetMessageIDs(prop->messageIDs->GetIntegerList());
+    auto messageIDs = prop->messageIDs->GetIntegerList();
+    mAction->SetMessageIDs(messageIDs);
 
     return mAction;
 }

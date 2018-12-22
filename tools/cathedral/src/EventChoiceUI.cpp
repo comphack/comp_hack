@@ -77,7 +77,9 @@ void EventChoice::Load(const std::shared_ptr<objects::EventChoice>& e)
     }
 
     mBranchScript->SetScriptID(e->GetBranchScriptID());
-    mBranchScript->SetParams(e->GetBranchScriptParams());
+
+    auto params = e->GetBranchScriptParams();
+    mBranchScript->SetParams(params);
 }
 
 std::shared_ptr<objects::EventChoice> EventChoice::Save() const
@@ -91,14 +93,17 @@ std::shared_ptr<objects::EventChoice> EventChoice::Save() const
 
     auto choice = std::dynamic_pointer_cast<objects::EventChoice>(mEventBase);
     choice->SetMessageID(mMessage->GetValue());
-    choice->SetBranches(mBranches->GetObjectList<objects::EventBase>());
+
+    auto branches = mBranches->GetObjectList<objects::EventBase>();
+    choice->SetBranches(branches);
     
     choice->SetBranchScriptID(mBranchScript->GetScriptID());
     choice->ClearBranchScriptParams();
     if(!choice->GetBranchScriptID().IsEmpty())
     {
         // Ignore params if no script is set
-        choice->SetBranchScriptParams(mBranchScript->GetParams());
+        auto params = mBranchScript->GetParams();
+        choice->SetBranchScriptParams(params);
     }
 
     return choice;

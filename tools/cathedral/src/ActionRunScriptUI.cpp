@@ -68,7 +68,9 @@ void ActionRunScript::Load(const std::shared_ptr<objects::Action>& act)
     LoadBaseProperties(mAction);
 
     prop->script->SetScriptID(mAction->GetScriptID());
-    prop->script->SetParams(mAction->GetParams());
+
+    auto params = mAction->GetParams();
+    prop->script->SetParams(params);
 }
 
 std::shared_ptr<objects::Action> ActionRunScript::Save() const
@@ -86,7 +88,8 @@ std::shared_ptr<objects::Action> ActionRunScript::Save() const
     if(!mAction->GetScriptID().IsEmpty())
     {
         // Ignore params if no script is set
-        mAction->SetParams(prop->script->GetParams());
+        auto params = prop->script->GetParams();
+        mAction->SetParams(params);
     }
 
     return mAction;

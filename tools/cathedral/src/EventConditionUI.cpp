@@ -253,7 +253,9 @@ void EventCondition::Load(const std::shared_ptr<objects::EventCondition>& e)
             ui->typeFlags->setCurrentIndex(0);
 
             ui->script->SetScriptID(scriptCondition->GetScriptID());
-            ui->script->SetParams(scriptCondition->GetParams());
+
+            auto params = scriptCondition->GetParams();
+            ui->script->SetParams(params);
 
             ui->radScript->setChecked(true);
         }
@@ -285,7 +287,8 @@ std::shared_ptr<objects::EventCondition> EventCondition::Save() const
         if(!sCondition->GetScriptID().IsEmpty())
         {
             // Ignore params if no script is set
-            sCondition->SetParams(ui->script->GetParams());
+            auto params = ui->script->GetParams();
+            sCondition->SetParams(params);
         }
 
         condition = sCondition;

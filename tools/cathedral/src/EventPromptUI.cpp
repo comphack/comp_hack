@@ -93,7 +93,9 @@ std::shared_ptr<objects::Event> EventPrompt::Save() const
     Event::Save();
 
     mEvent->SetMessageID(prop->message->GetValue());
-    mEvent->SetChoices(prop->choices->GetObjectList<objects::EventChoice>());
+
+    auto choices = prop->choices->GetObjectList<objects::EventChoice>();
+    mEvent->SetChoices(choices);
 
     return mEvent;
 }

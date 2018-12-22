@@ -99,8 +99,8 @@ std::shared_ptr<objects::EventBase> EventBase::Save() const
     mEventBase->SetPop(ui->pop->isChecked());
     mEventBase->SetPopNext(ui->popNext->isChecked());
 
-    mEventBase->SetConditions(ui->conditions->GetObjectList<
-        objects::EventCondition>());
+    auto conditions = ui->conditions->GetObjectList<objects::EventCondition>();
+    mEventBase->SetConditions(conditions);
 
     return mEventBase;
 }

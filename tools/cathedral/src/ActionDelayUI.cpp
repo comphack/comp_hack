@@ -71,7 +71,9 @@ void ActionDelay::Load(const std::shared_ptr<objects::Action>& act)
         mAction->GetType()));
     prop->delayID->setValue(mAction->GetDelayID());
     prop->duration->setValue(mAction->GetDuration());
-    prop->actions->Load(mAction->GetActions());
+
+    auto actions = mAction->GetActions();
+    prop->actions->Load(actions);
 }
 
 std::shared_ptr<objects::Action> ActionDelay::Save() const
@@ -87,7 +89,9 @@ std::shared_ptr<objects::Action> ActionDelay::Save() const
         prop->type->currentIndex());
     mAction->SetDelayID(prop->delayID->value());
     mAction->SetDuration((uint32_t)prop->duration->value());
-    mAction->SetActions(prop->actions->Save());
+
+    auto actions = prop->actions->Save();
+    mAction->SetActions(actions);
 
     return mAction;
 }

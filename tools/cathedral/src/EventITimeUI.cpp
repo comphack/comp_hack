@@ -94,7 +94,9 @@ std::shared_ptr<objects::Event> EventITime::Save() const
     mEvent->SetITimeID((int8_t)prop->iTimeID->value());
     mEvent->SetReactionID(prop->reactionID->value());
     mEvent->SetTimeLimit((int16_t)prop->timeLimit->value());
-    mEvent->SetGiftIDs(prop->giftIDs->GetUnsignedIntegerList());
+
+    auto giftIDs = prop->giftIDs->GetUnsignedIntegerList();
+    mEvent->SetGiftIDs(giftIDs);
     mEvent->SetStartActions(prop->startActions->GetEvent());
 
     return mEvent;

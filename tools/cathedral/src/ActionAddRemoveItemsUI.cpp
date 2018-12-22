@@ -70,7 +70,9 @@ void ActionAddRemoveItems::Load(const std::shared_ptr<objects::Action>& act)
 
     prop->notify->setChecked(mAction->GetNotify());
     prop->fromDropSet->setChecked(mAction->GetFromDropSet());
-    prop->items->Load(mAction->GetItems());
+
+    auto items = mAction->GetItems();
+    prop->items->Load(items);
     prop->mode->setCurrentIndex(to_underlying(
         mAction->GetMode()));
 }
@@ -86,7 +88,9 @@ std::shared_ptr<objects::Action> ActionAddRemoveItems::Save() const
 
     mAction->SetNotify(prop->notify->isChecked());
     mAction->SetFromDropSet(prop->fromDropSet->isChecked());
-    mAction->SetItems(prop->items->Save());
+
+    auto items = prop->items->Save();
+    mAction->SetItems(items);
     mAction->SetMode((objects::ActionAddRemoveItems::Mode_t)
         prop->mode->currentIndex());
 

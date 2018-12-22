@@ -113,7 +113,9 @@ void Action::LoadBaseProperties(const std::shared_ptr<objects::Action>& action)
     ui->stopOnFailure->setChecked(action->GetStopOnFailure());
     ui->failureEvent->SetEvent(action->GetOnFailureEvent());
     ui->transformScript->SetScriptID(action->GetTransformScriptID());
-    ui->transformScript->SetParams(action->GetTransformScriptParams());
+
+    auto params = action->GetTransformScriptParams();
+    ui->transformScript->SetParams(params);
 
     // If any non-base values are set, display the base values section
     if(!ui->layoutBaseBody->isVisible() &&
@@ -142,6 +144,7 @@ void Action::SaveBaseProperties(const std::shared_ptr<
     if(!action->GetTransformScriptID().IsEmpty())
     {
         // Ignore params if no script is set
-        action->SetTransformScriptParams(ui->transformScript->GetParams());
+        auto params = ui->transformScript->GetParams();
+        action->SetTransformScriptParams(params);
     }
 }

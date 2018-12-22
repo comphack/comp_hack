@@ -90,7 +90,9 @@ void ActionSpawn::Load(const std::shared_ptr<objects::Action>& act)
 
     prop->mode->setCurrentIndex(to_underlying(
         mAction->GetMode()));
-    prop->defeatActions->Load(mAction->GetDefeatActions());
+
+    auto defeatActions = mAction->GetDefeatActions();
+    prop->defeatActions->Load(defeatActions);
     prop->noStagger->setChecked(mAction->GetNoStagger());
 }
 
@@ -103,8 +105,8 @@ std::shared_ptr<objects::Action> ActionSpawn::Save() const
 
     SaveBaseProperties(mAction);
 
-    mAction->SetSpawnLocationGroupIDs(prop->spawnLocationGroupIDs
-        ->GetUnsignedIntegerList());
+    auto slgIDs = prop->spawnLocationGroupIDs->GetUnsignedIntegerList();
+    mAction->SetSpawnLocationGroupIDs(slgIDs);
 
     mAction->SetSpotID((uint32_t)prop->spotID->currentText().toInt());
 
@@ -115,7 +117,9 @@ std::shared_ptr<objects::Action> ActionSpawn::Save() const
     }
 
     mAction->SetMode((objects::ActionSpawn::Mode_t)prop->mode->currentIndex());
-    mAction->SetDefeatActions(prop->defeatActions->Save());
+
+    auto defeatActions = prop->defeatActions->Save();
+    mAction->SetDefeatActions(defeatActions);
     mAction->SetNoStagger(prop->noStagger->isChecked());
 
     return mAction;

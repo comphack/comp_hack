@@ -68,7 +68,8 @@ void EventPerformActions::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    prop->actions->Load(mEvent->GetActions());
+    auto actions = mEvent->GetActions();
+    prop->actions->Load(actions);
 }
 
 std::shared_ptr<objects::Event> EventPerformActions::Save() const
@@ -80,7 +81,8 @@ std::shared_ptr<objects::Event> EventPerformActions::Save() const
 
     Event::Save();
 
-    mEvent->SetActions(prop->actions->Save());
+    auto actions = prop->actions->Save();
+    mEvent->SetActions(actions);
 
     return mEvent;
 }

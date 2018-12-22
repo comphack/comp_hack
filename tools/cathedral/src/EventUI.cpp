@@ -76,9 +76,13 @@ void Event::Load(const std::shared_ptr<objects::Event>& e)
     ui->pop->setChecked(e->GetPop());
     ui->popNext->setChecked(e->GetPopNext());
     ui->branchScript->SetScriptID(e->GetBranchScriptID());
-    ui->branchScript->SetParams(e->GetBranchScriptParams());
     ui->transformScript->SetScriptID(e->GetTransformScriptID());
-    ui->transformScript->SetParams(e->GetTransformScriptParams());
+
+    auto params = e->GetBranchScriptParams();
+    ui->branchScript->SetParams(params);
+
+    params = e->GetTransformScriptParams();
+    ui->transformScript->SetParams(params);
 
     for(auto branch : e->GetBranches())
     {
@@ -121,18 +125,22 @@ std::shared_ptr<objects::Event> Event::Save() const
     mEventBase->ClearBranchScriptParams();
     if(!mEventBase->GetBranchScriptID().IsEmpty())
     {
-        mEventBase->SetBranchScriptParams(ui->branchScript->GetParams());
+        auto params = ui->branchScript->GetParams();
+        mEventBase->SetBranchScriptParams(params);
     }
 
     mEventBase->ClearTransformScriptParams();
     if(!mEventBase->GetTransformScriptID().IsEmpty())
     {
-        mEventBase->SetTransformScriptParams(ui->transformScript->GetParams());
+        auto params = ui->transformScript->GetParams();
+        mEventBase->SetTransformScriptParams(params);
     }
 
-    mEventBase->SetBranches(ui->branches->GetObjectList<objects::EventBase>());
-    mEventBase->SetConditions(ui->conditions->GetObjectList<
-        objects::EventCondition>());
+    auto branches = ui->branches->GetObjectList<objects::EventBase>();
+    mEventBase->SetBranches(branches);
+
+    auto conditions = ui->conditions->GetObjectList<objects::EventCondition>();
+    mEventBase->SetConditions(conditions);
 
     return mEventBase;
 }

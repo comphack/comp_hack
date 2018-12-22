@@ -84,7 +84,8 @@ std::shared_ptr<objects::Event> EventNPCMessage::Save() const
 
     Event::Save();
 
-    mEvent->SetMessageIDs(prop->messages->GetIntegerList());
+    auto messageIDs = prop->messages->GetIntegerList();
+    mEvent->SetMessageIDs(messageIDs);
 
     return mEvent;
 }

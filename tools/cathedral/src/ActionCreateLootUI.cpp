@@ -102,14 +102,19 @@ std::shared_ptr<objects::Action> ActionCreateLoot::Save() const
 
     SaveBaseProperties(mAction);
 
-    mAction->SetDrops(prop->drops->GetObjectList<objects::ItemDrop>());
-    mAction->SetDropSetIDs(prop->dropSetIDs->GetUnsignedIntegerList());
+    auto drops = prop->drops->GetObjectList<objects::ItemDrop>();
+    mAction->SetDrops(drops);
+
+    auto dropSetIDs = prop->dropSetIDs->GetUnsignedIntegerList();
+    mAction->SetDropSetIDs(dropSetIDs);
+
     mAction->SetIsBossBox(prop->isBossBox->isChecked());
     mAction->SetExpirationTime((float)prop->expirationTime->value());
     mAction->SetPosition((objects::ActionCreateLoot::Position_t)
         prop->position->currentIndex());
-    mAction->SetLocations(prop->drops
-        ->GetObjectList<objects::ObjectPosition>());
+
+    auto locations = prop->drops->GetObjectList<objects::ObjectPosition>();
+    mAction->SetLocations(locations);
 
     return mAction;
 }

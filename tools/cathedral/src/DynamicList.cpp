@@ -149,7 +149,7 @@ QWidget* DynamicList::GetUnsignedIntegerWidget(uint32_t val)
     spin->setMaximum(2147483647);
     spin->setMinimum(0);
 
-    spin->setValue(val);
+    spin->setValue((int32_t)val);
 
     return spin;
 }
@@ -368,7 +368,7 @@ std::list<int32_t> DynamicList::GetIntegerList() const
     std::list<int32_t> result;
     if(mType == DynamicItemType_t::COMPLEX_EVENT_MESSAGE)
     {
-        size_t total = ui->layoutItems->count();
+        int total = ui->layoutItems->count();
         for(int childIdx = 0; childIdx < total; childIdx++)
         {
             EventMessageRef* spin = ui->layoutItems->itemAt(childIdx)->widget()
@@ -385,7 +385,7 @@ std::list<int32_t> DynamicList::GetIntegerList() const
             return result;
         }
     
-        size_t total = ui->layoutItems->count();
+        int total = ui->layoutItems->count();
         for(int childIdx = 0; childIdx < total; childIdx++)
         {
             QSpinBox* spin = ui->layoutItems->itemAt(childIdx)->widget()
@@ -407,7 +407,7 @@ std::list<uint32_t> DynamicList::GetUnsignedIntegerList() const
         return result;
     }
 
-    size_t total = ui->layoutItems->count();
+    int total = ui->layoutItems->count();
     for(int childIdx = 0; childIdx < total; childIdx++)
     {
         QSpinBox* spin = ui->layoutItems->itemAt(childIdx)->widget()
@@ -428,7 +428,7 @@ std::list<libcomp::String> DynamicList::GetStringList() const
         return result;
     }
     
-    size_t total = ui->layoutItems->count();
+    int total = ui->layoutItems->count();
     for(int childIdx = 0; childIdx < total; childIdx++)
     {
         QLineEdit* txt = ui->layoutItems->itemAt(childIdx)->widget()
@@ -451,7 +451,7 @@ std::list<std::shared_ptr<objects::EventBase>>
         return result;
     }
 
-    size_t total = ui->layoutItems->count();
+    int total = ui->layoutItems->count();
     for(int childIdx = 0; childIdx < total; childIdx++)
     {
         EventBase* ctrl = ui->layoutItems->itemAt(childIdx)->widget()
@@ -474,7 +474,7 @@ std::list<std::shared_ptr<objects::EventChoice>>
         return result;
     }
 
-    size_t total = ui->layoutItems->count();
+    int total = ui->layoutItems->count();
     for(int childIdx = 0; childIdx < total; childIdx++)
     {
         EventChoice* ctrl = ui->layoutItems->itemAt(childIdx)->widget()
@@ -497,7 +497,7 @@ std::list<std::shared_ptr<objects::EventCondition>>
         return result;
     }
 
-    size_t total = ui->layoutItems->count();
+    int total = ui->layoutItems->count();
     for(int childIdx = 0; childIdx < total; childIdx++)
     {
         EventCondition* ctrl = ui->layoutItems->itemAt(childIdx)->widget()
@@ -520,7 +520,7 @@ std::list<std::shared_ptr<objects::ItemDrop>>
         return result;
     }
 
-    size_t total = ui->layoutItems->count();
+    int total = ui->layoutItems->count();
     for(int childIdx = 0; childIdx < total; childIdx++)
     {
         ItemDrop* ctrl = ui->layoutItems->itemAt(childIdx)->widget()
@@ -543,7 +543,7 @@ std::list<std::shared_ptr<objects::ObjectPosition>>
         return result;
     }
 
-    size_t total = ui->layoutItems->count();
+    int total = ui->layoutItems->count();
     for(int childIdx = 0; childIdx < total; childIdx++)
     {
         ObjectPosition* ctrl = ui->layoutItems->itemAt(childIdx)->widget()
@@ -642,7 +642,7 @@ void DynamicList::RemoveRow()
         bool exists = false;
 
         int childIdx = 0;
-        size_t total = ui->layoutItems->count();
+        int total = ui->layoutItems->count();
         for(; childIdx < total; childIdx++)
         {
             if(ui->layoutItems->itemAt(childIdx)->widget() == parent)
@@ -673,7 +673,7 @@ void DynamicList::MoveUp()
         bool exists = false;
 
         int childIdx = 0;
-        size_t total = ui->layoutItems->count();
+        int total = ui->layoutItems->count();
         for(; childIdx < total; childIdx++)
         {
             if(ui->layoutItems->itemAt(childIdx)->widget() == parent)
@@ -704,7 +704,7 @@ void DynamicList::MoveDown()
         bool exists = false;
 
         int childIdx = 0;
-        size_t total = ui->layoutItems->count();
+        int total = ui->layoutItems->count();
         for(; childIdx < total; childIdx++)
         {
             if(ui->layoutItems->itemAt(childIdx)->widget() == parent)
@@ -728,7 +728,7 @@ void DynamicList::MoveDown()
 
 void DynamicList::RefreshPositions()
 {
-    size_t total = ui->layoutItems->count();
+    int total = ui->layoutItems->count();
     for(int childIdx = 0; childIdx < total; childIdx++)
     {
         auto item = (DynamicListItem*)ui->layoutItems->itemAt(childIdx)

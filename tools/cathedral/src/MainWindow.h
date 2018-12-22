@@ -74,7 +74,7 @@ public:
     SpotListWindow* GetSpotList() const;
 
     std::shared_ptr<objects::MiCEventMessageData> GetEventMessage(
-        uint32_t msgID) const;
+        int32_t msgID) const;
 
     void ResetEventCount();
 

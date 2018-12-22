@@ -69,8 +69,8 @@ void ActionZoneChange::Load(const std::shared_ptr<objects::Action>& act)
 
     LoadBaseProperties(mAction);
 
-    prop->zone->setValue(mAction->GetZoneID());
-    prop->dynamicMap->setValue(mAction->GetDynamicMapID());
+    prop->zone->setValue((int32_t)mAction->GetZoneID());
+    prop->dynamicMap->setValue((int32_t)mAction->GetDynamicMapID());
 
     prop->destination->Load(mAction->GetSpotID(),
         mAction->GetDestinationX(), mAction->GetDestinationY(),

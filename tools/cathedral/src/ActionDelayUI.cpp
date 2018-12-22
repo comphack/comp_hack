@@ -70,7 +70,7 @@ void ActionDelay::Load(const std::shared_ptr<objects::Action>& act)
     prop->type->setCurrentIndex(to_underlying(
         mAction->GetType()));
     prop->delayID->setValue(mAction->GetDelayID());
-    prop->duration->setValue(mAction->GetDuration());
+    prop->duration->setValue((int32_t)mAction->GetDuration());
 
     auto actions = mAction->GetActions();
     prop->actions->Load(actions);

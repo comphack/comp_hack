@@ -29,12 +29,12 @@
 
 // Qt Includes
 #include <PushIgnore.h>
-#include <QLineEdit.h>
+#include <QLineEdit>
 
 #include "ui_ObjectPosition.h"
 #include <PopIgnore.h>
 
-ObjectPosition::ObjectPosition(QWidget *pParent)
+ObjectPosition::ObjectPosition(QWidget *pParent) : QWidget(pParent)
 {
     prop = new Ui::ObjectPosition;
     prop->setupUi(this);

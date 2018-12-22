@@ -80,7 +80,7 @@ std::shared_ptr<objects::Event> EventPlayScene::Save() const
     Event::Save();
 
     mEvent->SetSceneID(prop->scene->value());
-    mEvent->SetUnknown(prop->unknown->value());
+    mEvent->SetUnknown((int8_t)prop->unknown->value());
 
     return mEvent;
 }

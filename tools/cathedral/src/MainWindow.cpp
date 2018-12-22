@@ -211,12 +211,12 @@ SpotListWindow* MainWindow::GetSpotList() const
 }
 
 std::shared_ptr<objects::MiCEventMessageData> MainWindow::GetEventMessage(
-    uint32_t msgID) const
+    int32_t msgID) const
 {
-    auto msg = mCEventMessageData->GetObjectByID(msgID);
+    auto msg = mCEventMessageData->GetObjectByID((uint32_t)msgID);
     if(!msg)
     {
-        msg = mCEventMessageData2->GetObjectByID(msgID);
+        msg = mCEventMessageData2->GetObjectByID((uint32_t)msgID);
     }
 
     return std::dynamic_pointer_cast<objects::MiCEventMessageData>(msg);

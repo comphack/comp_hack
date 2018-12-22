@@ -425,8 +425,8 @@ void EventCondition::RefreshTypeContext()
     ui->lblValue2->setText("Value 2:");
 
     libcomp::String defaultCompareTxt;
-    std::array<int, 2> minValues = { -2147483647, -2147483647 };
-    std::array<int, 2> maxValues = { 2147483647, 2147483647 };
+    std::array<int, 2> minValues = { { -2147483647, -2147483647 } };
+    std::array<int, 2> maxValues = { { 2147483647, 2147483647 } };
 
     switch(GetCurrentType())
     {

@@ -29,7 +29,7 @@
 
 // Qt Includes
 #include <PushIgnore.h>
-#include <QLineEdit.h>
+#include <QLineEdit>
 
 #include "ui_ItemDrop.h"
 #include <PopIgnore.h>
@@ -37,7 +37,7 @@
 // libcomp Includes
 #include <PacketCodes.h>
 
-ItemDrop::ItemDrop(QWidget *pParent)
+ItemDrop::ItemDrop(QWidget *pParent) : QWidget(pParent)
 {
     prop = new Ui::ItemDrop;
     prop->setupUi(this);

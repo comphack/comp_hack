@@ -71,8 +71,8 @@ void ActionZoneInstance::Load(const std::shared_ptr<objects::Action>& act)
 
     prop->mode->setCurrentIndex(to_underlying(
         mAction->GetMode()));
-    prop->variantID->setValue(mAction->GetVariantID());
-    prop->timerID->setValue(mAction->GetTimerID());
+    prop->variantID->setValue((int32_t)mAction->GetVariantID());
+    prop->timerID->setValue((int32_t)mAction->GetTimerID());
     prop->timerExpirationEvent->SetEvent(mAction
         ->GetTimerExpirationEventID());
 }

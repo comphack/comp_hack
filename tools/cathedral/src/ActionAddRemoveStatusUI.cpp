@@ -84,7 +84,7 @@ void ActionAddRemoveStatus::Load(const std::shared_ptr<objects::Action>& act)
 
     for(auto time : mAction->GetStatusTimes())
     {
-        times[time.first] = time.second;
+        times[time.first] = (int32_t)time.second;
     }
 
     prop->statusStacks->Load(stacks);

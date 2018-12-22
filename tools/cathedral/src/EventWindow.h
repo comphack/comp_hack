@@ -69,6 +69,7 @@ private slots:
     void FileSelectionChanged();
     void LoadDirectory();
     void LoadFile();
+    void SaveFile();
     void NewFile();
     void NewEvent();
     void Refresh();
@@ -91,6 +92,8 @@ private:
         std::set<libcomp::String>& seen, int32_t eventIdx = -1);
 
     void RebuildGlobalIDMap();
+
+    void SimplifyObjectXML(std::list<tinyxml2::XMLNode*> nodes);
 
     libcomp::String GetInlineMessageText(const libcomp::String& raw,
         size_t limit = 0);

@@ -61,7 +61,9 @@
 
 // object Includes
 #include <Event.h>
+#include <EventBase.h>
 #include <EventChoice.h>
+#include <EventCondition.h>
 #include <EventDirection.h>
 #include <EventExNPCMessage.h>
 #include <EventITime.h>
@@ -194,6 +196,7 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
 
     ui->addEvent->setMenu(pMenu);
 
+    connect(ui->save, SIGNAL(clicked()), this, SLOT(SaveFile()));
     connect(ui->newFile, SIGNAL(clicked()), this, SLOT(NewFile()));
     connect(ui->refresh, SIGNAL(clicked()), this, SLOT(Refresh()));
     connect(ui->files, SIGNAL(currentIndexChanged(const QString&)), this,
@@ -345,6 +348,127 @@ void EventWindow::LoadFile()
     {
         ui->files->blockSignals(false);
     }
+}
+
+void EventWindow::SaveFile()
+{
+    libcomp::String path = cs(ui->files->currentText());
+    if(path.IsEmpty())
+    {
+        // No file, nothing to do
+        return;
+    }
+
+    std::list<std::shared_ptr<FileEvent>> updates;
+
+    auto file = mFiles[path];
+    for(auto fEvent : file->Events)
+    {
+        if(fEvent->HasUpdates)
+        {
+            updates.push_back(fEvent);
+        }
+    }
+
+    if(updates.size() == 0)
+    {
+        // Nothing to save
+        return;
+    }
+
+    // Update the current event if we haven't already
+    if(mCurrentEvent && mCurrentEvent->HasUpdates)
+    {
+        for(auto eCtrl : ui->splitter->findChildren<Event*>())
+        {
+            eCtrl->Save();
+        }
+    }
+
+    tinyxml2::XMLDocument doc;
+    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+    {
+        LOG_ERROR(libcomp::String("Failed to parse file for saving: %1\n")
+            .Arg(path));
+        return;
+    }
+
+    std::unordered_map<libcomp::String, tinyxml2::XMLNode*> existingEvents;
+
+    auto rootElem = doc.RootElement();
+    if(!rootElem)
+    {
+        // If for whatever reason we don't have a root element, create one now
+        rootElem = doc.NewElement("objects");
+        doc.InsertEndChild(rootElem);
+    }
+    else
+    {
+        // Load all existing events for replacement
+        auto child = rootElem->FirstChild();
+        while(child != 0)
+        {
+            auto member = child->FirstChildElement("member");
+            while(member != 0)
+            {
+                libcomp::String memberName(member->Attribute("name"));
+                if(memberName == "ID")
+                {
+                    auto txtChild = member->FirstChild();
+                    auto txt = txtChild ? txtChild->ToText() : 0;
+                    if(txt)
+                    {
+                        existingEvents[txt->Value()] = child;
+                    }
+                    break;
+                }
+
+                member = member->NextSiblingElement("member");
+            }
+
+            child = child->NextSibling();
+        }
+    }
+
+    std::list<tinyxml2::XMLNode*> updatedNodes;
+    for(auto fEvent : file->Events)
+    {
+        if(!fEvent->HasUpdates) continue;
+
+        // Append event to the existing file
+        auto e = fEvent->Event;
+        e->Save(doc, *rootElem);
+
+        tinyxml2::XMLNode* eNode = rootElem->LastChild();
+        if(!fEvent->FileEventID.IsEmpty())
+        {
+            // If the event already existed in the file, move it to the same
+            // location and drop the old one
+            auto iter = existingEvents.find(fEvent->FileEventID);
+            if(iter != existingEvents.end())
+            {
+                if(iter->second->NextSibling() != eNode)
+                {
+                    rootElem->InsertAfterChild(iter->second, eNode);
+                }
+
+                rootElem->DeleteChild(iter->second);
+                existingEvents[fEvent->FileEventID] = eNode;
+            }
+        }
+
+        updatedNodes.push_back(eNode);
+
+        fEvent->HasUpdates = false;
+        fEvent->FileEventID = e->GetID();
+    }
+
+    SimplifyObjectXML(updatedNodes);
+
+    doc.SaveFile(path.C());
+
+    RebuildGlobalIDMap();
+    Refresh();
 }
 
 void EventWindow::NewFile()
@@ -1261,6 +1385,230 @@ void EventWindow::RebuildGlobalIDMap()
             {
                 mGlobalIDMap[eventID] = file->Path;
             }
+        }
+    }
+}
+
+void EventWindow::SimplifyObjectXML(std::list<tinyxml2::XMLNode*> nodes)
+{
+    // Collect all object nodes and simplify by removing defaulted fields.
+    // Also remove CDATA blocks as events are not complicated enough to
+    // benefit from it.
+    std::set<tinyxml2::XMLNode*> currentNodes;
+    std::set<tinyxml2::XMLNode*> objectNodes;
+    for(auto node : nodes)
+    {
+        currentNodes.insert(node);
+    }
+
+    while(currentNodes.size() > 0)
+    {
+        auto node = *currentNodes.begin();
+        currentNodes.erase(node);
+
+        if(libcomp::String(node->ToElement()->Name()) == "object")
+        {
+            objectNodes.insert(node);
+        }
+
+        auto child = node->FirstChild();
+        while(child)
+        {
+            auto txt = child->ToText();
+            if(txt)
+            {
+                txt->SetCData(false);
+            }
+            else
+            {
+                currentNodes.insert(child);
+            }
+
+            child = child->NextSibling();
+        }
+    }
+
+    if(objectNodes.size() == 0)
+    {
+        return;
+    }
+
+    // Create an empty template object for each type encountered for comparison
+    tinyxml2::XMLDocument templateDoc;
+    std::unordered_map<libcomp::String, std::unordered_map<libcomp::String,
+        tinyxml2::XMLNode*>> templateMembers;
+    std::unordered_map<libcomp::String, libcomp::String> templateLowerMembers;
+
+    auto rootElem = templateDoc.NewElement("objects");
+    templateDoc.InsertEndChild(rootElem);
+
+    for(auto objNode : objectNodes)
+    {
+        libcomp::String objType(objNode->ToElement()->Attribute("name"));
+
+        auto templateIter = templateMembers.find(objType);
+        if(templateIter == templateMembers.end())
+        {
+            std::shared_ptr<libcomp::Object> obj;
+            if(objType == "EventBase")
+            {
+                obj = std::make_shared<objects::EventBase>();
+                templateLowerMembers[objType] = "popNext";
+            }
+            else if(objType == "EventChoice")
+            {
+                obj = std::make_shared<objects::EventChoice>();
+                templateLowerMembers[objType] = "branchScriptParams";
+            }
+            else if(objType.Left(6) == "Action")
+            {
+                // Action derived
+                obj = objects::Action::InheritedConstruction(objType);
+                templateLowerMembers[objType] = "transformScriptParams";
+            }
+            else if(objType.Left(5) == "Event")
+            {
+                if(objType.Right(9) == "Condition")
+                {
+                    // EventCondition derived
+                    obj = objects::EventCondition::InheritedConstruction(
+                        objType);
+                }
+                else
+                {
+                    // Event derived
+                    obj = objects::Event::InheritedConstruction(objType);
+                    templateLowerMembers[objType] = "transformScriptParams";
+                }
+            }
+
+            if(obj)
+            {
+                obj->Save(templateDoc, *rootElem);
+
+                auto tNode = rootElem->LastChild();
+
+                std::unordered_map<libcomp::String,
+                    tinyxml2::XMLNode*> tMembers;
+                auto child = tNode->FirstChild();
+                while(child)
+                {
+                    auto elem = child->ToElement();
+                    if(elem && libcomp::String(elem->Name()) == "member")
+                    {
+                        // Remove CDATA here too
+                        auto gChild = child->FirstChild();
+                        auto txt = gChild ? gChild->ToText() : 0;
+                        if(txt && txt->CData())
+                        {
+                            txt->SetCData(false);
+                        }
+
+                        libcomp::String memberName(elem->Attribute("name"));
+                        tMembers[memberName] = child;
+                    }
+
+                    child = child->NextSibling();
+                }
+
+                templateMembers[objType] = tMembers;
+                templateIter = templateMembers.find(objType);
+            }
+            else
+            {
+                // No simplification
+                continue;
+            }
+        }
+
+        auto& tMembers = templateIter->second;
+
+        auto lowerIter = templateLowerMembers.find(objType);
+        if(lowerIter != templateLowerMembers.end())
+        {
+            // Move the ID to the top (if it exists) and move less important
+            // base properties to the bottom
+            std::set<libcomp::String> seen;
+
+            auto child = objNode->FirstChild();
+            while(child)
+            {
+                auto next = child->NextSibling();
+
+                libcomp::String memberName(child->ToElement()
+                    ->Attribute("name"));
+                bool last = memberName == lowerIter->second || !next ||
+                    seen.find(memberName) != seen.end();
+
+                seen.insert(memberName);
+
+                if(memberName == "ID")
+                {
+                    // Move to the top
+                    objNode->InsertFirstChild(child);
+                }
+                else if(!last &&
+                    memberName != "next" && memberName != "queueNext")
+                {
+                    // Move all others to the bottom
+                    objNode->InsertEndChild(child);
+                }
+
+                if(last)
+                {
+                    break;
+                }
+                else
+                {
+                    child = next;
+                }
+            }
+        }
+
+        if(objType == "EventBase")
+        {
+            // EventBase is used for the branch structure which does not need
+            // the object identifier and often times these can be very simple
+            // so drop it here.
+            objNode->ToElement()->DeleteAttribute("name");
+        }
+
+        // Drop matching level 1 child nodes (anything further down should not
+        // be simplified anyway)
+        auto child = objNode->FirstChild();
+        while(child)
+        {
+            auto next = child->NextSibling();
+
+            auto elem = child->ToElement();
+            if(elem)
+            {
+                libcomp::String memberName(elem->Attribute("name"));
+
+                auto iter = tMembers.find(memberName);
+                if(iter != tMembers.end())
+                {
+                    auto child2 = iter->second;
+
+                    auto gc = child->FirstChild();
+                    auto gc2 = child2->FirstChild();
+
+                    auto txt = gc ? gc->ToText() : 0;
+                    auto txt2 = gc2 ? gc2->ToText() : 0;
+
+                    // If both have no child or both have the same text
+                    // representation, the nodes match
+                    if((gc == 0 && gc2 == 0) || (txt && txt2 &&
+                        libcomp::String(txt->Value()) ==
+                        libcomp::String(txt2->Value())))
+                    {
+                        // Default value matches, drop node
+                        objNode->DeleteChild(child);
+                    }
+                }
+            }
+
+            child = next;
         }
     }
 }

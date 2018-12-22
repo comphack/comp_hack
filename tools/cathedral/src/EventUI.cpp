@@ -114,7 +114,7 @@ std::shared_ptr<objects::Event> Event::Save() const
 
     mEventBase->SetID(cs(ui->eventID->text()));
     mEventBase->SetNext(ui->next->GetEvent());
-    mEventBase->SetQueueNext(ui->next->GetEvent());
+    mEventBase->SetQueueNext(ui->queueNext->GetEvent());
     mEventBase->SetPop(ui->pop->isChecked());
     mEventBase->SetPopNext(ui->popNext->isChecked());
 

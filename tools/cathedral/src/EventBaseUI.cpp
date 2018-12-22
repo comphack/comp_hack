@@ -95,7 +95,7 @@ std::shared_ptr<objects::EventBase> EventBase::Save() const
     }
 
     mEventBase->SetNext(ui->next->GetEvent());
-    mEventBase->SetQueueNext(ui->next->GetEvent());
+    mEventBase->SetQueueNext(ui->queueNext->GetEvent());
     mEventBase->SetPop(ui->pop->isChecked());
     mEventBase->SetPopNext(ui->popNext->isChecked());
 

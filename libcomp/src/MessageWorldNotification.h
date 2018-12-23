@@ -75,6 +75,8 @@ public:
 
     virtual ConnectionMessageType GetConnectionMessageType() const;
 
+    virtual libcomp::String Dump() const override;
+
 private:
     /// The address the connection is coming from
     String mAddress;

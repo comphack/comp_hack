@@ -128,6 +128,15 @@ protected:
     bool Admin_UpdateAccount(const JsonBox::Object& request,
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
+    bool Admin_GetPromos(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+    bool Admin_CreatePromo(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+    bool Admin_DeletePromo(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
 
     bool WebGame_GetCharacter(const JsonBox::Object& request,
         JsonBox::Object& response,

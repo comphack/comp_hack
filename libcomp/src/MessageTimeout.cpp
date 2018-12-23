@@ -40,3 +40,8 @@ Message::MessageType Message::Timeout::GetType() const
 {
     return MessageType::MESSAGE_TYPE_SYSTEM;
 }
+
+libcomp::String Message::Timeout::Dump() const
+{
+    return "Message: Timeout";
+}

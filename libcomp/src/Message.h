@@ -27,6 +27,9 @@
 #ifndef LIBCOMP_SRC_MESSAGE_H
 #define LIBCOMP_SRC_MESSAGE_H
 
+// libcomp Includes
+#include "CString.h"
+
 namespace libcomp
 {
 
@@ -60,6 +63,12 @@ public:
      * @return The message's type.
      */
     virtual MessageType GetType() const = 0;
+
+    /**
+     * Dump the message for logging.
+     * @return String representation of the message.
+     */
+    virtual libcomp::String Dump() const = 0;
 };
 
 } // namespace Message

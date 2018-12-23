@@ -138,7 +138,8 @@ void Worker::Run(MessageQueue<Message::Message*> *pMessageQueue)
                 }
                 else if(!manager->ProcessMessage(pMessage))
                 {
-                    LOG_ERROR("Failed to process message!\n");
+                    LOG_ERROR(libcomp::String("Failed to process message:\n"
+                        "%1\n").Arg(pMessage->Dump()));
                 }
             }
         }

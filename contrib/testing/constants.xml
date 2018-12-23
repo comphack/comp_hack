@@ -1436,4 +1436,63 @@
         <element>21937</element>
         <element>21938</element>
     </constant>
+
+    <!-- GM Command Levels -->
+    <constant name="GM_CMD_LVL_ADD_CP">950</constant>
+    <constant name="GM_CMD_LVL_ANNOUNCE">100</constant>
+    <constant name="GM_CMD_LVL_BAN">400</constant>
+    <constant name="GM_CMD_LVL_BATTLE_POINTS">250</constant>
+    <constant name="GM_CMD_LVL_BETHEL">250</constant>
+    <constant name="GM_CMD_LVL_COIN">250</constant>
+    <constant name="GM_CMD_LVL_CONTRACT">250</constant>
+    <constant name="GM_CMD_LVL_COUNTER">950</constant>
+    <constant name="GM_CMD_LVL_COWRIE">250</constant>
+    <constant name="GM_CMD_LVL_CRASH">950</constant>
+    <constant name="GM_CMD_LVL_DIGITALIZE_POINTS">250</constant>
+    <constant name="GM_CMD_LVL_EFFECT">250</constant>
+    <constant name="GM_CMD_LVL_ENCHANT">650</constant>
+    <constant name="GM_CMD_LVL_ENEMY">400</constant>
+    <constant name="GM_CMD_LVL_EVENT">950</constant>
+    <constant name="GM_CMD_LVL_EXPERTISE_EXTEND">250</constant>
+    <constant name="GM_CMD_LVL_EXPERTISE_SET">250</constant>
+    <constant name="GM_CMD_LVL_FAMILIARITY">250</constant>
+    <constant name="GM_CMD_LVL_FLAG">950</constant>
+    <constant name="GM_CMD_LVL_FUSION_GAUGE">250</constant>
+    <constant name="GM_CMD_LVL_GOTO">400</constant>
+    <constant name="GM_CMD_LVL_GRADE_POINTS">950</constant>
+    <constant name="GM_CMD_LVL_HELP">1</constant>
+    <constant name="GM_CMD_LVL_HOMEPOINT">1</constant>
+    <constant name="GM_CMD_LVL_INSTANCE">200</constant>
+    <constant name="GM_CMD_LVL_ITEM">250</constant>
+    <constant name="GM_CMD_LVL_KICK">400</constant>
+    <constant name="GM_CMD_LVL_KILL">500</constant>
+    <constant name="GM_CMD_LVL_LEVEL_UP">250</constant>
+    <constant name="GM_CMD_LVL_LNC">1</constant>
+    <constant name="GM_CMD_LVL_MAP">1</constant>
+    <constant name="GM_CMD_LVL_ONLINE">1</constant>
+    <constant name="GM_CMD_LVL_PENALTY_RESET">400</constant>
+    <constant name="GM_CMD_LVL_PLUGIN">250</constant>
+    <constant name="GM_CMD_LVL_POSITION">200</constant>
+    <constant name="GM_CMD_LVL_POST">750</constant>
+    <constant name="GM_CMD_LVL_REPORTED">400</constant>
+    <constant name="GM_CMD_LVL_RESOLVE">400</constant>
+    <constant name="GM_CMD_LVL_REUNION">250</constant>
+    <constant name="GM_CMD_LVL_QUEST">200</constant>
+    <constant name="GM_CMD_LVL_SCRAP">700</constant>
+    <constant name="GM_CMD_LVL_SKILL">250</constant>
+    <constant name="GM_CMD_LVL_SKILL_POINT">250</constant>
+    <constant name="GM_CMD_LVL_SLOT_ADD">650</constant>
+    <constant name="GM_CMD_LVL_SOUL_POINTS">250</constant>
+    <constant name="GM_CMD_LVL_SPAWN">950</constant>
+    <constant name="GM_CMD_LVL_SPEED">200</constant>
+    <constant name="GM_CMD_LVL_SPIRIT">650</constant>
+    <constant name="GM_CMD_LVL_SUPPORT">1</constant>
+    <constant name="GM_CMD_LVL_TICKER_MESSAGE">100</constant>
+    <constant name="GM_CMD_LVL_TITLE">100</constant>
+    <constant name="GM_CMD_LVL_TOKUSEI">250</constant>
+    <constant name="GM_CMD_LVL_VALUABLE">200</constant>
+    <constant name="GM_CMD_LVL_WORLD_TIME">950</constant>
+    <constant name="GM_CMD_LVL_ZIOTITE">250</constant>
+    <constant name="GM_CMD_LVL_ZONE">200</constant>
+    <constant name="GM_CMD_LVL_XP">250</constant>
 </constants>

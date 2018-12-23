@@ -26,6 +26,9 @@
 
 #include "MessageConnectionClosed.h"
 
+// libcomp Includes
+#include "TcpConnection.h"
+
 using namespace libcomp;
 
 Message::ConnectionClosed::ConnectionClosed(std::shared_ptr<TcpConnection> connection) :
@@ -45,4 +48,17 @@ std::shared_ptr<TcpConnection> Message::ConnectionClosed::GetConnection() const
 Message::ConnectionMessageType Message::ConnectionClosed::GetConnectionMessageType() const
 {
     return ConnectionMessageType::CONNECTION_MESSAGE_CONNECTION_CLOSED;
+}
+
+libcomp::String Message::ConnectionClosed::Dump() const
+{
+    if(mConnection)
+    {
+        return libcomp::String("Message: Connection Closed\nConnection: %1"
+            ).Arg(mConnection->GetName());
+    }
+    else
+    {
+        return "Message: Connection Closed";
+    }
 }

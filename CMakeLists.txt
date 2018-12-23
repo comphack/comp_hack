@@ -86,6 +86,34 @@ SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
 SET(CPACK_PACKAGE_VERSION_MAJOR ${VERSION_MAJOR})
 SET(CPACK_PACKAGE_VERSION_MINOR ${VERSION_MINOR})
 SET(CPACK_PACKAGE_VERSION_PATCH ${VERSION_PATCH})
+SET(CPACK_COMPONENTS_ALL runtime lobby world channel tools config webroot docs)
+
+SET(CPACK_COMPONENT_RUNTIME_DISPLAY_NAME "C++ Runtime Library")
+SET(CPACK_COMPONENT_RUNTIME_DESCRIPTION "Runtime library needed by the software.")
+SET(CPACK_COMPONENT_RUNTUME_REQUIRED TRUE)
+SET(CPACK_COMPONENT_LOBBY_DISPLAY_NAME "Lobby Server")
+SET(CPACK_COMPONENT_LOBBY_DESCRIPTION "Lobby server to manage characters and login accounts.")
+SET(CPACK_COMPONENT_WORLD_DISPLAY_NAME "World Server")
+SET(CPACK_COMPONENT_WORLD_DESCRIPTION "World server to manage communication between channels.")
+SET(CPACK_COMPONENT_CHANNEL_DISPLAY_NAME "Channel Server")
+SET(CPACK_COMPONENT_CHANNEL_DESCRIPTION "Channel server to manage gameplay.")
+SET(CPACK_COMPONENT_TOOLS_DISPLAY_NAME "Tools")
+SET(CPACK_COMPONENT_TOOLS_DESCRIPTION "Tools for debug, development and content creation.")
+SET(CPACK_COMPONENT_CONFIG_DISPLAY_NAME "Example Configuration")
+SET(CPACK_COMPONENT_CONFIG_DESCRIPTION "Example configuration files to get up and running.")
+SET(CPACK_COMPONENT_WEBROOT_DISPLAY_NAME "API Website Files")
+SET(CPACK_COMPONENT_WEBROOT_DESCRIPTION "Website files for the internal API (in the lobby). This includes the example account manager site.")
+SET(CPACK_COMPONENT_WEBROOT_DEPENDS lobby)
+SET(CPACK_COMPONENT_DOCS_DISPLAY_NAME "Documentation")
+SET(CPACK_COMPONENT_DOCS_DESCRIPTION "Documentation for the server.")
+
+SET(CPACK_COMPONENT_LOBBY_GROUP servers)
+SET(CPACK_COMPONENT_WORLD_GROUP servers)
+SET(CPACK_COMPONENT_CHANNEL_GROUP servers)
+
+SET(CPACK_COMPONENT_GROUP_SERVERS_DISPLAY_NAME "Servers Applications")
+SET(CPACK_COMPONENT_GROUP_SERVERS_DESCRIPTION "Main server applications.")
+SET(CPACK_COMPONENT_GROUP_SERVERS_EXPANDED TRUE)
 
 IF(WIN32)
     SET(COMP_INSTALL_DIR "/")
@@ -94,6 +122,8 @@ IF(WIN32)
     #SET(CPACK_WIX_ROOT "C:\\Program Files (x86)\\WiX Toolset v3.11")
     SET(CPACK_WIX_UPGRADE_GUID "A253D8BE-ED6C-43EF-A1C5-F378F269C9E4")
     SET(CPACK_WIX_PRODUCT_ICON "${CMAKE_SOURCE_DIR}/tools/bdpatch/res/bdpatch.ico")
+    SET(CPACK_WIX_UI_BANNER "${CMAKE_SOURCE_DIR}/contrib/wix-banner.png")
+    SET(CPACK_WIX_UI_DIALOG "${CMAKE_SOURCE_DIR}/contrib/wix-background.png")
     SET(CPACK_WIX_PROGRAM_MENU_FOLDER "COMP_hack")
     SET(CPACK_WIX_PROPERTY_ARPHELPLINK "https://github.com/comphack/comp_hack")
     SET(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/contrib/services.wxs")
@@ -108,6 +138,7 @@ IF(WIN32)
     INSTALL(
         PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
         DESTINATION /
+        COMPONENT runtime
     )
 
     FIND_PACKAGE(Qt5Widgets REQUIRED)
@@ -138,7 +169,13 @@ IF(WIN32)
         "${CMAKE_SOURCE_DIR}/contrib/winconfig/setup.xml"
         "${CMAKE_SOURCE_DIR}/contrib/winconfig/newcharacter.xml"
         "${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml"
-        DESTINATION config)
+        DESTINATION config
+        COMPONENT config)
+
+    INSTALL(DIRECTORY
+        "${CMAKE_SOURCE_DIR}/contrib/webroot"
+        DESTINATION /
+        COMPONENT webroot)
 ELSE()
     SET(COMP_INSTALL_DIR "bin")
     SET(CPACK_GENERATOR "TGZ;TBZ2;DEB")
@@ -342,6 +379,9 @@ ELSE()
         -Wconversion -Wsign-conversion -g)
 ENDIF()
 
+# Ignore the warning about mixed use of override.
+ADD_COMPILER_FLAGS(AUTO -Wno-inconsistent-missing-override)
+
 # Warning level 4 and treat warnings as errors (MSVC).
 # ADD_COMPILER_FLAGS(AUTO /W4 /WX)
 
@@ -459,6 +499,7 @@ MACRO(ADD_QT_DEPS target)
             DIRECTORY
             "${CMAKE_CURRENT_BINARY_DIR}/windeployqt/"
             DESTINATION /
+            COMPONENT tools
         )
     ENDIF()
 ENDMACRO()
@@ -853,5 +894,6 @@ FIND_PACKAGE(Doxygen)
 
 If(DOXYGEN_FOUND AND GENERATE_DOCUMENTATION AND NOT WIN32)
     INSTALL(DIRECTORY ${CMAKE_BINARY_DIR}/api
-        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/comp_hack)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/comp_hack
+        COMPONENT docs)
 ENDIF(DOXYGEN_FOUND AND GENERATE_DOCUMENTATION AND NOT WIN32)

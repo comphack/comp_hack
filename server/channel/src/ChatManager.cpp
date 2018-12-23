@@ -470,7 +470,7 @@ bool ChatManager::GMCommand_AddCP(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 950))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_ADD_CP))
     {
         return true;
     }
@@ -539,7 +539,7 @@ bool ChatManager::GMCommand_Announce(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 100))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_ANNOUNCE))
     {
         return true;
     }
@@ -564,7 +564,7 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 400))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_BAN))
     {
         return true;
     }
@@ -639,7 +639,7 @@ bool ChatManager::GMCommand_BattlePoints(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_BATTLE_POINTS))
     {
         return true;
     }
@@ -676,7 +676,7 @@ bool ChatManager::GMCommand_Bethel(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_BETHEL))
     {
         return true;
     }
@@ -717,7 +717,7 @@ bool ChatManager::GMCommand_Coin(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_COIN))
     {
         return true;
     }
@@ -753,7 +753,7 @@ bool ChatManager::GMCommand_Contract(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_CONTRACT))
     {
         return true;
     }
@@ -800,7 +800,7 @@ bool ChatManager::GMCommand_Counter(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 950))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_COUNTER))
     {
         return true;
     }
@@ -877,7 +877,7 @@ bool ChatManager::GMCommand_Cowrie(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_COWRIE))
     {
         return true;
     }
@@ -914,7 +914,7 @@ bool ChatManager::GMCommand_Crash(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 950))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_CRASH))
     {
         return true;
     }
@@ -929,7 +929,7 @@ bool ChatManager::GMCommand_DigitalizePoints(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_DIGITALIZE_POINTS))
     {
         return true;
     }
@@ -951,7 +951,7 @@ bool ChatManager::GMCommand_DigitalizePoints(const std::shared_ptr<
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
             "Invalid digitalize demon race ID");
     }
-    
+
     if(points < 0)
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
@@ -971,7 +971,7 @@ bool ChatManager::GMCommand_Effect(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_EFFECT))
     {
         return true;
     }
@@ -1037,7 +1037,7 @@ bool ChatManager::GMCommand_Enchant(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 650))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_ENCHANT))
     {
         return true;
     }
@@ -1137,7 +1137,7 @@ bool ChatManager::GMCommand_Enemy(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 400))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_ENEMY))
     {
         return true;
     }
@@ -1235,7 +1235,7 @@ bool ChatManager::GMCommand_Event(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 950))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_EVENT))
     {
         return true;
     }
@@ -1308,7 +1308,7 @@ bool ChatManager::GMCommand_ExpertiseExtend(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_EXPERTISE_EXTEND))
     {
         return true;
     }
@@ -1352,7 +1352,7 @@ bool ChatManager::GMCommand_ExpertiseSet(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_EXPERTISE_SET))
     {
         return true;
     }
@@ -1397,7 +1397,7 @@ bool ChatManager::GMCommand_Familiarity(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_FAMILIARITY))
     {
         return true;
     }
@@ -1421,7 +1421,7 @@ bool ChatManager::GMCommand_Flag(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 950))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_FLAG))
     {
         return true;
     }
@@ -1544,7 +1544,7 @@ bool ChatManager::GMCommand_FusionGauge(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_FUSION_GAUGE))
     {
         return true;
     }
@@ -1568,7 +1568,7 @@ bool ChatManager::GMCommand_Goto(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 400))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_GOTO))
     {
         return true;
     }
@@ -1651,7 +1651,7 @@ bool ChatManager::GMCommand_GradePoints(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 950))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_GRADE_POINTS))
     {
         return true;
     }
@@ -2031,7 +2031,7 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
         } },
     };
 
-    if(!HaveUserLevel(client, 1))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_HELP))
     {
         return true;
     }
@@ -2080,7 +2080,7 @@ bool ChatManager::GMCommand_Homepoint(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 1))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_HOMEPOINT))
     {
         return true;
     }
@@ -2125,7 +2125,7 @@ bool ChatManager::GMCommand_Instance(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 200))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_INSTANCE))
     {
         return true;
     }
@@ -2237,7 +2237,7 @@ bool ChatManager::GMCommand_Item(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_ITEM))
     {
         return true;
     }
@@ -2294,7 +2294,7 @@ bool ChatManager::GMCommand_Kick(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 400))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_KICK))
     {
         return true;
     }
@@ -2364,7 +2364,7 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 500))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_KILL))
     {
         return true;
     }
@@ -2456,7 +2456,7 @@ bool ChatManager::GMCommand_LevelUp(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_LEVEL_UP))
     {
         return true;
     }
@@ -2563,7 +2563,7 @@ bool ChatManager::GMCommand_LNC(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 1))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_LNC))
     {
         return true;
     }
@@ -2586,7 +2586,7 @@ bool ChatManager::GMCommand_Map(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 1))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_MAP))
     {
         return true;
     }
@@ -2609,7 +2609,7 @@ bool ChatManager::GMCommand_Online(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 1))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_ONLINE))
     {
         return true;
     }
@@ -2678,7 +2678,7 @@ bool ChatManager::GMCommand_PenaltyReset(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 400))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_PENALTY_RESET))
     {
         return true;
     }
@@ -2725,7 +2725,7 @@ bool ChatManager::GMCommand_Plugin(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_PLUGIN))
     {
         return true;
     }
@@ -2752,7 +2752,7 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 200))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_POSITION))
     {
         return true;
     }
@@ -2803,7 +2803,7 @@ bool ChatManager::GMCommand_Post(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 750))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_POST))
     {
         return true;
     }
@@ -2861,7 +2861,7 @@ bool ChatManager::GMCommand_Reported(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 400))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_REPORTED))
     {
         return true;
     }
@@ -2974,7 +2974,7 @@ bool ChatManager::GMCommand_Resolve(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 400))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_RESOLVE))
     {
         return true;
     }
@@ -3033,7 +3033,7 @@ bool ChatManager::GMCommand_Reunion(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_REUNION))
     {
         return true;
     }
@@ -3108,7 +3108,7 @@ bool ChatManager::GMCommand_Quest(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 200))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_QUEST))
     {
         return true;
     }
@@ -3149,7 +3149,7 @@ bool ChatManager::GMCommand_Scrap(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 700))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_SCRAP))
     {
         return true;
     }
@@ -3231,7 +3231,7 @@ bool ChatManager::GMCommand_Skill(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_SKILL))
     {
         return true;
     }
@@ -3269,7 +3269,7 @@ bool ChatManager::GMCommand_SkillPoint(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_SKILL_POINT))
     {
         return true;
     }
@@ -3292,7 +3292,7 @@ bool ChatManager::GMCommand_SlotAdd(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 650))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_SLOT_ADD))
     {
         return true;
     }
@@ -3358,7 +3358,7 @@ bool ChatManager::GMCommand_SoulPoints(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_SOUL_POINTS))
     {
         return true;
     }
@@ -3381,7 +3381,7 @@ bool ChatManager::GMCommand_Spawn(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 950))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_SPAWN))
     {
         return true;
     }
@@ -3400,7 +3400,7 @@ bool ChatManager::GMCommand_Speed(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 200))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_SPEED))
     {
         return true;
     }
@@ -3442,7 +3442,7 @@ bool ChatManager::GMCommand_Spirit(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 650))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_SPIRIT))
     {
         return true;
     }
@@ -3582,7 +3582,7 @@ bool ChatManager::GMCommand_Support(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 1))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_SUPPORT))
     {
         return true;
     }
@@ -3612,7 +3612,7 @@ bool ChatManager::GMCommand_TickerMessage(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 100))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_TICKER_MESSAGE))
     {
         return true;
     }
@@ -3644,7 +3644,7 @@ bool ChatManager::GMCommand_Title(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 100))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_TITLE))
     {
         return true;
     }
@@ -3667,7 +3667,7 @@ bool ChatManager::GMCommand_Tokusei(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_TOKUSEI))
     {
         return true;
     }
@@ -3735,7 +3735,7 @@ bool ChatManager::GMCommand_Valuable(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 200))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_VALUABLE))
     {
         return true;
     }
@@ -3786,7 +3786,7 @@ bool ChatManager::GMCommand_WorldTime(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 950))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_WORLD_TIME))
     {
         return true;
     }
@@ -3820,7 +3820,7 @@ bool ChatManager::GMCommand_Ziotite(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_ZIOTITE))
     {
         return true;
     }
@@ -3866,7 +3866,7 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 200))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_ZONE))
     {
         return true;
     }
@@ -3964,7 +3964,7 @@ bool ChatManager::GMCommand_XP(const std::shared_ptr<
     channel::ChannelClientConnection>& client,
     const std::list<libcomp::String>& args)
 {
-    if(!HaveUserLevel(client, 250))
+    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_XP))
     {
         return true;
     }
@@ -3991,10 +3991,10 @@ bool ChatManager::GMCommand_XP(const std::shared_ptr<
 }
 
 bool ChatManager::HaveUserLevel(const std::shared_ptr<
-    channel::ChannelClientConnection>& client, int32_t requiredLevel)
+    channel::ChannelClientConnection>& client, uint32_t requiredLevel)
 {
     int32_t currentLevel = client->GetClientState()->GetUserLevel();
-    if(currentLevel < requiredLevel)
+    if(currentLevel < (int32_t)requiredLevel)
     {
         SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
             "Requested GMand requires a user level of at least %1."

@@ -174,20 +174,36 @@ void Downloader::startUpdate()
     }
 }
 
-void Downloader::requestError()
+void Downloader::requestError(QNetworkReply::NetworkError code)
 {
-    mStatusCode = mCurrentReq->attribute(
-        QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    QString phrase = mCurrentReq->attribute(
-        QNetworkRequest::HttpReasonPhraseAttribute).toString();
+    (void)code;
+
+    auto errorString = mCurrentReq->errorString();
+
+    if(!errorString.isEmpty())
+    {
+#ifdef COMP_HACK_LOGSTDOUT
+        std::cout << "Download failed: "
+            << errorString.toLocal8Bit().data() << std::endl;
+#endif // COMP_HACK_LOGSTDOUT
+
+        expressFinish(tr("Download failed: %1").arg(errorString));
+    }
+    else
+    {
+        mStatusCode = mCurrentReq->attribute(
+            QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        QString phrase = mCurrentReq->attribute(
+            QNetworkRequest::HttpReasonPhraseAttribute).toString();
 
 #ifdef COMP_HACK_LOGSTDOUT
         std::cout << "Download failed: Server returned status code "
             << mStatusCode << " " << phrase.toLocal8Bit().data() << std::endl;
 #endif // COMP_HACK_LOGSTDOUT
 
-    expressFinish(tr("Download failed: Server returned status "
-        "code %1 %2").arg(mStatusCode).arg(phrase));
+        expressFinish(tr("Download failed: Server returned status "
+            "code %1 %2").arg(mStatusCode).arg(phrase));
+    }
 }
 
 void Downloader::requestReadyRead()
@@ -280,7 +296,7 @@ void Downloader::requestFinished()
 
     if(QNetworkReply::NoError != mCurrentReq->error())
     {
-        requestError();
+        requestError(mCurrentReq->error());
         mCurrentReq = 0;
         return;
     }
@@ -649,7 +665,8 @@ void Downloader::startDownload(const QString& url, const QString& path)
 
     mCurrentReq = mConnection->get(request);
 
-    connect(mCurrentReq, SIGNAL(error()), this, SLOT(requestError()));
+    connect(mCurrentReq, SIGNAL(error(QNetworkReply::NetworkError)), this,
+        SLOT(requestError(QNetworkReply::NetworkError)));
     connect(mCurrentReq, SIGNAL(readyRead()), this, SLOT(requestReadyRead()));
     connect(mCurrentReq, SIGNAL(finished()), this, SLOT(requestFinished()));
 }

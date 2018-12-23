@@ -40,3 +40,8 @@ Message::MessageType Message::Shutdown::GetType() const
 {
     return MessageType::MESSAGE_TYPE_SYSTEM;
 }
+
+libcomp::String Message::Shutdown::Dump() const
+{
+    return "Message: Shutdown";
+}

@@ -34,9 +34,9 @@
 #include <QString>
 #include <QStringList>
 #include <QCryptographicHash>
+#include <QNetworkReply>
 #include <PopIgnore.h>
 
-class QNetworkReply;
 class QNetworkAccessManager;
 
 class FileData
@@ -80,7 +80,7 @@ protected slots:
     void expressFinish(const QString& msg = QString());
     void advanceToNextFile();
 
-    void requestError();
+    void requestError(QNetworkReply::NetworkError code);
     void requestReadyRead();
     void requestFinished();
 

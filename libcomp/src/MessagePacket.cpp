@@ -26,6 +26,9 @@
 
 #include "MessagePacket.h"
 
+// libcomp Includes
+#include "TcpConnection.h"
+
 using namespace libcomp;
 
 Message::Packet::Packet(const std::shared_ptr<TcpConnection>& connection,
@@ -56,4 +59,20 @@ std::shared_ptr<TcpConnection> Message::Packet::GetConnection() const
 Message::MessageType Message::Packet::GetType() const
 {
     return MessageType::MESSAGE_TYPE_PACKET;
+}
+
+libcomp::String Message::Packet::Dump() const
+{
+    if(mConnection)
+    {
+        return libcomp::String("Message: Packet\nConnection: %1\n"
+            "Command Code: 0x%2\n%3").Arg(mConnection->GetName()).Arg(
+            mCommandCode, 4, 16, '0').Arg(mPacket.Dump());
+    }
+    else
+    {
+        return libcomp::String("Message: Packet\nConnection: unknown\n"
+            "Command Code: 0x%1\n%2").Arg(mCommandCode, 4, 16, '0').Arg(
+            mPacket.Dump());
+    }
 }

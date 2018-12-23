@@ -61,6 +61,11 @@ public:
     {
         return MessageType::MESSAGE_TYPE_SYSTEM;
     }
+
+    virtual libcomp::String Dump() const override
+    {
+        return libcomp::String("Message: Tick");
+    }
 };
 
 } // namespace Message

@@ -28,6 +28,7 @@
 #include "EventWindow.h"
 #include "NPCListWindow.h"
 #include "SpotListWindow.h"
+#include "ZoneWindow.h"
 
 // objects Includes
 #include <MiCEventMessageData.h>
@@ -54,10 +55,12 @@ MainWindow::MainWindow(QWidget *pParent) : QWidget(pParent)
     mEventWindow = nullptr;
     mNPCWindow = nullptr;
     mSpotWindow = nullptr;
+    mZoneWindow = nullptr;
 
     mEventWindow = new EventWindow(this);
     mNPCWindow = new NPCListWindow(this);
     mSpotWindow = new SpotListWindow(this);
+    mZoneWindow = new ZoneWindow(this);
 
     ui = new Ui::MainWindow;
     ui->setupUi(this);
@@ -65,6 +68,7 @@ MainWindow::MainWindow(QWidget *pParent) : QWidget(pParent)
     connect(ui->zoneBrowse, SIGNAL(clicked(bool)), this, SLOT(BrowseZone()));
 
     connect(ui->eventsView, SIGNAL(clicked(bool)), this, SLOT(OpenEvents()));
+    connect(ui->openMap, SIGNAL(clicked(bool)), this, SLOT(OpenMap()));
     connect(ui->openNPCs, SIGNAL(clicked(bool)), this, SLOT(OpenNPCs()));
     connect(ui->openSpots, SIGNAL(clicked(bool)), this, SLOT(OpenSpots()));
 }
@@ -290,6 +294,12 @@ void MainWindow::OpenEvents()
 {
     mEventWindow->show();
     mEventWindow->raise();
+}
+
+void MainWindow::OpenMap()
+{
+    mZoneWindow->show();
+    mZoneWindow->raise();
 }
 
 void MainWindow::OpenNPCs()

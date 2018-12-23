@@ -1,11 +1,11 @@
 /**
- * @file tools/map/src/MainWindow.h
+ * @file tools/cathedral/src/ZoneWindow.h
  * @ingroup map
  *
  * @author HACKfrost
  *
- * @brief Main window for the map manager which allows for visualization
- *  and modification of zone map data.
+ * @brief Zone window which allows for visualization and modification of zone
+ *  map data.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -23,20 +23,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef TOOLS_CATHEDRAL_SRC_ZONEWINDOW_H
+#define TOOLS_CATHEDRAL_SRC_ZONEWINDOW_H
 
 #include <PushIgnore.h>
-#include "ui_MainWindow.h"
+#include "ui_ZoneWindow.h"
 #include <PopIgnore.h>
 
 #include <QLabel>
 #include <QMouseEvent>
 
-#include <DefinitionManager.h>
 #include <MiZoneData.h>
 #include <QmpFile.h>
 #include <ServerZone.h>
+
+class MainWindow;
 
 class GenericPoint
 {
@@ -45,15 +46,13 @@ public:
     float Y = 0.f;
 };
 
-class MainWindow : public QMainWindow
+class ZoneWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    explicit MainWindow(std::shared_ptr<libcomp::DataStore> datastore,
-        std::shared_ptr<libcomp::DefinitionManager> definitions,
-        QWidget *parent = 0);
-    ~MainWindow();
+    explicit ZoneWindow(MainWindow *pMainWindow, QWidget *parent = 0);
+    ~ZoneWindow();
 
 protected:
     void mousePressEvent(QMouseEvent* event);
@@ -96,7 +95,9 @@ private:
     int32_t Scale(int32_t point);
     int32_t Scale(float point);
 
-    Ui::MainWindow ui;
+    MainWindow *mMainWindow;
+
+    Ui::ZoneWindow ui;
     QLabel* mDrawTarget;
     QRubberBand* mRubberBand;
     QPoint mOrigin;
@@ -104,8 +105,6 @@ private:
     float mOffsetX;
     float mOffsetY;
 
-    std::shared_ptr<libcomp::DataStore> mDatastore;
-    std::shared_ptr<libcomp::DefinitionManager> mDefinitions;
     objects::ServerZone mZone;
     std::shared_ptr<objects::MiZoneData> mZoneData;
     std::shared_ptr<objects::QmpFile> mQmpFile;
@@ -115,4 +114,4 @@ private:
     uint8_t mZoomScale;
 };
 
-#endif // MAINWINDOW_H
+#endif // TOOLS_CATHEDRAL_SRC_ZONEWINDOW_H

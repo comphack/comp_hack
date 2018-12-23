@@ -1,11 +1,11 @@
 /**
- * @file tools/map/src/MainWindow.cpp
+ * @file tools/cathedral/src/ZoneWindow.cpp
  * @ingroup map
  *
  * @author HACKfrost
  *
- * @brief Main window for the map manager which allows for visualization
- *  and modification of zone map data.
+ * @brief Zone window which allows for visualization and modification of zone
+ *  map data.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -23,6 +23,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ZoneWindow.h"
+
+// Cathedral Includes
 #include "MainWindow.h"
 
  // C++ Standard Includes
@@ -52,10 +55,8 @@
 #include <SpawnLocation.h>
 #include <SpawnLocationGroup.h>
 
-MainWindow::MainWindow(std::shared_ptr<libcomp::DataStore> datastore,
-    std::shared_ptr<libcomp::DefinitionManager> definitions, QWidget *p)
-    : QMainWindow(p), mDrawTarget(0), mRubberBand(0),
-    mDatastore(datastore), mDefinitions(definitions)
+ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
+    : QMainWindow(p), mMainWindow(pMainWindow), mDrawTarget(0), mRubberBand(0)
 {
     ui.setupUi(this);
 
@@ -93,11 +94,11 @@ MainWindow::MainWindow(std::shared_ptr<libcomp::DataStore> datastore,
     mZoomScale = 20;
 }
 
-MainWindow::~MainWindow()
+ZoneWindow::~ZoneWindow()
 {
 }
 
-void MainWindow::ShowOpenDialog()
+void ZoneWindow::ShowOpenDialog()
 {
     QString path = QFileDialog::getOpenFileName(this, tr("Open Zone Definition"),
         QString(), tr("Zone Definition (*.xml)"));
@@ -108,7 +109,7 @@ void MainWindow::ShowOpenDialog()
     LoadMapFromZone(path);
 }
 
-void MainWindow::ShowSaveDialog()
+void ZoneWindow::ShowSaveDialog()
 {
     if(!mZoneData)
     {
@@ -133,7 +134,7 @@ void MainWindow::ShowSaveDialog()
     }
 }
 
-void MainWindow::Zoom200()
+void ZoneWindow::Zoom200()
 {
     mZoomScale = 10;
     ui.zoom200->setChecked(true);
@@ -145,7 +146,7 @@ void MainWindow::Zoom200()
     DrawMap();
 }
 
-void MainWindow::Zoom100()
+void ZoneWindow::Zoom100()
 {
     mZoomScale = 20;
     ui.zoom100->setChecked(true);
@@ -157,7 +158,7 @@ void MainWindow::Zoom100()
     DrawMap();
 }
 
-void MainWindow::Zoom50()
+void ZoneWindow::Zoom50()
 {
     mZoomScale = 40;
     ui.zoom50->setChecked(true);
@@ -169,7 +170,7 @@ void MainWindow::Zoom50()
     DrawMap();
 }
 
-void MainWindow::Zoom25()
+void ZoneWindow::Zoom25()
 {
     mZoomScale = 80;
     ui.zoom25->setChecked(true);
@@ -181,7 +182,7 @@ void MainWindow::Zoom25()
     DrawMap();
 }
 
-void MainWindow::PlotPoints()
+void ZoneWindow::PlotPoints()
 {
     mPoints.clear();
     mHiddenPoints.clear();
@@ -243,25 +244,25 @@ void MainWindow::PlotPoints()
     DrawMap();
 }
 
-void MainWindow::ClearPoints()
+void ZoneWindow::ClearPoints()
 {
     mPoints.clear();
     DrawMap();
 }
 
-void MainWindow::ShowToggled(bool checked)
+void ZoneWindow::ShowToggled(bool checked)
 {
     (void)checked;
 
     DrawMap();
 }
 
-void MainWindow::Refresh()
+void ZoneWindow::Refresh()
 {
     DrawMap();
 }
 
-void MainWindow::mousePressEvent(QMouseEvent* event)
+void ZoneWindow::mousePressEvent(QMouseEvent* event)
 {
     mOrigin = event->pos();
     if(!mRubberBand)
@@ -272,7 +273,7 @@ void MainWindow::mousePressEvent(QMouseEvent* event)
     mRubberBand->show();
 }
 
-void MainWindow::mouseMoveEvent(QMouseEvent* event)
+void ZoneWindow::mouseMoveEvent(QMouseEvent* event)
 {
     if(mRubberBand)
     {
@@ -280,7 +281,7 @@ void MainWindow::mouseMoveEvent(QMouseEvent* event)
     }
 }
 
-void MainWindow::mouseReleaseEvent(QMouseEvent* event)
+void ZoneWindow::mouseReleaseEvent(QMouseEvent* event)
 {
     if(mRubberBand)
     {
@@ -353,7 +354,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent* event)
     DrawMap();
 }
 
-void MainWindow::ComboBox_SpawnEdit_IndexChanged(const QString& str)
+void ZoneWindow::ComboBox_SpawnEdit_IndexChanged(const QString& str)
 {
     (void)str;
 
@@ -362,7 +363,7 @@ void MainWindow::ComboBox_SpawnEdit_IndexChanged(const QString& str)
     DrawMap();
 }
 
-void MainWindow::SpawnLocationRemoveSelected()
+void ZoneWindow::SpawnLocationRemoveSelected()
 {
     QItemSelectionModel* select = ui.tableWidget_SpawnLocation->selectionModel();
 
@@ -407,7 +408,7 @@ void MainWindow::SpawnLocationRemoveSelected()
     DrawMap();
 }
 
-void MainWindow::PointGroupClicked()
+void ZoneWindow::PointGroupClicked()
 {
     mHiddenPoints.clear();
 
@@ -425,7 +426,7 @@ void MainWindow::PointGroupClicked()
     DrawMap();
 }
 
-bool MainWindow::LoadMapFromZone(QString path)
+bool ZoneWindow::LoadMapFromZone(QString path)
 {
     tinyxml2::XMLDocument doc;
     doc.LoadFile(path.toUtf8().constData());
@@ -451,13 +452,16 @@ bool MainWindow::LoadMapFromZone(QString path)
         return false;
     }
 
-    mZoneData = mDefinitions->GetZoneData(mZone.GetID());
+    auto definitions = mMainWindow->GetDefinitions();
+
+    mZoneData = definitions->GetZoneData(mZone.GetID());
     if(!mZoneData)
     {
         return false;
     }
 
-    mQmpFile = mDefinitions->LoadQmpFile(mZoneData->GetFile()->GetQmpFile(), &*mDatastore);
+    mQmpFile = definitions->LoadQmpFile(mZoneData->GetFile()->GetQmpFile(),
+        &*mMainWindow->GetDatastore());
     if(!mQmpFile)
     {
         return false;
@@ -519,7 +523,7 @@ bool MainWindow::LoadMapFromZone(QString path)
 }
 
 
-bool MainWindow::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
+bool ZoneWindow::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
     float& x, float& y, float& rot) const
 {
     if (spotID == 0 || dynamicMapID == 0)
@@ -527,7 +531,9 @@ bool MainWindow::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
         return false;
     }
 
-    auto spots = mDefinitions->GetSpotData(dynamicMapID);
+    auto definitions = mMainWindow->GetDefinitions();
+
+    auto spots = definitions->GetSpotData(dynamicMapID);
     auto spotIter = spots.find(spotID);
     if (spotIter != spots.end())
     {
@@ -541,7 +547,7 @@ bool MainWindow::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
     return false;
 }
 
-void MainWindow::BindNPCs()
+void ZoneWindow::BindNPCs()
 {
     ui.tableWidget_NPC->clear();
     ui.tableWidget_NPC->setColumnCount(4);
@@ -568,7 +574,7 @@ void MainWindow::BindNPCs()
     ui.tableWidget_NPC->resizeColumnsToContents();
 }
 
-void MainWindow::BindObjects()
+void ZoneWindow::BindObjects()
 {
     ui.tableWidget_Object->clear();
     ui.tableWidget_Object->setColumnCount(4);
@@ -595,8 +601,10 @@ void MainWindow::BindObjects()
     ui.tableWidget_Object->resizeColumnsToContents();
 }
 
-void MainWindow::BindSpawns()
+void ZoneWindow::BindSpawns()
 {
+    auto definitions = mMainWindow->GetDefinitions();
+
     // Set up the Spawn table
     ui.tableWidget_Spawn->clear();
     ui.tableWidget_Spawn->setColumnCount(5);
@@ -611,7 +619,7 @@ void MainWindow::BindSpawns()
     for(auto sPair : mZone.GetSpawns())
     {
         auto s = sPair.second;
-        auto def = mDefinitions->GetDevilData(s->GetEnemyType());
+        auto def = definitions->GetDevilData(s->GetEnemyType());
 
         ui.tableWidget_Spawn->setItem(i, 0, GetTableWidget(libcomp::String("%1")
             .Arg(s->GetID()).C()));
@@ -714,7 +722,7 @@ void MainWindow::BindSpawns()
     ui.tableWidget_SpawnLocation->resizeColumnsToContents();
 }
 
-void MainWindow::BindPoints()
+void ZoneWindow::BindPoints()
 {
     ui.tableWidget_Points->clear();
     ui.tableWidget_Points->setColumnCount(3);
@@ -742,7 +750,7 @@ void MainWindow::BindPoints()
     ui.tableWidget_Points->resizeColumnsToContents();
 }
 
-QTableWidgetItem* MainWindow::GetTableWidget(std::string name, bool readOnly)
+QTableWidgetItem* ZoneWindow::GetTableWidget(std::string name, bool readOnly)
 {
     auto item = new QTableWidgetItem(name.c_str());
 
@@ -754,7 +762,7 @@ QTableWidgetItem* MainWindow::GetTableWidget(std::string name, bool readOnly)
     return item;
 }
 
-void MainWindow::DrawMap()
+void ZoneWindow::DrawMap()
 {
     if(!mZoneData)
     {
@@ -822,7 +830,9 @@ void MainWindow::DrawMap()
     font.setPixelSize(10);
     painter.setFont(font);
 
-    auto spots = mDefinitions->GetSpotData(mZone.GetDynamicMapID());
+    auto definitions = mMainWindow->GetDefinitions();
+
+    auto spots = definitions->GetSpotData(mZone.GetDynamicMapID());
     for(auto spotPair : spots)
     {
         float xc = spotPair.second->GetCenterX();
@@ -987,12 +997,12 @@ void MainWindow::DrawMap()
     ui.scrollArea->verticalScrollBar()->setValue(yScroll);
 }
 
-int32_t MainWindow::Scale(int32_t point)
+int32_t ZoneWindow::Scale(int32_t point)
 {
     return (int32_t)(point / mZoomScale);
 }
 
-int32_t MainWindow::Scale(float point)
+int32_t ZoneWindow::Scale(float point)
 {
     return (int32_t)(point / mZoomScale);
 }

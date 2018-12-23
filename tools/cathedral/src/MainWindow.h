@@ -55,6 +55,7 @@ class MainWindow;
 class EventWindow;
 class NPCListWindow;
 class SpotListWindow;
+class ZoneWindow;
 
 class MainWindow : public QWidget
 {
@@ -80,6 +81,7 @@ public:
 
 protected slots:
     void OpenEvents();
+    void OpenMap();
     void OpenNPCs();
     void OpenSpots();
 
@@ -96,6 +98,7 @@ protected:
     EventWindow *mEventWindow;
     NPCListWindow *mNPCWindow;
     SpotListWindow *mSpotWindow;
+    ZoneWindow *mZoneWindow;
 
 private:
     Ui::MainWindow *ui;

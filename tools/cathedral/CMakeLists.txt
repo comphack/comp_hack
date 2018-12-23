@@ -83,6 +83,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ObjectPositionUI.cpp
     src/ServerScript.cpp
     src/SpotListWindow.cpp
+    src/ZoneWindow.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
@@ -140,6 +141,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ObjectPositionUI.h
     src/ServerScript.h
     src/SpotListWindow.h
+    src/ZoneWindow.h
 )
 
 SET(${PROJECT_NAME}_RCC
@@ -198,6 +200,7 @@ SET(${PROJECT_NAME}_UIS
     ui/ObjectListWindow.ui
     ui/ObjectPosition.ui
     ui/ServerScript.ui
+    ui/ZoneWindow.ui
 
     # Properties for each object.
     ui/NPCProperties.ui

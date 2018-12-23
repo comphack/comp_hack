@@ -127,6 +127,13 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="openMap">
+          <property name="text">
+           <string>Map</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <spacer name="spacerZoneRight">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>

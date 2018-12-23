@@ -43,8 +43,6 @@
 
 // Qt Includes
 #include <PushIgnore.h>
-#include "ui_EventWindow.h"
-
 #include <QCheckBox>
 #include <QDir>
 #include <QDirIterator>
@@ -125,24 +123,14 @@ public:
 };
 
 EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
-    QWidget(pParent), mMainWindow(pMainWindow)
+    QMainWindow(pParent), mMainWindow(pMainWindow)
 {
     ui = new Ui::EventWindow;
     ui->setupUi(this);
 
     QAction *pAction = nullptr;
 
-    QMenu *pMenu = new QMenu(tr("Load"));
-
-    pAction = pMenu->addAction("File");
-    connect(pAction, SIGNAL(triggered()), this, SLOT(LoadFile()));
-
-    pAction = pMenu->addAction("Directory");
-    connect(pAction, SIGNAL(triggered()), this, SLOT(LoadDirectory()));
-
-    ui->load->setMenu(pMenu);
-
-    pMenu = new QMenu(tr("Add Event"));
+    QMenu *pMenu = new QMenu(tr("Add Event"));
 
     pAction = pMenu->addAction("Fork");
     pAction->setData(to_underlying(
@@ -196,9 +184,15 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
 
     ui->addEvent->setMenu(pMenu);
 
-    connect(ui->save, SIGNAL(clicked()), this, SLOT(SaveFile()));
-    connect(ui->newFile, SIGNAL(clicked()), this, SLOT(NewFile()));
-    connect(ui->refresh, SIGNAL(clicked()), this, SLOT(Refresh()));
+    ui->removeEvent->hide();
+
+    connect(ui->actionLoadFile, SIGNAL(triggered()), this, SLOT(LoadFile()));
+    connect(ui->actionLoadDirectory, SIGNAL(triggered()), this,
+        SLOT(LoadDirectory()));
+    connect(ui->actionSave, SIGNAL(triggered()), this, SLOT(SaveFile()));
+    connect(ui->actionNew, SIGNAL(triggered()), this, SLOT(NewFile()));
+    connect(ui->actionRefresh, SIGNAL(triggered()), this, SLOT(Refresh()));
+    connect(ui->removeEvent, SIGNAL(clicked()), this, SLOT(RemoveEvent()));
     connect(ui->files, SIGNAL(currentIndexChanged(const QString&)), this,
         SLOT(FileSelectionChanged()));
     connect(ui->treeWidget, SIGNAL(itemSelectionChanged()), this,
@@ -370,7 +364,7 @@ void EventWindow::SaveFile()
         }
     }
 
-    if(updates.size() == 0)
+    if(updates.size() == 0 && file->PendingRemovals.size() == 0)
     {
         // Nothing to save
         return;
@@ -430,6 +424,19 @@ void EventWindow::SaveFile()
         }
     }
 
+    // Remove events first
+    for(auto eventID : file->PendingRemovals)
+    {
+        auto iter = existingEvents.find(eventID);
+        if(iter != existingEvents.end())
+        {
+            rootElem->DeleteChild(iter->second);
+        }
+    }
+
+    file->PendingRemovals.clear();
+
+    // Now handle updates
     std::list<tinyxml2::XMLNode*> updatedNodes;
     for(auto fEvent : file->Events)
     {
@@ -463,7 +470,10 @@ void EventWindow::SaveFile()
         fEvent->FileEventID = e->GetID();
     }
 
-    SimplifyObjectXML(updatedNodes);
+    if(updatedNodes.size() > 0)
+    {
+        SimplifyObjectXML(updatedNodes);
+    }
 
     doc.SaveFile(path.C());
 
@@ -503,6 +513,41 @@ void EventWindow::NewFile()
     if(LoadFileFromPath(cs(qPath)))
     {
         ui->files->setCurrentText(qPath);
+    }
+}
+
+void EventWindow::RemoveEvent()
+{
+    auto fIter = mFiles.find(cs(ui->files->currentText()));
+    if(fIter == mFiles.end())
+    {
+        // No file
+        return;
+    }
+
+    auto file = fIter->second;
+    if(mCurrentEvent)
+    {
+        if(!mCurrentEvent->FileEventID.IsEmpty())
+        {
+            file->PendingRemovals.insert(mCurrentEvent->FileEventID);
+        }
+
+        for(auto it = file->Events.begin(); it != file->Events.end(); it++)
+        {
+            if(*it == mCurrentEvent)
+            {
+                file->Events.erase(it);
+                break;
+            }
+        }
+
+        mCurrentEvent = nullptr;
+
+        RebuildLocalIDMap(file);
+        RebuildGlobalIDMap();
+        mMainWindow->ResetEventCount();
+        Refresh();
     }
 }
 
@@ -654,10 +699,10 @@ void EventWindow::NewEvent()
     auto e = GetNewEvent(eventType);
     e->SetID(eventID);
 
-    file->EventIDMap[eventID] = (int32_t)file->Events.size();
     file->Events.push_back(std::make_shared<FileEvent>(e, true));
 
     // Rebuild the global map and update the main window
+    RebuildLocalIDMap(file);
     RebuildGlobalIDMap();
     mMainWindow->ResetEventCount();
 
@@ -764,21 +809,12 @@ bool EventWindow::LoadFileFromPath(const libcomp::String& path)
 
         for(auto e : events)
         {
-            if(file->EventIDMap.find(e->GetID()) == file->EventIDMap.end())
-            {
-                // Don't add it twice
-                file->EventIDMap[e->GetID()] = (int32_t)file->Events.size();
-            }
-            else
-            {
-                LOG_ERROR(libcomp::String("Duplicate event ID %1 encountered"
-                    " in file: %2\n").Arg(e->GetID()).Arg(path));
-            }
-
             file->Events.push_back(std::make_shared<FileEvent>(e));
         }
 
         mFiles[path] = file;
+
+        RebuildLocalIDMap(file);
 
         // Rebuild the context menu
         ui->files->clear();
@@ -1060,9 +1096,12 @@ void EventWindow::BindSelectedEvent()
         }
 
         ui->layoutView->insertWidget(1, eNode);
+
+        ui->removeEvent->show();
     }
     else
     {
+        ui->removeEvent->hide();
         ui->lblNoCurrent->show();
     }
 }
@@ -1368,6 +1407,24 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
         {
             AddEventToTree(b->GetNext(), bNode, file, seen);
         }
+    }
+}
+
+void EventWindow::RebuildLocalIDMap(const std::shared_ptr<EventFile>& file)
+{
+    file->EventIDMap.clear();
+
+    int32_t idx = 0;
+    for(auto fEvent : file->Events)
+    {
+        auto e = fEvent->Event;
+        if(file->EventIDMap.find(e->GetID()) == file->EventIDMap.end())
+        {
+            // Don't add it twice
+            file->EventIDMap[e->GetID()] = idx;
+        }
+
+        idx++;
     }
 }
 

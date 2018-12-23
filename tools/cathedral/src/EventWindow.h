@@ -30,6 +30,8 @@
 // Qt Includes
 #include <PushIgnore.h>
 #include <QWidget>
+
+#include "ui_EventWindow.h"
 #include <PopIgnore.h>
 
 // objects Includes
@@ -40,20 +42,13 @@
 // Standard C++11 Includes
 #include <set>
 
-namespace Ui
-{
-
-class EventWindow;
-
-} // namespace Ui
-
 class EventFile;
 class EventTreeItem;
 class FileEvent;
 class MainWindow;
 class QTreeWidgetItem;
 
-class EventWindow : public QWidget
+class EventWindow : public QMainWindow
 {
     Q_OBJECT
 
@@ -72,6 +67,7 @@ private slots:
     void SaveFile();
     void NewFile();
     void NewEvent();
+    void RemoveEvent();
     void Refresh();
     void CurrentEventEdited();
     void TreeSelectionChanged();
@@ -91,6 +87,7 @@ private:
         const std::shared_ptr<EventFile>& file,
         std::set<libcomp::String>& seen, int32_t eventIdx = -1);
 
+    void RebuildLocalIDMap(const std::shared_ptr<EventFile>& file);
     void RebuildGlobalIDMap();
 
     void SimplifyObjectXML(std::list<tinyxml2::XMLNode*> nodes);

@@ -235,6 +235,8 @@ void MainWindow::ResetEventCount()
 
 void MainWindow::ReloadZoneData()
 {
+    ui->openMap->setEnabled(mActiveZone != nullptr);
+
     // NPCs
     {
         std::vector<std::shared_ptr<libcomp::Object>> objs;
@@ -298,8 +300,10 @@ void MainWindow::OpenEvents()
 
 void MainWindow::OpenMap()
 {
-    mZoneWindow->show();
-    mZoneWindow->raise();
+    if(mZoneWindow->ShowZone(mActiveZone))
+    {
+        mZoneWindow->raise();
+    }
 }
 
 void MainWindow::OpenNPCs()

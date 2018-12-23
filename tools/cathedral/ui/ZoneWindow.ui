@@ -36,11 +36,10 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>600</width>
-           <height>590</height>
+           <width>572</width>
+           <height>587</height>
           </rect>
          </property>
-         <zorder>tabs</zorder>
         </widget>
        </widget>
       </item>
@@ -166,52 +165,6 @@
           </item>
          </layout>
         </widget>
-        <widget class="QWidget" name="tab_Point">
-         <attribute name="title">
-          <string>Points</string>
-         </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_5">
-          <item>
-           <widget class="QTextEdit" name="textEdit_Points"/>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0">
-            <property name="sizeConstraint">
-             <enum>QLayout::SetDefaultConstraint</enum>
-            </property>
-            <item>
-             <widget class="QPushButton" name="button_PlotPoints">
-              <property name="maximumSize">
-               <size>
-                <width>50</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Plot</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="button_ClearPoints">
-              <property name="maximumSize">
-               <size>
-                <width>50</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Clear</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <widget class="QTableWidget" name="tableWidget_Points"/>
-          </item>
-         </layout>
-        </widget>
        </widget>
       </item>
      </layout>
@@ -224,7 +177,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1028</width>
+     <width>1000</width>
      <height>21</height>
     </rect>
    </property>
@@ -232,10 +185,7 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
-    <addaction name="action_Open"/>
     <addaction name="actionSave"/>
-    <addaction name="separator"/>
-    <addaction name="action_Quit"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -253,15 +203,8 @@
     <addaction name="actionRefresh"/>
     <addaction name="menuZoom"/>
    </widget>
-   <widget class="QMenu" name="menuData">
-    <property name="title">
-     <string>Data</string>
-    </property>
-    <addaction name="actionRemove_Selected_Locations"/>
-   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
-   <addaction name="menuData"/>
   </widget>
   <action name="action_Open">
    <property name="text">

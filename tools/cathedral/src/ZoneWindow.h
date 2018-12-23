@@ -26,25 +26,27 @@
 #ifndef TOOLS_CATHEDRAL_SRC_ZONEWINDOW_H
 #define TOOLS_CATHEDRAL_SRC_ZONEWINDOW_H
 
+// Qt Includes
 #include <PushIgnore.h>
+#include <QLabel>
+
 #include "ui_ZoneWindow.h"
 #include <PopIgnore.h>
 
-#include <QLabel>
-#include <QMouseEvent>
+// C++11 Standard Includes
+#include <memory>
+#include <set>
 
-#include <MiZoneData.h>
-#include <QmpFile.h>
-#include <ServerZone.h>
+namespace objects
+{
+
+class MiZoneData;
+class QmpFile;
+class ServerZone;
+
+} // namespace objects
 
 class MainWindow;
-
-class GenericPoint
-{
-public:
-    float X = 0.f;
-    float Y = 0.f;
-};
 
 class ZoneWindow : public QMainWindow
 {
@@ -54,30 +56,18 @@ public:
     explicit ZoneWindow(MainWindow *pMainWindow, QWidget *parent = 0);
     ~ZoneWindow();
 
-protected:
-    void mousePressEvent(QMouseEvent* event);
-    void mouseMoveEvent(QMouseEvent* event);
-    void mouseReleaseEvent(QMouseEvent* event);
+    bool ShowZone(const std::shared_ptr<objects::ServerZone>& zone);
 
 protected slots:
-    void ShowOpenDialog();
-    void ShowSaveDialog();
     void Zoom200();
     void Zoom100();
     void Zoom50();
     void Zoom25();
-    void PlotPoints();
-    void ClearPoints();
     void ShowToggled(bool checked);
     void Refresh();
 
-    void ComboBox_SpawnEdit_IndexChanged(const QString& str);
-    void SpawnLocationRemoveSelected();
-
-    void PointGroupClicked();
-
 private:
-    bool LoadMapFromZone(QString path);
+    bool LoadMapFromZone();
 
     bool GetSpotPosition(uint32_t dynamicMapID,
         uint32_t spotID, float& x, float& y, float& rot) const;
@@ -85,7 +75,6 @@ private:
     void BindNPCs();
     void BindObjects();
     void BindSpawns();
-    void BindPoints();
 
     QTableWidgetItem* GetTableWidget(std::string name,
         bool readOnly = true);
@@ -99,16 +88,13 @@ private:
 
     Ui::ZoneWindow ui;
     QLabel* mDrawTarget;
-    QRubberBand* mRubberBand;
-    QPoint mOrigin;
 
     float mOffsetX;
     float mOffsetY;
 
-    objects::ServerZone mZone;
+    std::shared_ptr<objects::ServerZone> mZone;
     std::shared_ptr<objects::MiZoneData> mZoneData;
     std::shared_ptr<objects::QmpFile> mQmpFile;
-    std::map<std::string, std::list<GenericPoint>> mPoints;
     std::set<std::string> mHiddenPoints;
 
     uint8_t mZoomScale;

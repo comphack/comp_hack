@@ -43,10 +43,10 @@
 #include <MiONPCData.h>
 
 // objects Includes
-#include <ServerNPC.h>
+#include <ServerObject.h>
 
-NPCListWindow::NPCListWindow(MainWindow *pMainWindow, QWidget *pParent) :
-    ObjectListWindow(pMainWindow, pParent)
+NPCListWindow::NPCListWindow(QWidget *pParent) :
+    ObjectListWindow(pParent)
 {
     QWidget *pWidget = new QWidget;
     prop = new Ui::NPCProperties;
@@ -65,28 +65,28 @@ NPCListWindow::~NPCListWindow()
 QString NPCListWindow::GetObjectID(const std::shared_ptr<
     libcomp::Object>& obj) const
 {
-    auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(obj);
+    auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
 
-    if(!npc)
+    if(!sObj)
     {
         return {};
     }
 
-    return QString::number(npc->GetID());
+    return QString::number(sObj->GetID());
 }
 
 QString NPCListWindow::GetObjectName(const std::shared_ptr<
     libcomp::Object>& obj) const
 {
-    auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(obj);
+    auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
 
-    if(!npc)
+    if(!sObj)
     {
         return {};
     }
 
     auto definitions = mMainWindow->GetDefinitions();
-    auto id = npc->GetID();
+    auto id = sObj->GetID();
     auto hNPC = definitions->GetHNPCData(id);
     auto oNPC = definitions->GetONPCData(id);
 
@@ -105,17 +105,17 @@ QString NPCListWindow::GetObjectName(const std::shared_ptr<
 
 void NPCListWindow::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
-    auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(obj);
+    auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
 
-    if(!npc)
+    if(!sObj)
     {
         return;
     }
 
-    prop->spot->lineEdit()->setText(QString::number(npc->GetSpotID()));
-    prop->x->setValue(npc->GetX());
-    prop->y->setValue(npc->GetY());
-    prop->rot->setValue(npc->GetRotation());
+    prop->spot->lineEdit()->setText(QString::number(sObj->GetSpotID()));
+    prop->x->setValue(sObj->GetX());
+    prop->y->setValue(sObj->GetY());
+    prop->rot->setValue(sObj->GetRotation());
 }
 
 void NPCListWindow::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
@@ -127,17 +127,4 @@ void NPCListWindow::ResetSpotList()
 {
     prop->spot->clear();
     prop->spot->addItem(QString("0 (None)"), QVariant(0));
-
-    auto spotList = mMainWindow->GetSpotList();
-
-    if(spotList)
-    {
-        // Get the list of all the spots IDs.
-        auto mapping = spotList->GetObjectMapping();
-
-        for(auto it : mapping)
-        {
-            prop->spot->addItem(it.second, QVariant(it.first));
-        }
-    }
 }

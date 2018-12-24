@@ -37,14 +37,13 @@
 // libcomp Includes
 #include <Log.h>
 
-ObjectListWindow::ObjectListWindow(MainWindow *pMainWindow, QWidget *pParent) :
-    QWidget(pParent), mMainWindow(pMainWindow)
+ObjectListWindow::ObjectListWindow(QWidget *pParent) :
+    QWidget(pParent)
 {
     mObjectModel = new ObjectListModel(this);
 
     mFilterModel = new QSortFilterProxyModel;
     mFilterModel->setSourceModel(mObjectModel);
-    mFilterModel->sort(0, Qt::AscendingOrder);
     mFilterModel->setFilterRegExp(QRegExp("", Qt::CaseInsensitive,
         QRegExp::FixedString));
     mFilterModel->setFilterKeyColumn(0);
@@ -64,6 +63,11 @@ ObjectListWindow::ObjectListWindow(MainWindow *pMainWindow, QWidget *pParent) :
 ObjectListWindow::~ObjectListWindow()
 {
     delete ui;
+}
+
+void ObjectListWindow::SetMainWindow(MainWindow *pMainWindow)
+{
+    mMainWindow = pMainWindow;
 }
 
 void ObjectListWindow::Search(const QString& term)

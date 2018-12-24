@@ -39,8 +39,10 @@ class SpotListWindow : public ObjectListWindow
     Q_OBJECT
 
 public:
-    explicit SpotListWindow(MainWindow *pMainWindow, QWidget *pParent = 0);
+    explicit SpotListWindow(QWidget *pParent = 0);
     virtual ~SpotListWindow();
+
+    virtual void SetMainWindow(MainWindow *pMainWindow);
 
     QString GetObjectID(const std::shared_ptr<
         libcomp::Object>& obj) const override;

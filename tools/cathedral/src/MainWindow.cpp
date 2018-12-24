@@ -53,13 +53,9 @@ MainWindow::MainWindow(QWidget *pParent) : QWidget(pParent)
 {
     // Set these first in case the window wants to query for IDs from another.
     mEventWindow = nullptr;
-    mNPCWindow = nullptr;
-    mSpotWindow = nullptr;
     mZoneWindow = nullptr;
 
     mEventWindow = new EventWindow(this);
-    mNPCWindow = new NPCListWindow(this);
-    mSpotWindow = new SpotListWindow(this);
     mZoneWindow = new ZoneWindow(this);
 
     ui = new Ui::MainWindow;
@@ -68,9 +64,7 @@ MainWindow::MainWindow(QWidget *pParent) : QWidget(pParent)
     connect(ui->zoneBrowse, SIGNAL(clicked(bool)), this, SLOT(BrowseZone()));
 
     connect(ui->eventsView, SIGNAL(clicked(bool)), this, SLOT(OpenEvents()));
-    connect(ui->openMap, SIGNAL(clicked(bool)), this, SLOT(OpenMap()));
-    connect(ui->openNPCs, SIGNAL(clicked(bool)), this, SLOT(OpenNPCs()));
-    connect(ui->openSpots, SIGNAL(clicked(bool)), this, SLOT(OpenSpots()));
+    connect(ui->zoneView, SIGNAL(clicked(bool)), this, SLOT(OpenZone()));
 }
 
 MainWindow::~MainWindow()
@@ -204,16 +198,6 @@ EventWindow* MainWindow::GetEvents() const
     return mEventWindow;
 }
 
-NPCListWindow* MainWindow::GetNPCList() const
-{
-    return mNPCWindow;
-}
-
-SpotListWindow* MainWindow::GetSpotList() const
-{
-    return mSpotWindow;
-}
-
 std::shared_ptr<objects::MiCEventMessageData> MainWindow::GetEventMessage(
     int32_t msgID) const
 {
@@ -231,40 +215,6 @@ void MainWindow::ResetEventCount()
     size_t total = mEventWindow->GetLoadedEventCount();
     ui->eventCount->setText(qs(libcomp::String("%1 event(s) loaded")
         .Arg(total)));
-}
-
-void MainWindow::ReloadZoneData()
-{
-    ui->openMap->setEnabled(mActiveZone != nullptr);
-
-    // NPCs
-    {
-        std::vector<std::shared_ptr<libcomp::Object>> objs;
-
-        for(auto obj : mActiveZone->GetNPCs())
-        {
-            objs.push_back(obj);
-        }
-
-        mNPCWindow->SetObjectList(objs);
-        ui->openNPCs->setEnabled(true);
-    }
-
-    // Spots
-    {
-        std::vector<std::shared_ptr<libcomp::Object>> objs;
-
-        for(auto obj : mActiveZone->GetSpots())
-        {
-            objs.push_back(obj.second);
-        }
-
-        mSpotWindow->SetObjectList(objs);
-        ui->openSpots->setEnabled(true);
-    }
-
-    // Reset all links in the combo boxes.
-    mNPCWindow->ResetSpotList();
 }
 
 bool MainWindow::LoadCMessageData(std::shared_ptr<
@@ -298,24 +248,12 @@ void MainWindow::OpenEvents()
     mEventWindow->raise();
 }
 
-void MainWindow::OpenMap()
+void MainWindow::OpenZone()
 {
     if(mZoneWindow->ShowZone(mActiveZone))
     {
         mZoneWindow->raise();
     }
-}
-
-void MainWindow::OpenNPCs()
-{
-    mNPCWindow->show();
-    mNPCWindow->raise();
-}
-
-void MainWindow::OpenSpots()
-{
-    mSpotWindow->show();
-    mSpotWindow->raise();
 }
 
 void MainWindow::BrowseZone()
@@ -386,6 +324,5 @@ void MainWindow::BrowseZone()
     LOG_INFO(libcomp::String("Loaded: %1\n").Arg(
         path.toLocal8Bit().constData()));
 
-    // Reload all views now.
-    ReloadZoneData();
+    ui->zoneView->setEnabled(mActiveZone != nullptr);
 }

@@ -19,159 +19,158 @@
    </property>
    <layout class="QHBoxLayout" name="mainLayout">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_main">
-      <property name="spacing">
-       <number>6</number>
+     <widget class="QSplitter" name="splitter">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
       </property>
-      <item>
-       <widget class="QScrollArea" name="scrollArea">
-        <property name="enabled">
-         <bool>true</bool>
+      <widget class="QScrollArea" name="scrollArea">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="scrollAreaWidgetContents">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>69</width>
+          <height>609</height>
+         </rect>
         </property>
-        <property name="widgetResizable">
-         <bool>true</bool>
-        </property>
-        <widget class="QWidget" name="scrollAreaWidgetContents">
-         <property name="geometry">
-          <rect>
-           <x>0</x>
-           <y>0</y>
-           <width>572</width>
-           <height>587</height>
-          </rect>
-         </property>
-        </widget>
        </widget>
-      </item>
-      <item>
-       <widget class="QTabWidget" name="tabs">
-        <property name="enabled">
-         <bool>true</bool>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>400</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="currentIndex">
-         <number>0</number>
-        </property>
-        <widget class="QWidget" name="tab_NPC">
-         <attribute name="title">
-          <string>NPCs</string>
-         </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <widget class="QTableWidget" name="tableWidget_NPC"/>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="checkBox_NPC">
-            <property name="maximumSize">
-             <size>
-              <width>200</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Show</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-        <widget class="QWidget" name="tab_Object">
-         <attribute name="title">
-          <string>Objects</string>
-         </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
-          <item>
-           <widget class="QTableWidget" name="tableWidget_Object"/>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="checkBox_Object">
-            <property name="maximumSize">
-             <size>
-              <width>200</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Show</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-        <widget class="QWidget" name="tab_Spawn">
-         <attribute name="title">
-          <string>Spawns</string>
-         </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
-          <item>
-           <widget class="QTableWidget" name="tableWidget_Spawn">
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QTableWidget" name="tableWidget_SpawnLocation">
-            <property name="contextMenuPolicy">
-             <enum>Qt::CustomContextMenu</enum>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="layout_SpawnLocation">
-            <item>
-             <widget class="QCheckBox" name="checkBox_Spawn">
-              <property name="maximumSize">
-               <size>
-                <width>200</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Show</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QComboBox" name="comboBox_SpawnEdit"/>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <widget class="QTableWidget" name="tableWidget_SpawnGroup"/>
-          </item>
-         </layout>
-        </widget>
+      </widget>
+      <widget class="QTabWidget" name="tabs">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
+       <widget class="QWidget" name="tabNPC">
+        <attribute name="title">
+         <string>NPCs</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="tabNPCLayout">
+         <item>
+          <widget class="NPCListWindow" name="npcs" native="true"/>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="showNPCs">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Show</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
-      </item>
-     </layout>
+       <widget class="QWidget" name="tabObject">
+        <attribute name="title">
+         <string>Objects</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="tabObjectLayout">
+         <item>
+          <widget class="NPCListWindow" name="objects" native="true"/>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="showObjects">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Show</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tabSpawn">
+        <attribute name="title">
+         <string>Spawns</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="tabSpawnLayout">
+         <item>
+          <widget class="QTableWidget" name="tableWidget_Spawn">
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTableWidget" name="tableWidget_SpawnLocation">
+           <property name="contextMenuPolicy">
+            <enum>Qt::CustomContextMenu</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="layout_SpawnLocation">
+           <item>
+            <widget class="QCheckBox" name="showSpawns">
+             <property name="maximumSize">
+              <size>
+               <width>200</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Show</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QComboBox" name="comboBox_SpawnEdit"/>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QTableWidget" name="tableWidget_SpawnGroup"/>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tabSpots">
+        <attribute name="title">
+         <string>Spots</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="tabSpotLayout">
+         <item>
+          <widget class="SpotListWindow" name="spots" native="true"/>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </widget>
     </item>
    </layout>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
@@ -276,6 +275,20 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>NPCListWindow</class>
+   <extends>QWidget</extends>
+   <header>NPCListWindow.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SpotListWindow</class>
+   <extends>QWidget</extends>
+   <header>SpotListWindow.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

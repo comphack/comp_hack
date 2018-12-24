@@ -75,6 +75,7 @@ private:
     void BindNPCs();
     void BindObjects();
     void BindSpawns();
+    void BindSpots();
 
     QTableWidgetItem* GetTableWidget(std::string name,
         bool readOnly = true);

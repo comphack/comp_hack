@@ -57,6 +57,7 @@
 #include <SpawnGroup.h>
 #include <SpawnLocation.h>
 #include <SpawnLocationGroup.h>
+#include <ServerZoneSpot.h>
 
 // C++11 Standard Includes
 #include <cmath>
@@ -65,6 +66,10 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     : QMainWindow(p), mMainWindow(pMainWindow), mDrawTarget(0)
 {
     ui.setupUi(this);
+
+    ui.npcs->SetMainWindow(pMainWindow);
+    ui.objects->SetMainWindow(pMainWindow);
+    ui.spots->SetMainWindow(pMainWindow);
 
     connect(ui.zoom200, SIGNAL(triggered()),
         this, SLOT(Zoom200()));
@@ -76,11 +81,11 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
         this, SLOT(Zoom25()));
     connect(ui.actionRefresh, SIGNAL(triggered()),
         this, SLOT(Refresh()));
-    connect(ui.checkBox_NPC, SIGNAL(toggled(bool)),
+    connect(ui.showNPCs, SIGNAL(toggled(bool)),
         this, SLOT(ShowToggled(bool)));
-    connect(ui.checkBox_Object, SIGNAL(toggled(bool)),
+    connect(ui.showObjects, SIGNAL(toggled(bool)),
         this, SLOT(ShowToggled(bool)));
-    connect(ui.checkBox_Spawn, SIGNAL(toggled(bool)),
+    connect(ui.showSpawns, SIGNAL(toggled(bool)),
         this, SLOT(ShowToggled(bool)));
 
     mZoomScale = 20;
@@ -185,8 +190,8 @@ bool ZoneWindow::LoadMapFromZone()
         return false;
     }
 
-    setWindowTitle(libcomp::String("COMP_hack Map Manager - %1 (%2)")
-        .Arg(mZone->GetID()).Arg(mZone->GetDynamicMapID()).C());
+    setWindowTitle(libcomp::String("COMP_hack Cathedral of Content - Zone %1"
+        " (%2)").Arg(mZone->GetID()).Arg(mZone->GetDynamicMapID()).C());
 
     ui.comboBox_SpawnEdit->clear();
     ui.comboBox_SpawnEdit->addItem("All");
@@ -234,6 +239,7 @@ bool ZoneWindow::LoadMapFromZone()
     BindNPCs();
     BindObjects();
     BindSpawns();
+    BindSpots();
 
     DrawMap();
 
@@ -267,64 +273,24 @@ bool ZoneWindow::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
 
 void ZoneWindow::BindNPCs()
 {
-    ui.tableWidget_NPC->clear();
-    ui.tableWidget_NPC->setColumnCount(4);
-    ui.tableWidget_NPC->setHorizontalHeaderItem(0,
-        GetTableWidget("ID"));
-    ui.tableWidget_NPC->setHorizontalHeaderItem(1,
-        GetTableWidget("X"));
-    ui.tableWidget_NPC->setHorizontalHeaderItem(2, 
-        GetTableWidget("Y"));
-    ui.tableWidget_NPC->setHorizontalHeaderItem(3,
-        GetTableWidget("Rotation"));
-
-    ui.tableWidget_NPC->setRowCount((int)mZone->NPCsCount());
-    int i = 0;
+    std::vector<std::shared_ptr<libcomp::Object>> npcs;
     for(auto npc : mZone->GetNPCs())
     {
-        ui.tableWidget_NPC->setItem(i, 0, GetTableWidget(
-            libcomp::String("%1").Arg(npc->GetID()).C()));
-        ui.tableWidget_NPC->setItem(i, 1, GetTableWidget(
-            libcomp::String("%1").Arg(npc->GetX()).C()));
-        ui.tableWidget_NPC->setItem(i, 2, GetTableWidget(
-            libcomp::String("%1").Arg(npc->GetY()).C()));
-        ui.tableWidget_NPC->setItem(i, 3, GetTableWidget(
-            libcomp::String("%1").Arg(npc->GetRotation()).C()));
-        i++;
+        npcs.push_back(npc);
     }
 
-    ui.tableWidget_NPC->resizeColumnsToContents();
+    ui.npcs->SetObjectList(npcs);
 }
 
 void ZoneWindow::BindObjects()
 {
-    ui.tableWidget_Object->clear();
-    ui.tableWidget_Object->setColumnCount(4);
-    ui.tableWidget_Object->setHorizontalHeaderItem(0,
-        GetTableWidget("ID"));
-    ui.tableWidget_Object->setHorizontalHeaderItem(1,
-        GetTableWidget("X"));
-    ui.tableWidget_Object->setHorizontalHeaderItem(2,
-        GetTableWidget("Y"));
-    ui.tableWidget_Object->setHorizontalHeaderItem(3,
-        GetTableWidget("Rotation"));
-
-    ui.tableWidget_Object->setRowCount((int)mZone->ObjectsCount());
-    int i = 0;
+    std::vector<std::shared_ptr<libcomp::Object>> objs;
     for(auto obj : mZone->GetObjects())
     {
-        ui.tableWidget_Object->setItem(i, 0, GetTableWidget(
-            libcomp::String("%1").Arg(obj->GetID()).C()));
-        ui.tableWidget_Object->setItem(i, 1, GetTableWidget(
-            libcomp::String("%1").Arg(obj->GetX()).C()));
-        ui.tableWidget_Object->setItem(i, 2, GetTableWidget(
-            libcomp::String("%1").Arg(obj->GetY()).C()));
-        ui.tableWidget_Object->setItem(i, 3, GetTableWidget(
-            libcomp::String("%1").Arg(obj->GetRotation()).C()));
-        i++;
+        objs.push_back(obj);
     }
 
-    ui.tableWidget_Object->resizeColumnsToContents();
+    ui.objects->SetObjectList(objs);
 }
 
 void ZoneWindow::BindSpawns()
@@ -464,6 +430,17 @@ void ZoneWindow::BindSpawns()
     ui.tableWidget_SpawnLocation->resizeColumnsToContents();
 }
 
+void ZoneWindow::BindSpots()
+{
+    std::vector<std::shared_ptr<libcomp::Object>> spots;
+    for(auto& spotPair : mZone->GetSpots())
+    {
+        spots.push_back(spotPair.second);
+    }
+
+    ui.spots->SetObjectList(spots);
+}
+
 QTableWidgetItem* ZoneWindow::GetTableWidget(std::string name, bool readOnly)
 {
     auto item = new QTableWidgetItem(name.c_str());
@@ -600,7 +577,7 @@ void ZoneWindow::DrawMap()
         Scale(-mZone->GetStartingY())), 3, 3);
 
     // Draw NPCs
-    if(ui.checkBox_NPC->isChecked())
+    if(ui.showNPCs->isChecked())
     {
         painter.setPen(QPen(Qt::green));
         painter.setBrush(QBrush(Qt::green));
@@ -619,7 +596,7 @@ void ZoneWindow::DrawMap()
     }
 
     // Draw Objects
-    if(ui.checkBox_Object->isChecked())
+    if(ui.showObjects->isChecked())
     {
         painter.setPen(QPen(Qt::blue));
         painter.setBrush(QBrush(Qt::blue));
@@ -638,7 +615,7 @@ void ZoneWindow::DrawMap()
     }
 
     // Draw Spawn Locations
-    if(ui.checkBox_Spawn->isChecked())
+    if(ui.showSpawns->isChecked())
     {
         painter.setPen(QPen(Qt::red));
         painter.setBrush(QBrush(Qt::red));

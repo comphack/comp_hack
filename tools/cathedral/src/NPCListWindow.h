@@ -39,7 +39,7 @@ class NPCListWindow : public ObjectListWindow
     Q_OBJECT
 
 public:
-    explicit NPCListWindow(MainWindow *pMainWindow, QWidget *pParent = 0);
+    explicit NPCListWindow(QWidget *pParent = 0);
     virtual ~NPCListWindow();
 
     QString GetObjectID(const std::shared_ptr<

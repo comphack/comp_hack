@@ -40,20 +40,26 @@
 #include <ServerZoneSpot.h>
 #include <SpawnLocation.h>
 
-SpotListWindow::SpotListWindow(MainWindow *pMainWindow, QWidget *pParent) :
-    ObjectListWindow(pMainWindow, pParent)
+SpotListWindow::SpotListWindow(QWidget *pParent) :
+    ObjectListWindow(pParent)
 {
     QWidget *pWidget = new QWidget;
     prop = new Ui::SpotProperties;
     prop->setupUi(pWidget);
 
     ui->splitter->addWidget(pWidget);
-    prop->actionList->SetMainWindow(pMainWindow);
 }
 
 SpotListWindow::~SpotListWindow()
 {
     delete prop;
+}
+
+void SpotListWindow::SetMainWindow(MainWindow *pMainWindow)
+{
+    mMainWindow = pMainWindow;
+
+    prop->actionList->SetMainWindow(pMainWindow);
 }
 
 QString SpotListWindow::GetObjectID(const std::shared_ptr<

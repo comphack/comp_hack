@@ -49,8 +49,10 @@ class ObjectListWindow : public QWidget
     Q_OBJECT
 
 public:
-    explicit ObjectListWindow(MainWindow *pMainWindow, QWidget *pParent = 0);
+    explicit ObjectListWindow(QWidget *pParent = 0);
     virtual ~ObjectListWindow();
+
+    virtual void SetMainWindow(MainWindow *pMainWindow);
 
     virtual void SetObjectList(const std::vector<
         std::shared_ptr<libcomp::Object>>& objs);

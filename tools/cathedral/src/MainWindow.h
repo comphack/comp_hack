@@ -53,8 +53,6 @@ class MainWindow;
 } // namespace Ui
 
 class EventWindow;
-class NPCListWindow;
-class SpotListWindow;
 class ZoneWindow;
 
 class MainWindow : public QWidget
@@ -71,8 +69,6 @@ public:
     std::shared_ptr<libcomp::DefinitionManager> GetDefinitions() const;
 
     EventWindow* GetEvents() const;
-    NPCListWindow* GetNPCList() const;
-    SpotListWindow* GetSpotList() const;
 
     std::shared_ptr<objects::MiCEventMessageData> GetEventMessage(
         int32_t msgID) const;
@@ -81,13 +77,9 @@ public:
 
 protected slots:
     void OpenEvents();
-    void OpenMap();
-    void OpenNPCs();
-    void OpenSpots();
+    void OpenZone();
 
 protected:
-    void ReloadZoneData();
-
     bool LoadCMessageData(std::shared_ptr<libcomp::BinaryDataSet>& dataset,
         const libcomp::String& file);
 
@@ -96,8 +88,6 @@ private slots:
 
 protected:
     EventWindow *mEventWindow;
-    NPCListWindow *mNPCWindow;
-    SpotListWindow *mSpotWindow;
     ZoneWindow *mZoneWindow;
 
 private:

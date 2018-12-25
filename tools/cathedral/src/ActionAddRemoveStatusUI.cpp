@@ -46,8 +46,13 @@ ActionAddRemoveStatus::ActionAddRemoveStatus(ActionList *pList,
     QWidget *pWidget = new QWidget;
     prop = new Ui::ActionAddRemoveStatus;
     prop->setupUi(pWidget);
+
+    /// @todo: prop->statusStacks->BindSelector(pMainWindow, "CStatusData");
     prop->statusStacks->SetValueName(tr("Stacks:"));
     prop->statusStacks->SetMinMax(0, 255);
+
+    /// @todo: prop->statusTimes->BindSelector(pMainWindow, "CStatusData");
+    prop->statusTimes->SetValueName(tr("Time:"));
 
     ui->actionTitle->setText(tr("<b>Add/Remove Status</b>"));
     ui->layoutMain->addWidget(pWidget);
@@ -106,13 +111,13 @@ std::shared_ptr<objects::Action> ActionAddRemoveStatus::Save() const
     mAction->SetAllowNull(prop->allowNull->isChecked());
 
     mAction->ClearStatusStacks();
-    for(auto pair : prop->statusStacks->Save())
+    for(auto pair : prop->statusStacks->SaveUnsigned())
     {
         mAction->SetStatusStacks(pair.first, (int8_t)pair.second);
     }
 
     mAction->ClearStatusTimes();
-    for(auto pair : prop->statusTimes->Save())
+    for(auto pair : prop->statusTimes->SaveUnsigned())
     {
         mAction->SetStatusTimes(pair.first, (uint32_t)pair.second);
     }

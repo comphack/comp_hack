@@ -47,6 +47,8 @@ ActionPlayBGM::ActionPlayBGM(ActionList *pList,
     prop = new Ui::ActionPlayBGM;
     prop->setupUi(pWidget);
 
+    prop->music->Bind(pMainWindow, "CSoundData");
+
     ui->actionTitle->setText(tr("<b>Play BGM</b>"));
     ui->layoutMain->addWidget(pWidget);
 }
@@ -68,8 +70,7 @@ void ActionPlayBGM::Load(const std::shared_ptr<objects::Action>& act)
     LoadBaseProperties(mAction);
 
     prop->isStop->setChecked(mAction->GetIsStop());
-    prop->musicID->lineEdit()->setText(
-        QString::number(mAction->GetMusicID()));
+    prop->music->SetValue((uint32_t)mAction->GetMusicID());
     prop->fadeInDelay->setValue(mAction->GetFadeInDelay());
     prop->unknown->setValue(mAction->GetUnknown());
 }
@@ -84,7 +85,7 @@ std::shared_ptr<objects::Action> ActionPlayBGM::Save() const
     SaveBaseProperties(mAction);
 
     mAction->SetIsStop(prop->isStop->isChecked());
-    mAction->SetMusicID(prop->musicID->currentText().toInt());
+    mAction->SetMusicID((int32_t)prop->music->GetValue());
     mAction->SetFadeInDelay(prop->fadeInDelay->value());
     mAction->SetUnknown(prop->unknown->value());
 

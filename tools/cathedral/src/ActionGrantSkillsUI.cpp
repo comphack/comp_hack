@@ -114,7 +114,7 @@ std::shared_ptr<objects::Action> ActionGrantSkills::Save() const
     mAction->SetExpertiseSet(prop->expertiseSet->isChecked());
 
     mAction->ClearExpertisePoints();
-    for(auto pair : prop->expertisePoints->Save())
+    for(auto pair : prop->expertisePoints->SaveUnsigned())
     {
         mAction->SetExpertisePoints((uint8_t)pair.first, pair.second);
     }

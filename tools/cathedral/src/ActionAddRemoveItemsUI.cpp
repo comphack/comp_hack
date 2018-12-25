@@ -46,6 +46,8 @@ ActionAddRemoveItems::ActionAddRemoveItems(ActionList *pList,
     QWidget *pWidget = new QWidget;
     prop = new Ui::ActionAddRemoveItems;
     prop->setupUi(pWidget);
+
+    prop->items->BindSelector(pMainWindow, "CItemData");
     prop->items->SetValueName(tr("Qty:"));
 
     ui->actionTitle->setText(tr("<b>Add/Remove Items</b>"));
@@ -89,7 +91,7 @@ std::shared_ptr<objects::Action> ActionAddRemoveItems::Save() const
     mAction->SetNotify(prop->notify->isChecked());
     mAction->SetFromDropSet(prop->fromDropSet->isChecked());
 
-    auto items = prop->items->Save();
+    auto items = prop->items->SaveUnsigned();
     mAction->SetItems(items);
     mAction->SetMode((objects::ActionAddRemoveItems::Mode_t)
         prop->mode->currentIndex());

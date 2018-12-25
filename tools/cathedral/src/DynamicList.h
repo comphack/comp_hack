@@ -60,6 +60,7 @@ enum class DynamicItemType_t : uint8_t
     PRIMITIVE_UINT,
     PRIMITIVE_STRING,
     COMPLEX_EVENT_MESSAGE,
+    COMPLEX_OBJECT_SELECTOR,
     OBJ_EVENT_BASE,
     OBJ_EVENT_CHOICE,
     OBJ_EVENT_CONDITION,
@@ -75,7 +76,8 @@ public:
     explicit DynamicList(QWidget *pParent = 0);
     virtual ~DynamicList();
 
-    void Setup(DynamicItemType_t type, MainWindow *pMainWindow);
+    void Setup(DynamicItemType_t type, MainWindow *pMainWindow,
+        const libcomp::String& objectSelectorType = "");
 
     bool AddInteger(int32_t val);
     bool AddUnsignedInteger(uint32_t val);
@@ -103,6 +105,7 @@ protected:
     QWidget* GetStringWidget(const libcomp::String& val);
     template<class T> QWidget* GetObjectWidget(const std::shared_ptr<T>& obj);
     QWidget* GetEventMessageWidget(int32_t val);
+    QWidget* GetObjectSelectorWidget(uint32_t val);
 
     void RefreshPositions();
 
@@ -111,6 +114,8 @@ protected:
     MainWindow *mMainWindow;
 
     DynamicItemType_t mType;
+
+    libcomp::String mObjectSelectorType;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_DYNAMICLIST_H

@@ -33,19 +33,20 @@
 // objects Includes
 #include <Object.h>
 
-class ObjectListWindow;
+class ObjectList;
 
 class ObjectListModel : public QAbstractListModel
 {
     Q_OBJECT
 
 public:
-    explicit ObjectListModel(ObjectListWindow *pListWindow,
-        QObject *pParent = 0);
+    explicit ObjectListModel(ObjectList *pList, QObject *pParent = 0);
     virtual ~ObjectListModel();
 
     virtual void SetObjectList(const std::vector<
         std::shared_ptr<libcomp::Object>>& objs);
+
+    int GetIndex(const std::shared_ptr<libcomp::Object>& obj);
 
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index,
@@ -54,7 +55,7 @@ public:
     std::shared_ptr<libcomp::Object> GetObject(const QModelIndex& index) const;
 
 protected:
-    ObjectListWindow *mListWindow;
+    ObjectList *mList;
     std::vector<std::shared_ptr<libcomp::Object>> mObjects;
 };
 

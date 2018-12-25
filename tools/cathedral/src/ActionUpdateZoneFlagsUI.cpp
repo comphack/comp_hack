@@ -73,14 +73,7 @@ void ActionUpdateZoneFlags::Load(const std::shared_ptr<objects::Action>& act)
     prop->setMode->setCurrentIndex(to_underlying(
         mAction->GetSetMode()));
 
-    std::unordered_map<uint32_t, int32_t> states;
-
-    /// @todo: fix
-    for(auto state : mAction->GetFlagStates())
-    {
-        states[(uint32_t)state.first] = state.second;
-    }
-
+    auto states = mAction->GetFlagStates();
     prop->flagStates->Load(states);
 }
 
@@ -98,11 +91,8 @@ std::shared_ptr<objects::Action> ActionUpdateZoneFlags::Save() const
     mAction->SetSetMode((objects::ActionUpdateZoneFlags::SetMode_t)
         prop->setMode->currentIndex());
 
-    mAction->ClearFlagStates();
-    for(auto pair : prop->flagStates->Save())
-    {
-        mAction->SetFlagStates((int32_t)pair.first, pair.second);
-    }
+    auto states = prop->flagStates->SaveSigned();
+    mAction->SetFlagStates(states);
 
     return mAction;
 }

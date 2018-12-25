@@ -44,7 +44,8 @@
 #include <Log.h>
 #include <PacketCodes.h>
 
-EventCondition::EventCondition(QWidget *pParent) : QWidget(pParent)
+EventCondition::EventCondition(MainWindow *pMainWindow, QWidget *pParent)
+    : QWidget(pParent), mMainWindow(pMainWindow)
 {
     ui = new Ui::EventCondition;
     ui->setupUi(this);
@@ -205,7 +206,14 @@ void EventCondition::Load(const std::shared_ptr<objects::EventCondition>& e)
         return;
     }
 
-    ui->value1->setValue(e->GetValue1());
+    // Reset min/max while setting the values so they are not adjusted
+    ui->value1Number->setMinimum(-2147483647);
+    ui->value1Number->setMaximum(2147483647);
+    ui->value2->setMinimum(-2147483647);
+    ui->value2->setMaximum(2147483647);
+
+    ui->value1Number->setValue(e->GetValue1());
+    ui->value1Selector->SetValue(e->GetValue1());
     ui->value2->setValue(e->GetValue2());
 
     ui->compareMode->setCurrentIndex((int)e->GetCompareMode());
@@ -237,13 +245,7 @@ void EventCondition::Load(const std::shared_ptr<objects::EventCondition>& e)
             int idx = ui->typeFlags->findData((int)e->GetType());
             ui->typeFlags->setCurrentIndex(idx != -1 ? idx : 0);
 
-            /// @todo: fix this
-            std::unordered_map<uint32_t, int32_t> flags;
-            for(auto& pair : flagCondition->GetFlagStates())
-            {
-                flags[(uint32_t)pair.first] = pair.second;
-            }
-
+            auto flags = flagCondition->GetFlagStates();
             ui->flagStates->Load(flags);
 
             ui->radFlags->setChecked(true);
@@ -271,10 +273,9 @@ std::shared_ptr<objects::EventCondition> EventCondition::Save() const
     {
         // Flag condition
         auto fCondition = std::make_shared<objects::EventFlagCondition>();
-        for(auto pair : ui->flagStates->Save())
-        {
-            fCondition->SetFlagStates((int32_t)pair.first, pair.second);
-        }
+
+        auto states = ui->flagStates->SaveSigned();
+        fCondition->SetFlagStates(states);
 
         condition = fCondition;
     }
@@ -300,7 +301,16 @@ std::shared_ptr<objects::EventCondition> EventCondition::Save() const
     }
 
     condition->SetType(GetCurrentType());
-    condition->SetValue1(ui->value1->value());
+
+    if(ui->value1Selector->isVisible())
+    {
+        condition->SetValue1((int32_t)ui->value1Selector->GetValue());
+    }
+    else
+    {
+        condition->SetValue1(ui->value1Number->value());
+    }
+
     condition->SetValue2(ui->value2->value());
     condition->SetCompareMode((objects::EventCondition::CompareMode_t)ui
         ->compareMode->currentData().value<int>());
@@ -315,9 +325,9 @@ void EventCondition::RadioToggle()
     if(ui->typeFlags->isEnabled() &&
         !ui->radFlags->isChecked())
     {
-        ui->value1->setMinimum(0);
-        ui->value1->setMaximum(0);
-        ui->value1->setValue(0);
+        ui->value1Number->setMinimum(0);
+        ui->value1Number->setMaximum(0);
+        ui->value1Number->setValue(0);
 
         ui->value2->setMinimum(0);
         ui->value2->setMaximum(0);
@@ -425,6 +435,7 @@ void EventCondition::RefreshTypeContext()
     ui->lblValue2->setText("Value 2:");
 
     libcomp::String defaultCompareTxt;
+    libcomp::String selectorObjectType;
     std::array<int, 2> minValues = { { -2147483647, -2147483647 } };
     std::array<int, 2> maxValues = { { 2147483647, 2147483647 } };
 
@@ -436,12 +447,13 @@ void EventCondition::RefreshTypeContext()
         defaultCompareTxt = "GTE";
         minValues[0] = minValues[1] = 0;
         maxValues[0] = 4;
-        cmpNumeric = false;
+        cmpBetween = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::CLAN_HOME:
         ui->lblValue1->setText("Zone:");
         value2Ignored = true;
         defaultCompareTxt = "Equal";
+        selectorObjectType = "ZoneData";
         minValues[0] = 0;
         cmpNumeric = cmpBetween = cmpExists = false;
         break;
@@ -449,6 +461,7 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue1->setText("Demon Type:");
         value2Ignored = true;
         defaultCompareTxt = "Exists";
+        selectorObjectType = "DevilData";
         minValues[0] = 0;
         cmpNumeric = cmpBetween = cmpEqual = false;
         break;
@@ -474,6 +487,7 @@ void EventCondition::RefreshTypeContext()
         {
             ui->lblValue1->setText("Demon Type:");
             ui->lblValue2->setText("Base Demon?:");
+            selectorObjectType = "DevilData";
             minValues[0] = minValues[1] = 0;
             maxValues[1] = 1;
         }
@@ -512,6 +526,7 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue1->setText("Item Type:");
         value2Ignored = true;
         defaultCompareTxt = "Equal";
+        selectorObjectType = "CItemData";
         minValues[0] = 0;
         cmpNumeric = cmpBetween = cmpExists = false;
         break;
@@ -528,7 +543,7 @@ void EventCondition::RefreshTypeContext()
         defaultCompareTxt = "GTE";
         minValues[0] = minValues[1] = 0;
         maxValues[0] = 58;
-        cmpNumeric = false;
+        cmpBetween = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::EXPERTISE_ACTIVE:
         ui->lblValue1->setText("Expertise Index:");
@@ -545,7 +560,7 @@ void EventCondition::RefreshTypeContext()
         defaultCompareTxt = "Equal";
         minValues[0] = minValues[1] = 0;
         maxValues[0] = 58;
-        cmpNumeric = false;
+        cmpBetween = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::FACTION_GROUP:
         ui->lblValue1->setText("(Min) Value:");
@@ -589,8 +604,9 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue1->setText("Item Type:");
         ui->lblValue2->setText("Amount:");
         defaultCompareTxt = "GTE";
+        selectorObjectType = "CItemData";
         minValues[0] = minValues[1] = 0;
-        cmpNumeric = false;
+        cmpBetween = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::LEVEL:
     case objects::EventCondition::Type_t::PARTNER_LEVEL:
@@ -613,9 +629,9 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue1->setText("L/N/C (0/2/4):");
         value2Ignored = true;
         defaultCompareTxt = "Equal";
-        cmpNumeric = cmpBetween = cmpExists = false;
         minValues[0] = 0;
         maxValues[0] = 5;
+        cmpNumeric = cmpBetween = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::MAP:
         ui->lblValue1->setText("Map ID:");
@@ -629,8 +645,9 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue1->setText("Material Type:");
         ui->lblValue2->setText("Amount:");
         defaultCompareTxt = "GTE";
+        selectorObjectType = "CItemData";
         minValues[0] = minValues[1] = 0;
-        cmpNumeric = false;
+        cmpBetween = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::MOON_PHASE:
         if(objects::EventCondition::CompareMode_t::BETWEEN ==
@@ -666,7 +683,7 @@ void EventCondition::RefreshTypeContext()
         defaultCompareTxt = "Equal";
         minValues[1] = 0;
         maxValues[1] = 255;
-        cmpNumeric = false;
+        cmpBetween = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::PARTNER_ALIVE:
     case objects::EventCondition::Type_t::PARTNER_LOCKED:
@@ -697,7 +714,7 @@ void EventCondition::RefreshTypeContext()
         defaultCompareTxt = "GTE";
         minValues[0] = minValues[1] = 0;
         maxValues[0] = 125;
-        cmpNumeric = false;
+        cmpBetween = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::PARTY_SIZE:
         ui->lblValue1->setText("(Min) Size:");
@@ -723,50 +740,57 @@ void EventCondition::RefreshTypeContext()
         cmpNumeric = cmpBetween = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::QUEST_ACTIVE:
-        ui->lblValue1->setText("Quest ID:");
+        ui->lblValue1->setText("Quest:");
         ui->lblValue2->setText("Active?:");
         defaultCompareTxt = "Equal";
+        selectorObjectType = "CQuestData";
         minValues[0] = minValues[1] = 0;
         maxValues[1] = 1;
         cmpNumeric = cmpBetween = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::QUEST_AVAILABLE:
-        ui->lblValue1->setText("Quest ID:");
+        ui->lblValue1->setText("Quest:");
         value2Ignored = true;
+        selectorObjectType = "CQuestData";
         minValues[0] = 0;
         cmpNumeric = cmpBetween = cmpEqual = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::QUEST_COMPLETE:
-        ui->lblValue1->setText("Quest ID:");
+        ui->lblValue1->setText("Quest:");
         ui->lblValue2->setText("Completed?:");
         defaultCompareTxt = "Equal";
+        selectorObjectType = "CQuestData";
         minValues[0] = minValues[1] = 0;
         maxValues[1] = 1;
         cmpNumeric = cmpBetween = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::QUEST_FLAGS:
-        ui->lblValue1->setText("Quest ID:");
+        ui->lblValue1->setText("Quest:");
         value2Ignored = true;
+        selectorObjectType = "CQuestData";
         minValues[0] = 0;
         cmpBetween = false;
         break;
     case objects::EventCondition::Type_t::QUEST_PHASE:
-        ui->lblValue1->setText("Quest ID:");
+        ui->lblValue1->setText("Quest:");
         ui->lblValue2->setText("Phase:");
         defaultCompareTxt = "Equal";
+        selectorObjectType = "CQuestData";
         minValues[0] = 0;
         minValues[1] = -2;
         break;
     case objects::EventCondition::Type_t::QUEST_PHASE_REQUIREMENTS:
-        ui->lblValue1->setText("Quest ID:");
+        ui->lblValue1->setText("Quest:");
         value2Ignored = true;
+        selectorObjectType = "CQuestData";
         minValues[0] = 0;
         cmpNumeric = cmpBetween = cmpEqual = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::QUEST_SEQUENCE:
-        ui->lblValue1->setText("Quest ID:");
+        ui->lblValue1->setText("Quest:");
         value2Ignored = true;
         defaultCompareTxt = "Equal";
+        selectorObjectType = "CQuestData";
         minValues[0] = 0;
         cmpNumeric = cmpBetween = cmpExists = false;
         break;
@@ -793,6 +817,7 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue1->setText("Status Effect:");
         ui->lblValue2->setText("Parter Demon?:");
         defaultCompareTxt = "Exists";
+        //selectorObjectType = "CStatusData";
         minValues[0] = minValues[1] = 0;
         maxValues[1] = 1;
         cmpNumeric = cmpBetween = cmpEqual = false;
@@ -801,6 +826,7 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue1->setText("Demon Type:");
         ui->lblValue2->setText("Base Demon?:");
         defaultCompareTxt = "Equal";
+        selectorObjectType = "DevilData";
         minValues[0] = minValues[1] = 0;
         maxValues[1] = 1;
         cmpNumeric = cmpBetween = false;
@@ -928,15 +954,15 @@ void EventCondition::RefreshTypeContext()
     if(value1Ignored)
     {
         int lockValue = ui->radFlags->isChecked() ? -1 : 0;
-        ui->value1->setValue(lockValue);
+        ui->value1Number->setValue(lockValue);
         ui->lblValue1->setText("Not Used:");
         minValues[0] = lockValue;
         maxValues[0] = lockValue;
-        ui->value1->setEnabled(false);
+        ui->value1Number->setEnabled(false);
     }
     else
     {
-        ui->value1->setEnabled(true);
+        ui->value1Number->setEnabled(true);
     }
 
     if(value2Ignored)
@@ -953,12 +979,30 @@ void EventCondition::RefreshTypeContext()
         ui->value2->setEnabled(true);
     }
 
-    ui->value1->setMinimum(minValues[0]);
+    ui->value1Number->setMinimum(minValues[0]);
     ui->value2->setMinimum(minValues[1]);
-    ui->value1->setMaximum(maxValues[0]);
+    ui->value1Number->setMaximum(maxValues[0]);
     ui->value2->setMaximum(maxValues[1]);
 
     // Min/max automatically fix existing values
+
+    // Swap value1 control if needed
+    if(!selectorObjectType.IsEmpty())
+    {
+        ui->value1Number->hide();
+        ui->value1Selector->show();
+
+        if(ui->value1Selector->Bind(mMainWindow, selectorObjectType))
+        {
+            // If the binding changed, reset the value
+            ui->value1Selector->SetValue(0);
+        }
+    }
+    else
+    {
+        ui->value1Number->show();
+        ui->value1Selector->hide();
+    }
 
     // Turn on control signals
     ui->radNormal->blockSignals(false);

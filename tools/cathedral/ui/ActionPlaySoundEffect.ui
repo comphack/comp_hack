@@ -29,22 +29,9 @@
       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
      </property>
      <item row="0" column="0">
-      <widget class="QLabel" name="lblSoundID">
+      <widget class="QLabel" name="lblSound">
        <property name="text">
-        <string>Sound ID:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="soundID">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="editable">
-        <bool>true</bool>
+        <string>Sound:</string>
        </property>
       </widget>
      </item>
@@ -65,10 +52,21 @@
        </property>
       </widget>
      </item>
+     <item row="0" column="1">
+      <widget class="ObjectSelector" name="sound" native="true"/>
+     </item>
     </layout>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ObjectSelector</class>
+   <extends>QWidget</extends>
+   <header>ObjectSelector.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -46,7 +46,9 @@ ActionUpdateQuest::ActionUpdateQuest(ActionList *pList,
     QWidget *pWidget = new QWidget;
     prop = new Ui::ActionUpdateQuest;
     prop->setupUi(pWidget);
+
     prop->flagStates->SetValueName(tr("State:"));
+    prop->quest->Bind(pMainWindow, "CQuestData");
 
     ui->actionTitle->setText(tr("<b>Update Quest</b>"));
     ui->layoutMain->addWidget(pWidget);
@@ -68,21 +70,13 @@ void ActionUpdateQuest::Load(const std::shared_ptr<objects::Action>& act)
 
     LoadBaseProperties(mAction);
 
-    prop->questID->lineEdit()->setText(
-        QString::number(mAction->GetQuestID()));
+    prop->quest->SetValue((uint32_t)mAction->GetQuestID());
     prop->phase->setValue(mAction->GetPhase());
     prop->forceUpdate->setChecked(mAction->GetForceUpdate());
     prop->flagSetMode->setCurrentIndex(to_underlying(
         mAction->GetFlagSetMode()));
 
-    std::unordered_map<uint32_t, int32_t> states;
-
-    /// @todo: fix
-    for(auto state : mAction->GetFlagStates())
-    {
-        states[(uint32_t)state.first] = state.second;
-    }
-
+    auto states = mAction->GetFlagStates();
     prop->flagStates->Load(states);
 }
 
@@ -95,17 +89,14 @@ std::shared_ptr<objects::Action> ActionUpdateQuest::Save() const
 
     SaveBaseProperties(mAction);
 
-    mAction->SetQuestID((int16_t)prop->questID->currentText().toInt());
+    mAction->SetQuestID((int16_t)prop->quest->GetValue());
     mAction->SetPhase((int8_t)prop->phase->value());
     mAction->SetForceUpdate(prop->forceUpdate->isChecked());
     mAction->SetFlagSetMode((objects::ActionUpdateQuest::FlagSetMode_t)
         prop->flagSetMode->currentIndex());
 
-    mAction->ClearFlagStates();
-    for(auto pair : prop->flagStates->Save())
-    {
-        mAction->SetFlagStates((int32_t)pair.first, pair.second);
-    }
+    auto states = prop->flagStates->SaveSigned();
+    mAction->SetFlagStates(states);
 
     return mAction;
 }

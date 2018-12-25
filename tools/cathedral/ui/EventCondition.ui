@@ -35,16 +35,6 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QSpinBox" name="value1">
-       <property name="minimum">
-        <number>-2147483647</number>
-       </property>
-       <property name="maximum">
-        <number>2147483647</number>
-       </property>
-      </widget>
-     </item>
      <item row="1" column="0">
       <widget class="QLabel" name="lblValue2">
        <property name="text">
@@ -59,6 +49,30 @@
        </property>
        <property name="maximum">
         <number>2147483647</number>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="lblCompareMode">
+       <property name="text">
+        <string>Compare Mode:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QComboBox" name="compareMode"/>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="lblNegate">
+       <property name="text">
+        <string>Negate:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QCheckBox" name="negate">
+       <property name="text">
+        <string/>
        </property>
       </widget>
      </item>
@@ -102,29 +116,22 @@
      <item row="6" column="1">
       <widget class="ServerScript" name="script" native="true"/>
      </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="lblCompareMode">
-       <property name="text">
-        <string>Compare Mode:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QComboBox" name="compareMode"/>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="lblNegate">
-       <property name="text">
-        <string>Negate:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QCheckBox" name="negate">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
+     <item row="0" column="1">
+      <layout class="QHBoxLayout" name="layoutValue1">
+       <item>
+        <widget class="QSpinBox" name="value1Number">
+         <property name="minimum">
+          <number>-2147483647</number>
+         </property>
+         <property name="maximum">
+          <number>2147483647</number>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="ObjectSelector" name="value1Selector" native="true"/>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
@@ -141,6 +148,12 @@
    <class>ServerScript</class>
    <extends>QWidget</extends>
    <header>ServerScript.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ObjectSelector</class>
+   <extends>QWidget</extends>
+   <header>ObjectSelector.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

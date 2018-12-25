@@ -25,10 +25,7 @@
 #ifndef TOOLS_CATHEDRAL_SRC_EVENTMESSAGEREF_H
 #define TOOLS_CATHEDRAL_SRC_EVENTMESSAGEREF_H
 
-// Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
-#include <PopIgnore.h>
+#include <ObjectSelectorBase.h>
 
 namespace Ui
 {
@@ -37,9 +34,7 @@ class EventMessageRef;
 
 } // namespace Ui
 
-class MainWindow;
-
-class EventMessageRef : public QWidget
+class EventMessageRef : public ObjectSelectorBase
 {
     Q_OBJECT
 
@@ -49,16 +44,14 @@ public:
 
     void SetMainWindow(MainWindow *pMainWindow);
 
-    void SetValue(int32_t value);
-    int32_t GetValue() const;
+    void SetValue(uint32_t value) override;
+    uint32_t GetValue() const override;
 
 private slots:
     void MessageIDChanged();
 
 protected:
     Ui::EventMessageRef *ui;
-
-    MainWindow *mMainWindow;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_EVENTMESSAGEREF_H

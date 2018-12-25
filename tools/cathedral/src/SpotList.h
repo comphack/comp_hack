@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/NPCListWindow.h
+ * @file tools/cathedral/src/SpotList.h
  * @ingroup cathedral
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Definition for a window that holds a list of NPCs.
+ * @brief Definition for a control that holds a list of zone spots.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,39 +22,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_CATHEDRAL_SRC_NPCLISTWINDOW_H
-#define TOOLS_CATHEDRAL_SRC_NPCLISTWINDOW_H
+#ifndef TOOLS_CATHEDRAL_SRC_SPOTLIST_H
+#define TOOLS_CATHEDRAL_SRC_SPOTLIST_H
 
-#include "ObjectListWindow.h"
+#include "ObjectList.h"
 
 namespace Ui
 {
 
-class NPCProperties;
+class SpotProperties;
 
 } // namespace Ui
 
-class NPCListWindow : public ObjectListWindow
+class SpotList : public ObjectList
 {
     Q_OBJECT
 
 public:
-    explicit NPCListWindow(QWidget *pParent = 0);
-    virtual ~NPCListWindow();
+    explicit SpotList(QWidget *pParent = 0);
+    virtual ~SpotList();
+
+    virtual void SetMainWindow(MainWindow *pMainWindow);
 
     QString GetObjectID(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
-    QString GetObjectName(const std::shared_ptr<
         libcomp::Object>& obj) const override;
 
     void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
     void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
 
-public slots:
-    void ResetSpotList();
-
 protected:
-    Ui::NPCProperties *prop;
+    Ui::SpotProperties *prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_NPCLISTWINDOW_H
+#endif // TOOLS_CATHEDRAL_SRC_SPOTLIST_H

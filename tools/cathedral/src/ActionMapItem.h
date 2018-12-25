@@ -52,12 +52,14 @@ class ActionMapItem : public QWidget
 
 public:
     explicit ActionMapItem(const QString& valueName, ActionMap *pMap,
-        uint32_t key, int32_t value, QWidget *pParent = 0);
-    explicit ActionMapItem(const QString& valueName, ActionMap *pMap,
         QWidget *pParent = 0);
     virtual ~ActionMapItem();
 
-    uint32_t GetKey() const;
+    void Setup(int32_t key, int32_t value,
+        const libcomp::String& objectSelectorType = "",
+        MainWindow* pMainWindow = 0);
+
+    int32_t GetKey() const;
     int32_t GetValue() const;
 
     void SetMinMax(int32_t min, int32_t max);

@@ -39,22 +39,9 @@
       <widget class="QCheckBox" name="isStop"/>
      </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="lblMusicID">
+      <widget class="QLabel" name="lblMusic">
        <property name="text">
-        <string>Music ID:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QComboBox" name="musicID">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="editable">
-        <bool>true</bool>
+        <string>Music:</string>
        </property>
       </widget>
      </item>
@@ -92,10 +79,21 @@
        </property>
       </widget>
      </item>
+     <item row="1" column="1">
+      <widget class="ObjectSelector" name="music" native="true"/>
+     </item>
     </layout>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ObjectSelector</class>
+   <extends>QWidget</extends>
+   <header>ObjectSelector.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

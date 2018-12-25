@@ -46,8 +46,12 @@ ActionUpdateCOMP::ActionUpdateCOMP(ActionList *pList,
     QWidget *pWidget = new QWidget;
     prop = new Ui::ActionUpdateCOMP;
     prop->setupUi(pWidget);
+
+    prop->addDemons->BindSelector(pMainWindow, "DevilData");
     prop->addDemons->SetValueName(tr("Count:"));
     prop->addDemons->SetMinMax(0, 255);
+
+    prop->removeDemons->BindSelector(pMainWindow, "DevilData");
     prop->removeDemons->SetValueName(tr("Count:"));
     prop->removeDemons->SetMinMax(0, 255);
 
@@ -103,13 +107,13 @@ std::shared_ptr<objects::Action> ActionUpdateCOMP::Save() const
     mAction->SetUnsummon(prop->unsummon->isChecked());
 
     mAction->ClearAddDemons();
-    for(auto pair : prop->addDemons->Save())
+    for(auto pair : prop->addDemons->SaveUnsigned())
     {
         mAction->SetAddDemons(pair.first, (uint8_t)pair.second);
     }
 
     mAction->ClearRemoveDemons();
-    for(auto pair : prop->removeDemons->Save())
+    for(auto pair : prop->removeDemons->SaveUnsigned())
     {
         mAction->SetRemoveDemons(pair.first, (uint8_t)pair.second);
     }

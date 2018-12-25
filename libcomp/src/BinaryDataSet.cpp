@@ -42,12 +42,29 @@ BinaryDataSet::BinaryDataSet(std::function<std::shared_ptr<
 {
 }
 
-bool BinaryDataSet::Load(std::istream& file)
+BinaryDataSet::~BinaryDataSet()
 {
-    mObjects = libcomp::Object::LoadBinaryData(file,
+}
+
+bool BinaryDataSet::Load(std::istream& file, bool loadMore)
+{
+    auto objs = libcomp::Object::LoadBinaryData(file,
         mObjectAllocator);
 
-    for(auto obj : mObjects)
+    if(loadMore)
+    {
+        for(auto obj : objs)
+        {
+            mObjects.push_back(obj);
+        }
+    }
+    else
+    {
+        mObjects = objs;
+        mObjectMap.clear();
+    }
+
+    for(auto obj : objs)
     {
         mObjectMap[mObjectMapper(obj)] = obj;
     }
@@ -60,7 +77,8 @@ bool BinaryDataSet::Save(std::ostream& file) const
     return libcomp::Object::SaveBinaryData(file, mObjects);
 }
 
-bool BinaryDataSet::LoadXml(tinyxml2::XMLDocument& doc)
+bool BinaryDataSet::LoadXml(tinyxml2::XMLDocument& doc,
+    bool loadMore)
 {
     std::list<std::shared_ptr<libcomp::Object>> objs;
 
@@ -86,9 +104,19 @@ bool BinaryDataSet::LoadXml(tinyxml2::XMLDocument& doc)
 
         objElement = objElement->NextSiblingElement("object");
     }
-
-    mObjects = objs;
-    mObjectMap.clear();
+    
+    if(loadMore)
+    {
+        for(auto obj : objs)
+        {
+            mObjects.push_back(obj);
+        }
+    }
+    else
+    {
+        mObjects = objs;
+        mObjectMap.clear();
+    }
 
     for(auto obj : mObjects)
     {

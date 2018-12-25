@@ -49,6 +49,8 @@ ActionDelay::ActionDelay(ActionList *pList,
 
     ui->actionTitle->setText(tr("<b>Delay</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    prop->actions->SetMainWindow(pMainWindow);
 }
 
 ActionDelay::~ActionDelay()

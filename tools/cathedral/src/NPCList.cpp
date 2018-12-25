@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/NPCListWindow.cpp
+ * @file tools/cathedral/src/NPCList.cpp
  * @ingroup cathedral
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Implementation for a window that holds a list of NPCs.
+ * @brief Implementation for a control that holds a list of NPCs.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,16 +22,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "NPCListWindow.h"
+#include "NPCList.h"
 
 // Cathedral Includes
 #include "MainWindow.h"
-#include "SpotListWindow.h"
+#include "SpotList.h"
 
 // Qt Includes
 #include <PushIgnore.h>
 #include "ui_NPCProperties.h"
-#include "ui_ObjectListWindow.h"
+#include "ui_ObjectList.h"
 #include <PopIgnore.h>
 
 // libcomp Includes
@@ -43,10 +43,10 @@
 #include <MiONPCData.h>
 
 // objects Includes
+#include <ServerNPC.h>
 #include <ServerObject.h>
 
-NPCListWindow::NPCListWindow(QWidget *pParent) :
-    ObjectListWindow(pParent)
+NPCList::NPCList(QWidget *pParent) : ObjectList(pParent)
 {
     QWidget *pWidget = new QWidget;
     prop = new Ui::NPCProperties;
@@ -57,12 +57,12 @@ NPCListWindow::NPCListWindow(QWidget *pParent) :
     ResetSpotList();
 }
 
-NPCListWindow::~NPCListWindow()
+NPCList::~NPCList()
 {
     delete prop;
 }
 
-QString NPCListWindow::GetObjectID(const std::shared_ptr<
+QString NPCList::GetObjectID(const std::shared_ptr<
     libcomp::Object>& obj) const
 {
     auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
@@ -75,35 +75,41 @@ QString NPCListWindow::GetObjectID(const std::shared_ptr<
     return QString::number(sObj->GetID());
 }
 
-QString NPCListWindow::GetObjectName(const std::shared_ptr<
+QString NPCList::GetObjectName(const std::shared_ptr<
     libcomp::Object>& obj) const
 {
     auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
-
     if(!sObj)
     {
         return {};
     }
 
-    auto definitions = mMainWindow->GetDefinitions();
-    auto id = sObj->GetID();
-    auto hNPC = definitions->GetHNPCData(id);
-    auto oNPC = definitions->GetONPCData(id);
-
-    if(hNPC)
+    auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(sObj);
+    if(npc)
     {
-        return qs(hNPC->GetBasic()->GetName());
+        auto dataset = mMainWindow->GetBinaryDataSet("hNPCData");
+        auto hNPC = std::dynamic_pointer_cast<objects::MiHNPCData>(
+            dataset->GetObjectByID(sObj->GetID()));
+        if(hNPC)
+        {
+            return qs(hNPC->GetBasic()->GetName());
+        }
     }
-
-    if(oNPC)
+    else
     {
-        return qs(oNPC->GetName());
+        auto dataset = mMainWindow->GetBinaryDataSet("oNPCData");
+        auto oNPC = std::dynamic_pointer_cast<objects::MiONPCData>(
+            dataset->GetObjectByID(sObj->GetID()));
+        if(oNPC)
+        {
+            return qs(oNPC->GetName());
+        }
     }
 
     return {};
 }
 
-void NPCListWindow::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
+void NPCList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
     auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
 
@@ -118,12 +124,12 @@ void NPCListWindow::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
     prop->rot->setValue(sObj->GetRotation());
 }
 
-void NPCListWindow::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
+void NPCList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
     (void)obj;
 }
 
-void NPCListWindow::ResetSpotList()
+void NPCList::ResetSpotList()
 {
     prop->spot->clear();
     prop->spot->addItem(QString("0 (None)"), QVariant(0));

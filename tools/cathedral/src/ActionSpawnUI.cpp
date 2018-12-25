@@ -111,7 +111,7 @@ std::shared_ptr<objects::Action> ActionSpawn::Save() const
     mAction->SetSpotID((uint32_t)prop->spotID->currentText().toInt());
 
     mAction->ClearSpawnGroupIDs();
-    for(auto pair : prop->spawnGroupIDs->Save())
+    for(auto pair : prop->spawnGroupIDs->SaveUnsigned())
     {
         mAction->SetSpawnGroupIDs(pair.first, (uint32_t)pair.second);
     }

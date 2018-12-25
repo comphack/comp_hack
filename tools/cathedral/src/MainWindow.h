@@ -53,6 +53,7 @@ class MainWindow;
 } // namespace Ui
 
 class EventWindow;
+class ObjectSelectorWindow;
 class ZoneWindow;
 
 class MainWindow : public QWidget
@@ -73,6 +74,12 @@ public:
     std::shared_ptr<objects::MiCEventMessageData> GetEventMessage(
         int32_t msgID) const;
 
+    std::shared_ptr<libcomp::BinaryDataSet> GetBinaryDataSet(
+        const libcomp::String& objType) const;
+
+    ObjectSelectorWindow* GetObjectSelector(
+        const libcomp::String& objType) const;
+
     void ResetEventCount();
 
 protected slots:
@@ -80,6 +87,10 @@ protected slots:
     void OpenZone();
 
 protected:
+    bool LoadBinaryData(const libcomp::String& binaryFile,
+        const libcomp::String& objName, bool decrypt, bool addSelector = false,
+        bool selectorAllowBlanks = false);
+
     bool LoadCMessageData(std::shared_ptr<libcomp::BinaryDataSet>& dataset,
         const libcomp::String& file);
 
@@ -95,9 +106,12 @@ private:
 
     std::shared_ptr<libcomp::DataStore> mDatastore;
     std::shared_ptr<libcomp::DefinitionManager> mDefinitions;
+    
+    std::unordered_map<libcomp::String,
+        std::shared_ptr<libcomp::BinaryDataSet>> mBinaryDataSets;
 
-    std::shared_ptr<libcomp::BinaryDataSet> mCEventMessageData;
-    std::shared_ptr<libcomp::BinaryDataSet> mCEventMessageData2;
+    std::unordered_map<libcomp::String,
+        ObjectSelectorWindow*> mObjectSelectors;
 
     QString mActiveZonePath;
     std::shared_ptr<objects::ServerZone> mActiveZone;

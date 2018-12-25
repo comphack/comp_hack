@@ -1,10 +1,11 @@
 /**
- * @file tools/cathedral/src/ItemDropUI.h
+ * @file tools/cathedral/src/ObjectSelector.h
  * @ingroup cathedral
  *
  * @author HACKfrost
  *
- * @brief Definition for a configured ItemDrop.
+ * @brief Definition for a value bound to an object with a selectable
+ *  text representation.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,47 +23,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H
-#define TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H
+#ifndef TOOLS_CATHEDRAL_SRC_OBJECTSELECTOR_H
+#define TOOLS_CATHEDRAL_SRC_OBJECTSELECTOR_H
 
-// Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
-#include <PopIgnore.h>
-
-// Standard C++11 Includes
-#include <memory>
-
-namespace objects
-{
-
-class ItemDrop;
-
-} // namespace objects
+#include <ObjectSelectorBase.h>
 
 namespace Ui
 {
 
-class ItemDrop;
+class ObjectSelector;
 
 } // namespace Ui
 
-class MainWindow;
-
-class ItemDrop : public QWidget
+class ObjectSelector : public ObjectSelectorBase
 {
     Q_OBJECT
 
 public:
-    explicit ItemDrop(MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ItemDrop();
+    explicit ObjectSelector(QWidget *pParent = 0);
+    virtual ~ObjectSelector();
 
-    void Load(const std::shared_ptr<objects::ItemDrop>& drop);
-    std::shared_ptr<objects::ItemDrop> Save() const;
+    bool Bind(MainWindow *pMainWindow,
+        const libcomp::String& objType) override;
+
+    void SetValue(uint32_t value) override;
+    uint32_t GetValue() const override;
+
+private slots:
+    void ValueChanged();
 
 protected:
-    Ui::ItemDrop *prop;
+    Ui::ObjectSelector *ui;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H
+#endif // TOOLS_CATHEDRAL_SRC_OBJECTSELECTOR_H

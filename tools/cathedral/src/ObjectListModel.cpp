@@ -25,7 +25,7 @@
 #include "ObjectListModel.h"
 
 // Cathedral Includes
-#include "ObjectListWindow.h"
+#include "ObjectList.h"
 
 // Qt Includes
 #include <PushIgnore.h>
@@ -34,8 +34,8 @@
 // libcomp Includes
 #include <Log.h>
 
-ObjectListModel::ObjectListModel(ObjectListWindow *pListWindow,
-    QObject *pParent) : QAbstractListModel(pParent), mListWindow(pListWindow)
+ObjectListModel::ObjectListModel(ObjectList *pList,
+    QObject *pParent) : QAbstractListModel(pParent), mList(pList)
 {
 }
 
@@ -49,6 +49,19 @@ void ObjectListModel::SetObjectList(const std::vector<
     beginResetModel();
     mObjects = objs;
     endResetModel();
+}
+
+int ObjectListModel::GetIndex(const std::shared_ptr<libcomp::Object>& obj)
+{
+    for(int idx = 0; idx < (int)mObjects.size(); idx++)
+    {
+        if (mObjects[idx] == obj)
+        {
+            return idx;
+        }
+    }
+
+    return -1;
 }
 
 std::shared_ptr<libcomp::Object> ObjectListModel::GetObject(
@@ -84,16 +97,16 @@ QVariant ObjectListModel::data(const QModelIndex& index, int role) const
         auto obj = mObjects[(std::vector<std::shared_ptr<
             libcomp::Object>>::size_type)row];
 
-        QString id = mListWindow->GetObjectID(obj);
-        QString name = mListWindow->GetObjectName(obj);
+        QString id = mList->GetObjectID(obj);
+        QString name = mList->GetObjectName(obj);
 
         if(name.isEmpty())
         {
-            return id;
+            return QString("[%1]").arg(id);
         }
         else
         {
-            return QString("%1 (%2)").arg(id).arg(name);
+            return QString("[%1] %2").arg(id).arg(name);
         }
     }
 

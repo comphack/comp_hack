@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/ObjectListWindow.h
+ * @file tools/cathedral/src/ObjectList.h
  * @ingroup cathedral
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Implementation for a window that holds a list of objgen objects.
+ * @brief Implementation for a list that holds objgen objects.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,14 +22,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ObjectListWindow.h"
+#include "ObjectList.h"
 
 // Cathedral Includes
 #include "ObjectListModel.h"
 
 // Qt Includes
 #include <PushIgnore.h>
-#include "ui_ObjectListWindow.h"
+#include "ui_ObjectList.h"
 
 #include <QSortFilterProxyModel>
 #include <PopIgnore.h>
@@ -37,7 +37,7 @@
 // libcomp Includes
 #include <Log.h>
 
-ObjectListWindow::ObjectListWindow(QWidget *pParent) :
+ObjectList::ObjectList(QWidget *pParent) :
     QWidget(pParent)
 {
     mObjectModel = new ObjectListModel(this);
@@ -48,7 +48,7 @@ ObjectListWindow::ObjectListWindow(QWidget *pParent) :
         QRegExp::FixedString));
     mFilterModel->setFilterKeyColumn(0);
 
-    ui = new Ui::ObjectListWindow;
+    ui = new Ui::ObjectList;
     ui->setupUi(this);
 
     ui->objectList->setModel(mFilterModel);
@@ -60,23 +60,29 @@ ObjectListWindow::ObjectListWindow(QWidget *pParent) :
         this, SLOT(SelectedObjectChanged()));
 }
 
-ObjectListWindow::~ObjectListWindow()
+ObjectList::~ObjectList()
 {
     delete ui;
 }
 
-void ObjectListWindow::SetMainWindow(MainWindow *pMainWindow)
+void ObjectList::SetMainWindow(MainWindow *pMainWindow)
 {
     mMainWindow = pMainWindow;
 }
 
-void ObjectListWindow::Search(const QString& term)
+void ObjectList::Search(const QString& term)
 {
     mFilterModel->setFilterRegExp(QRegExp(term, Qt::CaseInsensitive,
         QRegExp::FixedString));
 }
 
-QString ObjectListWindow::GetObjectName(const std::shared_ptr<
+QString ObjectList::GetObjectID(const std::shared_ptr<
+    libcomp::Object>& obj) const
+{
+    return {};
+}
+
+QString ObjectList::GetObjectName(const std::shared_ptr<
     libcomp::Object>& obj) const
 {
     (void)obj;
@@ -84,25 +90,43 @@ QString ObjectListWindow::GetObjectName(const std::shared_ptr<
     return  {};
 }
 
-void ObjectListWindow::SetObjectList(const std::vector<
+bool ObjectList::Select(const std::shared_ptr<libcomp::Object>& obj)
+{
+    int idx = mObjectModel->GetIndex(obj);
+    if(idx != -1)
+    {
+        auto qIdx = mObjectModel->index(idx);
+
+        ui->objectList->scrollTo(qIdx,
+            QAbstractItemView::ScrollHint::PositionAtCenter);
+        ui->objectList->selectionModel()->select(qIdx,
+            QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+
+        return true;
+    }
+
+    return false;
+}
+
+void ObjectList::SetObjectList(const std::vector<
     std::shared_ptr<libcomp::Object>>& objs)
 {
     mObjectModel->SetObjectList(objs);
 }
 
-void ObjectListWindow::LoadProperties(
+void ObjectList::LoadProperties(
     const std::shared_ptr<libcomp::Object>& obj)
 {
     (void)obj;
 }
 
-void ObjectListWindow::SaveProperties(
+void ObjectList::SaveProperties(
     const std::shared_ptr<libcomp::Object>& obj)
 {
     (void)obj;
 }
 
-void ObjectListWindow::SelectedObjectChanged()
+void ObjectList::SelectedObjectChanged()
 {
     auto obj = mActiveObject.lock();
 
@@ -126,7 +150,7 @@ void ObjectListWindow::SelectedObjectChanged()
     LoadProperties(mActiveObject.lock());
 }
 
-std::map<uint32_t, QString> ObjectListWindow::GetObjectMapping() const
+std::map<uint32_t, QString> ObjectList::GetObjectMapping() const
 {
     std::map<uint32_t, QString> mapping;
 

@@ -47,6 +47,8 @@ ActionPlaySoundEffect::ActionPlaySoundEffect(ActionList *pList,
     prop = new Ui::ActionPlaySoundEffect;
     prop->setupUi(pWidget);
 
+    prop->sound->Bind(pMainWindow, "CSoundData");
+
     ui->actionTitle->setText(tr("<b>Play Sound Effect</b>"));
     ui->layoutMain->addWidget(pWidget);
 }
@@ -67,8 +69,7 @@ void ActionPlaySoundEffect::Load(const std::shared_ptr<objects::Action>& act)
 
     LoadBaseProperties(mAction);
 
-    prop->soundID->lineEdit()->setText(
-        QString::number(mAction->GetSoundID()));
+    prop->sound->SetValue((uint32_t)mAction->GetSoundID());
     prop->delay->setValue(mAction->GetDelay());
 }
 
@@ -81,7 +82,7 @@ std::shared_ptr<objects::Action> ActionPlaySoundEffect::Save() const
 
     SaveBaseProperties(mAction);
 
-    mAction->SetSoundID(prop->soundID->currentText().toInt());
+    mAction->SetSoundID((int32_t)prop->sound->GetValue());
     mAction->SetDelay(prop->delay->value());
 
     return mAction;

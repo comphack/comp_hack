@@ -33,6 +33,7 @@
 #include "ItemDropUI.h"
 #include "MainWindow.h"
 #include "ObjectPositionUI.h"
+#include "ObjectSelector.h"
 
 // Qt Includes
 #include <PushIgnore.h>
@@ -69,12 +70,18 @@ DynamicList::~DynamicList()
     delete ui;
 }
 
-void DynamicList::Setup(DynamicItemType_t type, MainWindow *pMainWindow)
+void DynamicList::Setup(DynamicItemType_t type, MainWindow *pMainWindow,
+    const libcomp::String& objectSelectorType)
 {
     if(mType == DynamicItemType_t::NONE)
     {
         mType = type;
         mMainWindow = pMainWindow;
+
+        if(type == DynamicItemType_t::COMPLEX_OBJECT_SELECTOR)
+        {
+            mObjectSelectorType = objectSelectorType;
+        }
     }
     else
     {
@@ -126,18 +133,30 @@ QWidget* DynamicList::GetIntegerWidget(int32_t val)
 
 bool DynamicList::AddUnsignedInteger(uint32_t val)
 {
-    if(mType != DynamicItemType_t::PRIMITIVE_UINT)
+    if(mType == DynamicItemType_t::COMPLEX_OBJECT_SELECTOR)
     {
-        LOG_ERROR("Attempted to assign a unsigned integer value to a"
-            " differing DynamicList type\n");
-        return false;
+        auto ctrl = GetObjectSelectorWidget(val);
+        if(ctrl)
+        {
+            AddItem(ctrl, true);
+            return true;
+        }
     }
-
-    auto ctrl = GetUnsignedIntegerWidget(val);
-    if(ctrl)
+    else
     {
-        AddItem(ctrl, false);
-        return true;
+        if(mType != DynamicItemType_t::PRIMITIVE_UINT)
+        {
+            LOG_ERROR("Attempted to assign a unsigned integer value to a"
+                " differing DynamicList type\n");
+            return false;
+        }
+
+        auto ctrl = GetUnsignedIntegerWidget(val);
+        if(ctrl)
+        {
+            AddItem(ctrl, false);
+            return true;
+        }
     }
 
     return false;
@@ -255,7 +274,7 @@ template<>
 QWidget* DynamicList::GetObjectWidget<objects::EventCondition>(
     const std::shared_ptr<objects::EventCondition>& obj)
 {
-    EventCondition* ctrl = new EventCondition;
+    EventCondition* ctrl = new EventCondition(mMainWindow);
     if(obj)
     {
         ctrl->Load(obj);
@@ -289,7 +308,7 @@ template<>
 QWidget* DynamicList::GetObjectWidget<objects::ItemDrop>(
     const std::shared_ptr<objects::ItemDrop>& obj)
 {
-    ItemDrop* ctrl = new ItemDrop;
+    ItemDrop* ctrl = new ItemDrop(mMainWindow);
     if(obj)
     {
         ctrl->Load(obj);
@@ -363,6 +382,16 @@ QWidget* DynamicList::GetEventMessageWidget(int32_t val)
     return msg;
 }
 
+QWidget* DynamicList::GetObjectSelectorWidget(uint32_t val)
+{
+    ObjectSelector* sel = new ObjectSelector;
+    sel->Bind(mMainWindow, mObjectSelectorType);
+
+    sel->SetValue(val);
+
+    return sel;
+}
+
 std::list<int32_t> DynamicList::GetIntegerList() const
 {
     std::list<int32_t> result;
@@ -371,9 +400,9 @@ std::list<int32_t> DynamicList::GetIntegerList() const
         int total = ui->layoutItems->count();
         for(int childIdx = 0; childIdx < total; childIdx++)
         {
-            EventMessageRef* spin = ui->layoutItems->itemAt(childIdx)->widget()
+            EventMessageRef* ref = ui->layoutItems->itemAt(childIdx)->widget()
                 ->findChild<EventMessageRef*>();
-            result.push_back(spin->GetValue());
+            result.push_back(ref->GetValue());
         }
     }
     else
@@ -400,19 +429,32 @@ std::list<int32_t> DynamicList::GetIntegerList() const
 std::list<uint32_t> DynamicList::GetUnsignedIntegerList() const
 {
     std::list<uint32_t> result;
-    if(mType != DynamicItemType_t::PRIMITIVE_UINT)
+    if(mType == DynamicItemType_t::COMPLEX_OBJECT_SELECTOR)
     {
-        LOG_ERROR("Attempted to retrieve unsigned integer list from a differing"
-            " DynamicList type\n");
-        return result;
+        int total = ui->layoutItems->count();
+        for(int childIdx = 0; childIdx < total; childIdx++)
+        {
+            ObjectSelector* sel = ui->layoutItems->itemAt(childIdx)->widget()
+                ->findChild<ObjectSelector*>();
+            result.push_back(sel->GetValue());
+        }
     }
-
-    int total = ui->layoutItems->count();
-    for(int childIdx = 0; childIdx < total; childIdx++)
+    else
     {
-        QSpinBox* spin = ui->layoutItems->itemAt(childIdx)->widget()
-            ->findChild<QSpinBox*>();
-        result.push_back((uint32_t)spin->value());
+        if(mType != DynamicItemType_t::PRIMITIVE_UINT)
+        {
+            LOG_ERROR("Attempted to retrieve unsigned integer list from a"
+                " differing DynamicList type\n");
+            return result;
+        }
+
+        int total = ui->layoutItems->count();
+        for(int childIdx = 0; childIdx < total; childIdx++)
+        {
+            QSpinBox* spin = ui->layoutItems->itemAt(childIdx)->widget()
+                ->findChild<QSpinBox*>();
+            result.push_back((uint32_t)spin->value());
+        }
     }
 
     return result;
@@ -572,6 +614,10 @@ void DynamicList::AddRow()
         break;
     case DynamicItemType_t::COMPLEX_EVENT_MESSAGE:
         ctrl = GetEventMessageWidget(0);
+        canReorder = true;
+        break;
+    case DynamicItemType_t::COMPLEX_OBJECT_SELECTOR:
+        ctrl = GetObjectSelectorWidget(0);
         canReorder = true;
         break;
     case DynamicItemType_t::OBJ_EVENT_BASE:

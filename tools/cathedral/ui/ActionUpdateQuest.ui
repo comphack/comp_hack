@@ -29,22 +29,9 @@
       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
      </property>
      <item row="0" column="0">
-      <widget class="QLabel" name="lblQuestID">
+      <widget class="QLabel" name="lblQuest">
        <property name="text">
-        <string>Quest ID:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="questID">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="editable">
-        <bool>true</bool>
+        <string>Quest:</string>
        </property>
       </widget>
      </item>
@@ -58,7 +45,7 @@
      <item row="1" column="1">
       <widget class="QSpinBox" name="phase">
        <property name="minimum">
-        <number>-128</number>
+        <number>-2</number>
        </property>
        <property name="maximum">
         <number>127</number>
@@ -111,6 +98,9 @@
      <item row="4" column="1">
       <widget class="ActionMap" name="flagStates" native="true"/>
      </item>
+     <item row="0" column="1">
+      <widget class="ObjectSelector" name="quest" native="true"/>
+     </item>
     </layout>
    </item>
   </layout>
@@ -120,6 +110,12 @@
    <class>ActionMap</class>
    <extends>QWidget</extends>
    <header>ActionMap.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ObjectSelector</class>
+   <extends>QWidget</extends>
+   <header>ObjectSelector.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

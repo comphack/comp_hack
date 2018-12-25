@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/ItemDropUI.h
+ * @file tools/cathedral/src/ObjectSelectorWindow.h
  * @ingroup cathedral
  *
  * @author HACKfrost
  *
- * @brief Definition for a configured ItemDrop.
+ * @brief Definition for a value selection window bound to an ObjectSelector.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,47 +22,48 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H
-#define TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H
+#ifndef TOOLS_CATHEDRAL_SRC_OBJECTSELECTORWINDOW_H
+#define TOOLS_CATHEDRAL_SRC_OBJECTSELECTORWINDOW_H
 
 // Qt Includes
 #include <PushIgnore.h>
 #include <QWidget>
 #include <PopIgnore.h>
 
-// Standard C++11 Includes
-#include <memory>
-
-namespace objects
-{
-
-class ItemDrop;
-
-} // namespace objects
+// libcomp Includes
+#include <CString.h>
+#include <Object.h>
 
 namespace Ui
 {
 
-class ItemDrop;
+class ObjectSelectorWindow;
 
 } // namespace Ui
 
-class MainWindow;
+class ObjectSelectorBase;
+class ObjectSelectorList;
 
-class ItemDrop : public QWidget
+class ObjectSelectorWindow : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit ItemDrop(MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ItemDrop();
+    explicit ObjectSelectorWindow(QWidget *pParent = 0);
+    virtual ~ObjectSelectorWindow();
 
-    void Load(const std::shared_ptr<objects::ItemDrop>& drop);
-    std::shared_ptr<objects::ItemDrop> Save() const;
+    void Bind(ObjectSelectorList* listControl);
 
-protected:
-    Ui::ItemDrop *prop;
+    void Open(ObjectSelectorBase* ctrl = 0);
+
+protected slots:
+    void ObjectSelected();
+    void SelectedObjectChanged();
+
+private:
+    Ui::ObjectSelectorWindow *ui;
+
+    ObjectSelectorBase* mSelectorControl;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H
+#endif // TOOLS_CATHEDRAL_SRC_OBJECTSELECTORWINDOW_H

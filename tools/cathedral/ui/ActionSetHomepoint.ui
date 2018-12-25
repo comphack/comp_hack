@@ -32,30 +32,6 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <layout class="QHBoxLayout" name="layoutZone">
-       <item>
-        <widget class="QComboBox" name="zone">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="editable">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="zoneGo">
-         <property name="text">
-          <string>Go</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
      <item row="1" column="0">
       <widget class="QLabel" name="lblSpot">
        <property name="text">
@@ -87,10 +63,21 @@
        </item>
       </layout>
      </item>
+     <item row="0" column="1">
+      <widget class="ObjectSelector" name="zone" native="true"/>
+     </item>
     </layout>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ObjectSelector</class>
+   <extends>QWidget</extends>
+   <header>ObjectSelector.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

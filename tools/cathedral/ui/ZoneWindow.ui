@@ -60,7 +60,7 @@
         </attribute>
         <layout class="QVBoxLayout" name="tabNPCLayout">
          <item>
-          <widget class="NPCListWindow" name="npcs" native="true"/>
+          <widget class="NPCList" name="npcs" native="true"/>
          </item>
          <item>
           <widget class="QCheckBox" name="showNPCs">
@@ -86,7 +86,7 @@
         </attribute>
         <layout class="QVBoxLayout" name="tabObjectLayout">
          <item>
-          <widget class="NPCListWindow" name="objects" native="true"/>
+          <widget class="NPCList" name="objects" native="true"/>
          </item>
          <item>
           <widget class="QCheckBox" name="showObjects">
@@ -162,7 +162,7 @@
         </attribute>
         <layout class="QVBoxLayout" name="tabSpotLayout">
          <item>
-          <widget class="SpotListWindow" name="spots" native="true"/>
+          <widget class="SpotList" name="spots" native="true"/>
          </item>
         </layout>
        </widget>
@@ -277,15 +277,15 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>NPCListWindow</class>
+   <class>NPCList</class>
    <extends>QWidget</extends>
-   <header>NPCListWindow.h</header>
+   <header>NPCList.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>SpotListWindow</class>
+   <class>SpotList</class>
    <extends>QWidget</extends>
-   <header>SpotListWindow.h</header>
+   <header>SpotList.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -54,10 +54,13 @@ public:
     explicit ActionMap(QWidget *pParent = 0);
     virtual ~ActionMap();
 
-    void SetMainWindow(MainWindow *pMainWindow);
+    void BindSelector(MainWindow *pMainWindow,
+        const libcomp::String& objectSelectorType);
 
+    void Load(const std::unordered_map<int32_t, int32_t>& values);
     void Load(const std::unordered_map<uint32_t, int32_t>& values);
-    std::unordered_map<uint32_t, int32_t> Save() const;
+    std::unordered_map<int32_t, int32_t> SaveSigned() const;
+    std::unordered_map<uint32_t, int32_t> SaveUnsigned() const;
 
     void RemoveValue(ActionMapItem *pValue);
     void SetValueName(const QString& name);
@@ -75,6 +78,8 @@ protected:
 
     QString mValueName;
     int32_t mMin, mMax;
+
+    libcomp::String mObjectSelectorType;
 
     Ui::ActionMap *ui;
 

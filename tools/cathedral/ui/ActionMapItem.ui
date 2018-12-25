@@ -24,15 +24,28 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QComboBox" name="key">
+    <widget class="QSpinBox" name="keyNumber">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="editable">
-      <bool>true</bool>
+     <property name="minimum">
+      <number>-2147483647</number>
+     </property>
+     <property name="maximum">
+      <number>2147483647</number>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="ObjectSelector" name="keySelector" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
      </property>
     </widget>
    </item>
@@ -68,6 +81,14 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ObjectSelector</class>
+   <extends>QWidget</extends>
+   <header>ObjectSelector.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -51,6 +51,8 @@ ActionZoneChange::ActionZoneChange(ActionList *pList, MainWindow *pMainWindow,
 
     ui->actionTitle->setText(tr("<b>Zone Change</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    prop->zone->Bind(pMainWindow, "ZoneData");
 }
 
 ActionZoneChange::~ActionZoneChange()
@@ -69,7 +71,7 @@ void ActionZoneChange::Load(const std::shared_ptr<objects::Action>& act)
 
     LoadBaseProperties(mAction);
 
-    prop->zone->setValue((int32_t)mAction->GetZoneID());
+    prop->zone->SetValue(mAction->GetZoneID());
     prop->dynamicMap->setValue((int32_t)mAction->GetDynamicMapID());
 
     prop->destination->Load(mAction->GetSpotID(),
@@ -86,7 +88,7 @@ std::shared_ptr<objects::Action> ActionZoneChange::Save() const
 
     SaveBaseProperties(mAction);
 
-    mAction->SetZoneID((uint32_t)prop->zone->value());
+    mAction->SetZoneID(prop->zone->GetValue());
     mAction->SetDynamicMapID((uint32_t)prop->dynamicMap->value());
 
     auto pos = prop->destination->Save();

@@ -175,14 +175,15 @@ void ZoneWindow::Refresh()
 
 bool ZoneWindow::LoadMapFromZone()
 {
-    auto definitions = mMainWindow->GetDefinitions();
-
-    mZoneData = definitions->GetZoneData(mZone->GetID());
+    auto dataset = mMainWindow->GetBinaryDataSet("ZoneData");
+    mZoneData = std::dynamic_pointer_cast<objects::MiZoneData>(
+        dataset->GetObjectByID(mZone->GetID()));
     if(!mZoneData)
     {
         return false;
     }
 
+    auto definitions = mMainWindow->GetDefinitions();
     mQmpFile = definitions->LoadQmpFile(mZoneData->GetFile()->GetQmpFile(),
         &*mMainWindow->GetDatastore());
     if(!mQmpFile)
@@ -295,7 +296,7 @@ void ZoneWindow::BindObjects()
 
 void ZoneWindow::BindSpawns()
 {
-    auto definitions = mMainWindow->GetDefinitions();
+    auto dataset = mMainWindow->GetBinaryDataSet("DevilData");
 
     // Set up the Spawn table
     ui.tableWidget_Spawn->clear();
@@ -316,7 +317,8 @@ void ZoneWindow::BindSpawns()
     for(auto sPair : mZone->GetSpawns())
     {
         auto s = sPair.second;
-        auto def = definitions->GetDevilData(s->GetEnemyType());
+        auto def = std::dynamic_pointer_cast<objects::MiDevilData>(
+            dataset->GetObjectByID(s->GetEnemyType()));
 
         ui.tableWidget_Spawn->setItem(i, 0, GetTableWidget(
             libcomp::String("%1").Arg(s->GetID()).C()));

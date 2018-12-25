@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/SpotListWindow.cpp
+ * @file tools/cathedral/src/SpotList.cpp
  * @ingroup cathedral
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Implementation for a window that holds a list of zone spots.
+ * @brief Implementation for a control that holds a list of zone spots.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,7 +22,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SpotListWindow.h"
+#include "SpotList.h"
 
 // Cathedral Includes
 #include "MainWindow.h"
@@ -30,7 +30,7 @@
 // Qt Includes
 #include <PushIgnore.h>
 #include "ui_SpotProperties.h"
-#include "ui_ObjectListWindow.h"
+#include "ui_ObjectList.h"
 #include <PopIgnore.h>
 
 // libcomp Includes
@@ -40,8 +40,7 @@
 #include <ServerZoneSpot.h>
 #include <SpawnLocation.h>
 
-SpotListWindow::SpotListWindow(QWidget *pParent) :
-    ObjectListWindow(pParent)
+SpotList::SpotList(QWidget *pParent) : ObjectList(pParent)
 {
     QWidget *pWidget = new QWidget;
     prop = new Ui::SpotProperties;
@@ -50,19 +49,19 @@ SpotListWindow::SpotListWindow(QWidget *pParent) :
     ui->splitter->addWidget(pWidget);
 }
 
-SpotListWindow::~SpotListWindow()
+SpotList::~SpotList()
 {
     delete prop;
 }
 
-void SpotListWindow::SetMainWindow(MainWindow *pMainWindow)
+void SpotList::SetMainWindow(MainWindow *pMainWindow)
 {
     mMainWindow = pMainWindow;
 
     prop->actionList->SetMainWindow(pMainWindow);
 }
 
-QString SpotListWindow::GetObjectID(const std::shared_ptr<
+QString SpotList::GetObjectID(const std::shared_ptr<
     libcomp::Object>& obj) const
 {
     auto spot = std::dynamic_pointer_cast<objects::ServerZoneSpot>(obj);
@@ -75,7 +74,7 @@ QString SpotListWindow::GetObjectID(const std::shared_ptr<
     return QString::number(spot->GetID());
 }
 
-void SpotListWindow::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
+void SpotList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
     auto spot = std::dynamic_pointer_cast<objects::ServerZoneSpot>(obj);
 
@@ -107,7 +106,7 @@ void SpotListWindow::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
     /// @todo: add more
 }
 
-void SpotListWindow::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
+void SpotList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
     (void)obj;
 }

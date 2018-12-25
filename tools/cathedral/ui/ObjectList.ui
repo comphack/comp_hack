@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ObjectListWindow</class>
- <widget class="QWidget" name="ObjectListWindow">
+ <class>ObjectList</class>
+ <widget class="QWidget" name="ObjectList">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -26,7 +26,11 @@
         </widget>
        </item>
        <item>
-        <widget class="QListView" name="objectList"/>
+        <widget class="QListView" name="objectList">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>

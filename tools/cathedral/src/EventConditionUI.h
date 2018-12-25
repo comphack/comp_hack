@@ -40,12 +40,14 @@ class EventCondition;
 
 } // namespace Ui
 
+class MainWindow;
+
 class EventCondition : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit EventCondition(QWidget *pParent = 0);
+    explicit EventCondition(MainWindow *pMainWindow, QWidget *pParent = 0);
     virtual ~EventCondition();
 
     virtual void Load(const std::shared_ptr<objects::EventCondition>& e);
@@ -62,6 +64,7 @@ private:
     void RefreshTypeContext();
 
     Ui::EventCondition *ui;
+    MainWindow *mMainWindow;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_EVENTCONDITIONUI_H

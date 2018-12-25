@@ -55,9 +55,24 @@ ActionMap::~ActionMap()
     delete ui;
 }
 
-void ActionMap::SetMainWindow(MainWindow *pMainWindow)
+void ActionMap::BindSelector(MainWindow *pMainWindow,
+    const libcomp::String& objectSelectorType)
 {
     mMainWindow = pMainWindow;
+    mObjectSelectorType = objectSelectorType;
+}
+
+void ActionMap::Load(const std::unordered_map<int32_t, int32_t>& values)
+{
+    ClearValues();
+
+    for(auto val : values)
+    {
+        auto item = new ActionMapItem(mValueName, this);
+        item->Setup(val.first, val.second, mObjectSelectorType,
+            mMainWindow);
+        AddValue(item);
+    }
 }
 
 void ActionMap::Load(const std::unordered_map<uint32_t, int32_t>& values)
@@ -66,17 +81,32 @@ void ActionMap::Load(const std::unordered_map<uint32_t, int32_t>& values)
 
     for(auto val : values)
     {
-        AddValue(new ActionMapItem(mValueName, this, val.first, val.second));
+        auto item = new ActionMapItem(mValueName, this);
+        item->Setup((int32_t)val.first, val.second, mObjectSelectorType,
+            mMainWindow);
+        AddValue(item);
     }
 }
 
-std::unordered_map<uint32_t, int32_t> ActionMap::Save() const
+std::unordered_map<int32_t, int32_t> ActionMap::SaveSigned() const
+{
+    std::unordered_map<int32_t, int32_t> values;
+
+    for(auto pValue : mValues)
+    {
+        values[pValue->GetKey()] = pValue->GetValue();
+    }
+
+    return values;
+}
+
+std::unordered_map<uint32_t, int32_t> ActionMap::SaveUnsigned() const
 {
     std::unordered_map<uint32_t, int32_t> values;
 
     for(auto pValue : mValues)
     {
-        values[pValue->GetKey()] = pValue->GetValue();
+        values[(uint32_t)pValue->GetKey()] = pValue->GetValue();
     }
 
     return values;
@@ -111,7 +141,10 @@ void ActionMap::SetMinMax(int32_t min, int32_t max)
 
 void ActionMap::AddNewValue()
 {
-    AddValue(new ActionMapItem(mValueName, this));
+    auto item = new ActionMapItem(mValueName, this);
+    item->Setup(0, 0, mObjectSelectorType, mMainWindow);
+
+    AddValue(item);
 }
 
 void ActionMap::AddValue(ActionMapItem *pValue)
@@ -120,8 +153,7 @@ void ActionMap::AddValue(ActionMapItem *pValue)
 
     mValues.push_back(pValue);
 
-    ui->actionMapLayout->insertWidget(
-        ui->actionMapLayout->count() - 1, pValue);
+    ui->actionMapLayout->addWidget(pValue);
 
     emit rowEdit();
 }

@@ -42,24 +42,6 @@
 #include <algorithm>
 
 ActionMapItem::ActionMapItem(const QString& valueName, ActionMap *pMap,
-    uint32_t key, int32_t value, QWidget *pParent) : QWidget(pParent),
-    mMap(pMap)
-{
-    ui = new Ui::ActionMapItem;
-    ui->setupUi(this);
-
-    ui->key->lineEdit()->setText(QString::number(key));
-    ui->value->setValue(value);
-
-    if(!valueName.isEmpty())
-    {
-        ui->valueLabel->setText(valueName);
-    }
-
-    connect(ui->remove, SIGNAL(clicked(bool)), this, SLOT(Remove()));
-}
-
-ActionMapItem::ActionMapItem(const QString& valueName, ActionMap *pMap,
     QWidget *pParent) : QWidget(pParent), mMap(pMap)
 {
     ui = new Ui::ActionMapItem;
@@ -78,10 +60,16 @@ ActionMapItem::~ActionMapItem()
     delete ui;
 }
 
-uint32_t ActionMapItem::GetKey() const
+int32_t ActionMapItem::GetKey() const
 {
-    /// @todo Implement
-    return 0;
+    if(ui->keyNumber->isHidden())
+    {
+        return ui->keyNumber->value();
+    }
+    else
+    {
+        return (int32_t)ui->keySelector->GetValue();
+    }
 }
 
 int32_t ActionMapItem::GetValue() const
@@ -93,6 +81,29 @@ void ActionMapItem::SetMinMax(int32_t min, int32_t max)
 {
     ui->value->setMinimum(min);
     ui->value->setMaximum(max);
+}
+
+void ActionMapItem::Setup(int32_t key, int32_t value,
+    const libcomp::String& objectSelectorType, MainWindow* pMainWindow)
+{
+    if(!objectSelectorType.IsEmpty())
+    {
+        ui->keyNumber->hide();
+        ui->keySelector->show();
+
+        ui->keySelector->Bind(pMainWindow, objectSelectorType);
+
+        ui->keySelector->SetValue((uint32_t)key);
+    }
+    else
+    {
+        ui->keyNumber->show();
+        ui->keySelector->hide();
+
+        ui->keyNumber->setValue(key);
+    }
+
+    ui->value->setValue(value);
 }
 
 void ActionMapItem::Remove()

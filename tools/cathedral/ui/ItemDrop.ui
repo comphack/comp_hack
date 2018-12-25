@@ -35,13 +35,6 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="itemType">
-       <property name="editable">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
      <item row="1" column="0">
       <widget class="QLabel" name="lblRate">
        <property name="text">
@@ -156,10 +149,21 @@
        </property>
       </widget>
      </item>
+     <item row="0" column="1">
+      <widget class="ObjectSelector" name="itemType" native="true"/>
+     </item>
     </layout>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ObjectSelector</class>
+   <extends>QWidget</extends>
+   <header>ObjectSelector.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

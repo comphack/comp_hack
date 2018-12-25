@@ -25,14 +25,28 @@
 #include "MainWindow.h"
 
 // Cathedral Includes
+#include "BinaryDataNamedSet.h"
 #include "EventWindow.h"
-#include "NPCListWindow.h"
-#include "SpotListWindow.h"
+#include "NPCList.h"
+#include "ObjectSelectorList.h"
+#include "ObjectSelectorWindow.h"
+#include "SpotList.h"
 #include "ZoneWindow.h"
 
 // objects Includes
 #include <MiCEventMessageData.h>
+#include <MiCItemBaseData.h>
+#include <MiCItemData.h>
+#include <MiCSoundData.h>
+#include <MiCQuestData.h>
+#include <MiDevilData.h>
+#include <MiDynamicMapData.h>
+#include <MiHNPCBasicData.h>
+#include <MiHNPCData.h>
+#include <MiNPCBasicData.h>
 #include <MiONPCData.h>
+#include <MiZoneBasicData.h>
+#include <MiZoneData.h>
 #include <ServerNPC.h>
 #include <ServerZoneSpot.h>
 
@@ -48,6 +62,23 @@
 
 // libcomp Includes
 #include <Log.h>
+
+#define BDSET(objname, getid, getname) \
+    std::make_shared<BinaryDataNamedSet>( \
+        []() \
+        { \
+            return std::make_shared<objects::objname>(); \
+        }, \
+        [](const std::shared_ptr<libcomp::Object>& obj) -> uint32_t \
+        { \
+            return static_cast<uint32_t>(std::dynamic_pointer_cast< \
+                objects::objname>(obj)->getid); \
+        }, \
+        [](const std::shared_ptr<libcomp::Object>& obj) -> libcomp::String \
+        { \
+            return std::dynamic_pointer_cast< \
+                objects::objname>(obj)->getname; \
+        }); \
 
 MainWindow::MainWindow(QWidget *pParent) : QWidget(pParent)
 {
@@ -70,6 +101,13 @@ MainWindow::MainWindow(QWidget *pParent) : QWidget(pParent)
 MainWindow::~MainWindow()
 {
     delete ui;
+
+    for(auto& pair : mObjectSelectors)
+    {
+        delete pair.second;
+    }
+
+    mObjectSelectors.clear();
 }
 
 bool MainWindow::Init()
@@ -126,31 +164,83 @@ bool MainWindow::Init()
         settingPath = true;
     }
 
+    mBinaryDataSets["CEventMessageData"] = std::make_shared<
+        BinaryDataNamedSet>([]()
+        {
+            return std::make_shared<objects::MiCEventMessageData>();
+        },
+        [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
+        {
+            return std::dynamic_pointer_cast<
+                objects::MiCEventMessageData>(obj)->GetID();
+        },
+        [](const std::shared_ptr<libcomp::Object>& obj)->libcomp::String
+        {
+            // Combine lines so they all display
+            auto msg = std::dynamic_pointer_cast<objects::MiCEventMessageData>(
+                obj);
+            return libcomp::String::Join(msg->GetLines(), "\n\r");
+        });
+
+    mBinaryDataSets["CItemData"] = BDSET(MiCItemData, GetBaseData()->GetID(),
+        GetBaseData()->GetName2());
+    mBinaryDataSets["CSoundData"] = BDSET(MiCSoundData, GetID(), GetPath());
+    mBinaryDataSets["CSoundData"] = BDSET(MiCSoundData, GetID(), GetPath());
+    mBinaryDataSets["CQuestData"] = BDSET(MiCQuestData, GetID(), GetTitle());
+    mBinaryDataSets["DevilData"] = BDSET(MiDevilData, GetBasic()->GetID(),
+        GetBasic()->GetName());
+    mBinaryDataSets["hNPCData"] = BDSET(MiHNPCData, GetBasic()->GetID(),
+        GetBasic()->GetName());
+    mBinaryDataSets["oNPCData"] = BDSET(MiONPCData, GetID(), GetName());
+    mBinaryDataSets["ZoneData"] = BDSET(MiZoneData, GetBasic()->GetID(),
+        GetBasic()->GetName());
+
     std::string err;
 
     if(!mDatastore->AddSearchPath(settingVal.toStdString()))
     {
         err = "Failed to add datastore search path.";
     }
-    else if(!mDefinitions->LoadData<objects::MiZoneData>(mDatastore.get()))
+    else if(!LoadBinaryData("Shield/CEventMessageData.sbin",
+        "CEventMessageData", true, true, false) ||
+       !LoadBinaryData("Shield/CEventMessageData2.sbin", "CEventMessageData",
+            true, true, false))
     {
-        err = "Failed to load zone data.";
+        err = "Failed to load event message data.";
     }
-    else if(!mDefinitions->LoadData<objects::MiDynamicMapData>(mDatastore.get()))
+    else if(!LoadBinaryData("Shield/CItemData.sbin", "CItemData", true, true))
     {
-        err = "Failed to load dynamic map data.";
+        err = "Failed to load c-item data.";
     }
-    else if(!mDefinitions->LoadData<objects::MiDevilData>(mDatastore.get()))
+    else if(!LoadBinaryData("Client/CSoundData.bin", "CSoundData", false, true))
+    {
+        err = "Failed to load c-sound data.";
+    }
+    else if(!LoadBinaryData("Shield/CQuestData.sbin", "CQuestData", true, true))
+    {
+        err = "Failed to load c-quest data.";
+    }
+    else if(!LoadBinaryData("Shield/DevilData.sbin", "DevilData", true, true))
     {
         err = "Failed to load devil data.";
     }
-    else if(!mDefinitions->LoadData<objects::MiHNPCData>(mDatastore.get()))
+    else if(!mDefinitions->LoadData<objects::MiDynamicMapData>(mDatastore.get()))
+    {
+        // Dynamic map data uses the definition manager as it handles spot
+        // data loading as well and these records do not need to be referenced
+        err = "Failed to load dynamic map data.";
+    }
+    else if(!LoadBinaryData("Shield/hNPCData.sbin", "hNPCData", true, true))
     {
         err = "Failed to load hNPC data.";
     }
-    else if(!mDefinitions->LoadData<objects::MiONPCData>(mDatastore.get()))
+    else if(!LoadBinaryData("Shield/oNPCData.sbin", "oNPCData", true, true))
     {
         err = "Failed to load oNPC data.";
+    }
+    else if(!LoadBinaryData("Shield/ZoneData.sbin", "ZoneData", true, true))
+    {
+        err = "Failed to load zone data.";
     }
 
     if(err.length() > 0)
@@ -160,17 +250,6 @@ bool MainWindow::Init()
         Msgbox.exec();
 
         return false;
-    }
-
-    // Load some "nice to haves"
-    if(!LoadCMessageData(mCEventMessageData, "CEventMessageData.xml"))
-    {
-        LOG_ERROR("Failed to load CEventMessageData.xml\n");
-    }
-
-    if(!LoadCMessageData(mCEventMessageData2, "CEventMessageData2.xml"))
-    {
-        LOG_ERROR("Failed to load CEventMessageData2.xml\n");
     }
 
     if(settingPath)
@@ -201,13 +280,24 @@ EventWindow* MainWindow::GetEvents() const
 std::shared_ptr<objects::MiCEventMessageData> MainWindow::GetEventMessage(
     int32_t msgID) const
 {
-    auto msg = mCEventMessageData->GetObjectByID((uint32_t)msgID);
-    if(!msg)
-    {
-        msg = mCEventMessageData2->GetObjectByID((uint32_t)msgID);
-    }
+    auto ds = GetBinaryDataSet("CEventMessageData");
+    auto msg = ds->GetObjectByID((uint32_t)msgID);
 
     return std::dynamic_pointer_cast<objects::MiCEventMessageData>(msg);
+}
+
+std::shared_ptr<libcomp::BinaryDataSet> MainWindow::GetBinaryDataSet(
+    const libcomp::String& objType) const
+{
+    auto iter = mBinaryDataSets.find(objType);
+    return iter != mBinaryDataSets.end() ? iter->second : nullptr;
+}
+
+ObjectSelectorWindow* MainWindow::GetObjectSelector(
+    const libcomp::String& objType) const
+{
+    auto iter = mObjectSelectors.find(objType);
+    return iter != mObjectSelectors.end() ? iter->second : nullptr;
 }
 
 void MainWindow::ResetEventCount()
@@ -217,25 +307,52 @@ void MainWindow::ResetEventCount()
         .Arg(total)));
 }
 
-bool MainWindow::LoadCMessageData(std::shared_ptr<
-    libcomp::BinaryDataSet>& dataset, const libcomp::String& file)
+bool MainWindow::LoadBinaryData(const libcomp::String& binaryFile,
+    const libcomp::String& objName, bool decrypt, bool addSelector,
+    bool selectorAllowBlanks)
 {
-    dataset = std::make_shared<libcomp::BinaryDataSet>([]()
-        {
-            return std::make_shared<objects::MiCEventMessageData>();
-        },
-
-        [](const std::shared_ptr<libcomp::Object>& obj)
-        {
-            return std::dynamic_pointer_cast<objects::MiCEventMessageData>(
-                obj)->GetID();
-        });
-
-    tinyxml2::XMLDocument doc;
-    if(tinyxml2::XML_NO_ERROR == doc.LoadFile(file.C()) && dataset->LoadXml(doc))
+    auto dataset = GetBinaryDataSet(objName);
+    if(!dataset)
     {
-        LOG_DEBUG(libcomp::String("Loaded %1 MiCEventMessageData records from"
-            " %2\n").Arg(dataset->GetObjects().size()).Arg(file));
+        return false;
+    }
+
+    auto path = libcomp::String("/BinaryData/") + binaryFile;
+
+    std::vector<char> data;
+    if(decrypt)
+    {
+        data = mDatastore->DecryptFile(path);
+    }
+    else
+    {
+        data = mDatastore->ReadFile(path);
+    }
+
+    if(data.empty())
+    {
+        return false;
+    }
+    else
+    {
+        LOG_DEBUG(libcomp::String("Loading records from %1\n")
+            .Arg(binaryFile));
+    }
+
+    std::stringstream ss(std::string(data.begin(), data.end()));
+    if(dataset->Load(ss, true))
+    {
+        auto namedSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            dataset);
+        if(addSelector && namedSet &&
+            mObjectSelectors.find(objName) == mObjectSelectors.end())
+        {
+            ObjectSelectorWindow* selector = new ObjectSelectorWindow();
+            selector->Bind(new ObjectSelectorList(namedSet,
+                selectorAllowBlanks));
+            mObjectSelectors[objName] = selector;
+        }
+
         return true;
     }
 

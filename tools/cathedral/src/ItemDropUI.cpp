@@ -24,6 +24,9 @@
 
 #include "ItemDropUI.h"
 
+// Cathedral Includes
+#include "MainWindow.h"
+
 // objects Includes
 #include <ItemDrop.h>
 
@@ -37,10 +40,13 @@
 // libcomp Includes
 #include <PacketCodes.h>
 
-ItemDrop::ItemDrop(QWidget *pParent) : QWidget(pParent)
+ItemDrop::ItemDrop(MainWindow *pMainWindow,
+    QWidget *pParent) : QWidget(pParent)
 {
     prop = new Ui::ItemDrop;
     prop->setupUi(this);
+
+    prop->itemType->Bind(pMainWindow, "CItemData");
 }
 
 ItemDrop::~ItemDrop()
@@ -50,8 +56,7 @@ ItemDrop::~ItemDrop()
 
 void ItemDrop::Load(const std::shared_ptr<objects::ItemDrop>& drop)
 {
-    prop->itemType->lineEdit()->setText(
-        QString::number(drop->GetItemType()));
+    prop->itemType->SetValue(drop->GetItemType());
     prop->rate->setValue((double)drop->GetRate());
     prop->minStack->setValue(drop->GetMinStack());
     prop->maxStack->setValue(drop->GetMaxStack());
@@ -64,7 +69,7 @@ void ItemDrop::Load(const std::shared_ptr<objects::ItemDrop>& drop)
 std::shared_ptr<objects::ItemDrop> ItemDrop::Save() const
 {
     auto obj = std::make_shared<objects::ItemDrop>();
-    obj->SetItemType((uint32_t)prop->itemType->currentText().toInt());
+    obj->SetItemType(prop->itemType->GetValue());
     obj->SetRate((float)prop->rate->value());
     obj->SetMinStack((uint16_t)prop->minStack->value());
     obj->SetMaxStack((uint16_t)prop->maxStack->value());

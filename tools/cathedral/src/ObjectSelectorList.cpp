@@ -58,7 +58,9 @@ QString ObjectSelectorList::GetObjectName(const std::shared_ptr<
 {
     if(mDataSet)
     {
-        return qs(mDataSet->GetName(obj));
+        // "Tab in" new lines so they are easier to read
+        return qs(mDataSet->GetName(obj).Replace("\r", "\n")
+            .Replace("\n\n", "\n").Replace("\n", "\n\r    "));
     }
 
     return "";

@@ -27,7 +27,7 @@
 
 // Qt Includes
 #include <PushIgnore.h>
-#include <QWidget>
+#include <QMainWindow>
 #include <PopIgnore.h>
 
 // libcomp Includes
@@ -43,7 +43,7 @@ namespace objects
 
 class MiCEventMessageData;
 
-}
+} // namespace objects
 
 namespace Ui
 {
@@ -56,7 +56,7 @@ class EventWindow;
 class ObjectSelectorWindow;
 class ZoneWindow;
 
-class MainWindow : public QWidget
+class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
@@ -85,14 +85,16 @@ public:
 protected slots:
     void OpenEvents();
     void OpenZone();
+    void ViewObjectList();
 
 protected:
     bool LoadBinaryData(const libcomp::String& binaryFile,
         const libcomp::String& objName, bool decrypt, bool addSelector = false,
         bool selectorAllowBlanks = false);
 
-    bool LoadCMessageData(std::shared_ptr<libcomp::BinaryDataSet>& dataset,
-        const libcomp::String& file);
+    void CloseAllWindows();
+
+    void closeEvent(QCloseEvent* event) override;
 
 private slots:
     void BrowseZone();

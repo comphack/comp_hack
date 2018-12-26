@@ -54,6 +54,7 @@
 #include <PushIgnore.h>
 #include "ui_MainWindow.h"
 
+#include <QCloseEvent>
 #include <QDir>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -80,7 +81,7 @@
                 objects::objname>(obj)->getname; \
         }); \
 
-MainWindow::MainWindow(QWidget *pParent) : QWidget(pParent)
+MainWindow::MainWindow(QWidget *pParent) : QMainWindow(pParent)
 {
     // Set these first in case the window wants to query for IDs from another.
     mEventWindow = nullptr;
@@ -96,6 +97,8 @@ MainWindow::MainWindow(QWidget *pParent) : QWidget(pParent)
 
     connect(ui->eventsView, SIGNAL(clicked(bool)), this, SLOT(OpenEvents()));
     connect(ui->zoneView, SIGNAL(clicked(bool)), this, SLOT(OpenZone()));
+
+    connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(close()));
 }
 
 MainWindow::~MainWindow()
@@ -115,6 +118,7 @@ bool MainWindow::Init()
     libcomp::Log::GetSingletonPtr()->AddLogHook([&](
         libcomp::Log::Level_t level, const libcomp::String& msg)
     {
+        ui->log->moveCursor(QTextCursor::End);
         ui->log->setFontWeight(QFont::Normal);
 
         switch(level)
@@ -140,6 +144,7 @@ bool MainWindow::Init()
         }
 
         ui->log->insertPlainText(msg.C());
+        ui->log->moveCursor(QTextCursor::End);
     });
 
     mDatastore = std::make_shared<libcomp::DataStore>("comp_cathedral");
@@ -351,12 +356,41 @@ bool MainWindow::LoadBinaryData(const libcomp::String& binaryFile,
             selector->Bind(new ObjectSelectorList(namedSet,
                 selectorAllowBlanks));
             mObjectSelectors[objName] = selector;
+
+            // Build a menu action for viewing without selection
+            QAction *pAction = ui->menuResourceList->addAction(qs(objName));
+            connect(pAction, SIGNAL(triggered()), this,
+                SLOT(ViewObjectList()));
         }
 
         return true;
     }
 
     return false;
+}
+
+
+void MainWindow::CloseAllWindows() 
+{
+    for(auto& pair : mObjectSelectors)
+    {
+        pair.second->close();
+    }
+
+    if(mEventWindow)
+    {
+        mEventWindow->close();
+    }
+
+    if(mZoneWindow)
+    {
+        mZoneWindow->close();
+    }
+}
+
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    CloseAllWindows();
 }
 
 void MainWindow::OpenEvents()
@@ -370,6 +404,20 @@ void MainWindow::OpenZone()
     if(mZoneWindow->ShowZone(mActiveZone))
     {
         mZoneWindow->raise();
+    }
+}
+
+void MainWindow::ViewObjectList()
+{
+    QAction* action = qobject_cast<QAction*>(sender());
+    if(action)
+    {
+        auto objType = cs(action->text());
+        auto selector = GetObjectSelector(objType);
+        if(selector)
+        {
+            selector->Open(nullptr);
+        }
     }
 }
 

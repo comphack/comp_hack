@@ -33,6 +33,7 @@
 #include "Downloader.h"
 #else // COMP_HACK_HEADLESS
 #include <QApplication>
+#include <QLibraryInfo>
 #include <QTranslator>
 
 #include <QFile>
@@ -50,7 +51,10 @@ Q_IMPORT_PLUGIN(qgif)
 #include <windows.h>
 #endif // Q_OS_WIN32
 
+#include "LanguageSelection.h"
 #include "Updater.h"
+
+QList<QTranslator*> gTranslators;
 #endif // COMP_HACK_HEADLESS
 
 int main(int argc, char *argv[])
@@ -119,14 +123,34 @@ int main(int argc, char *argv[])
     }
 #endif // Q_OS_WIN32
 
-    QTranslator translator;
+    QFile file("ImagineUpdate.lang");
+    QString locale;
 
-    if(translator.load("ImagineUpdate.qm"))
+    if( file.open(QIODevice::ReadOnly | QIODevice::Text) )
     {
-        app.installTranslator(&translator);
+        locale = QString::fromLocal8Bit(file.readLine()).trimmed();
     }
 
-    (new Updater)->show();
+    if(locale.isEmpty())
+    {
+        (new LanguageSelection)->show();
+    }
+    else
+    {
+        QTranslator *pTranslator = new QTranslator;
+        gTranslators.push_back(pTranslator);
+
+        pTranslator->load("qt_" + locale.split("_").first(),
+            QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+
+        if(pTranslator->load("updater_" + locale,
+            QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
+        {
+            app.installTranslator(pTranslator);
+        }
+
+        (new Updater)->show();
+    }
 
     int ret = app.exec();
 

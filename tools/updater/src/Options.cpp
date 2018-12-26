@@ -25,15 +25,21 @@
  */
 
 #include "Options.h"
+#include "Updater.h"
 
 #ifdef Q_OS_WIN32
 
 #include <PushIgnore.h>
+#include <QDir>
 #include <QFile>
+#include <QLibraryInfo>
 #include <QMessageBox>
+#include <QTranslator>
 #include <PopIgnore.h>
 
 typedef IDirect3D9* (WINAPI *D3DC9)(UINT);
+
+extern QList<QTranslator*> gTranslators;
 
 Options::Options(QWidget *p) : QDialog(p,
     Qt::WindowSystemMenuHint | Qt::WindowTitleHint |
@@ -88,6 +94,38 @@ Options::Options(QWidget *p) : QDialog(p,
     }
 
     Load();
+
+    // Language option
+    QStringList langs = QDir(QLibraryInfo::location(
+        QLibraryInfo::TranslationsPath)).entryList(
+        QStringList() << "updater_*.qm");
+
+    foreach(QString lang, langs)
+    {
+        lang = lang.replace("updater_", QString()).replace(
+            ".qm", QString());
+
+        ui.langCombo->addItem(QLocale(lang).nativeLanguageName(), lang);
+    }
+
+    connect(ui.langCombo, SIGNAL(currentIndexChanged(int)),
+        this, SLOT(LanguageChanged()));
+
+    QFile file("ImagineUpdate.lang");
+
+    if(file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QString locale = QString::fromLocal8Bit(
+            file.readLine()).trimmed();
+
+        ui.langCombo->setCurrentText(
+            QLocale(locale).nativeLanguageName());
+    }
+    else
+    {
+        ui.langCombo->setCurrentText(
+            QLocale::system().nativeLanguageName());
+    }
 }
 
 Options::~Options()
@@ -260,7 +298,70 @@ void Options::Save()
         ui.modeCombo->currentIndex() ? "true" : "false").arg(
         screenX).arg(screenY).toLocal8Bit());
 
+    // Language options
+    QString locale = ui.langCombo->currentData().toString();
+
+    QFile fileLang("ImagineUpdate.lang");
+
+    if(!fileLang.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        QMessageBox::critical(this, tr("Save Error"),
+            tr("Failed to save the language selection!"));
+
+        return;
+    }
+
+    fileLang.write(locale.toLocal8Bit());
+    fileLang.close();
+
+    if(!QFile::remove("ImagineUpdate.dat") ||
+        !QFile::copy(tr("translations/ImagineUpdate_en_US.dat"),
+            "ImagineUpdate.dat"))
+    {
+        QMessageBox::critical(this, tr("Save Error"),
+            tr("Failed to save the updater URL!"));
+
+        return;
+    }
+
+    ((Updater*)parent())->ReloadURL();
+
     close();
+}
+
+void Options::LanguageChanged()
+{
+    QTranslator *pTranslator = new QTranslator;
+
+    QString locale = ui.langCombo->currentData().toString();
+
+    pTranslator->load("qt_" + locale.split("_").first(),
+        QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+
+    if(pTranslator->load("updater_" + locale,
+        QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
+    {
+        foreach(QTranslator *pTrans, gTranslators)
+        {
+            QCoreApplication::instance()->removeTranslator(pTrans);
+        }
+
+        gTranslators.push_back(pTranslator);
+
+        QCoreApplication::instance()->installTranslator(pTranslator);
+    }
+    else
+    {
+        delete pTranslator;
+    }
+}
+
+void Options::changeEvent(QEvent *pEvent)
+{
+    if(QEvent::LanguageChange == pEvent->type())
+    {
+        ui.retranslateUi(this);
+    }
 }
 
 #endif // Q_OS_WIN32

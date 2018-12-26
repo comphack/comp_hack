@@ -54,7 +54,11 @@ protected slots:
     void Load();
     void Save();
 
+    void LanguageChanged();
+
 protected:
+    virtual void changeEvent(QEvent *pEvent);
+
     void PopulateAdapterModes();
 
     IDirect3D9 *mD3D9;

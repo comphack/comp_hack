@@ -1,126 +1,171 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="ja_JP" sourcelanguage="en_US">
+<TS version="2.1" language="ru_RU">
 <context>
     <name>Downloader</name>
     <message>
         <location filename="../src/Downloader.cpp" line="169"/>
         <source>%1/hashlist.dat</source>
-        <translation></translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/Downloader.cpp" line="173"/>
         <source>%1/hashlist.ver</source>
-        <translation></translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="189"/>
+        <location filename="../src/Downloader.cpp" line="190"/>
+        <source>Download failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/Downloader.cpp" line="204"/>
         <source>Download failed: Server returned status code %1 %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>LanguageSelection</name>
+    <message>
+        <location filename="../../../build64/tools/updater/ui_LanguageSelection.h" line="81"/>
+        <source>Language Selection</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../../build64/tools/updater/ui_LanguageSelection.h" line="82"/>
+        <source>Please select a language:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/LanguageSelection.cpp" line="109"/>
+        <location filename="../src/LanguageSelection.cpp" line="122"/>
+        <source>Save Error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/LanguageSelection.cpp" line="110"/>
+        <source>Failed to save the language selection!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/LanguageSelection.cpp" line="119"/>
+        <source>translations/ImagineUpdate_en_US.dat</source>
+        <translation>translations/ImagineUpdate_ru_RU.dat</translation>
+    </message>
+    <message>
+        <location filename="../src/LanguageSelection.cpp" line="123"/>
+        <source>Failed to save the updater URL!</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>Options</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="201"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="213"/>
         <source>Shin Megami Tensei IMAGINE - Game Option Configuration</source>
-        <translation>真・女神転生IMAGINE　ゲームオプション設定</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="202"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="214"/>
         <source>Mode:</source>
-        <translation>モード：</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="203"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="215"/>
         <source>Window</source>
-        <translation>ウィンドウ表示</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="204"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="216"/>
         <source>Full Screen</source>
-        <translation>全画面（フルスクリーン）</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="206"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="218"/>
         <source>Video Card:</source>
-        <translation>ビデオカード：</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="207"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="219"/>
         <source>Screen Size:</source>
-        <translation>画面サイズ：</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="208"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="220"/>
         <source>Chat Text Size:</source>
-        <translation>チャットテキストサイズ：</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="209"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="221"/>
         <source>Preset</source>
-        <translation>プリセット</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="210"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="222"/>
         <source>Custom</source>
-        <translation>カスタム</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="211"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="223"/>
         <source>x</source>
-        <translation></translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="212"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="224"/>
         <source>Small (12pt)</source>
-        <translation>小 (12pt)</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="213"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="225"/>
         <source>Medium (14pt)</source>
-        <translation>中 (14pt)</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="214"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="226"/>
         <source>Large (16pt)</source>
-        <translation>大 (16pt)</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="215"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="227"/>
         <source>Small (12pt no antialiasing)</source>
-        <translation>小 (12pt　アンチエイリアス無効)</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="216"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="228"/>
         <source>Medium (14pt no antialiasing)</source>
-        <translation>中 (14pt　アンチエイリアス無効)</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="217"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="229"/>
         <source>Large (16pt no antialiasing)</source>
-        <translation>大 (12pt　アンチエイリアス無効)</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Options.cpp" line="80"/>
-        <location filename="../src/Options.cpp" line="132"/>
-        <location filename="../src/Options.cpp" line="220"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="231"/>
+        <source>Language:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/Options.cpp" line="86"/>
+        <location filename="../src/Options.cpp" line="170"/>
+        <location filename="../src/Options.cpp" line="258"/>
         <source>%1 x %2</source>
-        <translation></translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Options.cpp" line="235"/>
+        <location filename="../src/Options.cpp" line="273"/>
+        <location filename="../src/Options.cpp" line="308"/>
+        <location filename="../src/Options.cpp" line="321"/>
         <source>Save Error</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Options.cpp" line="236"/>
+        <location filename="../src/Options.cpp" line="274"/>
         <source>Failed to save configuration to OutsideOption.txt!</source>
-        <oldsource>Failed to save configuration to OutsideOption.txt file!</oldsource>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Options.cpp" line="252"/>
+        <location filename="../src/Options.cpp" line="290"/>
         <source>-Adapter &quot;%1&quot;
 -ChatFontSizeType %2
 -Color 32
@@ -128,43 +173,58 @@
 -ResolutionX %4
 -ResolutionY %5
 </source>
-        <translation></translation>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/Options.cpp" line="309"/>
+        <source>Failed to save the language selection!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/Options.cpp" line="318"/>
+        <source>translations/ImagineUpdate_en_US.dat</source>
+        <translation>translations/ImagineUpdate_ru_RU.dat</translation>
+    </message>
+    <message>
+        <location filename="../src/Options.cpp" line="322"/>
+        <source>Failed to save the updater URL!</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>Updater</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="155"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="155"/>
         <source>COMP_hack Updater v1.0</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="158"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="158"/>
         <source>Please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="159"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="159"/>
         <source>Screenshots</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="160"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="160"/>
         <source>Full Check</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="161"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="161"/>
         <source>Diagnostics</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="162"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="162"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="163"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="163"/>
         <source>PLAY GAME</source>
         <translation type="unfinished"></translation>
     </message>
@@ -239,23 +299,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="400"/>
+        <location filename="../src/Updater.cpp" line="401"/>
         <source>%1/%2.%3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="402"/>
+        <location filename="../src/Updater.cpp" line="403"/>
         <source>%1/%2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="407"/>
-        <location filename="../src/Updater.cpp" line="520"/>
+        <location filename="../src/Updater.cpp" line="408"/>
+        <location filename="../src/Updater.cpp" line="522"/>
         <source>Updater Error</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="408"/>
+        <location filename="../src/Updater.cpp" line="409"/>
         <source>Failed to patch %1</source>
         <translation type="unfinished"></translation>
     </message>

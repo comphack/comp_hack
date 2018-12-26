@@ -1,10 +1,10 @@
 /**
- * @file tools/updater/src/Updater.h
+ * @file tools/updater/src/LanguageSelection.h
  * @ingroup tools
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief GUI for the updater.
+ * @brief GUI for the language selection.
  *
  * This tool will update the game client.
  *
@@ -24,64 +24,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_UPDATER_SRC_UPDATER_H
-#define TOOLS_UPDATER_SRC_UPDATER_H
+#ifndef TOOLS_UPDATER_SRC_LANGUAGESELECTION_H
+#define TOOLS_UPDATER_SRC_LANGUAGESELECTION_H
 
 #include <PushIgnore.h>
-#include "ui_Updater.h"
+#include "ui_LanguageSelection.h"
 
-#include <QMap>
-#include <QThread>
+#include <QDialog>
 #include <PopIgnore.h>
 
-class Downloader;
+#include <PushIgnore.h>
+#include <d3d9.h>
+#include <PopIgnore.h>
 
-class VersionData
-{
-public:
-    QString title;
-    QString server;
-    QString tag;
-
-    QMap<QString, QString> files;
-};
-
-class Updater : public QWidget
+class LanguageSelection : public QDialog
 {
     Q_OBJECT
 
 public:
-    Updater(QWidget *parent = 0);
-    ~Updater();
-
-    void ReloadURL();
+    LanguageSelection(QWidget *parent = 0);
+    ~LanguageSelection();
 
 protected slots:
-    void unlock();
-    void startGame();
-    void showSettings();
-    void showScreenshots();
-    void showDXDiag();
-    void recheck();
-
-    void errorMessage(const QString& msg);
+    void LanguageChanged();
+    void Save();
 
 protected:
-    virtual void closeEvent(QCloseEvent *event);
+    virtual void changeEvent(QEvent *pEvent);
 
-    bool copyFile(const QString& src, const QString& dest);
-
-    bool mDone;
-
-    QString mURL;
-    QString mWebsite;
-
-    Downloader *mDL;
-    QThread mDownloadThread;
-
-    QMap<QString, VersionData*> mVersionMap;
-
-    Ui::Updater ui;
+    Ui::LanguageSelection ui;
 };
 
-#endif // TOOLS_UPDATER_SRC_UPDATER_H
+#endif // TOOLS_UPDATER_SRC_LANGUAGESELECTION_H

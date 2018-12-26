@@ -38,6 +38,7 @@ IF(WIN32)
 
     SET(${PROJECT_NAME}_SRCS
         src/Downloader.cpp
+        src/LanguageSelection.cpp
         src/Options.cpp
         src/Updater.cpp
         src/main.cpp
@@ -45,11 +46,13 @@ IF(WIN32)
 
     SET(${PROJECT_NAME}_HDRS
         src/Downloader.h
+        src/LanguageSelection.h
         src/Options.h
         src/Updater.h
     )
 
     SET(${PROJECT_NAME}_UIS
+        ui/LanguageSelection.ui
         ui/Options.ui
         ui/Updater.ui
     )
@@ -57,8 +60,8 @@ IF(WIN32)
 
     qt5_create_translation(QM_FILES ${${PROJECT_NAME}_SRCS}
         ${${PROJECT_NAME}_HDRS} ${${PROJECT_NAME}_RCC_SRCS}
-        ${${PROJECT_NAME}_UI_SRCS} trans/en_US.ts trans/ja_JP.ts
-        trans/ru_RU.ts)
+        ${${PROJECT_NAME}_UI_SRCS} trans/updater_en_US.ts
+        trans/updater_ja_JP.ts trans/updater_ru_RU.ts)
 
     RES_WRAP(${PROJECT_NAME}_SRCS res/updater.rc)
 

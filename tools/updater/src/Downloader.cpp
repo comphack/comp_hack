@@ -670,3 +670,8 @@ void Downloader::startDownload(const QString& url, const QString& path)
     connect(mCurrentReq, SIGNAL(readyRead()), this, SLOT(requestReadyRead()));
     connect(mCurrentReq, SIGNAL(finished()), this, SLOT(requestFinished()));
 }
+
+void Downloader::setURL(const QString& url)
+{
+    mURL = url;
+}

@@ -59,6 +59,7 @@ public:
     ~Downloader();
 
     void triggerKill();
+    void setURL(const QString& url);
 
 signals:
     void updateKilled();

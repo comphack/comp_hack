@@ -49,7 +49,7 @@ build_script:
   - if %platform%==x64 (7z x ..\doxygen.zip)
   - if %platform%==x64 (cd ..)
   - if %platform%==x64 (del doxygen.zip)
-  - if %platform%==x64 (set PATH="%APPVEYOR_BUILD_FOLDER%\build\doxygen;%PATH%")
+  - set PATH=%APPVEYOR_BUILD_FOLDER%\build\doxygen;%PATH%
   - if %platform%==x64 (cmake -DUSE_PREBUILT_OBJECTS=ON -DGENERATE_DOCUMENTATION=ON -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CUSTOM_CONFIGURATION_TYPES="%configuration%" -G"%generator%" ..) else (cmake -DUSE_PREBUILT_OBJECTS=ON -DGENERATE_DOCUMENTATION=ON -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="%appveyor_build_folder%\build\install" -DCMAKE_CUSTOM_CONFIGURATION_TYPES="%configuration%" -DUPDATER_ONLY=ON -G"%generator%" ..)
   - cmake --build . --config %configuration% --target package
   - if %platform%==x64 (cmake --build . --config %configuration% --target doc)

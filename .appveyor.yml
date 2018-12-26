@@ -58,7 +58,5 @@ build_script:
 artifacts:
   - path: build\comp_hack-*.msi
     name: comp_hack_installer
-    on:
-      - platform: x64
   - path: build\comp_hack-*.zip
     name: comp_hack_archive

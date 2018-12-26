@@ -69,6 +69,8 @@ IF(WIN32)
         ${${PROJECT_NAME}_HDRS} ${${PROJECT_NAME}_RCC_SRCS}
         ${${PROJECT_NAME}_UI_SRCS} ${QM_FILES})
 
+    ADD_QT_DEPS(${PROJECT_NAME})
+
     IF(MINGW)
         SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINK_FLAGS -mwindows)
     ENDIF(MINGW)
@@ -85,5 +87,9 @@ IF(WIN32)
         Qt5::WebEngineWidgets Qt5::Xml zlib)
 
     INSTALL(TARGETS ${PROJECT_NAME} DESTINATION ${COMP_INSTALL_DIR} COMPONENT tools)
+
+    FOREACH(qm_file ${QM_FILES})
+        INSTALL(FILES ${qm_file} DESTINATION translations COMPONENT tools)
+    ENDFOREACH(qm_file)
 
 ENDIF(WIN32)

@@ -32,30 +32,39 @@ IF(WIN32)
     FIND_PACKAGE(Qt5WebEngine REQUIRED)
     FIND_PACKAGE(Qt5WebEngineWidgets REQUIRED)
     FIND_PACKAGE(Qt5Xml REQUIRED)
+    FIND_PACKAGE(Qt5LinguistTools REQUIRED)
 
     MESSAGE("** Configuring ${PROJECT_NAME} **")
 
     SET(${PROJECT_NAME}_SRCS
         src/Downloader.cpp
+        src/Options.cpp
         src/Updater.cpp
         src/main.cpp
     )
 
     SET(${PROJECT_NAME}_HDRS
         src/Downloader.h
+        src/Options.h
         src/Updater.h
     )
 
     SET(${PROJECT_NAME}_UIS
+        ui/Options.ui
         ui/Updater.ui
     )
     qt5_wrap_ui(${PROJECT_NAME}_UI_SRCS ${${PROJECT_NAME}_UIS})
+
+    qt5_create_translation(QM_FILES ${${PROJECT_NAME}_SRCS}
+        ${${PROJECT_NAME}_HDRS} ${${PROJECT_NAME}_RCC_SRCS}
+        ${${PROJECT_NAME}_UI_SRCS} trans/en_US.ts trans/ja_JP.ts
+        trans/ru_RU.ts)
 
     RES_WRAP(${PROJECT_NAME}_SRCS res/updater.rc)
 
     ADD_EXECUTABLE(${PROJECT_NAME} WIN32 ${${PROJECT_NAME}_SRCS}
         ${${PROJECT_NAME}_HDRS} ${${PROJECT_NAME}_RCC_SRCS}
-        ${${PROJECT_NAME}_UI_SRCS})
+        ${${PROJECT_NAME}_UI_SRCS} ${QM_FILES})
 
     IF(MINGW)
         SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINK_FLAGS -mwindows)

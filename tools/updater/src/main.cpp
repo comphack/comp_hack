@@ -33,6 +33,7 @@
 #include "Downloader.h"
 #else // COMP_HACK_HEADLESS
 #include <QApplication>
+#include <QTranslator>
 
 #include <QFile>
 #include <QProcess>
@@ -117,6 +118,13 @@ int main(int argc, char *argv[])
         return 0;
     }
 #endif // Q_OS_WIN32
+
+    QTranslator translator;
+
+    if(translator.load("ImagineUpdate.qm"))
+    {
+        app.installTranslator(&translator);
+    }
 
     (new Updater)->show();
 

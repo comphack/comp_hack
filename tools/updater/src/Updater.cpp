@@ -26,6 +26,7 @@
 
 #include "Updater.h"
 #include "Downloader.h"
+#include "Options.h"
 
 #include <PushIgnore.h>
 #include <QMenu>
@@ -438,7 +439,7 @@ void Updater::closeEvent(QCloseEvent *evt)
 void Updater::showSettings()
 {
 #ifdef Q_OS_WIN32
-    QProcess::startDetached("ImagineOption.exe");
+    (new Options(this))->show();
 #else
     QProcess::startDetached("env WINEPREFIX=\"/home/erikku/.wine\" wine "
         "\"C:\\AeriaGames\\MegaTen\\ImagineOption.exe\"");

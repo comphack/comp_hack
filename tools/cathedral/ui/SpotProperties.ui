@@ -6,12 +6,21 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>360</width>
-    <height>443</height>
+    <width>438</width>
+    <height>322</height>
    </rect>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <property name="margin">
+  <layout class="QVBoxLayout" name="layoutMain">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
     <number>0</number>
    </property>
    <item>
@@ -19,132 +28,416 @@
      <property name="widgetResizable">
       <bool>true</bool>
      </property>
-     <widget class="QWidget" name="scrollAreaWidgetContents">
+     <widget class="QWidget" name="scrollAreaWidget">
       <property name="geometry">
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>358</width>
-        <height>441</height>
+        <width>436</width>
+        <height>320</height>
        </rect>
       </property>
-      <layout class="QFormLayout" name="formLayout">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>ID:</string>
+      <layout class="QVBoxLayout" name="layoutScrollArea">
+       <item>
+        <widget class="QGroupBox" name="grpClientDefinition">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
+         <property name="title">
+          <string>Client Definition</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+         </property>
+         <layout class="QVBoxLayout" name="layoutClientDefinition">
+          <property name="leftMargin">
+           <number>3</number>
+          </property>
+          <property name="topMargin">
+           <number>3</number>
+          </property>
+          <property name="rightMargin">
+           <number>3</number>
+          </property>
+          <property name="bottomMargin">
+           <number>3</number>
+          </property>
+          <item>
+           <layout class="QHBoxLayout" name="layoutHeader">
+            <property name="topMargin">
+             <number>5</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="lblID">
+              <property name="text">
+               <string>ID:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="id">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblType">
+              <property name="text">
+               <string>Type:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="type">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <item>
+               <property name="text">
+                <string>0: Not Specified</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>1: Spawn Location</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>2: Zone Change</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>3: Zone-In Point</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>4: Unused</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>5: Start Event</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>6: Unknown</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>7: NPC Position</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>8: Bazaar Market</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>9: Spawn Trigger</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>10: Unused</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>11: NPC State Trigger</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>12: Spawn Object</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>13: Plasma</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>14: Instance Base</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>15: Diaspora Zone-In</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>16: Bounding Box</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="chkEnabled">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Enabled</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="layoutPosition">
+            <item>
+             <widget class="QLabel" name="lblX">
+              <property name="text">
+               <string>X:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="x">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblY">
+              <property name="text">
+               <string>Y:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="y">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblRotation">
+              <property name="text">
+               <string>Rotation:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="rotation">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="layoutGeometry">
+            <item>
+             <widget class="QLabel" name="lblWidth">
+              <property name="text">
+               <string>Width:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="width">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblHeight">
+              <property name="text">
+               <string>Height:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="height">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblArguments">
+            <property name="text">
+             <string>No client arguments</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
-       <item row="0" column="1">
-        <widget class="QSpinBox" name="id">
-         <property name="minimum">
-          <number>1</number>
+       <item>
+        <widget class="QGroupBox" name="grpServerDefinition">
+         <property name="title">
+          <string>Server Definition</string>
          </property>
-         <property name="maximum">
-          <number>2147483647</number>
+         <property name="checkable">
+          <bool>true</bool>
          </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+         <layout class="QFormLayout" name="layoutServerDefinition">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblActions">
+            <property name="text">
+             <string>Actions:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="ActionList" name="actions" native="true"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblLeaveActions">
+            <property name="text">
+             <string>Leave Actions:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="ActionList" name="leaveActions" native="true"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblSpawnArea">
+            <property name="text">
+             <string>Spawn Area:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="lblMatchSpawn">
+            <property name="text">
+             <string>Match Spawn:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QComboBox" name="matchSpawn">
+            <item>
+             <property name="text">
+              <string>None</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>All</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>PvP Blue Team</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>PvP Read Team</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="lblMatchBase">
+            <property name="text">
+             <string>Match Base:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QSpinBox" name="matchBase">
+            <property name="maximum">
+             <number>256</number>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="lblMatchZoneInLimit">
+            <property name="text">
+             <string>Match Zone-In Limit:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QSpinBox" name="matchZoneInLimit">
+            <property name="maximum">
+             <number>256</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QGroupBox" name="grpSpawnArea">
+            <property name="title">
+             <string/>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+            <layout class="QHBoxLayout" name="spawnAreaLayout">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="SpawnLocation" name="spawnArea" native="true"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>Trigger on Leave:</string>
+       <item>
+        <spacer name="spacerMain">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QCheckBox" name="triggerOnLeave"/>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>X:</string>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
          </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="label_4">
-         <property name="text">
-          <string>Y:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="label_5">
-         <property name="text">
-          <string>Width:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QLabel" name="label_6">
-         <property name="text">
-          <string>Height:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QDoubleSpinBox" name="x">
-         <property name="decimals">
-          <number>5</number>
-         </property>
-         <property name="minimum">
-          <double>-1000000000.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>1000000000.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QDoubleSpinBox" name="y">
-         <property name="decimals">
-          <number>5</number>
-         </property>
-         <property name="minimum">
-          <double>-1000000000.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>1000000000.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QDoubleSpinBox" name="width">
-         <property name="decimals">
-          <number>5</number>
-         </property>
-         <property name="minimum">
-          <double>-1000000000.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>1000000000.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QDoubleSpinBox" name="height">
-         <property name="decimals">
-          <number>5</number>
-         </property>
-         <property name="minimum">
-          <double>-1000000000.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>1000000000.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="1">
-        <widget class="ActionList" name="actionList" native="true"/>
-       </item>
-       <item row="6" column="0">
-        <widget class="QLabel" name="label_7">
-         <property name="text">
-          <string>Actions:</string>
-         </property>
-        </widget>
+        </spacer>
        </item>
       </layout>
      </widget>
@@ -157,6 +450,12 @@
    <class>ActionList</class>
    <extends>QWidget</extends>
    <header>ActionList.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SpawnLocation</class>
+   <extends>QWidget</extends>
+   <header>SpawnLocationUI.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

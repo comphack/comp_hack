@@ -70,6 +70,7 @@ public:
     std::shared_ptr<libcomp::DefinitionManager> GetDefinitions() const;
 
     EventWindow* GetEvents() const;
+    ZoneWindow* GetZones() const;
 
     std::shared_ptr<objects::MiCEventMessageData> GetEventMessage(
         int32_t msgID) const;

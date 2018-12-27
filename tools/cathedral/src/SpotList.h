@@ -46,6 +46,8 @@ public:
 
     QString GetObjectID(const std::shared_ptr<
         libcomp::Object>& obj) const override;
+    QString GetObjectName(const std::shared_ptr<
+        libcomp::Object>& obj) const override;
 
     void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
     void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;

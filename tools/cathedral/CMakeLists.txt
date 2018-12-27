@@ -87,7 +87,10 @@ SET(${PROJECT_NAME}_SRCS
     src/ObjectSelectorList.cpp
     src/ObjectSelectorWindow.cpp
     src/ServerScript.cpp
+    src/SpawnLocationUI.cpp
+    src/SpawnRestrictionUI.cpp
     src/SpotList.cpp
+    src/ZoneTriggerUI.cpp
     src/ZoneWindow.cpp
 )
 
@@ -150,7 +153,10 @@ SET(${PROJECT_NAME}_HDRS
     src/ObjectSelectorList.h
     src/ObjectSelectorWindow.h
     src/ServerScript.h
+    src/SpawnLocationUI.h
+    src/SpawnRestrictionUI.h
     src/SpotList.h
+    src/ZoneTriggerUI.h
     src/ZoneWindow.h
 )
 
@@ -212,6 +218,9 @@ SET(${PROJECT_NAME}_UIS
     ui/ObjectSelector.ui
     ui/ObjectSelectorWindow.ui
     ui/ServerScript.ui
+    ui/SpawnLocation.ui
+    ui/SpawnRestriction.ui
+    ui/ZoneTrigger.ui
     ui/ZoneWindow.ui
 
     # Properties for each object.

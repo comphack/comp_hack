@@ -61,13 +61,13 @@ void ObjectPosition::Load(uint32_t spotID, float x, float y, float rot)
     prop->y->setValue((double)y);
     prop->rotation->setValue((double)rot);
 
-    if(x || y || rot)
+    if(spotID || (!x && !y && !rot))
     {
-        prop->radPosition->setChecked(true);
+        prop->radSpot->setChecked(true);
     }
     else
     {
-        prop->radSpot->setChecked(true);
+        prop->radPosition->setChecked(true);
     }
 
     RadioToggle();

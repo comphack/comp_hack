@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ZoneTrigger</class>
+ <widget class="QWidget" name="ZoneTrigger">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>250</width>
+    <height>85</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="layoutMain">
+   <item>
+    <layout class="QFormLayout" name="formLayout">
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="lblTrigger">
+       <property name="text">
+        <string>Trigger:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="trigger">
+       <item>
+        <property name="text">
+         <string>On Setup</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Pre-Zone-In</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Zone-In</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Zone-Out</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Spawn</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Death</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Revival</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Respawn</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Flag Set</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Time</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On System Time</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Moon Phase</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Action Delay</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Phase</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On PvP Start</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On PvP Base Capture</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On PvP Complete</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Diaspora Base Capture</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Diaspora Base Reset</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On UB Tick</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On UB Gauge Over</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On UB Gauge Under</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="lblValue">
+       <property name="text">
+        <string>Value:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QSpinBox" name="value">
+       <property name="minimum">
+        <number>-2147483647</number>
+       </property>
+       <property name="maximum">
+        <number>2147483647</number>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="lblActions">
+       <property name="text">
+        <string>Actions:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="ActionList" name="actions" native="true"/>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ActionList</class>
+   <extends>QWidget</extends>
+   <header>ActionList.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

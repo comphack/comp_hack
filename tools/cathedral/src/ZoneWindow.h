@@ -56,6 +56,8 @@ public:
     explicit ZoneWindow(MainWindow *pMainWindow, QWidget *parent = 0);
     ~ZoneWindow();
 
+    std::shared_ptr<objects::ServerZone> GetZone() const;
+
     bool ShowZone(const std::shared_ptr<objects::ServerZone>& zone);
 
 protected slots:

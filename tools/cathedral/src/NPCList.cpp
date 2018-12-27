@@ -53,13 +53,19 @@ NPCList::NPCList(QWidget *pParent) : ObjectList(pParent)
     prop->setupUi(pWidget);
 
     ui->splitter->addWidget(pWidget);
-
-    ResetSpotList();
 }
 
 NPCList::~NPCList()
 {
     delete prop;
+}
+
+void NPCList::Bind(MainWindow *pMainWindow, bool isHNPC)
+{
+    SetMainWindow(pMainWindow);
+
+    prop->type->Bind(pMainWindow, isHNPC ? "hNPCData" : "oNPCData");
+    prop->actions->SetMainWindow(pMainWindow);
 }
 
 QString NPCList::GetObjectID(const std::shared_ptr<
@@ -84,6 +90,8 @@ QString NPCList::GetObjectName(const std::shared_ptr<
         return {};
     }
 
+    libcomp::String name;
+
     auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(sObj);
     if(npc)
     {
@@ -92,7 +100,7 @@ QString NPCList::GetObjectName(const std::shared_ptr<
             dataset->GetObjectByID(sObj->GetID()));
         if(hNPC)
         {
-            return qs(hNPC->GetBasic()->GetName());
+            name = hNPC->GetBasic()->GetName();
         }
     }
     else
@@ -102,35 +110,37 @@ QString NPCList::GetObjectName(const std::shared_ptr<
             dataset->GetObjectByID(sObj->GetID()));
         if(oNPC)
         {
-            return qs(oNPC->GetName());
+            name = oNPC->GetName();
         }
     }
 
-    return {};
+    if(sObj->GetActorID())
+    {
+        name = libcomp::String("%1 [Actor %2]").Arg(name)
+            .Arg(sObj->GetActorID()).Trimmed();
+    }
+
+    return qs(name);
 }
 
 void NPCList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
     auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
-
     if(!sObj)
     {
         return;
     }
 
-    prop->spot->lineEdit()->setText(QString::number(sObj->GetSpotID()));
-    prop->x->setValue(sObj->GetX());
-    prop->y->setValue(sObj->GetY());
-    prop->rot->setValue(sObj->GetRotation());
+    prop->type->SetValue(sObj->GetID());
+    prop->position->Load(sObj);
+    prop->state->setValue((uint8_t)sObj->GetState());
+    prop->actorID->setValue(sObj->GetActorID());
+
+    auto actions = sObj->GetActions();
+    prop->actions->Load(actions);
 }
 
 void NPCList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
     (void)obj;
-}
-
-void NPCList::ResetSpotList()
-{
-    prop->spot->clear();
-    prop->spot->addItem(QString("0 (None)"), QVariant(0));
 }

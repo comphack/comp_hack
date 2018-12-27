@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/NPCList.h
+ * @file tools/cathedral/src/SpawnLocationUI.h
  * @ingroup cathedral
  *
- * @author COMP Omega <compomega@tutanota.com>
+ * @author HACKfrost
  *
- * @brief Definition for a control that holds a list of NPCs.
+ * @brief Definition for a configured SpawnLocation.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,38 +22,44 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_CATHEDRAL_SRC_NPCLIST_H
-#define TOOLS_CATHEDRAL_SRC_NPCLIST_H
+#ifndef TOOLS_CATHEDRAL_SRC_SPAWNLOCATIONUI_H
+#define TOOLS_CATHEDRAL_SRC_SPAWNLOCATIONUI_H
 
-#include "ObjectList.h"
+// Qt Includes
+#include <PushIgnore.h>
+#include <QWidget>
+#include <PopIgnore.h>
+
+// Standard C++11 Includes
+#include <memory>
+
+namespace objects
+{
+
+class SpawnLocation;
+
+} // namespace objects
 
 namespace Ui
 {
 
-class NPCProperties;
+class SpawnLocation;
 
 } // namespace Ui
 
-class NPCList : public ObjectList
+class SpawnLocation : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit NPCList(QWidget *pParent = 0);
-    virtual ~NPCList();
+    explicit SpawnLocation(QWidget *pParent = 0);
+    virtual ~SpawnLocation();
 
-    void Bind(MainWindow *pMainWindow, bool isHNPC);
-
-    QString GetObjectID(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
-    QString GetObjectName(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
-
-    void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
-    void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+    void Load(const std::shared_ptr<objects::SpawnLocation>& loc);
+    std::shared_ptr<objects::SpawnLocation> Save() const;
 
 protected:
-    Ui::NPCProperties *prop;
+    Ui::SpawnLocation *prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_NPCLIST_H
+#endif // TOOLS_CATHEDRAL_SRC_SPAWNLOCATIONUI_H

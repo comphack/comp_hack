@@ -27,10 +27,8 @@
 // Cathedral Includes
 #include "BinaryDataNamedSet.h"
 #include "EventWindow.h"
-#include "NPCList.h"
 #include "ObjectSelectorList.h"
 #include "ObjectSelectorWindow.h"
-#include "SpotList.h"
 #include "ZoneWindow.h"
 
 // objects Includes
@@ -280,6 +278,11 @@ std::shared_ptr<libcomp::DefinitionManager> MainWindow::GetDefinitions() const
 EventWindow* MainWindow::GetEvents() const
 {
     return mEventWindow;
+}
+
+ZoneWindow* MainWindow::GetZones() const
+{
+    return mZoneWindow;
 }
 
 std::shared_ptr<objects::MiCEventMessageData> MainWindow::GetEventMessage(

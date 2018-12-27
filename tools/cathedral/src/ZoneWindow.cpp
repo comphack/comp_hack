@@ -67,8 +67,8 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
 {
     ui.setupUi(this);
 
-    ui.npcs->SetMainWindow(pMainWindow);
-    ui.objects->SetMainWindow(pMainWindow);
+    ui.npcs->Bind(pMainWindow, true);
+    ui.objects->Bind(pMainWindow, false);
     ui.spots->SetMainWindow(pMainWindow);
 
     connect(ui.zoom200, SIGNAL(triggered()),
@@ -93,6 +93,11 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
 
 ZoneWindow::~ZoneWindow()
 {
+}
+
+std::shared_ptr<objects::ServerZone> ZoneWindow::GetZone() const
+{
+    return mZone;
 }
 
 bool ZoneWindow::ShowZone(const std::shared_ptr<objects::ServerZone>& zone)
@@ -435,9 +440,31 @@ void ZoneWindow::BindSpawns()
 void ZoneWindow::BindSpots()
 {
     std::vector<std::shared_ptr<libcomp::Object>> spots;
+
+    auto definitions = mMainWindow->GetDefinitions();
+    auto spotDefs = definitions->GetSpotData(mZone->GetDynamicMapID());
+
+    // Add defined spots first (valid or not)
     for(auto& spotPair : mZone->GetSpots())
     {
-        spots.push_back(spotPair.second);
+        auto iter = spotDefs.find(spotPair.first);
+        if(iter != spotDefs.end())
+        {
+            spots.push_back(iter->second);
+        }
+        else
+        {
+            spots.push_back(spotPair.second);
+        }
+    }
+
+    // Add all remaining definitions next
+    for(auto& spotPair : spotDefs)
+    {
+        if(!mZone->SpotsKeyExists(spotPair.first))
+        {
+            spots.push_back(spotPair.second);
+        }
     }
 
     ui.spots->SetObjectList(spots);

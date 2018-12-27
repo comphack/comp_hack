@@ -7,10 +7,10 @@
     <x>0</x>
     <y>0</y>
     <width>360</width>
-    <height>443</height>
+    <height>130</height>
    </rect>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="layoutMain">
    <property name="leftMargin">
     <number>0</number>
    </property>
@@ -34,70 +34,70 @@
         <x>0</x>
         <y>0</y>
         <width>358</width>
-        <height>441</height>
+        <height>128</height>
        </rect>
       </property>
-      <layout class="QFormLayout" name="formLayout">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Spot:</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <widget class="QComboBox" name="spot">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="editable">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="spotGo">
-           <property name="text">
-            <string>Go</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
+      <layout class="QFormLayout" name="layoutScrollArea">
        <item row="1" column="0">
-        <widget class="QLabel" name="label_2">
+        <widget class="QLabel" name="lblPosition">
          <property name="text">
-          <string>X:</string>
+          <string>Position:</string>
          </property>
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QDoubleSpinBox" name="x"/>
+        <widget class="ObjectPosition" name="position" native="true"/>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="lblType">
+         <property name="text">
+          <string>Type:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="ObjectSelector" name="type" native="true"/>
        </item>
        <item row="2" column="0">
-        <widget class="QLabel" name="label_3">
+        <widget class="QLabel" name="lblState">
          <property name="text">
-          <string>Y:</string>
+          <string>State:</string>
          </property>
         </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QDoubleSpinBox" name="y"/>
+        <widget class="QSpinBox" name="state">
+         <property name="maximum">
+          <number>255</number>
+         </property>
+        </widget>
        </item>
        <item row="3" column="0">
-        <widget class="QLabel" name="label_4">
+        <widget class="QLabel" name="lblActorID">
          <property name="text">
-          <string>Rot:</string>
+          <string>Actor ID:</string>
          </property>
         </widget>
        </item>
        <item row="3" column="1">
-        <widget class="QDoubleSpinBox" name="rot"/>
+        <widget class="QSpinBox" name="actorID">
+         <property name="minimum">
+          <number>-2147483647</number>
+         </property>
+         <property name="maximum">
+          <number>2147483647</number>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="lblActions">
+         <property name="text">
+          <string>Actions:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="ActionList" name="actions" native="true"/>
        </item>
       </layout>
      </widget>
@@ -105,6 +105,26 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ObjectPosition</class>
+   <extends>QWidget</extends>
+   <header>ObjectPositionUI.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ObjectSelector</class>
+   <extends>QWidget</extends>
+   <header>ObjectSelector.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ActionList</class>
+   <extends>QWidget</extends>
+   <header>ActionList.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

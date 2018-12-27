@@ -71,6 +71,8 @@ protected slots:
 private:
     bool LoadMapFromZone();
 
+    void LoadProperties();
+
     bool GetSpotPosition(uint32_t dynamicMapID,
         uint32_t spotID, float& x, float& y, float& rot) const;
 

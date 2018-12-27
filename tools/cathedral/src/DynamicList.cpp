@@ -34,6 +34,8 @@
 #include "MainWindow.h"
 #include "ObjectPositionUI.h"
 #include "ObjectSelector.h"
+#include <SpawnLocationUI.h>
+#include <ZoneTriggerUI.h>
 
 // Qt Includes
 #include <PushIgnore.h>
@@ -51,6 +53,8 @@
 #include <EventCondition.h>
 #include <ItemDrop.h>
 #include <ObjectPosition.h>
+#include <ServerZoneTrigger.h>
+#include <SpawnLocation.h>
 
 // libcomp Includes
 #include <Log.h>
@@ -372,6 +376,74 @@ bool DynamicList::AddObject<objects::ObjectPosition>(
     return false;
 }
 
+template<>
+QWidget* DynamicList::GetObjectWidget<objects::SpawnLocation>(
+    const std::shared_ptr<objects::SpawnLocation>& obj)
+{
+    SpawnLocation* ctrl = new SpawnLocation;
+    if(obj)
+    {
+        ctrl->Load(obj);
+    }
+
+    return ctrl;
+}
+
+template<>
+bool DynamicList::AddObject<objects::SpawnLocation>(
+    const std::shared_ptr<objects::SpawnLocation>& obj)
+{
+    if(mType != DynamicItemType_t::OBJ_SPAWN_LOCATION)
+    {
+        LOG_ERROR("Attempted to assign an SpawnLocation object to a differing"
+            " DynamicList type\n");
+        return false;
+    }
+
+    auto ctrl = GetObjectWidget(obj);
+    if(ctrl)
+    {
+        AddItem(ctrl, true);
+        return true;
+    }
+
+    return false;
+}
+
+template<>
+QWidget* DynamicList::GetObjectWidget<objects::ServerZoneTrigger>(
+    const std::shared_ptr<objects::ServerZoneTrigger>& obj)
+{
+    ZoneTrigger* ctrl = new ZoneTrigger(mMainWindow);
+    if(obj)
+    {
+        ctrl->Load(obj);
+    }
+
+    return ctrl;
+}
+
+template<>
+bool DynamicList::AddObject<objects::ServerZoneTrigger>(
+    const std::shared_ptr<objects::ServerZoneTrigger>& obj)
+{
+    if(mType != DynamicItemType_t::OBJ_ZONE_TRIGGER)
+    {
+        LOG_ERROR("Attempted to assign an ServerZoneTrigger object to a"
+            " differing DynamicList type\n");
+        return false;
+    }
+
+    auto ctrl = GetObjectWidget(obj);
+    if(ctrl)
+    {
+        AddItem(ctrl, true);
+        return true;
+    }
+
+    return false;
+}
+
 QWidget* DynamicList::GetEventMessageWidget(int32_t val)
 {
     EventMessageRef* msg = new EventMessageRef;
@@ -596,6 +668,17 @@ std::list<std::shared_ptr<objects::ObjectPosition>>
     return result;
 }
 
+void DynamicList::Clear()
+{
+    auto items = findChildren<DynamicListItem*>();
+    for(auto item : items)
+    {
+        ui->layoutItems->removeWidget(item);
+
+        item->deleteLater();
+    }
+}
+
 void DynamicList::AddRow()
 {
     bool canReorder = false;
@@ -640,6 +723,14 @@ void DynamicList::AddRow()
         break;
     case DynamicItemType_t::OBJ_OBJECT_POSITION:
         ctrl = GetObjectWidget<objects::ObjectPosition>(nullptr);
+        canReorder = true;
+        break;
+    case DynamicItemType_t::OBJ_SPAWN_LOCATION:
+        ctrl = GetObjectWidget<objects::SpawnLocation>(nullptr);
+        canReorder = true;
+        break;
+    case DynamicItemType_t::OBJ_ZONE_TRIGGER:
+        ctrl = GetObjectWidget<objects::ServerZoneTrigger>(nullptr);
         canReorder = true;
         break;
     case DynamicItemType_t::NONE:

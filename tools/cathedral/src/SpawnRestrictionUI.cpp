@@ -49,6 +49,11 @@ SpawnRestriction::~SpawnRestriction()
 
 void SpawnRestriction::Load(const std::shared_ptr<objects::SpawnRestriction>& restrict)
 {
+    if(!restrict)
+    {
+        return;
+    }
+
     prop->disabled->setChecked(restrict->GetDisabled());
 
     std::unordered_map<uint32_t, int32_t> time;
@@ -76,13 +81,13 @@ void SpawnRestriction::Load(const std::shared_ptr<objects::SpawnRestriction>& re
 
     // Set the moon controls
     std::vector<QPushButton*> moonControls;
-    for(size_t i = 0; i < prop->layoutMoonWax->count(); i++)
+    for(int i = 0; i < prop->layoutMoonWax->count(); i++)
     {
         moonControls.push_back((QPushButton*)prop->layoutMoonWax
             ->itemAt(i)->widget());
     }
     
-    for(size_t i = 0; i < prop->layoutMoonWane->count(); i++)
+    for(int i = 0; i < prop->layoutMoonWane->count(); i++)
     {
         moonControls.push_back((QPushButton*)prop->layoutMoonWane
             ->itemAt(i)->widget());
@@ -96,7 +101,7 @@ void SpawnRestriction::Load(const std::shared_ptr<objects::SpawnRestriction>& re
 
     // Set the day controls
     std::vector<QPushButton*> dayControls;
-    for(size_t i = 0; i < prop->layoutDay->count(); i++)
+    for(int i = 0; i < prop->layoutDay->count(); i++)
     {
         dayControls.push_back((QPushButton*)prop->layoutDay
             ->itemAt(i)->widget());

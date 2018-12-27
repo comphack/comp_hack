@@ -71,6 +71,18 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     ui.objects->Bind(pMainWindow, false);
     ui.spots->SetMainWindow(pMainWindow);
 
+    ui.zoneID->Bind(pMainWindow, "ZoneData");
+    ui.validTeamTypes->Setup(DynamicItemType_t::PRIMITIVE_INT,
+        pMainWindow);
+    ui.dropSetIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT,
+        pMainWindow);
+    ui.skillBlacklist->Setup(DynamicItemType_t::PRIMITIVE_UINT,
+        pMainWindow);
+    ui.skillWhitelist->Setup(DynamicItemType_t::PRIMITIVE_UINT,
+        pMainWindow);
+    ui.triggers->Setup(DynamicItemType_t::OBJ_ZONE_TRIGGER,
+        pMainWindow);
+
     connect(ui.zoom200, SIGNAL(triggered()),
         this, SLOT(Zoom200()));
     connect(ui.zoom100, SIGNAL(triggered()),
@@ -108,6 +120,8 @@ bool ZoneWindow::ShowZone(const std::shared_ptr<objects::ServerZone>& zone)
     }
 
     mZone = zone;
+
+    LoadProperties();
 
     if(LoadMapFromZone())
     {
@@ -252,6 +266,61 @@ bool ZoneWindow::LoadMapFromZone()
     return true;
 }
 
+void ZoneWindow::LoadProperties()
+{
+    if(!mZone)
+    {
+        return;
+    }
+
+    ui.zoneID->SetValue(mZone->GetID());
+    ui.dynamicMapID->setValue((int32_t)mZone->GetDynamicMapID());
+    ui.globalZone->setChecked(mZone->GetGlobal());
+    ui.zoneRestricted->setChecked(mZone->GetRestricted());
+    ui.groupID->setValue((int32_t)mZone->GetDynamicMapID());
+    ui.globalBossGroup->setValue((int32_t)mZone->GetGlobalBossGroup());
+    ui.zoneStartingX->setValue((double)mZone->GetStartingX());
+    ui.zoneStartingY->setValue((double)mZone->GetStartingY());
+    ui.zoneStartingRotation->setValue((double)mZone->GetStartingRotation());
+    ui.xpMultiplier->setValue((double)mZone->GetXPMultiplier());
+    ui.bazaarMarketCost->setValue((int32_t)mZone->GetBazaarMarketCost());
+    ui.bazaarMarketTime->setValue((int32_t)mZone->GetBazaarMarketTime());
+    ui.mountDisabled->setChecked(mZone->GetMountDisabled());
+    ui.bikeDisabled->setChecked(mZone->GetBikeDisabled());
+    ui.bikeBoostEnabled->setChecked(mZone->GetBikeBoostEnabled());
+
+    ui.validTeamTypes->Clear();
+    for(int8_t teamType : mZone->GetValidTeamTypes())
+    {
+        ui.validTeamTypes->AddInteger(teamType);
+    }
+
+    ui.trackTeam->setChecked(mZone->GetTrackTeam());
+
+    ui.dropSetIDs->Clear();
+    for(uint32_t dropSetID : mZone->GetDropSetIDs())
+    {
+        ui.dropSetIDs->AddUnsignedInteger(dropSetID);
+    }
+
+    ui.skillBlacklist->Clear();
+    for(uint32_t skillID : mZone->GetSkillBlacklist())
+    {
+        ui.skillBlacklist->AddUnsignedInteger(skillID);
+    }
+
+    ui.skillWhitelist->Clear();
+    for(uint32_t skillID : mZone->GetSkillWhitelist())
+    {
+        ui.skillWhitelist->AddUnsignedInteger(skillID);
+    }
+
+    ui.triggers->Clear();
+    for(auto trigger : mZone->GetTriggers())
+    {
+        ui.triggers->AddObject(trigger);
+    }
+}
 
 bool ZoneWindow::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
     float& x, float& y, float& rot) const

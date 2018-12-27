@@ -66,6 +66,8 @@ enum class DynamicItemType_t : uint8_t
     OBJ_EVENT_CONDITION,
     OBJ_ITEM_DROP,
     OBJ_OBJECT_POSITION,
+    OBJ_SPAWN_LOCATION,
+    OBJ_ZONE_TRIGGER,
 };
 
 class DynamicList : public QWidget
@@ -88,6 +90,8 @@ public:
     std::list<uint32_t> GetUnsignedIntegerList() const;
     std::list<libcomp::String> GetStringList() const;
     template<class T> std::list<std::shared_ptr<T>> GetObjectList() const;
+
+    void Clear();
 
 protected slots:
     void AddRow();

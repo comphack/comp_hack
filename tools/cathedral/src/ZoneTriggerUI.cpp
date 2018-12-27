@@ -52,6 +52,11 @@ ZoneTrigger::~ZoneTrigger()
 void ZoneTrigger::Load(const std::shared_ptr<
     objects::ServerZoneTrigger>& trigger)
 {
+    if(!trigger)
+    {
+        return;
+    }
+
     prop->trigger->setCurrentIndex(to_underlying(
         trigger->GetTrigger()));
     prop->value->setValue(trigger->GetValue());

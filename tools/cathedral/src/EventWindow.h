@@ -89,8 +89,6 @@ private:
     void RebuildLocalIDMap(const std::shared_ptr<EventFile>& file);
     void RebuildGlobalIDMap();
 
-    void SimplifyObjectXML(std::list<tinyxml2::XMLNode*> nodes);
-
     libcomp::String GetInlineMessageText(const libcomp::String& raw,
         size_t limit = 0);
 

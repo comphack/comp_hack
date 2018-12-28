@@ -38,6 +38,8 @@ public:
 
     static void SimplifyObject(std::list<tinyxml2::XMLNode*> nodes);
 
+    static std::list<libcomp::String> GetComments(tinyxml2::XMLNode* node);
+
     static std::shared_ptr<XmlTemplateObject> GetTemplateObject(
         const libcomp::String& objType, tinyxml2::XMLDocument& templateDoc);
 };

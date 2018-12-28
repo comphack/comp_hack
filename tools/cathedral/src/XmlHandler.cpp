@@ -56,7 +56,8 @@ void XmlHandler::SimplifyObject(std::list<tinyxml2::XMLNode*> nodes)
         auto node = *currentNodes.begin();
         currentNodes.erase(node);
 
-        if(libcomp::String(node->ToElement()->Name()) == "object")
+        auto elem = node->ToElement();
+        if(elem && libcomp::String(elem->Name()) == "object")
         {
             objectNodes.insert(node);
         }
@@ -122,9 +123,15 @@ void XmlHandler::SimplifyObject(std::list<tinyxml2::XMLNode*> nodes)
             while(child)
             {
                 auto next = child->NextSibling();
+                auto elem = child->ToElement();
 
-                libcomp::String memberName(child->ToElement()
-                    ->Attribute("name"));
+                if(!elem)
+                {
+                    child = next;
+                    continue;
+                }
+
+                libcomp::String memberName(elem->Attribute("name"));
                 bool last = memberName == tObj->LastLesserMember || !next ||
                     seen.find(memberName) != seen.end();
 
@@ -199,6 +206,35 @@ void XmlHandler::SimplifyObject(std::list<tinyxml2::XMLNode*> nodes)
             child = next;
         }
     }
+}
+
+std::list<libcomp::String> XmlHandler::GetComments(tinyxml2::XMLNode* node)
+{
+    std::list<libcomp::String> comments;
+    if(node)
+    {
+        auto child = node->FirstChild();
+        while(child != 0)
+        {
+            auto comment = dynamic_cast<const tinyxml2::XMLComment*>(child);
+            if(comment)
+            {
+                comments.push_back(libcomp::String(comment->Value())
+                    .Trimmed());
+            }
+            else
+            {
+                for(auto str : GetComments(child))
+                {
+                    comments.push_back(str);
+                }
+            }
+
+            child = child->NextSibling();
+        }
+    }
+
+    return comments;
 }
 
 std::shared_ptr<XmlTemplateObject> XmlHandler::GetTemplateObject(

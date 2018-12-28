@@ -39,9 +39,10 @@
 
 // Qt Includes
 #include <PushIgnore.h>
-#include <QtWidgets/QFormLayout>
-#include <QtWidgets/QSpinBox>
-#include <QtWidgets/QLineEdit>
+#include <QFormLayout>
+#include <QSpinBox>
+#include <QLineEdit>
+#include <QTextEdit>
 
 #include "ui_DynamicList.h"
 #include "ui_DynamicListItem.h"
@@ -179,14 +180,16 @@ QWidget* DynamicList::GetUnsignedIntegerWidget(uint32_t val)
 
 bool DynamicList::AddString(const libcomp::String& val)
 {
-    if(mType != DynamicItemType_t::PRIMITIVE_STRING)
+    if(mType != DynamicItemType_t::PRIMITIVE_STRING &&
+        mType != DynamicItemType_t::PRIMITIVE_MULTILINE_STRING)
     {
         LOG_ERROR("Attempted to assign a string value to a differing"
             " DynamicList type\n");
         return false;
     }
 
-    auto ctrl = GetStringWidget(val);
+    auto ctrl = GetStringWidget(val,
+        mType == DynamicItemType_t::PRIMITIVE_MULTILINE_STRING);
     if(ctrl)
     {
         AddItem(ctrl, false);
@@ -196,14 +199,27 @@ bool DynamicList::AddString(const libcomp::String& val)
     return false;
 }
 
-QWidget* DynamicList::GetStringWidget(const libcomp::String& val)
+QWidget* DynamicList::GetStringWidget(const libcomp::String& val,
+    bool multiline)
 {
-    QLineEdit* txt = new QLineEdit;
-    txt->setPlaceholderText("[Empty]");
+    if(multiline)
+    {
+        QTextEdit* txt = new QTextEdit;
+        txt->setPlaceholderText("[Empty]");
 
-    txt->setText(qs(val));
+        txt->setText(qs(val));
 
-    return txt;
+        return txt;
+    }
+    else
+    {
+        QLineEdit* txt = new QLineEdit;
+        txt->setPlaceholderText("[Empty]");
+
+        txt->setText(qs(val));
+
+        return txt;
+    }
 }
 
 template<>
@@ -534,20 +550,33 @@ std::list<uint32_t> DynamicList::GetUnsignedIntegerList() const
 
 std::list<libcomp::String> DynamicList::GetStringList() const
 {
+    bool singleLine = mType == DynamicItemType_t::PRIMITIVE_STRING;
+    bool multiLine = mType == DynamicItemType_t::PRIMITIVE_MULTILINE_STRING;
+
     std::list<libcomp::String> result;
-    if(mType != DynamicItemType_t::PRIMITIVE_STRING)
+    if(!singleLine && !multiLine)
     {
         LOG_ERROR("Attempted to retrieve a string list from a differing"
             " DynamicList type\n");
         return result;
     }
-    
+
     int total = ui->layoutItems->count();
     for(int childIdx = 0; childIdx < total; childIdx++)
     {
-        QLineEdit* txt = ui->layoutItems->itemAt(childIdx)->widget()
-            ->findChild<QLineEdit*>();
-        result.push_back(libcomp::String(txt->text().toStdString()));
+        if(singleLine)
+        {
+            QLineEdit* txt = ui->layoutItems->itemAt(childIdx)->widget()
+                ->findChild<QLineEdit*>();
+            result.push_back(libcomp::String(txt->text().toStdString()));
+        }
+        else
+        {
+            QTextEdit* txt = ui->layoutItems->itemAt(childIdx)->widget()
+                ->findChild<QTextEdit*>();
+            result.push_back(libcomp::String(txt->toPlainText()
+                .toStdString()));
+        }
     }
 
     return result;
@@ -693,7 +722,10 @@ void DynamicList::AddRow()
         ctrl = GetUnsignedIntegerWidget(0);
         break;
     case DynamicItemType_t::PRIMITIVE_STRING:
-        ctrl = GetStringWidget("");
+        ctrl = GetStringWidget("", false);
+        break;
+    case DynamicItemType_t::PRIMITIVE_MULTILINE_STRING:
+        ctrl = GetStringWidget("", true);
         break;
     case DynamicItemType_t::COMPLEX_EVENT_MESSAGE:
         ctrl = GetEventMessageWidget(0);

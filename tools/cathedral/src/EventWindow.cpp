@@ -56,6 +56,7 @@
 #include <QRadioButton>
 #include <QSettings>
 #include <QSpinBox>
+#include <QTextEdit>
 #include <PopIgnore.h>
 
 // object Includes
@@ -109,6 +110,7 @@ public:
 
     std::shared_ptr<objects::Event> Event;
     libcomp::String FileEventID;
+    std::list<libcomp::String> Comments;
     bool HasUpdates;
 };
 
@@ -374,7 +376,10 @@ void EventWindow::SaveFile()
     {
         for(auto eCtrl : ui->splitter->findChildren<Event*>())
         {
-            eCtrl->Save();
+            if(mCurrentEvent->Event == eCtrl->Save())
+            {
+                mCurrentEvent->Comments = eCtrl->GetComments();
+            }
         }
     }
 
@@ -446,6 +451,27 @@ void EventWindow::SaveFile()
         e->Save(doc, *rootElem);
 
         tinyxml2::XMLNode* eNode = rootElem->LastChild();
+        if(fEvent->Comments.size())
+        {
+            tinyxml2::XMLNode* commentNode = 0;
+            for(auto comment : fEvent->Comments)
+            {
+                auto cNode = doc.NewComment(libcomp::String(" %1 ")
+                    .Arg(comment).C());
+
+                if(commentNode)
+                {
+                    eNode->InsertAfterChild(commentNode, cNode);
+                }
+                else
+                {
+                    eNode->InsertFirstChild(cNode);
+                }
+
+                commentNode = cNode;
+            }
+        }
+
         if(!fEvent->FileEventID.IsEmpty())
         {
             // If the event already existed in the file, move it to the same
@@ -712,9 +738,16 @@ void EventWindow::NewEvent()
 
 void EventWindow::Refresh()
 {
+    auto current = mCurrentEvent;
+
     libcomp::String path = cs(ui->files->currentText());
 
     SelectFile(path);
+
+    if(current)
+    {
+        GoToEvent(current->FileEventID);
+    }
 }
 
 void EventWindow::CurrentEventEdited()
@@ -766,6 +799,7 @@ bool EventWindow::LoadFileFromPath(const libcomp::String& path)
     }
 
     std::list<std::shared_ptr<objects::Event>> events;
+    std::list<std::list<libcomp::String>> commentSets;
 
     auto objNode = rootElem->FirstChildElement("object");
     while(objNode)
@@ -785,6 +819,7 @@ bool EventWindow::LoadFileFromPath(const libcomp::String& path)
         }
 
         events.push_back(event);
+        commentSets.push_back(XmlHandler::GetComments(objNode));
 
         objNode = objNode->NextSiblingElement("object");
     }
@@ -808,7 +843,11 @@ bool EventWindow::LoadFileFromPath(const libcomp::String& path)
 
         for(auto e : events)
         {
-            file->Events.push_back(std::make_shared<FileEvent>(e));
+            auto fEvent = std::make_shared<FileEvent>(e);
+            fEvent->Comments = commentSets.front();
+            file->Events.push_back(fEvent);
+
+            commentSets.pop_front();
         }
 
         mFiles[path] = file;
@@ -966,25 +1005,23 @@ void EventWindow::BindSelectedEvent()
 
     if(!eNode)
     {
-        std::shared_ptr<objects::Event> e;
         if(fileIdx != -1 && file &&
             file->Events.size() > (size_t)fileIdx)
         {
             auto eIter2 = file->Events.begin();
             std::advance(eIter2, fileIdx);
             mCurrentEvent = *eIter2;
-            e = mCurrentEvent->Event;
             editListen = !mCurrentEvent->HasUpdates;
         }
 
-        if(e)
+        if(mCurrentEvent)
         {
-            switch(e->GetEventType())
+            switch(mCurrentEvent->Event->GetEventType())
             {
             case objects::Event::EventType_t::FORK:
                 {
                     auto eUI = new Event(mMainWindow);
-                    eUI->Load(e);
+                    eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
                 }
@@ -992,7 +1029,7 @@ void EventWindow::BindSelectedEvent()
             case objects::Event::EventType_t::NPC_MESSAGE:
                 {
                     auto eUI = new EventNPCMessage(mMainWindow);
-                    eUI->Load(e);
+                    eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
                 }
@@ -1000,7 +1037,7 @@ void EventWindow::BindSelectedEvent()
             case objects::Event::EventType_t::EX_NPC_MESSAGE:
                 {
                     auto eUI = new EventExNPCMessage(mMainWindow);
-                    eUI->Load(e);
+                    eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
                 }
@@ -1008,7 +1045,7 @@ void EventWindow::BindSelectedEvent()
             case objects::Event::EventType_t::MULTITALK:
                 {
                     auto eUI = new EventMultitalk(mMainWindow);
-                    eUI->Load(e);
+                    eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
                 }
@@ -1016,7 +1053,7 @@ void EventWindow::BindSelectedEvent()
             case objects::Event::EventType_t::PROMPT:
                 {
                     auto eUI = new EventPrompt(mMainWindow);
-                    eUI->Load(e);
+                    eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
                 }
@@ -1024,7 +1061,7 @@ void EventWindow::BindSelectedEvent()
             case objects::Event::EventType_t::PERFORM_ACTIONS:
                 {
                     auto eUI = new EventPerformActions(mMainWindow);
-                    eUI->Load(e);
+                    eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
                 }
@@ -1032,7 +1069,7 @@ void EventWindow::BindSelectedEvent()
             case objects::Event::EventType_t::OPEN_MENU:
                 {
                     auto eUI = new EventOpenMenu(mMainWindow);
-                    eUI->Load(e);
+                    eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
                 }
@@ -1040,7 +1077,7 @@ void EventWindow::BindSelectedEvent()
             case objects::Event::EventType_t::PLAY_SCENE:
                 {
                     auto eUI = new EventPlayScene(mMainWindow);
-                    eUI->Load(e);
+                    eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
                 }
@@ -1048,7 +1085,7 @@ void EventWindow::BindSelectedEvent()
             case objects::Event::EventType_t::DIRECTION:
                 {
                     auto eUI = new EventDirection(mMainWindow);
-                    eUI->Load(e);
+                    eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
                 }
@@ -1056,7 +1093,7 @@ void EventWindow::BindSelectedEvent()
             case objects::Event::EventType_t::ITIME:
                 {
                     auto eUI = new EventITime(mMainWindow);
-                    eUI->Load(e);
+                    eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
                 }
@@ -1064,16 +1101,24 @@ void EventWindow::BindSelectedEvent()
             default:
                 break;
             }
+
+            if(eNode)
+            {
+                ((Event*)eNode)->SetComments(mCurrentEvent->Comments);
+            }
         }
     }
 
     // If the previous current event was updated, update the event definition
-    // from the current control
+    // from the current control (should only be one)
     if(previousEvent && previousEvent->HasUpdates)
     {
         for(auto eCtrl : ui->splitter->findChildren<Event*>())
         {
-            eCtrl->Save();
+            if(previousEvent->Event == eCtrl->Save())
+            {
+                previousEvent->Comments = eCtrl->GetComments();
+            }
         }
     }
 
@@ -1144,6 +1189,11 @@ void EventWindow::BindEventEditControls(QWidget* eNode)
     {
         connect(ctrl, SIGNAL(textChanged(const QString&)), this,
             SLOT(CurrentEventEdited()));
+    }
+
+    for(auto ctrl : eNode->findChildren<QTextEdit*>())
+    {
+        connect(ctrl, SIGNAL(textChanged()), this, SLOT(CurrentEventEdited()));
     }
 
     for(auto ctrl : eNode->findChildren<QDoubleSpinBox*>())

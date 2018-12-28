@@ -53,6 +53,9 @@ public:
     virtual void Load(const std::shared_ptr<objects::Event>& e);
     virtual std::shared_ptr<objects::Event> Save() const;
 
+    void SetComments(const std::list<libcomp::String>& comments);
+    std::list<libcomp::String> GetComments();
+
 public slots:
     virtual void ToggleBaseDisplay();
 

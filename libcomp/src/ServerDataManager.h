@@ -276,6 +276,19 @@ public:
     bool ApplyZonePartial(std::shared_ptr<objects::ServerZone> zone,
         uint32_t partialID);
 
+    /**
+     * Apply modifications from a zone partial to an instanced zone definition.
+     * Unique IDs and NPCs/objects in the same spot that already exist on the
+     * definition will be replaced by the partial definition, including
+     * deletes. The supplied zone being a copy must be checked before this
+     * point.
+     * @param zone Pointer to a zone definition to modify
+     * @param partial Pointer to the zone partial definition to apply to the
+     *  zone
+     */
+    static void ApplyZonePartial(std::shared_ptr<objects::ServerZone> zone,
+        const std::shared_ptr<objects::ServerZonePartial>& partial);
+
 private:
     /**
      * Get a server object by ID from the supplied map of the specified

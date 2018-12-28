@@ -790,7 +790,7 @@ bool EventWindow::LoadFileFromPath(const libcomp::String& path)
         objNode = objNode->NextSiblingElement("object");
     }
 
-    // Add the file if if has events or no child nodes
+    // Add the file if it has events or no child nodes
     if(events.size() > 0 || rootElem->FirstChild() == nullptr)
     {
         if(mFiles.find(path) != mFiles.end())

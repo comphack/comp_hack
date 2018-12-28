@@ -27,9 +27,11 @@
 
 // Cathedral Includes
 #include "MainWindow.h"
+#include "ZonePartialSelector.h"
 
 // Qt Includes
 #include <PushIgnore.h>
+#include <QDirIterator>
 #include <QFileDialog>
 #include <QIODevice>
 #include <QMessageBox>
@@ -57,15 +59,22 @@
 #include <SpawnGroup.h>
 #include <SpawnLocation.h>
 #include <SpawnLocationGroup.h>
+#include <ServerZonePartial.h>
 #include <ServerZoneSpot.h>
 
 // C++11 Standard Includes
 #include <cmath>
 
+// libcomp Includes
+#include <Log.h>
+#include <ServerDataManager.h>
+
 ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     : QMainWindow(p), mMainWindow(pMainWindow), mDrawTarget(0)
 {
     ui.setupUi(this);
+
+    mMergedZone = std::make_shared<MergedZone>();
 
     ui.npcs->Bind(pMainWindow, true);
     ui.objects->Bind(pMainWindow, false);
@@ -81,6 +90,9 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     ui.skillWhitelist->Setup(DynamicItemType_t::PRIMITIVE_UINT,
         pMainWindow);
     ui.triggers->Setup(DynamicItemType_t::OBJ_ZONE_TRIGGER,
+        pMainWindow);
+
+    ui.partialDynamicMapIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT,
         pMainWindow);
 
     connect(ui.zoom200, SIGNAL(triggered()),
@@ -100,6 +112,16 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     connect(ui.showSpawns, SIGNAL(toggled(bool)),
         this, SLOT(ShowToggled(bool)));
 
+    connect(ui.actionPartialsLoadFile, SIGNAL(triggered()), this,
+        SLOT(LoadFile()));
+    connect(ui.actionPartialsLoadDirectory, SIGNAL(triggered()),
+        this, SLOT(LoadDirectory()));
+    connect(ui.actionPartialsApply, SIGNAL(triggered()),
+        this, SLOT(ApplyPartials()));
+
+    connect(ui.zoneView, SIGNAL(currentIndexChanged(const QString&)), this,
+        SLOT(ZoneViewUpdated()));
+
     mZoomScale = 20;
 }
 
@@ -107,9 +129,20 @@ ZoneWindow::~ZoneWindow()
 {
 }
 
-std::shared_ptr<objects::ServerZone> ZoneWindow::GetZone() const
+std::shared_ptr<MergedZone> ZoneWindow::GetMergedZone() const
 {
-    return mZone;
+    return mMergedZone;
+}
+
+std::map<uint32_t, std::shared_ptr<
+    objects::ServerZonePartial>> ZoneWindow::GetLoadedPartials() const
+{
+    return mZonePartials;
+}
+
+std::set<uint32_t> ZoneWindow::GetSelectedPartials() const
+{
+    return mSelectedPartials;
 }
 
 bool ZoneWindow::ShowZone(const std::shared_ptr<objects::ServerZone>& zone)
@@ -119,9 +152,29 @@ bool ZoneWindow::ShowZone(const std::shared_ptr<objects::ServerZone>& zone)
         return false;
     }
 
-    mZone = zone;
+    mMergedZone->Definition = zone;
+    mMergedZone->CurrentZone = zone;
+    mMergedZone->CurrentPartial = nullptr;
+
+    // Don't bother showing the bazaar settings if none are configured
+    if(zone->BazaarsCount() == 0)
+    {
+        ui.grpBazaar->hide();
+    }
+    else
+    {
+        ui.grpBazaar->show();
+    }
+
+    mSelectedPartials.clear();
+    ResetAppliedPartials();
+
+    UpdateMergedZone(false);
 
     LoadProperties();
+
+    setWindowTitle(libcomp::String("COMP_hack Cathedral of Content - Zone %1"
+        " (%2)").Arg(zone->GetID()).Arg(zone->GetDynamicMapID()).C());
 
     if(LoadMapFromZone())
     {
@@ -130,6 +183,71 @@ bool ZoneWindow::ShowZone(const std::shared_ptr<objects::ServerZone>& zone)
     }
 
     return false;
+}
+
+void ZoneWindow::LoadDirectory()
+{
+    QSettings settings;
+
+    QString qPath = QFileDialog::getExistingDirectory(this,
+        tr("Load Zone Partial XML folder"),
+        settings.value("datastore").toString());
+    if(qPath.isEmpty())
+    {
+        return;
+    }
+
+    bool merged = false;
+
+    QDirIterator it(qPath, QStringList() << "*.xml", QDir::Files,
+        QDirIterator::Subdirectories);
+    while(it.hasNext())
+    {
+        libcomp::String path = cs(it.next());
+        merged |= LoadZonePartials(path);
+    }
+
+    if(merged)
+    {
+        UpdateMergedZone(true);
+    }
+}
+
+void ZoneWindow::LoadFile()
+{
+    QSettings settings;
+
+    QString qPath = QFileDialog::getOpenFileName(this,
+        tr("Load Zone Partial XML"), settings.value("datastore").toString(),
+        tr("Zone Partial XML (*.xml)"));
+    if(qPath.isEmpty())
+    {
+        return;
+    }
+
+    libcomp::String path = cs(qPath);
+    if(LoadZonePartials(path))
+    {
+        UpdateMergedZone(true);
+    }
+}
+
+void ZoneWindow::ApplyPartials()
+{
+    ZonePartialSelector* selector = new ZonePartialSelector(mMainWindow);
+    selector->setWindowModality(Qt::ApplicationModal);
+
+    mSelectedPartials = selector->Select();
+
+    delete selector;
+
+    RebuildCurrentZoneDisplay();
+    UpdateMergedZone(true);
+}
+
+void ZoneWindow::ZoneViewUpdated()
+{
+    UpdateMergedZone(true);
 }
 
 void ZoneWindow::Zoom200()
@@ -192,11 +310,233 @@ void ZoneWindow::Refresh()
     DrawMap();
 }
 
+bool ZoneWindow::LoadZonePartials(const libcomp::String& path)
+{
+    tinyxml2::XMLDocument doc;
+    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+    {
+        LOG_ERROR(libcomp::String("Failed to parse file: %1\n").Arg(path));
+        return false;
+    }
+    
+    auto rootElem = doc.RootElement();
+    if(!rootElem)
+    {
+        LOG_ERROR(libcomp::String("No root element in file: %1\n").Arg(path));
+        return false;
+    }
+
+    std::list<std::shared_ptr<objects::ServerZonePartial>> partials;
+
+    auto objNode = rootElem->FirstChildElement("object");
+    while(objNode)
+    {
+        auto partial = std::make_shared<objects::ServerZonePartial>();
+        if(!partial || !partial->Load(doc, *objNode))
+        {
+            break;
+        }
+
+        partials.push_back(partial);
+
+        objNode = objNode->NextSiblingElement("object");
+    }
+
+    // Add the file if it has partials or no child nodes
+    if(partials.size() > 0 || rootElem->FirstChild() == nullptr)
+    {
+        LOG_INFO(libcomp::String("Loading %1 zone partial(s) from"
+            " file: %2\n").Arg(partials.size()).Arg(path));
+
+        std::set<uint32_t> loadedPartials;
+        for(auto partial : partials)
+        {
+            if(mZonePartials.find(partial->GetID()) != mZonePartials.end())
+            {
+                LOG_WARNING(libcomp::String("Reloaded zone partial %1 from"
+                    " file: %2\n").Arg(partial->GetID()).Arg(path));
+            }
+
+            mZonePartials[partial->GetID()] = partial;
+
+            mZonePartialFiles[partial->GetID()] = path;
+
+            loadedPartials.insert(partial->GetID());
+        }
+
+        ResetAppliedPartials(loadedPartials);
+
+        return true;
+    }
+    else
+    {
+        LOG_WARNING(libcomp::String("No zone partials found in file: %1\n")
+            .Arg(path));
+    }
+
+    return false;
+}
+
+void ZoneWindow::ResetAppliedPartials(std::set<uint32_t> newPartials)
+{
+    uint32_t dynamicMapID = mMergedZone->CurrentZone->GetDynamicMapID();
+    for(auto& pair : mZonePartials)
+    {
+        if(newPartials.size() == 0 ||
+            newPartials.find(pair.first) != newPartials.end())
+        {
+            auto partial = pair.second;
+
+            if(partial->GetAutoApply() && dynamicMapID &&
+                partial->DynamicMapIDsContains(dynamicMapID))
+            {
+                // Automatically add auto applies
+                mSelectedPartials.insert(partial->GetID());
+            }
+        }
+    }
+
+    RebuildCurrentZoneDisplay();
+}
+
+void ZoneWindow::RebuildCurrentZoneDisplay()
+{
+    ui.zoneView->blockSignals(true);
+
+    ui.zoneView->clear();
+    if(mSelectedPartials.size() > 0)
+    {
+        ui.zoneView->addItem("Merged Zone", -2);
+        ui.zoneView->addItem("Zone Only", -1);
+
+        for(uint32_t partialID : mSelectedPartials)
+        {
+            if(partialID)
+            {
+                ui.zoneView->addItem(QString("Partial %1")
+                    .arg(partialID), (int32_t)partialID);
+            }
+            else
+            {
+                ui.zoneView->addItem("Global Partial", 0);
+            }
+        }
+
+        ui.zoneViewWidget->show();
+    }
+    else
+    {
+        ui.zoneViewWidget->hide();
+    }
+
+    ui.zoneView->blockSignals(false);
+}
+
+void ZoneWindow::UpdateMergedZone(bool redraw)
+{
+    // Set control defaults
+    ui.lblZoneViewNotes->setText("");
+
+    ui.zoneHeaderWidget->hide();
+    ui.grpZone->setDisabled(true);
+    ui.grpTriggers->setDisabled(true);
+
+    ui.grpPartial->hide();
+    ui.partialAutoApply->setChecked(false);
+    ui.partialDynamicMapIDs->Clear();
+
+    bool zoneOnly = mSelectedPartials.size() == 0;
+    if(!zoneOnly)
+    {
+        // Build merged zone based on
+        int viewing = ui.zoneView->currentData().toInt();
+        switch(viewing)
+        {
+        case -2:
+            // Copy the base zone definition and apply all partials
+            {
+                auto copyZone = std::make_shared<objects::ServerZone>(
+                    *mMergedZone->CurrentZone);
+
+                for(uint32_t partialID : mSelectedPartials)
+                {
+                    auto partial = mZonePartials[partialID];
+                    libcomp::ServerDataManager::ApplyZonePartial(copyZone,
+                        partial);
+                }
+
+                mMergedZone->Definition = copyZone;
+
+                // Show the zone details but do not enable editing
+                ui.zoneHeaderWidget->show();
+
+                ui.lblZoneViewNotes->setText("No zone or zone partial fields"
+                    " can be modified while viewing a merged zone.");
+            }
+            break;
+        case -1:
+            // Merge no partials
+            zoneOnly = true;
+            break;
+        default:
+            // Build zone just from selected partial
+            if(viewing >= 0)
+            {
+                auto newZone = std::make_shared<objects::ServerZone>();
+                newZone->SetID(mMergedZone->CurrentZone->GetID());
+                newZone->SetDynamicMapID(mMergedZone->CurrentZone
+                    ->GetDynamicMapID());
+
+                auto partial = mZonePartials[(uint32_t)viewing];
+                libcomp::ServerDataManager::ApplyZonePartial(newZone,
+                    partial);
+
+                mMergedZone->Definition = newZone;
+
+                // Show the partial controls
+                ui.grpPartial->show();
+                ui.partialID->setValue((int)partial->GetID());
+
+                ui.partialAutoApply->setChecked(partial->GetAutoApply());
+
+                ui.partialDynamicMapIDs->Clear();
+                for(uint32_t dynamicMapID : partial->GetDynamicMapIDs())
+                {
+                    ui.partialDynamicMapIDs->AddUnsignedInteger(dynamicMapID);
+                }
+
+                ui.grpTriggers->setDisabled(false);
+
+                ui.lblZoneViewNotes->setText("Changes made while viewing a"
+                    " zone partial will not be applied directly to the zone.");
+            }
+            break;
+        }
+    }
+
+    if(zoneOnly)
+    {
+        // Only the zone is loaded, merged zone equals
+        mMergedZone->Definition = mMergedZone->CurrentZone;
+
+        ui.zoneHeaderWidget->show();
+        ui.grpZone->setDisabled(false);
+        ui.grpTriggers->setDisabled(false);
+    }
+
+    if(redraw)
+    {
+        LoadMapFromZone();
+    }
+}
+
 bool ZoneWindow::LoadMapFromZone()
 {
+    auto zone = mMergedZone->Definition;
+
     auto dataset = mMainWindow->GetBinaryDataSet("ZoneData");
     mZoneData = std::dynamic_pointer_cast<objects::MiZoneData>(
-        dataset->GetObjectByID(mZone->GetID()));
+        dataset->GetObjectByID(zone->GetID()));
     if(!mZoneData)
     {
         return false;
@@ -210,26 +550,23 @@ bool ZoneWindow::LoadMapFromZone()
         return false;
     }
 
-    setWindowTitle(libcomp::String("COMP_hack Cathedral of Content - Zone %1"
-        " (%2)").Arg(mZone->GetID()).Arg(mZone->GetDynamicMapID()).C());
-
     ui.comboBox_SpawnEdit->clear();
     ui.comboBox_SpawnEdit->addItem("All");
-    for(auto pair : mZone->GetSpawnLocationGroups())
+    for(auto pair : zone->GetSpawnLocationGroups())
     {
         ui.comboBox_SpawnEdit->addItem(libcomp::String("%1")
             .Arg(pair.first).C());
     }
 
     // Convert spot IDs
-    for(auto npc : mZone->GetNPCs())
+    for(auto npc : zone->GetNPCs())
     {
         if(npc->GetSpotID())
         {
             float x = npc->GetX();
             float y = npc->GetY();
             float rot = npc->GetRotation();
-            if(GetSpotPosition(mZone->GetDynamicMapID(), npc->GetSpotID(),
+            if(GetSpotPosition(zone->GetDynamicMapID(), npc->GetSpotID(),
                 x, y, rot))
             {
                 npc->SetX(x);
@@ -239,14 +576,14 @@ bool ZoneWindow::LoadMapFromZone()
         }
     }
 
-    for(auto obj : mZone->GetObjects())
+    for(auto obj : zone->GetObjects())
     {
         if(obj->GetSpotID())
         {
             float x = obj->GetX();
             float y = obj->GetY();
             float rot = obj->GetRotation();
-            if(GetSpotPosition(mZone->GetDynamicMapID(), obj->GetSpotID(),
+            if(GetSpotPosition(zone->GetDynamicMapID(), obj->GetSpotID(),
                 x, y, rot))
             {
                 obj->SetX(x);
@@ -268,55 +605,56 @@ bool ZoneWindow::LoadMapFromZone()
 
 void ZoneWindow::LoadProperties()
 {
-    if(!mZone)
+    if(!mMergedZone->Definition)
     {
         return;
     }
 
-    ui.zoneID->SetValue(mZone->GetID());
-    ui.dynamicMapID->setValue((int32_t)mZone->GetDynamicMapID());
-    ui.globalZone->setChecked(mZone->GetGlobal());
-    ui.zoneRestricted->setChecked(mZone->GetRestricted());
-    ui.groupID->setValue((int32_t)mZone->GetDynamicMapID());
-    ui.globalBossGroup->setValue((int32_t)mZone->GetGlobalBossGroup());
-    ui.zoneStartingX->setValue((double)mZone->GetStartingX());
-    ui.zoneStartingY->setValue((double)mZone->GetStartingY());
-    ui.zoneStartingRotation->setValue((double)mZone->GetStartingRotation());
-    ui.xpMultiplier->setValue((double)mZone->GetXPMultiplier());
-    ui.bazaarMarketCost->setValue((int32_t)mZone->GetBazaarMarketCost());
-    ui.bazaarMarketTime->setValue((int32_t)mZone->GetBazaarMarketTime());
-    ui.mountDisabled->setChecked(mZone->GetMountDisabled());
-    ui.bikeDisabled->setChecked(mZone->GetBikeDisabled());
-    ui.bikeBoostEnabled->setChecked(mZone->GetBikeBoostEnabled());
+    auto zone = mMergedZone->Definition;
+    ui.zoneID->SetValue(zone->GetID());
+    ui.dynamicMapID->setValue((int32_t)zone->GetDynamicMapID());
+    ui.globalZone->setChecked(zone->GetGlobal());
+    ui.zoneRestricted->setChecked(zone->GetRestricted());
+    ui.groupID->setValue((int32_t)zone->GetDynamicMapID());
+    ui.globalBossGroup->setValue((int32_t)zone->GetGlobalBossGroup());
+    ui.zoneStartingX->setValue((double)zone->GetStartingX());
+    ui.zoneStartingY->setValue((double)zone->GetStartingY());
+    ui.zoneStartingRotation->setValue((double)zone->GetStartingRotation());
+    ui.xpMultiplier->setValue((double)zone->GetXPMultiplier());
+    ui.bazaarMarketCost->setValue((int32_t)zone->GetBazaarMarketCost());
+    ui.bazaarMarketTime->setValue((int32_t)zone->GetBazaarMarketTime());
+    ui.mountDisabled->setChecked(zone->GetMountDisabled());
+    ui.bikeDisabled->setChecked(zone->GetBikeDisabled());
+    ui.bikeBoostEnabled->setChecked(zone->GetBikeBoostEnabled());
 
     ui.validTeamTypes->Clear();
-    for(int8_t teamType : mZone->GetValidTeamTypes())
+    for(int8_t teamType : zone->GetValidTeamTypes())
     {
         ui.validTeamTypes->AddInteger(teamType);
     }
 
-    ui.trackTeam->setChecked(mZone->GetTrackTeam());
+    ui.trackTeam->setChecked(zone->GetTrackTeam());
 
     ui.dropSetIDs->Clear();
-    for(uint32_t dropSetID : mZone->GetDropSetIDs())
+    for(uint32_t dropSetID : zone->GetDropSetIDs())
     {
         ui.dropSetIDs->AddUnsignedInteger(dropSetID);
     }
 
     ui.skillBlacklist->Clear();
-    for(uint32_t skillID : mZone->GetSkillBlacklist())
+    for(uint32_t skillID : zone->GetSkillBlacklist())
     {
         ui.skillBlacklist->AddUnsignedInteger(skillID);
     }
 
     ui.skillWhitelist->Clear();
-    for(uint32_t skillID : mZone->GetSkillWhitelist())
+    for(uint32_t skillID : zone->GetSkillWhitelist())
     {
         ui.skillWhitelist->AddUnsignedInteger(skillID);
     }
 
     ui.triggers->Clear();
-    for(auto trigger : mZone->GetTriggers())
+    for(auto trigger : zone->GetTriggers())
     {
         ui.triggers->AddObject(trigger);
     }
@@ -349,7 +687,7 @@ bool ZoneWindow::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
 void ZoneWindow::BindNPCs()
 {
     std::vector<std::shared_ptr<libcomp::Object>> npcs;
-    for(auto npc : mZone->GetNPCs())
+    for(auto npc : mMergedZone->Definition->GetNPCs())
     {
         npcs.push_back(npc);
     }
@@ -360,7 +698,7 @@ void ZoneWindow::BindNPCs()
 void ZoneWindow::BindObjects()
 {
     std::vector<std::shared_ptr<libcomp::Object>> objs;
-    for(auto obj : mZone->GetObjects())
+    for(auto obj : mMergedZone->Definition->GetObjects())
     {
         objs.push_back(obj);
     }
@@ -370,6 +708,8 @@ void ZoneWindow::BindObjects()
 
 void ZoneWindow::BindSpawns()
 {
+    auto zone = mMergedZone->Definition;
+
     auto dataset = mMainWindow->GetBinaryDataSet("DevilData");
 
     // Set up the Spawn table
@@ -386,9 +726,9 @@ void ZoneWindow::BindSpawns()
     ui.tableWidget_Spawn->setHorizontalHeaderItem(4,
         GetTableWidget("Level"));
 
-    ui.tableWidget_Spawn->setRowCount((int)mZone->SpawnsCount());
+    ui.tableWidget_Spawn->setRowCount((int)zone->SpawnsCount());
     int i = 0;
-    for(auto sPair : mZone->GetSpawns())
+    for(auto sPair : zone->GetSpawns())
     {
         auto s = sPair.second;
         auto def = std::dynamic_pointer_cast<objects::MiDevilData>(
@@ -421,9 +761,9 @@ void ZoneWindow::BindSpawns()
     ui.tableWidget_SpawnGroup->setHorizontalHeaderItem(3,
         GetTableWidget("Count"));
 
-    ui.tableWidget_SpawnGroup->setRowCount((int)mZone->SpawnGroupsCount());
+    ui.tableWidget_SpawnGroup->setRowCount((int)zone->SpawnGroupsCount());
     i = 0;
-    for(auto sgPair : mZone->GetSpawnGroups())
+    for(auto sgPair : zone->GetSpawnGroups())
     {
         auto sg = sgPair.second;
         for(auto sPair : sg->GetSpawns())
@@ -466,10 +806,10 @@ void ZoneWindow::BindSpawns()
             .ToInteger<uint32_t>(&success);
     }
 
-    auto locGroup = mZone->GetSpawnLocationGroups(locKey);
+    auto locGroup = zone->GetSpawnLocationGroups(locKey);
 
     int locCount = 0;
-    for(auto grpPair : mZone->GetSpawnLocationGroups())
+    for(auto grpPair : zone->GetSpawnLocationGroups())
     {
         if(allLocs || grpPair.second == locGroup)
         {
@@ -479,7 +819,7 @@ void ZoneWindow::BindSpawns()
 
     ui.tableWidget_SpawnLocation->setRowCount(locCount);
     i = 0;
-    for(auto grpPair : mZone->GetSpawnLocationGroups())
+    for(auto grpPair : zone->GetSpawnLocationGroups())
     {
         auto grp = grpPair.second;
         if(allLocs || grp == locGroup)
@@ -508,13 +848,15 @@ void ZoneWindow::BindSpawns()
 
 void ZoneWindow::BindSpots()
 {
+    auto zone = mMergedZone->Definition;
+
     std::vector<std::shared_ptr<libcomp::Object>> spots;
 
     auto definitions = mMainWindow->GetDefinitions();
-    auto spotDefs = definitions->GetSpotData(mZone->GetDynamicMapID());
+    auto spotDefs = definitions->GetSpotData(zone->GetDynamicMapID());
 
     // Add defined spots first (valid or not)
-    for(auto& spotPair : mZone->GetSpots())
+    for(auto& spotPair : zone->GetSpots())
     {
         auto iter = spotDefs.find(spotPair.first);
         if(iter != spotDefs.end())
@@ -530,7 +872,7 @@ void ZoneWindow::BindSpots()
     // Add all remaining definitions next
     for(auto& spotPair : spotDefs)
     {
-        if(!mZone->SpotsKeyExists(spotPair.first))
+        if(!zone->SpotsKeyExists(spotPair.first))
         {
             spots.push_back(spotPair.second);
         }
@@ -553,7 +895,8 @@ QTableWidgetItem* ZoneWindow::GetTableWidget(std::string name, bool readOnly)
 
 void ZoneWindow::DrawMap()
 {
-    if(!mZoneData)
+    auto zone = mMergedZone->Definition;
+    if(!mZoneData || !zone)
     {
         return;
     }
@@ -621,7 +964,7 @@ void ZoneWindow::DrawMap()
 
     auto definitions = mMainWindow->GetDefinitions();
 
-    auto spots = definitions->GetSpotData(mZone->GetDynamicMapID());
+    auto spots = definitions->GetSpotData(zone->GetDynamicMapID());
     for(auto spotPair : spots)
     {
         float xc = spotPair.second->GetCenterX();
@@ -668,11 +1011,11 @@ void ZoneWindow::DrawMap()
     painter.setPen(QPen(Qt::magenta));
     painter.setBrush(QBrush(Qt::magenta));
 
-    xVals.insert(mZone->GetStartingX());
-    yVals.insert(mZone->GetStartingY());
+    xVals.insert(zone->GetStartingX());
+    yVals.insert(zone->GetStartingY());
 
-    painter.drawEllipse(QPoint(Scale(mZone->GetStartingX()),
-        Scale(-mZone->GetStartingY())), 3, 3);
+    painter.drawEllipse(QPoint(Scale(zone->GetStartingX()),
+        Scale(-zone->GetStartingY())), 3, 3);
 
     // Draw NPCs
     if(ui.showNPCs->isChecked())
@@ -680,7 +1023,7 @@ void ZoneWindow::DrawMap()
         painter.setPen(QPen(Qt::green));
         painter.setBrush(QBrush(Qt::green));
 
-        for(auto npc : mZone->GetNPCs())
+        for(auto npc : zone->GetNPCs())
         {
             xVals.insert(npc->GetX());
             yVals.insert(npc->GetY());
@@ -699,7 +1042,7 @@ void ZoneWindow::DrawMap()
         painter.setPen(QPen(Qt::blue));
         painter.setBrush(QBrush(Qt::blue));
 
-        for(auto obj : mZone->GetObjects())
+        for(auto obj : zone->GetObjects())
         {
             xVals.insert(obj->GetX());
             yVals.insert(obj->GetY());
@@ -728,9 +1071,9 @@ void ZoneWindow::DrawMap()
                 .ToInteger<uint32_t>(&success);
         }
 
-        auto locGroup = mZone->GetSpawnLocationGroups(locKey);
+        auto locGroup = zone->GetSpawnLocationGroups(locKey);
 
-        for(auto grpPair : mZone->GetSpawnLocationGroups())
+        for(auto grpPair : zone->GetSpawnLocationGroups())
         {
             auto grp = grpPair.second;
             if(allLocs || locGroup == grp)

@@ -126,18 +126,27 @@ QString NPCList::GetObjectName(const std::shared_ptr<
 void NPCList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
     auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
+
+    auto parentWidget = prop->layoutMain->itemAt(0)->widget();
     if(!sObj)
     {
-        return;
+        parentWidget->hide();
     }
+    else
+    {
+        if(parentWidget->isHidden())
+        {
+            parentWidget->show();
+        }
 
-    prop->type->SetValue(sObj->GetID());
-    prop->position->Load(sObj);
-    prop->state->setValue((uint8_t)sObj->GetState());
-    prop->actorID->setValue(sObj->GetActorID());
+        prop->type->SetValue(sObj->GetID());
+        prop->position->Load(sObj);
+        prop->state->setValue((uint8_t)sObj->GetState());
+        prop->actorID->setValue(sObj->GetActorID());
 
-    auto actions = sObj->GetActions();
-    prop->actions->Load(actions);
+        auto actions = sObj->GetActions();
+        prop->actions->Load(actions);
+    }
 }
 
 void NPCList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)

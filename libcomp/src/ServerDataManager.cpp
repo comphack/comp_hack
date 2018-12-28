@@ -546,6 +546,15 @@ bool ServerDataManager::ApplyZonePartial(std::shared_ptr<objects::ServerZone> zo
         return false;
     }
 
+    ApplyZonePartial(zone, partial);
+
+    return true;
+}
+
+void ServerDataManager::ApplyZonePartial(
+    std::shared_ptr<objects::ServerZone> zone,
+    const std::shared_ptr<objects::ServerZonePartial>& partial)
+{
     // Add dropsets
     for(uint32_t dropSetID : partial->GetDropSetIDs())
     {
@@ -641,8 +650,6 @@ bool ServerDataManager::ApplyZonePartial(std::shared_ptr<objects::ServerZone> zo
     {
         zone->AppendTriggers(trigger);
     }
-
-    return true;
 }
 
 bool ServerDataManager::LoadScripts(gsl::not_null<DataStore*> pDataStore,

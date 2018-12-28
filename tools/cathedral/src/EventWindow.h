@@ -73,7 +73,6 @@ private slots:
     void TreeSelectionChanged();
 
 private:
-    void LoadFilesFromPaths(const QStringList& inPaths);
     bool LoadFileFromPath(const libcomp::String& path);
     bool SelectFile(const libcomp::String& path);
 

@@ -79,433 +79,470 @@
               <height>565</height>
              </rect>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_2">
+            <layout class="QVBoxLayout" name="layoutMain">
              <item>
-              <layout class="QFormLayout" name="formZoneView">
-               <property name="labelAlignment">
-                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-               </property>
-               <item row="0" column="0">
-                <widget class="QLabel" name="lblZoneView">
-                 <property name="text">
-                  <string>View:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QComboBox" name="zoneView"/>
-               </item>
-               <item row="1" column="1">
-                <widget class="QLabel" name="lblZoneViewNotes">
-                 <property name="text">
-                  <string/>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <layout class="QGridLayout" name="gridZoneMain">
-               <property name="topMargin">
-                <number>5</number>
-               </property>
-               <item row="1" column="2">
-                <widget class="QLabel" name="lblGroupID">
-                 <property name="text">
-                  <string>Group ID:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="ObjectSelector" name="zoneID" native="true">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0">
-                <widget class="QLabel" name="lblID">
-                 <property name="text">
-                  <string>Zone:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QLabel" name="lblGlobal">
-                 <property name="text">
-                  <string>Global Zone:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="3">
-                <widget class="QSpinBox" name="dynamicMapID">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="maximum">
-                  <number>2147483647</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="2">
-                <widget class="QLabel" name="lblDynamicMapID">
-                 <property name="text">
-                  <string>Dynamic Map ID:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QCheckBox" name="globalZone">
-                 <property name="text">
-                  <string/>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="3">
-                <widget class="QSpinBox" name="groupID">
-                 <property name="maximum">
-                  <number>2147483647</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0">
-                <widget class="QLabel" name="lblGlobalBossGroup">
-                 <property name="text">
-                  <string>Global Boss Group:</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="3">
-                <widget class="QCheckBox" name="trackTeam">
-                 <property name="text">
-                  <string/>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="1">
-                <widget class="QSpinBox" name="globalBossGroup">
-                 <property name="maximum">
-                  <number>2147483647</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="2">
-                <widget class="QLabel" name="lblTrackTeam">
-                 <property name="text">
-                  <string>Track Team:</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <layout class="QVBoxLayout" name="layoutZoneHeader">
-               <item>
-                <layout class="QHBoxLayout" name="layoutZoneStart">
-                 <item>
-                  <widget class="QLabel" name="lblStartingX">
-                   <property name="text">
-                    <string>Starting X/Y/Rotation:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QDoubleSpinBox" name="zoneStartingX">
-                   <property name="minimum">
-                    <double>-99999999.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>99999999.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QDoubleSpinBox" name="zoneStartingY">
-                   <property name="minimum">
-                    <double>-99999999.000000000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>99999999.000000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QDoubleSpinBox" name="zoneStartingRotation">
-                   <property name="decimals">
-                    <number>5</number>
-                   </property>
-                   <property name="minimum">
-                    <double>-3.141590000000000</double>
-                   </property>
-                   <property name="maximum">
-                    <double>3.141590000000000</double>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item>
-                <widget class="QGroupBox" name="grpBonuses">
-                 <property name="title">
-                  <string>Bonuses</string>
-                 </property>
-                 <layout class="QGridLayout" name="gridLayout_2">
-                  <property name="leftMargin">
-                   <number>2</number>
+              <widget class="QWidget" name="zoneViewWidget" native="true">
+               <layout class="QFormLayout" name="formZoneView">
+                <property name="labelAlignment">
+                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                </property>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="lblZoneView">
+                  <property name="text">
+                   <string>View:</string>
                   </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QComboBox" name="zoneView"/>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QLabel" name="lblZoneViewNotes">
+                  <property name="text">
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="grpZone">
+               <property name="title">
+                <string>Zone</string>
+               </property>
+               <layout class="QVBoxLayout" name="grpZoneLayout">
+                <item>
+                 <layout class="QGridLayout" name="gridZoneMain">
                   <property name="topMargin">
-                   <number>2</number>
+                   <number>5</number>
                   </property>
-                  <property name="rightMargin">
-                   <number>2</number>
-                  </property>
-                  <property name="bottomMargin">
-                   <number>2</number>
-                  </property>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="lblXPMultiplier">
+                  <item row="1" column="2">
+                   <widget class="QLabel" name="lblGroupID">
                     <property name="text">
-                     <string>XP Multiplier:</string>
+                     <string>Group ID:</string>
                     </property>
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QDoubleSpinBox" name="xpMultiplier">
-                    <property name="maximum">
-                     <double>10000.000000000000000</double>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="2">
-                   <widget class="QLabel" name="lblDropSetIDs">
-                    <property name="text">
-                     <string>Drop Set IDs:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="3">
-                   <widget class="DynamicList" name="dropSetIDs" native="true"/>
-                  </item>
-                 </layout>
-                </widget>
-               </item>
-               <item>
-                <widget class="QGroupBox" name="grpRestrictions">
-                 <property name="title">
-                  <string>Restrictions</string>
-                 </property>
-                 <layout class="QGridLayout" name="grpRestrictionsLayout">
-                  <property name="leftMargin">
-                   <number>2</number>
-                  </property>
-                  <property name="topMargin">
-                   <number>2</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>2</number>
-                  </property>
-                  <property name="bottomMargin">
-                   <number>2</number>
-                  </property>
-                  <item row="1" column="0">
-                   <widget class="QLabel" name="lblBikeDisabled">
-                    <property name="text">
-                     <string>Bike Disabled:</string>
+                   <widget class="ObjectSelector" name="zoneID" native="true">
+                    <property name="enabled">
+                     <bool>false</bool>
                     </property>
                    </widget>
                   </item>
                   <item row="0" column="0">
-                   <widget class="QLabel" name="lblRestricted">
+                   <widget class="QLabel" name="lblID">
                     <property name="text">
-                     <string>Access Restricted:</string>
+                     <string>Zone:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="lblGlobal">
+                    <property name="text">
+                     <string>Global Zone:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QSpinBox" name="dynamicMapID">
+                    <property name="enabled">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <number>2147483647</number>
                     </property>
                    </widget>
                   </item>
                   <item row="0" column="2">
-                   <widget class="QLabel" name="lblMountDisabled">
+                   <widget class="QLabel" name="lblDynamicMapID">
                     <property name="text">
-                     <string>Mount Disabled:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="2">
-                   <widget class="QLabel" name="lblBikeBoostDisabled">
-                    <property name="text">
-                     <string>Bike Boost Enabled:</string>
+                     <string>Dynamic Map ID:</string>
                     </property>
                    </widget>
                   </item>
                   <item row="1" column="1">
-                   <widget class="QCheckBox" name="bikeDisabled">
-                    <property name="text">
-                     <string/>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QCheckBox" name="zoneRestricted">
-                    <property name="text">
-                     <string/>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="3">
-                   <widget class="QCheckBox" name="mountDisabled">
+                   <widget class="QCheckBox" name="globalZone">
                     <property name="text">
                      <string/>
                     </property>
                    </widget>
                   </item>
                   <item row="1" column="3">
-                   <widget class="QCheckBox" name="bikeBoostEnabled">
+                   <widget class="QSpinBox" name="groupID">
+                    <property name="maximum">
+                     <number>2147483647</number>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item>
+                 <widget class="QWidget" name="zoneHeaderWidget" native="true">
+                  <layout class="QVBoxLayout" name="layoutZoneHeader">
+                   <property name="leftMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>0</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>0</number>
+                   </property>
+                   <item>
+                    <layout class="QHBoxLayout" name="layoutZoneStart">
+                     <item>
+                      <widget class="QLabel" name="lblStartingX">
+                       <property name="text">
+                        <string>Starting X/Y/Rotation:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QDoubleSpinBox" name="zoneStartingX">
+                       <property name="minimum">
+                        <double>-99999999.000000000000000</double>
+                       </property>
+                       <property name="maximum">
+                        <double>99999999.000000000000000</double>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QDoubleSpinBox" name="zoneStartingY">
+                       <property name="minimum">
+                        <double>-99999999.000000000000000</double>
+                       </property>
+                       <property name="maximum">
+                        <double>99999999.000000000000000</double>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QDoubleSpinBox" name="zoneStartingRotation">
+                       <property name="decimals">
+                        <number>5</number>
+                       </property>
+                       <property name="minimum">
+                        <double>-3.141590000000000</double>
+                       </property>
+                       <property name="maximum">
+                        <double>3.141590000000000</double>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout">
+                     <property name="topMargin">
+                      <number>5</number>
+                     </property>
+                     <item>
+                      <widget class="QLabel" name="lblGlobalBossGroup">
+                       <property name="text">
+                        <string>Global Boss Group:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QSpinBox" name="globalBossGroup">
+                       <property name="maximum">
+                        <number>2147483647</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="lblTrackTeam">
+                       <property name="text">
+                        <string>Track Team:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="trackTeam">
+                       <property name="text">
+                        <string/>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <layout class="QFormLayout" name="formZoneMisc">
+                     <property name="topMargin">
+                      <number>5</number>
+                     </property>
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="lblValidTeamTypes">
+                       <property name="text">
+                        <string>Valid Team Types:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="DynamicList" name="validTeamTypes" native="true"/>
+                     </item>
+                    </layout>
+                   </item>
+                   <item>
+                    <widget class="QGroupBox" name="grpBonuses">
+                     <property name="title">
+                      <string>Bonuses</string>
+                     </property>
+                     <layout class="QGridLayout" name="gridLayout_2">
+                      <property name="leftMargin">
+                       <number>2</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>2</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>2</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>2</number>
+                      </property>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="lblXPMultiplier">
+                        <property name="text">
+                         <string>XP Multiplier:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QDoubleSpinBox" name="xpMultiplier">
+                        <property name="maximum">
+                         <double>10000.000000000000000</double>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QLabel" name="lblDropSetIDs">
+                        <property name="text">
+                         <string>Drop Set IDs:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
+                       <widget class="DynamicList" name="dropSetIDs" native="true"/>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QGroupBox" name="grpRestrictions">
+                     <property name="title">
+                      <string>Restrictions</string>
+                     </property>
+                     <layout class="QGridLayout" name="grpRestrictionsLayout">
+                      <property name="leftMargin">
+                       <number>2</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>2</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>2</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>2</number>
+                      </property>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="lblBikeDisabled">
+                        <property name="text">
+                         <string>Bike Disabled:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="lblRestricted">
+                        <property name="text">
+                         <string>Access Restricted:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QLabel" name="lblMountDisabled">
+                        <property name="text">
+                         <string>Mount Disabled:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="2">
+                       <widget class="QLabel" name="lblBikeBoostDisabled">
+                        <property name="text">
+                         <string>Bike Boost Enabled:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QCheckBox" name="bikeDisabled">
+                        <property name="text">
+                         <string/>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QCheckBox" name="zoneRestricted">
+                        <property name="text">
+                         <string/>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
+                       <widget class="QCheckBox" name="mountDisabled">
+                        <property name="text">
+                         <string/>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="3">
+                       <widget class="QCheckBox" name="bikeBoostEnabled">
+                        <property name="text">
+                         <string/>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QLabel" name="lblSkillBlacklist">
+                        <property name="text">
+                         <string>Skill Blacklist:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="2">
+                       <widget class="QLabel" name="lblSkillWhitelist">
+                        <property name="text">
+                         <string>Skill Whitelist:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="DynamicList" name="skillBlacklist" native="true"/>
+                      </item>
+                      <item row="2" column="3">
+                       <widget class="DynamicList" name="skillWhitelist" native="true"/>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QGroupBox" name="grpBazaar">
+                     <property name="title">
+                      <string>Bazaars</string>
+                     </property>
+                     <layout class="QGridLayout" name="grpBazaarLayout">
+                      <property name="leftMargin">
+                       <number>2</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>2</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>2</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>2</number>
+                      </property>
+                      <item row="0" column="2">
+                       <widget class="QLabel" name="lblBazaarMarketCost">
+                        <property name="text">
+                         <string>Market Cost:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="lblBazaarMarketTime">
+                        <property name="text">
+                         <string>Market Time:</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QSpinBox" name="bazaarMarketTime">
+                        <property name="maximum">
+                         <number>2147483647</number>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
+                       <widget class="QSpinBox" name="bazaarMarketCost">
+                        <property name="maximum">
+                         <number>2147483647</number>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="grpPartial">
+               <property name="title">
+                <string>Partial</string>
+               </property>
+               <layout class="QVBoxLayout" name="grpPartialLayout">
+                <item>
+                 <layout class="QGridLayout" name="gridPartialMain">
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="lblPartialID">
+                    <property name="text">
+                     <string>ID:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QSpinBox" name="partialID">
+                    <property name="enabled">
+                     <bool>false</bool>
+                    </property>
+                    <property name="maximum">
+                     <number>2147483647</number>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QLabel" name="lblAutoApply">
+                    <property name="text">
+                     <string>Auto Apply:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QCheckBox" name="partialAutoApply">
                     <property name="text">
                      <string/>
                     </property>
                    </widget>
                   </item>
-                  <item row="2" column="0">
-                   <widget class="QLabel" name="lblSkillBlacklist">
-                    <property name="text">
-                     <string>Skill Blacklist:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="2">
-                   <widget class="QLabel" name="lblSkillWhitelist">
-                    <property name="text">
-                     <string>Skill Whitelist:</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="1">
-                   <widget class="DynamicList" name="skillBlacklist" native="true"/>
-                  </item>
-                  <item row="2" column="3">
-                   <widget class="DynamicList" name="skillWhitelist" native="true"/>
-                  </item>
                  </layout>
-                </widget>
-               </item>
-               <item>
-                <widget class="QGroupBox" name="grpBazaar">
-                 <property name="title">
-                  <string>Bazaars</string>
-                 </property>
-                 <layout class="QGridLayout" name="grpBazaarLayout">
-                  <property name="leftMargin">
-                   <number>2</number>
-                  </property>
-                  <property name="topMargin">
-                   <number>2</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>2</number>
-                  </property>
-                  <property name="bottomMargin">
-                   <number>2</number>
-                  </property>
-                  <item row="0" column="2">
-                   <widget class="QLabel" name="lblBazaarMarketCost">
-                    <property name="text">
-                     <string>Market Cost:</string>
-                    </property>
-                   </widget>
-                  </item>
+                </item>
+                <item>
+                 <layout class="QFormLayout" name="formPartialDynamicMapIDs">
                   <item row="0" column="0">
-                   <widget class="QLabel" name="lblBazaarMarketTime">
+                   <widget class="QLabel" name="lblPartialDynamicMapIDs">
                     <property name="text">
-                     <string>Market Time:</string>
+                     <string>Dynamic Map IDs:</string>
                     </property>
                    </widget>
                   </item>
                   <item row="0" column="1">
-                   <widget class="QSpinBox" name="bazaarMarketTime">
-                    <property name="maximum">
-                     <number>2147483647</number>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="0" column="3">
-                   <widget class="QSpinBox" name="bazaarMarketCost">
-                    <property name="maximum">
-                     <number>2147483647</number>
-                    </property>
-                   </widget>
+                   <widget class="DynamicList" name="partialDynamicMapIDs" native="true"/>
                   </item>
                  </layout>
-                </widget>
-               </item>
-               <item>
-                <layout class="QFormLayout" name="formZoneMisc">
-                 <property name="topMargin">
-                  <number>5</number>
-                 </property>
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lblValidTeamTypes">
-                   <property name="text">
-                    <string>Valid Team Types:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="DynamicList" name="validTeamTypes" native="true"/>
-                 </item>
-                </layout>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <layout class="QVBoxLayout" name="layoutPartialHeader">
-               <item>
-                <layout class="QGridLayout" name="gridPartialMain">
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lblPartialID">
-                   <property name="text">
-                    <string>ID:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QSpinBox" name="partialID">
-                   <property name="enabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="maximum">
-                    <number>2147483647</number>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="2">
-                  <widget class="QLabel" name="lblAutoApply">
-                   <property name="text">
-                    <string>Auto Apply:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="3">
-                  <widget class="QCheckBox" name="partialAutoApply">
-                   <property name="text">
-                    <string/>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item>
-                <layout class="QFormLayout" name="formPartialDynamicMapIDs">
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="lblPartialDynamicMapIDs">
-                   <property name="text">
-                    <string>Dynamic Map IDs:</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="DynamicList" name="partialDynamicMapIDs" native="true"/>
-                 </item>
-                </layout>
-               </item>
-              </layout>
+                </item>
+               </layout>
+              </widget>
              </item>
              <item>
               <widget class="QGroupBox" name="grpTriggers">
@@ -685,7 +722,16 @@
     <addaction name="actionRefresh"/>
     <addaction name="menuZoom"/>
    </widget>
+   <widget class="QMenu" name="menuPartials">
+    <property name="title">
+     <string>Partials</string>
+    </property>
+    <addaction name="actionPartialsLoadFile"/>
+    <addaction name="actionPartialsLoadDirectory"/>
+    <addaction name="actionPartialsApply"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuPartials"/>
    <addaction name="menuView"/>
   </widget>
   <action name="action_Open">
@@ -755,6 +801,21 @@
   <action name="actionRemove_Selected_Locations">
    <property name="text">
     <string>Remove Selected Locations</string>
+   </property>
+  </action>
+  <action name="actionPartialsLoadFile">
+   <property name="text">
+    <string>Load File</string>
+   </property>
+  </action>
+  <action name="actionPartialsLoadDirectory">
+   <property name="text">
+    <string>Load Directory</string>
+   </property>
+  </action>
+  <action name="actionPartialsApply">
+   <property name="text">
+    <string>Apply To Zone</string>
    </property>
   </action>
  </widget>

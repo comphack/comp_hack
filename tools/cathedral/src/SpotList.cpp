@@ -101,8 +101,9 @@ QString SpotList::GetObjectName(const std::shared_ptr<
             auto zoneWindow = mMainWindow->GetZones();
             if(zoneWindow)
             {
-                auto zone = zoneWindow->GetZone();
-                if(zone && zone->SpotsKeyExists(spotDef->GetID()))
+                auto merged = zoneWindow->GetMergedZone();
+                if(merged && merged->Definition->SpotsKeyExists(spotDef
+                    ->GetID()))
                 {
                     return QString("%1 [%2] [Defined]").arg(typeTxt)
                         .arg(spotDef->GetType());
@@ -158,10 +159,10 @@ void SpotList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
             auto zoneWindow = mMainWindow->GetZones();
             if(zoneWindow)
             {
-                auto zone = zoneWindow->GetZone();
-                if(zone)
+                auto merged = zoneWindow->GetMergedZone();
+                if(merged)
                 {
-                    spot = zone->GetSpots(spotDef->GetID());
+                    spot = merged->Definition->GetSpots(spotDef->GetID());
                 }
             }
         }

@@ -112,6 +112,9 @@ void ObjectList::SetObjectList(const std::vector<
     std::shared_ptr<libcomp::Object>>& objs)
 {
     mObjectModel->SetObjectList(objs);
+
+    // Always reset to no selection
+    LoadProperties(nullptr);
 }
 
 void ObjectList::LoadProperties(

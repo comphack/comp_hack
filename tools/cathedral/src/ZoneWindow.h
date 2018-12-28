@@ -43,10 +43,19 @@ namespace objects
 class MiZoneData;
 class QmpFile;
 class ServerZone;
+class ServerZonePartial;
 
 } // namespace objects
 
 class MainWindow;
+
+class MergedZone
+{
+public:
+    std::shared_ptr<objects::ServerZone> Definition;
+    std::shared_ptr<objects::ServerZone> CurrentZone;
+    std::shared_ptr<objects::ServerZonePartial> CurrentPartial;
+};
 
 class ZoneWindow : public QMainWindow
 {
@@ -56,11 +65,20 @@ public:
     explicit ZoneWindow(MainWindow *pMainWindow, QWidget *parent = 0);
     ~ZoneWindow();
 
-    std::shared_ptr<objects::ServerZone> GetZone() const;
+    std::shared_ptr<MergedZone> GetMergedZone() const;
+    std::map < uint32_t,
+        std::shared_ptr < objects::ServerZonePartial >> GetLoadedPartials() const;
+    std::set<uint32_t> GetSelectedPartials() const;
 
     bool ShowZone(const std::shared_ptr<objects::ServerZone>& zone);
 
 protected slots:
+    void LoadDirectory();
+    void LoadFile();
+    void ApplyPartials();
+
+    void ZoneViewUpdated();
+
     void Zoom200();
     void Zoom100();
     void Zoom50();
@@ -69,6 +87,12 @@ protected slots:
     void Refresh();
 
 private:
+    bool LoadZonePartials(const libcomp::String& path);
+
+    void ResetAppliedPartials(std::set<uint32_t> newPartials = {});
+    void RebuildCurrentZoneDisplay();
+    void UpdateMergedZone(bool redraw);
+
     bool LoadMapFromZone();
 
     void LoadProperties();
@@ -97,10 +121,15 @@ private:
     float mOffsetX;
     float mOffsetY;
 
-    std::shared_ptr<objects::ServerZone> mZone;
+    std::shared_ptr<MergedZone> mMergedZone;
     std::shared_ptr<objects::MiZoneData> mZoneData;
     std::shared_ptr<objects::QmpFile> mQmpFile;
     std::set<std::string> mHiddenPoints;
+
+    std::set<uint32_t> mSelectedPartials;
+    std::map<uint32_t,
+        std::shared_ptr<objects::ServerZonePartial>> mZonePartials;
+    std::map<uint32_t, libcomp::String> mZonePartialFiles;
 
     uint8_t mZoomScale;
 };

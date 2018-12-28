@@ -704,6 +704,7 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
+    <addaction name="actionLoad"/>
     <addaction name="actionSave"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -816,6 +817,11 @@
   <action name="actionPartialsApply">
    <property name="text">
     <string>Apply To Zone</string>
+   </property>
+  </action>
+  <action name="actionLoad">
+   <property name="text">
+    <string>Load</string>
    </property>
   </action>
  </widget>

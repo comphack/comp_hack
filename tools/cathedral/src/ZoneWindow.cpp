@@ -55,6 +55,7 @@
 #include <QmpFile.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
+#include <ServerZone.h>
 #include <Spawn.h>
 #include <SpawnGroup.h>
 #include <SpawnLocation.h>
@@ -112,10 +113,12 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     connect(ui.showSpawns, SIGNAL(toggled(bool)),
         this, SLOT(ShowToggled(bool)));
 
+    connect(ui.actionLoad, SIGNAL(triggered()), this, SLOT(LoadZoneFile()));
+
     connect(ui.actionPartialsLoadFile, SIGNAL(triggered()), this,
-        SLOT(LoadFile()));
+        SLOT(LoadPartialFile()));
     connect(ui.actionPartialsLoadDirectory, SIGNAL(triggered()),
-        this, SLOT(LoadDirectory()));
+        this, SLOT(LoadPartialDirectory()));
     connect(ui.actionPartialsApply, SIGNAL(triggered()),
         this, SLOT(ApplyPartials()));
 
@@ -145,16 +148,13 @@ std::set<uint32_t> ZoneWindow::GetSelectedPartials() const
     return mSelectedPartials;
 }
 
-bool ZoneWindow::ShowZone(const std::shared_ptr<objects::ServerZone>& zone)
+bool ZoneWindow::ShowZone()
 {
+    auto zone = mMergedZone->CurrentZone;
     if(!zone)
     {
         return false;
     }
-
-    mMergedZone->Definition = zone;
-    mMergedZone->CurrentZone = zone;
-    mMergedZone->CurrentPartial = nullptr;
 
     // Don't bother showing the bazaar settings if none are configured
     if(zone->BazaarsCount() == 0)
@@ -185,7 +185,72 @@ bool ZoneWindow::ShowZone(const std::shared_ptr<objects::ServerZone>& zone)
     return false;
 }
 
-void ZoneWindow::LoadDirectory()
+void ZoneWindow::LoadZoneFile()
+{
+    QSettings settings;
+
+    QString path = QFileDialog::getOpenFileName(this, tr("Open Zone XML"),
+        settings.value("datastore").toString(), tr("Zone XML (*.xml)"));
+    if(path.isEmpty())
+    {
+        return;
+    }
+
+    tinyxml2::XMLDocument doc;
+    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.toLocal8Bit().constData()))
+    {
+        LOG_ERROR(libcomp::String("Failed to parse file: %1\n").Arg(
+            path.toLocal8Bit().constData()));
+
+        return;
+    }
+
+    libcomp::BinaryDataSet pSet([]()
+        {
+            return std::make_shared<objects::ServerZone>();
+        },
+
+        [](const std::shared_ptr<libcomp::Object>& obj)
+        {
+            return std::dynamic_pointer_cast<objects::ServerZone>(
+                obj)->GetID();
+        }
+    );
+
+    if(!pSet.LoadXml(doc))
+    {
+        LOG_ERROR(libcomp::String("Failed to load file: %1\n").Arg(
+            path.toLocal8Bit().constData()));
+
+        return;
+    }
+
+    auto objs = pSet.GetObjects();
+    if(1 != objs.size())
+    {
+        LOG_ERROR("There must be exactly 1 zone in the XML file.\n");
+
+        return;
+    }
+
+    auto zone = std::dynamic_pointer_cast<objects::ServerZone>(objs.front());
+    if(!zone)
+    {
+        LOG_ERROR("Internal error loading zone.\n");
+
+        return;
+    }
+
+    mMergedZone->Definition = zone;
+    mMergedZone->CurrentZone = zone;
+    mMergedZone->CurrentPartial = nullptr;
+
+    mMainWindow->UpdateActiveZone(cs(path));
+
+    ShowZone();
+}
+
+void ZoneWindow::LoadPartialDirectory()
 {
     QSettings settings;
 
@@ -213,7 +278,7 @@ void ZoneWindow::LoadDirectory()
     }
 }
 
-void ZoneWindow::LoadFile()
+void ZoneWindow::LoadPartialFile()
 {
     QSettings settings;
 

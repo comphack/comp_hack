@@ -34,6 +34,7 @@
 #include <PopIgnore.h>
 
 // object Includes
+#include <ServerZone.h>
 #include <ServerZonePartial.h>
 
 ZonePartialSelector::ZonePartialSelector(MainWindow *pMainWindow,

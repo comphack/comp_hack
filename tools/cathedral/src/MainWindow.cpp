@@ -308,6 +308,17 @@ ObjectSelectorWindow* MainWindow::GetObjectSelector(
     return iter != mObjectSelectors.end() ? iter->second : nullptr;
 }
 
+void MainWindow::UpdateActiveZone(const libcomp::String& path)
+{
+    mActiveZonePath = path;
+
+    ui->zonePath->setText(qs(path));
+
+    LOG_INFO(libcomp::String("Loaded: %1\n").Arg(path));
+
+    ui->zoneView->setEnabled(true);
+}
+
 void MainWindow::ResetEventCount()
 {
     size_t total = mEventWindow->GetLoadedEventCount();
@@ -404,7 +415,7 @@ void MainWindow::OpenEvents()
 
 void MainWindow::OpenZone()
 {
-    if(mZoneWindow->ShowZone(mActiveZone))
+    if(mZoneWindow->ShowZone())
     {
         mZoneWindow->raise();
     }
@@ -426,71 +437,5 @@ void MainWindow::ViewObjectList()
 
 void MainWindow::BrowseZone()
 {
-    QSettings settings;
-
-    QString path = QFileDialog::getOpenFileName(this, tr("Open Zone XML"),
-        settings.value("datastore").toString(), tr("Zone XML (*.xml)"));
-
-    if(path.isEmpty())
-    {
-        return;
-    }
-
-    tinyxml2::XMLDocument doc;
-
-    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.toLocal8Bit().constData()))
-    {
-        LOG_ERROR(libcomp::String("Failed to parse file: %1\n").Arg(
-            path.toLocal8Bit().constData()));
-
-        return;
-    }
-
-    libcomp::BinaryDataSet pSet([]()
-        {
-            return std::make_shared<objects::ServerZone>();
-        },
-
-        [](const std::shared_ptr<libcomp::Object>& obj)
-        {
-            return std::dynamic_pointer_cast<objects::ServerZone>(
-                obj)->GetID();
-        }
-    );
-
-    if(!pSet.LoadXml(doc))
-    {
-        LOG_ERROR(libcomp::String("Failed to load file: %1\n").Arg(
-            path.toLocal8Bit().constData()));
-
-        return;
-    }
-
-    auto objs = pSet.GetObjects();
-
-    if(1 != objs.size())
-    {
-        LOG_ERROR("There must be exactly 1 zone in the XML file.\n");
-
-        return;
-    }
-
-    auto zone = std::dynamic_pointer_cast<objects::ServerZone>(objs.front());
-
-    if(!zone)
-    {
-        LOG_ERROR("Internal error loading zone.\n");
-
-        return;
-    }
-
-    mActiveZonePath = path;
-    mActiveZone = zone;
-
-    ui->zonePath->setText(QDir::toNativeSeparators(path));
-
-    LOG_INFO(libcomp::String("Loaded: %1\n").Arg(
-        path.toLocal8Bit().constData()));
-
-    ui->zoneView->setEnabled(mActiveZone != nullptr);
+    mZoneWindow->LoadZoneFile();
 }

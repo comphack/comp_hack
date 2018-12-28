@@ -70,11 +70,14 @@ public:
         std::shared_ptr < objects::ServerZonePartial >> GetLoadedPartials() const;
     std::set<uint32_t> GetSelectedPartials() const;
 
-    bool ShowZone(const std::shared_ptr<objects::ServerZone>& zone);
+    bool ShowZone();
+
+public slots:
+    void LoadZoneFile();
 
 protected slots:
-    void LoadDirectory();
-    void LoadFile();
+    void LoadPartialDirectory();
+    void LoadPartialFile();
     void ApplyPartials();
 
     void ZoneViewUpdated();

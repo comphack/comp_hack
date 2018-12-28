@@ -35,9 +35,6 @@
 #include <DataStore.h>
 #include <DefinitionManager.h>
 
-// objects Includes
-#include <ServerZone.h>
-
 namespace objects
 {
 
@@ -81,6 +78,8 @@ public:
     ObjectSelectorWindow* GetObjectSelector(
         const libcomp::String& objType) const;
 
+    void UpdateActiveZone(const libcomp::String& path);
+
     void ResetEventCount();
 
 protected slots:
@@ -116,8 +115,7 @@ private:
     std::unordered_map<libcomp::String,
         ObjectSelectorWindow*> mObjectSelectors;
 
-    QString mActiveZonePath;
-    std::shared_ptr<objects::ServerZone> mActiveZone;
+    libcomp::String mActiveZonePath;
 };
 
 static inline QString qs(const libcomp::String& s)

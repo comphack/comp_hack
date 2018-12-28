@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SpawnLocationGroup</class>
+ <widget class="QWidget" name="SpawnLocationGroup">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>300</width>
+    <height>175</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="layoutMain">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidget">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>298</width>
+        <height>173</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="layoutScrollArea">
+       <item>
+        <layout class="QFormLayout" name="formMain">
+         <item row="0" column="0">
+          <widget class="QLabel" name="lblID">
+           <property name="text">
+            <string>ID:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="slgID">
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="lblGroups">
+           <property name="text">
+            <string>Groups:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="DynamicList" name="groups" native="true"/>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="lblRespawnTime">
+           <property name="text">
+            <string>Respawn Time:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="lblImmediateSpawn">
+           <property name="text">
+            <string>Immediate Spawn:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="lblSpots">
+           <property name="text">
+            <string>Spots:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="lblSpotSelection">
+           <property name="text">
+            <string>Spot Selection:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="0">
+          <widget class="QLabel" name="lblLocations">
+           <property name="text">
+            <string>Locations:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1">
+          <widget class="DynamicList" name="locations" native="true"/>
+         </item>
+         <item row="4" column="1">
+          <widget class="DynamicList" name="spots" native="true"/>
+         </item>
+         <item row="2" column="1">
+          <widget class="QDoubleSpinBox" name="respawnTime">
+           <property name="minimum">
+            <double>-99999999.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>99999999.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QCheckBox" name="immediateSpawn">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QComboBox" name="spotSelection">
+           <item>
+            <property name="text">
+             <string>Random</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Spread</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>DynamicList</class>
+   <extends>QWidget</extends>
+   <header>DynamicList.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

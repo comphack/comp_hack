@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SpawnGroup</class>
+ <widget class="QWidget" name="SpawnGroup">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>300</width>
+    <height>150</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="layoutMain">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidget">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>298</width>
+        <height>148</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="layoutScrollArea">
+       <item>
+        <layout class="QFormLayout" name="formMain">
+         <item row="0" column="0">
+          <widget class="QLabel" name="lblID">
+           <property name="text">
+            <string>ID:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="groupID">
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="lblSpawns">
+           <property name="text">
+            <string>Spawns:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="ActionMap" name="spawns" native="true"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="grpRestrictions">
+         <property name="title">
+          <string>Restrictions</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+         <layout class="QVBoxLayout" name="grpRestrictionsLayout">
+          <item>
+           <widget class="SpawnRestriction" name="restrictions" native="true"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <layout class="QFormLayout" name="formActions">
+         <item row="0" column="0">
+          <widget class="QLabel" name="lblSpawnActions">
+           <property name="text">
+            <string>Spawn Actions:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="lblDefeatActions">
+           <property name="text">
+            <string>Defeat Actions:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="ActionList" name="spawnActions" native="true"/>
+         </item>
+         <item row="1" column="1">
+          <widget class="ActionList" name="defeatActions" native="true"/>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ActionList</class>
+   <extends>QWidget</extends>
+   <header>ActionList.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SpawnRestriction</class>
+   <extends>QWidget</extends>
+   <header>SpawnRestrictionUI.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ActionMap</class>
+   <extends>QWidget</extends>
+   <header>ActionMap.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

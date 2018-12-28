@@ -53,6 +53,14 @@ ObjectSelectorWindow::~ObjectSelectorWindow()
 
 void ObjectSelectorWindow::Bind(ObjectSelectorList* listControl)
 {
+    auto existingControls = findChildren<ObjectSelectorList*>();
+    for(auto ctrl : existingControls)
+    {
+        ui->listContainerLayout->removeWidget(ctrl);
+
+        ctrl->deleteLater();
+    }
+
     ui->listContainerLayout->addWidget(listControl);
 
     connect(listControl, SIGNAL(selectedObjectChanged()), this,

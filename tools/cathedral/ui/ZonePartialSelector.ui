@@ -31,6 +31,9 @@
      <property name="columnCount">
       <number>8</number>
      </property>
+     <attribute name="verticalHeaderVisible">
+      <bool>false</bool>
+     </attribute>
      <column>
       <property name="text">
        <string>ID</string>

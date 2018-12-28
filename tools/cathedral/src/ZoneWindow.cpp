@@ -26,6 +26,7 @@
 #include "ZoneWindow.h"
 
 // Cathedral Includes
+#include "BinaryDataNamedSet.h"
 #include "MainWindow.h"
 #include "ZonePartialSelector.h"
 
@@ -79,6 +80,9 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
 
     ui.npcs->Bind(pMainWindow, true);
     ui.objects->Bind(pMainWindow, false);
+    ui.spawns->SetMainWindow(pMainWindow);
+    ui.spawnGroups->SetMainWindow(pMainWindow);
+    ui.spawnLocationGroups->SetMainWindow(pMainWindow);
     ui.spots->SetMainWindow(pMainWindow);
 
     ui.zoneID->Bind(pMainWindow, "ZoneData");
@@ -183,6 +187,118 @@ bool ZoneWindow::ShowZone()
     }
 
     return false;
+}
+
+void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
+{
+    std::vector<libcomp::String> names;
+    if(objType == "Spawn")
+    {
+        auto devilDataSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mMainWindow->GetBinaryDataSet("DevilData"));
+
+        std::vector<std::shared_ptr<libcomp::Object>> spawns;
+        for(auto& sPair : mMergedZone->Definition->GetSpawns())
+        {
+            auto spawn = sPair.second;
+            auto devilData = std::dynamic_pointer_cast<objects::MiDevilData>(
+                devilDataSet->GetObjectByID(spawn->GetEnemyType()));
+
+            libcomp::String name(devilData
+                ? devilDataSet->GetName(devilData) : "[Unknown]");
+
+            int8_t lvl = spawn->GetLevel();
+            if(lvl == -1 && devilData)
+            {
+                lvl = devilData->GetGrowth()->GetBaseLevel();
+            }
+
+            name = libcomp::String("%1 Lv:%2").Arg(name).Arg(lvl);
+
+            if(spawn->GetCategory() == objects::Spawn::Category_t::ALLY)
+            {
+                name = libcomp::String("%1 [Ally]").Arg(name);
+            }
+
+            spawns.push_back(spawn);
+            names.push_back(name);
+        }
+        
+        auto newData = std::make_shared<BinaryDataNamedSet>(
+            [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
+            {
+                return std::dynamic_pointer_cast<objects::Spawn>(obj)
+                    ->GetID();
+            });
+        newData->MapRecords(spawns, names);
+        mMainWindow->RegisterBinaryDataSet("Spawn", newData);
+    }
+    else if(objType == "SpawnGroup")
+    {
+        auto spawnSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mMainWindow->GetBinaryDataSet("Spawn"));
+
+        std::vector<std::shared_ptr<libcomp::Object>> sgs;
+        for(auto& sgPair : mMergedZone->Definition->GetSpawnGroups())
+        {
+            std::list<libcomp::String> spawnStrings;
+
+            auto sg = sgPair.second;
+            for(auto& spawnPair : sg->GetSpawns())
+            {
+                auto spawn = spawnSet->GetObjectByID(spawnPair.first);
+                libcomp::String txt(spawn
+                    ? spawnSet->GetName(spawn) : "[Unknown]");
+                spawnStrings.push_back(libcomp::String("%1 x%2 [%3]")
+                    .Arg(txt).Arg(spawnPair.second).Arg(spawnPair.first));
+            }
+
+            sgs.push_back(sg);
+            names.push_back(libcomp::String::Join(spawnStrings, ",\n\r    "));
+        }
+
+        auto newData = std::make_shared<BinaryDataNamedSet>(
+            [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
+            {
+                return std::dynamic_pointer_cast<objects::SpawnGroup>(obj)
+                    ->GetID();
+            });
+        newData->MapRecords(sgs, names);
+        mMainWindow->RegisterBinaryDataSet("SpawnGroup", newData);
+    }
+    else if(objType == "SpawnLocationGroup")
+    {
+        auto sgSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mMainWindow->GetBinaryDataSet("SpawnGroup"));
+
+        std::vector<std::shared_ptr<libcomp::Object>> slgs;
+        for(auto& slgPair : mMergedZone->Definition->GetSpawnLocationGroups())
+        {
+            std::list<libcomp::String> sgStrings;
+
+            auto slg = slgPair.second;
+            for(uint32_t sgID : slg->GetGroupIDs())
+            {
+                auto sg = sgSet->GetObjectByID(sgID);
+                libcomp::String txt(sg ? sgSet->GetName(sg).Replace("\n\r", "")
+                    : "[Unknown]");
+                sgStrings.push_back(libcomp::String("{ %1 } @%2").Arg(txt)
+                    .Arg(sgID));
+            }
+
+            slgs.push_back(slg);
+            names.push_back(libcomp::String::Join(sgStrings, ",\n\r    "));
+        }
+
+        auto newData = std::make_shared<BinaryDataNamedSet>(
+            [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
+            {
+                return std::dynamic_pointer_cast<objects::SpawnLocationGroup>(
+                    obj)->GetID();
+            });
+        newData->MapRecords(slgs, names);
+        mMainWindow->RegisterBinaryDataSet("SpawnLocationGroup", newData);
+    }
 }
 
 void ZoneWindow::LoadZoneFile()
@@ -615,14 +731,6 @@ bool ZoneWindow::LoadMapFromZone()
         return false;
     }
 
-    ui.comboBox_SpawnEdit->clear();
-    ui.comboBox_SpawnEdit->addItem("All");
-    for(auto pair : zone->GetSpawnLocationGroups())
-    {
-        ui.comboBox_SpawnEdit->addItem(libcomp::String("%1")
-            .Arg(pair.first).C());
-    }
-
     // Convert spot IDs
     for(auto npc : zone->GetNPCs())
     {
@@ -773,142 +881,32 @@ void ZoneWindow::BindObjects()
 
 void ZoneWindow::BindSpawns()
 {
-    auto zone = mMergedZone->Definition;
-
-    auto dataset = mMainWindow->GetBinaryDataSet("DevilData");
-
-    // Set up the Spawn table
-    ui.tableWidget_Spawn->clear();
-    ui.tableWidget_Spawn->setColumnCount(5);
-    ui.tableWidget_Spawn->setHorizontalHeaderItem(0,
-        GetTableWidget("ID"));
-    ui.tableWidget_Spawn->setHorizontalHeaderItem(1,
-        GetTableWidget("Type"));
-    ui.tableWidget_Spawn->setHorizontalHeaderItem(2,
-        GetTableWidget("Variant"));
-    ui.tableWidget_Spawn->setHorizontalHeaderItem(3,
-        GetTableWidget("Name"));
-    ui.tableWidget_Spawn->setHorizontalHeaderItem(4,
-        GetTableWidget("Level"));
-
-    ui.tableWidget_Spawn->setRowCount((int)zone->SpawnsCount());
-    int i = 0;
-    for(auto sPair : zone->GetSpawns())
+    std::vector<std::shared_ptr<libcomp::Object>> spawns;
+    for(auto& sPair : mMergedZone->Definition->GetSpawns())
     {
-        auto s = sPair.second;
-        auto def = std::dynamic_pointer_cast<objects::MiDevilData>(
-            dataset->GetObjectByID(s->GetEnemyType()));
-
-        ui.tableWidget_Spawn->setItem(i, 0, GetTableWidget(
-            libcomp::String("%1").Arg(s->GetID()).C()));
-        ui.tableWidget_Spawn->setItem(i, 1, GetTableWidget(
-            libcomp::String("%1").Arg(s->GetEnemyType()).C()));
-        ui.tableWidget_Spawn->setItem(i, 2, GetTableWidget(
-            libcomp::String("%1").Arg(s->GetVariantType()).C()));
-        ui.tableWidget_Spawn->setItem(i, 3, GetTableWidget(
-            libcomp::String("%1").Arg(def
-                ? def->GetBasic()->GetName() : "?").C()));
-        ui.tableWidget_Spawn->setItem(i, 4, GetTableWidget(
-            libcomp::String("%1").Arg(def
-                ? def->GetGrowth()->GetBaseLevel() : 0).C()));
-        i++;
+        spawns.push_back(sPair.second);
     }
 
-    ui.tableWidget_Spawn->resizeColumnsToContents();
-
-    // Set up the Spawn Group table
-    ui.tableWidget_SpawnGroup->clear();
-    ui.tableWidget_SpawnGroup->setColumnCount(3);
-    ui.tableWidget_SpawnGroup->setHorizontalHeaderItem(0,
-        GetTableWidget("GroupID"));
-    ui.tableWidget_SpawnGroup->setHorizontalHeaderItem(1,
-        GetTableWidget("SpawnID"));
-    ui.tableWidget_SpawnGroup->setHorizontalHeaderItem(3,
-        GetTableWidget("Count"));
-
-    ui.tableWidget_SpawnGroup->setRowCount((int)zone->SpawnGroupsCount());
-    i = 0;
-    for(auto sgPair : zone->GetSpawnGroups())
+    std::vector<std::shared_ptr<libcomp::Object>> sgs;
+    for(auto& sgPair : mMergedZone->Definition->GetSpawnGroups())
     {
-        auto sg = sgPair.second;
-        for(auto sPair : sg->GetSpawns())
-        {
-            ui.tableWidget_SpawnGroup->setItem(i, 0, GetTableWidget(
-                libcomp::String("%1").Arg(sg->GetID()).C()));
-            ui.tableWidget_SpawnGroup->setItem(i, 1, GetTableWidget(
-                libcomp::String("%1").Arg(sPair.first).C()));
-            ui.tableWidget_SpawnGroup->setItem(i, 3, GetTableWidget(
-                libcomp::String("%1").Arg(sPair.second).C()));
-            i++;
-        }
+        sgs.push_back(sgPair.second);
     }
 
-    ui.tableWidget_SpawnGroup->resizeColumnsToContents();
-
-    // Set up the Spawn Location table
-    ui.tableWidget_SpawnLocation->clear();
-    ui.tableWidget_SpawnLocation->setColumnCount(6);
-    ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(0,
-        GetTableWidget("LGroupID"));
-    ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(1,
-        GetTableWidget("X"));
-    ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(2,
-        GetTableWidget("Y"));
-    ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(3,
-        GetTableWidget("Width"));
-    ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(4,
-        GetTableWidget("Height"));
-    ui.tableWidget_SpawnLocation->setHorizontalHeaderItem(5,
-        GetTableWidget("RespawnTime"));
-
-    uint32_t locKey = static_cast<uint32_t>(-1);
-    QString selectedLGroup = ui.comboBox_SpawnEdit->currentText();
-    bool allLocs = selectedLGroup == "All";
-    if(selectedLGroup.length() > 0 && !allLocs)
+    std::vector<std::shared_ptr<libcomp::Object>> slgs;
+    for(auto& slgPair : mMergedZone->Definition->GetSpawnLocationGroups())
     {
-        bool success = false;
-        locKey = libcomp::String(selectedLGroup.toStdString())
-            .ToInteger<uint32_t>(&success);
+        slgs.push_back(slgPair.second);
     }
 
-    auto locGroup = zone->GetSpawnLocationGroups(locKey);
+    ui.spawns->SetObjectList(spawns);
+    ui.spawnGroups ->SetObjectList(sgs);
+    ui.spawnLocationGroups->SetObjectList(slgs);
 
-    int locCount = 0;
-    for(auto grpPair : zone->GetSpawnLocationGroups())
-    {
-        if(allLocs || grpPair.second == locGroup)
-        {
-            locCount += (int)grpPair.second->LocationsCount();
-        }
-    }
-
-    ui.tableWidget_SpawnLocation->setRowCount(locCount);
-    i = 0;
-    for(auto grpPair : zone->GetSpawnLocationGroups())
-    {
-        auto grp = grpPair.second;
-        if(allLocs || grp == locGroup)
-        {
-            for(auto loc : grp->GetLocations())
-            {
-                ui.tableWidget_SpawnLocation->setItem(i, 0, GetTableWidget(
-                    libcomp::String("%1").Arg(grp->GetID()).C()));
-                ui.tableWidget_SpawnLocation->setItem(i, 1, GetTableWidget(
-                    libcomp::String("%1").Arg(loc->GetX()).C()));
-                ui.tableWidget_SpawnLocation->setItem(i, 2, GetTableWidget(
-                    libcomp::String("%1").Arg(loc->GetY()).C()));
-                ui.tableWidget_SpawnLocation->setItem(i, 3, GetTableWidget(
-                    libcomp::String("%1").Arg(loc->GetWidth()).C()));
-                ui.tableWidget_SpawnLocation->setItem(i, 4, GetTableWidget(
-                    libcomp::String("%1").Arg(loc->GetHeight()).C()));
-                ui.tableWidget_SpawnLocation->setItem(i, 5, GetTableWidget(
-                    libcomp::String("%1").Arg(grp->GetRespawnTime()).C()));
-                i++;
-            }
-        }
-    }
-
-    ui.tableWidget_SpawnLocation->resizeColumnsToContents();
+    // Build these in order as they are dependent
+    RebuildNamedDataSet("Spawn");
+    RebuildNamedDataSet("SpawnGroup");
+    RebuildNamedDataSet("SpawnLocationGroup");
 }
 
 void ZoneWindow::BindSpots()
@@ -1117,54 +1115,6 @@ void ZoneWindow::DrawMap()
             painter.drawText(QPoint(Scale(obj->GetX() + 20.f),
                 Scale(-obj->GetY())), libcomp::String("%1")
                 .Arg(obj->GetID()).C());
-        }
-    }
-
-    // Draw Spawn Locations
-    if(ui.showSpawns->isChecked())
-    {
-        painter.setPen(QPen(Qt::red));
-        painter.setBrush(QBrush(Qt::red));
-
-        uint32_t locKey = static_cast<uint32_t>(-1);
-        QString selectedLGroup = ui.comboBox_SpawnEdit->currentText();
-        bool allLocs = selectedLGroup == "All";
-        if(selectedLGroup.length() > 0 && !allLocs)
-        {
-            bool success = false;
-            locKey = libcomp::String(selectedLGroup.toStdString())
-                .ToInteger<uint32_t>(&success);
-        }
-
-        auto locGroup = zone->GetSpawnLocationGroups(locKey);
-
-        for(auto grpPair : zone->GetSpawnLocationGroups())
-        {
-            auto grp = grpPair.second;
-            if(allLocs || locGroup == grp)
-            {
-                for(auto loc : grp->GetLocations())
-                {
-                    float x1 = loc->GetX();
-                    float y1 = loc->GetY();
-                    float x2 = loc->GetX() + loc->GetWidth();
-                    float y2 = loc->GetY() - loc->GetHeight();
-
-                    xVals.insert(x1);
-                    xVals.insert(x2);
-                    yVals.insert(y1);
-                    yVals.insert(y2);
-
-                    painter.drawLine(Scale(x1), Scale(-y1),
-                        Scale(x2), Scale(-y1));
-                    painter.drawLine(Scale(x2), Scale(-y1),
-                        Scale(x2), Scale(-y2));
-                    painter.drawLine(Scale(x2), Scale(-y2),
-                        Scale(x1), Scale(-y2));
-                    painter.drawLine(Scale(x1), Scale(-y2),
-                        Scale(x1), Scale(-y1));
-                }
-            }
         }
     }
 

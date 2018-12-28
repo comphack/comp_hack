@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Spawn</class>
+ <widget class="QWidget" name="Spawn">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>375</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="layoutMain">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidget">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>373</width>
+        <height>598</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="layoutScrollArea">
+       <item>
+        <layout class="QFormLayout" name="formMain">
+         <item row="0" column="0">
+          <widget class="QLabel" name="lblID">
+           <property name="text">
+            <string>ID:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="spawnID">
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="lblType">
+           <property name="text">
+            <string>Type:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="ObjectSelector" name="type" native="true"/>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="lblVariant">
+           <property name="text">
+            <string>Variant:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QSpinBox" name="variant">
+           <property name="maximum">
+            <number>2147483647</number>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="lblCategory">
+           <property name="text">
+            <string>Category:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QComboBox" name="category">
+           <item>
+            <property name="text">
+             <string>Enemy</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Boss</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Ally</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="lblLevel">
+           <property name="text">
+            <string>Level:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QSpinBox" name="level">
+           <property name="minimum">
+            <number>-1</number>
+           </property>
+           <property name="maximum">
+            <number>2147483647</number>
+           </property>
+           <property name="value">
+            <number>-1</number>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="lblXP">
+           <property name="text">
+            <string>XP:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QSpinBox" name="xp">
+           <property name="minimum">
+            <number>-1</number>
+           </property>
+           <property name="maximum">
+            <number>2147483647</number>
+           </property>
+           <property name="value">
+            <number>-1</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="grpDrops">
+         <property name="title">
+          <string>Drops</string>
+         </property>
+         <layout class="QFormLayout" name="grpDropsLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblDrops">
+            <property name="text">
+             <string>Explicit:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblDropSetIDs">
+            <property name="text">
+             <string>Drop Set IDs:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblInheritDrops">
+            <property name="text">
+             <string>Inherit Drops:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="inheritDrops">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="DynamicList" name="dropSetIDs" native="true"/>
+          </item>
+          <item row="0" column="1">
+           <widget class="DynamicList" name="drops" native="true"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="grpTalkResults">
+         <property name="title">
+          <string>Talk Results</string>
+         </property>
+         <layout class="QVBoxLayout" name="grpTalkResultsLayout">
+          <item>
+           <layout class="QFormLayout" name="formTalkResist">
+            <item row="0" column="0">
+             <widget class="QLabel" name="lblTalkResist">
+              <property name="text">
+               <string>Resistance:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QSpinBox" name="talkResist">
+              <property name="maximum">
+               <number>100</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="layoutTalkOutcomes">
+            <item>
+             <widget class="QCheckBox" name="canJoin">
+              <property name="text">
+               <string>Can Join</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="canGift">
+              <property name="text">
+               <string>Can Gift</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="grpGifts">
+         <property name="title">
+          <string>Gifts</string>
+         </property>
+         <layout class="QFormLayout" name="grpGiftsLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblGifts">
+            <property name="text">
+             <string>Explicit:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblGiftSetIDs">
+            <property name="text">
+             <string>Gift Set IDs:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="DynamicList" name="gifts" native="true"/>
+          </item>
+          <item row="1" column="1">
+           <widget class="DynamicList" name="giftSetIDs" native="true"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="grpAI">
+         <property name="title">
+          <string>AI</string>
+         </property>
+         <layout class="QFormLayout" name="grpAILayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblBaseAIType">
+            <property name="text">
+             <string>Base Type:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblAIScript">
+            <property name="text">
+             <string>Script:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblLogicGroupID">
+            <property name="text">
+             <string>Logic Group ID:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="baseAIType">
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="aiScript"/>
+          </item>
+          <item row="2" column="1">
+           <widget class="QSpinBox" name="logicGroupID">
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <layout class="QGridLayout" name="gridLayout">
+         <property name="topMargin">
+          <number>5</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="lblKillValue">
+           <property name="text">
+            <string>Kill Value:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QSpinBox" name="killValue">
+           <property name="maximum">
+            <number>2147483647</number>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QLabel" name="lblKillValueType">
+           <property name="text">
+            <string>Kill Value Type:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QComboBox" name="killValueType">
+           <item>
+            <property name="text">
+             <string>Inherited</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Soul Points</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Bethel</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>UB Points</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Ziotite</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="lblBossGroup">
+           <property name="text">
+            <string>Boss Group:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QSpinBox" name="bossGroup">
+           <property name="maximum">
+            <number>3</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QLabel" name="lblFactionGroup">
+           <property name="text">
+            <string>Faction Group:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QSpinBox" name="factionGroup">
+           <property name="maximum">
+            <number>2147483647</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ObjectSelector</class>
+   <extends>QWidget</extends>
+   <header>ObjectSelector.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DynamicList</class>
+   <extends>QWidget</extends>
+   <header>DynamicList.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

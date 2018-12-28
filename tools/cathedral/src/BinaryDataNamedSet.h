@@ -41,6 +41,8 @@ class String;
 class BinaryDataNamedSet : public libcomp::BinaryDataSet
 {
 public:
+    BinaryDataNamedSet(std::function<uint32_t(
+            const std::shared_ptr<libcomp::Object>&)> mapper);
     BinaryDataNamedSet(
         std::function<std::shared_ptr<libcomp::Object>()> allocator,
         std::function<uint32_t(
@@ -53,9 +55,14 @@ public:
 
     libcomp::String GetName(const std::shared_ptr<libcomp::Object>& obj) const;
 
+    void MapRecords(std::vector<std::shared_ptr<libcomp::Object>>& objs,
+        std::vector<libcomp::String>& explicitNames);
+
 private:
     std::function<libcomp::String(const std::shared_ptr<
         libcomp::Object>&)> mObjectNamer;
+
+    std::unordered_map<uint32_t, libcomp::String> mExplicitNames;
 };
 
 #endif // LIBCOMP_SRC_BINARYDATANAMEDSET_H

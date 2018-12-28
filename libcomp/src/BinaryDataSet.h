@@ -71,6 +71,7 @@ private:
     std::list<std::string> ReadNodes(tinyxml2::XMLElement *node,
         int16_t dataMode) const;
 
+protected:
     std::list<std::shared_ptr<libcomp::Object>> mObjects;
     std::map<uint32_t, std::shared_ptr<libcomp::Object>> mObjectMap;
 };

@@ -30,6 +30,13 @@
 // libcomp Includes
 #include <CString.h>
 
+
+BinaryDataNamedSet::BinaryDataNamedSet(std::function<uint32_t(
+    const std::shared_ptr<libcomp::Object>&)> mapper) :
+    libcomp::BinaryDataSet(nullptr, mapper), mObjectNamer(nullptr)
+{
+}
+
 BinaryDataNamedSet::BinaryDataNamedSet(std::function<std::shared_ptr<
     libcomp::Object>()> allocator, std::function<uint32_t(
     const std::shared_ptr<libcomp::Object>&)> mapper,
@@ -52,5 +59,48 @@ uint32_t BinaryDataNamedSet::GetMapID(const std::shared_ptr<
 libcomp::String BinaryDataNamedSet::GetName(const std::shared_ptr<
     libcomp::Object>& obj) const
 {
-    return mObjectNamer(obj);
+    if(mExplicitNames.size() > 0)
+    {
+        uint32_t mapID = GetMapID(obj);
+
+        auto iter = mExplicitNames.find(mapID);
+        if(iter != mExplicitNames.end())
+        {
+            return iter->second;
+        }
+    }
+
+    if(mObjectNamer)
+    {
+        return mObjectNamer(obj);
+    }
+    else
+    {
+        return "";
+    }
+}
+
+void BinaryDataNamedSet::MapRecords(
+    std::vector<std::shared_ptr<libcomp::Object>>& objs,
+    std::vector<libcomp::String>& explicitNames)
+{
+    // Clear old records and reload
+    mObjects.clear();
+    mObjectMap.clear();
+    mExplicitNames.clear();
+
+    bool setNames = objs.size() == explicitNames.size();
+    for(size_t i = 0; i < objs.size(); i++)
+    {
+        auto obj = objs[i];
+        uint32_t mapID = GetMapID(obj);
+
+        mObjects.push_back(obj);
+        mObjectMap[mapID] = obj;
+
+        if(setNames)
+        {
+            mExplicitNames[mapID] = explicitNames[i];
+        }
+    }
 }

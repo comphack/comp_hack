@@ -75,6 +75,10 @@ public:
     std::shared_ptr<libcomp::BinaryDataSet> GetBinaryDataSet(
         const libcomp::String& objType) const;
 
+    void RegisterBinaryDataSet(const libcomp::String& objType,
+        const std::shared_ptr<libcomp::BinaryDataSet>& dataset,
+        bool createSelector = true);
+
     ObjectSelectorWindow* GetObjectSelector(
         const libcomp::String& objType) const;
 

@@ -30,7 +30,7 @@
        <property name="widgetResizable">
         <bool>true</bool>
        </property>
-       <widget class="QWidget" name="scrollAreaWidgetContents">
+       <widget class="QWidget" name="scrollAreaWidget">
         <property name="geometry">
          <rect>
           <x>0</x>
@@ -626,53 +626,66 @@
          </item>
         </layout>
        </widget>
-       <widget class="QWidget" name="tabSpawn">
+       <widget class="QWidget" name="tabSpawns">
         <attribute name="title">
          <string>Spawns</string>
         </attribute>
-        <layout class="QVBoxLayout" name="tabSpawnLayout">
+        <layout class="QVBoxLayout" name="tabSpawnsLayout">
          <item>
-          <widget class="QTableWidget" name="tableWidget_Spawn">
+          <widget class="QTabWidget" name="tabSpawnTypes">
+           <property name="tabPosition">
+            <enum>QTabWidget::South</enum>
+           </property>
+           <property name="currentIndex">
+            <number>0</number>
+           </property>
+           <widget class="QWidget" name="tabSpawn">
+            <attribute name="title">
+             <string>Spawn</string>
+            </attribute>
+            <layout class="QHBoxLayout" name="tabSpawnLayout">
+             <item>
+              <widget class="SpawnList" name="spawns" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="tabSpawnGroup">
+            <attribute name="title">
+             <string>Spawn Group</string>
+            </attribute>
+            <layout class="QHBoxLayout" name="tabSpawnGroupLayout">
+             <item>
+              <widget class="SpawnGroupList" name="spawnGroups" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="tabSpawnLocationGroup">
+            <attribute name="title">
+             <string>Spawn Location Group</string>
+            </attribute>
+            <layout class="QHBoxLayout" name="tabSpawnLocationGroupLayout">
+             <item>
+              <widget class="SpawnLocationGroupList" name="spawnLocationGroups" native="true"/>
+             </item>
+            </layout>
+           </widget>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="showSpawns">
            <property name="maximumSize">
             <size>
-             <width>16777215</width>
+             <width>200</width>
              <height>16777215</height>
             </size>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTableWidget" name="tableWidget_SpawnLocation">
-           <property name="contextMenuPolicy">
-            <enum>Qt::CustomContextMenu</enum>
+           <property name="text">
+            <string>Show</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
            </property>
           </widget>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="layout_SpawnLocation">
-           <item>
-            <widget class="QCheckBox" name="showSpawns">
-             <property name="maximumSize">
-              <size>
-               <width>200</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Show</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QComboBox" name="comboBox_SpawnEdit"/>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QTableWidget" name="tableWidget_SpawnGroup"/>
          </item>
         </layout>
        </widget>
@@ -848,6 +861,24 @@
    <class>ObjectSelector</class>
    <extends>QWidget</extends>
    <header>ObjectSelector.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SpawnList</class>
+   <extends>QWidget</extends>
+   <header>SpawnList.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SpawnGroupList</class>
+   <extends>QWidget</extends>
+   <header>SpawnGroupList.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SpawnLocationGroupList</class>
+   <extends>QWidget</extends>
+   <header>SpawnLocationGroupList.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

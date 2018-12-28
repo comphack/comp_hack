@@ -49,8 +49,47 @@ SpawnRestriction::~SpawnRestriction()
 
 void SpawnRestriction::Load(const std::shared_ptr<objects::SpawnRestriction>& restrict)
 {
+    // Gather the buttong flag controls to set further down
+    std::vector<QPushButton*> moonControls;
+    for(int i = 0; i < prop->layoutMoonWax->count(); i++)
+    {
+        moonControls.push_back((QPushButton*)prop->layoutMoonWax
+            ->itemAt(i)->widget());
+    }
+    
+    for(int i = 0; i < prop->layoutMoonWane->count(); i++)
+    {
+        moonControls.push_back((QPushButton*)prop->layoutMoonWane
+            ->itemAt(i)->widget());
+    }
+    
+    std::vector<QPushButton*> dayControls;
+    for(int i = 0; i < prop->layoutDay->count(); i++)
+    {
+        dayControls.push_back((QPushButton*)prop->layoutDay
+            ->itemAt(i)->widget());
+    }
+
     if(!restrict)
     {
+        // Clear settings and quit
+        std::unordered_map<uint32_t, int32_t> empty;
+
+        prop->disabled->setChecked(false);
+        prop->time->Load(empty);
+        prop->systemTime->Load(empty);
+        prop->date->Load(empty);
+        
+        for(size_t i = 0; i < 16; i++)
+        {
+            moonControls[i]->setChecked(false);
+        }
+
+        for(size_t i = 0; i < 7; i++)
+        {
+            dayControls[i]->setChecked(false);
+        }
+
         return;
     }
 
@@ -79,32 +118,10 @@ void SpawnRestriction::Load(const std::shared_ptr<objects::SpawnRestriction>& re
     prop->systemTime->Load(sysTime);
     prop->date->Load(date);
 
-    // Set the moon controls
-    std::vector<QPushButton*> moonControls;
-    for(int i = 0; i < prop->layoutMoonWax->count(); i++)
-    {
-        moonControls.push_back((QPushButton*)prop->layoutMoonWax
-            ->itemAt(i)->widget());
-    }
-    
-    for(int i = 0; i < prop->layoutMoonWane->count(); i++)
-    {
-        moonControls.push_back((QPushButton*)prop->layoutMoonWane
-            ->itemAt(i)->widget());
-    }
-
     uint16_t moonRestrict = restrict->GetMoonRestriction();
     for(size_t i = 0; i < 16; i++)
     {
         moonControls[i]->setChecked((moonRestrict & (1 << i)) != 0);
-    }
-
-    // Set the day controls
-    std::vector<QPushButton*> dayControls;
-    for(int i = 0; i < prop->layoutDay->count(); i++)
-    {
-        dayControls.push_back((QPushButton*)prop->layoutDay
-            ->itemAt(i)->widget());
     }
 
     uint16_t dayRestrict = restrict->GetDayRestriction();

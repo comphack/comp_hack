@@ -29,6 +29,7 @@
 // Qt Includes
 #include <PushIgnore.h>
 #include <QLabel>
+#include <QTableWidgetItem>
 
 #include "ui_ZoneWindow.h"
 #include <PopIgnore.h>
@@ -66,11 +67,13 @@ public:
     ~ZoneWindow();
 
     std::shared_ptr<MergedZone> GetMergedZone() const;
-    std::map < uint32_t,
-        std::shared_ptr < objects::ServerZonePartial >> GetLoadedPartials() const;
+    std::map<uint32_t,
+        std::shared_ptr<objects::ServerZonePartial>> GetLoadedPartials() const;
     std::set<uint32_t> GetSelectedPartials() const;
 
     bool ShowZone();
+
+    void RebuildNamedDataSet(const libcomp::String& objType);
 
 public slots:
     void LoadZoneFile();

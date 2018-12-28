@@ -301,6 +301,35 @@ std::shared_ptr<libcomp::BinaryDataSet> MainWindow::GetBinaryDataSet(
     return iter != mBinaryDataSets.end() ? iter->second : nullptr;
 }
 
+void MainWindow::RegisterBinaryDataSet(const libcomp::String& objType,
+    const std::shared_ptr<libcomp::BinaryDataSet>& dataset,
+    bool createSelector)
+{
+    mBinaryDataSets[objType] = dataset;
+
+    auto namedSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+        dataset);
+    if(namedSet)
+    {
+        auto iter = mObjectSelectors.find(objType);
+        if(iter == mObjectSelectors.end())
+        {
+            if(createSelector)
+            {
+                mObjectSelectors[objType] = new ObjectSelectorWindow();
+                iter = mObjectSelectors.find(objType);
+            }
+            else
+            {
+                // Do not create the selector
+                return;
+            }
+        }
+
+        iter->second->Bind(new ObjectSelectorList(namedSet, false));
+    }
+}
+
 ObjectSelectorWindow* MainWindow::GetObjectSelector(
     const libcomp::String& objType) const
 {

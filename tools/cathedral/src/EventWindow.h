@@ -68,7 +68,8 @@ private slots:
     void NewFile();
     void NewEvent();
     void RemoveEvent();
-    void Refresh();
+    void Refresh(bool reselectEvent = true);
+    void GoTo();
     void CurrentEventEdited();
     void TreeSelectionChanged();
 

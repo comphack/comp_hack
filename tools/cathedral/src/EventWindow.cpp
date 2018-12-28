@@ -193,6 +193,7 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
     connect(ui->actionSave, SIGNAL(triggered()), this, SLOT(SaveFile()));
     connect(ui->actionNew, SIGNAL(triggered()), this, SLOT(NewFile()));
     connect(ui->actionRefresh, SIGNAL(triggered()), this, SLOT(Refresh()));
+    connect(ui->actionGoto, SIGNAL(triggered()), this, SLOT(GoTo()));
     connect(ui->removeEvent, SIGNAL(clicked()), this, SLOT(RemoveEvent()));
     connect(ui->files, SIGNAL(currentIndexChanged(const QString&)), this,
         SLOT(FileSelectionChanged()));
@@ -269,7 +270,7 @@ size_t EventWindow::GetLoadedEventCount() const
 
 void EventWindow::FileSelectionChanged()
 {
-    Refresh();
+    Refresh(false);
 }
 
 void EventWindow::LoadDirectory()
@@ -305,7 +306,7 @@ void EventWindow::LoadDirectory()
     mMainWindow->ResetEventCount();
 
     // Refresh selection even if it didnt change
-    Refresh();
+    Refresh(false);
 }
 
 void EventWindow::LoadFile()
@@ -336,7 +337,7 @@ void EventWindow::LoadFile()
         else
         {
             // Just refresh
-            Refresh();
+            Refresh(false);
         }
     }
     else
@@ -503,7 +504,7 @@ void EventWindow::SaveFile()
     doc.SaveFile(path.C());
 
     RebuildGlobalIDMap();
-    Refresh();
+    Refresh(true);
 }
 
 void EventWindow::NewFile()
@@ -572,7 +573,7 @@ void EventWindow::RemoveEvent()
         RebuildLocalIDMap(file);
         RebuildGlobalIDMap();
         mMainWindow->ResetEventCount();
-        Refresh();
+        Refresh(false);
     }
 }
 
@@ -732,11 +733,11 @@ void EventWindow::NewEvent()
     mMainWindow->ResetEventCount();
 
     // Refresh the file and select the new event
-    Refresh();
+    Refresh(false);
     GoToEvent(eventID);
 }
 
-void EventWindow::Refresh()
+void EventWindow::Refresh(bool reselectEvent)
 {
     auto current = mCurrentEvent;
 
@@ -744,10 +745,22 @@ void EventWindow::Refresh()
 
     SelectFile(path);
 
-    if(current)
+    if(reselectEvent && current)
     {
         GoToEvent(current->FileEventID);
     }
+}
+
+void EventWindow::GoTo()
+{
+    QString qEventID = QInputDialog::getText(this, "Enter an ID", "Event ID",
+        QLineEdit::Normal);
+    if(qEventID.isEmpty())
+    {
+        return;
+    }
+
+    GoToEvent(cs(qEventID));
 }
 
 void EventWindow::CurrentEventEdited()

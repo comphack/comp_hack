@@ -63,6 +63,7 @@
 #include <SpawnLocationGroup.h>
 #include <ServerZonePartial.h>
 #include <ServerZoneSpot.h>
+#include <ServerZoneTrigger.h>
 
 // C++11 Standard Includes
 #include <cmath>
@@ -301,6 +302,119 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
     }
 }
 
+std::list<std::shared_ptr<objects::Action>>
+    ZoneWindow::GetLoadedActions(bool forUpdate)
+{
+    std::list<std::shared_ptr<objects::Action>> actions;
+    if(forUpdate)
+    {
+        // Make sure all controls are saved and not bound during the update
+        Refresh();
+    }
+
+    // Get all loaded partial actions
+    for(auto& partialPair : mZonePartials)
+    {
+        auto partial = partialPair.second;
+        for(auto npc : partial->GetNPCs())
+        {
+            for(auto action : npc->GetActions())
+            {
+                actions.push_back(action);
+            }
+        }
+
+        for(auto obj : partial->GetObjects())
+        {
+            for(auto action : obj->GetActions())
+            {
+                actions.push_back(action);
+            }
+        }
+
+        for(auto& sgPair : partial->GetSpawnGroups())
+        {
+            for(auto action : sgPair.second->GetSpawnActions())
+            {
+                actions.push_back(action);
+            }
+
+            for(auto action : sgPair.second->GetDefeatActions())
+            {
+                actions.push_back(action);
+            }
+        }
+
+        for(auto& spotPair : partial->GetSpots())
+        {
+            for(auto action : spotPair.second->GetActions())
+            {
+                actions.push_back(action);
+            }
+        }
+
+        for(auto trigger : partial->GetTriggers())
+        {
+            for(auto action : trigger->GetActions())
+            {
+                actions.push_back(action);
+            }
+        }
+    }
+
+    // Get all current zone actions
+    if(mMergedZone->CurrentZone)
+    {
+        auto zone = mMergedZone->CurrentZone;
+        for(auto npc : zone->GetNPCs())
+        {
+            for(auto action : npc->GetActions())
+            {
+                actions.push_back(action);
+            }
+        }
+
+        for(auto obj : zone->GetObjects())
+        {
+            for(auto action : obj->GetActions())
+            {
+                actions.push_back(action);
+            }
+        }
+
+        for(auto& sgPair : zone->GetSpawnGroups())
+        {
+            for(auto action : sgPair.second->GetSpawnActions())
+            {
+                actions.push_back(action);
+            }
+
+            for(auto action : sgPair.second->GetDefeatActions())
+            {
+                actions.push_back(action);
+            }
+        }
+
+        for(auto& spotPair : zone->GetSpots())
+        {
+            for(auto action : spotPair.second->GetActions())
+            {
+                actions.push_back(action);
+            }
+        }
+
+        for(auto trigger : zone->GetTriggers())
+        {
+            for(auto action : trigger->GetActions())
+            {
+                actions.push_back(action);
+            }
+        }
+    }
+
+    return actions;
+}
+
 void ZoneWindow::LoadZoneFile()
 {
     QSettings settings;
@@ -488,7 +602,7 @@ void ZoneWindow::ShowToggled(bool checked)
 
 void ZoneWindow::Refresh()
 {
-    DrawMap();
+    LoadMapFromZone();
 }
 
 bool ZoneWindow::LoadZonePartials(const libcomp::String& path)

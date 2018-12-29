@@ -42,6 +42,13 @@
 // Standard C++11 Includes
 #include <set>
 
+namespace objects
+{
+
+class Action;
+
+} // namespace objects
+
 class EventFile;
 class EventTreeItem;
 class FileEvent;
@@ -59,6 +66,8 @@ public:
     bool GoToEvent(const libcomp::String& eventID);
 
     size_t GetLoadedEventCount() const;
+
+    void ChangeEventID(const libcomp::String& currentID);
 
 private slots:
     void FileSelectionChanged();
@@ -86,6 +95,15 @@ private:
     void AddEventToTree(const libcomp::String& id, EventTreeItem* parent,
         const std::shared_ptr<EventFile>& file,
         std::set<libcomp::String>& seen, int32_t eventIdx = -1);
+
+    void ChangeEventIDs(const std::unordered_map<libcomp::String,
+        libcomp::String>& idMap);
+    bool ChangeActionEventIDs(const std::unordered_map<libcomp::String,
+        libcomp::String>& idMap, const std::list<std::shared_ptr<
+        objects::Action>>& actions);
+
+    libcomp::String GetNewEventID(const std::shared_ptr<EventFile>& file,
+        objects::Event::EventType_t eventType);
 
     void RebuildLocalIDMap(const std::shared_ptr<EventFile>& file);
     void RebuildGlobalIDMap();

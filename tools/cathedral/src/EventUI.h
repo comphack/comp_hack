@@ -57,6 +57,7 @@ public:
     std::list<libcomp::String> GetComments();
 
 public slots:
+    void ChangeEventID();
     virtual void ToggleBaseDisplay();
 
 protected:

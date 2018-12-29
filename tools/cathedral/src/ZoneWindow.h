@@ -41,6 +41,7 @@
 namespace objects
 {
 
+class Action;
 class MiZoneData;
 class QmpFile;
 class ServerZone;
@@ -74,6 +75,9 @@ public:
     bool ShowZone();
 
     void RebuildNamedDataSet(const libcomp::String& objType);
+
+    std::list<std::shared_ptr<objects::Action>> GetLoadedActions(
+        bool forUpdate);
 
 public slots:
     void LoadZoneFile();

@@ -25,8 +25,12 @@
 #include "EventWindow.h"
 
 // Cathedral Includes
+#include "ActionDelay.h"
 #include "ActionList.h"
 #include "ActionMap.h"
+#include "ActionSpawn.h"
+#include "ActionStartEvent.h"
+#include "ActionZoneInstance.h"
 #include "DynamicList.h"
 #include "EventUI.h"
 #include "EventDirectionUI.h"
@@ -41,6 +45,7 @@
 #include "EventRef.h"
 #include "MainWindow.h"
 #include "XmlHandler.h"
+#include "ZoneWindow.h"
 
 // Qt Includes
 #include <PushIgnore.h>
@@ -266,6 +271,79 @@ size_t EventWindow::GetLoadedEventCount() const
     }
 
     return total;
+}
+
+void EventWindow::ChangeEventID(const libcomp::String& currentID)
+{
+    auto it = mGlobalIDMap.find(currentID);
+    if(it == mGlobalIDMap.end())
+    {
+        return;
+    }
+
+    auto fileIter = mFiles.find(it->second);
+    if(fileIter == mFiles.end())
+    {
+        return;
+    }
+
+    std::shared_ptr<FileEvent> fEvent;
+
+    auto file = fileIter->second;
+    if(file && file->EventIDMap.find(currentID) != file->EventIDMap.end())
+    {
+        auto eIter = file->Events.begin();
+        std::advance(eIter, file->EventIDMap[currentID]);
+        fEvent = *eIter;
+    }
+
+    if(fEvent)
+    {
+        libcomp::String eventID = GetNewEventID(file, fEvent->Event
+            ->GetEventType());
+        if(eventID.IsEmpty())
+        {
+            return;
+        }
+
+        auto reply = QMessageBox::question(this, "Confirm Rename",
+            QString("Event ID '%1' will be changed to '%2' and all currently"
+                " loaded event references will be updated automatically"
+                " however, no files will be saved at this time. Only the"
+                " current zone and loaded zone partials will be updated."
+                " Please confirm this action.")
+            .arg(currentID.C()).arg(eventID.C()),
+            QMessageBox::Yes | QMessageBox::No);
+        if(reply != QMessageBox::Yes)
+        {
+            return;
+        }
+
+        // Deselect the tree so everything saves
+        ui->treeWidget->clearSelection();
+
+        // Update the event
+        fEvent->Event->SetID(eventID);
+
+        std::unordered_map<libcomp::String, libcomp::String> eventIDMap;
+        eventIDMap[currentID] = eventID;
+
+        ChangeEventIDs(eventIDMap);
+
+        // Refresh and select the new event
+        fEvent->HasUpdates = true;
+        RebuildLocalIDMap(file);
+        RebuildGlobalIDMap();
+        Refresh(false);
+        GoToEvent(eventID);
+    }
+    else
+    {
+        QMessageBox err;
+        err.setText(qs(libcomp::String("Event ID '%1' does not exist")
+            .Arg(currentID)));
+        err.exec();
+    }
 }
 
 void EventWindow::FileSelectionChanged()
@@ -595,130 +673,10 @@ void EventWindow::NewEvent()
     auto file = fIter->second;
     auto eventType = (objects::Event::EventType_t)pAction->data().toUInt();
 
-    // Suggest an ID that is not already taken based off current IDs in
-    // the file and cross checked against other loaded files
-    libcomp::String commonPrefix;
-
-    auto eIter = file->Events.begin();
-    if(eIter != file->Events.end())
+    libcomp::String eventID = GetNewEventID(file, eventType);
+    if(!eventID.IsEmpty())
     {
-        commonPrefix = (*eIter)->Event->GetID();
-        eIter++;
-    }
-
-    for(; eIter != file->Events.end(); eIter++)
-    {
-        auto id = (*eIter)->Event->GetID();
-        while(commonPrefix.Length() > 0 &&
-            commonPrefix != id.Left(commonPrefix.Length()))
-        {
-            commonPrefix = commonPrefix.Left((size_t)(
-                commonPrefix.Length() - 1));
-        }
-
-        if(commonPrefix.Length() == 0)
-        {
-            // No common prefix
-            break;
-        }
-    }
-
-    if(commonPrefix.Length() > 0)
-    {
-        // Add type abbreviation and increase number until new ID is found
-        if(commonPrefix.Right(1) == "_")
-        {
-            // Remove double underscore
-            commonPrefix = commonPrefix.Left((size_t)(
-                commonPrefix.Length() - 1));
-        }
-
-        switch(eventType)
-        {
-        case objects::Event::EventType_t::NPC_MESSAGE:
-            commonPrefix += "_NM";
-            break;
-        case objects::Event::EventType_t::EX_NPC_MESSAGE:
-            commonPrefix += "_EX";
-            break;
-        case objects::Event::EventType_t::MULTITALK:
-            commonPrefix += "_ML";
-            break;
-        case objects::Event::EventType_t::PROMPT:
-            commonPrefix += "_PR";
-            break;
-        case objects::Event::EventType_t::PERFORM_ACTIONS:
-            commonPrefix += "_PA";
-            break;
-        case objects::Event::EventType_t::OPEN_MENU:
-            commonPrefix += "_ME";
-            break;
-        case objects::Event::EventType_t::PLAY_SCENE:
-            commonPrefix += "_SC";
-            break;
-        case objects::Event::EventType_t::DIRECTION:
-            commonPrefix += "_DR";
-            break;
-        case objects::Event::EventType_t::ITIME:
-            commonPrefix += "_IT";
-            break;
-        case objects::Event::EventType_t::FORK:
-        default:
-            commonPrefix += "_";
-            break;
-        }
-    }
-
-    libcomp::String suggestedID(commonPrefix);
-    if(suggestedID.Length() > 0)
-    {
-        // Add sequence number to the event and make sure its not already
-        // taken
-        bool validFound = false;
-        for(size_t i = 1; i < 1000; i++)
-        {
-            // Zero pad the number
-            auto str = libcomp::String("%1%2").Arg(suggestedID)
-                .Arg(libcomp::String("%1").Arg(1000 + i).Right(3));
-            if(mGlobalIDMap.find(str) == mGlobalIDMap.end())
-            {
-                suggestedID = str;
-                validFound = true;
-                break;
-            }
-        }
-
-        if(!validFound)
-        {
-            // No suggested ID
-            suggestedID.Clear();
-        }
-    }
-
-    libcomp::String eventID;
-    while(true)
-    {
-        QString qEventID = QInputDialog::getText(this, "Enter an ID", "New ID",
-            QLineEdit::Normal, qs(suggestedID));
-        if(qEventID.isEmpty())
-        {
-            return;
-        }
-
-        eventID = cs(qEventID);
-
-        auto globalIter = mGlobalIDMap.find(eventID);
-        if(globalIter != mGlobalIDMap.end())
-        {
-            QMessageBox err;
-            err.setText(qs(libcomp::String("Event ID '%1' already exists in"
-                " file: %2").Arg(eventID).Arg(globalIter->second)));
-            err.exec();
-        }
-        else
-        {
-            break;
-        }
+        return;
     }
 
     // Create and add the event
@@ -1467,6 +1425,302 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
             AddEventToTree(b->GetQueueNext(), bNode, file, seen);
         }
     }
+}
+
+void EventWindow::ChangeEventIDs(const std::unordered_map<libcomp::String,
+    libcomp::String>& idMap)
+{
+    // Update all loaded events and actions within them
+    for(auto fPair : mFiles)
+    {
+        for(auto f : fPair.second->Events)
+        {
+            bool update = false;
+
+            auto e = f->Event;
+
+            // Pull base class casts for whatever we can since many fields
+            // are shared between sections
+            std::list<std::shared_ptr<objects::EventBase>> baseParts;
+            baseParts.push_back(e);
+
+            for(auto b : e->GetBranches())
+            {
+                baseParts.push_back(b);
+            }
+
+            switch(e->GetEventType())
+            {
+            case objects::Event::EventType_t::ITIME:
+                {
+                    auto iTime = std::dynamic_pointer_cast<
+                        objects::EventITime>(e);
+                    auto iter = idMap.find(iTime->GetStartActions());
+                    if(iter != idMap.end())
+                    {
+                        iTime->SetStartActions(iter->second);
+                        update = true;
+                    }
+                }
+                break;
+            case objects::Event::EventType_t::PERFORM_ACTIONS:
+                {
+                    auto pa = std::dynamic_pointer_cast<
+                        objects::EventPerformActions>(e);
+
+                    auto actions = pa->GetActions();
+                    update |= ChangeActionEventIDs(idMap, actions);
+                }
+                break;
+            case objects::Event::EventType_t::PROMPT:
+                {
+                    auto prompt = std::dynamic_pointer_cast<
+                        objects::EventPrompt>(e);
+                    for(auto choice : prompt->GetChoices())
+                    {
+                        baseParts.push_back(choice);
+                        for(auto b : choice->GetBranches())
+                        {
+                            baseParts.push_back(b);
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+
+            for(auto eBase : baseParts)
+            {
+                auto iter = idMap.find(eBase->GetNext());
+                if(iter != idMap.end())
+                {
+                    eBase->SetNext(iter->second);
+                    update = true;
+                }
+
+                iter = idMap.find(eBase->GetQueueNext());
+                if(iter != idMap.end())
+                {
+                    eBase->SetQueueNext(iter->second);
+                    update = true;
+                }
+            }
+
+            if(update)
+            {
+                f->HasUpdates = true;
+            }
+        }
+    }
+
+    // Update all loaded zone and partial actions
+    auto actions = mMainWindow->GetZones()->GetLoadedActions(true);
+    ChangeActionEventIDs(idMap, actions);
+}
+
+bool EventWindow::ChangeActionEventIDs(const std::unordered_map<
+    libcomp::String, libcomp::String>& idMap,
+    const std::list<std::shared_ptr<objects::Action>>& actions)
+{
+    bool updated = false;
+    auto currentActions = actions;
+
+    std::list<std::shared_ptr<objects::Action>> newActions;
+    while(currentActions.size() > 0)
+    {
+        // Actions can't nest forever so loop until we're done
+        for(auto action : currentActions)
+        {
+            switch(action->GetActionType())
+            {
+            case objects::Action::ActionType_t::DELAY:
+                {
+                    auto act = std::dynamic_pointer_cast<
+                        objects::ActionDelay>(action);
+                    for(auto act2 : act->GetActions())
+                    {
+                        newActions.push_back(act2);
+                    }
+                }
+                break;
+            case objects::Action::ActionType_t::SPAWN:
+                {
+                    auto act = std::dynamic_pointer_cast<
+                        objects::ActionSpawn>(action);
+                    for(auto act2 : act->GetDefeatActions())
+                    {
+                        newActions.push_back(act2);
+                    }
+                }
+                break;
+            case objects::Action::ActionType_t::START_EVENT:
+                {
+                    auto act = std::dynamic_pointer_cast<
+                        objects::ActionStartEvent>(action);
+                    auto iter = idMap.find(act->GetEventID());
+                    if(iter != idMap.end())
+                    {
+                        act->SetEventID(iter->second);
+                        updated = true;
+                    }
+                }
+                break;
+            case objects::Action::ActionType_t::ZONE_INSTANCE:
+                {
+                    auto act = std::dynamic_pointer_cast<
+                        objects::ActionZoneInstance>(action);
+                    auto iter = idMap.find(act->GetTimerExpirationEventID());
+                    if(iter != idMap.end())
+                    {
+                        act->SetTimerExpirationEventID(iter->second);
+                        updated = true;
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+        }
+
+        currentActions = newActions;
+        newActions.clear();
+    }
+
+    return updated;
+}
+
+libcomp::String EventWindow::GetNewEventID(
+    const std::shared_ptr<EventFile>& file,
+    objects::Event::EventType_t eventType)
+{
+    // Suggest an ID that is not already taken based off current IDs in
+    // the file and cross checked against other loaded files
+    libcomp::String commonPrefix;
+
+    auto eIter = file->Events.begin();
+    if(eIter != file->Events.end())
+    {
+        commonPrefix = (*eIter)->Event->GetID();
+        eIter++;
+    }
+
+    for(; eIter != file->Events.end(); eIter++)
+    {
+        auto id = (*eIter)->Event->GetID();
+        while(commonPrefix.Length() > 0 &&
+            commonPrefix != id.Left(commonPrefix.Length()))
+        {
+            commonPrefix = commonPrefix.Left((size_t)(
+                commonPrefix.Length() - 1));
+        }
+
+        if(commonPrefix.Length() == 0)
+        {
+            // No common prefix
+            break;
+        }
+    }
+
+    if(commonPrefix.Length() > 0)
+    {
+        // Add type abbreviation and increase number until new ID is found
+        if(commonPrefix.Right(1) == "_")
+        {
+            // Remove double underscore
+            commonPrefix = commonPrefix.Left((size_t)(
+                commonPrefix.Length() - 1));
+        }
+
+        switch(eventType)
+        {
+        case objects::Event::EventType_t::NPC_MESSAGE:
+            commonPrefix += "_NM";
+            break;
+        case objects::Event::EventType_t::EX_NPC_MESSAGE:
+            commonPrefix += "_EX";
+            break;
+        case objects::Event::EventType_t::MULTITALK:
+            commonPrefix += "_ML";
+            break;
+        case objects::Event::EventType_t::PROMPT:
+            commonPrefix += "_PR";
+            break;
+        case objects::Event::EventType_t::PERFORM_ACTIONS:
+            commonPrefix += "_PA";
+            break;
+        case objects::Event::EventType_t::OPEN_MENU:
+            commonPrefix += "_ME";
+            break;
+        case objects::Event::EventType_t::PLAY_SCENE:
+            commonPrefix += "_SC";
+            break;
+        case objects::Event::EventType_t::DIRECTION:
+            commonPrefix += "_DR";
+            break;
+        case objects::Event::EventType_t::ITIME:
+            commonPrefix += "_IT";
+            break;
+        case objects::Event::EventType_t::FORK:
+        default:
+            commonPrefix += "_";
+            break;
+        }
+    }
+
+    libcomp::String suggestedID(commonPrefix);
+    if(suggestedID.Length() > 0)
+    {
+        // Add sequence number to the event and make sure its not already
+        // taken
+        bool validFound = false;
+        for(size_t i = 1; i < 1000; i++)
+        {
+            // Zero pad the number
+            auto str = libcomp::String("%1%2").Arg(suggestedID)
+                .Arg(libcomp::String("%1").Arg(1000 + i).Right(3));
+            if(mGlobalIDMap.find(str) == mGlobalIDMap.end())
+            {
+                suggestedID = str;
+                validFound = true;
+                break;
+            }
+        }
+
+        if(!validFound)
+        {
+            // No suggested ID
+            suggestedID.Clear();
+        }
+    }
+
+    libcomp::String eventID;
+    while(true)
+    {
+        QString qEventID = QInputDialog::getText(this, "Enter an ID", "New ID",
+            QLineEdit::Normal, qs(suggestedID));
+        if(qEventID.isEmpty())
+        {
+            return "";
+        }
+
+        eventID = cs(qEventID);
+
+        auto globalIter = mGlobalIDMap.find(eventID);
+        if(globalIter != mGlobalIDMap.end())
+        {
+            QMessageBox err;
+            err.setText(qs(libcomp::String("Event ID '%1' already exists in"
+                " file: %2").Arg(eventID).Arg(globalIter->second)));
+            err.exec();
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return eventID;
 }
 
 void EventWindow::RebuildLocalIDMap(const std::shared_ptr<EventFile>& file)

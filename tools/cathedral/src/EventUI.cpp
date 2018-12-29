@@ -25,6 +25,7 @@
 #include "EventUI.h"
 
 // Cathedral Includes
+#include "EventWindow.h"
 #include "MainWindow.h"
 
 // Qt Includes
@@ -54,6 +55,8 @@ Event::Event(MainWindow *pMainWindow, QWidget *pParent) :
     ui->next->SetMainWindow(pMainWindow);
     ui->queueNext->SetMainWindow(pMainWindow);
 
+    connect(ui->changeEventID, SIGNAL(clicked(bool)), this,
+        SLOT(ChangeEventID()));
     connect(ui->toggleBaseDisplay, SIGNAL(clicked(bool)), this,
         SLOT(ToggleBaseDisplay()));
 }
@@ -164,6 +167,15 @@ void Event::SetComments(const std::list<libcomp::String>& comments)
 std::list<libcomp::String> Event::GetComments()
 {
     return ui->comments->GetStringList();
+}
+
+void Event::ChangeEventID()
+{
+    if(mMainWindow && mEventBase)
+    {
+        auto eventWindow = mMainWindow->GetEvents();
+        eventWindow->ChangeEventID(mEventBase->GetID());
+    }
 }
 
 void Event::ToggleBaseDisplay()

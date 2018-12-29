@@ -38,7 +38,7 @@
 #include <Log.h>
 
 ObjectList::ObjectList(QWidget *pParent) :
-    QWidget(pParent)
+    QWidget(pParent), mReadOnly(false)
 {
     mObjectModel = new ObjectListModel(this);
 
@@ -129,12 +129,20 @@ void ObjectList::SaveProperties(
     (void)obj;
 }
 
+std::shared_ptr<libcomp::Object> ObjectList::GetActiveObject()
+{
+    return mActiveObject.lock();
+}
+
 void ObjectList::SaveActiveProperties()
 {
-    auto obj = mActiveObject.lock();
-    if(obj)
+    if(!mReadOnly)
     {
-        SaveProperties(obj);
+        auto obj = mActiveObject.lock();
+        if(obj)
+        {
+            SaveProperties(obj);
+        }
     }
 }
 
@@ -142,7 +150,7 @@ void ObjectList::SelectedObjectChanged()
 {
     auto obj = mActiveObject.lock();
 
-    if(obj)
+    if(obj && !mReadOnly)
     {
         SaveProperties(obj);
     }
@@ -177,4 +185,9 @@ std::map<uint32_t, QString> ObjectList::GetObjectMapping() const
     }
 
     return mapping;
+}
+
+void ObjectList::SetReadOnly(bool readOnly)
+{
+    mReadOnly = readOnly;
 }

@@ -285,9 +285,12 @@ public:
      * @param zone Pointer to a zone definition to modify
      * @param partial Pointer to the zone partial definition to apply to the
      *  zone
+     * @param positionReplace If true non-keyed objects at the same position
+     *  will be replaced as we go. If false they will all be included.
      */
     static void ApplyZonePartial(std::shared_ptr<objects::ServerZone> zone,
-        const std::shared_ptr<objects::ServerZonePartial>& partial);
+        const std::shared_ptr<objects::ServerZonePartial>& partial,
+        bool positionReplace);
 
 private:
     /**

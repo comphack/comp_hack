@@ -577,23 +577,61 @@
         </attribute>
         <layout class="QVBoxLayout" name="tabNPCLayout">
          <item>
-          <widget class="NPCList" name="npcs" native="true"/>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="showNPCs">
-           <property name="maximumSize">
-            <size>
-             <width>200</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>Show</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
+          <widget class="NPCList" name="npcs" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
            </property>
           </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="layoutNPCControls">
+           <item>
+            <widget class="QCheckBox" name="showNPCs">
+             <property name="maximumSize">
+              <size>
+               <width>200</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Show</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="addNPC">
+             <property name="text">
+              <string>Add NPC</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="removeNPC">
+             <property name="text">
+              <string>Remove NPC</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="spacerNPCControls">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>
@@ -603,23 +641,61 @@
         </attribute>
         <layout class="QVBoxLayout" name="tabObjectLayout">
          <item>
-          <widget class="NPCList" name="objects" native="true"/>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="showObjects">
-           <property name="maximumSize">
-            <size>
-             <width>200</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>Show</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
+          <widget class="NPCList" name="objects" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
            </property>
           </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="layoutObjectControls">
+           <item>
+            <widget class="QCheckBox" name="showObjects">
+             <property name="maximumSize">
+              <size>
+               <width>200</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Show</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="addObject">
+             <property name="text">
+              <string>Add Object</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="removeObject">
+             <property name="text">
+              <string>Remove Object</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="spacerObjectControls">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>
@@ -669,20 +745,38 @@
           </widget>
          </item>
          <item>
-          <widget class="QCheckBox" name="showSpawns">
-           <property name="maximumSize">
-            <size>
-             <width>200</width>
-             <height>16777215</height>
-            </size>
+          <layout class="QHBoxLayout" name="layoutSpawnControls">
+           <property name="topMargin">
+            <number>5</number>
            </property>
-           <property name="text">
-            <string>Show</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
+           <item>
+            <widget class="QPushButton" name="addSpawn">
+             <property name="text">
+              <string>Add Spawn</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="removeSpawn">
+             <property name="text">
+              <string>Remove Spawn</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="spacerSpawnControls">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>

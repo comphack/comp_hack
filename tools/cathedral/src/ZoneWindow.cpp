@@ -35,6 +35,7 @@
 #include <PushIgnore.h>
 #include <QDirIterator>
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QIODevice>
 #include <QMessageBox>
 #include <QPainter>
@@ -117,8 +118,13 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
         this, SLOT(ShowToggled(bool)));
     connect(ui.showObjects, SIGNAL(toggled(bool)),
         this, SLOT(ShowToggled(bool)));
-    connect(ui.showSpawns, SIGNAL(toggled(bool)),
-        this, SLOT(ShowToggled(bool)));
+
+    connect(ui.addNPC, SIGNAL(clicked()), this, SLOT(AddNPC()));
+    connect(ui.addObject, SIGNAL(clicked()), this, SLOT(AddObject()));
+    connect(ui.addSpawn, SIGNAL(clicked()), this, SLOT(AddSpawn()));
+    connect(ui.removeNPC, SIGNAL(clicked()), this, SLOT(RemoveNPC()));
+    connect(ui.removeObject, SIGNAL(clicked()), this, SLOT(RemoveObject()));
+    connect(ui.removeSpawn, SIGNAL(clicked()), this, SLOT(RemoveSpawn()));
 
     connect(ui.actionLoad, SIGNAL(triggered()), this, SLOT(LoadZoneFile()));
     connect(ui.actionSave, SIGNAL(triggered()), this, SLOT(SaveFile()));
@@ -133,6 +139,8 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
 
     connect(ui.zoneView, SIGNAL(currentIndexChanged(const QString&)), this,
         SLOT(ZoneViewUpdated()));
+    connect(ui.tabSpawnTypes, SIGNAL(currentIndexChanged(const QString&)), this,
+        SLOT(SpawnTabChanged()));
 
     mZoomScale = 20;
 }
@@ -606,11 +614,324 @@ void ZoneWindow::ApplyPartials()
     UpdateMergedZone(true);
 }
 
+void ZoneWindow::AddNPC()
+{
+    auto npc = std::make_shared<objects::ServerNPC>();
+    if(mMergedZone->CurrentPartial)
+    {
+        mMergedZone->CurrentPartial->AppendNPCs(npc);
+    }
+    else
+    {
+        mMergedZone->CurrentZone->AppendNPCs(npc);
+    }
+
+    UpdateMergedZone(true);
+}
+
+void ZoneWindow::AddObject()
+{
+    auto obj = std::make_shared<objects::ServerObject>();
+    if(mMergedZone->CurrentPartial)
+    {
+        mMergedZone->CurrentPartial->AppendObjects(obj);
+    }
+    else
+    {
+        mMergedZone->CurrentZone->AppendObjects(obj);
+    }
+
+    UpdateMergedZone(true);
+}
+
+void ZoneWindow::AddSpawn()
+{
+    uint32_t nextID = 1;
+    switch(ui.tabSpawnTypes->currentIndex())
+    {
+    case 1:
+        while(nextID && mMergedZone->Definition->SpawnGroupsKeyExists(nextID))
+        {
+            nextID = (uint32_t)(nextID + 1);
+        }
+        break;
+    case 2:
+        while(nextID &&
+            mMergedZone->Definition->SpawnLocationGroupsKeyExists(nextID))
+        {
+            nextID = (uint32_t)(nextID + 1);
+        }
+        break;
+    case 0:
+    default:
+        while(nextID && mMergedZone->Definition->SpawnsKeyExists(nextID))
+        {
+            nextID = (uint32_t)(nextID + 1);
+        }
+        break;
+    }
+
+    int spawnID = QInputDialog::getInt(this, "Enter an ID", "New ID",
+        (int32_t)nextID, 0);
+    if(!spawnID)
+    {
+        return;
+    }
+
+    libcomp::String errMsg;
+    switch(ui.tabSpawnTypes->currentIndex())
+    {
+    case 1:
+        if(mMergedZone->Definition->SpawnGroupsKeyExists((uint32_t)spawnID))
+        {
+            errMsg = libcomp::String("Spawn Group ID %1 already exists")
+                .Arg(spawnID);
+        }
+        else
+        {
+            auto sg = std::make_shared<objects::SpawnGroup>();
+            sg->SetID((uint32_t)spawnID);
+            if(mMergedZone->CurrentPartial)
+            {
+                mMergedZone->CurrentPartial->SetSpawnGroups((uint32_t)spawnID,
+                    sg);
+            }
+            else
+            {
+                mMergedZone->CurrentZone->SetSpawnGroups((uint32_t)spawnID,
+                    sg);
+            }
+        }
+        break;
+    case 2:
+        if(mMergedZone->Definition->SpawnLocationGroupsKeyExists(
+            (uint32_t)spawnID))
+        {
+            errMsg = libcomp::String("Spawn Location Group ID %1 already"
+                " exists").Arg(spawnID);
+        }
+        else
+        {
+            auto slg = std::make_shared<objects::SpawnLocationGroup>();
+            slg->SetID((uint32_t)spawnID);
+            if(mMergedZone->CurrentPartial)
+            {
+                mMergedZone->CurrentPartial->SetSpawnLocationGroups(
+                    (uint32_t)spawnID, slg);
+            }
+            else
+            {
+                mMergedZone->CurrentZone->SetSpawnLocationGroups(
+                    (uint32_t)spawnID, slg);
+            }
+        }
+        break;
+    case 0:
+    default:
+        if(mMergedZone->Definition->SpawnsKeyExists((uint32_t)spawnID))
+        {
+            errMsg = libcomp::String("Spawn ID %1 already exists")
+                .Arg(spawnID);
+        }
+        else
+        {
+            auto spawn = std::make_shared<objects::Spawn>();
+            spawn->SetID((uint32_t)spawnID);
+            if(mMergedZone->CurrentPartial)
+            {
+                mMergedZone->CurrentPartial->SetSpawns((uint32_t)spawnID,
+                    spawn);
+            }
+            else
+            {
+                mMergedZone->CurrentZone->SetSpawns((uint32_t)spawnID,
+                    spawn);
+            }
+        }
+        break;
+    }
+
+    if(errMsg.Length() > 0)
+    {
+        QMessageBox err;
+        err.setText(qs(errMsg));
+        err.exec();
+    }
+    else
+    {
+        UpdateMergedZone(true);
+    }
+}
+
+void ZoneWindow::RemoveNPC()
+{
+    auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(
+        ui.npcs->GetActiveObject());
+    if(npc)
+    {
+        if(mMergedZone->CurrentPartial)
+        {
+            size_t count = mMergedZone->CurrentPartial->NPCsCount();
+            for(size_t idx = 0; idx < count; idx++)
+            {
+                if(mMergedZone->CurrentPartial->GetNPCs(idx) == npc)
+                {
+                    mMergedZone->CurrentPartial->RemoveNPCs(idx);
+                    UpdateMergedZone(true);
+                    return;
+                }
+            }
+        }
+        else
+        {
+            size_t count = mMergedZone->CurrentZone->NPCsCount();
+            for(size_t idx = 0; idx < count; idx++)
+            {
+                if(mMergedZone->CurrentZone->GetNPCs(idx) == npc)
+                {
+                    mMergedZone->CurrentZone->RemoveNPCs(idx);
+                    UpdateMergedZone(true);
+                    return;
+                }
+            }
+        }
+    }
+}
+
+void ZoneWindow::RemoveObject()
+{
+    auto obj = std::dynamic_pointer_cast<objects::ServerObject>(
+        ui.objects->GetActiveObject());
+    if(obj)
+    {
+        if(mMergedZone->CurrentPartial)
+        {
+            size_t count = mMergedZone->CurrentPartial->ObjectsCount();
+            for(size_t idx = 0; idx < count; idx++)
+            {
+                if(mMergedZone->CurrentPartial->GetObjects(idx) == obj)
+                {
+                    mMergedZone->CurrentPartial->RemoveObjects(idx);
+                    UpdateMergedZone(true);
+                    return;
+                }
+            }
+        }
+        else
+        {
+            size_t count = mMergedZone->CurrentZone->ObjectsCount();
+            for(size_t idx = 0; idx < count; idx++)
+            {
+                if(mMergedZone->CurrentZone->GetObjects(idx) == obj)
+                {
+                    mMergedZone->CurrentZone->RemoveObjects(idx);
+                    UpdateMergedZone(true);
+                    return;
+                }
+            }
+        }
+    }
+}
+
+void ZoneWindow::RemoveSpawn()
+{
+    bool updated = false;
+    switch(ui.tabSpawnTypes->currentIndex())
+    {
+    case 1:
+        {
+            auto sg = std::dynamic_pointer_cast<objects::SpawnGroup>(
+                ui.spawnGroups->GetActiveObject());
+            if(sg)
+            {
+                if(mMergedZone->CurrentPartial)
+                {
+                    mMergedZone->CurrentPartial->RemoveSpawnGroups(sg
+                        ->GetID());
+                }
+                else
+                {
+                    mMergedZone->CurrentZone->RemoveSpawnGroups(sg->GetID());
+                }
+
+                updated = true;
+            }
+        }
+        break;
+    case 2:
+        {
+            auto slg = std::dynamic_pointer_cast<objects::SpawnLocationGroup>(
+                ui.spawnLocationGroups->GetActiveObject());
+            if(slg)
+            {
+                if(mMergedZone->CurrentPartial)
+                {
+                    mMergedZone->CurrentPartial->RemoveSpawnLocationGroups(slg
+                        ->GetID());
+                }
+                else
+                {
+                    mMergedZone->CurrentZone->RemoveSpawnLocationGroups(slg
+                        ->GetID());
+                }
+
+                updated = true;
+            }
+        }
+        break;
+    case 0:
+    default:
+        {
+            auto spawn = std::dynamic_pointer_cast<objects::Spawn>(
+                ui.spawns->GetActiveObject());
+            if(spawn)
+            {
+                if(mMergedZone->CurrentPartial)
+                {
+                    mMergedZone->CurrentPartial->RemoveSpawns(spawn->GetID());
+                }
+                else
+                {
+                    mMergedZone->CurrentZone->RemoveSpawns(spawn->GetID());
+                }
+
+                updated = true;
+            }
+        }
+        break;
+    }
+
+    if(updated)
+    {
+        UpdateMergedZone(true);
+    }
+}
+
 void ZoneWindow::ZoneViewUpdated()
 {
     SaveProperties();
 
     UpdateMergedZone(true);
+}
+
+void ZoneWindow::SpawnTabChanged()
+{
+    switch(ui.tabSpawnTypes->currentIndex())
+    {
+    case 1:
+        ui.addSpawn->setText("Add Spawn Group");
+        ui.removeSpawn->setText("Remove Spawn Group");
+        break;
+    case 2:
+        ui.addSpawn->setText("Add Spawn Location Group");
+        ui.removeSpawn->setText("Remove Spawn Location Group");
+        break;
+    case 0:
+    default:
+        ui.addSpawn->setText("Add Spawn");
+        ui.removeSpawn->setText("Remove Spawn");
+        break;
+    }
 }
 
 void ZoneWindow::Zoom200()
@@ -947,6 +1268,8 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
 
     mMergedZone->CurrentPartial = nullptr;
 
+    bool canEdit = true;
+
     bool zoneOnly = mSelectedPartials.size() == 0;
     if(!zoneOnly)
     {
@@ -964,7 +1287,7 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
                 {
                     auto partial = mZonePartials[partialID];
                     libcomp::ServerDataManager::ApplyZonePartial(copyZone,
-                        partial);
+                        partial, true);
                 }
 
                 mMergedZone->Definition = copyZone;
@@ -974,6 +1297,8 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
 
                 ui.lblZoneViewNotes->setText("No zone or zone partial fields"
                     " can be modified while viewing a merged zone.");
+
+                canEdit = false;
             }
             break;
         case -1:
@@ -991,7 +1316,7 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
 
                 auto partial = mZonePartials[(uint32_t)viewing];
                 libcomp::ServerDataManager::ApplyZonePartial(newZone,
-                    partial);
+                    partial, false);
 
                 mMergedZone->Definition = newZone;
                 mMergedZone->CurrentPartial = partial;
@@ -1031,6 +1356,20 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
         ui.grpSkills->setDisabled(false);
         ui.grpTriggers->setDisabled(false);
     }
+
+    ui.npcs->SetReadOnly(!canEdit);
+    ui.objects->SetReadOnly(!canEdit);
+    ui.spawns->SetReadOnly(!canEdit);
+    ui.spawnGroups->SetReadOnly(!canEdit);
+    ui.spawnLocationGroups->SetReadOnly(!canEdit);
+    ui.spots->SetReadOnly(!canEdit);
+
+    ui.addNPC->setDisabled(!canEdit);
+    ui.addObject->setDisabled(!canEdit);
+    ui.addSpawn->setDisabled(!canEdit);
+    ui.removeNPC->setDisabled(!canEdit);
+    ui.removeObject->setDisabled(!canEdit);
+    ui.removeSpawn->setDisabled(!canEdit);
 
     // Update merged collection properties
     ui.dropSetIDs->Clear();

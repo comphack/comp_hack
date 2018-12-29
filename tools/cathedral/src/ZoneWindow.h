@@ -89,7 +89,15 @@ protected slots:
     void SaveAllFiles();
     void ApplyPartials();
 
+    void AddNPC();
+    void AddObject();
+    void AddSpawn();
+    void RemoveNPC();
+    void RemoveObject();
+    void RemoveSpawn();
+
     void ZoneViewUpdated();
+    void SpawnTabChanged();
 
     void Zoom200();
     void Zoom100();

@@ -546,14 +546,15 @@ bool ServerDataManager::ApplyZonePartial(std::shared_ptr<objects::ServerZone> zo
         return false;
     }
 
-    ApplyZonePartial(zone, partial);
+    ApplyZonePartial(zone, partial, true);
 
     return true;
 }
 
 void ServerDataManager::ApplyZonePartial(
     std::shared_ptr<objects::ServerZone> zone,
-    const std::shared_ptr<objects::ServerZonePartial>& partial)
+    const std::shared_ptr<objects::ServerZonePartial>& partial,
+    bool positionReplace)
 {
     // Add dropsets
     for(uint32_t dropSetID : partial->GetDropSetIDs())
@@ -577,17 +578,20 @@ void ServerDataManager::ApplyZonePartial(
     auto npcs = zone->GetNPCs();
     for(auto& npc : partial->GetNPCs())
     {
-        // Remove any NPCs that share the same spot ID or are within
-        // 10 units from the new one (X or Y)
-        npcs.remove_if([npc](
-            const std::shared_ptr<objects::ServerNPC>& oNPC)
-            {
-                return (npc->GetSpotID() &&
-                    oNPC->GetSpotID() == npc->GetSpotID()) ||
-                    (!npc->GetSpotID() && !oNPC->GetSpotID() &&
-                        fabs(oNPC->GetX() - npc->GetX()) < 10.f &&
-                        fabs(oNPC->GetY() - npc->GetY()) < 10.f);
-            });
+        if(positionReplace)
+        {
+            // Remove any NPCs that share the same spot ID or are within
+            // 10 units from the new one (X or Y)
+            npcs.remove_if([npc](
+                const std::shared_ptr<objects::ServerNPC>& oNPC)
+                {
+                    return (npc->GetSpotID() &&
+                        oNPC->GetSpotID() == npc->GetSpotID()) ||
+                        (!npc->GetSpotID() && !oNPC->GetSpotID() &&
+                            fabs(oNPC->GetX() - npc->GetX()) < 10.f &&
+                            fabs(oNPC->GetY() - npc->GetY()) < 10.f);
+                });
+        }
 
         // Removes supported via 0 ID
         if(npc->GetID())
@@ -601,17 +605,20 @@ void ServerDataManager::ApplyZonePartial(
     auto objects = zone->GetObjects();
     for(auto& obj : partial->GetObjects())
     {
-        // Remove any objects that share the same spot ID or are within
-        // 10 units from the new one (X and Y)
-        objects.remove_if([obj](
-            const std::shared_ptr<objects::ServerObject>& oObj)
-            {
-                return (obj->GetSpotID() &&
-                    oObj->GetSpotID() == obj->GetSpotID()) ||
-                    (!obj->GetSpotID() && !oObj->GetSpotID() &&
-                        fabs(oObj->GetX() - obj->GetX()) < 10.f &&
-                        fabs(oObj->GetY() - obj->GetY()) < 10.f);
-            });
+        if(positionReplace)
+        {
+            // Remove any objects that share the same spot ID or are within
+            // 10 units from the new one (X and Y)
+            objects.remove_if([obj](
+                const std::shared_ptr<objects::ServerObject>& oObj)
+                {
+                    return (obj->GetSpotID() &&
+                        oObj->GetSpotID() == obj->GetSpotID()) ||
+                        (!obj->GetSpotID() && !oObj->GetSpotID() &&
+                            fabs(oObj->GetX() - obj->GetX()) < 10.f &&
+                            fabs(oObj->GetY() - obj->GetY()) < 10.f);
+                });
+        }
 
         // Removes supported via 0 ID
         if(obj->GetID())

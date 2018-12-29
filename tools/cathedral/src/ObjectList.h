@@ -67,9 +67,13 @@ public:
     virtual void LoadProperties(const std::shared_ptr<libcomp::Object>& obj);
     virtual void SaveProperties(const std::shared_ptr<libcomp::Object>& obj);
 
+    std::shared_ptr<libcomp::Object> GetActiveObject();
+
     void SaveActiveProperties();
 
     std::map<uint32_t, QString> GetObjectMapping() const;
+
+    void SetReadOnly(bool readOnly);
 
 public slots:
     virtual void Search(const QString& term);
@@ -83,6 +87,8 @@ protected:
     std::weak_ptr<libcomp::Object> mActiveObject;
 
     Ui::ObjectList *ui;
+
+    bool mReadOnly;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_OBJECTLIST_H

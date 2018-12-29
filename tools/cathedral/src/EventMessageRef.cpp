@@ -61,7 +61,7 @@ void EventMessageRef::SetMainWindow(MainWindow *pMainWindow)
 
 void EventMessageRef::SetValue(uint32_t value)
 {
-    ui->messageID->setValue(value);
+    ui->messageID->setValue((int32_t)value);
 }
 
 uint32_t EventMessageRef::GetValue() const
@@ -75,7 +75,7 @@ void EventMessageRef::MessageIDChanged()
 
     if(mMainWindow)
     {
-        auto msg = mMainWindow->GetEventMessage(GetValue());
+        auto msg = mMainWindow->GetEventMessage((int32_t)GetValue());
         if(msg)
         {
             ui->message->setText(qs(

@@ -30,16 +30,34 @@
 #include <EventBase.h>
 #include <EventChoice.h>
 #include <EventCondition.h>
+#include <PlasmaSpawn.h>
+#include <ServerBazaar.h>
+#include <ServerNPC.h>
+#include <ServerObject.h>
+#include <ServerZone.h>
+#include <ServerZonePartial.h>
+#include <ServerZoneSpot.h>
+#include <ServerZoneTrigger.h>
+#include <Spawn.h>
+#include <SpawnGroup.h>
+#include <SpawnLocationGroup.h>
+#include <SpawnRestriction.h>
+
+// C++11 Standard Includes
+#include <map>
 
 class XmlTemplateObject
 {
 public:
     std::shared_ptr<libcomp::Object> Template;
     std::unordered_map<libcomp::String, tinyxml2::XMLNode*> MemberNodes;
+    std::set<libcomp::String> CorrectMaps;
+    std::set<libcomp::String> KeepDefaults;
+    std::set<libcomp::String> ToHex;
     libcomp::String LastLesserMember;
 };
 
-void XmlHandler::SimplifyObject(std::list<tinyxml2::XMLNode*> nodes)
+void XmlHandler::SimplifyObjects(std::list<tinyxml2::XMLNode*> nodes)
 {
     // Collect all object nodes and simplify by removing defaulted fields.
     // Also remove CDATA blocks as events are not complicated enough to
@@ -138,13 +156,12 @@ void XmlHandler::SimplifyObject(std::list<tinyxml2::XMLNode*> nodes)
                     continue;
                 }
 
-                libcomp::String memberName(elem->Attribute("name"));
-                bool last = memberName == tObj->LastLesserMember || !next ||
-                    seen.find(memberName) != seen.end();
+                libcomp::String member(elem->Attribute("name"));
+                bool last = !next || seen.find(member) != seen.end();
 
-                seen.insert(memberName);
+                seen.insert(member);
 
-                if(memberName == "ID")
+                if(member == "ID")
                 {
                     // Move to the top (after comments)
                     if(lastComment)
@@ -157,13 +174,13 @@ void XmlHandler::SimplifyObject(std::list<tinyxml2::XMLNode*> nodes)
                     }
                 }
                 else if(!last &&
-                    memberName != "next" && memberName != "queueNext")
+                    member != "next" && member != "queueNext")
                 {
                     // Move all others to the bottom
                     objNode->InsertEndChild(child);
                 }
 
-                if(last)
+                if(last || member == tObj->LastLesserMember)
                 {
                     break;
                 }
@@ -192,33 +209,68 @@ void XmlHandler::SimplifyObject(std::list<tinyxml2::XMLNode*> nodes)
             auto elem = child->ToElement();
             if(elem)
             {
-                libcomp::String memberName(elem->Attribute("name"));
+                libcomp::String member(elem->Attribute("name"));
 
-                auto iter = tObj->MemberNodes.find(memberName);
-                if(iter != tObj->MemberNodes.end())
+                auto iter = tObj->MemberNodes.find(member);
+                if(iter != tObj->MemberNodes.end() &&
+                    member != "ID")
                 {
-                    auto child2 = iter->second;
-
-                    auto gc = child->FirstChild();
-                    auto gc2 = child2->FirstChild();
-
-                    auto txt = gc ? gc->ToText() : 0;
-                    auto txt2 = gc2 ? gc2->ToText() : 0;
-
-                    // If both have no child or both have the same text
-                    // representation, the nodes match
-                    if((gc == 0 && gc2 == 0) || (txt && txt2 &&
-                        libcomp::String(txt->Value()) ==
-                        libcomp::String(txt2->Value())))
+                    if(tObj->CorrectMaps.find(member) !=
+                        tObj->CorrectMaps.end())
                     {
-                        // Default value matches, drop node
-                        objNode->DeleteChild(child);
+                        CorrectMap(child);
+                    }
+
+                    if(tObj->KeepDefaults.find(member) ==
+                        tObj->KeepDefaults.end())
+                    {
+                        auto child2 = iter->second;
+
+                        auto gc = child->FirstChild();
+                        auto gc2 = child2->FirstChild();
+
+                        auto txt = gc ? gc->ToText() : 0;
+                        auto txt2 = gc2 ? gc2->ToText() : 0;
+
+                        // If both have no child or both have the same text
+                        // representation, the nodes match
+                        if((gc == 0 && gc2 == 0) || (txt && txt2 &&
+                            libcomp::String(txt->Value()) ==
+                            libcomp::String(txt2->Value())))
+                        {
+                            // Default value matches, drop node
+                            objNode->DeleteChild(child);
+                        }
                     }
                 }
             }
 
             child = next;
         }
+    }
+}
+
+void XmlHandler::CorrectMap(tinyxml2::XMLNode* parentNode)
+{
+    std::map<uint32_t, tinyxml2::XMLNode*> mapped;
+
+    auto pair = parentNode->FirstChild();
+    while(pair != 0)
+    {
+        auto key = pair->FirstChildElement("key");
+        if(key)
+        {
+            uint32_t k = libcomp::String(key->FirstChild()->ToText()->Value())
+                .ToInteger<uint32_t>();
+            mapped[k] = pair;
+        }
+
+        pair = pair->NextSibling();
+    }
+
+    for(auto& pair : mapped)
+    {
+        parentNode->InsertEndChild(pair.second);
     }
 }
 
@@ -255,6 +307,8 @@ std::shared_ptr<XmlTemplateObject> XmlHandler::GetTemplateObject(
     const libcomp::String& objType, tinyxml2::XMLDocument& templateDoc)
 {
     std::shared_ptr<libcomp::Object> obj;
+    std::set<libcomp::String> correctMaps;
+    std::set<libcomp::String> keepDefaults;
     libcomp::String lesserMember;
 
     if(objType == "EventBase")
@@ -287,6 +341,86 @@ std::shared_ptr<XmlTemplateObject> XmlHandler::GetTemplateObject(
             obj = objects::Event::InheritedConstruction(objType);
             lesserMember = "transformScriptParams";
         }
+    }
+    else if(objType == "PlasmaSpawn")
+    {
+        obj = std::make_shared<objects::PlasmaSpawn>();
+        lesserMember = "FailActions";
+    }
+    else if(objType == "ServerBazaar")
+    {
+        obj = std::make_shared<objects::ServerBazaar>();
+        lesserMember = "MarketIDs";
+    }
+    else if(objType == "ServerNPC")
+    {
+        obj = std::make_shared<objects::ServerNPC>();
+        lesserMember = "Actions";
+    }
+    else if(objType == "ServerObject")
+    {
+        obj = std::make_shared<objects::ServerObject>();
+        lesserMember = "Actions";
+    }
+    else if(objType == "ServerObjectBase")
+    {
+        obj = std::make_shared<objects::ServerObjectBase>();
+        lesserMember = "Rotation";
+    }
+    else if(objType == "ServerZone")
+    {
+        obj = std::make_shared<objects::ServerZone>();
+
+        // Keep some defaults
+        keepDefaults.insert("Global");
+        keepDefaults.insert("StartingX");
+        keepDefaults.insert("StartingY");
+        keepDefaults.insert("StartingRotation");
+        keepDefaults.insert("NPCs");
+        keepDefaults.insert("Objects");
+        keepDefaults.insert("Spots");
+
+        correctMaps.insert("NPCs");
+        correctMaps.insert("Objects");
+        correctMaps.insert("Spawns");
+        correctMaps.insert("SpawnGroups");
+        correctMaps.insert("SpawnLocationGroups");
+        correctMaps.insert("Spots");
+    }
+    else if(objType == "ServerZonePartial")
+    {
+        obj = std::make_shared<objects::ServerZonePartial>();
+
+        correctMaps.insert("NPCs");
+        correctMaps.insert("Objects");
+        correctMaps.insert("Spawns");
+        correctMaps.insert("SpawnGroups");
+        correctMaps.insert("SpawnLocationGroups");
+        correctMaps.insert("Spots");
+    }
+    else if(objType == "Spawn")
+    {
+        obj = std::make_shared<objects::Spawn>();
+    }
+    else if(objType == "SpawnGroup")
+    {
+        obj = std::make_shared<objects::SpawnGroup>();
+    }
+    else if(objType == "SpawnLocationGroup")
+    {
+        obj = std::make_shared<objects::SpawnLocationGroup>();
+    }
+    else if(objType == "SpawnRestriction")
+    {
+        obj = std::make_shared<objects::SpawnRestriction>();
+    }
+    else if(objType == "ServerZoneSpot")
+    {
+        obj = std::make_shared<objects::ServerZoneSpot>();
+    }
+    else if(objType == "ServerZoneTrigger")
+    {
+        obj = std::make_shared<objects::ServerZoneTrigger>();
     }
 
     if(obj)
@@ -321,6 +455,8 @@ std::shared_ptr<XmlTemplateObject> XmlHandler::GetTemplateObject(
 
         auto tObj = std::make_shared<XmlTemplateObject>();
         tObj->Template = obj;
+        tObj->CorrectMaps = correctMaps;
+        tObj->KeepDefaults = keepDefaults;
         tObj->LastLesserMember = lesserMember;
         tObj->MemberNodes = tMembers;
 

@@ -129,6 +129,15 @@ void ObjectList::SaveProperties(
     (void)obj;
 }
 
+void ObjectList::SaveActiveProperties()
+{
+    auto obj = mActiveObject.lock();
+    if(obj)
+    {
+        SaveProperties(obj);
+    }
+}
+
 void ObjectList::SelectedObjectChanged()
 {
     auto obj = mActiveObject.lock();

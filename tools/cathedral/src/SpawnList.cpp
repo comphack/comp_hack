@@ -164,7 +164,7 @@ void SpawnList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
         prop->killValueType->setCurrentIndex(to_underlying(spawn
             ->GetKillValueType()));
         prop->bossGroup->setValue((int32_t)spawn->GetBossGroup());
-        prop->factionGroup->setValue((int32_t)spawn->GetFactionGroup());
+        prop->factionGroup->setValue(spawn->GetFactionGroup());
     }
     else
     {
@@ -174,5 +174,44 @@ void SpawnList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
 
 void SpawnList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
-    (void)obj;
+    auto spawn = std::dynamic_pointer_cast<objects::Spawn>(obj);
+    if(spawn)
+    {
+        spawn->SetEnemyType(prop->type->GetValue());
+        spawn->SetVariantType((uint32_t)prop->variant->value());
+        spawn->SetCategory((objects::Spawn::Category_t)prop->category
+            ->currentIndex());
+        spawn->SetLevel((int8_t)prop->level->value());
+        spawn->SetXP(prop->xp->value());
+
+        auto drops = prop->drops->GetObjectList<objects::ItemDrop>();
+        spawn->SetDrops(drops);
+
+        auto dropSetIDs = prop->dropSetIDs->GetUnsignedIntegerList();
+        spawn->SetDropSetIDs(dropSetIDs);
+
+        spawn->SetInheritDrops(prop->inheritDrops->isChecked());
+
+        spawn->SetTalkResist((uint8_t)prop->talkResist->value());
+
+        spawn->SetTalkResults((uint8_t)(
+            prop->canJoin->isChecked() ? 0x01 : 0x00 |
+            prop->canGift->isChecked() ? 0x02 : 0x00));
+
+        auto gifts = prop->gifts->GetObjectList<objects::ItemDrop>();
+        spawn->SetGifts(gifts);
+
+        auto giftSetIDs = prop->giftSetIDs->GetUnsignedIntegerList();
+        spawn->SetGiftSetIDs(giftSetIDs);
+
+        spawn->SetBaseAIType((uint16_t)prop->baseAIType->value());
+        spawn->SetAIScriptID(cs(prop->aiScript->text()));
+        spawn->SetLogicGroupID((uint16_t)prop->logicGroupID->value());
+
+        spawn->SetKillValue(prop->killValue->value());
+        spawn->SetKillValueType((objects::Spawn::KillValueType_t)
+            prop->killValueType->currentIndex());
+        spawn->SetBossGroup((uint8_t)prop->bossGroup->value());
+        spawn->SetFactionGroup(prop->factionGroup->value());
+    }
 }

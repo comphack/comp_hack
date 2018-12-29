@@ -49,20 +49,20 @@ SpawnRestriction::~SpawnRestriction()
 
 void SpawnRestriction::Load(const std::shared_ptr<objects::SpawnRestriction>& restrict)
 {
-    // Gather the buttong flag controls to set further down
+    // Gather the button flag controls to set further down
     std::vector<QPushButton*> moonControls;
     for(int i = 0; i < prop->layoutMoonWax->count(); i++)
     {
         moonControls.push_back((QPushButton*)prop->layoutMoonWax
             ->itemAt(i)->widget());
     }
-    
+
     for(int i = 0; i < prop->layoutMoonWane->count(); i++)
     {
         moonControls.push_back((QPushButton*)prop->layoutMoonWane
             ->itemAt(i)->widget());
     }
-    
+
     std::vector<QPushButton*> dayControls;
     for(int i = 0; i < prop->layoutDay->count(); i++)
     {
@@ -133,7 +133,71 @@ void SpawnRestriction::Load(const std::shared_ptr<objects::SpawnRestriction>& re
 
 std::shared_ptr<objects::SpawnRestriction> SpawnRestriction::Save() const
 {
-    /// @todo
+    auto restrict = std::make_shared<objects::SpawnRestriction>();
 
-    return nullptr;
+    // Gather the button flag controls to set further down
+    std::vector<QPushButton*> moonControls;
+    for(int i = 0; i < prop->layoutMoonWax->count(); i++)
+    {
+        moonControls.push_back((QPushButton*)prop->layoutMoonWax
+            ->itemAt(i)->widget());
+    }
+    
+    for(int i = 0; i < prop->layoutMoonWane->count(); i++)
+    {
+        moonControls.push_back((QPushButton*)prop->layoutMoonWane
+            ->itemAt(i)->widget());
+    }
+
+    std::vector<QPushButton*> dayControls;
+    for(int i = 0; i < prop->layoutDay->count(); i++)
+    {
+        dayControls.push_back((QPushButton*)prop->layoutDay
+            ->itemAt(i)->widget());
+    }
+
+    restrict->SetDisabled(prop->disabled->isChecked());
+
+    restrict->ClearTimeRestriction();
+    for(auto& pair : prop->time->SaveUnsigned())
+    {
+        restrict->SetTimeRestriction((uint16_t)pair.first,
+            (uint16_t)pair.second);
+    }
+
+    restrict->ClearSystemTimeRestriction();
+    for(auto& pair : prop->systemTime->SaveUnsigned())
+    {
+        restrict->SetSystemTimeRestriction((uint16_t)pair.first,
+            (uint16_t)pair.second);
+    }
+
+    restrict->ClearDateRestriction();
+    for(auto& pair : prop->date->SaveUnsigned())
+    {
+        restrict->SetDateRestriction((uint16_t)pair.first,
+            (uint16_t)pair.second);
+    }
+
+    uint16_t moonRestrict = 0;
+    for(size_t i = 0; i < 16; i++)
+    {
+        if(moonControls[i]->isChecked())
+        {
+            moonRestrict = (uint16_t)(moonRestrict | (1 << i));
+        }
+    }
+    restrict->SetMoonRestriction(moonRestrict);
+
+    uint16_t dayRestrict = 0;
+    for(size_t i = 0; i < 7; i++)
+    {
+        if(dayControls[i]->isChecked())
+        {
+            dayRestrict = (uint16_t)(dayRestrict | (1 << i));
+        }
+    }
+    restrict->SetDayRestriction(dayRestrict);
+
+    return restrict;
 }

@@ -213,7 +213,8 @@ void EventCondition::Load(const std::shared_ptr<objects::EventCondition>& e)
     ui->value2->setMaximum(2147483647);
 
     ui->value1Number->setValue(e->GetValue1());
-    ui->value1Selector->SetValue(e->GetValue1());
+    ui->value1Selector->SetValue(e->GetValue1() >= 0
+        ? (uint32_t)e->GetValue1() : 0);
     ui->value2->setValue(e->GetValue2());
 
     ui->compareMode->setCurrentIndex((int)e->GetCompareMode());

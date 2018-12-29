@@ -28,6 +28,7 @@
 // Cathedral Includes
 #include "BinaryDataNamedSet.h"
 #include "MainWindow.h"
+#include "XmlHandler.h"
 #include "ZonePartialSelector.h"
 
 // Qt Includes
@@ -67,6 +68,7 @@
 
 // C++11 Standard Includes
 #include <cmath>
+#include <map>
 
 // libcomp Includes
 #include <Log.h>
@@ -119,6 +121,8 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
         this, SLOT(ShowToggled(bool)));
 
     connect(ui.actionLoad, SIGNAL(triggered()), this, SLOT(LoadZoneFile()));
+    connect(ui.actionSave, SIGNAL(triggered()), this, SLOT(SaveFile()));
+    connect(ui.actionSaveAll, SIGNAL(triggered()), this, SLOT(SaveAllFiles()));
 
     connect(ui.actionPartialsLoadFile, SIGNAL(triggered()), this,
         SLOT(LoadPartialFile()));
@@ -198,8 +202,16 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
         auto devilDataSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
             mMainWindow->GetBinaryDataSet("DevilData"));
 
-        std::vector<std::shared_ptr<libcomp::Object>> spawns;
+        /// @todo: add MiCTitleData
+
+        std::map<uint32_t, std::shared_ptr<objects::Spawn>> sort;
         for(auto& sPair : mMergedZone->Definition->GetSpawns())
+        {
+            sort[sPair.first] = sPair.second;
+        }
+
+        std::vector<std::shared_ptr<libcomp::Object>> spawns;
+        for(auto& sPair : sort)
         {
             auto spawn = sPair.second;
             auto devilData = std::dynamic_pointer_cast<objects::MiDevilData>(
@@ -239,8 +251,14 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
         auto spawnSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
             mMainWindow->GetBinaryDataSet("Spawn"));
 
+        std::map<uint32_t, std::shared_ptr<objects::SpawnGroup>> sort;
+        for(auto& sPair : mMergedZone->Definition->GetSpawnGroups())
+        {
+            sort[sPair.first] = sPair.second;
+        }
+
         std::vector<std::shared_ptr<libcomp::Object>> sgs;
-        for(auto& sgPair : mMergedZone->Definition->GetSpawnGroups())
+        for(auto& sgPair : sort)
         {
             std::list<libcomp::String> spawnStrings;
 
@@ -271,6 +289,12 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
     {
         auto sgSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
             mMainWindow->GetBinaryDataSet("SpawnGroup"));
+
+        std::map<uint32_t, std::shared_ptr<objects::SpawnLocationGroup>> sort;
+        for(auto& sPair : mMergedZone->Definition->GetSpawnLocationGroups())
+        {
+            sort[sPair.first] = sPair.second;
+        }
 
         std::vector<std::shared_ptr<libcomp::Object>> slgs;
         for(auto& slgPair : mMergedZone->Definition->GetSpawnLocationGroups())
@@ -471,11 +495,15 @@ void ZoneWindow::LoadZoneFile()
         return;
     }
 
+    // Save any properties currently set (do not save to zone file)
+    SaveProperties();
+
+    mZonePath = cs(path);
     mMergedZone->Definition = zone;
     mMergedZone->CurrentZone = zone;
     mMergedZone->CurrentPartial = nullptr;
 
-    mMainWindow->UpdateActiveZone(cs(path));
+    mMainWindow->UpdateActiveZone(mZonePath);
 
     ShowZone();
 }
@@ -491,6 +519,8 @@ void ZoneWindow::LoadPartialDirectory()
     {
         return;
     }
+
+    SaveProperties();
 
     bool merged = false;
 
@@ -520,11 +550,47 @@ void ZoneWindow::LoadPartialFile()
         return;
     }
 
+    SaveProperties();
+
     libcomp::String path = cs(qPath);
     if(LoadZonePartials(path))
     {
         UpdateMergedZone(true);
     }
+}
+
+void ZoneWindow::SaveFile()
+{
+    // Save off all properties first
+    SaveProperties();
+
+    if(mMergedZone && mMergedZone->CurrentPartial)
+    {
+        std::set<uint32_t> partialIDs;
+        partialIDs.insert(mMergedZone->CurrentPartial->GetID());
+        SavePartials(partialIDs);
+    }
+    else if(mMergedZone && mMergedZone->CurrentZone &&
+        mMergedZone->Definition == mMergedZone->CurrentZone)
+    {
+        SaveZone();
+    }
+}
+
+void ZoneWindow::SaveAllFiles()
+{
+    // Save off all properties first
+    SaveProperties();
+
+    SaveFile();
+
+    std::set<uint32_t> partialIDs;
+    for(auto& pair : mZonePartials)
+    {
+        partialIDs.insert(pair.first);
+    }
+
+    SavePartials(partialIDs);
 }
 
 void ZoneWindow::ApplyPartials()
@@ -542,6 +608,8 @@ void ZoneWindow::ApplyPartials()
 
 void ZoneWindow::ZoneViewUpdated()
 {
+    SaveProperties();
+
     UpdateMergedZone(true);
 }
 
@@ -672,6 +740,140 @@ bool ZoneWindow::LoadZonePartials(const libcomp::String& path)
     return false;
 }
 
+void ZoneWindow::SaveZone()
+{
+    if(mZonePath.Length() == 0 || !mMergedZone || !mMergedZone->CurrentZone)
+    {
+        // No zone file loaded
+        return;
+    }
+
+    auto zone = mMergedZone->CurrentZone;
+
+    tinyxml2::XMLDocument doc;
+
+    auto rootElem = doc.NewElement("objects");
+    doc.InsertEndChild(rootElem);
+
+    zone->Save(doc, *rootElem);
+
+    tinyxml2::XMLNode* zNode = rootElem->LastChild();
+
+    std::list<tinyxml2::XMLNode*> updatedNodes;
+    updatedNodes.push_back(zNode);
+
+    XmlHandler::SimplifyObjects(updatedNodes);
+
+    doc.SaveFile(mZonePath.C());
+
+    LOG_DEBUG(libcomp::String("Updated zone file '%1'\n").Arg(mZonePath));
+}
+
+void ZoneWindow::SavePartials(const std::set<uint32_t>& partialIDs)
+{
+    std::unordered_map<libcomp::String, std::set<uint32_t>> fileMap;
+    for(uint32_t partialID : partialIDs)
+    {
+        fileMap[mZonePartialFiles[partialID]].insert(partialID);
+    }
+
+    if(fileMap.size() == 0)
+    {
+        // Nothing to save
+        return;
+    }
+
+    for(auto& filePair : fileMap)
+    {
+        auto path = filePair.first;
+
+        tinyxml2::XMLDocument doc;
+        if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+        {
+            LOG_ERROR(libcomp::String("Failed to parse file for saving: %1\n")
+                .Arg(path));
+            continue;
+        }
+
+        std::unordered_map<uint32_t, tinyxml2::XMLNode*> existing;
+
+        auto rootElem = doc.RootElement();
+        if(!rootElem)
+        {
+            // If for whatever reason we don't have a root element, create
+            // one now
+            rootElem = doc.NewElement("objects");
+            doc.InsertEndChild(rootElem);
+        }
+        else
+        {
+            // Load all existing partials for replacement
+            auto child = rootElem->FirstChild();
+            while(child != 0)
+            {
+                auto member = child->FirstChildElement("member");
+                while(member != 0)
+                {
+                    libcomp::String memberName(member->Attribute("name"));
+                    if(memberName == "ID")
+                    {
+                        auto txtChild = member->FirstChild();
+                        auto txt = txtChild ? txtChild->ToText() : 0;
+                        if(txt)
+                        {
+                            existing[libcomp::String(txt->Value())
+                                .ToInteger<uint32_t>()] = child;
+                        }
+                        break;
+                    }
+
+                    member = member->NextSiblingElement("member");
+                }
+
+                child = child->NextSibling();
+            }
+        }
+
+        // Now handle updates
+        std::list<tinyxml2::XMLNode*> updatedNodes;
+        for(uint32_t partialID : filePair.second)
+        {
+            auto partial = mZonePartials[partialID];
+
+            // Append to the existing file
+            partial->Save(doc, *rootElem);
+
+            tinyxml2::XMLNode* pNode = rootElem->LastChild();
+
+            // If the partial already existed in the file, move it to the
+            // same location and drop the old one
+            auto iter = existing.find(partialID);
+            if(iter != existing.end())
+            {
+                if(iter->second->NextSibling() != pNode)
+                {
+                    rootElem->InsertAfterChild(iter->second, pNode);
+                }
+
+                rootElem->DeleteChild(iter->second);
+                existing[partialID] = pNode;
+            }
+
+            updatedNodes.push_back(pNode);
+        }
+
+        if(updatedNodes.size() > 0)
+        {
+            XmlHandler::SimplifyObjects(updatedNodes);
+        }
+
+        doc.SaveFile(path.C());
+
+        LOG_DEBUG(libcomp::String("Updated zone partial file '%1'\n")
+            .Arg(path));
+    }
+}
+
 void ZoneWindow::ResetAppliedPartials(std::set<uint32_t> newPartials)
 {
     uint32_t dynamicMapID = mMergedZone->CurrentZone->GetDynamicMapID();
@@ -734,11 +936,16 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
 
     ui.zoneHeaderWidget->hide();
     ui.grpZone->setDisabled(true);
+    ui.xpMultiplier->setDisabled(true);
+    ui.grpBonuses->setDisabled(true);
+    ui.grpSkills->setDisabled(true);
     ui.grpTriggers->setDisabled(true);
 
     ui.grpPartial->hide();
     ui.partialAutoApply->setChecked(false);
     ui.partialDynamicMapIDs->Clear();
+
+    mMergedZone->CurrentPartial = nullptr;
 
     bool zoneOnly = mSelectedPartials.size() == 0;
     if(!zoneOnly)
@@ -787,6 +994,7 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
                     partial);
 
                 mMergedZone->Definition = newZone;
+                mMergedZone->CurrentPartial = partial;
 
                 // Show the partial controls
                 ui.grpPartial->show();
@@ -800,6 +1008,8 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
                     ui.partialDynamicMapIDs->AddUnsignedInteger(dynamicMapID);
                 }
 
+                ui.grpBonuses->setDisabled(false);
+                ui.grpSkills->setDisabled(false);
                 ui.grpTriggers->setDisabled(false);
 
                 ui.lblZoneViewNotes->setText("Changes made while viewing a"
@@ -816,7 +1026,35 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
 
         ui.zoneHeaderWidget->show();
         ui.grpZone->setDisabled(false);
+        ui.xpMultiplier->setDisabled(false);
+        ui.grpBonuses->setDisabled(false);
+        ui.grpSkills->setDisabled(false);
         ui.grpTriggers->setDisabled(false);
+    }
+
+    // Update merged collection properties
+    ui.dropSetIDs->Clear();
+    for(uint32_t dropSetID : mMergedZone->Definition->GetDropSetIDs())
+    {
+        ui.dropSetIDs->AddUnsignedInteger(dropSetID);
+    }
+
+    ui.skillBlacklist->Clear();
+    for(uint32_t skillID : mMergedZone->Definition->GetSkillBlacklist())
+    {
+        ui.skillBlacklist->AddUnsignedInteger(skillID);
+    }
+
+    ui.skillWhitelist->Clear();
+    for(uint32_t skillID : mMergedZone->Definition->GetSkillWhitelist())
+    {
+        ui.skillWhitelist->AddUnsignedInteger(skillID);
+    }
+
+    ui.triggers->Clear();
+    for(auto trigger : mMergedZone->Definition->GetTriggers())
+    {
+        ui.triggers->AddObject(trigger);
     }
 
     if(redraw)
@@ -845,41 +1083,6 @@ bool ZoneWindow::LoadMapFromZone()
         return false;
     }
 
-    // Convert spot IDs
-    for(auto npc : zone->GetNPCs())
-    {
-        if(npc->GetSpotID())
-        {
-            float x = npc->GetX();
-            float y = npc->GetY();
-            float rot = npc->GetRotation();
-            if(GetSpotPosition(zone->GetDynamicMapID(), npc->GetSpotID(),
-                x, y, rot))
-            {
-                npc->SetX(x);
-                npc->SetY(y);
-                npc->SetRotation(rot);
-            }
-        }
-    }
-
-    for(auto obj : zone->GetObjects())
-    {
-        if(obj->GetSpotID())
-        {
-            float x = obj->GetX();
-            float y = obj->GetY();
-            float rot = obj->GetRotation();
-            if(GetSpotPosition(zone->GetDynamicMapID(), obj->GetSpotID(),
-                x, y, rot))
-            {
-                obj->SetX(x);
-                obj->SetY(y);
-                obj->SetRotation(rot);
-            }
-        }
-    }
-
     BindNPCs();
     BindObjects();
     BindSpawns();
@@ -902,7 +1105,7 @@ void ZoneWindow::LoadProperties()
     ui.dynamicMapID->setValue((int32_t)zone->GetDynamicMapID());
     ui.globalZone->setChecked(zone->GetGlobal());
     ui.zoneRestricted->setChecked(zone->GetRestricted());
-    ui.groupID->setValue((int32_t)zone->GetDynamicMapID());
+    ui.groupID->setValue((int32_t)zone->GetGroupID());
     ui.globalBossGroup->setValue((int32_t)zone->GetGlobalBossGroup());
     ui.zoneStartingX->setValue((double)zone->GetStartingX());
     ui.zoneStartingY->setValue((double)zone->GetStartingY());
@@ -921,36 +1124,110 @@ void ZoneWindow::LoadProperties()
     }
 
     ui.trackTeam->setChecked(zone->GetTrackTeam());
+}
 
-    ui.dropSetIDs->Clear();
-    for(uint32_t dropSetID : zone->GetDropSetIDs())
+void ZoneWindow::SaveProperties()
+{
+    // Pull all properties into their respective parent
+    ui.npcs->SaveActiveProperties();
+    ui.objects->SaveActiveProperties();
+    ui.spawns->SaveActiveProperties();
+    ui.spawnGroups->SaveActiveProperties();
+    ui.spawnLocationGroups->SaveActiveProperties();
+    ui.spots->SaveActiveProperties();
+
+    if(mMergedZone->CurrentPartial)
     {
-        ui.dropSetIDs->AddUnsignedInteger(dropSetID);
+        // Partial selected
+        auto partial = mMergedZone->CurrentPartial;
+
+        partial->SetAutoApply(ui.partialAutoApply->isChecked());
+
+        partial->ClearDynamicMapIDs();
+        for(uint32_t dynamicMapID : ui.partialDynamicMapIDs
+            ->GetUnsignedIntegerList())
+        {
+            partial->InsertDynamicMapIDs(dynamicMapID);
+        }
+
+        partial->ClearDropSetIDs();
+        for(uint32_t dropSetID : ui.dropSetIDs->GetUnsignedIntegerList())
+        {
+            partial->InsertDropSetIDs(dropSetID);
+        }
+
+        partial->ClearSkillBlacklist();
+        for(uint32_t skillID : ui.skillBlacklist->GetUnsignedIntegerList())
+        {
+            partial->InsertSkillBlacklist(skillID);
+        }
+
+        partial->ClearSkillWhitelist();
+        for(uint32_t skillID : ui.skillWhitelist->GetUnsignedIntegerList())
+        {
+            partial->InsertSkillWhitelist(skillID);
+        }
+
+        auto triggers = ui.triggers->GetObjectList<
+            objects::ServerZoneTrigger>();
+        partial->SetTriggers(triggers);
     }
-
-    ui.skillBlacklist->Clear();
-    for(uint32_t skillID : zone->GetSkillBlacklist())
+    else if(mMergedZone->CurrentZone &&
+        mMergedZone->CurrentZone == mMergedZone->Definition)
     {
-        ui.skillBlacklist->AddUnsignedInteger(skillID);
-    }
+        // Zone selected
+        auto zone = mMergedZone->CurrentZone;
 
-    ui.skillWhitelist->Clear();
-    for(uint32_t skillID : zone->GetSkillWhitelist())
-    {
-        ui.skillWhitelist->AddUnsignedInteger(skillID);
-    }
+        zone->SetGlobal(ui.globalZone->isChecked());
+        zone->SetRestricted(ui.zoneRestricted->isChecked());
+        zone->SetGroupID((uint32_t)ui.groupID->value());
+        zone->SetGlobalBossGroup((uint32_t)ui.globalBossGroup->value());
+        zone->SetStartingX((float)ui.zoneStartingX->value());
+        zone->SetStartingY((float)ui.zoneStartingY->value());
+        zone->SetStartingRotation((float)ui.zoneStartingRotation->value());
+        zone->SetXPMultiplier((float)ui.xpMultiplier->value());
+        zone->SetBazaarMarketCost((uint32_t)ui.bazaarMarketCost->value());
+        zone->SetBazaarMarketTime((uint32_t)ui.bazaarMarketTime->value());
+        zone->SetMountDisabled(ui.mountDisabled->isChecked());
+        zone->SetBikeDisabled(ui.bikeDisabled->isChecked());
+        zone->SetBikeBoostEnabled(ui.bikeBoostEnabled->isChecked());
 
-    ui.triggers->Clear();
-    for(auto trigger : zone->GetTriggers())
-    {
-        ui.triggers->AddObject(trigger);
+        zone->ClearValidTeamTypes();
+        for(int32_t teamType : ui.validTeamTypes->GetIntegerList())
+        {
+            zone->InsertValidTeamTypes((int8_t)teamType);
+        }
+
+        zone->SetTrackTeam(ui.trackTeam->isChecked());
+
+        zone->ClearDropSetIDs();
+        for(uint32_t dropSetID : ui.dropSetIDs->GetUnsignedIntegerList())
+        {
+            zone->InsertDropSetIDs(dropSetID);
+        }
+
+        zone->ClearSkillBlacklist();
+        for(uint32_t skillID : ui.skillBlacklist->GetUnsignedIntegerList())
+        {
+            zone->InsertSkillBlacklist(skillID);
+        }
+
+        zone->ClearSkillWhitelist();
+        for(uint32_t skillID : ui.skillWhitelist->GetUnsignedIntegerList())
+        {
+            zone->InsertSkillWhitelist(skillID);
+        }
+
+        auto triggers = ui.triggers->GetObjectList<
+            objects::ServerZoneTrigger>();
+        zone->SetTriggers(triggers);
     }
 }
 
 bool ZoneWindow::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
     float& x, float& y, float& rot) const
 {
-    if (spotID == 0 || dynamicMapID == 0)
+    if(spotID == 0 || dynamicMapID == 0)
     {
         return false;
     }
@@ -959,7 +1236,7 @@ bool ZoneWindow::GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID,
 
     auto spots = definitions->GetSpotData(dynamicMapID);
     auto spotIter = spots.find(spotID);
-    if (spotIter != spots.end())
+    if(spotIter != spots.end())
     {
         x = spotIter->second->GetCenterX();
         y = spotIter->second->GetCenterY();
@@ -995,20 +1272,40 @@ void ZoneWindow::BindObjects()
 
 void ZoneWindow::BindSpawns()
 {
-    std::vector<std::shared_ptr<libcomp::Object>> spawns;
+    // Sort by key
+    std::map<uint32_t, std::shared_ptr<libcomp::Object>> spawnSort;
+    std::map<uint32_t, std::shared_ptr<libcomp::Object>> sgSort;
+    std::map<uint32_t, std::shared_ptr<libcomp::Object>> slgSort;
+
     for(auto& sPair : mMergedZone->Definition->GetSpawns())
+    {
+        spawnSort[sPair.first] = sPair.second;
+    }
+
+    for(auto& sgPair : mMergedZone->Definition->GetSpawnGroups())
+    {
+        sgSort[sgPair.first] = sgPair.second;
+    }
+
+    for(auto& slgPair : mMergedZone->Definition->GetSpawnLocationGroups())
+    {
+        slgSort[slgPair.first] = slgPair.second;
+    }
+
+    std::vector<std::shared_ptr<libcomp::Object>> spawns;
+    for(auto& sPair : spawnSort)
     {
         spawns.push_back(sPair.second);
     }
 
     std::vector<std::shared_ptr<libcomp::Object>> sgs;
-    for(auto& sgPair : mMergedZone->Definition->GetSpawnGroups())
+    for(auto& sgPair : sgSort)
     {
         sgs.push_back(sgPair.second);
     }
 
     std::vector<std::shared_ptr<libcomp::Object>> slgs;
-    for(auto& slgPair : mMergedZone->Definition->GetSpawnLocationGroups())
+    for(auto& slgPair : slgSort)
     {
         slgs.push_back(slgPair.second);
     }
@@ -1188,11 +1485,11 @@ void ZoneWindow::DrawMap()
     painter.setPen(QPen(Qt::magenta));
     painter.setBrush(QBrush(Qt::magenta));
 
-    xVals.insert(zone->GetStartingX());
-    yVals.insert(zone->GetStartingY());
+    xVals.insert(mMergedZone->CurrentZone->GetStartingX());
+    yVals.insert(mMergedZone->CurrentZone->GetStartingY());
 
-    painter.drawEllipse(QPoint(Scale(zone->GetStartingX()),
-        Scale(-zone->GetStartingY())), 3, 3);
+    painter.drawEllipse(QPoint(Scale(mMergedZone->CurrentZone->GetStartingX()),
+        Scale(-mMergedZone->CurrentZone->GetStartingY())), 3, 3);
 
     // Draw NPCs
     if(ui.showNPCs->isChecked())
@@ -1202,14 +1499,18 @@ void ZoneWindow::DrawMap()
 
         for(auto npc : zone->GetNPCs())
         {
-            xVals.insert(npc->GetX());
-            yVals.insert(npc->GetY());
-            painter.drawEllipse(QPoint(Scale(npc->GetX()),
-                Scale(-npc->GetY())), 3, 3);
+            float x = npc->GetX();
+            float y = npc->GetY();
+            float rot = npc->GetRotation();
+            GetSpotPosition(zone->GetDynamicMapID(), npc->GetSpotID(),
+                x, y, rot);
 
-            painter.drawText(QPoint(Scale(npc->GetX() + 20.f),
-                Scale(-npc->GetY())), libcomp::String("%1")
-                .Arg(npc->GetID()).C());
+            xVals.insert(x);
+            yVals.insert(y);
+            painter.drawEllipse(QPoint(Scale(x), Scale(-y)), 3, 3);
+
+            painter.drawText(QPoint(Scale(x + 20.f), Scale(-y)),
+                libcomp::String("%1").Arg(npc->GetID()).C());
         }
     }
 
@@ -1221,14 +1522,18 @@ void ZoneWindow::DrawMap()
 
         for(auto obj : zone->GetObjects())
         {
-            xVals.insert(obj->GetX());
-            yVals.insert(obj->GetY());
-            painter.drawEllipse(QPoint(Scale(obj->GetX()),
-                Scale(-obj->GetY())), 3, 3);
+            float x = obj->GetX();
+            float y = obj->GetY();
+            float rot = obj->GetRotation();
+            GetSpotPosition(zone->GetDynamicMapID(), obj->GetSpotID(),
+                x, y, rot);
 
-            painter.drawText(QPoint(Scale(obj->GetX() + 20.f),
-                Scale(-obj->GetY())), libcomp::String("%1")
-                .Arg(obj->GetID()).C());
+            xVals.insert(x);
+            yVals.insert(y);
+            painter.drawEllipse(QPoint(Scale(x), Scale(-y)), 3, 3);
+
+            painter.drawText(QPoint(Scale(x + 20.f), Scale(-y)),
+                libcomp::String("%1").Arg(obj->GetID()).C());
         }
     }
 

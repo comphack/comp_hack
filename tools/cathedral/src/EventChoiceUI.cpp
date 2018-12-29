@@ -69,7 +69,7 @@ void EventChoice::Load(const std::shared_ptr<objects::EventChoice>& e)
         return;
     }
 
-    mMessage->SetValue(e->GetMessageID());
+    mMessage->SetValue((uint32_t)e->GetMessageID());
 
     for(auto branch : e->GetBranches())
     {
@@ -92,7 +92,7 @@ std::shared_ptr<objects::EventChoice> EventChoice::Save() const
     EventBase::Save();
 
     auto choice = std::dynamic_pointer_cast<objects::EventChoice>(mEventBase);
-    choice->SetMessageID(mMessage->GetValue());
+    choice->SetMessageID((int32_t)mMessage->GetValue());
 
     auto branches = mBranches->GetObjectList<objects::EventBase>();
     choice->SetBranches(branches);

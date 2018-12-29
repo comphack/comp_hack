@@ -151,5 +151,21 @@ void NPCList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
 
 void NPCList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
-    (void)obj;
+    auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
+    if(sObj)
+    {
+        sObj->SetID(prop->type->GetValue());
+
+        auto pos = prop->position->Save();
+        sObj->SetSpotID(pos->GetSpotID());
+        sObj->SetX(pos->GetX());
+        sObj->SetY(pos->GetY());
+        sObj->SetRotation(pos->GetRotation());
+
+        sObj->SetState((uint8_t)prop->state->value());
+        sObj->SetActorID(prop->actorID->value());
+
+        auto actions = prop->actions->Save();
+        sObj->SetActions(actions);
+    }
 }

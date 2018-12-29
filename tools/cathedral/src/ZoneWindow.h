@@ -85,6 +85,8 @@ public slots:
 protected slots:
     void LoadPartialDirectory();
     void LoadPartialFile();
+    void SaveFile();
+    void SaveAllFiles();
     void ApplyPartials();
 
     void ZoneViewUpdated();
@@ -99,6 +101,9 @@ protected slots:
 private:
     bool LoadZonePartials(const libcomp::String& path);
 
+    void SaveZone();
+    void SavePartials(const std::set<uint32_t>& partialIDs);
+
     void ResetAppliedPartials(std::set<uint32_t> newPartials = {});
     void RebuildCurrentZoneDisplay();
     void UpdateMergedZone(bool redraw);
@@ -106,6 +111,7 @@ private:
     bool LoadMapFromZone();
 
     void LoadProperties();
+    void SaveProperties();
 
     bool GetSpotPosition(uint32_t dynamicMapID,
         uint32_t spotID, float& x, float& y, float& rot) const;
@@ -131,6 +137,7 @@ private:
     float mOffsetX;
     float mOffsetY;
 
+    libcomp::String mZonePath;
     std::shared_ptr<MergedZone> mMergedZone;
     std::shared_ptr<objects::MiZoneData> mZoneData;
     std::shared_ptr<objects::QmpFile> mQmpFile;

@@ -138,5 +138,28 @@ void SpawnGroupList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
 
 void SpawnGroupList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
-    (void)obj;
+    auto sg = std::dynamic_pointer_cast<objects::SpawnGroup>(obj);
+    if(sg)
+    {
+        sg->ClearSpawns();
+        for(auto& pair : prop->spawns->SaveUnsigned())
+        {
+            sg->SetSpawns(pair.first, (uint16_t)pair.second);
+        }
+
+        if(prop->grpRestrictions->isChecked())
+        {
+            sg->SetRestrictions(prop->restrictions->Save());
+        }
+        else
+        {
+            sg->SetRestrictions(nullptr);
+        }
+
+        auto actions = prop->spawnActions->Save();
+        sg->SetSpawnActions(actions);
+
+        actions = prop->defeatActions->Save();
+        sg->SetDefeatActions(actions);
+    }
 }

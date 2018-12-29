@@ -67,6 +67,8 @@ public:
     virtual void LoadProperties(const std::shared_ptr<libcomp::Object>& obj);
     virtual void SaveProperties(const std::shared_ptr<libcomp::Object>& obj);
 
+    void SaveActiveProperties();
+
     std::map<uint32_t, QString> GetObjectMapping() const;
 
 public slots:

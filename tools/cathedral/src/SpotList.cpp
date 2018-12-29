@@ -37,6 +37,7 @@
 // objects Includes
 #include <MiSpotData.h>
 #include <ServerZone.h>
+#include <ServerZonePartial.h>
 #include <ServerZoneSpot.h>
 #include <SpawnLocation.h>
 
@@ -157,13 +158,10 @@ void SpotList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
         if(mMainWindow)
         {
             auto zoneWindow = mMainWindow->GetZones();
-            if(zoneWindow)
+            auto merged = zoneWindow->GetMergedZone();
+            if(merged)
             {
-                auto merged = zoneWindow->GetMergedZone();
-                if(merged)
-                {
-                    spot = merged->Definition->GetSpots(spotDef->GetID());
-                }
+                spot = merged->Definition->GetSpots(spotDef->GetID());
             }
         }
     }
@@ -226,5 +224,63 @@ void SpotList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
 
 void SpotList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
-    (void)obj;
+    auto spotDef = std::dynamic_pointer_cast<objects::MiSpotData>(obj);
+    if(spotDef && mMainWindow)
+    {
+        auto zoneWindow = mMainWindow->GetZones();
+        auto merged = zoneWindow->GetMergedZone();
+        if(!merged || (!merged->CurrentPartial &&
+            merged->Definition != merged->CurrentZone))
+        {
+            // We shouldn't actually be editing anything right now
+            return;
+        }
+
+        if(prop->grpServerDefinition->isChecked())
+        {
+            auto spot = merged->Definition->GetSpots(spotDef->GetID());
+            if(!spot)
+            {
+                spot = std::make_shared<objects::ServerZoneSpot>();
+                spot->SetID(spotDef->GetID());
+
+                if(merged->CurrentPartial)
+                {
+                    merged->CurrentPartial->SetSpots(spotDef->GetID(),
+                        spot);
+                }
+            }
+
+            auto actions = prop->actions->Save();
+            spot->SetActions(actions);
+
+            actions = prop->leaveActions->Save();
+            spot->SetLeaveActions(actions);
+
+            if(prop->grpSpawnArea->isChecked())
+            {
+                spot->SetSpawnArea(prop->spawnArea->Save());
+            }
+            else
+            {
+                spot->SetSpawnArea(nullptr);
+            }
+
+            spot->SetMatchSpawn((objects::ServerZoneSpot::MatchSpawn_t)
+                prop->matchSpawn->currentIndex());
+            spot->SetMatchBase((uint8_t)prop->matchBase->value());
+            spot->SetMatchZoneInLimit((uint8_t)prop->matchZoneInLimit->value());
+        }
+        else
+        {
+            if(merged->CurrentPartial)
+            {
+                merged->CurrentPartial->RemoveSpots(spotDef->GetID());
+            }
+            else
+            {
+                merged->CurrentZone->RemoveSpots(spotDef->GetID());
+            }
+        }
+    }
 }

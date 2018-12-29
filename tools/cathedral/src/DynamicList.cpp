@@ -465,7 +465,7 @@ QWidget* DynamicList::GetEventMessageWidget(int32_t val)
     EventMessageRef* msg = new EventMessageRef;
     msg->SetMainWindow(mMainWindow);
 
-    msg->SetValue(val);
+    msg->SetValue((uint32_t)val);
 
     return msg;
 }
@@ -490,7 +490,7 @@ std::list<int32_t> DynamicList::GetIntegerList() const
         {
             EventMessageRef* ref = ui->layoutItems->itemAt(childIdx)->widget()
                 ->findChild<EventMessageRef*>();
-            result.push_back(ref->GetValue());
+            result.push_back((int32_t)ref->GetValue());
         }
     }
     else
@@ -691,6 +691,52 @@ std::list<std::shared_ptr<objects::ObjectPosition>>
     {
         ObjectPosition* ctrl = ui->layoutItems->itemAt(childIdx)->widget()
             ->findChild<ObjectPosition*>();
+        result.push_back(ctrl->Save());
+    }
+
+    return result;
+}
+
+template<>
+std::list<std::shared_ptr<objects::ServerZoneTrigger>>
+    DynamicList::GetObjectList() const
+{
+    std::list<std::shared_ptr<objects::ServerZoneTrigger>> result;
+    if(mType != DynamicItemType_t::OBJ_ZONE_TRIGGER)
+    {
+        LOG_ERROR("Attempted to retrieve a ServerZoneTrigger list from a"
+            " differing DynamicList type\n");
+        return result;
+    }
+
+    int total = ui->layoutItems->count();
+    for(int childIdx = 0; childIdx < total; childIdx++)
+    {
+        ZoneTrigger* ctrl = ui->layoutItems->itemAt(childIdx)->widget()
+            ->findChild<ZoneTrigger*>();
+        result.push_back(ctrl->Save());
+    }
+
+    return result;
+}
+
+template<>
+std::list<std::shared_ptr<objects::SpawnLocation>>
+    DynamicList::GetObjectList() const
+{
+    std::list<std::shared_ptr<objects::SpawnLocation>> result;
+    if(mType != DynamicItemType_t::OBJ_SPAWN_LOCATION)
+    {
+        LOG_ERROR("Attempted to retrieve a SpawnLocation list from a"
+            " differing DynamicList type\n");
+        return result;
+    }
+
+    int total = ui->layoutItems->count();
+    for(int childIdx = 0; childIdx < total; childIdx++)
+    {
+        SpawnLocation* ctrl = ui->layoutItems->itemAt(childIdx)->widget()
+            ->findChild<SpawnLocation*>();
         result.push_back(ctrl->Save());
     }
 

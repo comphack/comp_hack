@@ -903,7 +903,7 @@ void EventWindow::SaveFiles(const std::list<libcomp::String>& paths)
 
         if(updatedNodes.size() > 0)
         {
-            XmlHandler::SimplifyObject(updatedNodes);
+            XmlHandler::SimplifyObjects(updatedNodes);
         }
 
         doc.SaveFile(path.C());

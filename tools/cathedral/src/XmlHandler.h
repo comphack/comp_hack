@@ -36,7 +36,9 @@ class XmlHandler
 public:
     XmlHandler() {}
 
-    static void SimplifyObject(std::list<tinyxml2::XMLNode*> nodes);
+    static void SimplifyObjects(std::list<tinyxml2::XMLNode*> nodes);
+
+    static void CorrectMap(tinyxml2::XMLNode* parentNode);
 
     static std::list<libcomp::String> GetComments(tinyxml2::XMLNode* node);
 

@@ -142,7 +142,28 @@ void SpawnLocationGroupList::LoadProperties(
     }
 }
 
-void SpawnLocationGroupList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
+void SpawnLocationGroupList::SaveProperties(const std::shared_ptr<
+    libcomp::Object>& obj)
 {
-    (void)obj;
+    auto slg = std::dynamic_pointer_cast<objects::SpawnLocationGroup>(obj);
+    if(slg)
+    {
+        auto groupIDs = prop->groups->GetUnsignedIntegerList();
+        slg->SetGroupIDs(groupIDs);
+
+        slg->SetRespawnTime((float)prop->respawnTime->value());
+        slg->SetImmediateSpawn(prop->immediateSpawn->isChecked());
+
+        slg->ClearSpotIDs();
+        for(uint32_t spotID : prop->spots->GetUnsignedIntegerList())
+        {
+            slg->InsertSpotIDs(spotID);
+        }
+
+        slg->SetSpotSelection((objects::SpawnLocationGroup::SpotSelection_t)
+            prop->spotSelection->currentIndex());
+
+        auto locs = prop->locations->GetObjectList<objects::SpawnLocation>();
+        slg->SetLocations(locs);
+    }
 }

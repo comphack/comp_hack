@@ -68,7 +68,7 @@ void EventExNPCMessage::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    prop->message->SetValue(mEvent->GetMessageID());
+    prop->message->SetValue((uint32_t)mEvent->GetMessageID());
     prop->messageValue->setValue(mEvent->GetMessageValue());
 }
 
@@ -81,7 +81,7 @@ std::shared_ptr<objects::Event> EventExNPCMessage::Save() const
 
     Event::Save();
 
-    mEvent->SetMessageID(prop->message->GetValue());
+    mEvent->SetMessageID((int32_t)prop->message->GetValue());
     mEvent->SetMessageValue(prop->messageValue->value());
 
     return mEvent;

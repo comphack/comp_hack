@@ -60,6 +60,7 @@
 #include <QMessageBox>
 #include <QRadioButton>
 #include <QSettings>
+#include <QShortcut>
 #include <QSpinBox>
 #include <QTextEdit>
 #include <PopIgnore.h>
@@ -206,6 +207,9 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
         SLOT(FileSelectionChanged()));
     connect(ui->treeWidget, SIGNAL(itemSelectionChanged()), this,
         SLOT(TreeSelectionChanged()));
+
+    QShortcut *shortcut = new QShortcut(QKeySequence("F5"), this);
+    connect(shortcut, SIGNAL(activated()), this, SLOT(Refresh()));
 }
 
 EventWindow::~EventWindow()

@@ -42,6 +42,7 @@
 #include <QPicture>
 #include <QScrollBar>
 #include <QSettings>
+#include <QShortcut>
 #include <QToolTip>
 #include <PopIgnore.h>
 
@@ -104,20 +105,10 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     ui.partialDynamicMapIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT,
         pMainWindow);
 
-    connect(ui.zoom200, SIGNAL(triggered()),
-        this, SLOT(Zoom200()));
-    connect(ui.zoom100, SIGNAL(triggered()),
-        this, SLOT(Zoom100()));
-    connect(ui.zoom50, SIGNAL(triggered()),
-        this, SLOT(Zoom50()));
-    connect(ui.zoom25, SIGNAL(triggered()),
-        this, SLOT(Zoom25()));
-    connect(ui.actionRefresh, SIGNAL(triggered()),
-        this, SLOT(Refresh()));
-    connect(ui.showNPCs, SIGNAL(toggled(bool)),
-        this, SLOT(ShowToggled(bool)));
-    connect(ui.showObjects, SIGNAL(toggled(bool)),
-        this, SLOT(ShowToggled(bool)));
+    connect(ui.actionRefresh, SIGNAL(triggered()), this, SLOT(Refresh()));
+    connect(ui.showNPCs, SIGNAL(toggled(bool)), this, SLOT(ShowToggled(bool)));
+    connect(ui.showObjects, SIGNAL(toggled(bool)), this,
+        SLOT(ShowToggled(bool)));
 
     connect(ui.addNPC, SIGNAL(clicked()), this, SLOT(AddNPC()));
     connect(ui.addObject, SIGNAL(clicked()), this, SLOT(AddObject()));
@@ -139,10 +130,12 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
 
     connect(ui.zoneView, SIGNAL(currentIndexChanged(const QString&)), this,
         SLOT(ZoneViewUpdated()));
-    connect(ui.tabSpawnTypes, SIGNAL(currentIndexChanged(const QString&)), this,
+    connect(ui.tabSpawnTypes, SIGNAL(currentChanged(int)), this,
         SLOT(SpawnTabChanged()));
+    connect(ui.zoomSlider, SIGNAL(valueChanged(int)), this, SLOT(Zoom()));
 
-    mZoomScale = 20;
+    QShortcut *shortcut = new QShortcut(QKeySequence("F5"), this);
+    connect(shortcut, SIGNAL(activated()), this, SLOT(Refresh()));
 }
 
 ZoneWindow::~ZoneWindow()
@@ -934,51 +927,8 @@ void ZoneWindow::SpawnTabChanged()
     }
 }
 
-void ZoneWindow::Zoom200()
+void ZoneWindow::Zoom()
 {
-    mZoomScale = 10;
-    ui.zoom200->setChecked(true);
-
-    ui.zoom100->setChecked(false);
-    ui.zoom50->setChecked(false);
-    ui.zoom25->setChecked(false);
-
-    DrawMap();
-}
-
-void ZoneWindow::Zoom100()
-{
-    mZoomScale = 20;
-    ui.zoom100->setChecked(true);
-
-    ui.zoom200->setChecked(false);
-    ui.zoom50->setChecked(false);
-    ui.zoom25->setChecked(false);
-
-    DrawMap();
-}
-
-void ZoneWindow::Zoom50()
-{
-    mZoomScale = 40;
-    ui.zoom50->setChecked(true);
-
-    ui.zoom200->setChecked(false);
-    ui.zoom100->setChecked(false);
-    ui.zoom25->setChecked(false);
-
-    DrawMap();
-}
-
-void ZoneWindow::Zoom25()
-{
-    mZoomScale = 80;
-    ui.zoom25->setChecked(true);
-
-    ui.zoom200->setChecked(false);
-    ui.zoom100->setChecked(false);
-    ui.zoom50->setChecked(false);
-
     DrawMap();
 }
 
@@ -1714,8 +1664,8 @@ void ZoneWindow::DrawMap()
         return;
     }
 
-    auto xScroll = ui.scrollArea->horizontalScrollBar()->value();
-    auto yScroll = ui.scrollArea->verticalScrollBar()->value();
+    auto xScroll = ui.mapScrollArea->horizontalScrollBar()->value();
+    auto yScroll = ui.mapScrollArea->verticalScrollBar()->value();
 
     mDrawTarget = new QLabel();
 
@@ -1879,18 +1829,18 @@ void ZoneWindow::DrawMap()
     painter.end();
 
     mDrawTarget->setPicture(pic);
-    ui.scrollArea->setWidget(mDrawTarget);
+    ui.mapScrollArea->setWidget(mDrawTarget);
 
-    ui.scrollArea->horizontalScrollBar()->setValue(xScroll);
-    ui.scrollArea->verticalScrollBar()->setValue(yScroll);
+    ui.mapScrollArea->horizontalScrollBar()->setValue(xScroll);
+    ui.mapScrollArea->verticalScrollBar()->setValue(yScroll);
 }
 
 int32_t ZoneWindow::Scale(int32_t point)
 {
-    return (int32_t)(point / mZoomScale);
+    return (int32_t)(point / ui.zoomSlider->value());
 }
 
 int32_t ZoneWindow::Scale(float point)
 {
-    return (int32_t)(point / mZoomScale);
+    return (int32_t)(point / ui.zoomSlider->value());
 }

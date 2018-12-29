@@ -62,7 +62,7 @@ ActionMapItem::~ActionMapItem()
 
 int32_t ActionMapItem::GetKey() const
 {
-    if(ui->keyNumber->isHidden())
+    if(!ui->keyNumber->isHidden())
     {
         return ui->keyNumber->value();
     }

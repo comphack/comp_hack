@@ -99,10 +99,7 @@ protected slots:
     void ZoneViewUpdated();
     void SpawnTabChanged();
 
-    void Zoom200();
-    void Zoom100();
-    void Zoom50();
-    void Zoom25();
+    void Zoom();
     void ShowToggled(bool checked);
     void Refresh();
 
@@ -155,8 +152,6 @@ private:
     std::map<uint32_t,
         std::shared_ptr<objects::ServerZonePartial>> mZonePartials;
     std::map<uint32_t, libcomp::String> mZonePartialFiles;
-
-    uint8_t mZoomScale;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_ZONEWINDOW_H

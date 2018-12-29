@@ -119,6 +119,8 @@ void XmlHandler::SimplifyObject(std::list<tinyxml2::XMLNode*> nodes)
             // base properties to the bottom
             std::set<libcomp::String> seen;
 
+            tinyxml2::XMLNode* lastComment = 0;
+
             auto child = objNode->FirstChild();
             while(child)
             {
@@ -127,6 +129,11 @@ void XmlHandler::SimplifyObject(std::list<tinyxml2::XMLNode*> nodes)
 
                 if(!elem)
                 {
+                    if(dynamic_cast<const tinyxml2::XMLComment*>(child))
+                    {
+                        lastComment = child;
+                    }
+
                     child = next;
                     continue;
                 }
@@ -139,8 +146,15 @@ void XmlHandler::SimplifyObject(std::list<tinyxml2::XMLNode*> nodes)
 
                 if(memberName == "ID")
                 {
-                    // Move to the top
-                    objNode->InsertFirstChild(child);
+                    // Move to the top (after comments)
+                    if(lastComment)
+                    {
+                        objNode->InsertAfterChild(lastComment, child);
+                    }
+                    else
+                    {
+                        objNode->InsertFirstChild(child);
+                    }
                 }
                 else if(!last &&
                     memberName != "next" && memberName != "queueNext")

@@ -196,6 +196,8 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
     connect(ui->actionLoadDirectory, SIGNAL(triggered()), this,
         SLOT(LoadDirectory()));
     connect(ui->actionSave, SIGNAL(triggered()), this, SLOT(SaveFile()));
+    connect(ui->actionSaveAll, SIGNAL(triggered()), this,
+        SLOT(SaveAllFiles()));
     connect(ui->actionNew, SIGNAL(triggered()), this, SLOT(NewFile()));
     connect(ui->actionRefresh, SIGNAL(triggered()), this, SLOT(Refresh()));
     connect(ui->actionGoto, SIGNAL(triggered()), this, SLOT(GoTo()));
@@ -433,156 +435,20 @@ void EventWindow::SaveFile()
         return;
     }
 
-    std::list<std::shared_ptr<FileEvent>> updates;
+    std::list<libcomp::String> paths;
+    paths.push_back(path);
+    SaveFiles(paths);
+}
 
-    auto file = mFiles[path];
-    for(auto fEvent : file->Events)
+void EventWindow::SaveAllFiles()
+{
+    std::list<libcomp::String> paths;
+    for(auto& pair : mFiles)
     {
-        if(fEvent->HasUpdates)
-        {
-            updates.push_back(fEvent);
-        }
+        paths.push_back(pair.first);
     }
 
-    if(updates.size() == 0 && file->PendingRemovals.size() == 0)
-    {
-        // Nothing to save
-        return;
-    }
-
-    // Update the current event if we haven't already
-    if(mCurrentEvent && mCurrentEvent->HasUpdates)
-    {
-        for(auto eCtrl : ui->splitter->findChildren<Event*>())
-        {
-            if(mCurrentEvent->Event == eCtrl->Save())
-            {
-                mCurrentEvent->Comments = eCtrl->GetComments();
-            }
-        }
-    }
-
-    tinyxml2::XMLDocument doc;
-    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
-    {
-        LOG_ERROR(libcomp::String("Failed to parse file for saving: %1\n")
-            .Arg(path));
-        return;
-    }
-
-    std::unordered_map<libcomp::String, tinyxml2::XMLNode*> existingEvents;
-
-    auto rootElem = doc.RootElement();
-    if(!rootElem)
-    {
-        // If for whatever reason we don't have a root element, create one now
-        rootElem = doc.NewElement("objects");
-        doc.InsertEndChild(rootElem);
-    }
-    else
-    {
-        // Load all existing events for replacement
-        auto child = rootElem->FirstChild();
-        while(child != 0)
-        {
-            auto member = child->FirstChildElement("member");
-            while(member != 0)
-            {
-                libcomp::String memberName(member->Attribute("name"));
-                if(memberName == "ID")
-                {
-                    auto txtChild = member->FirstChild();
-                    auto txt = txtChild ? txtChild->ToText() : 0;
-                    if(txt)
-                    {
-                        existingEvents[txt->Value()] = child;
-                    }
-                    break;
-                }
-
-                member = member->NextSiblingElement("member");
-            }
-
-            child = child->NextSibling();
-        }
-    }
-
-    // Remove events first
-    for(auto eventID : file->PendingRemovals)
-    {
-        auto iter = existingEvents.find(eventID);
-        if(iter != existingEvents.end())
-        {
-            rootElem->DeleteChild(iter->second);
-        }
-    }
-
-    file->PendingRemovals.clear();
-
-    // Now handle updates
-    std::list<tinyxml2::XMLNode*> updatedNodes;
-    for(auto fEvent : file->Events)
-    {
-        if(!fEvent->HasUpdates) continue;
-
-        // Append event to the existing file
-        auto e = fEvent->Event;
-        e->Save(doc, *rootElem);
-
-        tinyxml2::XMLNode* eNode = rootElem->LastChild();
-        if(fEvent->Comments.size())
-        {
-            tinyxml2::XMLNode* commentNode = 0;
-            for(auto comment : fEvent->Comments)
-            {
-                auto cNode = doc.NewComment(libcomp::String(" %1 ")
-                    .Arg(comment).C());
-
-                if(commentNode)
-                {
-                    eNode->InsertAfterChild(commentNode, cNode);
-                }
-                else
-                {
-                    eNode->InsertFirstChild(cNode);
-                }
-
-                commentNode = cNode;
-            }
-        }
-
-        if(!fEvent->FileEventID.IsEmpty())
-        {
-            // If the event already existed in the file, move it to the same
-            // location and drop the old one
-            auto iter = existingEvents.find(fEvent->FileEventID);
-            if(iter != existingEvents.end())
-            {
-                if(iter->second->NextSibling() != eNode)
-                {
-                    rootElem->InsertAfterChild(iter->second, eNode);
-                }
-
-                rootElem->DeleteChild(iter->second);
-                existingEvents[fEvent->FileEventID] = eNode;
-            }
-        }
-
-        updatedNodes.push_back(eNode);
-
-        fEvent->HasUpdates = false;
-        fEvent->FileEventID = e->GetID();
-    }
-
-    if(updatedNodes.size() > 0)
-    {
-        XmlHandler::SimplifyObject(updatedNodes);
-    }
-
-    doc.SaveFile(path.C());
-
-    RebuildGlobalIDMap();
-    Refresh(true);
+    SaveFiles(paths);
 }
 
 void EventWindow::NewFile()
@@ -887,6 +753,166 @@ bool EventWindow::SelectFile(const libcomp::String& path)
     ui->treeWidget->resizeColumnToContents(0);
 
     return true;
+}
+
+void EventWindow::SaveFiles(const std::list<libcomp::String>& paths)
+{
+    // Update the current event if we haven't already
+    if(mCurrentEvent && mCurrentEvent->HasUpdates)
+    {
+        for(auto eCtrl : ui->splitter->findChildren<Event*>())
+        {
+            if(mCurrentEvent->Event == eCtrl->Save())
+            {
+                mCurrentEvent->Comments = eCtrl->GetComments();
+            }
+        }
+    }
+
+    for(auto path : paths)
+    {
+        std::list<std::shared_ptr<FileEvent>> updates;
+
+        auto file = mFiles[path];
+        for(auto fEvent : file->Events)
+        {
+            if(fEvent->HasUpdates)
+            {
+                updates.push_back(fEvent);
+            }
+        }
+
+        if(updates.size() == 0 && file->PendingRemovals.size() == 0)
+        {
+            // Nothing to save
+            continue;
+        }
+
+        tinyxml2::XMLDocument doc;
+        if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+        {
+            LOG_ERROR(libcomp::String("Failed to parse file for saving: %1\n")
+                .Arg(path));
+            continue;
+        }
+
+        std::unordered_map<libcomp::String, tinyxml2::XMLNode*> existingEvents;
+
+        auto rootElem = doc.RootElement();
+        if(!rootElem)
+        {
+            // If for whatever reason we don't have a root element, create
+            // one now
+            rootElem = doc.NewElement("objects");
+            doc.InsertEndChild(rootElem);
+        }
+        else
+        {
+            // Load all existing events for replacement
+            auto child = rootElem->FirstChild();
+            while(child != 0)
+            {
+                auto member = child->FirstChildElement("member");
+                while(member != 0)
+                {
+                    libcomp::String memberName(member->Attribute("name"));
+                    if(memberName == "ID")
+                    {
+                        auto txtChild = member->FirstChild();
+                        auto txt = txtChild ? txtChild->ToText() : 0;
+                        if(txt)
+                        {
+                            existingEvents[txt->Value()] = child;
+                        }
+                        break;
+                    }
+
+                    member = member->NextSiblingElement("member");
+                }
+
+                child = child->NextSibling();
+            }
+        }
+
+        // Remove events first
+        for(auto eventID : file->PendingRemovals)
+        {
+            auto iter = existingEvents.find(eventID);
+            if(iter != existingEvents.end())
+            {
+                rootElem->DeleteChild(iter->second);
+            }
+        }
+
+        file->PendingRemovals.clear();
+
+        // Now handle updates
+        std::list<tinyxml2::XMLNode*> updatedNodes;
+        for(auto fEvent : file->Events)
+        {
+            if(!fEvent->HasUpdates) continue;
+
+            // Append event to the existing file
+            auto e = fEvent->Event;
+            e->Save(doc, *rootElem);
+
+            tinyxml2::XMLNode* eNode = rootElem->LastChild();
+            if(fEvent->Comments.size())
+            {
+                tinyxml2::XMLNode* commentNode = 0;
+                for(auto comment : fEvent->Comments)
+                {
+                    auto cNode = doc.NewComment(libcomp::String(" %1 ")
+                        .Arg(comment).C());
+
+                    if(commentNode)
+                    {
+                        eNode->InsertAfterChild(commentNode, cNode);
+                    }
+                    else
+                    {
+                        eNode->InsertFirstChild(cNode);
+                    }
+
+                    commentNode = cNode;
+                }
+            }
+
+            if(!fEvent->FileEventID.IsEmpty())
+            {
+                // If the event already existed in the file, move it to the
+                // same location and drop the old one
+                auto iter = existingEvents.find(fEvent->FileEventID);
+                if(iter != existingEvents.end())
+                {
+                    if(iter->second->NextSibling() != eNode)
+                    {
+                        rootElem->InsertAfterChild(iter->second, eNode);
+                    }
+
+                    rootElem->DeleteChild(iter->second);
+                    existingEvents[fEvent->FileEventID] = eNode;
+                }
+            }
+
+            updatedNodes.push_back(eNode);
+
+            fEvent->HasUpdates = false;
+            fEvent->FileEventID = e->GetID();
+        }
+
+        if(updatedNodes.size() > 0)
+        {
+            XmlHandler::SimplifyObject(updatedNodes);
+        }
+
+        doc.SaveFile(path.C());
+
+        LOG_DEBUG(libcomp::String("Updated event file '%1'\n").Arg(path));
+    }
+
+    RebuildGlobalIDMap();
+    Refresh(true);
 }
 
 std::shared_ptr<objects::Event> EventWindow::GetNewEvent(

@@ -74,6 +74,7 @@ private slots:
     void LoadDirectory();
     void LoadFile();
     void SaveFile();
+    void SaveAllFiles();
     void NewFile();
     void NewEvent();
     void RemoveEvent();
@@ -85,6 +86,8 @@ private slots:
 private:
     bool LoadFileFromPath(const libcomp::String& path);
     bool SelectFile(const libcomp::String& path);
+
+    void SaveFiles(const std::list<libcomp::String>& paths);
 
     std::shared_ptr<objects::Event> GetNewEvent(
         objects::Event::EventType_t type) const;

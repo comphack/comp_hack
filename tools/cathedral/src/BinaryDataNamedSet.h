@@ -30,13 +30,10 @@
 
 // libcomp Includes
 #include <BinaryDataSet.h>
+#include <CString.h>
 
-namespace libcomp
-{
-
-class String;
-
-} // namespace libcomp
+// C++11 Standard Includes
+#include <vector>
 
 class BinaryDataNamedSet : public libcomp::BinaryDataSet
 {

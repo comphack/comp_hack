@@ -172,6 +172,7 @@
     <addaction name="actionLoadFile"/>
     <addaction name="actionLoadDirectory"/>
     <addaction name="actionSave"/>
+    <addaction name="actionSaveAll"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -226,6 +227,11 @@
   <action name="actionGoto">
    <property name="text">
     <string>Go To Event</string>
+   </property>
+  </action>
+  <action name="actionSaveAll">
+   <property name="text">
+    <string>Save All</string>
    </property>
   </action>
  </widget>

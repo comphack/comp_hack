@@ -1006,8 +1006,8 @@ void EventWindow::BindSelectedEvent()
 
     if(!eNode)
     {
-        if(fileIdx != -1 && file &&
-            file->Events.size() > (size_t)fileIdx)
+        if(fileIdx != -1 && file && file->Events.size() >
+            (std::list<std::shared_ptr<FileEvent>>::size_type)fileIdx)
         {
             auto eIter2 = file->Events.begin();
             std::advance(eIter2, fileIdx);

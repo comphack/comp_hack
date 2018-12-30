@@ -49,12 +49,7 @@ public:
 
     void LoadIfNeeded();
 
-    void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
-
     std::shared_ptr<libcomp::Object> GetSelectedObject();
-
-signals:
-    void selectedObjectChanged();
 
 private:
     std::shared_ptr<BinaryDataNamedSet> mDataSet;

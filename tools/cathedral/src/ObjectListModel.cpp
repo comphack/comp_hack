@@ -55,7 +55,7 @@ int ObjectListModel::GetIndex(const std::shared_ptr<libcomp::Object>& obj)
 {
     for(int idx = 0; idx < (int)mObjects.size(); idx++)
     {
-        if (mObjects[idx] == obj)
+        if(mObjects[(size_t)idx] == obj)
         {
             return idx;
         }

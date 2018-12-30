@@ -76,6 +76,18 @@
 #include <Log.h>
 #include <ServerDataManager.h>
 
+const QColor COLOR_SELECTED = Qt::red;
+const QColor COLOR_PLAYER = Qt::magenta;
+const QColor COLOR_NPC = Qt::darkRed;
+const QColor COLOR_OBJECT = Qt::blue;
+const QColor COLOR_SPOT = Qt::darkGreen;
+
+// Barrier colors
+const QColor COLOR_GENERIC = Qt::black;
+const QColor COLOR_1WAY = Qt::darkGray;
+const QColor COLOR_TOGGLE1 = Qt::darkYellow;
+const QColor COLOR_TOGGLE2 = Qt::darkCyan;
+
 ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     : QMainWindow(p), mMainWindow(pMainWindow), mDrawTarget(0)
 {
@@ -127,6 +139,21 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
         this, SLOT(LoadPartialDirectory()));
     connect(ui.actionPartialsApply, SIGNAL(triggered()),
         this, SLOT(ApplyPartials()));
+
+    connect(ui.tabs, SIGNAL(selectedObjectChanged()), this,
+        SLOT(SelectListObject()));
+    connect(ui.npcs, SIGNAL(selectedObjectChanged()), this,
+        SLOT(SelectListObject()));
+    connect(ui.objects, SIGNAL(selectedObjectChanged()), this,
+        SLOT(SelectListObject()));
+    connect(ui.spawns, SIGNAL(selectedObjectChanged()), this,
+        SLOT(SelectListObject()));
+    connect(ui.spawnGroups, SIGNAL(selectedObjectChanged()), this,
+        SLOT(SelectListObject()));
+    connect(ui.spawnLocationGroups, SIGNAL(selectedObjectChanged()), this,
+        SLOT(SelectListObject()));
+    connect(ui.spots, SIGNAL(selectedObjectChanged()), this,
+        SLOT(SelectListObject()));
 
     connect(ui.zoneView, SIGNAL(currentIndexChanged(const QString&)), this,
         SLOT(ZoneViewUpdated()));
@@ -224,7 +251,7 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
             int8_t lvl = spawn->GetLevel();
             if(lvl == -1 && devilData)
             {
-                lvl = devilData->GetGrowth()->GetBaseLevel();
+                lvl = (int8_t)devilData->GetGrowth()->GetBaseLevel();
             }
 
             name = libcomp::String("%1 Lv:%2").Arg(name).Arg(lvl);
@@ -907,6 +934,11 @@ void ZoneWindow::ZoneViewUpdated()
     UpdateMergedZone(true);
 }
 
+void ZoneWindow::SelectListObject()
+{
+    DrawMap();
+}
+
 void ZoneWindow::SpawnTabChanged()
 {
     switch(ui.tabSpawnTypes->currentIndex())
@@ -925,6 +957,8 @@ void ZoneWindow::SpawnTabChanged()
         ui.removeSpawn->setText("Remove Spawn");
         break;
     }
+
+    DrawMap();
 }
 
 void ZoneWindow::Zoom()
@@ -1644,18 +1678,6 @@ void ZoneWindow::BindSpots()
     ui.spots->SetObjectList(spots);
 }
 
-QTableWidgetItem* ZoneWindow::GetTableWidget(std::string name, bool readOnly)
-{
-    auto item = new QTableWidgetItem(name.c_str());
-
-    if(readOnly)
-    {
-        item->setFlags(item->flags() ^ Qt::ItemIsEditable);
-    }
-
-    return item;
-}
-
 void ZoneWindow::DrawMap()
 {
     auto zone = mMergedZone->Definition;
@@ -1679,8 +1701,6 @@ void ZoneWindow::DrawMap()
         elems[elem->GetID()] = (uint8_t)elem->GetType();
     }
 
-    std::set<float> xVals;
-    std::set<float> yVals;
     for(auto boundary : mQmpFile->GetBoundaries())
     {
         for(auto line : boundary->GetLines())
@@ -1689,93 +1709,107 @@ void ZoneWindow::DrawMap()
             {
             case 1:
                 // One way
-                painter.setPen(QPen(Qt::blue));
-                painter.setBrush(QBrush(Qt::blue));
+                painter.setPen(QPen(COLOR_1WAY));
+                painter.setBrush(QBrush(COLOR_1WAY));
                 break;
             case 2:
                 // Toggleable
-                painter.setPen(QPen(Qt::green));
-                painter.setBrush(QBrush(Qt::green));
+                painter.setPen(QPen(COLOR_TOGGLE1));
+                painter.setBrush(QBrush(COLOR_TOGGLE1));
                 break;
             case 3:
                 // Toggleable (wired up to close?)
-                painter.setPen(QPen(Qt::red));
-                painter.setBrush(QBrush(Qt::red));
+                painter.setPen(QPen(COLOR_TOGGLE2));
+                painter.setBrush(QBrush(COLOR_TOGGLE2));
                 break;
             default:
-                painter.setPen(QPen(Qt::black));
-                painter.setBrush(QBrush(Qt::black));
+                painter.setPen(QPen(COLOR_GENERIC));
+                painter.setBrush(QBrush(COLOR_GENERIC));
                 break;
             }
-            xVals.insert((float)line->GetX1());
-            xVals.insert((float)line->GetX2());
-            yVals.insert((float)line->GetY1());
-            yVals.insert((float)line->GetY2());
 
             painter.drawLine(Scale(line->GetX1()), Scale(-line->GetY1()),
                 Scale(line->GetX2()), Scale(-line->GetY2()));
         }
     }
 
-    // Draw spots
-    painter.setPen(QPen(Qt::darkGreen));
-    painter.setBrush(QBrush(Qt::darkGreen));
+    auto definitions = mMainWindow->GetDefinitions();
+    auto spots = definitions->GetSpotData(zone->GetDynamicMapID());
 
+    std::set<std::shared_ptr<libcomp::Object>> highlight;
+    switch(ui.tabs->currentIndex())
+    {
+    case 1: // NPCs
+        {
+            auto npc = ui.npcs->GetActiveObject();
+            if(npc)
+            {
+                highlight.insert(npc);
+            }
+        }
+        break;
+    case 2: // Objects
+        {
+            auto obj = ui.objects->GetActiveObject();
+            if(obj)
+            {
+                highlight.insert(obj);
+            }
+        }
+        break;
+    case 3: // Spawn Types
+        {
+            // If a SpawnLocationGroup is selected, highlight all bound
+            // spots
+            if(ui.tabSpawnTypes->currentIndex() == 2)
+            {
+                auto slg = std::dynamic_pointer_cast<
+                    objects::SpawnLocationGroup>(ui.spawnLocationGroups
+                        ->GetActiveObject());
+                if(slg)
+                {
+                    for(uint32_t spotID : slg->GetSpotIDs())
+                    {
+                        auto spotIter = spots.find(spotID);
+                        if(spotIter != spots.end())
+                        {
+                            highlight.insert(spotIter->second);
+                        }
+                    }
+                }
+            }
+        }
+        break;
+    case 4: // Spots
+        {
+            auto spot = ui.spots->GetActiveObject();
+            if(spot)
+            {
+                highlight.insert(spot);
+            }
+        }
+        break;
+    case 0: // Zone
+    default:
+        break;
+    }
+
+    // Draw spots
     QFont font = painter.font();
     font.setPixelSize(10);
     painter.setFont(font);
 
-    auto definitions = mMainWindow->GetDefinitions();
-
-    auto spots = definitions->GetSpotData(zone->GetDynamicMapID());
     for(auto spotPair : spots)
     {
-        float xc = spotPair.second->GetCenterX();
-        float yc = -spotPair.second->GetCenterY();
-        float rot = -spotPair.second->GetRotation();
-
-        float x1 = xc - spotPair.second->GetSpanX();
-        float y1 = yc + spotPair.second->GetSpanY();
-
-        float x2 = xc + spotPair.second->GetSpanX();
-        float y2 = yc - spotPair.second->GetSpanY();
-
-        std::vector<std::pair<float, float>> points;
-        points.push_back(std::pair<float, float>(x1, y1));
-        points.push_back(std::pair<float, float>(x2, y1));
-        points.push_back(std::pair<float, float>(x2, y2));
-        points.push_back(std::pair<float, float>(x1, y2));
-
-        for(auto& p : points)
+        if(highlight.find(spotPair.second) == highlight.end())
         {
-            float x = p.first;
-            float y = p.second;
-            p.first = (float)(((x - xc) * cos(rot)) -
-                ((y - yc) * sin(rot)) + xc);
-            p.second = (float)(((x - xc) * sin(rot)) +
-                ((y - yc) * cos(rot)) + yc);
+            DrawSpot(spotPair.second, false, painter);
         }
-
-        painter.drawLine(Scale(points[0].first), Scale(points[0].second),
-            Scale(points[1].first), Scale(points[1].second));
-        painter.drawLine(Scale(points[1].first), Scale(points[1].second),
-            Scale(points[2].first), Scale(points[2].second));
-        painter.drawLine(Scale(points[2].first), Scale(points[2].second),
-            Scale(points[3].first), Scale(points[3].second));
-        painter.drawLine(Scale(points[3].first), Scale(points[3].second),
-            Scale(points[0].first), Scale(points[0].second));
-
-        painter.drawText(QPoint(Scale(x1), Scale(y2)),
-            libcomp::String("[%1] %2").Arg(spotPair.second->GetType())
-            .Arg(spotPair.first).C());
     }
 
     // Draw the starting point
-    painter.setPen(QPen(Qt::magenta));
-    painter.setBrush(QBrush(Qt::magenta));
-
-    xVals.insert(mMergedZone->CurrentZone->GetStartingX());
-    yVals.insert(mMergedZone->CurrentZone->GetStartingY());
+    painter.setPen(QPen(COLOR_PLAYER));
+    painter.setBrush(QBrush(COLOR_PLAYER));
 
     painter.drawEllipse(QPoint(Scale(mMergedZone->CurrentZone->GetStartingX()),
         Scale(-mMergedZone->CurrentZone->GetStartingY())), 3, 3);
@@ -1783,46 +1817,44 @@ void ZoneWindow::DrawMap()
     // Draw NPCs
     if(ui.showNPCs->isChecked())
     {
-        painter.setPen(QPen(Qt::green));
-        painter.setBrush(QBrush(Qt::green));
-
         for(auto npc : zone->GetNPCs())
         {
-            float x = npc->GetX();
-            float y = npc->GetY();
-            float rot = npc->GetRotation();
-            GetSpotPosition(zone->GetDynamicMapID(), npc->GetSpotID(),
-                x, y, rot);
-
-            xVals.insert(x);
-            yVals.insert(y);
-            painter.drawEllipse(QPoint(Scale(x), Scale(-y)), 3, 3);
-
-            painter.drawText(QPoint(Scale(x + 20.f), Scale(-y)),
-                libcomp::String("%1").Arg(npc->GetID()).C());
+            if(highlight.find(npc) == highlight.end())
+            {
+                DrawNPC(npc, false, painter);
+            }
         }
     }
 
     // Draw Objects
     if(ui.showObjects->isChecked())
     {
-        painter.setPen(QPen(Qt::blue));
-        painter.setBrush(QBrush(Qt::blue));
-
         for(auto obj : zone->GetObjects())
         {
-            float x = obj->GetX();
-            float y = obj->GetY();
-            float rot = obj->GetRotation();
-            GetSpotPosition(zone->GetDynamicMapID(), obj->GetSpotID(),
-                x, y, rot);
+            if(highlight.find(obj) == highlight.end())
+            {
+                DrawObject(obj, false, painter);
+            }
+        }
+    }
 
-            xVals.insert(x);
-            yVals.insert(y);
-            painter.drawEllipse(QPoint(Scale(x), Scale(-y)), 3, 3);
-
-            painter.drawText(QPoint(Scale(x + 20.f), Scale(-y)),
-                libcomp::String("%1").Arg(obj->GetID()).C());
+    // Draw selected object on top of the others
+    for(auto h : highlight)
+    {
+        auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(h);
+        auto obj = std::dynamic_pointer_cast<objects::ServerObject>(h);
+        auto spot = std::dynamic_pointer_cast<objects::MiSpotData>(h);
+        if(npc)
+        {
+            DrawNPC(npc, true, painter);
+        }
+        else if(obj)
+        {
+            DrawObject(obj, true, painter);
+        }
+        else if(spot)
+        {
+            DrawSpot(spot, true, painter);
         }
     }
 
@@ -1835,6 +1867,112 @@ void ZoneWindow::DrawMap()
     ui.mapScrollArea->verticalScrollBar()->setValue(yScroll);
 }
 
+void ZoneWindow::DrawNPC(const std::shared_ptr<objects::ServerNPC>& npc,
+    bool selected, QPainter& painter)
+{
+    float x = npc->GetX();
+    float y = npc->GetY();
+    float rot = npc->GetRotation();
+    GetSpotPosition(mMergedZone->Definition->GetDynamicMapID(),
+        npc->GetSpotID(), x, y, rot);
+
+    if(selected)
+    {
+        painter.setPen(QPen(COLOR_SELECTED));
+        painter.setBrush(QBrush(COLOR_SELECTED));
+    }
+    else
+    {
+        painter.setPen(QPen(COLOR_NPC));
+        painter.setBrush(QBrush(COLOR_NPC));
+    }
+
+    painter.drawEllipse(QPoint(Scale(x), Scale(-y)), 3, 3);
+
+    painter.drawText(QPoint(Scale(x + 20.f), Scale(-y)),
+        libcomp::String("%1").Arg(npc->GetID()).C());
+}
+
+void ZoneWindow::DrawObject(const std::shared_ptr<objects::ServerObject>& obj,
+    bool selected, QPainter& painter)
+{   
+    float x = obj->GetX();
+    float y = obj->GetY();
+    float rot = obj->GetRotation();
+    GetSpotPosition(mMergedZone->Definition->GetDynamicMapID(),
+        obj->GetSpotID(), x, y, rot);
+
+    if(selected)
+    {
+        painter.setPen(QPen(COLOR_SELECTED));
+        painter.setBrush(QBrush(COLOR_SELECTED));
+    }
+    else
+    {
+        painter.setPen(QPen(COLOR_OBJECT));
+        painter.setBrush(QBrush(COLOR_OBJECT));
+    }
+
+    painter.drawEllipse(QPoint(Scale(x), Scale(-y)), 3, 3);
+
+    painter.drawText(QPoint(Scale(x + 20.f), Scale(-y)),
+        libcomp::String("%1").Arg(obj->GetID()).C());
+}
+
+void ZoneWindow::DrawSpot(const std::shared_ptr<objects::MiSpotData>& spotDef,
+    bool selected, QPainter& painter)
+{
+    float xc = spotDef->GetCenterX();
+    float yc = -spotDef->GetCenterY();
+    float rot = -spotDef->GetRotation();
+
+    float x1 = xc - spotDef->GetSpanX();
+    float y1 = yc + spotDef->GetSpanY();
+
+    float x2 = xc + spotDef->GetSpanX();
+    float y2 = yc - spotDef->GetSpanY();
+
+    std::vector<std::pair<float, float>> points;
+    points.push_back(std::pair<float, float>(x1, y1));
+    points.push_back(std::pair<float, float>(x2, y1));
+    points.push_back(std::pair<float, float>(x2, y2));
+    points.push_back(std::pair<float, float>(x1, y2));
+
+    for(auto& p : points)
+    {
+        float x = p.first;
+        float y = p.second;
+        p.first = (float)(((x - xc) * cos(rot)) -
+            ((y - yc) * sin(rot)) + xc);
+        p.second = (float)(((x - xc) * sin(rot)) +
+            ((y - yc) * cos(rot)) + yc);
+    }
+
+    if(selected)
+    {
+        painter.setPen(QPen(COLOR_SELECTED));
+        painter.setBrush(QBrush(COLOR_SELECTED));
+    }
+    else
+    {
+        painter.setPen(QPen(COLOR_SPOT));
+        painter.setBrush(QBrush(COLOR_SPOT));
+    }
+
+    painter.drawLine(Scale(points[0].first), Scale(points[0].second),
+        Scale(points[1].first), Scale(points[1].second));
+    painter.drawLine(Scale(points[1].first), Scale(points[1].second),
+        Scale(points[2].first), Scale(points[2].second));
+    painter.drawLine(Scale(points[2].first), Scale(points[2].second),
+        Scale(points[3].first), Scale(points[3].second));
+    painter.drawLine(Scale(points[3].first), Scale(points[3].second),
+        Scale(points[0].first), Scale(points[0].second));
+
+    painter.drawText(QPoint(Scale(x1), Scale(y2)),
+        libcomp::String("[%1] %2").Arg(spotDef->GetType())
+        .Arg(spotDef->GetID()).C());
+}
+
 int32_t ZoneWindow::Scale(int32_t point)
 {
     return (int32_t)(point / ui.zoomSlider->value());
@@ -1842,5 +1980,5 @@ int32_t ZoneWindow::Scale(int32_t point)
 
 int32_t ZoneWindow::Scale(float point)
 {
-    return (int32_t)(point / ui.zoomSlider->value());
+    return (int32_t)(point / (float)ui.zoomSlider->value());
 }

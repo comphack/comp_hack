@@ -71,7 +71,7 @@ bool ObjectSelector::Bind(MainWindow *pMainWindow,
 
 void ObjectSelector::SetValue(uint32_t value)
 {
-    ui->value->setValue(value);
+    ui->value->setValue((int32_t)value);
 }
 
 uint32_t ObjectSelector::GetValue() const

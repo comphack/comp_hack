@@ -99,14 +99,6 @@ void ObjectSelectorList::LoadIfNeeded()
     }
 }
 
-void ObjectSelectorList::LoadProperties(const std::shared_ptr<
-    libcomp::Object>& obj)
-{
-    (void)obj;
-
-    emit selectedObjectChanged();
-}
-
 std::shared_ptr<libcomp::Object> ObjectSelectorList::GetSelectedObject()
 {
     return mActiveObject.lock();

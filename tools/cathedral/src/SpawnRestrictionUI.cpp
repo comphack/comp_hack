@@ -124,7 +124,7 @@ void SpawnRestriction::Load(const std::shared_ptr<objects::SpawnRestriction>& re
         moonControls[i]->setChecked((moonRestrict & (1 << i)) != 0);
     }
 
-    uint16_t dayRestrict = restrict->GetDayRestriction();
+    uint8_t dayRestrict = restrict->GetDayRestriction();
     for(size_t i = 0; i < 7; i++)
     {
         dayControls[i]->setChecked((dayRestrict & (1 << i)) != 0);
@@ -189,12 +189,12 @@ std::shared_ptr<objects::SpawnRestriction> SpawnRestriction::Save() const
     }
     restrict->SetMoonRestriction(moonRestrict);
 
-    uint16_t dayRestrict = 0;
+    uint8_t dayRestrict = 0;
     for(size_t i = 0; i < 7; i++)
     {
         if(dayControls[i]->isChecked())
         {
-            dayRestrict = (uint16_t)(dayRestrict | (1 << i));
+            dayRestrict = (uint8_t)(dayRestrict | (1 << i));
         }
     }
     restrict->SetDayRestriction(dayRestrict);

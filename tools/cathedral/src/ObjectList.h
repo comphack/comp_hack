@@ -75,6 +75,9 @@ public:
 
     void SetReadOnly(bool readOnly);
 
+signals:
+    void selectedObjectChanged();
+
 public slots:
     virtual void Search(const QString& term);
     virtual void SelectedObjectChanged();

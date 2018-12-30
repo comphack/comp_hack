@@ -79,6 +79,8 @@ void ObjectList::Search(const QString& term)
 QString ObjectList::GetObjectID(const std::shared_ptr<
     libcomp::Object>& obj) const
 {
+    (void)obj;
+
     return {};
 }
 
@@ -168,6 +170,8 @@ void ObjectList::SelectedObjectChanged()
     }
 
     LoadProperties(mActiveObject.lock());
+
+    emit selectedObjectChanged();
 }
 
 std::map<uint32_t, QString> ObjectList::GetObjectMapping() const

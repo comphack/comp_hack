@@ -268,9 +268,9 @@ void XmlHandler::CorrectMap(tinyxml2::XMLNode* parentNode)
         pair = pair->NextSibling();
     }
 
-    for(auto& pair : mapped)
+    for(auto& mPair : mapped)
     {
-        parentNode->InsertEndChild(pair.second);
+        parentNode->InsertEndChild(mPair.second);
     }
 }
 

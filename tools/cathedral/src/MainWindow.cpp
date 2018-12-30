@@ -367,17 +367,17 @@ bool MainWindow::LoadBinaryData(const libcomp::String& binaryFile,
 
     auto path = libcomp::String("/BinaryData/") + binaryFile;
 
-    std::vector<char> data;
+    std::vector<char> bytes;
     if(decrypt)
     {
-        data = mDatastore->DecryptFile(path);
+        bytes = mDatastore->DecryptFile(path);
     }
     else
     {
-        data = mDatastore->ReadFile(path);
+        bytes = mDatastore->ReadFile(path);
     }
 
-    if(data.empty())
+    if(bytes.empty())
     {
         return false;
     }
@@ -387,7 +387,7 @@ bool MainWindow::LoadBinaryData(const libcomp::String& binaryFile,
             .Arg(binaryFile));
     }
 
-    std::stringstream ss(std::string(data.begin(), data.end()));
+    std::stringstream ss(std::string(bytes.begin(), bytes.end()));
     if(dataset->Load(ss, true))
     {
         auto namedSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
@@ -433,6 +433,8 @@ void MainWindow::CloseAllWindows()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
+    (void)event;
+
     CloseAllWindows();
 }
 

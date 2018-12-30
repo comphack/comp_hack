@@ -29,7 +29,6 @@
 // Qt Includes
 #include <PushIgnore.h>
 #include <QLabel>
-#include <QTableWidgetItem>
 
 #include "ui_ZoneWindow.h"
 #include <PopIgnore.h>
@@ -42,8 +41,11 @@ namespace objects
 {
 
 class Action;
+class MiSpotData;
 class MiZoneData;
 class QmpFile;
+class ServerNPC;
+class ServerObject;
 class ServerZone;
 class ServerZonePartial;
 
@@ -97,6 +99,7 @@ protected slots:
     void RemoveSpawn();
 
     void ZoneViewUpdated();
+    void SelectListObject();
     void SpawnTabChanged();
 
     void Zoom();
@@ -126,10 +129,14 @@ private:
     void BindSpawns();
     void BindSpots();
 
-    QTableWidgetItem* GetTableWidget(std::string name,
-        bool readOnly = true);
-
     void DrawMap();
+
+    void DrawNPC(const std::shared_ptr<objects::ServerNPC>& npc,
+        bool selected, QPainter& painter);
+    void DrawObject(const std::shared_ptr<objects::ServerObject>& obj,
+        bool selected, QPainter& painter);
+    void DrawSpot(const std::shared_ptr<objects::MiSpotData>& spotDef,
+        bool selected, QPainter& painter);
 
     int32_t Scale(int32_t point);
     int32_t Scale(float point);

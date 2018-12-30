@@ -26,6 +26,7 @@
 
 #include "Updater.h"
 #include "Downloader.h"
+#include "Options.h"
 
 #include <PushIgnore.h>
 #include <QMenu>
@@ -350,6 +351,7 @@ void Updater::unlock()
 
     ui.playButton->setMenu(playMenu);
     ui.playButton->setEnabled(true);
+    ui.settingsButton->setEnabled(true);
 }
 
 bool Updater::copyFile(const QString& src, const QString& dest)
@@ -438,7 +440,7 @@ void Updater::closeEvent(QCloseEvent *evt)
 void Updater::showSettings()
 {
 #ifdef Q_OS_WIN32
-    QProcess::startDetached("ImagineOption.exe");
+    (new Options(this))->show();
 #else
     QProcess::startDetached("env WINEPREFIX=\"/home/erikku/.wine\" wine "
         "\"C:\\AeriaGames\\MegaTen\\ImagineOption.exe\"");
@@ -481,6 +483,7 @@ void Updater::recheck()
 
     QFile(path).remove();
 
+    ui.settingsButton->setEnabled(false);
     ui.playButton->setEnabled(false);
 
     ui.fileProgress->setMaximum(100);
@@ -519,4 +522,29 @@ void Updater::errorMessage(const QString& msg)
     QMessageBox::critical(this, tr("Updater Error"), msg);
 
     qApp->quit();
+}
+
+void Updater::ReloadURL()
+{
+    QString settingsPath = "ImagineUpdate.dat";
+
+    if(QFileInfo("ImagineUpdate-user.dat").exists())
+    {
+        settingsPath = "ImagineUpdate-user.dat";
+    }
+
+    QSettings settings(settingsPath, QSettings::IniFormat);
+
+    mURL = settings.value("Setting/BaseURL1").toString();
+    mWebsite = settings.value("Setting/Information").toString();
+
+    ui.website->load(mWebsite);
+
+    ui.settingsButton->setEnabled(false);
+    ui.playButton->setEnabled(false);
+
+    mDL->setURL(mURL);
+    mDownloadThread.start();
+
+    ui.retranslateUi(this);
 }

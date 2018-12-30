@@ -32,30 +32,44 @@ IF(WIN32)
     FIND_PACKAGE(Qt5WebEngine REQUIRED)
     FIND_PACKAGE(Qt5WebEngineWidgets REQUIRED)
     FIND_PACKAGE(Qt5Xml REQUIRED)
+    FIND_PACKAGE(Qt5LinguistTools REQUIRED)
 
     MESSAGE("** Configuring ${PROJECT_NAME} **")
 
     SET(${PROJECT_NAME}_SRCS
         src/Downloader.cpp
+        src/LanguageSelection.cpp
+        src/Options.cpp
         src/Updater.cpp
         src/main.cpp
     )
 
     SET(${PROJECT_NAME}_HDRS
         src/Downloader.h
+        src/LanguageSelection.h
+        src/Options.h
         src/Updater.h
     )
 
     SET(${PROJECT_NAME}_UIS
+        ui/LanguageSelection.ui
+        ui/Options.ui
         ui/Updater.ui
     )
     qt5_wrap_ui(${PROJECT_NAME}_UI_SRCS ${${PROJECT_NAME}_UIS})
+
+    qt5_create_translation(QM_FILES ${${PROJECT_NAME}_SRCS}
+        ${${PROJECT_NAME}_HDRS} ${${PROJECT_NAME}_RCC_SRCS}
+        ${${PROJECT_NAME}_UI_SRCS} trans/updater_en_US.ts
+        trans/updater_ja_JP.ts trans/updater_ru_RU.ts)
 
     RES_WRAP(${PROJECT_NAME}_SRCS res/updater.rc)
 
     ADD_EXECUTABLE(${PROJECT_NAME} WIN32 ${${PROJECT_NAME}_SRCS}
         ${${PROJECT_NAME}_HDRS} ${${PROJECT_NAME}_RCC_SRCS}
-        ${${PROJECT_NAME}_UI_SRCS})
+        ${${PROJECT_NAME}_UI_SRCS} ${QM_FILES})
+
+    ADD_QT_DEPS(${PROJECT_NAME})
 
     IF(MINGW)
         SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINK_FLAGS -mwindows)
@@ -73,5 +87,9 @@ IF(WIN32)
         Qt5::WebEngineWidgets Qt5::Xml zlib)
 
     INSTALL(TARGETS ${PROJECT_NAME} DESTINATION ${COMP_INSTALL_DIR} COMPONENT tools)
+
+    FOREACH(qm_file ${QM_FILES})
+        INSTALL(FILES ${qm_file} DESTINATION translations COMPONENT tools)
+    ENDFOREACH(qm_file)
 
 ENDIF(WIN32)

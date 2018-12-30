@@ -1,10 +1,10 @@
 /**
- * @file tools/updater/src/Updater.h
+ * @file tools/updater/src/Options.h
  * @ingroup tools
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief GUI for the updater.
+ * @brief GUI for the options.
  *
  * This tool will update the game client.
  *
@@ -24,64 +24,50 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_UPDATER_SRC_UPDATER_H
-#define TOOLS_UPDATER_SRC_UPDATER_H
+#ifndef TOOLS_UPDATER_SRC_OPTIONS_H
+#define TOOLS_UPDATER_SRC_OPTIONS_H
 
 #include <PushIgnore.h>
-#include "ui_Updater.h"
+#include "ui_Options.h"
 
-#include <QMap>
-#include <QThread>
+#include <QDialog>
 #include <PopIgnore.h>
 
-class Downloader;
+#ifdef Q_OS_WIN32
 
-class VersionData
-{
-public:
-    QString title;
-    QString server;
-    QString tag;
+#include <PushIgnore.h>
+#include <d3d9.h>
+#include <PopIgnore.h>
 
-    QMap<QString, QString> files;
-};
-
-class Updater : public QWidget
+class Options : public QDialog
 {
     Q_OBJECT
 
 public:
-    Updater(QWidget *parent = 0);
-    ~Updater();
-
-    void ReloadURL();
+    Options(QWidget *parent = 0);
+    ~Options();
 
 protected slots:
-    void unlock();
-    void startGame();
-    void showSettings();
-    void showScreenshots();
-    void showDXDiag();
-    void recheck();
+    void UpdatePresetToggle(bool toggled);
+    void UpdateCustomToggle(bool toggled);
 
-    void errorMessage(const QString& msg);
+    void Load();
+    void Save();
+
+    void LanguageChanged();
 
 protected:
-    virtual void closeEvent(QCloseEvent *event);
+    virtual void changeEvent(QEvent *pEvent);
 
-    bool copyFile(const QString& src, const QString& dest);
+    void PopulateAdapterModes();
 
-    bool mDone;
+    IDirect3D9 *mD3D9;
 
-    QString mURL;
-    QString mWebsite;
+    QList< QPair<int, int> > mScreenSizes;
 
-    Downloader *mDL;
-    QThread mDownloadThread;
-
-    QMap<QString, VersionData*> mVersionMap;
-
-    Ui::Updater ui;
+    Ui::Options ui;
 };
 
-#endif // TOOLS_UPDATER_SRC_UPDATER_H
+#endif // Q_OS_WIN32
+
+#endif // TOOLS_UPDATER_SRC_OPTIONS_H

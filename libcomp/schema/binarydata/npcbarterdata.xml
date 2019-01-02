@@ -5,12 +5,15 @@
             <value num="0">NONE</value>
             <value num="1">ITEM</value>
             <value num="2">ONE_TIME_VALUABLE</value>
+            <value num="3">STATUS_CHARACTER</value>
             <value num="4">EVENT_COUNTER</value>
             <value num="5">COOLDOWN</value>
             <value num="8">BETHEL</value>
+            <value num="9">STATUS_DEMON</value>
+            <value num="10">STATUS_CHARACTER_AND_DEMON</value>
             <value num="11">SKILL_CHARACTER</value>
-            <value num="13">SOUL_POINT</value>
             <value num="12">SKILL_DEMON</value>
+            <value num="13">SOUL_POINT</value>
             <value num="14">PLUGIN</value>
             <value num="15">COIN</value>
         </member>
@@ -18,13 +21,52 @@
         <member type="s32" name="amount"/>
     </object>
     <object name="MiNPCBarterData" persistent="false">
-        <member type="u16" name="ID"/>
-        <member type="u16" name="unk1"/>
+        <member type="u16" name="ID" pad="2"/>
         <member type="array" size="4" name="resultItems">
             <element type="MiNPCBarterItemData*"/>
         </member>
         <member type="array" size="10" name="tradeItems">
             <element type="MiNPCBarterItemData*"/>
         </member>
+    </object>
+    <object name="MiNPCBarterConditionDataEntry" persistent="false">
+        <member type="enum" name="type" underlying="uint8_t" pad="3">
+            <value num="0">NONE</value>
+            <value num="1">CHARACTER_LEVEL</value>
+            <value num="2">DEMON_LEVEL</value>
+            <value num="3">CHARACTER_SKILL</value>
+            <value num="4">DEMON_SKILL</value>
+            <value num="5">DEMON_SKILL_INHERITANCE</value>
+            <value num="6">CHARACTER_NO_STATUS</value>
+            <value num="7">DEMON_NO_STATUS</value>
+            <value num="8">CHARACTER_NO_SKILL</value>
+            <value num="9">DEMON_TYPE</value>
+            <value num="10">DEMON_BASE_TYPE</value>
+        </member>
+        <member type="s32" name="value1"/>
+        <member type="s32" name="value2"/>
+    </object>
+    <object name="MiNPCBarterConditionData" persistent="false">
+        <member type="u16" name="ID" pad="2"/>
+        <member type="array" size="20" name="conditions">
+            <element type="MiNPCBarterConditionDataEntry*"/>
+        </member>
+    </object>
+    <object name="MiNPCBarterGroupEntry" persistent="false">
+        <member type="u16" name="barterID"/>
+        <member type="u8" name="flags" pad="1"/>
+    </object>
+    <object name="MiNPCBarterGroupData" persistent="false">
+        <member type="u16" name="ID"/>
+        <member type="u16" name="displayMode"/>
+        <member type="array" size="64" name="entries">
+            <element type="MiNPCBarterGroupEntry*"/>
+        </member>
+    </object>
+    <object name="MiNPCBarterTextData" persistent="false">
+        <member type="u16" name="ID" pad="2"/>
+        <member type="string" name="introText" encoding="cp932"/>
+        <member type="string" name="choiceText" encoding="cp932"/>
+        <member type="string" name="tradeText" encoding="cp932"/>
     </object>
 </objgen>

@@ -85,11 +85,24 @@
 
     <!-- BinaryData Files -->
     <include path="binarydata/aidata.xml"/>
+    <include path="binarydata/bazaarclerknpcdata.xml"/>
     <include path="binarydata/blenddata.xml"/>
+    <include path="binarydata/cchanceitemdata.xml"/>
+    <include path="binarydata/cculturedata.xml"/>
+    <include path="binarydata/cdevilbookbonusdata.xml"/>
+    <include path="binarydata/cdevilbookbonusmitamadata.xml"/>
+    <include path="binarydata/cdevildungeondata.xml"/>
+    <include path="binarydata/cdevilequipmentexclusivedata.xml"/>
+    <include path="binarydata/cequipmodeldata.xml"/>
     <include path="binarydata/ceventmessagedata.xml"/>
+    <include path="binarydata/cguardianassistdata.xml"/>
+    <include path="binarydata/chelpdata.xml"/>
     <include path="binarydata/chouraidata.xml"/>
     <include path="binarydata/cicondata.xml"/>
     <include path="binarydata/citemdata.xml"/>
+    <include path="binarydata/ckeyitemdata.xml"/>
+    <include path="binarydata/cloadingcommercialdata.xml"/>
+    <include path="binarydata/cmapdata.xml"/>
     <include path="binarydata/cmessagedata.xml"/>
     <include path="binarydata/cmodeldata.xml"/>
     <include path="binarydata/cmodifiedeffectdata.xml"/>
@@ -97,10 +110,16 @@
     <include path="binarydata/codenamedata.xml"/>
     <include path="binarydata/cpolygonmoviedata.xml"/>
     <include path="binarydata/cquest.xml"/>
+    <include path="binarydata/cskilldata.xml"/>
     <include path="binarydata/csounddata.xml"/>
+    <include path="binarydata/cspecialskilleffectdata.xml"/>
+    <include path="binarydata/cstatusdata.xml"/>
     <include path="binarydata/ctalkmessagedata.xml"/>
+    <include path="binarydata/ctimeattackdata.xml"/>
+    <include path="binarydata/ctitledata.xml"/>
+    <include path="binarydata/ctransformedmodeldata.xml"/>
     <include path="binarydata/cultureitemdata.xml"/>
-    <include path="binarydata/czonerelationdata.xml"/>
+    <include path="binarydata/cvaluablesdata.xml"/>
     <include path="binarydata/devilbookdata.xml"/>
     <include path="binarydata/devilboostdata.xml"/>
     <include path="binarydata/devildata.xml"/>
@@ -115,6 +134,7 @@
     <include path="binarydata/expertdata.xml"/>
     <include path="binarydata/fusiondata.xml"/>
     <include path="binarydata/guardiandata.xml"/>
+    <include path="binarydata/gvgtrophydata.xml"/>
     <include path="binarydata/hnpcdata.xml"/>
     <include path="binarydata/itemdata.xml"/>
     <include path="binarydata/mitamadata.xml"/>
@@ -122,7 +142,9 @@
     <include path="binarydata/modificationdata.xml"/>
     <include path="binarydata/npcbarterdata.xml"/>
     <include path="binarydata/onpcdata.xml"/>
+    <include path="binarydata/questbonusdata.xml"/>
     <include path="binarydata/questdata.xml"/>
+    <include path="binarydata/reporttypedata.xml"/>
     <include path="binarydata/shared.xml"/>
     <include path="binarydata/shopproductdata.xml"/>
     <include path="binarydata/sitemdata.xml"/>
@@ -131,8 +153,10 @@
     <include path="binarydata/sstatusdata.xml"/>
     <include path="binarydata/statusdata.xml"/>
     <include path="binarydata/synthesisdata.xml"/>
+    <include path="binarydata/tankdata.xml"/>
     <include path="binarydata/timelimitdata.xml"/>
     <include path="binarydata/triunionspecialdata.xml"/>
+    <include path="binarydata/uiinfodata.xml"/>
     <include path="binarydata/urafieldtowerdata.xml"/>
     <include path="binarydata/warppointdata.xml"/>
     <include path="binarydata/zonedata.xml"/>

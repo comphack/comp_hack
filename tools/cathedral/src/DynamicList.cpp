@@ -679,7 +679,7 @@ std::list<std::shared_ptr<objects::ObjectPosition>>
     DynamicList::GetObjectList() const
 {
     std::list<std::shared_ptr<objects::ObjectPosition>> result;
-    if(mType != DynamicItemType_t::OBJ_ITEM_DROP)
+    if(mType != DynamicItemType_t::OBJ_OBJECT_POSITION)
     {
         LOG_ERROR("Attempted to retrieve an ObjectPosition list from a"
             " differing DynamicList type\n");

@@ -13,17 +13,17 @@
         <member type="array" size="8" name="bonus">
             <element type="s32"/>
         </member>
-        <member type="string" name="bonusDescription"/>
+        <member type="string" name="bonusDescription" encoding="cp932"/>
         <member type="array" size="8" name="bonusEx">
             <element type="s32"/>
         </member>
-        <member type="string" name="bonusExDescription"/>
+        <member type="string" name="bonusExDescription" encoding="cp932"/>
     </object>
     <object name="MiMitamaUnionBonusData" persistent="false">
         <member type="u32" name="ID"/>
         <member type="array" size="6" name="bonus">
             <element type="s32"/>
         </member>
-        <member type="string" name="description"/>
+        <member type="string" name="description" encoding="cp932"/>
     </object>
 </objgen>

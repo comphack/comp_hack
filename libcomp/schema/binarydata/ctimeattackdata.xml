@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCTimeAttackData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="s8" name="type"/>
+        <member type="s8" name="sortOrder" pad="2"/>
+        <member type="string" name="name" encoding="cp932" length="36"/>
+        <member type="string" name="instanceName" encoding="cp932"
+            length="36"/>
+        <member type="string" name="desc1" encoding="cp932" length="260"/>
+        <member type="string" name="desc2" encoding="cp932" length="260"/>
+        <member type="string" name="unk1" encoding="cp932" length="260"/>
+        <member type="string" name="unk2" encoding="cp932" length="260"/>
+        <member type="string" name="unk3" encoding="cp932" length="260"/>
+        <member type="string" name="unk4" encoding="cp932" length="260"/>
+        <member type="string" name="unk5" encoding="cp932" length="260"/>
+        <member type="string" name="unk6" encoding="cp932" length="260"/>
+        <member type="string" name="unk7" encoding="cp932" length="260"/>
+        <member type="array" size="4" name="rankTimes">
+            <element type="u16"/>
+        </member>
+    </object>
+</objgen>

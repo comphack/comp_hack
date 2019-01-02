@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiUIInfoData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="ui2"/>
+        <member type="s32" name="ui3"/>
+        <member type="s32" name="ui4"/>
+        <member type="s32" name="ui5"/>
+        <member type="s32" name="ui6"/>
+        <member type="s32" name="ui7"/>
+        <member type="string" name="text" encoding="cp932" length="260"/>
+        <member type="u32" name="ui9"/>
+        <member type="s32" name="ui10"/>
+        <member type="s32" name="ui11"/>
+        <member type="s8" name="ui12"/>
+        <member type="s8" name="ui13"/>
+        <member type="s8" name="ui14"/>
+        <member type="s8" name="ui15"/>
+        <member type="s8" name="ui16"/>
+        <member type="s8" name="ui17"/>
+        <member type="s8" name="ui18"/>
+        <member type="s8" name="ui19"/>
+        <member type="u32" name="ui20"/>
+        <member type="s32" name="ui21"/>
+        <member type="s32" name="ui22"/>
+        <member type="s32" name="ui23"/>
+        <member type="s32" name="ui24"/>
+        <member type="s32" name="ui25"/>
+        <member type="s32" name="ui26"/>
+        <member type="s32" name="ui27"/>
+        <member type="s32" name="ui28"/>
+    </object>
+</objgen>

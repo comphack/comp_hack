@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
     <object name="MiMissionExit" persistent="false" scriptenabled="true">
-        <member type="string" name="name" length="36"/>
+        <member type="string" name="name" encoding="cp932" length="36"/>
         <member type="u32" name="zoneGroup"/>
         <member type="u32" name="zoneID"/>
         <member type="float" name="x"/>
@@ -17,7 +17,7 @@
         <member type="array" size="4" name="exits">
             <element type="MiMissionExit*"/>
         </member>
-        <member type="string" name="description"/>
+        <member type="string" name="description" encoding="cp932"/>
         <member type="s32" name="timerType"/>
     </object>
 </objgen>

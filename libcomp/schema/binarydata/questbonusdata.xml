@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiQuestBonusData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="s32" name="questCount"/>
+        <member type="s16" name="effect1"/>
+        <member type="s16" name="boost1"/>
+        <member type="s32" name="fixed1"/>
+        <member type="s16" name="effect2"/>
+        <member type="s16" name="boost2"/>
+        <member type="s32" name="fixed2"/>
+        <member type="s16" name="effect3"/>
+        <member type="s16" name="boost3"/>
+        <member type="s32" name="fixed3"/>
+        <member type="string" name="description" encoding="cp932" length="68"/>
+    </object>
+</objgen>

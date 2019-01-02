@@ -10,8 +10,8 @@
         </member>
     </object>
     <object name="MiEnchantCharasticData" persistent="false">
-        <member type="string" length="36" name="name"/>
-        <member type="string" length="1028" name="desc"/>
+        <member type="string" name="name" encoding="cp932" length="36"/>
+        <member type="string" name="desc" encoding="cp932" length="1028"/>
         <member type="u8" name="equipLevel" pad="3"/>
         <member type="s16" name="difficulty"/>
         <member type="u16" name="equipTypes"/>

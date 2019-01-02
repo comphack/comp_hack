@@ -40,7 +40,6 @@
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 #include <MiCultureItemData.h>
-#include <MiCZoneRelationData.h>
 #include <MiDamageData.h>
 #include <MiDCategoryData.h>
 #include <MiDevilBookData.h>
@@ -94,6 +93,7 @@
 #include <MiSStatusData.h>
 #include <MiStatusData.h>
 #include <MiSynthesisData.h>
+#include <MiTankData.h>
 #include <MiTimeLimitData.h>
 #include <MiTitleData.h>
 #include <MiTriUnionSpecialData.h>
@@ -642,6 +642,12 @@ std::unordered_map<uint32_t, std::shared_ptr<objects::MiSynthesisData>>
     return mSynthesisData;
 }
 
+std::unordered_map<uint32_t, std::shared_ptr<objects::MiTankData>>
+    DefinitionManager::GetTankData()
+{
+    return mTankData;
+}
+
 const std::shared_ptr<objects::MiTimeLimitData>
     DefinitionManager::GetTimeLimitData(uint32_t id)
 {
@@ -716,12 +722,6 @@ const std::shared_ptr<objects::MiZoneData>
     DefinitionManager::GetZoneData(uint32_t id)
 {
     return GetRecordByID(id, mZoneData);
-}
-
-const std::shared_ptr<objects::MiCZoneRelationData>
-    DefinitionManager::GetZoneRelationData(uint32_t id)
-{
-    return GetRecordByID(id, mZoneRelationData);
 }
 
 const std::shared_ptr<objects::EnchantSetData>
@@ -888,21 +888,6 @@ namespace libcomp
         for(auto record : records)
         {
             mCultureItemData[record->GetID()] = record;
-        }
-
-        return success;
-    }
-
-    template <>
-    bool DefinitionManager::LoadData<objects::MiCZoneRelationData>(
-        gsl::not_null<DataStore*> pDataStore)
-    {
-        std::list<std::shared_ptr<objects::MiCZoneRelationData>> records;
-        bool success = LoadBinaryData<objects::MiCZoneRelationData>(pDataStore,
-            "Shield/CZoneRelationData.sbin", true, 0, records);
-        for(auto record : records)
-        {
-            mZoneRelationData[record->GetID()] = record;
         }
 
         return success;
@@ -1699,6 +1684,21 @@ namespace libcomp
     }
 
     template <>
+    bool DefinitionManager::LoadData<objects::MiTankData>(
+        gsl::not_null<DataStore*> pDataStore)
+    {
+        std::list<std::shared_ptr<objects::MiTankData>> records;
+        bool success = LoadBinaryData<objects::MiTankData>(pDataStore,
+            "Shield/TankData.sbin", true, 0, records);
+        for(auto record : records)
+        {
+            mTankData[record->GetID()] = record;
+        }
+
+        return success;
+    }
+
+    template <>
     bool DefinitionManager::LoadData<objects::MiTimeLimitData>(
         gsl::not_null<DataStore*> pDataStore)
     {
@@ -1860,6 +1860,7 @@ bool DefinitionManager::LoadAllData(DataStore *pDataStore)
     success &= LoadData<objects::MiSkillData>(pDataStore);
     success &= LoadData<objects::MiStatusData>(pDataStore);
     success &= LoadData<objects::MiSynthesisData>(pDataStore);
+    success &= LoadData<objects::MiTankData>(pDataStore);
     success &= LoadData<objects::MiTimeLimitData>(pDataStore);
     success &= LoadData<objects::MiTitleData>(pDataStore);
     success &= LoadData<objects::MiTriUnionSpecialData>(pDataStore);

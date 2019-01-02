@@ -3,11 +3,11 @@
     <object name="MiDynamicMapData" persistent="false" scriptenabled="true">
         <member type="u32" name="id" caps="true"/>
         <member type="string" length="36" name="spotDataFile"/>
-        <member type="string" length="36" name="unk2"/>
-        <member type="string" length="36" name="unk3"/>
-        <member type="string" length="36" name="unk4"/>
-        <member type="string" length="36" name="unk5"/>
-        <member type="string" length="36" name="unk6"/>
-        <member type="string" length="36" name="unk7"/>
+        <member type="string" length="36" name="enemyFile"/>
+        <member type="string" length="36" name="npcFile"/>
+        <member type="string" length="36" name="eventFile"/>
+        <member type="string" length="36" name="eventFile2"/>
+        <member type="string" length="36" name="groupFile"/>
+        <member type="string" length="36" name="unitFile"/>
     </object>
 </objgen>

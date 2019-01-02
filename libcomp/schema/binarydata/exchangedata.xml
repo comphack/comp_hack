@@ -5,7 +5,7 @@
         <member type="u16" name="stackSize" pad="2"/>
     </object>
     <object name="MiExchangeOptionData" persistent="false">
-        <member type="string" length="68" name="name"/>
+        <member type="string" name="name" encoding="cp932" length="68"/>
         <member type="array" size="8" name="items">
             <element type="MiExchangeObjectData*"/>
         </member>

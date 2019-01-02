@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiBazaarClerkNPCData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="npcID"/>
+        <member type="u32" name="unk"/>
+        <member type="array" size="3" name="messageIDs">
+            <element type="u32"/>
+        </member>
+    </object>
+</objgen>

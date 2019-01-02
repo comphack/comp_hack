@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiFacilityData" persistent="false">
+        <member type="u32" name="type"/>
+        <member type="float" name="x"/>
+        <member type="float" name="y"/>
+        <member type="string" name="text" encoding="cp932" length="260"/>
+    </object>
+    <object name="MiZoneChangeData" persistent="false">
+        <member type="u32" name="type"/>
+        <member type="float" name="x"/>
+        <member type="float" name="y"/>
+        <member type="string" name="text" encoding="cp932" length="260"/>
+    </object>
+    <object name="MiCMapData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="float" name="xOffset"/>
+        <member type="float" name="yOffset"/>
+        <member type="bool" name="startObtained"/>
+        <member type="bool" name="showMap"/>
+        <member type="u16" name="mapID"/>
+        <member type="u32" name="zoneID"/>
+        <member type="array" name="facilities" size="16">
+            <element type="MiFacilityData*"/>
+        </member>
+        <member type="array" name="zoneChanges" size="8">
+            <element type="MiZoneChangeData*"/>
+        </member>
+    </object>
+</objgen>

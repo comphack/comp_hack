@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCSpecialSkillEffectData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="skillID"/>
+        <member type="u32" name="itemID"/>
+        <member type="u16" name="unk1" pad="2"/>
+        <member type="u32" name="unk2"/>
+        <member type="string" name="effect1"/>
+        <member type="string" name="effect2"/>
+        <member type="string" name="effect3"/>
+        <member type="string" name="effect4"/>
+        <member type="string" name="effect5"/>
+        <member type="string" name="effect6"/>
+        <member type="string" name="effect7"/>
+        <member type="string" name="effect8"/>
+        <member type="string" name="effect9"/>
+        <member type="string" name="effect10"/>
+        <member type="string" name="effect11"/>
+        <member type="string" name="effect12"/>
+        <member type="string" name="effect13"/>
+        <member type="string" name="effect14"/>
+        <member type="string" name="effect15"/>
+        <member type="string" name="effect16"/>
+        <member type="string" name="effect17"/>
+        <member type="string" name="effect18"/>
+        <member type="string" name="effect19"/>
+        <member type="string" name="effect20"/>
+    </object>
+</objgen>

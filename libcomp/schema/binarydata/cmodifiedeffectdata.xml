@@ -2,9 +2,8 @@
 <objgen>
     <object name="MiCModifiedEffectData" persistent="false">
         <member type="u16" name="ID"/>
-        <member type="s8" name="Unk1"/>
-        <member type="u8" name="Unk2"/>
-        <member type="string" encoding="cp932" length="36" name="Name"/>
-        <member type="string" encoding="cp932" length="260" name="Desc"/>
+        <member type="s8" name="sequenceID" pad="1"/>
+        <member type="string" name="name" encoding="cp932" length="36"/>
+        <member type="string" name="desc" encoding="cp932" length="260"/>
     </object>
 </objgen>

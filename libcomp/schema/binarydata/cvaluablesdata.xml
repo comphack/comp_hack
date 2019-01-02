@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCValuablesData" persistent="false">
+        <member type="u16" name="ID"/>
+        <member type="u16" name="sortOrder"/>
+        <member type="string" name="name" encoding="cp932" length="36"/>
+        <member type="string" name="desc" encoding="cp932" length="204"/>
+        <member type="s8" name="hidden" pad="3"/>
+    </object>
+</objgen>

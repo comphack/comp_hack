@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiGvGTrophyData" persistent="false">
+        <member type="u8" name="ID"/>
+        <member type="u8" name="mode"/>
+        <member type="u16" name="bonus"/>
+        <member type="u16" name="unk1"/>
+        <member type="u16" name="unk2"/>
+        <member type="string" name="name" encoding="cp932" length="36"/>
+        <member type="string" name="description" encoding="cp932"
+            length="516"/>
+    </object>
+</objgen>

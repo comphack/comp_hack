@@ -78,6 +78,11 @@
        </item>
        <item>
         <property name="text">
+         <string>Solo Create</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Team Join</string>
         </property>
        </item>

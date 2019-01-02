@@ -54,7 +54,6 @@ class MiCHouraiData;
 class MiCItemData;
 class MiCorrectTbl;
 class MiCultureItemData;
-class MiCZoneRelationData;
 class MiDevilBookData;
 class MiDevilBoostData;
 class MiDevilBoostExtraData;
@@ -97,6 +96,7 @@ class MiSpotData;
 class MiSStatusData;
 class MiStatusData;
 class MiSynthesisData;
+class MiTankData;
 class MiTimeLimitData;
 class MiTitleData;
 class MiTriUnionSpecialData;
@@ -254,9 +254,9 @@ public:
         GetDevilEquipmentItemData(uint32_t itemID);
 
     /**
-     * Get the devil equipment item definition corresponding to an ID
-     * @param id Devil equipment item ID to retrieve
-     * @return Pointer to the matching devil equipment item definition, null if
+     * Get the fusion skill definition corresponding to an ID
+     * @param id Fusion skill ID to retrieve
+     * @return Pointer to the matching fusion skill definition, null if
      *  it does not exist
      */
     const std::shared_ptr<objects::MiDevilFusionData>
@@ -681,6 +681,13 @@ public:
         std::shared_ptr<objects::MiSynthesisData>> GetAllSynthesisData();
 
     /**
+     * Get the map of all material tank item definitions by ID
+     * @return Map of pointers to material tank item definitions by ID
+     */
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiTankData>> GetTankData();
+
+    /**
      * Get the time limit definition corresponding to an ID
      * @param id Time limit ID to retrieve
      * @return Pointer to the matching time limit definition, null if it does
@@ -738,15 +745,6 @@ public:
      *  not exist
      */
     const std::shared_ptr<objects::MiZoneData> GetZoneData(uint32_t id);
-
-    /**
-     * Get the zone relation information corresponding to an ID
-     * @param id Zone relation information ID to retrieve
-     * @return Pointer to the matching zone relation information, null if
-     *  it does not exist
-     */
-    const std::shared_ptr<objects::MiCZoneRelationData> GetZoneRelationData(
-        uint32_t id);
 
     /**
      * Get an enchant set by definition ID
@@ -1205,6 +1203,10 @@ private:
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiSynthesisData>> mSynthesisData;
 
+    /// Map of material tank definitions by ID
+    std::unordered_map<uint32_t,
+        std::shared_ptr<objects::MiTankData>> mTankData;
+
     /// Map of time limit definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiTimeLimitData>> mTimeLimitData;
@@ -1235,10 +1237,6 @@ private:
     /// Map of zone definitions by ID
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiZoneData>> mZoneData;
-
-    /// Map of zone relational information by ID
-    std::unordered_map<uint32_t,
-        std::shared_ptr<objects::MiCZoneRelationData>> mZoneRelationData;
 
     /// Map of enchant set definitions by ID
     std::unordered_map<uint32_t,

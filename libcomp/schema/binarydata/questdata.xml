@@ -35,7 +35,7 @@
         <member type="array" name="conditions" size="4">
             <element type="MiQuestUpperCondition*"/>
         </member>
-        <member type="string" name="restrictionText"/>
+        <member type="string" name="restrictionText" encoding="cp932"/>
         <member type="u32" name="phaseCount"/>
         <member type="array" name="phases" size="8">
             <element type="MiQuestPhaseData*"/>

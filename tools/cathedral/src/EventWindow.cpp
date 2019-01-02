@@ -544,7 +544,7 @@ void EventWindow::NewEvent()
     auto eventType = (objects::Event::EventType_t)pAction->data().toUInt();
 
     libcomp::String eventID = GetNewEventID(file, eventType);
-    if(!eventID.IsEmpty())
+    if(eventID.IsEmpty())
     {
         return;
     }

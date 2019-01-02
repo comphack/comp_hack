@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCDevilEquipmentExclusiveData" persistent="false">
+        <member type="u16" name="ID" pad="2"/>
+        <member type="string" name="desc" encoding="cp932"/>
+    </object>
+</objgen>

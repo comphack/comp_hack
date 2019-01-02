@@ -19,7 +19,7 @@
         <member type="array" size="4" name="levelUpData">
             <element type="MiDevilLVUpData*"/>
         </member>
-        <member type="string" length="36" name="name"/>
+        <member type="string" name="name" encoding="cp932" length="36"/>
         <member type="array" size="4" name="reunionConditions">
             <element type="MiDevilReunionConditionData*"/>
         </member>

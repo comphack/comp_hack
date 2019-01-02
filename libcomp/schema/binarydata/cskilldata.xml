@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCSkillBase" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" name="name" encoding="cp932"/>
+        <member type="string" name="desc" encoding="cp932"/>
+        <member type="u16" name="base1"/>
+        <member type="u8" name="base2"/>
+        <member type="u8" name="base3"/>
+    </object>
+    <object name="MiCSkillCast" persistent="false">
+        <member type="u16" name="cast1"/>
+        <member type="u16" name="cast2"/>
+        <member type="u16" name="cast3"/>
+        <member type="u16" name="cast4"/>
+        <member type="u8" name="cast5"/>
+        <member type="u8" name="cast6"/>
+        <member type="u16" name="cast7"/>
+        <member type="f32" name="cast8"/>
+        <member type="u32" name="cast9"/>
+        <member type="u32" name="cast10"/>
+        <member type="array" size="20" name="cast11">
+            <element type="string"/>
+        </member>
+    </object>
+    <object name="MiCSkillShoot" persistent="false">
+        <member type="f32" name="shoot1"/>
+        <member type="u8" name="shoot2"/>
+        <member type="u8" name="shoot3"/>
+        <member type="u8" name="shoot4"/>
+        <member type="u8" name="shoot5"/>
+        <member type="f32" name="shoot6"/>
+        <member type="string" name="shoot7"/>
+        <member type="array" size="20" name="shoot8">
+            <element type="string"/>
+        </member>
+    </object>
+    <object name="MiCSkillBullet" persistent="false">
+        <member type="u8" name="bullet1"/>
+        <member type="u8" name="bullet2"/>
+        <member type="u8" name="bullet3"/>
+        <member type="u8" name="bullet4"/>
+        <member type="f32" name="bullet5"/>
+        <member type="f32" name="bullet6"/>
+        <member type="u32" name="bullet7"/>
+        <member type="string" name="bullet8"/>
+        <member type="array" size="3" name="bullet9">
+            <element type="u8"/>
+        </member>
+        <member type="u8" name="bullet10"/>
+        <member type="string" name="bullet11"/>
+    </object>
+    <object name="MiCSkillTarget" persistent="false">
+        <member type="u32" name="target1"/>
+        <member type="f32" name="target2"/>
+        <member type="u8" name="target3"/>
+        <member type="u8" name="target4"/>
+        <member type="u16" name="target5"/>
+        <member type="array" size="20" name="target6">
+            <element type="string"/>
+        </member>
+    </object>
+    <object name="MiCSkillHit" persistent="false">
+        <member type="f32" name="hit1"/>
+        <member type="u8" name="hit2"/>
+        <member type="u8" name="hit3"/>
+        <member type="u16" name="hit4"/>
+        <member type="f32" name="hit5"/>
+        <member type="f32" name="hit6"/>
+        <member type="f32" name="hit7"/>
+    </object>
+    <object name="MiCSkillEquipCategory" persistent="false">
+        <member type="array" size="11" name="equip1">
+            <element type="u32"/>
+        </member>
+    </object>
+    <object name="MiCSkillData" persistent="false">
+        <member type="MiCSkillBase*" name="base"/>
+        <member type="MiCSkillCast*" name="cast"/>
+        <member type="MiCSkillShoot*" name="shoot"/>
+        <member type="MiCSkillBullet*" name="bullet"/>
+        <member type="MiCSkillTarget*" name="target"/>
+        <member type="MiCSkillHit*" name="hit"/>
+        <member type="array" size="20" name="equip">
+            <element type="MiCSkillEquipCategory*"/>
+        </member>
+        <member type="array" size="400" name="unk1">
+            <element type="string"/>
+        </member>
+    </object>
+</objgen>

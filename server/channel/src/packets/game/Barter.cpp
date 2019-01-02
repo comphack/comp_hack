@@ -117,8 +117,11 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             case objects::MiNPCBarterItemData::Type_t::NONE:
                 break;
             case objects::MiNPCBarterItemData::Type_t::ONE_TIME_VALUABLE:
+            case objects::MiNPCBarterItemData::Type_t::STATUS_CHARACTER:
             case objects::MiNPCBarterItemData::Type_t::EVENT_COUNTER:
             case objects::MiNPCBarterItemData::Type_t::COOLDOWN:
+            case objects::MiNPCBarterItemData::Type_t::STATUS_DEMON:
+            case objects::MiNPCBarterItemData::Type_t::STATUS_CHARACTER_AND_DEMON:
             case objects::MiNPCBarterItemData::Type_t::SKILL_CHARACTER:
             case objects::MiNPCBarterItemData::Type_t::SKILL_DEMON:
             case objects::MiNPCBarterItemData::Type_t::PLUGIN:
@@ -135,6 +138,8 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     std::list<int32_t> demonSkills;
     std::list<int32_t> pluginIDs;
     std::set<uint16_t> oneTimeValuables;
+    StatusEffectChanges characterStatus;
+    StatusEffectChanges demonStatus;
     std::unordered_map<int32_t, uint32_t> cooldowns;
     std::unordered_map<int32_t, int32_t> eCounters;
     if(!failed)
@@ -171,6 +176,22 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                         failed = true;
                     }
                 }
+                break;
+            case objects::MiNPCBarterItemData::Type_t::STATUS_CHARACTER:
+                characterStatus[(uint32_t)itemData->GetSubtype()] =
+                    StatusEffectChange((uint32_t)itemData->GetSubtype(),
+                        (int8_t)itemData->GetAmount(), true);
+                break;
+            case objects::MiNPCBarterItemData::Type_t::STATUS_DEMON:
+                demonStatus[(uint32_t)itemData->GetSubtype()] =
+                    StatusEffectChange((uint32_t)itemData->GetSubtype(),
+                        (int8_t)itemData->GetAmount(), true);
+                break;
+            case objects::MiNPCBarterItemData::Type_t::STATUS_CHARACTER_AND_DEMON:
+                characterStatus[(uint32_t)itemData->GetSubtype()] =
+                demonStatus[(uint32_t)itemData->GetSubtype()] =
+                    StatusEffectChange((uint32_t)itemData->GetSubtype(),
+                        (int8_t)itemData->GetAmount(), true);
                 break;
             case objects::MiNPCBarterItemData::Type_t::SOUL_POINT:
                 spAdjust = (int32_t)(spAdjust + itemData->GetSubtype());
@@ -417,6 +438,17 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                     failed |= !characterManager->LearnSkill(client,
                         demonEntityID, (uint32_t)skillID);
                 }
+            }
+
+            if(characterStatus.size() > 0)
+            {
+                cState->AddStatusEffects(characterStatus, definitionManager);
+            }
+
+            if(demonStatus.size() > 0 && state->GetDemonState()->GetEntity())
+            {
+                state->GetDemonState()->AddStatusEffects(demonStatus,
+                    definitionManager);
             }
 
             for(int32_t pluginID : pluginIDs)

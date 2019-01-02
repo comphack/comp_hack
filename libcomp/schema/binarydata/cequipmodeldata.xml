@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCEquipModelProcInfo" persistent="false">
+        <member type="u32" name="type"/>
+        <member type="string" name="value" length="36"/>
+    </object>
+    <object name="MiCEquipModelData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="26" name="ProcInfo">
+            <element type="MiCEquipModelProcInfo*"/>
+        </member>
+    </object>
+    <!-- Custom -->
+    <object name="MiCAppearanceEquipData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" name="nif" length="36"/>
+    </object>
+</objgen>

@@ -1,6 +1,6 @@
 ([&]() -> @VAR_CODE_TYPE@
 {
-    @VAR_CODE_TYPE@ ref;
+    @VAR_CODE_TYPE@ ref = nullptr;
 
     auto pRefChildNode = @NODE@->FirstChildElement("object");
 
@@ -19,7 +19,7 @@
     }
 	else
     {
-        status = false;
+        // Parent node exists but is empty. Leave as null but don't error.
     }
 
     return ref;

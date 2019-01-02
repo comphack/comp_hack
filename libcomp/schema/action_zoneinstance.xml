@@ -10,6 +10,7 @@
             <value>START_TIMER</value>
             <value>STOP_TIMER</value>
             <value>TEAM_PVP</value>
+            <value>SOLO_CREATE</value>
             <value>TEAM_JOIN</value>
             <value>CLAN_JOIN</value>
         </member>

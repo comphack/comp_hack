@@ -113,7 +113,7 @@ std::shared_ptr<objects::Action> ActionCreateLoot::Save() const
     mAction->SetPosition((objects::ActionCreateLoot::Position_t)
         prop->position->currentIndex());
 
-    auto locations = prop->drops->GetObjectList<objects::ObjectPosition>();
+    auto locations = prop->locations->GetObjectList<objects::ObjectPosition>();
     mAction->SetLocations(locations);
 
     return mAction;

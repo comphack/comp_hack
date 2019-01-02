@@ -69,6 +69,7 @@ void ActionZoneInstance::Load(const std::shared_ptr<objects::Action>& act)
 
     LoadBaseProperties(mAction);
 
+    prop->instanceID->setValue((int32_t)mAction->GetInstanceID());
     prop->mode->setCurrentIndex(to_underlying(
         mAction->GetMode()));
     prop->variantID->setValue((int32_t)mAction->GetVariantID());
@@ -86,6 +87,7 @@ std::shared_ptr<objects::Action> ActionZoneInstance::Save() const
 
     SaveBaseProperties(mAction);
 
+    mAction->SetInstanceID((uint32_t)prop->instanceID->value());
     mAction->SetMode((objects::ActionZoneInstance::Mode_t)
         prop->mode->currentIndex());
     mAction->SetVariantID((uint32_t)prop->variantID->value());

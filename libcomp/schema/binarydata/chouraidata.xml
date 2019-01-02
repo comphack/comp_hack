@@ -2,7 +2,12 @@
 <objgen>
     <object name="MiCHouraiData" persistent="false">
         <member type="s8" name="ID" pad="3"/>
-        <member type="string" name="name" pad="8"/>
+        <member type="string" name="name" encoding="cp932" pad="8"/>
         <member type="u32" name="npcID"/>
+    </object>
+    <object name="MiCHouraiMessageData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" name="message" encoding="cp932"/>
+        <member type="u32" name="soundID"/>
     </object>
 </objgen>

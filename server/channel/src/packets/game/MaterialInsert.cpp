@@ -36,8 +36,7 @@
 
 // objects Includes
 #include <Item.h>
-#include <MiItemData.h>
-#include <MiPossessionData.h>
+#include <MiTankData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -69,9 +68,18 @@ bool Parsers::MaterialInsert::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
     uint32_t itemType = item ? item->GetType() : 0;
 
-    // Get the item definition and also check that a disassembly trigger exists for
+    // Get the material definition and also check that a disassembly trigger exists for
     // the item as each material type has one
-    auto itemDef = definitionManager->GetItemData(itemType);
+    std::shared_ptr<objects::MiTankData> mTank;
+    for(auto& pair : definitionManager->GetTankData())
+    {
+        if(pair.second->GetItemID() == itemType)
+        {
+            mTank = pair.second;
+            break;
+        }
+    }
+
     auto triggerDef = definitionManager->GetDisassemblyTriggerData(itemType);
 
     bool playerHasTank = CharacterManager::HasValuable(character,
@@ -79,11 +87,11 @@ bool Parsers::MaterialInsert::Parse(libcomp::ManagerPacket *pPacketManager,
 
     int32_t inserted = 0;
     bool success = false;
-    if(playerHasTank && itemDef && triggerDef)
+    if(playerHasTank && mTank && triggerDef)
     {
         // Unlike disassembly, direct material insertion will not remove stacks
         // over the delta free for that type
-        int32_t maxStack = (int32_t)itemDef->GetPossession()->GetStackSize();
+        int32_t maxStack = (int32_t)mTank->GetMaxStack();
 
         int32_t newStack = character->GetMaterials(itemType) + item->GetStackSize();
 

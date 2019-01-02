@@ -262,11 +262,23 @@ void ActionManager::PerformActions(
 
                 for(auto z : zones)
                 {
+                    // Include all enemy base entities (so allies too)
+                    std::list<std::shared_ptr<ActiveEntityState>> eBases;
                     for(auto enemy : z->GetEnemies())
+                    {
+                        eBases.push_back(enemy);
+                    }
+
+                    for(auto ally : z->GetAllies())
+                    {
+                        eBases.push_back(ally);
+                    }
+
+                    for(auto eBase : eBases)
                     {
                         ActionContext copyCtx = ctx;
                         copyCtx.Client = nullptr;
-                        copyCtx.SourceEntityID = enemy->GetEntityID();
+                        copyCtx.SourceEntityID = eBase->GetEntityID();
                         copyCtx.Options.AutoEventsOnly = true;
 
                         failure |= !it->second(*this, copyCtx);
@@ -2634,6 +2646,7 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
     switch(act->GetMode())
     {
     case objects::ActionZoneInstance::Mode_t::CREATE:
+    case objects::ActionZoneInstance::Mode_t::SOLO_CREATE:
     case objects::ActionZoneInstance::Mode_t::TEAM_JOIN:
     case objects::ActionZoneInstance::Mode_t::CLAN_JOIN:
         if(!ctx.Client)
@@ -2696,6 +2709,10 @@ bool ActionManager::UpdateZoneInstance(ActionContext& ctx)
 
                     moveNow = true;
                 }
+                break;
+            case objects::ActionZoneInstance::Mode_t::SOLO_CREATE:
+                // Only grant access to the client
+                accessCIDs.insert(state->GetWorldCID());
                 break;
             case objects::ActionZoneInstance::Mode_t::CREATE:
             default:

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCGuardianAssistData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" name="desc" encoding="cp932"/>
+    </object>
+</objgen>

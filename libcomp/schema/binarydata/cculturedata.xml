@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCCultureData" persistent="false">
+        <member type="u32" name="upperLimit"/>
+        <member type="u32" name="level1Min"/>
+        <member type="string" name="level1Text" encoding="cp932"/>
+        <member type="u32" name="level2Min"/>
+        <member type="string" name="level2Text" encoding="cp932"/>
+        <member type="u32" name="level3Min"/>
+        <member type="string" name="level3Text" encoding="cp932"/>
+        <member type="u32" name="level4Min"/>
+        <member type="string" name="level4Text" encoding="cp932"/>
+        <member type="u32" name="level5Min"/>
+        <member type="string" name="level5Text" encoding="cp932"/>
+        <member type="u16" name="unk1" pad="2"/>
+    </object>
+</objgen>

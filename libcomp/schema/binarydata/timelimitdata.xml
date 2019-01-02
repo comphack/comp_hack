@@ -4,10 +4,14 @@
         <member type="u32" name="ID"/>
         <member type="u16" name="duration"/>
         <member type="u16" name="warningTime"/>
-        <member type="string" length="104" name="startMessage"/>
-        <member type="string" length="104" name="warningMessage"/>
-        <member type="string" length="104" name="successMessage"/>
-        <member type="string" length="104" name="failureMessage"/>
+        <member type="string" name="startMessage" encoding="cp932"
+            length="104"/>
+        <member type="string" name="warningMessage" encoding="cp932"
+            length="104"/>
+        <member type="string" name="successMessage" encoding="cp932"
+            length="104"/>
+        <member type="string" name="failureMessage" encoding="cp932"
+            length="104"/>
         <member type="u8" name="timeLimit8"/>
         <member type="u8" name="timeLimit9"/>
         <member type="u8" name="timeLimit10"/>

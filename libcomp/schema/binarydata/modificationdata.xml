@@ -50,7 +50,7 @@
         <member type="s16" name="sequenceID"/>
         <member type="u32" name="tokusei"/>
         <member type="s32" name="sequenceID2"/>
-        <member type="string" name="shortDesc" length="100"/>
-        <member type="string" name="fullDesc" length="872"/>
+        <member type="string" name="shortDesc" encoding="cp932" length="100"/>
+        <member type="string" name="fullDesc" encoding="cp932" length="872"/>
     </object>
 </objgen>

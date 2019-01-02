@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiKeyItemData" persistent="false">
+        <member type="u8" name="ID" pad="3"/>
+        <member type="string" name="name" encoding="cp932" length="36"/>
+        <member type="string" name="desc" encoding="cp932" length="260"/>
+    </object>
+    <object name="MiKeyItemSortData" persistent="false">
+        <member type="u8" name="sort1"/>
+        <member type="u8" name="sort2"/>
+        <member type="u8" name="sort3"/>
+        <member type="u8" name="sort4"/>
+    </object>
+    <object name="MiCKeyItemData" persistent="false">
+        <member type="MiKeyItemData*" name="itemData"/>
+        <member type="MiKeyItemSortData*" name="sortData"/>
+    </object>
+</objgen>

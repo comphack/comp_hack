@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCTransformedModelEntry" persistent="false">
+        <member type="s8" name="entry1"/>
+        <member type="u8" name="entry2"/>
+        <member type="u16" name="entry3"/>
+        <member type="string" length="36" name="file"/>
+    </object>
+    <object name="MiCTransformedModelData" persistent="false">
+        <member type="u32" name="itemID"/>
+        <member type="u32" name="model2"/>
+        <member type="u32" name="model3"/>
+        <member type="u32" name="model4"/>
+        <member type="u32" name="model5"/>
+        <member type="u32" name="model6"/>
+        <member type="u32" name="model7"/>
+        <member type="u32" name="model8"/>
+        <member type="u32" name="model9"/>
+        <member type="array" size="26" name="entries">
+            <element type="MiCTransformedModelEntry*"/>
+        </member>
+        <member type="u32" name="model10"/>
+        <member type="u32" name="model11"/>
+        <member type="u32" name="model12"/>
+        <member type="u32" name="model13"/>
+    </object>
+</objgen>

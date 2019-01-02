@@ -114,6 +114,7 @@
 #include "SkillManager.h"
 #include "TokuseiManager.h"
 #include "Zone.h"
+#include "ZoneGeometryLoader.h"
 #include "ZoneInstance.h"
 
 // C++ Standard Includes
@@ -205,276 +206,8 @@ void ZoneManager::LoadGeometry()
     }
 
     // Build zone geometry from QMP files
-    for(auto zonePair : localZoneIDs)
-    {
-        uint32_t zoneID = zonePair.first;
-        auto zoneData = definitionManager->GetZoneData(zoneID);
-
-        libcomp::String filename = zoneData->GetFile()->GetQmpFile();
-        if(filename.IsEmpty() || mZoneGeometry.find(filename.C()) != mZoneGeometry.end()) continue;
-
-        auto qmpFile = definitionManager->LoadQmpFile(filename, server->GetDataStore());
-        if(!qmpFile)
-        {
-            //success = false;
-            LOG_ERROR(libcomp::String("Failed to load zone geometry file: %1\n")
-                .Arg(filename));
-            continue;
-        }
-
-        auto geometry = std::make_shared<ZoneGeometry>();
-        geometry->QmpFilename = filename;
-
-        std::unordered_map<uint32_t,
-            std::shared_ptr<objects::QmpElement>> elementMap;
-        for(auto qmpElem : qmpFile->GetElements())
-        {
-            geometry->Elements.push_back(qmpElem);
-            elementMap[qmpElem->GetID()] = qmpElem;
-        }
-
-        std::unordered_map<uint32_t, std::list<Line>> lineMap;
-        std::unordered_map<uint32_t,
-            std::shared_ptr<objects::QmpNavPoint>> navPoints;
-        for(auto qmpBoundary : qmpFile->GetBoundaries())
-        {
-            for(auto qmpLine : qmpBoundary->GetLines())
-            {
-                Line l(Point((float)qmpLine->GetX1(), (float)qmpLine->GetY1()),
-                    Point((float)qmpLine->GetX2(), (float)qmpLine->GetY2()));
-                lineMap[qmpLine->GetElementID()].push_back(l);
-            }
-
-            for(auto navPoint : qmpBoundary->GetNavPoints())
-            {
-                navPoints[navPoint->GetPointID()] = navPoint;
-            }
-        }
-
-        uint32_t instanceID = 1;
-        for(auto pair : lineMap)
-        {
-            auto shape =  std::make_shared<ZoneQmpShape>();
-            shape->ShapeID = pair.first;
-            shape->Element = elementMap[pair.first];
-            shape->OneWay = shape->Element->GetType() ==
-                objects::QmpElement::Type_t::ONE_WAY;
-
-            // Build a complete shape from the lines provided
-            // If there is a gap in the shape, it is a line instead
-            // of a full shape
-            auto lines = pair.second;
-
-            shape->Lines.push_back(lines.front());
-            lines.pop_front();
-            Line firstLine = shape->Lines.front();
-
-            Point* connectPoint = &shape->Lines.back().second;
-            while(lines.size() > 0)
-            {
-                bool connected = false;
-                for(auto it = lines.begin(); it != lines.end(); it++)
-                {
-                    if(it->first == *connectPoint)
-                    {
-                        shape->Lines.push_back(*it);
-                        connected = true;
-                    }
-                    else if(it->second == *connectPoint)
-                    {
-                        if(shape->OneWay)
-                        {
-                            LOG_DEBUG(libcomp::String("Inverted one way"
-                                " directional line encountered in shape:"
-                                " %1\n").Arg(shape->Element->GetName()));
-                        }
-
-                        shape->Lines.push_back(Line(it->second, it->first));
-                        connected = true;
-                    }
-
-                    if(connected)
-                    {
-                        connectPoint = &shape->Lines.back().second;
-                        lines.erase(it);
-                        break;
-                    }
-                }
-
-                if(!connected || lines.size() == 0)
-                {
-                    shape->InstanceID = instanceID++;
-
-                    if(*connectPoint == firstLine.first)
-                    {
-                        // Solid shape completed
-                        shape->IsLine = false;
-                    }
-
-                    geometry->Shapes.push_back(shape);
-
-                    // Determine the boundaries of the completed shape
-                    std::list<float> xVals;
-                    std::list<float> yVals;
-
-                    for(Line& line : shape->Lines)
-                    {
-                        for(const Point& p : { line.first, line.second })
-                        {
-                            xVals.push_back(p.x);
-                            yVals.push_back(p.y);
-                        }
-                    }
-
-                    xVals.sort([](const float& a, const float& b)
-                        {
-                            return a < b;
-                        });
-
-                    yVals.sort([](const float& a, const float& b)
-                        {
-                            return a < b;
-                        });
-
-                    shape->Boundaries[0] = Point(xVals.front(), yVals.front());
-                    shape->Boundaries[1] = Point(xVals.back(), yVals.back());
-
-                    if(lines.size() > 0)
-                    {
-                        // Start a new shape
-                        shape = std::make_shared<ZoneQmpShape>();
-                        shape->ShapeID = pair.first;
-                        shape->Element = elementMap[pair.first];
-                        shape->OneWay = shape->Element->GetType() ==
-                            objects::QmpElement::Type_t::ONE_WAY;
-
-                        shape->Lines.push_back(lines.front());
-                        lines.pop_front();
-                        firstLine = shape->Lines.front();
-                        connectPoint = &shape->Lines.back().second;
-                    }
-                }
-            }
-        }
-
-        // If any zone-in spots exist, remove all navpoints that are outside
-        // of all play areas by checking if the center point of zone-in spot
-        // connects to the points (in large zones this often times cuts the
-        // number of points in half)
-        std::list<Point> zoneInPoints;
-        for(auto dynamicMapID : zonePair.second)
-        {
-            auto spots = definitionManager->GetSpotData(dynamicMapID);
-            for(auto spotPair : spots)
-            {
-                if(spotPair.second->GetType() == 3)
-                {
-                    zoneInPoints.push_back(Point(spotPair.second->GetCenterX(),
-                        spotPair.second->GetCenterY()));
-                }
-            }
-        }
-
-        size_t navTotal = navPoints.size();
-        if(zoneInPoints.size() > 0)
-        {
-            // Gather all toggle enabled barriers to simulate everything being
-            // open
-            std::set<uint32_t> toggleBarriers;
-            for(auto qmpElem : qmpFile->GetElements())
-            {
-                if(qmpElem->GetType() == objects::QmpElement::Type_t::TOGGLE ||
-                   qmpElem->GetType() == objects::QmpElement::Type_t::TOGGLE_2)
-                {
-                    toggleBarriers.insert(qmpElem->GetID());
-                }
-            }
-
-            // Gather all points directly visible to a zone-in point
-            std::set<uint32_t> validPoints;
-
-            Point pOut;
-            Line lOut;
-            std::shared_ptr<ZoneShape> sOut;
-            for(Point& p : zoneInPoints)
-            {
-                for(auto& nPair : navPoints)
-                {
-                    if(validPoints.find(nPair.first) == validPoints.end())
-                    {
-                        auto n = nPair.second;
-
-                        Line l(p, Point((float)n->GetX(), (float)n->GetY()));
-                        if(!geometry->Collides(l, pOut, lOut, sOut,
-                            toggleBarriers))
-                        {
-                            validPoints.insert(nPair.first);
-
-                            // Pull all registered distance points as we go to
-                            // minimize geometry checks needed
-                            for(auto& dist : n->GetDistances())
-                            {
-                                validPoints.insert(dist.first);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // All direct points loaded, add direct path points from nav map
-            std::set<uint32_t> checked;
-            std::set<uint32_t> check = validPoints;
-            while(check.size() > 0)
-            {
-                uint32_t pointID = *check.begin();
-                check.erase(pointID);
-                checked.insert(pointID);
-
-                auto n = navPoints[pointID];
-                if(n)
-                {
-                    for(auto& dist : n->GetDistances())
-                    {
-                        uint32_t pointID2 = dist.first;
-                        if(checked.find(pointID2) == checked.end())
-                        {
-                            check.insert(pointID2);
-                            validPoints.insert(pointID2);
-                        }
-                    }
-                }
-            }
-
-            // Filter down the points
-            std::set<uint32_t> invalidPoints;
-            for(auto& pair : navPoints)
-            {
-                if(validPoints.find(pair.first) == validPoints.end())
-                {
-                    invalidPoints.insert(pair.first);
-                }
-            }
-
-            for(uint32_t pointID : invalidPoints)
-            {
-                navPoints.erase(pointID);
-            }
-        }
-
-        geometry->NavPoints = navPoints;
-
-        libcomp::String filterString;
-        if(navPoints.size() != navTotal)
-        {
-            filterString = libcomp::String(" (Nav points: %1 => %2)")
-                .Arg(navTotal).Arg(navPoints.size());
-        }
-
-        LOG_DEBUG(libcomp::String("Loaded zone geometry file: %1%2\n")
-            .Arg(filename).Arg(filterString));
-
-        mZoneGeometry[filename.C()] = geometry;
-    }
+    ZoneGeometryLoader loader;
+    mZoneGeometry = loader.LoadQMP(localZoneIDs, server);
 
     // Build any existing zone spots as polygons
     // Loop through a second time instead of handling in the first loop
@@ -527,7 +260,7 @@ void ZoneManager::LoadGeometry()
                         shape->Lines.push_back(Line(points[1], points[2]));
                         shape->Lines.push_back(Line(points[2], points[3]));
                         shape->Lines.push_back(Line(points[3], points[0]));
-                    
+
                         // Determine the boundaries of the completed shape
                         std::list<float> xVals;
                         std::list<float> yVals;
@@ -2519,7 +2252,7 @@ void ZoneManager::SendEnemyData(const std::shared_ptr<EnemyState>& enemyState,
     p.WriteFloat(enemyState->GetDestinationX());
     p.WriteFloat(enemyState->GetDestinationY());
     p.WriteFloat(enemyState->GetDestinationRotation());
-    
+
     auto statusEffects = enemyState->GetCurrentStatusEffectStates();
 
     p.WriteU32Little(static_cast<uint32_t>(statusEffects.size()));
@@ -2742,7 +2475,7 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
                     active.push_back(it->second);
                 }
             }
-            
+
             for(uint32_t effectType : updated)
             {
                 auto it = effectMap.find(effectType);
@@ -2861,7 +2594,7 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
             displayStateModified.erase(eState);
         }
     }
-    
+
     if(displayStateModified.size() > 0)
     {
         characterManager->UpdateWorldDisplayState(displayStateModified);
@@ -2968,7 +2701,7 @@ void ZoneManager::HandleSpecialInstancePopulate(
                 StatusEffectChanges effects;
                 effects[SVR_CONST.STATUS_DEMON_ONLY] = StatusEffectChange(
                     SVR_CONST.STATUS_DEMON_ONLY, 1, true);
-                
+
                 characterManager->AddStatusEffectImmediate(client, cState,
                     effects);
 
@@ -4001,7 +3734,7 @@ bool ZoneManager::UpdatePlasma(const std::shared_ptr<Zone>& zone, uint64_t now)
 
             BroadcastPacket(zone, notify);
         }
-        
+
         if(pState->HasStateChangePoints(false, now))
         {
             std::list<uint32_t> pointIDs;
@@ -5341,7 +5074,7 @@ void ZoneManager::HandleDeathTimeOut(
         // Zone no longer valid
         return;
     }
-    
+
     std::shared_ptr<ActiveEntityState> eState;
     switch(zone->GetInstanceType())
     {
@@ -7601,7 +7334,7 @@ void ZoneManager::AddPvPBases(const std::shared_ptr<Zone>& zone,
         {
             auto pvpBase = std::make_shared<objects::PvPBase>();
             pvpBase->SetRank(bRank);
-                    
+
             switch(bRank)
             {
             case 1:

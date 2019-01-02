@@ -64,6 +64,7 @@ SET(${PROJECT_NAME}_SRCS
     src/Zone.cpp
     src/ZoneInstance.cpp
     src/ZoneGeometry.cpp
+    src/ZoneGeometryLoader.cpp
     src/ZoneManager.cpp
     src/main.cpp
 )
@@ -103,6 +104,7 @@ SET(${PROJECT_NAME}_HDRS
     src/Zone.h
     src/ZoneInstance.h
     src/ZoneGeometry.h
+    src/ZoneGeometryLoader.h
     src/ZoneManager.h
 )
 

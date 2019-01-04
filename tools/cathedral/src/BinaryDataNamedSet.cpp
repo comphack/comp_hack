@@ -59,6 +59,11 @@ uint32_t BinaryDataNamedSet::GetMapID(const std::shared_ptr<
 libcomp::String BinaryDataNamedSet::GetName(const std::shared_ptr<
     libcomp::Object>& obj) const
 {
+    if(!obj)
+    {
+        return "";
+    }
+
     if(mExplicitNames.size() > 0)
     {
         uint32_t mapID = GetMapID(obj);

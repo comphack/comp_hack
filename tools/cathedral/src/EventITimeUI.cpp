@@ -51,6 +51,12 @@ EventITime::EventITime(MainWindow *pMainWindow, QWidget *pParent)
     ui->eventTitle->setText(tr("<b>I-Time</b>"));
     ui->layoutMain->addWidget(pWidget);
 
+    prop->choices->Setup(DynamicItemType_t::OBJ_EVENT_ITIME_CHOICE,
+        pMainWindow);
+
+    prop->iTimeID->Bind(pMainWindow, "CHouraiData");
+    prop->message->Setup(pMainWindow, "CHouraiMessageData");
+
     prop->startActions->SetMainWindow(pMainWindow);
 }
 
@@ -70,7 +76,14 @@ void EventITime::Load(const std::shared_ptr<objects::Event>& e)
         return;
     }
 
-    prop->iTimeID->setValue(mEvent->GetITimeID());
+    prop->message->SetValue((uint32_t)mEvent->GetMessageID());
+
+    for(auto choice : mEvent->GetChoices())
+    {
+        prop->choices->AddObject(choice);
+    }
+
+    prop->iTimeID->SetValue((uint32_t)mEvent->GetITimeID());
     prop->reactionID->setValue(mEvent->GetReactionID());
     prop->timeLimit->setValue(mEvent->GetTimeLimit());
 
@@ -91,7 +104,12 @@ std::shared_ptr<objects::Event> EventITime::Save() const
 
     Event::Save();
 
-    mEvent->SetITimeID((int8_t)prop->iTimeID->value());
+    mEvent->SetMessageID((int32_t)prop->message->GetValue());
+
+    auto choices = prop->choices->GetObjectList<objects::EventChoice>();
+    mEvent->SetChoices(choices);
+
+    mEvent->SetITimeID((int8_t)prop->iTimeID->GetValue());
     mEvent->SetReactionID(prop->reactionID->value());
     mEvent->SetTimeLimit((int16_t)prop->timeLimit->value());
 

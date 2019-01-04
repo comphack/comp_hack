@@ -39,15 +39,16 @@
 #include <Log.h>
 #include <PacketCodes.h>
 
-EventChoice::EventChoice(MainWindow *pMainWindow, QWidget *pParent) :
-    EventBase(pMainWindow, pParent), mMessage(0), mBranches(0),
-    mBranchScript(0)
+EventChoice::EventChoice(MainWindow *pMainWindow, bool isITime,
+    QWidget *pParent) : EventBase(pMainWindow, pParent), mMessage(0),
+    mBranches(0), mBranchScript(0)
 {
     mMessage = new EventMessageRef;
     mBranches = new DynamicList;
     mBranchScript = new ServerScript;
 
-    mMessage->SetMainWindow(pMainWindow);
+    mMessage->Setup(pMainWindow, isITime
+        ? "CHouraiMessageData" : "CEventMessageData");
 
     mBranches->Setup(DynamicItemType_t::OBJ_EVENT_BASE, pMainWindow);
 

@@ -25,6 +25,7 @@
 #include "EventMessageRef.h"
 
 // Cathedral Includes
+#include "BinaryDataNamedSet.h"
 #include "MainWindow.h"
 
 // objects Includes
@@ -54,9 +55,10 @@ EventMessageRef::~EventMessageRef()
     delete ui;
 }
 
-void EventMessageRef::SetMainWindow(MainWindow *pMainWindow)
+void EventMessageRef::Setup(MainWindow *pMainWindow,
+    const libcomp::String& objType)
 {
-    Bind(pMainWindow, "CEventMessageData");
+    Bind(pMainWindow, objType);
 }
 
 void EventMessageRef::SetValue(uint32_t value)
@@ -75,11 +77,12 @@ void EventMessageRef::MessageIDChanged()
 
     if(mMainWindow)
     {
-        auto msg = mMainWindow->GetEventMessage((int32_t)GetValue());
-        if(msg)
+        auto dataset = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mMainWindow->GetBinaryDataSet(GetObjectType()));
+        if(dataset)
         {
-            ui->message->setText(qs(
-                libcomp::String::Join(msg->GetLines(), "\n")));
+            ui->message->setText(qs(dataset->GetName(dataset
+                ->GetObjectByID(GetValue()))));
         }
     }
 }

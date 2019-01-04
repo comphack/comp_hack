@@ -61,6 +61,7 @@ void SpawnList::SetMainWindow(MainWindow *pMainWindow)
     mMainWindow = pMainWindow;
 
     prop->type->Bind(pMainWindow, "DevilData");
+    prop->variant->Bind(pMainWindow, "CTitleData");
     prop->drops->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
     prop->dropSetIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT, pMainWindow);
     prop->gifts->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
@@ -116,7 +117,7 @@ void SpawnList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
     {
         prop->spawnID->setText(QString::number(spawn->GetID()));
         prop->type->SetValue(spawn->GetEnemyType());
-        prop->variant->setValue((int32_t)spawn->GetVariantType());
+        prop->variant->SetValue(spawn->GetVariantType());
         prop->category->setCurrentIndex(to_underlying(spawn->GetCategory()));
         prop->level->setValue(spawn->GetLevel());
         prop->xp->setValue((int32_t)spawn->GetXP());
@@ -178,7 +179,7 @@ void SpawnList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
     if(spawn)
     {
         spawn->SetEnemyType(prop->type->GetValue());
-        spawn->SetVariantType((uint32_t)prop->variant->value());
+        spawn->SetVariantType(prop->variant->GetValue());
         spawn->SetCategory((objects::Spawn::Category_t)prop->category
             ->currentIndex());
         spawn->SetLevel((int8_t)prop->level->value());

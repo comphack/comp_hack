@@ -26,11 +26,14 @@
 
 // Cathedral Includes
 #include "ActionDelay.h"
+#include "ActionDisplayMessage.h"
 #include "ActionList.h"
 #include "ActionMap.h"
 #include "ActionSpawn.h"
+#include "ActionStageEffect.h"
 #include "ActionStartEvent.h"
 #include "ActionZoneInstance.h"
+#include "BinaryDataNamedSet.h"
 #include "DynamicList.h"
 #include "EventUI.h"
 #include "EventDirectionUI.h"
@@ -1348,22 +1351,28 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
         break;
     case objects::Event::EventType_t::MULTITALK:
         {
-            auto multi = std::dynamic_pointer_cast<
-                objects::EventMultitalk>(e);
-
             item->setText(1, "Multitalk");
         }
         break;
     case objects::Event::EventType_t::PROMPT:
+    case objects::Event::EventType_t::ITIME:
         {
             auto prompt = std::dynamic_pointer_cast<
                 objects::EventPrompt>(e);
 
-            auto cMessage = mMainWindow->GetEventMessage(prompt
-                ->GetMessageID());
-            item->setText(1, "Prompt");
-            item->setText(2, cMessage ? qs(GetInlineMessageText(
-                libcomp::String::Join(cMessage->GetLines(), "  "))) : "");
+            std::unordered_map<EventTreeItem*, int32_t> messageNodes;
+            messageNodes[item] = prompt->GetMessageID();
+
+            bool iTime = e->GetEventType() ==
+                objects::Event::EventType_t::ITIME;
+            if(iTime)
+            {
+                item->setText(1, "I-Time");
+            }
+            else
+            {
+                item->setText(1, "Prompt");
+            }
 
             for(size_t i = 0; i < prompt->ChoicesCount(); i++)
             {
@@ -1371,12 +1380,10 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
 
                 EventTreeItem* cNode = new EventTreeItem(item, id);
 
-                cMessage = mMainWindow->GetEventMessage(choice
-                    ->GetMessageID());
                 cNode->setText(0, qs(libcomp::String("[%1]").Arg(i + 1)));
-                cNode->setText(1, "Prompt Choice");
-                cNode->setText(2, cMessage ? qs(GetInlineMessageText(
-                    libcomp::String::Join(cMessage->GetLines(), "  "))) : "");
+                cNode->setText(1, iTime ? "I-Time Choice" : "Prompt Choice");
+
+                messageNodes[cNode] = choice->GetMessageID();
 
                 // Add regardless of next results
                 AddEventToTree(choice->GetNext(), cNode, file, seen);
@@ -1395,6 +1402,34 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
                     }
                 }
             }
+
+            if(iTime)
+            {
+                auto dataset = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+                    mMainWindow->GetBinaryDataSet("CHouraiMessageData"));
+                for(auto& pair : messageNodes)
+                {
+                    auto txt = dataset->GetName(dataset
+                        ->GetObjectByID((uint32_t)pair.second));
+                    if(txt.Length() > 0)
+                    {
+                        pair.first->setText(2, qs(GetInlineMessageText(txt)));
+                    }
+                }
+            }
+            else
+            {
+                for(auto& pair : messageNodes)
+                {
+                    auto cMessage = mMainWindow->GetEventMessage(pair.second);
+                    if(cMessage)
+                    {
+                        pair.first->setText(2, qs(GetInlineMessageText(
+                            libcomp::String::Join(cMessage->GetLines(),
+                                "  "))));
+                    }
+                }
+            }
         }
         break;
     case objects::Event::EventType_t::PERFORM_ACTIONS:
@@ -1403,39 +1438,66 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
                 objects::EventPerformActions>(e);
 
             item->setText(1, "Perform Actions");
+
+            // Print any messages to the line in order
+            std::list<int32_t> messageIDs;
+            for(auto action : pa->GetActions())
+            {
+                switch(action->GetActionType())
+                {
+                case objects::Action::ActionType_t::DISPLAY_MESSAGE:
+                    {
+                        auto act = std::dynamic_pointer_cast<
+                            objects::ActionDisplayMessage>(action);
+                        for(int32_t messageID : act->GetMessageIDs())
+                        {
+                            messageIDs.push_back(messageID);
+                        }
+                    }
+                    break;
+                case objects::Action::ActionType_t::STAGE_EFFECT:
+                    {
+                        auto act = std::dynamic_pointer_cast<
+                            objects::ActionStageEffect>(action);
+                        messageIDs.push_back(act->GetMessageID());
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            if(messageIDs.size() > 0)
+            {
+                std::list<libcomp::String> messages;
+                for(int32_t messageID : messageIDs)
+                {
+                    auto cMessage = mMainWindow->GetEventMessage(messageID);
+                    if(cMessage && cMessage->LinesCount() > 0)
+                    {
+                        messages.push_back(GetInlineMessageText(
+                            libcomp::String::Join(cMessage->GetLines(),
+                                "  ")));
+                    }
+                }
+
+                item->setText(2, qs(libcomp::String::Join(messages, " => ")));
+            }
         }
         break;
     case objects::Event::EventType_t::OPEN_MENU:
         {
-            auto menu = std::dynamic_pointer_cast<
-                objects::EventOpenMenu>(e);
-
             item->setText(1, "Open Menu");
         }
         break;
     case objects::Event::EventType_t::PLAY_SCENE:
         {
-            auto scene = std::dynamic_pointer_cast<
-                objects::EventPlayScene>(e);
-
             item->setText(1, "Play Scene");
         }
         break;
     case objects::Event::EventType_t::DIRECTION:
         {
-            auto dir = std::dynamic_pointer_cast<
-                objects::EventDirection>(e);
-
             item->setText(1, "Direction");
-        }
-        break;
-    case objects::Event::EventType_t::ITIME:
-        {
-            auto iTime = std::dynamic_pointer_cast<
-                objects::EventITime>(e);
-
-            /// @todo: load I-Time strings
-            item->setText(1, "I-Time");
         }
         break;
     default:

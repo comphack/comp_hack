@@ -45,7 +45,8 @@ class EventChoice : public EventBase
     Q_OBJECT
 
 public:
-    explicit EventChoice(MainWindow *pMainWindow, QWidget *pParent = 0);
+    explicit EventChoice(MainWindow *pMainWindow, bool isITime,
+        QWidget *pParent = 0);
     virtual ~EventChoice();
 
     void Load(const std::shared_ptr<objects::EventChoice>& e);

@@ -49,7 +49,7 @@ EventExNPCMessage::EventExNPCMessage(MainWindow *pMainWindow, QWidget *pParent)
     ui->eventTitle->setText(tr("<b>EX-NPC Message</b>"));
     ui->layoutMain->addWidget(pWidget);
 
-    prop->message->SetMainWindow(pMainWindow);
+    prop->message->Setup(pMainWindow);
 }
 
 EventExNPCMessage::~EventExNPCMessage()

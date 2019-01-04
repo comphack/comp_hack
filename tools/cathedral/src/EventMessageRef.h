@@ -42,7 +42,8 @@ public:
     explicit EventMessageRef(QWidget *pParent = 0);
     virtual ~EventMessageRef();
 
-    void SetMainWindow(MainWindow *pMainWindow);
+    void Setup(MainWindow *pMainWindow,
+        const libcomp::String& objType = "CEventMessageData");
 
     void SetValue(uint32_t value) override;
     uint32_t GetValue() const override;

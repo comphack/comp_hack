@@ -49,6 +49,8 @@ public:
     virtual void SetValue(uint32_t value) = 0;
     virtual uint32_t GetValue() const = 0;
 
+    libcomp::String GetObjectType() const;
+
 protected slots:
     void GetItem();
 

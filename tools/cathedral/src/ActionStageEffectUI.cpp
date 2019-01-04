@@ -50,7 +50,7 @@ ActionStageEffect::ActionStageEffect(ActionList *pList,
     ui->actionTitle->setText(tr("<b>Stage Effect</b>"));
     ui->layoutMain->addWidget(pWidget);
 
-    prop->message->SetMainWindow(pMainWindow);
+    prop->message->Setup(pMainWindow);
 }
 
 ActionStageEffect::~ActionStageEffect()

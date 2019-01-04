@@ -47,6 +47,7 @@
 #include <PopIgnore.h>
 
 // object Includes
+#include <MiCTitleData.h>
 #include <MiDevilData.h>
 #include <MiGrowthData.h>
 #include <MiNPCBasicData.h>
@@ -229,8 +230,8 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
     {
         auto devilDataSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
             mMainWindow->GetBinaryDataSet("DevilData"));
-
-        /// @todo: add MiCTitleData
+        auto titleDataSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mMainWindow->GetBinaryDataSet("CTitleData"));
 
         std::map<uint32_t, std::shared_ptr<objects::Spawn>> sort;
         for(auto& sPair : mMergedZone->Definition->GetSpawns())
@@ -247,6 +248,20 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
 
             libcomp::String name(devilData
                 ? devilDataSet->GetName(devilData) : "[Unknown]");
+
+            uint32_t titleID = spawn->GetVariantType()
+                ? spawn->GetVariantType() :
+                (devilData ? (uint32_t)devilData->GetBasic()->GetTitle() : 0);
+            if(titleID)
+            {
+                auto title = std::dynamic_pointer_cast<objects::MiCTitleData>(
+                    titleDataSet->GetObjectByID(titleID));
+                if(title)
+                {
+                    name = libcomp::String("%1 %2").Arg(title->GetTitle())
+                        .Arg(name);
+                }
+            }
 
             int8_t lvl = spawn->GetLevel();
             if(lvl == -1 && devilData)

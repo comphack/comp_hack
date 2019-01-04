@@ -56,7 +56,7 @@ EventPrompt::EventPrompt(MainWindow *pMainWindow, QWidget *pParent)
 
     prop->choices->Setup(DynamicItemType_t::OBJ_EVENT_CHOICE, pMainWindow);
 
-    prop->message->SetMainWindow(pMainWindow);
+    prop->message->Setup(pMainWindow);
 }
 
 EventPrompt::~EventPrompt()

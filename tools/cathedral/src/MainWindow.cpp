@@ -33,9 +33,12 @@
 
 // objects Includes
 #include <MiCEventMessageData.h>
+#include <MiCHouraiData.h>
+#include <MiCHouraiMessageData.h>
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
 #include <MiCSoundData.h>
+#include <MiCTitleData.h>
 #include <MiCQuestData.h>
 #include <MiDevilData.h>
 #include <MiDynamicMapData.h>
@@ -185,10 +188,13 @@ bool MainWindow::Init()
             return libcomp::String::Join(msg->GetLines(), "\n\r");
         });
 
+    mBinaryDataSets["CHouraiData"] = BDSET(MiCHouraiData, GetID(), GetName());
+    mBinaryDataSets["CHouraiMessageData"] = BDSET(MiCHouraiMessageData,
+        GetID(), GetMessage());
     mBinaryDataSets["CItemData"] = BDSET(MiCItemData, GetBaseData()->GetID(),
         GetBaseData()->GetName2());
     mBinaryDataSets["CSoundData"] = BDSET(MiCSoundData, GetID(), GetPath());
-    mBinaryDataSets["CSoundData"] = BDSET(MiCSoundData, GetID(), GetPath());
+    mBinaryDataSets["CTitleData"] = BDSET(MiCTitleData, GetID(), GetTitle());
     mBinaryDataSets["CQuestData"] = BDSET(MiCQuestData, GetID(), GetTitle());
     mBinaryDataSets["DevilData"] = BDSET(MiDevilData, GetBasic()->GetID(),
         GetBasic()->GetName());
@@ -211,6 +217,16 @@ bool MainWindow::Init()
     {
         err = "Failed to load event message data.";
     }
+    else if(!LoadBinaryData("Shield/CHouraiData.sbin", "CHouraiData", true,
+        true))
+    {
+        err = "Failed to load hourai data.";
+    }
+    else if(!LoadBinaryData("Shield/CHouraiMessageData.sbin",
+        "CHouraiMessageData", true, true))
+    {
+        err = "Failed to load hourai message data.";
+    }
     else if(!LoadBinaryData("Shield/CItemData.sbin", "CItemData", true, true))
     {
         err = "Failed to load c-item data.";
@@ -218,6 +234,10 @@ bool MainWindow::Init()
     else if(!LoadBinaryData("Client/CSoundData.bin", "CSoundData", false, true))
     {
         err = "Failed to load c-sound data.";
+    }
+    else if(!LoadBinaryData("Shield/CTitleData.sbin", "CTitleData", true, true))
+    {
+        err = "Failed to load c-title data.";
     }
     else if(!LoadBinaryData("Shield/CQuestData.sbin", "CQuestData", true, true))
     {

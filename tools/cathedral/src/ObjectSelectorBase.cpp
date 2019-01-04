@@ -63,6 +63,12 @@ bool ObjectSelectorBase::Bind(MainWindow *pMainWindow,
     return false;
 }
 
+
+libcomp::String ObjectSelectorBase::GetObjectType() const
+{
+    return mObjType;
+}
+
 void ObjectSelectorBase::GetItem()
 {
     if(mMainWindow && !mObjType.IsEmpty())

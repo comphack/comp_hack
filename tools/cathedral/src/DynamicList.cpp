@@ -260,7 +260,8 @@ template<>
 QWidget* DynamicList::GetObjectWidget<objects::EventChoice>(
     const std::shared_ptr<objects::EventChoice>& obj)
 {
-    EventChoice* ctrl = new EventChoice(mMainWindow);
+    EventChoice* ctrl = new EventChoice(mMainWindow,
+        mType == DynamicItemType_t::OBJ_EVENT_ITIME_CHOICE);
     if(obj)
     {
         ctrl->Load(obj);
@@ -273,7 +274,8 @@ template<>
 bool DynamicList::AddObject<objects::EventChoice>(
     const std::shared_ptr<objects::EventChoice>& obj)
 {
-    if(mType != DynamicItemType_t::OBJ_EVENT_CHOICE)
+    if(mType != DynamicItemType_t::OBJ_EVENT_CHOICE &&
+        mType != DynamicItemType_t::OBJ_EVENT_ITIME_CHOICE)
     {
         LOG_ERROR("Attempted to assign an EventChoice object to a differing"
             " DynamicList type\n");
@@ -463,7 +465,7 @@ bool DynamicList::AddObject<objects::ServerZoneTrigger>(
 QWidget* DynamicList::GetEventMessageWidget(int32_t val)
 {
     EventMessageRef* msg = new EventMessageRef;
-    msg->SetMainWindow(mMainWindow);
+    msg->Setup(mMainWindow);
 
     msg->SetValue((uint32_t)val);
 
@@ -610,7 +612,8 @@ std::list<std::shared_ptr<objects::EventChoice>>
     DynamicList::GetObjectList() const
 {
     std::list<std::shared_ptr<objects::EventChoice>> result;
-    if(mType != DynamicItemType_t::OBJ_EVENT_CHOICE)
+    if(mType != DynamicItemType_t::OBJ_EVENT_CHOICE &&
+        mType != DynamicItemType_t::OBJ_EVENT_ITIME_CHOICE)
     {
         LOG_ERROR("Attempted to retrieve an EventChoice list from a differing"
             " DynamicList type\n");
@@ -786,6 +789,7 @@ void DynamicList::AddRow()
         canReorder = true;
         break;
     case DynamicItemType_t::OBJ_EVENT_CHOICE:
+    case DynamicItemType_t::OBJ_EVENT_ITIME_CHOICE:
         ctrl = GetObjectWidget(std::make_shared<objects::EventChoice>());
         canReorder = true;
         break;

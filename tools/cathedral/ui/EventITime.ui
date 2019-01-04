@@ -35,24 +35,14 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QSpinBox" name="iTimeID">
-       <property name="minimum">
-        <number>-128</number>
-       </property>
-       <property name="maximum">
-        <number>127</number>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
+     <item row="2" column="0">
       <widget class="QLabel" name="lblReactionID">
        <property name="text">
         <string>Reaction ID:</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="1">
+     <item row="2" column="1">
       <widget class="QSpinBox" name="reactionID">
        <property name="minimum">
         <number>-2147483647</number>
@@ -62,39 +52,62 @@
        </property>
       </widget>
      </item>
-     <item row="2" column="0">
+     <item row="3" column="0">
       <widget class="QLabel" name="lblTimeLimit">
        <property name="text">
         <string>Time Limit:</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
+     <item row="3" column="1">
       <widget class="QSpinBox" name="timeLimit">
        <property name="maximum">
         <number>1000</number>
        </property>
       </widget>
      </item>
-     <item row="3" column="0">
+     <item row="4" column="0">
       <widget class="QLabel" name="lblGiftIDs">
        <property name="text">
         <string>Gift IDs:</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
+     <item row="4" column="1">
       <widget class="DynamicList" name="giftIDs" native="true"/>
      </item>
-     <item row="4" column="0">
+     <item row="5" column="0">
       <widget class="QLabel" name="lblStartActions">
        <property name="text">
         <string>Start Actions:</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="1">
+     <item row="5" column="1">
       <widget class="EventRef" name="startActions" native="true"/>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="lblMessage">
+       <property name="text">
+        <string>Message:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="QLabel" name="lblChoices">
+       <property name="text">
+        <string>Choices:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="DynamicList" name="choices" native="true"/>
+     </item>
+     <item row="1" column="1">
+      <widget class="EventMessageRef" name="message" native="true"/>
+     </item>
+     <item row="0" column="1">
+      <widget class="ObjectSelector" name="iTimeID" native="true"/>
      </item>
     </layout>
    </item>
@@ -111,6 +124,18 @@
    <class>EventRef</class>
    <extends>QWidget</extends>
    <header>EventRef.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>EventMessageRef</class>
+   <extends>QWidget</extends>
+   <header>EventMessageRef.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ObjectSelector</class>
+   <extends>QWidget</extends>
+   <header>ObjectSelector.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -110,4 +110,17 @@
 
 </section><!-- AutoCompressCurrency -->
 
+<section>
+<title>PerfMonitorEnabled</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>Enables performance monitoring statistics of the server.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="PerfMonitorEnabled">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- PerfMonitorEnabled -->
+
 </section>

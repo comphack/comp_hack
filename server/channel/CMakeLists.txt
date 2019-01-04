@@ -57,6 +57,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ManagerConnection.cpp
     src/ManagerSystem.cpp
     src/MatchManager.cpp
+    src/PerformanceTimer.cpp
     src/PlasmaState.cpp
     src/SkillManager.cpp
     src/TokuseiManager.cpp
@@ -97,6 +98,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ManagerSystem.h
     src/MatchManager.h
     src/Packets.h
+    src/PerformanceTimer.h
     src/PlasmaState.h
     src/SkillManager.h
     src/TokuseiManager.h

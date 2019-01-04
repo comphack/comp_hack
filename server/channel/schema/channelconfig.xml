@@ -16,5 +16,6 @@
             <value>PURPLE</value>
         </member>
         <member type="WorldSharedConfig*" name="WorldSharedConfig"/>
+        <member type="bool" name="PerfMonitorEnabled" default="false"/>
     </object>
 </objgen>

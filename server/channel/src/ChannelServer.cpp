@@ -53,6 +53,7 @@
 #include "ManagerClientPacket.h"
 #include "ManagerConnection.h"
 #include "Packets.h"
+#include "PerformanceTimer.h"
 #include "MatchManager.h"
 #include "SkillManager.h"
 #include "TokuseiManager.h"
@@ -1107,14 +1108,27 @@ void ChannelServer::Tick()
 
     ServerTime tickTime = GetServerTime();
 
+    // Performance timer for a tick.
+    PerformanceTimer tickPerf(this);
+    tickPerf.Start();
+
+    // Performance timer for a tick task.
+    PerformanceTimer perf(this);
+
     // Update the active zone states
+    perf.Start();
     mZoneManager->UpdateActiveZoneStates();
+    perf.Stop("UpdateActiveZoneStates");
 
     // Process queued world database changes
+    perf.Start();
     auto worldFailures = mWorldDatabase->ProcessTransactionQueue();
+    perf.Stop("WorldDatabaseTransactions");
 
     // Process queued lobby database changes
+    perf.Start();
     auto lobbyFailures = mLobbyDatabase->ProcessTransactionQueue();
+    perf.Stop("LobbyDatabaseTransactions");
 
     if(worldFailures.size() > 0 || lobbyFailures.size() > 0)
     {
@@ -1142,6 +1156,7 @@ void ChannelServer::Tick()
         }
     }
 
+    perf.Start();
     std::map<ServerTime, std::list<libcomp::Message::Execute*>> schedule;
     {
         std::lock_guard<std::mutex> lock(mLock);
@@ -1178,6 +1193,9 @@ void ChannelServer::Tick()
             }
         }
     }
+    perf.Stop("ScheduleWork");
+
+    tickPerf.Stop("Tick");
 }
 
 void ChannelServer::StartGameTick()

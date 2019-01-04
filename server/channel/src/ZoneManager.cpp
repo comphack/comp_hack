@@ -110,6 +110,7 @@
 #include "EventManager.h"
 #include "ManagerConnection.h"
 #include "MatchManager.h"
+#include "PerformanceTimer.h"
 #include "PlasmaState.h"
 #include "SkillManager.h"
 #include "TokuseiManager.h"
@@ -4026,13 +4027,19 @@ void ZoneManager::UpdateActiveZoneStates()
 
     auto server = mServer.lock();
 
+    // Performance timer to measure tasks.
+    PerformanceTimer perf(server.get());
+    PerformanceTimer perf2(server.get());
+
     // Spin through entities with updated status effects
+    perf.Start();
     auto worldClock = server->GetWorldClockTime();
     for(auto zone : zones)
     {
         UpdateStatusEffectStates(zone,
             worldClock.SystemTime);
     }
+    perf.Stop("UpdateStatusEffectStates");
 
     auto aiManager = server->GetAIManager();
 
@@ -4040,6 +4047,8 @@ void ZoneManager::UpdateActiveZoneStates()
 
     for(auto zone : zones)
     {
+        perf.Start();
+
         // Despawn first
         HandleDespawns(zone);
 
@@ -4055,7 +4064,9 @@ void ZoneManager::UpdateActiveZoneStates()
         }
 
         // Update active AI controlled entities
+        perf2.Start();
         aiManager->UpdateActiveStates(zone, serverTime, isNight);
+        perf2.Stop("Zone AI");
 
         // Update staggered spawns before doing any normal spawns
         if(zone->HasStaggeredSpawns(serverTime))
@@ -4073,6 +4084,8 @@ void ZoneManager::UpdateActiveZoneStates()
         }
 
         mTimeRestrictUpdatedZones.erase(zone->GetID());
+
+        perf.Stop(libcomp::String("Zone %1").Arg(zone->GetID()));
     }
 
     // Get any updated time restricted zones and clear the list
@@ -4093,6 +4106,7 @@ void ZoneManager::UpdateActiveZoneStates()
     }
 
     // Handle all time restrict updated zones
+    perf.Start();
     for(auto zone : zones)
     {
         // Despawn first
@@ -4104,9 +4118,12 @@ void ZoneManager::UpdateActiveZoneStates()
             UpdateSpawnGroups(zone, false, serverTime);
         }
     }
+    perf.Stop("TimeRestrictedSpawns");
 
     if(refreshTracking)
     {
+        perf.Start();
+
         // Refresh all tracking zones and boss groups as needed
         zones.clear();
         std::set<uint32_t> activeGroups;
@@ -4161,6 +4178,8 @@ void ZoneManager::UpdateActiveZoneStates()
         {
             SendMultiZoneBossStatus(groupID);
         }
+
+        perf.Stop("refreshTracking");
     }
 }
 

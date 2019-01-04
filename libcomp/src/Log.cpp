@@ -280,11 +280,11 @@ void Log::LogMessage(Log::Level_t level, const String& msg)
             String formattedTime = String("[%1] ").Arg(ss.str());
 
             mLogFile->write(formattedTime.C(),
-                (std::streamsize)(formattedTime.Length() * sizeof(char)));
+                (std::streamsize)(formattedTime.Size() * sizeof(char)));
         }
 
         mLogFile->write(final.C(),
-            (std::streamsize)(final.Length() * sizeof(char)));
+            (std::streamsize)(final.Size() * sizeof(char)));
         mLogFile->flush();
     }
 

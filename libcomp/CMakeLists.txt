@@ -46,6 +46,7 @@ ADD_CUSTOM_TARGET(git-version COMMAND ${CMAKE_COMMAND}
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/Git.h.in"
         "${CMAKE_SOURCE_DIR}/cmake/git-version.cmake"
     BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/Git.h"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMENT "Generating Git.h"
 )
 

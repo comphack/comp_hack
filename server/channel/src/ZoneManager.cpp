@@ -4085,7 +4085,7 @@ void ZoneManager::UpdateActiveZoneStates()
 
         mTimeRestrictUpdatedZones.erase(zone->GetID());
 
-        perf.Stop(libcomp::String("Zone %1").Arg(zone->GetID()));
+        perf.Stop(libcomp::String("Zone %1").Arg(zone->GetDefinitionID()));
     }
 
     // Get any updated time restricted zones and clear the list

@@ -56,6 +56,13 @@ ENDIF()
 
 PROJECT(comp_hack)
 
+# Detect if the host processor is x86 compatible.
+IF(CMAKE_SYSTEM_PROCESSOR MATCHES "x86|X86|amd64|AMD64|x86_64")
+    SET(X86 TRUE)
+ELSE()
+    SET(X86 FALSE)
+ENDIF()
+
 # Print the CMake version for debugging.
 MESSAGE("-- CMake version: ${CMAKE_VERSION}")
 
@@ -364,7 +371,11 @@ IF(NOT MSVC)
 
     # Determine basic gcc/clang/mingw flags for release mode.
     IF(BUILD_OPTIMIZED)
-        ADD_COMPILER_FLAGS(AUTO -O3 -msse3)
+        IF(X86)
+            ADD_COMPILER_FLAGS(AUTO -O3 -msse3)
+        ELSE()
+            ADD_COMPILER_FLAGS(AUTO -O3)
+        ENDIF()
     ENDIF(BUILD_OPTIMIZED)
 
     # Strip release builds.
@@ -410,7 +421,7 @@ SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
 # Add in the build of libobjgen and comp_objgen.
 IF(USE_PREBUILT_OBJECTS)
     ADD_EXECUTABLE(comp_objgen IMPORTED)
-    
+
     IF(WIN32)
         SET_TARGET_PROPERTIES(comp_objgen PROPERTIES IMPORTED_LOCATION
             "${CMAKE_SOURCE_DIR}/deps/objgen/comp_objgen.exe")

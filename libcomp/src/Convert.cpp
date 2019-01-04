@@ -26,6 +26,7 @@
 
 #include "Convert.h"
 #include "Endian.h"
+#include "Log.h"
 
 // Lookup tables for CP-1252 and CP-932.
 #include "LookupTableCP1252.h"
@@ -35,6 +36,8 @@
 #include <stdint.h>
 
 using namespace libcomp;
+
+#define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
 
 /**
  * Convert a CP-1252 encoded string to a @ref String.
@@ -246,6 +249,17 @@ static std::vector<char> ToCP932Encoding(const String& str,
     {
         // Get the Unicode code point for the current character.
         String::CodePoint unicode = str.At(i);
+
+        // Sanity check the code point is inside the array.
+        if(ARRAY_SIZE(LookupTableCP932) <= unicode ||
+            (String::CodePoint)0xFFFF < unicode)
+        {
+            LOG_ERROR(String("Invalid character %1 in string: %2\n").Arg(
+                i).Arg(str));
+
+            final.push_back('?');
+            continue;
+        }
 
         // Find the mapped code point for the desired encoding.
         uint16_t cp932 = pMappingTo[unicode];

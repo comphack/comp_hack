@@ -38,6 +38,7 @@
 #include <QInputDialog>
 #include <QIODevice>
 #include <QMessageBox>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPicture>
 #include <QScrollBar>
@@ -90,7 +91,7 @@ const QColor COLOR_TOGGLE1 = Qt::darkYellow;
 const QColor COLOR_TOGGLE2 = Qt::darkCyan;
 
 ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
-    : QMainWindow(p), mMainWindow(pMainWindow), mDrawTarget(0)
+    : QMainWindow(p), mMainWindow(pMainWindow), mDragging(false)
 {
     ui.setupUi(this);
 
@@ -164,6 +165,11 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
 
     QShortcut *shortcut = new QShortcut(QKeySequence("F5"), this);
     connect(shortcut, SIGNAL(activated()), this, SLOT(Refresh()));
+
+    // Override the standard scroll behavior for the map scroll area
+    ui.mapScrollArea->installEventFilter(this);
+    ui.mapScrollArea->horizontalScrollBar()->installEventFilter(this);
+    ui.mapScrollArea->verticalScrollBar()->installEventFilter(this);
 }
 
 ZoneWindow::~ZoneWindow()
@@ -549,6 +555,59 @@ void ZoneWindow::LoadZoneFile()
     mMainWindow->UpdateActiveZone(mZonePath);
 
     ShowZone();
+}
+
+void ZoneWindow::mouseMoveEvent(QMouseEvent* event)
+{
+    if(mDragging)
+    {
+        auto pos = event->pos();
+
+        auto hBar = ui.mapScrollArea->horizontalScrollBar();
+        auto vBar = ui.mapScrollArea->verticalScrollBar();
+
+        hBar->setValue(hBar->value() + mLastMousePos.x() - pos.x());
+        vBar->setValue(vBar->value() + mLastMousePos.y() - pos.y());
+
+        mLastMousePos = pos;
+    }
+}
+
+void ZoneWindow::mousePressEvent(QMouseEvent* event)
+{
+    if(event->button() == Qt::MouseButton::RightButton &&
+        ui.mapScrollArea->underMouse())
+    {
+        ui.mapScrollArea->setCursor(Qt::CursorShape::ClosedHandCursor);
+        mDragging = true;
+
+        mLastMousePos = event->pos();
+    }
+}
+
+void ZoneWindow::mouseReleaseEvent(QMouseEvent* event)
+{
+    if(mDragging)
+    {
+        ui.mapScrollArea->setCursor(Qt::CursorShape::ArrowCursor);
+        mDragging = false;
+    }
+}
+
+bool ZoneWindow::eventFilter(QObject* o, QEvent* e)
+{
+    if(e->type() == QEvent::Wheel && (o == ui.mapScrollArea ||
+        o == ui.mapScrollArea->horizontalScrollBar() ||
+        o == ui.mapScrollArea->verticalScrollBar()))
+    {
+        // Override mouse wheel to zoom for scroll area
+        QWheelEvent* we = static_cast<QWheelEvent*>(e);
+        ui.zoomSlider->setValue(ui.zoomSlider->value() + (we->delta() / 10));
+
+        return true;
+    }
+
+    return false;
 }
 
 void ZoneWindow::LoadPartialDirectory()
@@ -1704,7 +1763,7 @@ void ZoneWindow::DrawMap()
     auto xScroll = ui.mapScrollArea->horizontalScrollBar()->value();
     auto yScroll = ui.mapScrollArea->verticalScrollBar()->value();
 
-    mDrawTarget = new QLabel();
+    ui.drawTarget->clear();
 
     QPicture pic;
     QPainter painter(&pic);
@@ -1875,8 +1934,7 @@ void ZoneWindow::DrawMap()
 
     painter.end();
 
-    mDrawTarget->setPicture(pic);
-    ui.mapScrollArea->setWidget(mDrawTarget);
+    ui.drawTarget->setPicture(pic);
 
     ui.mapScrollArea->horizontalScrollBar()->setValue(xScroll);
     ui.mapScrollArea->verticalScrollBar()->setValue(yScroll);

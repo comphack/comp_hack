@@ -28,8 +28,6 @@
 
 // Qt Includes
 #include <PushIgnore.h>
-#include <QLabel>
-
 #include "ui_ZoneWindow.h"
 #include <PopIgnore.h>
 
@@ -83,6 +81,12 @@ public:
 
 public slots:
     void LoadZoneFile();
+
+protected:
+    void mouseMoveEvent(QMouseEvent* event);
+    void mousePressEvent(QMouseEvent* event);
+    void mouseReleaseEvent(QMouseEvent* event);
+    bool eventFilter(QObject* o, QEvent* e);
 
 protected slots:
     void LoadPartialDirectory();
@@ -144,10 +148,12 @@ private:
     MainWindow *mMainWindow;
 
     Ui::ZoneWindow ui;
-    QLabel* mDrawTarget;
 
     float mOffsetX;
     float mOffsetY;
+
+    QPoint mLastMousePos;
+    bool mDragging;
 
     libcomp::String mZonePath;
     std::shared_ptr<MergedZone> mMergedZone;

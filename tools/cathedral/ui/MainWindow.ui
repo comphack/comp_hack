@@ -52,7 +52,7 @@
             <bool>false</bool>
            </property>
            <property name="text">
-            <string>View</string>
+            <string>View Zone</string>
            </property>
           </widget>
          </item>
@@ -83,7 +83,7 @@
           </sizepolicy>
          </property>
          <property name="text">
-          <string>View</string>
+          <string>View Events</string>
          </property>
         </widget>
        </item>

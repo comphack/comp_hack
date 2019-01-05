@@ -246,9 +246,14 @@ void SpotList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
 
                 if(merged->CurrentPartial)
                 {
+                    // Add to partial
                     merged->CurrentPartial->SetSpots(spotDef->GetID(),
                         spot);
                 }
+
+                // Add to the merged/current zone
+                merged->Definition->SetSpots(spotDef->GetID(),
+                    spot);
             }
 
             auto actions = prop->actions->Save();
@@ -275,12 +280,12 @@ void SpotList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
         {
             if(merged->CurrentPartial)
             {
+                // Remove from partial
                 merged->CurrentPartial->RemoveSpots(spotDef->GetID());
             }
-            else
-            {
-                merged->CurrentZone->RemoveSpots(spotDef->GetID());
-            }
+
+            // Remove from merged/current zone
+            merged->Definition->RemoveSpots(spotDef->GetID());
         }
     }
 }

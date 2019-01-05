@@ -58,6 +58,12 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="editable">
+           <bool>true</bool>
+          </property>
+          <property name="insertPolicy">
+           <enum>QComboBox::NoInsert</enum>
+          </property>
          </widget>
         </item>
        </layout>

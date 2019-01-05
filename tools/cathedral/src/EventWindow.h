@@ -119,6 +119,7 @@ private:
     std::unordered_map<libcomp::String, std::shared_ptr<EventFile>> mFiles;
     std::unordered_map<libcomp::String, libcomp::String> mGlobalIDMap;
 
+    libcomp::String mCurrentFileName;
     std::shared_ptr<FileEvent> mCurrentEvent;
 
     Ui::EventWindow *ui;

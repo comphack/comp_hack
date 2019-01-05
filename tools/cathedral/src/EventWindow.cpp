@@ -233,7 +233,7 @@ bool EventWindow::GoToEvent(const libcomp::String& eventID)
         return false;
     }
 
-    libcomp::String currentPath = cs(ui->files->currentText());
+    libcomp::String currentPath = mCurrentFileName;
     libcomp::String path = iter->second;
 
     if(currentPath != path)
@@ -375,16 +375,10 @@ void EventWindow::LoadDirectory()
 
     QDirIterator it(qPath, QStringList() << "*.xml", QDir::Files,
         QDirIterator::Subdirectories);
-    libcomp::String currentPath(ui->files->currentText().toUtf8()
-        .constData());
-    libcomp::String selectPath = currentPath;
     while(it.hasNext())
     {
         libcomp::String path = cs(it.next());
-        if(LoadFileFromPath(path) && selectPath.IsEmpty())
-        {
-            selectPath = path;
-        }
+        LoadFileFromPath(path);
     }
 
     ui->files->blockSignals(false);
@@ -435,7 +429,7 @@ void EventWindow::LoadFile()
 
 void EventWindow::SaveFile()
 {
-    libcomp::String path = cs(ui->files->currentText());
+    libcomp::String path = mCurrentFileName;
     if(path.IsEmpty())
     {
         // No file, nothing to do
@@ -495,7 +489,7 @@ void EventWindow::NewFile()
 
 void EventWindow::RemoveEvent()
 {
-    auto fIter = mFiles.find(cs(ui->files->currentText()));
+    auto fIter = mFiles.find(mCurrentFileName);
     if(fIter == mFiles.end())
     {
         // No file
@@ -536,7 +530,7 @@ void EventWindow::NewEvent()
         return;
     }
 
-    auto fIter = mFiles.find(cs(ui->files->currentText()));
+    auto fIter = mFiles.find(mCurrentFileName);
     if(fIter == mFiles.end())
     {
         // No file
@@ -573,6 +567,21 @@ void EventWindow::Refresh(bool reselectEvent)
     auto current = mCurrentEvent;
 
     libcomp::String path = cs(ui->files->currentText());
+    if(mFiles.find(path) == mFiles.end())
+    {
+        // Path is invalid, roll back to last valid one and do nothing
+        path = mCurrentFileName;
+
+        bool old = ui->files->blockSignals(true);
+        ui->files->setCurrentText(qs(path));
+        ui->files->blockSignals(old);
+
+        return;
+    }
+    else
+    {
+        mCurrentFileName = path;
+    }
 
     SelectFile(path);
 
@@ -966,7 +975,7 @@ void EventWindow::BindSelectedEvent()
     std::shared_ptr<EventFile> file;
     if(selected)
     {
-        auto iter = mFiles.find(cs(ui->files->currentText()));
+        auto iter = mFiles.find(mCurrentFileName);
         if(iter != mFiles.end())
         {
             file = iter->second;

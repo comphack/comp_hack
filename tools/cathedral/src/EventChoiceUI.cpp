@@ -53,8 +53,8 @@ EventChoice::EventChoice(MainWindow *pMainWindow, bool isITime,
     mBranches->Setup(DynamicItemType_t::OBJ_EVENT_BASE, pMainWindow);
 
     ui->formCore->insertRow(0, "Message:", mMessage);
+    ui->formBranch->addRow("Branch Script:", mBranchScript);
     ui->formBranch->addRow("Branches:", mBranches);
-    ui->formBase->insertRow(1, "Branch Script:", mBranchScript);
 }
 
 EventChoice::~EventChoice()

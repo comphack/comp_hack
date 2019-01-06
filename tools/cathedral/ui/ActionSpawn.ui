@@ -45,19 +45,6 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="1">
-      <widget class="QComboBox" name="spotID">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="editable">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
      <item row="2" column="0">
       <widget class="QLabel" name="lblSpawnGroups">
        <property name="text">
@@ -128,6 +115,9 @@
        </property>
       </widget>
      </item>
+     <item row="1" column="1">
+      <widget class="SpotRef" name="spot" native="true"/>
+     </item>
     </layout>
    </item>
   </layout>
@@ -149,6 +139,12 @@
    <class>DynamicList</class>
    <extends>QWidget</extends>
    <header>DynamicList.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SpotRef</class>
+   <extends>QWidget</extends>
+   <header>SpotRef.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -93,6 +93,7 @@ SET(${PROJECT_NAME}_SRCS
     src/SpawnLocationUI.cpp
     src/SpawnRestrictionUI.cpp
     src/SpotList.cpp
+    src/SpotRef.cpp
     src/XmlHandler.cpp
     src/ZonePartialSelector.cpp
     src/ZoneTriggerUI.cpp
@@ -164,6 +165,7 @@ SET(${PROJECT_NAME}_HDRS
     src/SpawnLocationUI.h
     src/SpawnRestrictionUI.h
     src/SpotList.h
+    src/SpotRef.h
     src/XmlHandler.h
     src/ZonePartialSelector.h
     src/ZoneTriggerUI.h
@@ -233,6 +235,7 @@ SET(${PROJECT_NAME}_UIS
     ui/SpawnLocation.ui
     ui/SpawnLocationGroup.ui
     ui/SpawnRestriction.ui
+    ui/SpotRef.ui
     ui/ZonePartialSelector.ui
     ui/ZoneTrigger.ui
     ui/ZoneWindow.ui

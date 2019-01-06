@@ -34,8 +34,9 @@
 #include "MainWindow.h"
 #include "ObjectPositionUI.h"
 #include "ObjectSelector.h"
-#include <SpawnLocationUI.h>
-#include <ZoneTriggerUI.h>
+#include "SpawnLocationUI.h"
+#include "SpotRef.h"
+#include "ZoneTriggerUI.h"
 
 // Qt Includes
 #include <PushIgnore.h>
@@ -144,6 +145,15 @@ bool DynamicList::AddUnsignedInteger(uint32_t val)
         if(ctrl)
         {
             AddItem(ctrl, true);
+            return true;
+        }
+    }
+    else if(mType == DynamicItemType_t::COMPLEX_SPOT)
+    {
+        auto ctrl = GetSpotWidget(val);
+        if(ctrl)
+        {
+            AddItem(ctrl, false);
             return true;
         }
     }
@@ -365,6 +375,8 @@ QWidget* DynamicList::GetObjectWidget<objects::ObjectPosition>(
     const std::shared_ptr<objects::ObjectPosition>& obj)
 {
     ObjectPosition* ctrl = new ObjectPosition;
+    ctrl->SetMainWindow(mMainWindow);
+
     if(obj)
     {
         ctrl->Load(obj);
@@ -482,6 +494,16 @@ QWidget* DynamicList::GetObjectSelectorWidget(uint32_t val)
     return sel;
 }
 
+QWidget* DynamicList::GetSpotWidget(uint32_t val)
+{
+    SpotRef* spot = new SpotRef;
+    spot->SetMainWindow(mMainWindow);
+
+    spot->SetValue(val);
+
+    return spot;
+}
+
 std::list<int32_t> DynamicList::GetIntegerList() const
 {
     std::list<int32_t> result;
@@ -527,6 +549,16 @@ std::list<uint32_t> DynamicList::GetUnsignedIntegerList() const
             ObjectSelector* sel = ui->layoutItems->itemAt(childIdx)->widget()
                 ->findChild<ObjectSelector*>();
             result.push_back(sel->GetValue());
+        }
+    }
+    else if(mType == DynamicItemType_t::COMPLEX_SPOT)
+    {
+        int total = ui->layoutItems->count();
+        for(int childIdx = 0; childIdx < total; childIdx++)
+        {
+            SpotRef* ref = ui->layoutItems->itemAt(childIdx)->widget()
+                ->findChild<SpotRef*>();
+            result.push_back(ref->GetValue());
         }
     }
     else
@@ -783,6 +815,9 @@ void DynamicList::AddRow()
     case DynamicItemType_t::COMPLEX_OBJECT_SELECTOR:
         ctrl = GetObjectSelectorWidget(0);
         canReorder = true;
+        break;
+    case DynamicItemType_t::COMPLEX_SPOT:
+        ctrl = GetSpotWidget(0);
         break;
     case DynamicItemType_t::OBJ_EVENT_BASE:
         ctrl = GetObjectWidget(std::make_shared<objects::EventBase>());

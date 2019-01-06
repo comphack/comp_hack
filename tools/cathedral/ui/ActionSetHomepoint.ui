@@ -39,32 +39,11 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="1">
-      <layout class="QHBoxLayout" name="layoutSpot">
-       <item>
-        <widget class="QComboBox" name="spot">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="editable">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="spotGo">
-         <property name="text">
-          <string>Go</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
      <item row="0" column="1">
       <widget class="ObjectSelector" name="zone" native="true"/>
+     </item>
+     <item row="1" column="1">
+      <widget class="SpotRef" name="spot" native="true"/>
      </item>
     </layout>
    </item>
@@ -75,6 +54,12 @@
    <class>ObjectSelector</class>
    <extends>QWidget</extends>
    <header>ObjectSelector.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SpotRef</class>
+   <extends>QWidget</extends>
+   <header>SpotRef.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -53,6 +53,7 @@ ActionSpawn::ActionSpawn(ActionList *pList,
     prop->spawnLocationGroups->Setup(
         DynamicItemType_t::COMPLEX_OBJECT_SELECTOR, pMainWindow,
         "SpawnLocationGroup");
+    prop->spot->SetMainWindow(pMainWindow);
     prop->defeatActions->SetMainWindow(pMainWindow);
 
     ui->actionTitle->setText(tr("<b>Spawn</b>"));
@@ -80,8 +81,7 @@ void ActionSpawn::Load(const std::shared_ptr<objects::Action>& act)
         prop->spawnLocationGroups->AddUnsignedInteger(slgID);
     }
 
-    prop->spotID->lineEdit()->setText(
-        QString::number(mAction->GetSpotID()));
+    prop->spot->SetValue(mAction->GetSpotID());
 
     std::unordered_map<uint32_t, int32_t> spawnGroups;
 
@@ -112,7 +112,7 @@ std::shared_ptr<objects::Action> ActionSpawn::Save() const
     auto slgIDs = prop->spawnLocationGroups->GetUnsignedIntegerList();
     mAction->SetSpawnLocationGroupIDs(slgIDs);
 
-    mAction->SetSpotID((uint32_t)prop->spotID->currentText().toInt());
+    mAction->SetSpotID(prop->spot->GetValue());
 
     mAction->ClearSpawnGroupIDs();
     for(auto pair : prop->spawnGroups->SaveUnsigned())

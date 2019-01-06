@@ -47,6 +47,7 @@ ActionSetHomepoint::ActionSetHomepoint(ActionList *pList, MainWindow *pMainWindo
     prop->setupUi(pWidget);
 
     prop->zone->Bind(pMainWindow, "ZoneData");
+    prop->spot->SetMainWindow(pMainWindow);
 
     ui->actionTitle->setText(tr("<b>Set Homepoint</b>"));
     ui->layoutMain->addWidget(pWidget);
@@ -69,7 +70,7 @@ void ActionSetHomepoint::Load(const std::shared_ptr<objects::Action>& act)
     LoadBaseProperties(mAction);
 
     prop->zone->SetValue(mAction->GetZoneID());
-    prop->spot->lineEdit()->setText(QString::number(mAction->GetSpotID()));
+    prop->spot->SetValue(mAction->GetSpotID());
 }
 
 std::shared_ptr<objects::Action> ActionSetHomepoint::Save() const
@@ -82,7 +83,7 @@ std::shared_ptr<objects::Action> ActionSetHomepoint::Save() const
     SaveBaseProperties(mAction);
 
     mAction->SetZoneID(prop->zone->GetValue());
-    mAction->SetSpotID((uint32_t)prop->spot->currentText().toInt());
+    mAction->SetSpotID(prop->spot->GetValue());
 
     return mAction;
 }

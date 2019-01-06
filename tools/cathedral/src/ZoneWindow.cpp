@@ -492,6 +492,35 @@ std::list<std::shared_ptr<objects::Action>>
     return actions;
 }
 
+bool ZoneWindow::ShowSpot(uint32_t spotID)
+{
+    // Check if the spot exists and error if it does not
+    uint32_t dynamicMapID = mMergedZone->CurrentZone 
+        ? mMergedZone->CurrentZone->GetDynamicMapID() : 0;
+    auto definitions = mMainWindow->GetDefinitions();
+
+    auto spots = definitions->GetSpotData(dynamicMapID);
+    auto spotIter = spots.find(spotID);
+    if(spotIter == spots.end())
+    {
+        QMessageBox err;
+        err.setText(QString("Spot %1 is not currently loaded.").arg(spotID));
+        err.exec();
+
+        return false;
+    }
+
+    // Select the spots tab and select the object
+    if(ui.tabs->currentIndex() != 4)
+    {
+        ui.tabs->setCurrentIndex(4);
+    }
+
+    ui.spots->Select(spotIter->second);
+
+    return true;
+}
+
 void ZoneWindow::closeEvent(QCloseEvent* event)
 {
     (void)event;

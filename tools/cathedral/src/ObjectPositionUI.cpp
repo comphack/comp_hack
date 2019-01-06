@@ -34,7 +34,8 @@
 #include "ui_ObjectPosition.h"
 #include <PopIgnore.h>
 
-ObjectPosition::ObjectPosition(QWidget *pParent) : QWidget(pParent)
+ObjectPosition::ObjectPosition(QWidget *pParent) : QWidget(pParent),
+    mMainWindow(nullptr)
 {
     prop = new Ui::ObjectPosition;
     prop->setupUi(this);
@@ -48,6 +49,13 @@ ObjectPosition::~ObjectPosition()
     delete prop;
 }
 
+void ObjectPosition::SetMainWindow(MainWindow *pMainWindow)
+{
+    mMainWindow = pMainWindow;
+
+    prop->spot->SetMainWindow(pMainWindow);
+}
+
 void ObjectPosition::Load(const std::shared_ptr<objects::ObjectPosition>& pos)
 {
     Load(pos->GetSpotID(), pos->GetX(), pos->GetY(), pos->GetRotation());
@@ -55,8 +63,7 @@ void ObjectPosition::Load(const std::shared_ptr<objects::ObjectPosition>& pos)
 
 void ObjectPosition::Load(uint32_t spotID, float x, float y, float rot)
 {
-    prop->spot->lineEdit()->setText(
-        QString::number(spotID));
+    prop->spot->SetValue(spotID);
     prop->x->setValue((double)x);
     prop->y->setValue((double)y);
     prop->rotation->setValue((double)rot);
@@ -77,7 +84,7 @@ std::shared_ptr<objects::ObjectPosition> ObjectPosition::Save() const
 {
     auto obj = std::make_shared<objects::ObjectPosition>();
 
-    uint32_t spotID = (uint32_t)prop->spot->currentText().toInt();
+    uint32_t spotID = (uint32_t)prop->spot->GetValue();
     if(spotID)
     {
         obj->SetSpotID(spotID);
@@ -109,7 +116,7 @@ void ObjectPosition::RadioToggle()
     else
     {
         // Clear spot property
-        prop->spot->lineEdit()->setText("0");
+        prop->spot->SetValue(0);
 
         prop->spot->setEnabled(false);
         prop->x->setEnabled(true);

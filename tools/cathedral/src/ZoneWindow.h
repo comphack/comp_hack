@@ -79,6 +79,8 @@ public:
     std::list<std::shared_ptr<objects::Action>> GetLoadedActions(
         bool forUpdate);
 
+    bool ShowSpot(uint32_t spotID);
+
     void closeEvent(QCloseEvent* event) override;
 
 public slots:

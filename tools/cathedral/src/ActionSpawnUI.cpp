@@ -46,10 +46,13 @@ ActionSpawn::ActionSpawn(ActionList *pList,
     QWidget *pWidget = new QWidget;
     prop = new Ui::ActionSpawn;
     prop->setupUi(pWidget);
-    prop->spawnGroupIDs->SetValueName(tr("Spot ID:"));
 
-    prop->spawnLocationGroupIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT,
-        pMainWindow);
+    prop->spawnGroups->SetValueName(tr("Spot ID:"));
+    prop->spawnGroups->BindSelector(pMainWindow, "SpawnGroup");
+
+    prop->spawnLocationGroups->Setup(
+        DynamicItemType_t::COMPLEX_OBJECT_SELECTOR, pMainWindow,
+        "SpawnLocationGroup");
     prop->defeatActions->SetMainWindow(pMainWindow);
 
     ui->actionTitle->setText(tr("<b>Spawn</b>"));
@@ -74,7 +77,7 @@ void ActionSpawn::Load(const std::shared_ptr<objects::Action>& act)
     
     for(uint32_t slgID : mAction->GetSpawnLocationGroupIDs())
     {
-        prop->spawnLocationGroupIDs->AddUnsignedInteger(slgID);
+        prop->spawnLocationGroups->AddUnsignedInteger(slgID);
     }
 
     prop->spotID->lineEdit()->setText(
@@ -87,7 +90,7 @@ void ActionSpawn::Load(const std::shared_ptr<objects::Action>& act)
         spawnGroups[id.first] = (int32_t)id.second;
     }
 
-    prop->spawnGroupIDs->Load(spawnGroups);
+    prop->spawnGroups->Load(spawnGroups);
 
     prop->mode->setCurrentIndex(to_underlying(
         mAction->GetMode()));
@@ -106,13 +109,13 @@ std::shared_ptr<objects::Action> ActionSpawn::Save() const
 
     SaveBaseProperties(mAction);
 
-    auto slgIDs = prop->spawnLocationGroupIDs->GetUnsignedIntegerList();
+    auto slgIDs = prop->spawnLocationGroups->GetUnsignedIntegerList();
     mAction->SetSpawnLocationGroupIDs(slgIDs);
 
     mAction->SetSpotID((uint32_t)prop->spotID->currentText().toInt());
 
     mAction->ClearSpawnGroupIDs();
-    for(auto pair : prop->spawnGroupIDs->SaveUnsigned())
+    for(auto pair : prop->spawnGroups->SaveUnsigned())
     {
         mAction->SetSpawnGroupIDs(pair.first, (uint32_t)pair.second);
     }

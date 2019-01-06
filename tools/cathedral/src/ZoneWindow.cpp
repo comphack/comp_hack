@@ -147,7 +147,7 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
         this, SLOT(ApplyPartials()));
 
     connect(ui.tabs, SIGNAL(currentChanged(int)), this,
-        SLOT(SelectListObject()));
+        SLOT(MainTabChanged()));
     connect(ui.npcs, SIGNAL(selectedObjectChanged()), this,
         SLOT(SelectListObject()));
     connect(ui.objects, SIGNAL(selectedObjectChanged()), this,
@@ -492,6 +492,13 @@ std::list<std::shared_ptr<objects::Action>>
     return actions;
 }
 
+void ZoneWindow::closeEvent(QCloseEvent* event)
+{
+    (void)event;
+
+    mMainWindow->CloseSelectors(this);
+}
+
 void ZoneWindow::LoadZoneFile()
 {
     QString path = QFileDialog::getOpenFileName(this, tr("Open Zone XML"),
@@ -640,7 +647,7 @@ bool ZoneWindow::eventFilter(QObject* o, QEvent* e)
     {
         // Override mouse wheel to zoom for scroll area
         QWheelEvent* we = static_cast<QWheelEvent*>(e);
-        ui.zoomSlider->setValue(ui.zoomSlider->value() + (we->delta() / 10));
+        ui.zoomSlider->setValue(ui.zoomSlider->value() + (we->delta() / 20));
 
         return true;
     }
@@ -1067,8 +1074,17 @@ void ZoneWindow::SelectListObject()
     DrawMap();
 }
 
+void ZoneWindow::MainTabChanged()
+{
+    mMainWindow->CloseSelectors(this);
+
+    DrawMap();
+}
+
 void ZoneWindow::SpawnTabChanged()
 {
+    mMainWindow->CloseSelectors(this);
+
     switch(ui.tabSpawnTypes->currentIndex())
     {
     case 1:
@@ -1140,6 +1156,8 @@ void ZoneWindow::ShowToggled(bool checked)
 
 void ZoneWindow::Refresh()
 {
+    SaveProperties();
+
     LoadMapFromZone();
 }
 
@@ -1401,6 +1419,8 @@ void ZoneWindow::RebuildCurrentZoneDisplay()
 
 void ZoneWindow::UpdateMergedZone(bool redraw)
 {
+    mMainWindow->CloseSelectors(this);
+
     // Set control defaults
     ui.lblZoneViewNotes->setText("");
 
@@ -1553,6 +1573,8 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
 
 bool ZoneWindow::LoadMapFromZone()
 {
+    mMainWindow->CloseSelectors(this);
+
     auto zone = mMergedZone->Definition;
 
     auto dataset = mMainWindow->GetBinaryDataSet("ZoneData");

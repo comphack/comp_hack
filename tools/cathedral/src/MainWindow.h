@@ -89,6 +89,8 @@ public:
     QString GetDialogDirectory();
     void SetDialogDirectory(QString path, bool isFile);
 
+    void CloseSelectors(QWidget* topLevel);
+
 protected slots:
     void OpenEvents();
     void OpenZone();

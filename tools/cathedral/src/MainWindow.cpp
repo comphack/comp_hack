@@ -392,12 +392,20 @@ void MainWindow::SetDialogDirectory(QString path, bool isFile)
     QSettings settings;
     if(isFile)
     {
-        QDir currentDir;
-        path = currentDir.absoluteFilePath(path);
+        QFileInfo f(path);
+        path = f.absoluteDir().path();
     }
 
     settings.setValue("dialogDirectory", path);
     settings.sync();
+}
+
+void MainWindow::CloseSelectors(QWidget* topLevel)
+{
+    for(auto& pair : mObjectSelectors)
+    {
+        pair.second->CloseIfConnected(topLevel);
+    }
 }
 
 bool MainWindow::LoadBinaryData(const libcomp::String& binaryFile,

@@ -370,8 +370,17 @@ void EventWindow::ChangeEventID(const libcomp::String& currentID)
     }
 }
 
+void EventWindow::closeEvent(QCloseEvent* event)
+{
+    (void)event;
+
+    mMainWindow->CloseSelectors(this);
+}
+
 void EventWindow::FileSelectionChanged()
 {
+    mMainWindow->CloseSelectors(this);
+
     Refresh(false);
 }
 
@@ -1159,6 +1168,7 @@ void EventWindow::BindSelectedEvent()
     {
         for(auto eCtrl : ui->splitter->findChildren<Event*>())
         {
+            mMainWindow->CloseSelectors(eCtrl);
             if(previousEvent->Event == eCtrl->Save())
             {
                 previousEvent->Comments = eCtrl->GetComments();

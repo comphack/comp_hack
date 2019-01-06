@@ -25,6 +25,7 @@
 #include "ObjectList.h"
 
 // Cathedral Includes
+#include "MainWindow.h"
 #include "ObjectListModel.h"
 
 // Qt Includes
@@ -38,7 +39,7 @@
 #include <Log.h>
 
 ObjectList::ObjectList(QWidget *pParent) :
-    QWidget(pParent), mReadOnly(false)
+    QWidget(pParent), mMainWindow(nullptr), mReadOnly(false)
 {
     mObjectModel = new ObjectListModel(this);
 
@@ -152,9 +153,17 @@ void ObjectList::SelectedObjectChanged()
 {
     auto obj = mActiveObject.lock();
 
-    if(obj && !mReadOnly)
+    if(obj)
     {
-        SaveProperties(obj);
+        if(mMainWindow)
+        {
+            mMainWindow->CloseSelectors(this);
+        }
+
+        if(!mReadOnly)
+        {
+            SaveProperties(obj);
+        }
     }
 
     auto idxList = ui->objectList->selectionModel()->selectedIndexes();

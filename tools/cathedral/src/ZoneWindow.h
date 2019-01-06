@@ -79,6 +79,8 @@ public:
     std::list<std::shared_ptr<objects::Action>> GetLoadedActions(
         bool forUpdate);
 
+    void closeEvent(QCloseEvent* event) override;
+
 public slots:
     void LoadZoneFile();
 
@@ -104,6 +106,7 @@ protected slots:
 
     void ZoneViewUpdated();
     void SelectListObject();
+    void MainTabChanged();
     void SpawnTabChanged();
 
     void Zoom();

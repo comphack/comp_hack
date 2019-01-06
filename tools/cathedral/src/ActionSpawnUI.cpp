@@ -50,6 +50,7 @@ ActionSpawn::ActionSpawn(ActionList *pList,
 
     prop->spawnLocationGroupIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT,
         pMainWindow);
+    prop->defeatActions->SetMainWindow(pMainWindow);
 
     ui->actionTitle->setText(tr("<b>Spawn</b>"));
     ui->layoutMain->addWidget(pWidget);

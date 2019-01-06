@@ -56,6 +56,8 @@ public:
 
     void Open(ObjectSelectorBase* ctrl = 0);
 
+    bool CloseIfConnected(QWidget* topLevel);
+
 protected slots:
     void ObjectSelected();
     void SelectedObjectChanged();

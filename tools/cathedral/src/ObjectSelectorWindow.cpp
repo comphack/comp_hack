@@ -99,6 +99,27 @@ void ObjectSelectorWindow::Open(ObjectSelectorBase* ctrl)
     raise();
 }
 
+bool ObjectSelectorWindow::CloseIfConnected(QWidget* topLevel)
+{
+    if(isVisible() && mSelectorControl)
+    {
+        QObject* parent = mSelectorControl;
+        while(parent)
+        {
+            if(parent == topLevel)
+            {
+                mSelectorControl = nullptr;
+                close();
+                return true;
+            }
+
+            parent = parent->parent();
+        }
+    }
+
+    return false;
+}
+
 void ObjectSelectorWindow::ObjectSelected()
 {
     auto item = ui->listContainerLayout->itemAt(0);

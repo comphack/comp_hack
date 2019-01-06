@@ -69,6 +69,8 @@ public:
 
     void ChangeEventID(const libcomp::String& currentID);
 
+    void closeEvent(QCloseEvent* event) override;
+
 private slots:
     void FileSelectionChanged();
     void LoadDirectory();

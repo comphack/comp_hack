@@ -45,6 +45,8 @@
 #include <QSettings>
 #include <QShortcut>
 #include <QToolTip>
+
+#include <ui_SpotProperties.h>
 #include <PopIgnore.h>
 
 // object Includes
@@ -120,8 +122,10 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
         pMainWindow);
 
     connect(ui.actionRefresh, SIGNAL(triggered()), this, SLOT(Refresh()));
-    connect(ui.showNPCs, SIGNAL(toggled(bool)), this, SLOT(ShowToggled(bool)));
-    connect(ui.showObjects, SIGNAL(toggled(bool)), this,
+
+    connect(ui.actionShowNPCs, SIGNAL(toggled(bool)), this,
+        SLOT(ShowToggled(bool)));
+    connect(ui.actionShowObjects, SIGNAL(toggled(bool)), this,
         SLOT(ShowToggled(bool)));
 
     connect(ui.addNPC, SIGNAL(clicked()), this, SLOT(AddNPC()));
@@ -553,6 +557,40 @@ void ZoneWindow::LoadZoneFile()
     mMergedZone->CurrentPartial = nullptr;
 
     mMainWindow->UpdateActiveZone(mZonePath);
+
+    // Reset all "show" flags and rebuild the spot filters
+    ui.actionShowNPCs->blockSignals(true);
+    ui.actionShowNPCs->setChecked(true);
+    ui.actionShowNPCs->blockSignals(false);
+
+    ui.actionShowObjects->blockSignals(true);
+    ui.actionShowObjects->setChecked(true);
+    ui.actionShowObjects->blockSignals(false);
+
+    auto definitions = mMainWindow->GetDefinitions();
+
+    std::set<uint8_t> spotTypes = { 0 };
+    for(auto spotDef : definitions->GetSpotData(zone->GetDynamicMapID()))
+    {
+        spotTypes.insert(spotDef.second->GetType());
+    }
+
+    // Duplicate the values from the SpotProperties dropdown
+    QWidget temp;
+    Ui::SpotProperties* prop = new Ui::SpotProperties;
+    prop->setupUi(&temp);
+
+    ui.menuShowSpots->clear();
+    for(uint8_t spotType : spotTypes)
+    {
+        auto act = ui.menuShowSpots->addAction(spotType
+            ? prop->type->itemText((int)spotType) : "All");
+        act->setData(spotType);
+        act->setCheckable(true);
+        act->setChecked(true);
+
+        connect(act, SIGNAL(toggled(bool)), this, SLOT(ShowToggled(bool)));
+    }
 
     ShowZone();
 }
@@ -1042,7 +1080,44 @@ void ZoneWindow::Zoom()
 
 void ZoneWindow::ShowToggled(bool checked)
 {
-    (void)checked;
+    QAction *qAct = qobject_cast<QAction*>(sender());
+    if(qAct && qAct->parentWidget() == ui.menuShowSpots)
+    {
+        auto showAll = ui.menuShowSpots->actions()[0];
+        if(qAct == showAll)
+        {
+            // All toggled
+            for(auto act : ui.menuShowSpots->actions())
+            {
+                if(act != qAct)
+                {
+                    act->blockSignals(true);
+                    act->setChecked(checked);
+                    act->blockSignals(false);
+                }
+            }
+        }
+        else
+        {
+            // Specific type toggled, update "All"
+            bool allChecked = true;
+            for(auto act : ui.menuShowSpots->actions())
+            {
+                int data = act->data().toInt();
+                if(data)
+                {
+                    allChecked &= act->isChecked();
+                }
+            }
+
+            if(showAll->isChecked() != allChecked)
+            {
+                showAll->blockSignals(true);
+                showAll->setChecked(allChecked);
+                showAll->blockSignals(false);
+            }
+        }
+    }
 
     DrawMap();
 }
@@ -1868,16 +1943,28 @@ void ZoneWindow::DrawMap()
         break;
     }
 
-    // Draw spots
     QFont font = painter.font();
     font.setPixelSize(10);
     painter.setFont(font);
 
+    // Draw spots
+    std::set<uint8_t> showSpotTypes;
+    for(auto act : ui.menuShowSpots->actions())
+    {
+        int data = act->data().toInt();
+        if(data && act->isChecked())
+        {
+            showSpotTypes.insert((uint8_t)data);
+        }
+    }
+
     for(auto spotPair : spots)
     {
-        if(highlight.find(spotPair.second) == highlight.end())
+        auto spotDef = spotPair.second;
+        if(highlight.find(spotDef) == highlight.end() &&
+            showSpotTypes.find(spotDef->GetType()) != showSpotTypes.end())
         {
-            DrawSpot(spotPair.second, false, painter);
+            DrawSpot(spotDef, false, painter);
         }
     }
 
@@ -1889,7 +1976,7 @@ void ZoneWindow::DrawMap()
         Scale(-mMergedZone->CurrentZone->GetStartingY())), 3, 3);
 
     // Draw NPCs
-    if(ui.showNPCs->isChecked())
+    if(ui.actionShowNPCs->isChecked())
     {
         for(auto npc : zone->GetNPCs())
         {
@@ -1901,7 +1988,7 @@ void ZoneWindow::DrawMap()
     }
 
     // Draw Objects
-    if(ui.showObjects->isChecked())
+    if(ui.actionShowObjects->isChecked())
     {
         for(auto obj : zone->GetObjects())
         {

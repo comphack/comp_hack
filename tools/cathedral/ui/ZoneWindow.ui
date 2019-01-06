@@ -695,22 +695,6 @@
          <item>
           <layout class="QHBoxLayout" name="layoutNPCControls">
            <item>
-            <widget class="QCheckBox" name="showNPCs">
-             <property name="maximumSize">
-              <size>
-               <width>200</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Show</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QPushButton" name="addNPC">
              <property name="text">
               <string>Add NPC</string>
@@ -758,22 +742,6 @@
          </item>
          <item>
           <layout class="QHBoxLayout" name="layoutObjectControls">
-           <item>
-            <widget class="QCheckBox" name="showObjects">
-             <property name="maximumSize">
-              <size>
-               <width>200</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Show</string>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
            <item>
             <widget class="QPushButton" name="addObject">
              <property name="text">
@@ -852,9 +820,6 @@
          </item>
          <item>
           <layout class="QHBoxLayout" name="layoutSpawnControls">
-           <property name="topMargin">
-            <number>5</number>
-           </property>
            <item>
             <widget class="QPushButton" name="addSpawn">
              <property name="text">
@@ -922,7 +887,16 @@
     <property name="title">
      <string>View</string>
     </property>
+    <widget class="QMenu" name="menuShowSpots">
+     <property name="title">
+      <string>Show Spots</string>
+     </property>
+    </widget>
     <addaction name="actionRefresh"/>
+    <addaction name="separator"/>
+    <addaction name="actionShowNPCs"/>
+    <addaction name="actionShowObjects"/>
+    <addaction name="menuShowSpots"/>
    </widget>
    <widget class="QMenu" name="menuPartials">
     <property name="title">
@@ -955,41 +929,6 @@
     <string>Close the application.</string>
    </property>
   </action>
-  <action name="zoom100">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>100%</string>
-   </property>
-  </action>
-  <action name="zoom50">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>50%</string>
-   </property>
-  </action>
-  <action name="zoom25">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>25%</string>
-   </property>
-  </action>
-  <action name="zoom200">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>200%</string>
-   </property>
-  </action>
   <action name="actionRefresh">
    <property name="text">
     <string>Refresh</string>
@@ -998,11 +937,6 @@
   <action name="actionSave">
    <property name="text">
     <string>Save</string>
-   </property>
-  </action>
-  <action name="actionRemove_Selected_Locations">
-   <property name="text">
-    <string>Remove Selected Locations</string>
    </property>
   </action>
   <action name="actionPartialsLoadFile">
@@ -1028,6 +962,33 @@
   <action name="actionSaveAll">
    <property name="text">
     <string>Save All</string>
+   </property>
+  </action>
+  <action name="actionShowNPCs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show NPCs</string>
+   </property>
+  </action>
+  <action name="actionShowObjects">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Objects</string>
+   </property>
+  </action>
+  <action name="actionX">
+   <property name="text">
+    <string>x</string>
    </property>
   </action>
  </widget>

@@ -186,6 +186,8 @@
     </property>
     <addaction name="actionRefresh"/>
     <addaction name="actionGoto"/>
+    <addaction name="actionCollapseAll"/>
+    <addaction name="actionExpandAll"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
@@ -238,6 +240,16 @@
   <action name="actionSaveAll">
    <property name="text">
     <string>Save All</string>
+   </property>
+  </action>
+  <action name="actionExpandAll">
+   <property name="text">
+    <string>Expand All Nodes</string>
+   </property>
+  </action>
+  <action name="actionCollapseAll">
+   <property name="text">
+    <string>Collapse All Nodes</string>
    </property>
   </action>
  </widget>

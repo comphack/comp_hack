@@ -203,13 +203,18 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
     connect(ui->actionSaveAll, SIGNAL(triggered()), this,
         SLOT(SaveAllFiles()));
     connect(ui->actionNew, SIGNAL(triggered()), this, SLOT(NewFile()));
-    connect(ui->actionRefresh, SIGNAL(triggered()), this, SLOT(Refresh()));
-    connect(ui->actionGoto, SIGNAL(triggered()), this, SLOT(GoTo()));
     connect(ui->removeEvent, SIGNAL(clicked()), this, SLOT(RemoveEvent()));
     connect(ui->files, SIGNAL(currentIndexChanged(const QString&)), this,
         SLOT(FileSelectionChanged()));
     connect(ui->treeWidget, SIGNAL(itemSelectionChanged()), this,
         SLOT(TreeSelectionChanged()));
+
+    connect(ui->actionRefresh, SIGNAL(triggered()), this, SLOT(Refresh()));
+    connect(ui->actionGoto, SIGNAL(triggered()), this, SLOT(GoTo()));
+    connect(ui->actionCollapseAll, SIGNAL(triggered()), this,
+        SLOT(CollapseAll()));
+    connect(ui->actionExpandAll, SIGNAL(triggered()), this,
+        SLOT(ExpandAll()));
 
     QShortcut *shortcut = new QShortcut(QKeySequence("F5"), this);
     connect(shortcut, SIGNAL(activated()), this, SLOT(Refresh()));
@@ -260,6 +265,16 @@ bool EventWindow::GoToEvent(const libcomp::String& eventID)
 
                 // Select new item and display (if not already)
                 ui->treeWidget->setItemSelected(treeItem, true);
+
+                // Expand everything above the node then scroll to it
+                auto parent = treeItem->parent();
+                while(parent && !parent->isExpanded())
+                {
+                    ui->treeWidget->expandItem(parent);
+                    parent = parent->parent();
+                }
+
+                ui->treeWidget->scrollToItem(item);
                 show();
                 raise();
                 return true;
@@ -601,6 +616,16 @@ void EventWindow::GoTo()
     }
 
     GoToEvent(cs(qEventID));
+}
+
+void EventWindow::CollapseAll()
+{
+    ui->treeWidget->collapseAll();
+}
+
+void EventWindow::ExpandAll()
+{
+    ui->treeWidget->expandAll();
 }
 
 void EventWindow::CurrentEventEdited()

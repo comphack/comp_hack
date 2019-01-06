@@ -80,6 +80,8 @@ private slots:
     void RemoveEvent();
     void Refresh(bool reselectEvent = true);
     void GoTo();
+    void CollapseAll();
+    void ExpandAll();
     void CurrentEventEdited();
     void TreeSelectionChanged();
 

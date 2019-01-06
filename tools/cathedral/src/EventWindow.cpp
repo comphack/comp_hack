@@ -380,11 +380,13 @@ void EventWindow::LoadDirectory()
     QSettings settings;
 
     QString qPath = QFileDialog::getExistingDirectory(this,
-        tr("Load Event XML folder"), settings.value("datastore").toString());
+        tr("Load Event XML folder"), mMainWindow->GetDialogDirectory());
     if(qPath.isEmpty())
     {
         return;
     }
+
+    mMainWindow->SetDialogDirectory(qPath, false);
 
     ui->files->blockSignals(true);
 
@@ -410,11 +412,13 @@ void EventWindow::LoadFile()
     QSettings settings;
 
     QString qPath = QFileDialog::getOpenFileName(this, tr("Load Event XML"),
-        settings.value("datastore").toString(), tr("Event XML (*.xml)"));
+        mMainWindow->GetDialogDirectory(), tr("Event XML (*.xml)"));
     if(qPath.isEmpty())
     {
         return;
     }
+
+    mMainWindow->SetDialogDirectory(qPath, true);
 
     ui->files->blockSignals(true);
 
@@ -472,12 +476,14 @@ void EventWindow::NewFile()
     QSettings settings;
 
     QString qPath = QFileDialog::getSaveFileName(this,
-        tr("Create new Event file"), settings.value("datastore").toString(),
+        tr("Create new Event file"), mMainWindow->GetDialogDirectory(),
         tr("Event XML (*.xml)"));
     if(qPath.isEmpty())
     {
         return;
     }
+
+    mMainWindow->SetDialogDirectory(qPath, true);
 
     QFileInfo fi(qPath);
     if(fi.exists() && fi.isFile())

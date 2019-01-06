@@ -86,6 +86,9 @@ public:
 
     void ResetEventCount();
 
+    QString GetDialogDirectory();
+    void SetDialogDirectory(QString path, bool isFile);
+
 protected slots:
     void OpenEvents();
     void OpenZone();

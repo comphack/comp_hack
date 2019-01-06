@@ -146,7 +146,7 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     connect(ui.actionPartialsApply, SIGNAL(triggered()),
         this, SLOT(ApplyPartials()));
 
-    connect(ui.tabs, SIGNAL(selectedObjectChanged()), this,
+    connect(ui.tabs, SIGNAL(currentChanged(int)), this,
         SLOT(SelectListObject()));
     connect(ui.npcs, SIGNAL(selectedObjectChanged()), this,
         SLOT(SelectListObject()));
@@ -494,14 +494,14 @@ std::list<std::shared_ptr<objects::Action>>
 
 void ZoneWindow::LoadZoneFile()
 {
-    QSettings settings;
-
     QString path = QFileDialog::getOpenFileName(this, tr("Open Zone XML"),
-        settings.value("datastore").toString(), tr("Zone XML (*.xml)"));
+        mMainWindow->GetDialogDirectory(), tr("Zone XML (*.xml)"));
     if(path.isEmpty())
     {
         return;
     }
+
+    mMainWindow->SetDialogDirectory(path, true);
 
     tinyxml2::XMLDocument doc;
     if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.toLocal8Bit().constData()))
@@ -650,15 +650,14 @@ bool ZoneWindow::eventFilter(QObject* o, QEvent* e)
 
 void ZoneWindow::LoadPartialDirectory()
 {
-    QSettings settings;
-
     QString qPath = QFileDialog::getExistingDirectory(this,
-        tr("Load Zone Partial XML folder"),
-        settings.value("datastore").toString());
+        tr("Load Zone Partial XML folder"), mMainWindow->GetDialogDirectory());
     if(qPath.isEmpty())
     {
         return;
     }
+
+    mMainWindow->SetDialogDirectory(qPath, false);
 
     SaveProperties();
 
@@ -680,15 +679,15 @@ void ZoneWindow::LoadPartialDirectory()
 
 void ZoneWindow::LoadPartialFile()
 {
-    QSettings settings;
-
     QString qPath = QFileDialog::getOpenFileName(this,
-        tr("Load Zone Partial XML"), settings.value("datastore").toString(),
+        tr("Load Zone Partial XML"), mMainWindow->GetDialogDirectory(),
         tr("Zone Partial XML (*.xml)"));
     if(qPath.isEmpty())
     {
         return;
     }
+
+    mMainWindow->SetDialogDirectory(qPath, true);
 
     SaveProperties();
 
@@ -704,16 +703,33 @@ void ZoneWindow::SaveFile()
     // Save off all properties first
     SaveProperties();
 
-    if(mMergedZone && mMergedZone->CurrentPartial)
+    if(mMergedZone)
     {
-        std::set<uint32_t> partialIDs;
-        partialIDs.insert(mMergedZone->CurrentPartial->GetID());
-        SavePartials(partialIDs);
+        if(mMergedZone->CurrentPartial)
+        {
+            std::set<uint32_t> partialIDs;
+            partialIDs.insert(mMergedZone->CurrentPartial->GetID());
+            SavePartials(partialIDs);
+        }
+        else if(mMergedZone->CurrentZone &&
+            mMergedZone->Definition == mMergedZone->CurrentZone)
+        {
+            SaveZone();
+        }
+        else
+        {
+            QMessageBox err;
+            err.setText("Merged zone definitions cannot be saved directly."
+                " Please use 'Save All' instead or select which file you"
+                " want to save in the 'View' dropdown.");
+            err.exec();
+        }
     }
-    else if(mMergedZone && mMergedZone->CurrentZone &&
-        mMergedZone->Definition == mMergedZone->CurrentZone)
+    else
     {
-        SaveZone();
+        QMessageBox err;
+        err.setText("No zone loaded. Nothing will be saved.");
+        err.exec();
     }
 }
 

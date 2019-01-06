@@ -375,6 +375,31 @@ void MainWindow::ResetEventCount()
         .Arg(total)));
 }
 
+QString MainWindow::GetDialogDirectory()
+{
+    QSettings settings;
+    QString path = settings.value("dialogDirectory").toString();
+    if(path.isEmpty())
+    {
+        path = settings.value("datastore").toString();
+    }
+
+    return path;
+}
+
+void MainWindow::SetDialogDirectory(QString path, bool isFile)
+{
+    QSettings settings;
+    if(isFile)
+    {
+        QDir currentDir;
+        path = currentDir.absoluteFilePath(path);
+    }
+
+    settings.setValue("dialogDirectory", path);
+    settings.sync();
+}
+
 bool MainWindow::LoadBinaryData(const libcomp::String& binaryFile,
     const libcomp::String& objName, bool decrypt, bool addSelector,
     bool selectorAllowBlanks)

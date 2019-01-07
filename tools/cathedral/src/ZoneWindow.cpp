@@ -93,7 +93,8 @@ const QColor COLOR_TOGGLE1 = Qt::darkYellow;
 const QColor COLOR_TOGGLE2 = Qt::darkCyan;
 
 ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
-    : QMainWindow(p), mMainWindow(pMainWindow), mDragging(false)
+    : QMainWindow(p), mMainWindow(pMainWindow), mOffsetX(0), mOffsetY(0),
+    mDragging(false)
 {
     ui.setupUi(this);
 
@@ -649,13 +650,27 @@ void ZoneWindow::mouseMoveEvent(QMouseEvent* event)
 
 void ZoneWindow::mousePressEvent(QMouseEvent* event)
 {
-    if(event->button() == Qt::MouseButton::RightButton &&
-        ui.mapScrollArea->underMouse())
+    if(ui.mapScrollArea->underMouse())
     {
-        ui.mapScrollArea->setCursor(Qt::CursorShape::ClosedHandCursor);
-        mDragging = true;
+        if(event->button() == Qt::MouseButton::RightButton)
+        {
+            ui.mapScrollArea->setCursor(Qt::CursorShape::ClosedHandCursor);
+            mDragging = true;
 
-        mLastMousePos = event->pos();
+            mLastMousePos = event->pos();
+        }
+
+        int margin = ui.drawTarget->margin();
+        auto drawPos = ui.drawTarget->mapFromGlobal(event->globalPos());
+        float x = (float)(drawPos.x() + mOffsetX - margin) *
+            (float)ui.zoomSlider->value();
+        float y = (float)(-drawPos.y() + mOffsetY + margin) *
+            (float)ui.zoomSlider->value();
+        ui.lblCoordinates->setText(QString("%1/%2").arg(x).arg(y));
+    }
+    else
+    {
+        ui.lblCoordinates->setText("-/-");
     }
 }
 
@@ -2088,6 +2103,10 @@ void ZoneWindow::DrawMap()
 
     painter.end();
 
+    auto bounds = pic.boundingRect();
+    mOffsetX = bounds.topLeft().x();
+    mOffsetY = -bounds.topLeft().y();
+
     ui.drawTarget->setPicture(pic);
 
     ui.mapScrollArea->horizontalScrollBar()->setValue(xScroll);
@@ -2116,7 +2135,7 @@ void ZoneWindow::DrawNPC(const std::shared_ptr<objects::ServerNPC>& npc,
 
     painter.drawEllipse(QPoint(Scale(x), Scale(-y)), 3, 3);
 
-    painter.drawText(QPoint(Scale(x + 20.f), Scale(-y)),
+    painter.drawText(QPoint(Scale(x) + 5, Scale(-y)),
         libcomp::String("%1").Arg(npc->GetID()).C());
 }
 
@@ -2142,7 +2161,7 @@ void ZoneWindow::DrawObject(const std::shared_ptr<objects::ServerObject>& obj,
 
     painter.drawEllipse(QPoint(Scale(x), Scale(-y)), 3, 3);
 
-    painter.drawText(QPoint(Scale(x + 20.f), Scale(-y)),
+    painter.drawText(QPoint(Scale(x) + 5, Scale(-y)),
         libcomp::String("%1").Arg(obj->GetID()).C());
 }
 
@@ -2195,9 +2214,9 @@ void ZoneWindow::DrawSpot(const std::shared_ptr<objects::MiSpotData>& spotDef,
     painter.drawLine(Scale(points[3].first), Scale(points[3].second),
         Scale(points[0].first), Scale(points[0].second));
 
-    painter.drawText(QPoint(Scale(x1), Scale(y2)),
-        libcomp::String("[%1] %2").Arg(spotDef->GetType())
-        .Arg(spotDef->GetID()).C());
+    painter.drawText(QPoint(Scale(points[3].first),
+        Scale(points[3].second) + 10), libcomp::String("[%1] %2")
+        .Arg(spotDef->GetType()).Arg(spotDef->GetID()).C());
 }
 
 int32_t ZoneWindow::Scale(int32_t point)

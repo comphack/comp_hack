@@ -154,8 +154,8 @@ private:
 
     Ui::ZoneWindow ui;
 
-    float mOffsetX;
-    float mOffsetY;
+    int32_t mOffsetX;
+    int32_t mOffsetY;
 
     QPoint mLastMousePos;
     bool mDragging;

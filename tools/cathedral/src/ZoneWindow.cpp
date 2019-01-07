@@ -84,6 +84,7 @@ const QColor COLOR_SELECTED = Qt::red;
 const QColor COLOR_PLAYER = Qt::magenta;
 const QColor COLOR_NPC = Qt::darkRed;
 const QColor COLOR_OBJECT = Qt::blue;
+const QColor COLOR_SPAWN_LOC = Qt::darkMagenta;
 const QColor COLOR_SPOT = Qt::darkGreen;
 
 // Barrier colors
@@ -2007,16 +2008,28 @@ void ZoneWindow::DrawMap()
                             highlight.insert(spotIter->second);
                         }
                     }
+
+                    for(auto loc : slg->GetLocations())
+                    {
+                        highlight.insert(loc);
+                    }
                 }
             }
         }
         break;
     case 4: // Spots
         {
-            auto spot = ui.spots->GetActiveObject();
+            auto spot = std::dynamic_pointer_cast<
+                objects::MiSpotData>(ui.spots->GetActiveObject());
             if(spot)
             {
                 highlight.insert(spot);
+
+                auto serverSpot = zone->GetSpots(spot->GetID());
+                if(serverSpot && serverSpot->GetSpawnArea())
+                {
+                    highlight.insert(serverSpot->GetSpawnArea());
+                }
             }
         }
         break;
@@ -2087,6 +2100,7 @@ void ZoneWindow::DrawMap()
         auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(h);
         auto obj = std::dynamic_pointer_cast<objects::ServerObject>(h);
         auto spot = std::dynamic_pointer_cast<objects::MiSpotData>(h);
+        auto loc = std::dynamic_pointer_cast<objects::SpawnLocation>(h);
         if(npc)
         {
             DrawNPC(npc, true, painter);
@@ -2098,6 +2112,10 @@ void ZoneWindow::DrawMap()
         else if(spot)
         {
             DrawSpot(spot, true, painter);
+        }
+        else if(loc)
+        {
+            DrawSpawnLocation(loc, painter);
         }
     }
 
@@ -2163,6 +2181,35 @@ void ZoneWindow::DrawObject(const std::shared_ptr<objects::ServerObject>& obj,
 
     painter.drawText(QPoint(Scale(x) + 5, Scale(-y)),
         libcomp::String("%1").Arg(obj->GetID()).C());
+}
+
+void ZoneWindow::DrawSpawnLocation(const std::shared_ptr<
+    objects::SpawnLocation>& loc, QPainter& painter)
+{
+    float x1 = loc->GetX();
+    float y1 = -loc->GetY();
+
+    float x2 = x1 + loc->GetWidth();
+    float y2 = y1 + loc->GetHeight();
+
+    std::vector<std::pair<float, float>> points;
+    points.push_back(std::pair<float, float>(x1, y1));
+    points.push_back(std::pair<float, float>(x2, y1));
+    points.push_back(std::pair<float, float>(x2, y2));
+    points.push_back(std::pair<float, float>(x1, y2));
+
+    // Spawn locs only show when selected so no second color here
+    painter.setPen(QPen(COLOR_SPAWN_LOC));
+    painter.setBrush(QBrush(COLOR_SPAWN_LOC));
+
+    painter.drawLine(Scale(points[0].first), Scale(points[0].second),
+        Scale(points[1].first), Scale(points[1].second));
+    painter.drawLine(Scale(points[1].first), Scale(points[1].second),
+        Scale(points[2].first), Scale(points[2].second));
+    painter.drawLine(Scale(points[2].first), Scale(points[2].second),
+        Scale(points[3].first), Scale(points[3].second));
+    painter.drawLine(Scale(points[3].first), Scale(points[3].second),
+        Scale(points[0].first), Scale(points[0].second));
 }
 
 void ZoneWindow::DrawSpot(const std::shared_ptr<objects::MiSpotData>& spotDef,

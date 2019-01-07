@@ -85,7 +85,7 @@
                <string/>
               </property>
               <property name="margin">
-               <number>5</number>
+               <number>10</number>
               </property>
              </widget>
             </item>

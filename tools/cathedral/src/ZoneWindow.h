@@ -46,6 +46,7 @@ class ServerNPC;
 class ServerObject;
 class ServerZone;
 class ServerZonePartial;
+class SpawnLocation;
 
 } // namespace objects
 
@@ -144,6 +145,8 @@ private:
         bool selected, QPainter& painter);
     void DrawObject(const std::shared_ptr<objects::ServerObject>& obj,
         bool selected, QPainter& painter);
+    void DrawSpawnLocation(const std::shared_ptr<objects::SpawnLocation>& loc,
+        QPainter& painter);
     void DrawSpot(const std::shared_ptr<objects::MiSpotData>& spotDef,
         bool selected, QPainter& painter);
 

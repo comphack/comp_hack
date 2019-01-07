@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionStageEffect *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionStageEffect> mAction;
 };
 

@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionSetHomepoint *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionSetHomepoint> mAction;
 };
 

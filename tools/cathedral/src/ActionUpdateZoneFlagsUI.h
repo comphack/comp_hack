@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionUpdateZoneFlags *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionUpdateZoneFlags> mAction;
 };
 

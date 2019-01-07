@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionUpdateQuest *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionUpdateQuest> mAction;
 };
 

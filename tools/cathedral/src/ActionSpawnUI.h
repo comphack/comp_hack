@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionSpawn *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionSpawn> mAction;
 };
 

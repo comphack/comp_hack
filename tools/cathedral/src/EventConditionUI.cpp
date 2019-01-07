@@ -736,6 +736,7 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue1->setText("Plugin ID:");
         ui->lblValue2->setText("Obtained?:");
         defaultCompareTxt = "Equal";
+        selectorObjectType = "CKeyItemData";
         minValues[0] = minValues[1] = 0;
         maxValues[1] = 1;
         cmpNumeric = cmpBetween = cmpExists = false;
@@ -818,7 +819,7 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue1->setText("Status Effect:");
         ui->lblValue2->setText("Parter Demon?:");
         defaultCompareTxt = "Exists";
-        //selectorObjectType = "CStatusData";
+        selectorObjectType = "StatusData";
         minValues[0] = minValues[1] = 0;
         maxValues[1] = 1;
         cmpNumeric = cmpBetween = cmpEqual = false;
@@ -873,6 +874,7 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue1->setText("Valuable ID:");
         ui->lblValue2->setText("Obtained?:");
         defaultCompareTxt = "Equal";
+        selectorObjectType = "CValuablesData";
         minValues[0] = minValues[1] = 0;
         maxValues[1] = 1;
         cmpNumeric = cmpBetween = cmpExists = false;

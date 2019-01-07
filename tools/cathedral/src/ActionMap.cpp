@@ -59,7 +59,19 @@ void ActionMap::BindSelector(MainWindow *pMainWindow,
     const libcomp::String& objectSelectorType)
 {
     mMainWindow = pMainWindow;
-    mObjectSelectorType = objectSelectorType;
+
+    if((!mObjectSelectorType.IsEmpty() || !objectSelectorType.IsEmpty()) &&
+        mObjectSelectorType != objectSelectorType)
+    {
+        mObjectSelectorType = objectSelectorType;
+
+        // Rebind selectors for any existing values
+        for(auto pValue : mValues)
+        {
+            pValue->Setup(pValue->GetKey(), pValue->GetValue(),
+                objectSelectorType, mMainWindow);
+        }
+    }
 }
 
 void ActionMap::Load(const std::unordered_map<int32_t, int32_t>& values)

@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionPlaySoundEffect *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionPlaySoundEffect> mAction;
 };
 

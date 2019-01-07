@@ -57,10 +57,11 @@ public:
     void Load(const std::shared_ptr<objects::Action>& act) override;
     std::shared_ptr<objects::Action> Save() const override;
 
+protected slots:
+    void FlagTypeChanged();
+
 protected:
     Ui::ActionUpdateFlag *prop;
-
-    MainWindow *mMainWindow;
 
     std::shared_ptr<objects::ActionUpdateFlag> mAction;
 };

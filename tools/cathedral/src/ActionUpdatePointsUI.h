@@ -63,8 +63,6 @@ protected slots:
 protected:
     Ui::ActionUpdatePoints *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionUpdatePoints> mAction;
 };
 

@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionSetNPCState *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionSetNPCState> mAction;
 };
 

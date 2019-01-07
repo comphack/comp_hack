@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionRunScript *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionRunScript> mAction;
 };
 

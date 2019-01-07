@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionPlayBGM *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionPlayBGM> mAction;
 };
 

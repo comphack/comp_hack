@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionZoneChange *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionZoneChange> mAction;
 };
 

@@ -32,20 +32,28 @@
 #include "ZoneWindow.h"
 
 // objects Includes
+#include <MiCancelData.h>
 #include <MiCEventMessageData.h>
 #include <MiCHouraiData.h>
 #include <MiCHouraiMessageData.h>
 #include <MiCItemBaseData.h>
 #include <MiCItemData.h>
-#include <MiCSoundData.h>
-#include <MiCTitleData.h>
+#include <MiCKeyItemData.h>
 #include <MiCQuestData.h>
+#include <MiCSoundData.h>
+#include <MiCStatusData.h>
+#include <MiCTitleData.h>
+#include <MiCValuablesData.h>
 #include <MiDevilData.h>
 #include <MiDynamicMapData.h>
 #include <MiHNPCBasicData.h>
 #include <MiHNPCData.h>
+#include <MiKeyItemData.h>
 #include <MiNPCBasicData.h>
 #include <MiONPCData.h>
+#include <MiSkillItemStatusCommonData.h>
+#include <MiShopProductData.h>
+#include <MiStatusData.h>
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
 #include <ServerNPC.h>
@@ -193,9 +201,14 @@ bool MainWindow::Init()
         GetID(), GetMessage());
     mBinaryDataSets["CItemData"] = BDSET(MiCItemData, GetBaseData()->GetID(),
         GetBaseData()->GetName2());
-    mBinaryDataSets["CSoundData"] = BDSET(MiCSoundData, GetID(), GetPath());
-    mBinaryDataSets["CTitleData"] = BDSET(MiCTitleData, GetID(), GetTitle());
+    mBinaryDataSets["CKeyItemData"] = BDSET(MiCKeyItemData, GetItemData()->GetID(),
+        GetItemData()->GetName());
     mBinaryDataSets["CQuestData"] = BDSET(MiCQuestData, GetID(), GetTitle());
+    mBinaryDataSets["CSoundData"] = BDSET(MiCSoundData, GetID(), GetPath());
+    mBinaryDataSets["CStatusData"] = BDSET(MiCStatusData, GetID(), GetName());
+    mBinaryDataSets["CTitleData"] = BDSET(MiCTitleData, GetID(), GetTitle());
+    mBinaryDataSets["CValuablesData"] = BDSET(MiCValuablesData, GetID(),
+        GetName());
     mBinaryDataSets["DevilData"] = BDSET(MiDevilData, GetBasic()->GetID(),
         GetBasic()->GetName());
     mBinaryDataSets["hNPCData"] = BDSET(MiHNPCData, GetBasic()->GetID(),
@@ -203,6 +216,32 @@ bool MainWindow::Init()
     mBinaryDataSets["oNPCData"] = BDSET(MiONPCData, GetID(), GetName());
     mBinaryDataSets["ZoneData"] = BDSET(MiZoneData, GetBasic()->GetID(),
         GetBasic()->GetName());
+
+    // Special data sets that will be modified later
+    mBinaryDataSets["ShopProductData"] = std::make_shared<
+        BinaryDataNamedSet>([]()
+        {
+            return std::make_shared<objects::MiShopProductData>();
+        },
+        [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
+        {
+            return std::dynamic_pointer_cast<
+                objects::MiShopProductData>(obj)->GetID();
+        },
+        // Names will be mapped below
+        nullptr);
+    mBinaryDataSets["StatusData"] = std::make_shared<
+        BinaryDataNamedSet>([]()
+        {
+            return std::make_shared<objects::MiStatusData>();
+        },
+        [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
+        {
+            return std::dynamic_pointer_cast<
+                objects::MiStatusData>(obj)->GetCommon()->GetID();
+        },
+        // Names will be mapped below
+        nullptr);
 
     std::string err;
 
@@ -231,17 +270,35 @@ bool MainWindow::Init()
     {
         err = "Failed to load c-item data.";
     }
-    else if(!LoadBinaryData("Client/CSoundData.bin", "CSoundData", false, true))
+    else if(!LoadBinaryData("Shield/CKeyItemData.sbin", "CKeyItemData",
+        true, true))
+    {
+        err = "Failed to load c-key item data.";
+    }
+    else if(!LoadBinaryData("Shield/CQuestData.sbin", "CQuestData", true,
+        true))
+    {
+        err = "Failed to load c-quest data.";
+    }
+    else if(!LoadBinaryData("Client/CSoundData.bin", "CSoundData", false,
+        true))
     {
         err = "Failed to load c-sound data.";
     }
-    else if(!LoadBinaryData("Shield/CTitleData.sbin", "CTitleData", true, true))
+    else if(!LoadBinaryData("Shield/CStatusData.sbin", "CStatusData", true,
+        false))
+    {
+        err = "Failed to load c-status data.";
+    }
+    else if(!LoadBinaryData("Shield/CTitleData.sbin", "CTitleData", true,
+        true))
     {
         err = "Failed to load c-title data.";
     }
-    else if(!LoadBinaryData("Shield/CQuestData.sbin", "CQuestData", true, true))
+    else if(!LoadBinaryData("Shield/CValuablesData.sbin", "CValuablesData",
+        true, true))
     {
-        err = "Failed to load c-quest data.";
+        err = "Failed to load c-valuables data.";
     }
     else if(!LoadBinaryData("Shield/DevilData.sbin", "DevilData", true, true))
     {
@@ -261,9 +318,105 @@ bool MainWindow::Init()
     {
         err = "Failed to load oNPC data.";
     }
+    else if(!LoadBinaryData("Shield/ShopProductData.sbin", "ShopProductData",
+        true, true))
+    {
+        err = "Failed to load shop product data.";
+    }
+    else if(!LoadBinaryData("Shield/StatusData.sbin", "StatusData", true,
+        true))
+    {
+        err = "Failed to load status data.";
+    }
     else if(!LoadBinaryData("Shield/ZoneData.sbin", "ZoneData", true, true))
     {
         err = "Failed to load zone data.";
+    }
+
+    if(err.length() == 0)
+    {
+        // Build complex named types
+
+        // Build Status
+        auto dataset = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mBinaryDataSets["StatusData"]);
+        auto cStatusSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mBinaryDataSets["CStatusData"]);
+
+        std::vector<libcomp::String> names;
+        std::vector<std::shared_ptr<libcomp::Object>> objs;
+        for(auto obj : dataset->GetObjects())
+        {
+            auto status = std::dynamic_pointer_cast<objects::MiStatusData>(
+                obj);
+            auto cStatus = std::dynamic_pointer_cast<objects::MiCStatusData>(
+                cStatusSet->GetObjectByID(status->GetCommon()->GetID()));
+
+            libcomp::String name = cStatus ? cStatus->GetName() : "[Unnamed]";
+            if(status)
+            {
+                auto cancel = status->GetCancel();
+                uint32_t duration = cancel->GetDuration();
+                switch(cancel->GetDurationType())
+                {
+                case objects::MiCancelData::DurationType_t::MS:
+                    name = libcomp::String("%1 (%2ms)").Arg(name)
+                        .Arg(duration);
+                    break;
+                case objects::MiCancelData::DurationType_t::DAY:
+                    name = libcomp::String("%1 (%2 day%3)").Arg(name)
+                        .Arg(duration).Arg(duration != 1 ? "s" : "");
+                    break;
+                case objects::MiCancelData::DurationType_t::HOUR:
+                    name = libcomp::String("%1 (%2 hour%3)").Arg(name)
+                        .Arg(duration).Arg(duration != 1 ? "s" : "");
+                    break;
+                case objects::MiCancelData::DurationType_t::DAY_SET:
+                    name = libcomp::String("%1 (%2 day%3 [set])").Arg(name)
+                        .Arg(duration).Arg(duration != 1 ? "s" : "");
+                    break;
+                case objects::MiCancelData::DurationType_t::MS_SET:
+                    name = libcomp::String("%1 (%2ms [set])").Arg(name)
+                        .Arg(duration);
+                    break;
+                case objects::MiCancelData::DurationType_t::NONE:
+                default:
+                    if(duration)
+                    {
+                        name = libcomp::String("%1 (%2ms?)").Arg(name)
+                            .Arg(duration);
+                    }
+                    break;
+                }
+            }
+
+            names.push_back(name);
+            objs.push_back(obj);
+        }
+
+        dataset->MapRecords(objs, names);
+
+        // Build Shop Product
+        auto items = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mBinaryDataSets["CItemData"]);
+        dataset = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mBinaryDataSets["ShopProductData"]);
+
+        names.clear();
+        objs.clear();
+        for(auto obj : dataset->GetObjects())
+        {
+            auto product = std::dynamic_pointer_cast<
+                objects::MiShopProductData>(obj);
+            libcomp::String name = libcomp::String("%1 x%2").Arg(items
+                ->GetName(items->GetObjectByID(product->GetItem())))
+                .Arg(product->GetStack());
+
+            names.push_back(name);
+            objs.push_back(obj);
+        }
+
+        dataset->MapRecords(objs, names);
     }
 
     if(err.length() > 0)

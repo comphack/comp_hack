@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionCreateLoot *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionCreateLoot> mAction;
 };
 

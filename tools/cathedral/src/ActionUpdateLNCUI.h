@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionUpdateLNC *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionUpdateLNC> mAction;
 };
 

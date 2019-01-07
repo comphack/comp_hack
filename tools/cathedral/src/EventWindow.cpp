@@ -245,6 +245,7 @@ bool EventWindow::GoToEvent(const libcomp::String& eventID)
     {
         // Switch current file
         ui->files->setCurrentText(qs(path));
+        Refresh(false);
     }
 
     auto file = mFiles[path];
@@ -437,17 +438,14 @@ void EventWindow::LoadFile()
         RebuildGlobalIDMap();
         mMainWindow->ResetEventCount();
 
-        ui->files->blockSignals(false);
-
         if(ui->files->currentText() != qs(path))
         {
             ui->files->setCurrentText(qs(path));
         }
-        else
-        {
-            // Just refresh
-            Refresh(false);
-        }
+
+        ui->files->blockSignals(false);
+
+        Refresh(false);
     }
     else
     {
@@ -514,6 +512,7 @@ void EventWindow::NewFile()
     if(LoadFileFromPath(cs(qPath)))
     {
         ui->files->setCurrentText(qPath);
+        Refresh(false);
     }
 }
 

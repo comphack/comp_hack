@@ -47,8 +47,13 @@ ActionUpdateFlag::ActionUpdateFlag(ActionList *pList,
     prop = new Ui::ActionUpdateFlag;
     prop->setupUi(pWidget);
 
+    prop->idSelector->hide();
+
     ui->actionTitle->setText(tr("<b>Update Flag</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    connect(prop->flagType, SIGNAL(currentIndexChanged(const QString&)), this,
+        SLOT(FlagTypeChanged()));
 }
 
 ActionUpdateFlag::~ActionUpdateFlag()
@@ -69,7 +74,15 @@ void ActionUpdateFlag::Load(const std::shared_ptr<objects::Action>& act)
 
     prop->flagType->setCurrentIndex(to_underlying(
         mAction->GetFlagType()));
-    prop->id->setValue(mAction->GetID());
+    if(!prop->idNumeric->isHidden())
+    {
+        prop->idNumeric->setValue((int32_t)mAction->GetID());
+    }
+    else
+    {
+        prop->idSelector->SetValue(mAction->GetID());
+    }
+
     prop->remove->setChecked(mAction->GetRemove());
 }
 
@@ -84,8 +97,44 @@ std::shared_ptr<objects::Action> ActionUpdateFlag::Save() const
 
     mAction->SetFlagType((objects::ActionUpdateFlag::FlagType_t)
         prop->flagType->currentIndex());
-    mAction->SetID((uint16_t)prop->id->value());
+
+    if(!prop->idNumeric->isHidden())
+    {
+        mAction->SetID((uint16_t)prop->idNumeric->value());
+    }
+    else
+    {
+        mAction->SetID((uint16_t)prop->idSelector->GetValue());
+    }
+
     mAction->SetRemove(prop->remove->isChecked());
 
     return mAction;
+}
+
+void ActionUpdateFlag::FlagTypeChanged()
+{
+    libcomp::String selectorType;
+    switch((objects::ActionUpdateFlag::FlagType_t)
+        prop->flagType->currentIndex())
+    {
+    case objects::ActionUpdateFlag::FlagType_t::PLUGIN:
+        selectorType = "CKeyItemData";
+        break;
+    case objects::ActionUpdateFlag::FlagType_t::VALUABLE:
+        selectorType = "CValuablesData";
+        break;
+    case objects::ActionUpdateFlag::FlagType_t::MAP:
+    case objects::ActionUpdateFlag::FlagType_t::TIME_TRIAL:
+    default:
+        break;
+    }
+
+    prop->idSelector->Bind(mMainWindow, selectorType);
+
+    prop->idNumeric->setHidden(!selectorType.IsEmpty());
+    prop->idSelector->setHidden(selectorType.IsEmpty());
+
+    prop->idNumeric->setValue(0);
+    prop->idSelector->SetValue(0);
 }

@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionStartEvent *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionStartEvent> mAction;
 };
 

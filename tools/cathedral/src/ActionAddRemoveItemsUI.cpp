@@ -47,11 +47,14 @@ ActionAddRemoveItems::ActionAddRemoveItems(ActionList *pList,
     prop = new Ui::ActionAddRemoveItems;
     prop->setupUi(pWidget);
 
-    prop->items->BindSelector(pMainWindow, "CItemData");
     prop->items->SetValueName(tr("Qty:"));
+    prop->items->BindSelector(pMainWindow, "CItemData");
 
     ui->actionTitle->setText(tr("<b>Add/Remove Items</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    connect(prop->mode, SIGNAL(currentIndexChanged(const QString&)), this,
+        SLOT(ModeChanged()));
 }
 
 ActionAddRemoveItems::~ActionAddRemoveItems()
@@ -97,4 +100,17 @@ std::shared_ptr<objects::Action> ActionAddRemoveItems::Save() const
         prop->mode->currentIndex());
 
     return mAction;
+}
+
+void ActionAddRemoveItems::ModeChanged()
+{
+    if(prop->mode->currentIndex() ==
+        (int)objects::ActionAddRemoveItems::Mode_t::POST)
+    {
+        prop->items->BindSelector(mMainWindow, "ShopProductData");
+    }
+    else
+    {
+        prop->items->BindSelector(mMainWindow, "CItemData");
+    }
 }

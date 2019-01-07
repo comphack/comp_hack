@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionGrantXP *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionGrantXP> mAction;
 };
 

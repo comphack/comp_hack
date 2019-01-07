@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionDelay *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionDelay> mAction;
 };
 

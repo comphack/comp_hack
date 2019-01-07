@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionSpecialDirection *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionSpecialDirection> mAction;
 };
 

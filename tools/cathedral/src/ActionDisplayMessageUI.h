@@ -60,8 +60,6 @@ public:
 protected:
     Ui::ActionDisplayMessage *prop;
 
-    MainWindow *mMainWindow;
-
     std::shared_ptr<objects::ActionDisplayMessage> mAction;
 };
 

@@ -169,9 +169,6 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
         SLOT(SpawnTabChanged()));
     connect(ui.zoomSlider, SIGNAL(valueChanged(int)), this, SLOT(Zoom()));
 
-    QShortcut *shortcut = new QShortcut(QKeySequence("F5"), this);
-    connect(shortcut, SIGNAL(activated()), this, SLOT(Refresh()));
-
     // Override the standard scroll behavior for the map scroll area
     ui.mapScrollArea->installEventFilter(this);
     ui.mapScrollArea->horizontalScrollBar()->installEventFilter(this);

@@ -85,10 +85,15 @@ private slots:
     void Search();
     void Refresh(bool reselectEvent = true);
     void GoTo();
+    void FileViewChanged();
     void CollapseAll();
     void ExpandAll();
     void CurrentEventEdited();
     void TreeSelectionChanged();
+
+    void MoveUp();
+    void MoveDown();
+    void Reorganize();
 
 private:
     bool LoadFileFromPath(const libcomp::String& path);

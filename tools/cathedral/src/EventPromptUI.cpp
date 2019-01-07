@@ -47,8 +47,11 @@ EventPrompt::EventPrompt(MainWindow *pMainWindow, QWidget *pParent)
     prop->setupUi(pWidget);
 
     // Normal next paths do not apply to prompts
+    ui->lblNext->hide();
     ui->next->hide();
+    ui->lblQueueNext->hide();
     ui->queueNext->hide();
+    ui->lblBranches->hide();
     ui->branches->hide();
 
     ui->eventTitle->setText(tr("<b>Prompt</b>"));

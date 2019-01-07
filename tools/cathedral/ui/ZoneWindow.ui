@@ -947,43 +947,36 @@
    <addaction name="menuPartials"/>
    <addaction name="menuView"/>
   </widget>
-  <action name="action_Open">
-   <property name="text">
-    <string>&amp;Open</string>
-   </property>
-   <property name="toolTip">
-    <string>Open a zone for viewing.</string>
-   </property>
-  </action>
-  <action name="action_Quit">
-   <property name="text">
-    <string>&amp;Quit</string>
-   </property>
-   <property name="iconText">
-    <string>Quit</string>
-   </property>
-   <property name="toolTip">
-    <string>Close the application.</string>
-   </property>
-  </action>
   <action name="actionRefresh">
    <property name="text">
     <string>Refresh</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
    </property>
   </action>
   <action name="actionSave">
    <property name="text">
     <string>Save</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
   </action>
   <action name="actionPartialsLoadFile">
    <property name="text">
     <string>Load File</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
   </action>
   <action name="actionPartialsLoadDirectory">
    <property name="text">
     <string>Load Directory</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+D</string>
    </property>
   </action>
   <action name="actionPartialsApply">
@@ -995,10 +988,16 @@
    <property name="text">
     <string>Load</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
   </action>
   <action name="actionSaveAll">
    <property name="text">
     <string>Save All</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
    </property>
   </action>
   <action name="actionShowNPCs">
@@ -1021,11 +1020,6 @@
    </property>
    <property name="text">
     <string>Show Objects</string>
-   </property>
-  </action>
-  <action name="actionX">
-   <property name="text">
-    <string>x</string>
    </property>
   </action>
  </widget>

@@ -130,6 +130,7 @@ public:
     std::list<std::shared_ptr<FileEvent>> Events;
     std::unordered_map<libcomp::String, int32_t> EventIDMap;
     std::set<libcomp::String> PendingRemovals;
+    bool Reordered = false;
 };
 
 EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
@@ -195,6 +196,9 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
     ui->addEvent->setMenu(pMenu);
 
     ui->removeEvent->hide();
+    ui->menuSort->setDisabled(true);
+    ui->actionMoveUp->setDisabled(true);
+    ui->actionMoveDown->setDisabled(true);
 
     connect(ui->treeSearch, SIGNAL(textChanged(const QString&)), this,
         SLOT(Search()));
@@ -215,14 +219,15 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
     connect(ui->actionRefresh, SIGNAL(triggered()), this, SLOT(Refresh()));
     connect(ui->actionGoto, SIGNAL(triggered()), this, SLOT(GoTo()));
     connect(ui->actionFileView, SIGNAL(toggled(bool)), this,
-        SLOT(Refresh()));
+        SLOT(FileViewChanged()));
     connect(ui->actionCollapseAll, SIGNAL(triggered()), this,
         SLOT(CollapseAll()));
     connect(ui->actionExpandAll, SIGNAL(triggered()), this,
         SLOT(ExpandAll()));
 
-    QShortcut *shortcut = new QShortcut(QKeySequence("F5"), this);
-    connect(shortcut, SIGNAL(activated()), this, SLOT(Refresh()));
+    connect(ui->actionMoveUp, SIGNAL(triggered()), this, SLOT(MoveUp()));
+    connect(ui->actionMoveDown, SIGNAL(triggered()), this, SLOT(MoveDown()));
+    connect(ui->actionReorganize, SIGNAL(triggered()), this, SLOT(Reorganize()));
 }
 
 EventWindow::~EventWindow()
@@ -720,6 +725,13 @@ void EventWindow::GoTo()
     GoToEvent(cs(qEventID));
 }
 
+void EventWindow::FileViewChanged()
+{
+    ui->menuSort->setDisabled(!ui->actionFileView->isChecked());
+
+    Refresh(false);
+}
+
 void EventWindow::CollapseAll()
 {
     ui->treeWidget->collapseAll();
@@ -760,6 +772,129 @@ void EventWindow::CurrentEventEdited()
 void EventWindow::TreeSelectionChanged()
 {
     BindSelectedEvent();
+}
+
+void EventWindow::MoveUp()
+{
+    auto fIter = mFiles.find(mCurrentFileName);
+    if(fIter == mFiles.end() || !mCurrentEvent)
+    {
+        // No file or current event
+        return;
+    }
+
+    auto file = fIter->second;
+    if(ObjectList::Move(file->Events, mCurrentEvent, true))
+    {
+        file->Reordered = true;
+        RebuildLocalIDMap(file);
+        Refresh(true);
+    }
+}
+
+void EventWindow::MoveDown()
+{
+    auto fIter = mFiles.find(mCurrentFileName);
+    if(fIter == mFiles.end() || !mCurrentEvent)
+    {
+        // No file or current event
+        return;
+    }
+
+    auto file = fIter->second;
+    if(ObjectList::Move(file->Events, mCurrentEvent, false))
+    {
+        file->Reordered = true;
+        RebuildLocalIDMap(file);
+        Refresh(true);
+    }
+}
+
+void EventWindow::Reorganize()
+{
+    auto fIter = mFiles.find(mCurrentFileName);
+    if(fIter == mFiles.end())
+    {
+        // No file
+        return;
+    }
+
+    auto file = fIter->second;
+
+    std::list<libcomp::String> eventOrder;
+    std::set<libcomp::String> seen;
+    for(auto fEvent : file->Events)
+    {
+        auto e = fEvent->Event;
+
+        std::list<libcomp::String> eventSet;
+        eventSet.push_back(e->GetID());
+        eventSet.push_back(e->GetNext());
+        eventSet.push_back(e->GetQueueNext());
+
+        for(auto b : e->GetBranches())
+        {
+            eventSet.push_back(b->GetNext());
+            eventSet.push_back(b->GetQueueNext());
+        }
+
+        auto prompt = std::dynamic_pointer_cast<objects::EventPrompt>(e);
+        if(prompt)
+        {
+            for(auto c : prompt->GetChoices())
+            {
+                eventSet.push_back(c->GetNext());
+                eventSet.push_back(c->GetQueueNext());
+
+                for(auto b : c->GetBranches())
+                {
+                    eventSet.push_back(b->GetNext());
+                    eventSet.push_back(b->GetQueueNext());
+                }
+            }
+        }
+
+        for(auto eventID : eventSet)
+        {
+            if(!eventID.IsEmpty() && seen.find(eventID) == seen.end())
+            {
+                eventOrder.push_back(eventID);
+                seen.insert(eventID);
+            }
+        }
+    }
+
+    std::list<std::shared_ptr<FileEvent>> fEvents;
+    std::list<std::shared_ptr<FileEvent>> toEnd;
+    for(auto eventID : eventOrder)
+    {
+        bool added = false;
+        for(auto fEvent : file->Events)
+        {
+            if(fEvent->Event->GetID() == eventID)
+            {
+                if(added)
+                {
+                    toEnd.push_back(fEvent);
+                }
+                else
+                {
+                    fEvents.push_back(fEvent);
+                    added = true;
+                }
+            }
+        }
+    }
+
+    file->Events = fEvents;
+    for(auto fEvent : toEnd)
+    {
+        file->Events.push_back(fEvent);
+    }
+
+    RebuildLocalIDMap(file);
+    file->Reordered = true;
+    Refresh(true);
 }
 
 bool EventWindow::LoadFileFromPath(const libcomp::String& path)
@@ -916,6 +1051,10 @@ void EventWindow::SaveFiles(const std::list<libcomp::String>& paths)
     {
         std::list<std::shared_ptr<FileEvent>> updates;
 
+        // Make sure we don't have dupes
+        bool hasDupe = false;
+        std::set<libcomp::String> allEventIDs;
+
         auto file = mFiles[path];
         for(auto fEvent : file->Events)
         {
@@ -923,11 +1062,31 @@ void EventWindow::SaveFiles(const std::list<libcomp::String>& paths)
             {
                 updates.push_back(fEvent);
             }
+
+            if(allEventIDs.find(fEvent->Event->GetID()) == allEventIDs.end())
+            {
+                allEventIDs.insert(fEvent->Event->GetID());
+            }
+            else
+            {
+                hasDupe = true;
+            }
         }
 
-        if(updates.size() == 0 && file->PendingRemovals.size() == 0)
+        if(updates.size() == 0 && file->PendingRemovals.size() == 0 &&
+            !file->Reordered)
         {
             // Nothing to save
+            continue;
+        }
+
+        if(hasDupe)
+        {
+            QMessageBox err;
+            err.setText(QString("File '%1' cannot be saved because it has at"
+                " least one duplicate event ID.").arg(qs(path)));
+            err.exec();
+
             continue;
         }
 
@@ -963,7 +1122,8 @@ void EventWindow::SaveFiles(const std::list<libcomp::String>& paths)
                     {
                         auto txtChild = member->FirstChild();
                         auto txt = txtChild ? txtChild->ToText() : 0;
-                        if(txt)
+                        if(txt && existingEvents.find(txt->Value()) ==
+                            existingEvents.end())
                         {
                             existingEvents[txt->Value()] = child;
                         }
@@ -1042,6 +1202,67 @@ void EventWindow::SaveFiles(const std::list<libcomp::String>& paths)
 
             fEvent->HasUpdates = false;
             fEvent->FileEventID = e->GetID();
+        }
+
+        // Reorder if flagged
+        if(file->Reordered)
+        {
+            // Regather events by ID
+            existingEvents.clear();
+
+            auto child = rootElem->FirstChild();
+            while(child != 0)
+            {
+                auto member = child->FirstChildElement("member");
+                while(member != 0)
+                {
+                    libcomp::String memberName(member->Attribute("name"));
+                    if(memberName == "ID")
+                    {
+                        auto txtChild = member->FirstChild();
+                        auto txt = txtChild ? txtChild->ToText() : 0;
+                        if(txt)
+                        {
+                            existingEvents[txt->Value()] = child;
+                        }
+                        break;
+                    }
+
+                    member = member->NextSiblingElement("member");
+                }
+
+                child = child->NextSibling();
+            }
+
+            // Now reorganize
+            tinyxml2::XMLNode* last = 0;
+            for(auto fEvent : file->Events)
+            {
+                auto id = fEvent->Event->GetID();
+
+                auto iter = existingEvents.find(id);
+                if(iter == existingEvents.end()) continue;
+
+                child = existingEvents[id];
+                existingEvents.erase(id);
+
+                if(last == 0)
+                {
+                    if(child->PreviousSiblingElement("object") != 0)
+                    {
+                        // Move first event to the top
+                        rootElem->InsertFirstChild(child);
+                    }
+                }
+                else if(last->NextSiblingElement() != child->ToElement())
+                {
+                    rootElem->InsertAfterChild(last, child);
+                }
+
+                last = child;
+            }
+
+            file->Reordered = false;
         }
 
         if(updatedNodes.size() > 0)
@@ -1283,11 +1504,16 @@ void EventWindow::BindSelectedEvent()
         ui->layoutView->insertWidget(1, eNode);
 
         ui->removeEvent->show();
+        ui->actionMoveUp->setDisabled(false);
+        ui->actionMoveDown->setDisabled(false);
     }
     else
     {
-        ui->removeEvent->hide();
         ui->lblNoCurrent->show();
+
+        ui->removeEvent->hide();
+        ui->actionMoveUp->setDisabled(true);
+        ui->actionMoveDown->setDisabled(true);
     }
 }
 

@@ -57,6 +57,9 @@ public:
     void SetParams(std::list<libcomp::String>& params);
     std::list<libcomp::String> GetParams() const;
 
+protected slots:
+    void ScriptIDChanged();
+
 protected:
     Ui::ServerScript *ui;
 };

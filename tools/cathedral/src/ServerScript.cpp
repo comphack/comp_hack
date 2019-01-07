@@ -29,8 +29,6 @@
 
 // Qt Includes
 #include <PushIgnore.h>
-#include <QLineEdit>
-
 #include "ui_ServerScript.h"
 #include <PopIgnore.h>
 
@@ -40,6 +38,12 @@ ServerScript::ServerScript(QWidget *pParent) : QWidget(pParent)
     ui->setupUi(this);
 
     ui->params->Setup(DynamicItemType_t::PRIMITIVE_STRING, nullptr);
+
+    // Hide params by default until a script ID is set
+    ui->grpParams->hide();
+
+    connect(ui->scriptID, SIGNAL(textChanged(const QString&)), this,
+        SLOT(ScriptIDChanged()));
 }
 
 ServerScript::~ServerScript()
@@ -49,12 +53,12 @@ ServerScript::~ServerScript()
 
 void ServerScript::SetScriptID(const libcomp::String& scriptID)
 {
-    ui->scriptID->lineEdit()->setText(qs(scriptID));
+    ui->scriptID->setText(qs(scriptID));
 }
 
 libcomp::String ServerScript::GetScriptID() const
 {
-    return libcomp::String(ui->scriptID->currentText().toStdString());
+    return libcomp::String(ui->scriptID->text().toStdString());
 }
 
 void ServerScript::SetParams(std::list<libcomp::String>& params)
@@ -68,4 +72,16 @@ void ServerScript::SetParams(std::list<libcomp::String>& params)
 std::list<libcomp::String> ServerScript::GetParams() const
 {
     return ui->params->GetStringList();
+}
+
+void ServerScript::ScriptIDChanged()
+{
+    if(ui->scriptID->text().isEmpty())
+    {
+        ui->grpParams->hide();
+    }
+    else
+    {
+        ui->grpParams->show();
+    }
 }

@@ -139,6 +139,7 @@ void SpotList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
     auto spotDef = std::dynamic_pointer_cast<objects::MiSpotData>(obj);
     auto spot = std::dynamic_pointer_cast<objects::ServerZoneSpot>(obj);
 
+    bool actionTrigger = false;
     if(spotDef)
     {
         // Client definition
@@ -164,6 +165,20 @@ void SpotList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
                 spot = merged->Definition->GetSpots(spotDef->GetID());
             }
         }
+
+        // Only certain types will trigger actions for the server
+        switch(spotDef->GetType())
+        {
+        case 2:
+        case 5:
+        case 9:
+        case 11:
+        case 16:
+            actionTrigger = true;
+            break;
+        default:
+            break;
+        }
     }
     else if(spot)
     {
@@ -177,7 +192,12 @@ void SpotList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
         prop->type->setCurrentIndex(0);
         prop->chkEnabled->setChecked(false);
         prop->lblArguments->setText("No client arguments");
+
+        actionTrigger = true;
     }
+
+    prop->actions->setDisabled(!actionTrigger);
+    prop->leaveActions->setDisabled(!actionTrigger);
 
     std::shared_ptr<objects::SpawnLocation> spawnArea;
     if(spot)

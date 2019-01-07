@@ -35,10 +35,20 @@
 #include "ui_EventRef.h"
 #include <PopIgnore.h>
 
+std::list<libcomp::String> EventRef::sAllEventIDs;
+
 EventRef::EventRef(QWidget *pParent) : QWidget(pParent)
 {
     ui = new Ui::EventRef;
     ui->setupUi(this);
+
+    for(auto& eventID : sAllEventIDs)
+    {
+        ui->eventID->addItem(qs(eventID));
+    }
+
+    // Make sure nothing is selected by default
+    ui->eventID->setCurrentText("");
 
     connect(ui->go, SIGNAL(clicked(bool)), this, SLOT(Go()));
 }
@@ -61,6 +71,17 @@ void EventRef::SetEvent(const libcomp::String& event)
 libcomp::String EventRef::GetEvent() const
 {
     return libcomp::String(ui->eventID->currentText().toStdString());
+}
+
+void EventRef::RefreshAllEventIDs(MainWindow *pMainWindow)
+{
+    sAllEventIDs.clear();
+    for(auto& eventID : pMainWindow->GetEvents()->GetCurrentEventIDs())
+    {
+        sAllEventIDs.push_back(eventID);
+    }
+
+    sAllEventIDs.sort();
 }
 
 void EventRef::Go()

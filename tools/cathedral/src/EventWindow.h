@@ -69,6 +69,8 @@ public:
 
     void ChangeEventID(const libcomp::String& currentID);
 
+    std::list<libcomp::String> GetCurrentEventIDs() const;
+
     void closeEvent(QCloseEvent* event) override;
 
 private slots:

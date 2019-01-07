@@ -359,6 +359,7 @@ void EventWindow::ChangeEventID(const libcomp::String& currentID)
         fEvent->HasUpdates = true;
         RebuildLocalIDMap(file);
         RebuildGlobalIDMap();
+        EventRef::RefreshAllEventIDs(mMainWindow);
         Refresh(false);
         GoToEvent(eventID);
     }
@@ -369,6 +370,22 @@ void EventWindow::ChangeEventID(const libcomp::String& currentID)
             .Arg(currentID)));
         err.exec();
     }
+}
+
+std::list<libcomp::String> EventWindow::GetCurrentEventIDs() const
+{
+    std::list<libcomp::String> eventIDs;
+
+    auto fIter = mFiles.find(mCurrentFileName);
+    if(fIter != mFiles.end())
+    {
+        for(auto e : fIter->second->Events)
+        {
+            eventIDs.push_back(e->Event->GetID());
+        }
+    }
+
+    return eventIDs;
 }
 
 void EventWindow::closeEvent(QCloseEvent* event)
@@ -546,6 +563,7 @@ void EventWindow::RemoveEvent()
 
         RebuildLocalIDMap(file);
         RebuildGlobalIDMap();
+        EventRef::RefreshAllEventIDs(mMainWindow);
         mMainWindow->ResetEventCount();
         Refresh(false);
     }
@@ -607,9 +625,10 @@ void EventWindow::Refresh(bool reselectEvent)
 
         return;
     }
-    else
+    else if(mCurrentFileName != path)
     {
         mCurrentFileName = path;
+        EventRef::RefreshAllEventIDs(mMainWindow);
     }
 
     SelectFile(path);

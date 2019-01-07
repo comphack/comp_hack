@@ -55,6 +55,8 @@ public:
     void SetEvent(const libcomp::String& event);
     libcomp::String GetEvent() const;
 
+    static void RefreshAllEventIDs(MainWindow *pMainWindow);
+
 public slots:
     void Go();
 
@@ -62,6 +64,8 @@ protected:
     Ui::EventRef *ui;
 
     MainWindow *mMainWindow;
+
+    static std::list<libcomp::String> sAllEventIDs;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_EVENTREF_H

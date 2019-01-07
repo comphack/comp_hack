@@ -117,6 +117,7 @@ void ObjectList::SetObjectList(const std::vector<
     mObjectModel->SetObjectList(objs);
 
     // Always reset to no selection
+    mActiveObject.reset();
     LoadProperties(nullptr);
 }
 

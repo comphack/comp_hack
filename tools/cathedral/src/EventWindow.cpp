@@ -196,6 +196,9 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
 
     ui->removeEvent->hide();
 
+    connect(ui->treeSearch, SIGNAL(textChanged(const QString&)), this,
+        SLOT(Search()));
+
     connect(ui->actionLoadFile, SIGNAL(triggered()), this, SLOT(LoadFile()));
     connect(ui->actionLoadDirectory, SIGNAL(triggered()), this,
         SLOT(LoadDirectory()));
@@ -211,6 +214,8 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
 
     connect(ui->actionRefresh, SIGNAL(triggered()), this, SLOT(Refresh()));
     connect(ui->actionGoto, SIGNAL(triggered()), this, SLOT(GoTo()));
+    connect(ui->actionFileView, SIGNAL(toggled(bool)), this,
+        SLOT(Refresh()));
     connect(ui->actionCollapseAll, SIGNAL(triggered()), this,
         SLOT(CollapseAll()));
     connect(ui->actionExpandAll, SIGNAL(triggered()), this,
@@ -399,6 +404,14 @@ void EventWindow::FileSelectionChanged()
 {
     mMainWindow->CloseSelectors(this);
 
+    // Clear the search filter if set
+    if(!ui->treeSearch->text().isEmpty())
+    {
+        ui->treeSearch->blockSignals(true);
+        ui->treeSearch->setText("");
+        ui->treeSearch->blockSignals(false);
+    }
+
     Refresh(false);
 }
 
@@ -569,6 +582,57 @@ void EventWindow::RemoveEvent()
     }
 }
 
+void EventWindow::Search()
+{
+    std::set<QTreeWidgetItem*> display;
+
+    QList<QTreeWidgetItem*> items = ui->treeWidget->findItems(
+        QString("*"), Qt::MatchWrap | Qt::MatchWildcard | Qt::MatchRecursive);
+
+    QString filter = ui->treeSearch->text();
+    if(filter.isEmpty())
+    {
+        // Display all
+        for(auto item : items)
+        {
+            display.insert(item);
+        }
+    }
+    else
+    {
+        // Filter on ID and text columns and expand parents
+        for(auto item : items)
+        {
+            if(display.find(item) == display.end() &&
+                (item->text(0).contains(filter) ||
+                item->text(2).contains(filter)))
+            {
+                display.insert(item);
+
+                auto parent = item->parent();
+                while(parent)
+                {
+                    display.insert(parent);
+                    parent = parent->parent();
+                }
+            }
+        }
+    }
+
+    for(auto item : items)
+    {
+        if(display.find(item) != display.end())
+        {
+            item->setHidden(false);
+            item->setExpanded(true);
+        }
+        else
+        {
+            item->setHidden(true);
+        }
+    }
+}
+
 void EventWindow::NewEvent()
 {
     QAction *pAction = qobject_cast<QAction*>(sender());
@@ -636,6 +700,11 @@ void EventWindow::Refresh(bool reselectEvent)
     if(reselectEvent && current)
     {
         GoToEvent(current->FileEventID);
+    }
+
+    if(!ui->treeSearch->text().isEmpty())
+    {
+        Search();
     }
 }
 
@@ -1296,6 +1365,11 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
         return;
     }
 
+    if(ui->actionFileView->isChecked() && parent)
+    {
+        return;
+    }
+
     EventTreeItem* item = 0;
     std::shared_ptr<objects::Event> e;
     if(eventIdx == -1)
@@ -1442,31 +1516,36 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
                 item->setText(1, "Prompt");
             }
 
-            for(size_t i = 0; i < prompt->ChoicesCount(); i++)
+            if(!ui->actionFileView->isChecked())
             {
-                auto choice = prompt->GetChoices(i);
-
-                EventTreeItem* cNode = new EventTreeItem(item, id);
-
-                cNode->setText(0, qs(libcomp::String("[%1]").Arg(i + 1)));
-                cNode->setText(1, iTime ? "I-Time Choice" : "Prompt Choice");
-
-                messageNodes[cNode] = choice->GetMessageID();
-
-                // Add regardless of next results
-                AddEventToTree(choice->GetNext(), cNode, file, seen);
-                AddEventToTree(choice->GetQueueNext(), cNode, file, seen);
-
-                if(choice->BranchesCount() > 0)
+                for(size_t i = 0; i < prompt->ChoicesCount(); i++)
                 {
-                    EventTreeItem* bNode = new EventTreeItem(cNode, id);
+                    auto choice = prompt->GetChoices(i);
 
-                    bNode->setText(0, "[Branches]");
+                    EventTreeItem* cNode = new EventTreeItem(item, id);
 
-                    for(auto b : choice->GetBranches())
+                    cNode->setText(0, qs(libcomp::String("[%1]").Arg(i + 1)));
+                    cNode->setText(1, iTime
+                        ? "I-Time Choice" : "Prompt Choice");
+
+                    messageNodes[cNode] = choice->GetMessageID();
+
+                    // Add regardless of next results
+                    AddEventToTree(choice->GetNext(), cNode, file, seen);
+                    AddEventToTree(choice->GetQueueNext(), cNode, file, seen);
+
+                    if(choice->BranchesCount() > 0)
                     {
-                        AddEventToTree(b->GetNext(), bNode, file, seen);
-                        AddEventToTree(b->GetQueueNext(), bNode, file, seen);
+                        EventTreeItem* bNode = new EventTreeItem(cNode, id);
+
+                        bNode->setText(0, "[Branches]");
+
+                        for(auto b : choice->GetBranches())
+                        {
+                            AddEventToTree(b->GetNext(), bNode, file, seen);
+                            AddEventToTree(b->GetQueueNext(), bNode, file,
+                                seen);
+                        }
                     }
                 }
             }
@@ -1572,7 +1651,7 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
         break;
     }
 
-    if(e->BranchesCount() > 0)
+    if(e->BranchesCount() > 0 && !ui->actionFileView->isChecked())
     {
         // Add under branches child node
         EventTreeItem* bNode = new EventTreeItem(item, id);

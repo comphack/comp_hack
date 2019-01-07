@@ -26,6 +26,13 @@
       <widget class="QWidget" name="layoutWidget">
        <layout class="QVBoxLayout" name="layoutTree">
         <item>
+         <widget class="QLineEdit" name="treeSearch">
+          <property name="placeholderText">
+           <string>Enter your search here...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QTreeWidget" name="treeWidget">
           <property name="alternatingRowColors">
            <bool>true</bool>
@@ -86,7 +93,7 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>306</width>
+             <width>344</width>
              <height>376</height>
             </rect>
            </property>
@@ -186,6 +193,8 @@
     </property>
     <addaction name="actionRefresh"/>
     <addaction name="actionGoto"/>
+    <addaction name="actionFileView"/>
+    <addaction name="separator"/>
     <addaction name="actionCollapseAll"/>
     <addaction name="actionExpandAll"/>
    </widget>
@@ -250,6 +259,14 @@
   <action name="actionCollapseAll">
    <property name="text">
     <string>Collapse All Nodes</string>
+   </property>
+  </action>
+  <action name="actionFileView">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Display File Order</string>
    </property>
   </action>
  </widget>

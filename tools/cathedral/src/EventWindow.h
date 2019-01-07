@@ -82,6 +82,7 @@ private slots:
     void NewFile();
     void NewEvent();
     void RemoveEvent();
+    void Search();
     void Refresh(bool reselectEvent = true);
     void GoTo();
     void CollapseAll();

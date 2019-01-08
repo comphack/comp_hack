@@ -26,6 +26,8 @@
 
 // object Includes
 #include <Action.h>
+#include <DropSet.h>
+#include <ItemDrop.h>
 #include <Event.h>
 #include <EventBase.h>
 #include <EventChoice.h>
@@ -55,6 +57,7 @@ public:
     std::set<libcomp::String> KeepDefaults;
     std::set<libcomp::String> ToHex;
     libcomp::String LastLesserMember;
+    bool DropObjectIdentifier = false;
 };
 
 void XmlHandler::SimplifyObjects(std::list<tinyxml2::XMLNode*> nodes)
@@ -191,11 +194,8 @@ void XmlHandler::SimplifyObjects(std::list<tinyxml2::XMLNode*> nodes)
             }
         }
 
-        if(objType == "EventBase")
+        if(tObj->DropObjectIdentifier)
         {
-            // EventBase is used for the branch structure which does not need
-            // the object identifier and often times these can be very simple
-            // so drop it here.
             objNode->ToElement()->DeleteAttribute("name");
         }
 
@@ -310,11 +310,13 @@ std::shared_ptr<XmlTemplateObject> XmlHandler::GetTemplateObject(
     std::set<libcomp::String> correctMaps;
     std::set<libcomp::String> keepDefaults;
     libcomp::String lesserMember;
+    bool dropObjectIdentifier = false;
 
     if(objType == "EventBase")
     {
         obj = std::make_shared<objects::EventBase>();
         lesserMember = "popNext";
+        dropObjectIdentifier = true;
     }
     else if(objType == "EventChoice")
     {
@@ -341,6 +343,17 @@ std::shared_ptr<XmlTemplateObject> XmlHandler::GetTemplateObject(
             obj = objects::Event::InheritedConstruction(objType);
             lesserMember = "transformScriptParams";
         }
+    }
+    else if(objType == "DropSet")
+    {
+        obj = std::make_shared<objects::DropSet>();
+    }
+    else if(objType == "ItemDrop")
+    {
+        obj = std::make_shared<objects::ItemDrop>();
+        dropObjectIdentifier = true;
+
+        keepDefaults.insert("MaxStack");
     }
     else if(objType == "PlasmaSpawn")
     {
@@ -459,6 +472,7 @@ std::shared_ptr<XmlTemplateObject> XmlHandler::GetTemplateObject(
         tObj->KeepDefaults = keepDefaults;
         tObj->LastLesserMember = lesserMember;
         tObj->MemberNodes = tMembers;
+        tObj->DropObjectIdentifier = dropObjectIdentifier;
 
         return tObj;
     }

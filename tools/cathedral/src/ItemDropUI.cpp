@@ -47,6 +47,13 @@ ItemDrop::ItemDrop(MainWindow *pMainWindow,
     prop->setupUi(this);
 
     prop->itemType->Bind(pMainWindow, "CItemData");
+
+    // Hide by default
+    prop->lblModifier->hide();
+    prop->modifier->hide();
+
+    connect(prop->type, SIGNAL(currentIndexChanged(const QString&)),
+        this, SLOT(TypeChanged()));
 }
 
 ItemDrop::~ItemDrop()
@@ -78,4 +85,20 @@ std::shared_ptr<objects::ItemDrop> ItemDrop::Save() const
     obj->SetCooldownRestrict(prop->cooldownRestrict->value());
 
     return obj;
+}
+
+void ItemDrop::TypeChanged()
+{
+    if(prop->type->currentIndex() == 0)
+    {
+        // Modifier not used
+        prop->lblModifier->hide();
+        prop->modifier->hide();
+    }
+    else
+    {
+        // Modifier used
+        prop->lblModifier->show();
+        prop->modifier->show();
+    }
 }

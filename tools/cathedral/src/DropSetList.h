@@ -1,10 +1,10 @@
 /**
- * @file tools/cathedral/src/ItemDropUI.h
+ * @file tools/cathedral/src/DropSetList.h
  * @ingroup cathedral
  *
  * @author HACKfrost
  *
- * @brief Definition for a configured ItemDrop.
+ * @brief Definition for a control that holds a list of Drop Sets.
  *
  * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
  *
@@ -22,50 +22,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H
-#define TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H
+#ifndef TOOLS_CATHEDRAL_SRC_DROPSETLIST_H
+#define TOOLS_CATHEDRAL_SRC_DROPSETLIST_H
 
-// Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
-#include <PopIgnore.h>
-
-// Standard C++11 Includes
-#include <memory>
-
-namespace objects
-{
-
-class ItemDrop;
-
-} // namespace objects
+#include "ObjectList.h"
 
 namespace Ui
 {
 
-class ItemDrop;
+class DropSetProperties;
 
 } // namespace Ui
 
-class MainWindow;
-
-class ItemDrop : public QWidget
+class DropSetList : public ObjectList
 {
     Q_OBJECT
 
 public:
-    explicit ItemDrop(MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ItemDrop();
+    explicit DropSetList(QWidget *pParent = 0);
+    virtual ~DropSetList();
 
-    void Load(const std::shared_ptr<objects::ItemDrop>& drop);
-    std::shared_ptr<objects::ItemDrop> Save() const;
+    virtual void SetMainWindow(MainWindow *pMainWindow);
 
-protected slots:
-    void TypeChanged();
+    QString GetObjectID(const std::shared_ptr<
+        libcomp::Object>& obj) const override;
+    QString GetObjectName(const std::shared_ptr<
+        libcomp::Object>& obj) const override;
+
+    void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+    void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
 
 protected:
-    Ui::ItemDrop *prop;
+    Ui::DropSetProperties *prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ITEMDROPUI_H
+#endif // TOOLS_CATHEDRAL_SRC_DROPSETLIST_H

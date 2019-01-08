@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>251</width>
+    <height>156</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -24,9 +24,9 @@
     <number>0</number>
    </property>
    <item>
-    <layout class="QFormLayout" name="formLayout">
-     <property name="fieldGrowthPolicy">
-      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+    <layout class="QFormLayout" name="layoutType">
+     <property name="bottomMargin">
+      <number>5</number>
      </property>
      <item row="0" column="0">
       <widget class="QLabel" name="lblItemType">
@@ -35,82 +35,17 @@
        </property>
       </widget>
      </item>
+     <item row="0" column="1">
+      <widget class="ObjectSelector" name="itemType" native="true"/>
+     </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="lblRate">
-       <property name="text">
-        <string>Rate:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QDoubleSpinBox" name="rate">
-       <property name="minimum">
-        <double>0.010000000000000</double>
-       </property>
-       <property name="maximum">
-        <double>100.000000000000000</double>
-       </property>
-       <property name="value">
-        <double>100.000000000000000</double>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="lblMinStack">
-       <property name="text">
-        <string>Min Stack:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="lblMaxStack">
-       <property name="text">
-        <string>Max Stack</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
       <widget class="QLabel" name="lblType">
        <property name="text">
         <string>Type:</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="lblModifier">
-       <property name="text">
-        <string>Modifier:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0">
-      <widget class="QLabel" name="lblCooldownRestrict">
-       <property name="text">
-        <string>Cooldown Restrict:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QSpinBox" name="minStack">
-       <property name="maximum">
-        <number>65535</number>
-       </property>
-       <property name="value">
-        <number>1</number>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QSpinBox" name="maxStack">
-       <property name="maximum">
-        <number>65535</number>
-       </property>
-       <property name="value">
-        <number>1</number>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
+     <item row="1" column="1">
       <widget class="QComboBox" name="type">
        <item>
         <property name="text">
@@ -129,17 +64,54 @@
        </item>
       </widget>
      </item>
-     <item row="5" column="1">
+     <item row="2" column="0">
+      <widget class="QLabel" name="lblModifier">
+       <property name="text">
+        <string>Modifier:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
       <widget class="QDoubleSpinBox" name="modifier">
+       <property name="minimum">
+        <double>-1000000.000000000000000</double>
+       </property>
        <property name="maximum">
-        <double>10000.000000000000000</double>
+        <double>1000000.000000000000000</double>
        </property>
        <property name="value">
         <double>1.000000000000000</double>
        </property>
       </widget>
      </item>
-     <item row="6" column="1">
+     <item row="3" column="0">
+      <widget class="QLabel" name="lblRate">
+       <property name="text">
+        <string>Rate:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QDoubleSpinBox" name="rate">
+       <property name="minimum">
+        <double>0.010000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>100.000000000000000</double>
+       </property>
+       <property name="value">
+        <double>100.000000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="lblCooldownRestrict">
+       <property name="text">
+        <string>Cooldown Restrict:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
       <widget class="QSpinBox" name="cooldownRestrict">
        <property name="minimum">
         <number>-2147483647</number>
@@ -149,8 +121,58 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="ObjectSelector" name="itemType" native="true"/>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="layoutRate">
+     <item>
+      <widget class="QLabel" name="lblStack">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Stack:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="minStack">
+       <property name="maximum">
+        <number>65535</number>
+       </property>
+       <property name="value">
+        <number>1</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lblStackSeparator">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>~</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="maxStack">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>65535</number>
+       </property>
+       <property name="value">
+        <number>1</number>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>

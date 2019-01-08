@@ -25,8 +25,6 @@
 #ifndef TOOLS_CATHEDRAL_SRC_EVENTWINDOW_H
 #define TOOLS_CATHEDRAL_SRC_EVENTWINDOW_H
 
-#include "EventWindow.h"
-
 // Qt Includes
 #include <PushIgnore.h>
 #include <QWidget>

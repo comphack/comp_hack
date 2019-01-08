@@ -49,6 +49,7 @@ class MainWindow;
 
 } // namespace Ui
 
+class DropSetWindow;
 class EventWindow;
 class ObjectSelectorWindow;
 class ZoneWindow;
@@ -66,6 +67,7 @@ public:
     std::shared_ptr<libcomp::DataStore> GetDatastore() const;
     std::shared_ptr<libcomp::DefinitionManager> GetDefinitions() const;
 
+    DropSetWindow* GetDropSets() const;
     EventWindow* GetEvents() const;
     ZoneWindow* GetZones() const;
 
@@ -84,6 +86,7 @@ public:
 
     void UpdateActiveZone(const libcomp::String& path);
 
+    void ResetDropSetCount();
     void ResetEventCount();
 
     QString GetDialogDirectory();
@@ -92,6 +95,7 @@ public:
     void CloseSelectors(QWidget* topLevel);
 
 protected slots:
+    void OpenDropSets();
     void OpenEvents();
     void OpenZone();
     void ViewObjectList();
@@ -109,6 +113,7 @@ private slots:
     void BrowseZone();
 
 protected:
+    DropSetWindow *mDropSetWindow;
     EventWindow *mEventWindow;
     ZoneWindow *mZoneWindow;
 

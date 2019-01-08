@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>695</width>
-    <height>420</height>
+    <height>500</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -84,6 +84,35 @@
          </property>
          <property name="text">
           <string>View Events</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="groupDropSets">
+      <property name="title">
+       <string>Drop Set</string>
+      </property>
+      <layout class="QHBoxLayout" name="dropSetLayout">
+       <item>
+        <widget class="QLabel" name="dropSetCount">
+         <property name="text">
+          <string>No drop sets have been loaded.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="dropSetView">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>View Drop Sets</string>
          </property>
         </widget>
        </item>

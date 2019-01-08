@@ -26,6 +26,7 @@
 
 // Cathedral Includes
 #include "BinaryDataNamedSet.h"
+#include "DropSetWindow.h"
 #include "EventWindow.h"
 #include "ObjectSelectorList.h"
 #include "ObjectSelectorWindow.h"
@@ -93,9 +94,11 @@
 MainWindow::MainWindow(QWidget *pParent) : QMainWindow(pParent)
 {
     // Set these first in case the window wants to query for IDs from another.
+    mDropSetWindow = nullptr;
     mEventWindow = nullptr;
     mZoneWindow = nullptr;
 
+    mDropSetWindow = new DropSetWindow(this);
     mEventWindow = new EventWindow(this);
     mZoneWindow = new ZoneWindow(this);
 
@@ -104,6 +107,7 @@ MainWindow::MainWindow(QWidget *pParent) : QMainWindow(pParent)
 
     connect(ui->zoneBrowse, SIGNAL(clicked(bool)), this, SLOT(BrowseZone()));
 
+    connect(ui->dropSetView, SIGNAL(clicked(bool)), this, SLOT(OpenDropSets()));
     connect(ui->eventsView, SIGNAL(clicked(bool)), this, SLOT(OpenEvents()));
     connect(ui->zoneView, SIGNAL(clicked(bool)), this, SLOT(OpenZone()));
 
@@ -448,6 +452,11 @@ std::shared_ptr<libcomp::DefinitionManager> MainWindow::GetDefinitions() const
     return mDefinitions;
 }
 
+DropSetWindow* MainWindow::GetDropSets() const
+{
+    return mDropSetWindow;
+}
+
 EventWindow* MainWindow::GetEvents() const
 {
     return mEventWindow;
@@ -519,6 +528,13 @@ void MainWindow::UpdateActiveZone(const libcomp::String& path)
     LOG_INFO(libcomp::String("Loaded: %1\n").Arg(path));
 
     ui->zoneView->setEnabled(true);
+}
+
+void MainWindow::ResetDropSetCount()
+{
+    size_t total = mDropSetWindow->GetLoadedDropSetCount();
+    ui->dropSetCount->setText(qs(libcomp::String("%1 drop set(s) loaded")
+        .Arg(total)));
 }
 
 void MainWindow::ResetEventCount()
@@ -642,6 +658,12 @@ void MainWindow::closeEvent(QCloseEvent* event)
     (void)event;
 
     CloseAllWindows();
+}
+
+void MainWindow::OpenDropSets()
+{
+    mDropSetWindow->show();
+    mDropSetWindow->raise();
 }
 
 void MainWindow::OpenEvents()

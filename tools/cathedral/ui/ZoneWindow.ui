@@ -195,7 +195,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="tabZone">
         <attribute name="title">
@@ -861,6 +861,13 @@
             <widget class="QPushButton" name="addSpawn">
              <property name="text">
               <string>Add Spawn</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="cloneSpawn">
+             <property name="text">
+              <string>Clone</string>
              </property>
             </widget>
            </item>

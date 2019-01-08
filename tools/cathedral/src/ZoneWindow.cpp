@@ -68,6 +68,7 @@
 #include <SpawnGroup.h>
 #include <SpawnLocation.h>
 #include <SpawnLocationGroup.h>
+#include <SpawnRestriction.h>
 #include <ServerZonePartial.h>
 #include <ServerZoneSpot.h>
 #include <ServerZoneTrigger.h>
@@ -133,6 +134,7 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     connect(ui.addNPC, SIGNAL(clicked()), this, SLOT(AddNPC()));
     connect(ui.addObject, SIGNAL(clicked()), this, SLOT(AddObject()));
     connect(ui.addSpawn, SIGNAL(clicked()), this, SLOT(AddSpawn()));
+    connect(ui.cloneSpawn, SIGNAL(clicked()), this, SLOT(CloneSpawn()));
     connect(ui.removeNPC, SIGNAL(clicked()), this, SLOT(RemoveNPC()));
     connect(ui.removeObject, SIGNAL(clicked()), this, SLOT(RemoveObject()));
     connect(ui.removeSpawn, SIGNAL(clicked()), this, SLOT(RemoveSpawn()));
@@ -854,15 +856,21 @@ void ZoneWindow::AddObject()
     UpdateMergedZone(true);
 }
 
-void ZoneWindow::AddSpawn()
+void ZoneWindow::AddSpawn(bool cloneSelected)
 {
     uint32_t nextID = 1;
+    std::shared_ptr<libcomp::Object> clone;
     switch(ui.tabSpawnTypes->currentIndex())
     {
     case 1:
         while(nextID && mMergedZone->Definition->SpawnGroupsKeyExists(nextID))
         {
             nextID = (uint32_t)(nextID + 1);
+        }
+
+        if(cloneSelected)
+        {
+            clone = ui.spawnGroups->GetActiveObject();
         }
         break;
     case 2:
@@ -871,6 +879,11 @@ void ZoneWindow::AddSpawn()
         {
             nextID = (uint32_t)(nextID + 1);
         }
+
+        if(cloneSelected)
+        {
+            clone = ui.spawnLocationGroups->GetActiveObject();
+        }
         break;
     case 0:
     default:
@@ -878,7 +891,18 @@ void ZoneWindow::AddSpawn()
         {
             nextID = (uint32_t)(nextID + 1);
         }
+
+        if(cloneSelected)
+        {
+            clone = ui.spawns->GetActiveObject();
+        }
         break;
+    }
+    
+    if(cloneSelected && !clone)
+    {
+        // Nothing selected
+        return;
     }
 
     int spawnID = QInputDialog::getInt(this, "Enter an ID", "New ID",
@@ -899,7 +923,28 @@ void ZoneWindow::AddSpawn()
         }
         else
         {
-            auto sg = std::make_shared<objects::SpawnGroup>();
+            std::shared_ptr<objects::SpawnGroup> sg;
+            if(clone)
+            {
+                sg = std::make_shared<objects::SpawnGroup>(
+                    *std::dynamic_pointer_cast<objects::SpawnGroup>(clone));
+
+                sg->ClearSpawnActions();
+                sg->ClearDefeatActions();
+
+                if(sg->GetRestrictions())
+                {
+                    // Restrictions are the only exception to the shallow copy
+                    // to keep so make a copy of that too
+                    sg->SetRestrictions(std::make_shared<
+                        objects::SpawnRestriction>(*sg->GetRestrictions()));
+                }
+            }
+            else
+            {
+                sg = std::make_shared<objects::SpawnGroup>();
+            }
+
             sg->SetID((uint32_t)spawnID);
             if(mMergedZone->CurrentPartial)
             {
@@ -911,6 +956,10 @@ void ZoneWindow::AddSpawn()
                 mMergedZone->CurrentZone->SetSpawnGroups((uint32_t)spawnID,
                     sg);
             }
+
+            // Update then select new spawn group
+            UpdateMergedZone(true);
+            ui.spawnGroups->Select(sg);
         }
         break;
     case 2:
@@ -922,7 +971,20 @@ void ZoneWindow::AddSpawn()
         }
         else
         {
-            auto slg = std::make_shared<objects::SpawnLocationGroup>();
+            std::shared_ptr<objects::SpawnLocationGroup> slg;
+            if(clone)
+            {
+                slg = std::make_shared<objects::SpawnLocationGroup>(
+                    *std::dynamic_pointer_cast<objects::SpawnLocationGroup>(
+                        clone));
+
+                slg->ClearLocations();
+            }
+            else
+            {
+                slg = std::make_shared<objects::SpawnLocationGroup>();
+            }
+
             slg->SetID((uint32_t)spawnID);
             if(mMergedZone->CurrentPartial)
             {
@@ -934,6 +996,10 @@ void ZoneWindow::AddSpawn()
                 mMergedZone->CurrentZone->SetSpawnLocationGroups(
                     (uint32_t)spawnID, slg);
             }
+
+            // Update then select new spawn location group
+            UpdateMergedZone(true);
+            ui.spawnLocationGroups->Select(slg);
         }
         break;
     case 0:
@@ -945,7 +1011,20 @@ void ZoneWindow::AddSpawn()
         }
         else
         {
-            auto spawn = std::make_shared<objects::Spawn>();
+            std::shared_ptr<objects::Spawn> spawn;
+            if(clone)
+            {
+                spawn = std::make_shared<objects::Spawn>(
+                    *std::dynamic_pointer_cast<objects::Spawn>(clone));
+
+                spawn->ClearDrops();
+                spawn->ClearGifts();
+            }
+            else
+            {
+                spawn = std::make_shared<objects::Spawn>();
+            }
+
             spawn->SetID((uint32_t)spawnID);
             if(mMergedZone->CurrentPartial)
             {
@@ -957,6 +1036,10 @@ void ZoneWindow::AddSpawn()
                 mMergedZone->CurrentZone->SetSpawns((uint32_t)spawnID,
                     spawn);
             }
+
+            // Update then select new spawn
+            UpdateMergedZone(true);
+            ui.spawns->Select(spawn);
         }
         break;
     }
@@ -967,10 +1050,11 @@ void ZoneWindow::AddSpawn()
         err.setText(qs(errMsg));
         err.exec();
     }
-    else
-    {
-        UpdateMergedZone(true);
-    }
+}
+
+void ZoneWindow::CloneSpawn()
+{
+    AddSpawn(true);
 }
 
 void ZoneWindow::RemoveNPC()
@@ -1666,6 +1750,7 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
     ui.addNPC->setDisabled(!canEdit);
     ui.addObject->setDisabled(!canEdit);
     ui.addSpawn->setDisabled(!canEdit);
+    ui.cloneSpawn->setDisabled(!canEdit);
     ui.removeNPC->setDisabled(!canEdit);
     ui.removeObject->setDisabled(!canEdit);
     ui.removeSpawn->setDisabled(!canEdit);

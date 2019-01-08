@@ -102,7 +102,8 @@ protected slots:
 
     void AddNPC();
     void AddObject();
-    void AddSpawn();
+    void AddSpawn(bool cloneSelected = false);
+    void CloneSpawn();
     void RemoveNPC();
     void RemoveObject();
     void RemoveSpawn();

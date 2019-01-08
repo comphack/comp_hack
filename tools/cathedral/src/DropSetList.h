@@ -27,6 +27,9 @@
 
 #include "ObjectList.h"
 
+// libcomp Includes
+#include <CString.h>
+
 namespace Ui
 {
 

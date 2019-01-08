@@ -40,7 +40,6 @@
 #include <PopIgnore.h>
 
 // object Includes
-#include <DropSet.h>
 #include <ItemDrop.h>
 
 // libcomp Includes
@@ -50,7 +49,7 @@ class DropSetFile
 {
 public:
     libcomp::String Path;
-    std::list<std::shared_ptr<objects::DropSet>> DropSets;
+    std::list<std::shared_ptr<FileDropSet>> DropSets;
     std::set<uint32_t> PendingRemovals;
 };
 
@@ -91,7 +90,7 @@ void DropSetWindow::RebuildNamedDataSet()
     auto items = std::dynamic_pointer_cast<BinaryDataNamedSet>(
         mMainWindow->GetBinaryDataSet("CItemData"));
 
-    std::map<uint32_t, std::shared_ptr<objects::DropSet>> sort;
+    std::map<uint32_t, std::shared_ptr<FileDropSet>> sort;
     for(auto& fPair : mFiles)
     {
         for(auto ds : fPair.second->DropSets)
@@ -154,14 +153,21 @@ void DropSetWindow::RebuildNamedDataSet()
                 .Arg(suffix));
         }
 
+        libcomp::String desc;
+        if(!ds->Desc.IsEmpty())
+        {
+            desc = libcomp::String("%1\n\r    ").Arg(ds->Desc);
+        }
+
         dropSets.push_back(ds);
-        names.push_back(libcomp::String::Join(dropStrings, ",\n\r    "));
+        names.push_back(libcomp::String("%1%2").Arg(desc)
+            .Arg(libcomp::String::Join(dropStrings, ",\n\r    ")));
     }
 
     auto newData = std::make_shared<BinaryDataNamedSet>(
         [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
         {
-            return std::dynamic_pointer_cast<objects::DropSet>(obj)
+            return std::dynamic_pointer_cast<FileDropSet>(obj)
                 ->GetID();
         });
     newData->MapRecords(dropSets, names);
@@ -239,13 +245,13 @@ void DropSetWindow::NewDropSet()
         }
     }
 
-    auto ds = std::make_shared<objects::DropSet>();
+    auto ds = std::make_shared<FileDropSet>();
     ds->SetID(dropSetID);
 
     file->DropSets.push_back(ds);
     
-    file->DropSets.sort([](const std::shared_ptr<objects::DropSet>& a,
-        const std::shared_ptr<objects::DropSet>& b)
+    file->DropSets.sort([](const std::shared_ptr<FileDropSet>& a,
+        const std::shared_ptr<FileDropSet>& b)
         {
             return a->GetID() < b->GetID();
         });
@@ -300,7 +306,7 @@ void DropSetWindow::RemoveDropSet()
     }
 
     auto file = fIter->second;
-    auto current = std::dynamic_pointer_cast<objects::DropSet>(
+    auto current = std::dynamic_pointer_cast<FileDropSet>(
         ui->dropSetList->GetActiveObject());
     if(current)
     {
@@ -446,12 +452,12 @@ bool DropSetWindow::LoadFileFromPath(const libcomp::String& path)
         return false;
     }
 
-    std::list<std::shared_ptr<objects::DropSet>> dropSets;
+    std::list<std::shared_ptr<FileDropSet>> dropSets;
 
     auto objNode = rootElem->FirstChildElement("object");
     while(objNode)
     {
-        auto ds = std::make_shared<objects::DropSet>();
+        auto ds = std::make_shared<FileDropSet>();
         if(!ds->Load(doc, *objNode))
         {
             break;
@@ -464,6 +470,18 @@ bool DropSetWindow::LoadFileFromPath(const libcomp::String& path)
             break;
         }
 
+        libcomp::String desc;
+        auto descNode = objNode->FirstChildElement("desc");
+        if(descNode)
+        {
+            auto txtNode = descNode->FirstChild();
+            if(txtNode && txtNode->ToText())
+            {
+                desc = libcomp::String(txtNode->ToText()->Value());
+            }
+        }
+
+        ds->Desc = desc;
         dropSets.push_back(ds);
 
         objNode = objNode->NextSiblingElement("object");
@@ -611,6 +629,15 @@ void DropSetWindow::SaveFiles(const std::list<libcomp::String>& paths)
             ds->Save(doc, *rootElem);
 
             tinyxml2::XMLNode* dsNode = rootElem->LastChild();
+
+            if(!ds->Desc.IsEmpty())
+            {
+                auto descElem = doc.NewElement("desc");
+                auto txtElem = doc.NewText(ds->Desc.C());
+                descElem->InsertFirstChild(txtElem);
+                dsNode->InsertAfterChild(dsNode->FirstChildElement(),
+                    descElem);
+            }
 
             // If the drop set already existed in the file, move it to the
             // same location and drop the old one

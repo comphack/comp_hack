@@ -26,6 +26,7 @@
 
 // Cathedral Includes
 #include "BinaryDataNamedSet.h"
+#include "DropSetWindow.h"
 #include "DynamicList.h"
 #include "MainWindow.h"
 
@@ -36,7 +37,6 @@
 #include <PopIgnore.h>
 
 // objects Includes
-#include <DropSet.h>
 #include <ItemDrop.h>
 
 // libcomp Includes
@@ -71,19 +71,19 @@ void DropSetList::SetMainWindow(MainWindow *pMainWindow)
 QString DropSetList::GetObjectID(const std::shared_ptr<
     libcomp::Object>& obj) const
 {
-    auto sObj = std::dynamic_pointer_cast<objects::DropSet>(obj);
-    if(!sObj)
+    auto ds = std::dynamic_pointer_cast<FileDropSet>(obj);
+    if(!ds)
     {
         return {};
     }
 
-    return QString::number(sObj->GetID());
+    return QString::number(ds->GetID());
 }
 
 QString DropSetList::GetObjectName(const std::shared_ptr<
     libcomp::Object>& obj) const
 {
-    auto ds = std::dynamic_pointer_cast<objects::DropSet>(obj);
+    auto ds = std::dynamic_pointer_cast<FileDropSet>(obj);
     if(mMainWindow && ds)
     {
         auto dataset = std::dynamic_pointer_cast<BinaryDataNamedSet>(
@@ -96,7 +96,7 @@ QString DropSetList::GetObjectName(const std::shared_ptr<
 
 void DropSetList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
-    auto ds = std::dynamic_pointer_cast<objects::DropSet>(obj);
+    auto ds = std::dynamic_pointer_cast<FileDropSet>(obj);
 
     auto parentWidget = prop->layoutMain->itemAt(0)->widget();
     if(!ds)
@@ -111,6 +111,7 @@ void DropSetList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
         }
 
         prop->id->setText(QString::number(ds->GetID()));
+        prop->desc->setText(qs(ds->Desc));
         prop->type->setCurrentIndex(to_underlying(
             ds->GetType()));
         prop->mutexID->setValue((int32_t)ds->GetMutexID());
@@ -126,9 +127,10 @@ void DropSetList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
 
 void DropSetList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
 {
-    auto ds = std::dynamic_pointer_cast<objects::DropSet>(obj);
+    auto ds = std::dynamic_pointer_cast<FileDropSet>(obj);
     if(ds)
     {
+        ds->Desc = cs(prop->desc->text());
         ds->SetType((objects::DropSet::Type_t)prop->type->currentIndex());
         ds->SetMutexID((uint32_t)prop->mutexID->value());
         ds->SetGiftBoxID((uint32_t)prop->giftBoxID->value());

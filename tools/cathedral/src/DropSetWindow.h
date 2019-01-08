@@ -30,6 +30,9 @@
 #include "ui_DropSetWindow.h"
 #include <PopIgnore.h>
 
+// object Includes
+#include <DropSet.h>
+
 // libcomp Includes
 #include <CString.h>
 
@@ -39,6 +42,15 @@ namespace objects
 class Action;
 
 } // namespace objects
+
+class FileDropSet : public objects::DropSet
+{
+public:
+    FileDropSet() {}
+    virtual ~FileDropSet() {}
+
+    libcomp::String Desc;
+};
 
 class DropSetFile;
 class MainWindow;

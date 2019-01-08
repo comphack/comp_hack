@@ -207,7 +207,7 @@ void XmlHandler::SimplifyObjects(std::list<tinyxml2::XMLNode*> nodes)
             auto next = child->NextSibling();
 
             auto elem = child->ToElement();
-            if(elem)
+            if(elem && libcomp::String(elem->Name()) == "member")
             {
                 libcomp::String member(elem->Attribute("name"));
 

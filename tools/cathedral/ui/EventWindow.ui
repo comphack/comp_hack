@@ -198,17 +198,26 @@
     <addaction name="actionCollapseAll"/>
     <addaction name="actionExpandAll"/>
    </widget>
-   <widget class="QMenu" name="menuSort">
+   <widget class="QMenu" name="menuEdit">
     <property name="title">
-     <string>Sort</string>
+     <string>Edit</string>
     </property>
+    <widget class="QMenu" name="menuChangeIDs">
+     <property name="title">
+      <string>Change IDs</string>
+     </property>
+     <addaction name="actionChangeID"/>
+     <addaction name="actionChangeFileIDs"/>
+     <addaction name="actionChangeTreeIDs"/>
+    </widget>
     <addaction name="actionMoveUp"/>
     <addaction name="actionMoveDown"/>
     <addaction name="actionReorganize"/>
+    <addaction name="menuChangeIDs"/>
    </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuView"/>
-   <addaction name="menuSort"/>
   </widget>
   <action name="actionLoadFile">
    <property name="text">
@@ -309,6 +318,30 @@
   <action name="actionReorganize">
    <property name="text">
     <string>Reorganize</string>
+   </property>
+  </action>
+  <action name="actionChangeTreeIDs">
+   <property name="text">
+    <string>Tree Branch</string>
+   </property>
+   <property name="toolTip">
+    <string>Changes all event IDs in the selected branch in the tree and below based on a user supplied prefix.</string>
+   </property>
+  </action>
+  <action name="actionChangeID">
+   <property name="text">
+    <string>Selected Event</string>
+   </property>
+   <property name="toolTip">
+    <string>Change the ID of the currently selected event.</string>
+   </property>
+  </action>
+  <action name="actionChangeFileIDs">
+   <property name="text">
+    <string>Entire File</string>
+   </property>
+   <property name="toolTip">
+    <string>Changes all event IDs in the current file based on a user supplied prefix followed by the event type.</string>
    </property>
   </action>
  </widget>

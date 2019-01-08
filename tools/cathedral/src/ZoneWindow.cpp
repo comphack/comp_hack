@@ -389,6 +389,12 @@ std::list<std::shared_ptr<objects::Action>>
     ZoneWindow::GetLoadedActions(bool forUpdate)
 {
     std::list<std::shared_ptr<objects::Action>> actions;
+    if(!mMergedZone->Definition)
+    {
+        // Nothing loaded
+        return actions;
+    }
+
     if(forUpdate)
     {
         // Make sure all controls are saved and not bound during the update

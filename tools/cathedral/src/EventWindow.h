@@ -94,6 +94,9 @@ private slots:
     void MoveUp();
     void MoveDown();
     void Reorganize();
+    void ChangeCurrentEventID();
+    void ChangeFileEventIDs();
+    void ChangeTreeBranchIDs();
 
 private:
     bool LoadFileFromPath(const libcomp::String& path);
@@ -117,6 +120,10 @@ private:
         libcomp::String>& idMap, const std::list<std::shared_ptr<
         objects::Action>>& actions);
 
+    libcomp::String GetCommonEventPrefix(
+        const std::shared_ptr<EventFile>& file);
+    libcomp::String GetEventTypePrefix(const libcomp::String& prefix,
+        objects::Event::EventType_t eventType);
     libcomp::String GetNewEventID(const std::shared_ptr<EventFile>& file,
         objects::Event::EventType_t eventType);
 

@@ -77,6 +77,7 @@ private slots:
     void FileSelectionChanged();
     void LoadDirectory();
     void LoadFile();
+    void ReloadFile();
     void SaveFile();
     void SaveAllFiles();
     void NewFile();
@@ -85,6 +86,7 @@ private slots:
     void Search();
     void Refresh(bool reselectEvent = true);
     void GoTo();
+    void Back();
     void FileViewChanged();
     void CollapseAll();
     void ExpandAll();
@@ -107,7 +109,7 @@ private:
     std::shared_ptr<objects::Event> GetNewEvent(
         objects::Event::EventType_t type) const;
 
-    void BindSelectedEvent();
+    void BindSelectedEvent(bool storePrevious);
     void BindEventEditControls(QWidget* eNode);
 
     void AddEventToTree(const libcomp::String& id, EventTreeItem* parent,
@@ -127,6 +129,8 @@ private:
     libcomp::String GetNewEventID(const std::shared_ptr<EventFile>& file,
         objects::Event::EventType_t eventType);
 
+    void UpdatePreviousEvents(const libcomp::String& last);
+
     void RebuildLocalIDMap(const std::shared_ptr<EventFile>& file);
     void RebuildGlobalIDMap();
 
@@ -140,6 +144,8 @@ private:
 
     libcomp::String mCurrentFileName;
     std::shared_ptr<FileEvent> mCurrentEvent;
+
+    std::list<libcomp::String> mPreviousEventIDs;
 
     Ui::EventWindow *ui;
 };

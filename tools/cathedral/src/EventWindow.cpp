@@ -201,6 +201,8 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
     ui->actionMoveUp->setDisabled(true);
     ui->actionMoveDown->setDisabled(true);
 
+    ui->eventBack->hide();
+
     connect(ui->treeSearch, SIGNAL(textChanged(const QString&)), this,
         SLOT(Search()));
 
@@ -210,7 +212,10 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
     connect(ui->actionSave, SIGNAL(triggered()), this, SLOT(SaveFile()));
     connect(ui->actionSaveAll, SIGNAL(triggered()), this,
         SLOT(SaveAllFiles()));
+    connect(ui->actionReloadFile, SIGNAL(triggered()), this,
+        SLOT(ReloadFile()));
     connect(ui->actionNew, SIGNAL(triggered()), this, SLOT(NewFile()));
+    connect(ui->eventBack, SIGNAL(clicked()), this, SLOT(Back()));
     connect(ui->removeEvent, SIGNAL(clicked()), this, SLOT(RemoveEvent()));
     connect(ui->files, SIGNAL(currentIndexChanged(const QString&)), this,
         SLOT(FileSelectionChanged()));
@@ -278,9 +283,9 @@ bool EventWindow::GoToEvent(const libcomp::String& eventID)
             if(treeItem->EventID == eventID)
             {
                 // Block signals and clear current selection
-                ui->treeWidget->blockSignals(true);
+                bool old = ui->treeWidget->blockSignals(true);
                 ui->treeWidget->clearSelection();
-                ui->treeWidget->blockSignals(false);
+                ui->treeWidget->blockSignals(old);
 
                 // Select new item and display (if not already)
                 ui->treeWidget->setItemSelected(treeItem, true);
@@ -496,17 +501,49 @@ void EventWindow::LoadFile()
     }
 }
 
+void EventWindow::ReloadFile()
+{
+    auto fIter = mFiles.find(mCurrentFileName);
+    if(fIter == mFiles.end())
+    {
+        // No file
+        return;
+    }
+
+    auto file = fIter->second;
+
+    bool changeExists = file->Reordered ||
+        file->PendingRemovals.size() > 0;
+    for(auto fEvent : file->Events)
+    {
+        changeExists |= fEvent->HasUpdates;
+    }
+
+    if(changeExists)
+    {
+        auto reply = QMessageBox::question(this, "Confirm Reload",
+            QString("%1 has pending changes that will be lost by reloading."
+                " Is this okay?").arg(qs(mCurrentFileName)),
+            QMessageBox::Yes | QMessageBox::No);
+        if(reply != QMessageBox::Yes)
+        {
+            return;
+        }
+    }
+
+    LoadFileFromPath(mCurrentFileName);
+}
+
 void EventWindow::SaveFile()
 {
-    libcomp::String path = mCurrentFileName;
-    if(path.IsEmpty())
+    if(mCurrentFileName.IsEmpty())
     {
         // No file, nothing to do
         return;
     }
 
     std::list<libcomp::String> paths;
-    paths.push_back(path);
+    paths.push_back(mCurrentFileName);
     SaveFiles(paths);
 }
 
@@ -733,6 +770,31 @@ void EventWindow::GoTo()
     GoToEvent(cs(qEventID));
 }
 
+void EventWindow::Back()
+{
+    if(mPreviousEventIDs.size() > 0)
+    {
+        auto previousID = mPreviousEventIDs.back();
+        mPreviousEventIDs.pop_back();
+
+        ui->treeWidget->blockSignals(true);
+        GoToEvent(previousID);
+        ui->treeWidget->blockSignals(false);
+
+        BindSelectedEvent(false);
+
+        if(mPreviousEventIDs.size() == 0)
+        {
+            ui->eventBack->hide();
+        }
+        else
+        {
+            ui->eventBack->setText(QString("Back (%1)")
+                .arg(mPreviousEventIDs.size()));
+        }
+    }
+}
+
 void EventWindow::FileViewChanged()
 {
     bool flat = ui->actionFileView->isChecked();
@@ -782,7 +844,7 @@ void EventWindow::CurrentEventEdited()
 
 void EventWindow::TreeSelectionChanged()
 {
-    BindSelectedEvent();
+    BindSelectedEvent(true);
 }
 
 void EventWindow::MoveUp()
@@ -1302,6 +1364,10 @@ bool EventWindow::SelectFile(const libcomp::String& path)
     // Clean up the current tree
     ui->treeWidget->clear();
 
+    // Drop previous events
+    mPreviousEventIDs.clear();
+    ui->eventBack->hide();
+
     // Add events to the tree
     auto file = iter->second;
 
@@ -1323,6 +1389,9 @@ bool EventWindow::SelectFile(const libcomp::String& path)
         fileIdx++;
         dupeCheck.insert(e->GetID());
     }
+
+    mPreviousEventIDs.clear();
+    ui->eventBack->hide();
 
     ui->treeWidget->expandAll();
     ui->treeWidget->resizeColumnToContents(0);
@@ -1605,7 +1674,7 @@ std::shared_ptr<objects::Event> EventWindow::GetNewEvent(
     }
 }
 
-void EventWindow::BindSelectedEvent()
+void EventWindow::BindSelectedEvent(bool storePrevious)
 {
     auto previousEvent = mCurrentEvent;
     mCurrentEvent = nullptr;
@@ -1767,17 +1836,25 @@ void EventWindow::BindSelectedEvent()
         }
     }
 
-    // If the previous current event was updated, update the event definition
-    // from the current control (should only be one)
-    if(previousEvent && previousEvent->HasUpdates)
+    if(previousEvent)
     {
-        for(auto eCtrl : ui->splitter->findChildren<Event*>())
+        // If the previous current event was updated, update the event
+        // definition from the current control (should only be one)
+        if(previousEvent->HasUpdates)
         {
-            mMainWindow->CloseSelectors(eCtrl);
-            if(previousEvent->Event == eCtrl->Save())
+            for(auto eCtrl : ui->splitter->findChildren<Event*>())
             {
-                previousEvent->Comments = eCtrl->GetComments();
+                mMainWindow->CloseSelectors(eCtrl);
+                if(previousEvent->Event == eCtrl->Save())
+                {
+                    previousEvent->Comments = eCtrl->GetComments();
+                }
             }
+        }
+
+        if(storePrevious)
+        {
+            UpdatePreviousEvents(previousEvent->Event->GetID());
         }
     }
 
@@ -2505,6 +2582,31 @@ libcomp::String EventWindow::GetNewEventID(
     }
 
     return eventID;
+}
+
+void EventWindow::UpdatePreviousEvents(const libcomp::String& last)
+{
+    auto oldList = mPreviousEventIDs;
+
+    if(oldList.size() >= 10)
+    {
+        oldList.pop_front();
+    }
+
+    mPreviousEventIDs.clear();
+    for(auto eventID : oldList)
+    {
+        if(eventID != last)
+        {
+            mPreviousEventIDs.push_back(eventID);
+        }
+    }
+
+    mPreviousEventIDs.push_back(last);
+
+    ui->eventBack->setText(QString("Back (%1)")
+        .arg(mPreviousEventIDs.size()));
+    ui->eventBack->show();
 }
 
 void EventWindow::RebuildLocalIDMap(const std::shared_ptr<EventFile>& file)

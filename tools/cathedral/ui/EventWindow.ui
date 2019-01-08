@@ -141,6 +141,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="eventBack">
+            <property name="text">
+             <string>Back</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="spacerControls">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
@@ -186,6 +193,7 @@
     <addaction name="actionLoadDirectory"/>
     <addaction name="actionSave"/>
     <addaction name="actionSaveAll"/>
+    <addaction name="actionReloadFile"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -342,6 +350,14 @@
    </property>
    <property name="toolTip">
     <string>Changes all event IDs in the current file based on a user supplied prefix followed by the event type.</string>
+   </property>
+  </action>
+  <action name="actionReloadFile">
+   <property name="text">
+    <string>Reload Selected File</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
  </widget>

@@ -127,10 +127,10 @@ void DropSetWindow::RebuildNamedDataSet()
             switch(drop->GetType())
             {
             case objects::ItemDrop::Type_t::LEVEL_MULTIPLY:
-                suffix = " [Level Multiplied]";
+                suffix = " [x Lvl]";
                 break;
             case objects::ItemDrop::Type_t::RELATIVE_LEVEL_MIN:
-                suffix = libcomp::String(" [>= Level %1%2]")
+                suffix = libcomp::String(" [>= Lvl %1%2]")
                     .Arg(drop->GetModifier() >= 0 ? "+" : "")
                     .Arg(drop->GetModifier());
                 break;

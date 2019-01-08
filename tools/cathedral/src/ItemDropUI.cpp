@@ -46,7 +46,7 @@ ItemDrop::ItemDrop(MainWindow *pMainWindow,
     prop = new Ui::ItemDrop;
     prop->setupUi(this);
 
-    prop->itemType->Bind(pMainWindow, "CItemData");
+    prop->itemType->Bind(pMainWindow, "CItemData", false);
 
     // Hide by default
     prop->lblModifier->hide();
@@ -54,6 +54,8 @@ ItemDrop::ItemDrop(MainWindow *pMainWindow,
 
     connect(prop->type, SIGNAL(currentIndexChanged(const QString&)),
         this, SLOT(TypeChanged()));
+    connect(prop->minStack, SIGNAL(valueChanged(int)), this,
+        SLOT(MinStackChanged()));
 }
 
 ItemDrop::~ItemDrop()
@@ -85,6 +87,19 @@ std::shared_ptr<objects::ItemDrop> ItemDrop::Save() const
     obj->SetCooldownRestrict(prop->cooldownRestrict->value());
 
     return obj;
+}
+
+void ItemDrop::MinStackChanged()
+{
+    int min = prop->minStack->value();
+    if(min)
+    {
+        prop->maxStack->setMinimum(min);
+    }
+    else
+    {
+        prop->maxStack->setMinimum(1);
+    }
 }
 
 void ItemDrop::TypeChanged()

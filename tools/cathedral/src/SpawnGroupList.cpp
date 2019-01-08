@@ -63,7 +63,7 @@ void SpawnGroupList::SetMainWindow(MainWindow *pMainWindow)
 {
     mMainWindow = pMainWindow;
 
-    prop->spawns->BindSelector(pMainWindow, "Spawn");
+    prop->spawns->BindSelector(pMainWindow, "Spawn", true);
     prop->spawnActions->SetMainWindow(pMainWindow);
     prop->defeatActions->SetMainWindow(pMainWindow);
 }

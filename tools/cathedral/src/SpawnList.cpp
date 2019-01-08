@@ -63,9 +63,11 @@ void SpawnList::SetMainWindow(MainWindow *pMainWindow)
     prop->type->Bind(pMainWindow, "DevilData");
     prop->variant->Bind(pMainWindow, "CTitleData");
     prop->drops->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
-    prop->dropSetIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT, pMainWindow);
+    prop->dropSetIDs->Setup(DynamicItemType_t::COMPLEX_OBJECT_SELECTOR,
+        pMainWindow, "DropSet", true);
     prop->gifts->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
-    prop->giftSetIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT, pMainWindow);
+    prop->giftSetIDs->Setup(DynamicItemType_t::COMPLEX_OBJECT_SELECTOR,
+        pMainWindow, "DropSet", true);
 }
 
 QString SpawnList::GetObjectID(const std::shared_ptr<

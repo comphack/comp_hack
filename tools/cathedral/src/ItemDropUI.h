@@ -62,6 +62,7 @@ public:
     std::shared_ptr<objects::ItemDrop> Save() const;
 
 protected slots:
+    void MinStackChanged();
     void TypeChanged();
 
 protected:

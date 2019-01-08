@@ -63,7 +63,7 @@
 #include <Object.h>
 
 DynamicList::DynamicList(QWidget *pParent) : QWidget(pParent),
-    mType(DynamicItemType_t::NONE)
+    mType(DynamicItemType_t::NONE), mSelectorServerData(false)
 {
     ui = new Ui::DynamicList;
     ui->setupUi(this);
@@ -77,7 +77,7 @@ DynamicList::~DynamicList()
 }
 
 void DynamicList::Setup(DynamicItemType_t type, MainWindow *pMainWindow,
-    const libcomp::String& objectSelectorType)
+    const libcomp::String& objectSelectorType, bool selectorServerData)
 {
     if(mType == DynamicItemType_t::NONE)
     {
@@ -87,6 +87,7 @@ void DynamicList::Setup(DynamicItemType_t type, MainWindow *pMainWindow,
         if(type == DynamicItemType_t::COMPLEX_OBJECT_SELECTOR)
         {
             mObjectSelectorType = objectSelectorType;
+            mSelectorServerData = selectorServerData;
         }
     }
     else
@@ -487,7 +488,7 @@ QWidget* DynamicList::GetEventMessageWidget(int32_t val)
 QWidget* DynamicList::GetObjectSelectorWidget(uint32_t val)
 {
     ObjectSelector* sel = new ObjectSelector;
-    sel->Bind(mMainWindow, mObjectSelectorType);
+    sel->Bind(mMainWindow, mObjectSelectorType, mSelectorServerData);
 
     sel->SetValue(val);
 

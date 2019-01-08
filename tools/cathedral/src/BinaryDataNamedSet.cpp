@@ -100,12 +100,16 @@ void BinaryDataNamedSet::MapRecords(
         auto obj = objs[i];
         uint32_t mapID = GetMapID(obj);
 
-        mObjects.push_back(obj);
-        mObjectMap[mapID] = obj;
-
-        if(setNames)
+        // Make sure we don't add the same value twice
+        if(mObjectMap.find(mapID) == mObjectMap.end())
         {
-            mExplicitNames[mapID] = explicitNames[i];
+            mObjects.push_back(obj);
+            mObjectMap[mapID] = obj;
+
+            if(setNames)
+            {
+                mExplicitNames[mapID] = explicitNames[i];
+            }
         }
     }
 }

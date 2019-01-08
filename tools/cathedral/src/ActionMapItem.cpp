@@ -84,14 +84,16 @@ void ActionMapItem::SetMinMax(int32_t min, int32_t max)
 }
 
 void ActionMapItem::Setup(int32_t key, int32_t value,
-    const libcomp::String& objectSelectorType, MainWindow* pMainWindow)
+    const libcomp::String& objectSelectorType, bool selectorServerData,
+    MainWindow* pMainWindow)
 {
     if(!objectSelectorType.IsEmpty())
     {
         ui->keyNumber->hide();
         ui->keySelector->show();
 
-        ui->keySelector->Bind(pMainWindow, objectSelectorType);
+        ui->keySelector->Bind(pMainWindow, objectSelectorType,
+            selectorServerData);
 
         ui->keySelector->SetValue((uint32_t)key);
     }

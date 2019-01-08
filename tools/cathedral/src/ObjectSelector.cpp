@@ -39,7 +39,7 @@
 #include <PopIgnore.h>
 
 ObjectSelector::ObjectSelector(QWidget *pParent)
-    : ObjectSelectorBase(pParent)
+    : ObjectSelectorBase(pParent), mServerData(false)
 {
     ui = new Ui::ObjectSelector;
     ui->setupUi(this);
@@ -55,11 +55,13 @@ ObjectSelector::~ObjectSelector()
 }
 
 bool ObjectSelector::Bind(MainWindow *pMainWindow,
-    const libcomp::String& objType)
+    const libcomp::String& objType, bool serverData)
 {
     if(mObjType != objType)
     {
         bool changed = ObjectSelectorBase::Bind(pMainWindow, objType);
+
+        mServerData = serverData;
 
         ValueChanged();
 
@@ -83,7 +85,8 @@ void ObjectSelector::ValueChanged()
 {
     uint32_t value = GetValue();
 
-    QString txt = qs(value ? "[Invalid]" : "[None]");
+    QString txt = qs(value ? (mServerData ? "[Not loaded]" : "[Invalid]")
+        : "[None]");
     if(mMainWindow && value)
     {
         auto dataset = std::dynamic_pointer_cast<BinaryDataNamedSet>(

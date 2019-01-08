@@ -61,7 +61,7 @@ void SpawnLocationGroupList::SetMainWindow(MainWindow *pMainWindow)
     mMainWindow = pMainWindow;
 
     prop->groups->Setup(DynamicItemType_t::COMPLEX_OBJECT_SELECTOR,
-        pMainWindow, "SpawnGroup");
+        pMainWindow, "SpawnGroup", true);
     prop->spots->Setup(DynamicItemType_t::COMPLEX_SPOT, pMainWindow);
     prop->locations->Setup(DynamicItemType_t::OBJ_SPAWN_LOCATION, pMainWindow);
 }

@@ -82,7 +82,8 @@ public:
     virtual ~DynamicList();
 
     void Setup(DynamicItemType_t type, MainWindow *pMainWindow,
-        const libcomp::String& objectSelectorType = "");
+        const libcomp::String& objectSelectorType = "",
+        bool selectorServerData = false);
 
     bool AddInteger(int32_t val);
     bool AddUnsignedInteger(uint32_t val);
@@ -124,6 +125,8 @@ protected:
     DynamicItemType_t mType;
 
     libcomp::String mObjectSelectorType;
+
+    bool mSelectorServerData;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_DYNAMICLIST_H

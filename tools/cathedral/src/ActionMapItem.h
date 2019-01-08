@@ -56,8 +56,8 @@ public:
     virtual ~ActionMapItem();
 
     void Setup(int32_t key, int32_t value,
-        const libcomp::String& objectSelectorType = "",
-        MainWindow* pMainWindow = 0);
+        const libcomp::String& objectSelectorType,
+        bool selectorServerData, MainWindow* pMainWindow);
 
     int32_t GetKey() const;
     int32_t GetValue() const;

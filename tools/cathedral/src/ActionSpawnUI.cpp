@@ -48,11 +48,11 @@ ActionSpawn::ActionSpawn(ActionList *pList,
     prop->setupUi(pWidget);
 
     prop->spawnGroups->SetValueName(tr("Spot ID:"));
-    prop->spawnGroups->BindSelector(pMainWindow, "SpawnGroup");
+    prop->spawnGroups->BindSelector(pMainWindow, "SpawnGroup", true);
 
     prop->spawnLocationGroups->Setup(
         DynamicItemType_t::COMPLEX_OBJECT_SELECTOR, pMainWindow,
-        "SpawnLocationGroup");
+        "SpawnLocationGroup", true);
     prop->spot->SetMainWindow(pMainWindow);
     prop->defeatActions->SetMainWindow(pMainWindow);
 

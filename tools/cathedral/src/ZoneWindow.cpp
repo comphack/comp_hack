@@ -111,8 +111,8 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     ui.zoneID->Bind(pMainWindow, "ZoneData");
     ui.validTeamTypes->Setup(DynamicItemType_t::PRIMITIVE_INT,
         pMainWindow);
-    ui.dropSetIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT,
-        pMainWindow);
+    ui.dropSetIDs->Setup(DynamicItemType_t::COMPLEX_OBJECT_SELECTOR,
+        pMainWindow, "DropSet", true);
     ui.skillBlacklist->Setup(DynamicItemType_t::PRIMITIVE_UINT,
         pMainWindow);
     ui.skillWhitelist->Setup(DynamicItemType_t::PRIMITIVE_UINT,

@@ -54,11 +54,19 @@ ObjectList::ObjectList(QWidget *pParent) :
 
     ui->objectList->setModel(mFilterModel);
 
+    ui->moveUp->setHidden(true);
+    ui->moveDown->setHidden(true);
+    ui->moveUp->setDisabled(true);
+    ui->moveDown->setDisabled(true);
+
     connect(ui->objectSearch, SIGNAL(textChanged(const QString&)),
         this, SLOT(Search(const QString&)));
     connect(ui->objectList->selectionModel(), SIGNAL(selectionChanged(
         const QItemSelection&, const QItemSelection&)),
         this, SLOT(SelectedObjectChanged()));
+
+    connect(ui->moveUp, SIGNAL(clicked(bool)), this, SLOT(MoveUp()));
+    connect(ui->moveDown, SIGNAL(clicked(bool)), this, SLOT(MoveDown()));
 }
 
 ObjectList::~ObjectList()
@@ -172,16 +180,45 @@ void ObjectList::SelectedObjectChanged()
     if(idxList.isEmpty())
     {
         mActiveObject = {};
+
+        ui->moveUp->setDisabled(true);
+        ui->moveDown->setDisabled(true);
     }
     else
     {
         mActiveObject = mObjectModel->GetObject(
             mFilterModel->mapToSource(idxList.at(0)));
+
+        ui->moveUp->setDisabled(false);
+        ui->moveDown->setDisabled(false);
     }
 
     LoadProperties(mActiveObject.lock());
 
     emit selectedObjectChanged();
+}
+
+void ObjectList::MoveUp()
+{
+    auto idxList = ui->objectList->selectionModel()->selectedIndexes();
+    if(!idxList.isEmpty() && idxList.at(0).row() != 0)
+    {
+        auto obj = mObjectModel->GetObject(
+            mFilterModel->mapToSource(idxList.at(0)));
+        emit objectMoved(obj, true);
+    }
+}
+
+void ObjectList::MoveDown()
+{
+    auto idxList = ui->objectList->selectionModel()->selectedIndexes();
+    if(!idxList.isEmpty() &&
+        idxList.at(0).row() != mObjectModel->rowCount() - 1)
+    {
+        auto obj = mObjectModel->GetObject(
+            mFilterModel->mapToSource(idxList.at(0)));
+        emit objectMoved(obj, false);
+    }
 }
 
 std::map<uint32_t, QString> ObjectList::GetObjectMapping() const
@@ -204,4 +241,10 @@ std::map<uint32_t, QString> ObjectList::GetObjectMapping() const
 void ObjectList::SetReadOnly(bool readOnly)
 {
     mReadOnly = readOnly;
+}
+
+void ObjectList::ToggleMoveControls(bool visible)
+{
+    ui->moveUp->setHidden(!visible);
+    ui->moveDown->setHidden(!visible);
 }

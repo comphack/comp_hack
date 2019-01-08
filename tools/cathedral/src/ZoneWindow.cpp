@@ -163,6 +163,13 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     connect(ui.spots, SIGNAL(selectedObjectChanged()), this,
         SLOT(SelectListObject()));
 
+    connect(ui.npcs, SIGNAL(objectMoved(std::shared_ptr<
+        libcomp::Object>, bool)), this, SLOT(NPCMoved(std::shared_ptr<
+            libcomp::Object>, bool)));
+    connect(ui.objects, SIGNAL(objectMoved(std::shared_ptr<
+        libcomp::Object>, bool)), this, SLOT(ObjectMoved(std::shared_ptr<
+            libcomp::Object>, bool)));
+
     connect(ui.zoneView, SIGNAL(currentIndexChanged(const QString&)), this,
         SLOT(ZoneViewUpdated()));
     connect(ui.tabSpawnTypes, SIGNAL(currentChanged(int)), this,
@@ -1147,6 +1154,78 @@ void ZoneWindow::SpawnTabChanged()
     DrawMap();
 }
 
+void ZoneWindow::NPCMoved(std::shared_ptr<libcomp::Object> obj,
+    bool up)
+{
+    std::list<std::shared_ptr<objects::ServerNPC>> npcList;
+    if(mMergedZone->CurrentPartial)
+    {
+        npcList = mMergedZone->CurrentPartial->GetNPCs();
+    }
+    else if(mMergedZone->Definition == mMergedZone->CurrentZone)
+    {
+        npcList = mMergedZone->Definition->GetNPCs();
+    }
+    else
+    {
+        // Nothing to do
+        return;
+    }
+
+    if(ObjectList::Move(npcList, std::dynamic_pointer_cast<
+        objects::ServerNPC>(obj), up))
+    {
+        if(mMergedZone->CurrentPartial)
+        {
+            mMergedZone->CurrentPartial->SetNPCs(npcList);
+        }
+        else
+        {
+            mMergedZone->Definition->SetNPCs(npcList);
+        }
+
+        BindNPCs();
+        Refresh();
+        ui.npcs->Select(obj);
+    }
+}
+
+void ZoneWindow::ObjectMoved(std::shared_ptr<libcomp::Object> obj,
+    bool up)
+{
+    std::list<std::shared_ptr<objects::ServerObject>> objList;
+    if(mMergedZone->CurrentPartial)
+    {
+        objList = mMergedZone->CurrentPartial->GetObjects();
+    }
+    else if(mMergedZone->Definition == mMergedZone->CurrentZone)
+    {
+        objList = mMergedZone->Definition->GetObjects();
+    }
+    else
+    {
+        // Nothing to do
+        return;
+    }
+
+    if(ObjectList::Move(objList, std::dynamic_pointer_cast<
+        objects::ServerObject>(obj), up))
+    {
+        if(mMergedZone->CurrentPartial)
+        {
+            mMergedZone->CurrentPartial->SetObjects(objList);
+        }
+        else
+        {
+            mMergedZone->Definition->SetObjects(objList);
+        }
+
+        BindObjects();
+        Refresh();
+        ui.objects->Select(obj);
+    }
+}
+
 void ZoneWindow::Zoom()
 {
     DrawMap();
@@ -1570,6 +1649,9 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
 
     ui.npcs->SetReadOnly(!canEdit);
     ui.objects->SetReadOnly(!canEdit);
+    ui.npcs->ToggleMoveControls(canEdit);
+    ui.objects->ToggleMoveControls(canEdit);
+
     ui.spawns->SetReadOnly(!canEdit);
     ui.spawnGroups->SetReadOnly(!canEdit);
     ui.spawnLocationGroups->SetReadOnly(!canEdit);

@@ -75,6 +75,8 @@ public:
 
     void SetReadOnly(bool readOnly);
 
+    void ToggleMoveControls(bool visible);
+
     template<class T>
     static bool Move(std::list<std::shared_ptr<T>>& list,
         std::shared_ptr<T> obj, bool up)
@@ -123,10 +125,14 @@ public:
 
 signals:
     void selectedObjectChanged();
+    void objectMoved(std::shared_ptr<libcomp::Object> obj,
+        bool up);
 
 public slots:
     virtual void Search(const QString& term);
     virtual void SelectedObjectChanged();
+    void MoveUp();
+    void MoveDown();
 
 protected:
     MainWindow *mMainWindow;

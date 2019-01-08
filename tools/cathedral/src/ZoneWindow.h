@@ -112,6 +112,11 @@ protected slots:
     void MainTabChanged();
     void SpawnTabChanged();
 
+    void NPCMoved(std::shared_ptr<libcomp::Object> obj,
+        bool up);
+    void ObjectMoved(std::shared_ptr<libcomp::Object> obj,
+        bool up);
+
     void Zoom();
     void ShowToggled(bool checked);
     void Refresh();

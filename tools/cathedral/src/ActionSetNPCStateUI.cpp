@@ -49,6 +49,8 @@ ActionSetNPCState::ActionSetNPCState(ActionList *pList,
 
     ui->actionTitle->setText(tr("<b>Set NPC State</b>"));
     ui->layoutMain->addWidget(pWidget);
+
+    prop->actor->Bind(pMainWindow, "Actor", true);
 }
 
 ActionSetNPCState::~ActionSetNPCState()
@@ -69,7 +71,7 @@ void ActionSetNPCState::Load(const std::shared_ptr<objects::Action>& act)
 
     prop->state->setValue(mAction->GetState());
     prop->from->setValue(mAction->GetFrom());
-    prop->actor->lineEdit()->setText(QString::number(mAction->GetActorID()));
+    prop->actor->SetValue(mAction->GetActorID());
     prop->sourceClientOnly->setChecked(mAction->GetSourceClientOnly());
 }
 
@@ -84,7 +86,7 @@ std::shared_ptr<objects::Action> ActionSetNPCState::Save() const
 
     mAction->SetState((uint8_t)prop->state->value());
     mAction->SetFrom((int16_t)prop->from->value());
-    mAction->SetActorID(prop->actor->currentText().toInt());
+    mAction->SetActorID(prop->actor->GetValue());
     mAction->SetSourceClientOnly(prop->sourceClientOnly->isChecked());
 
     return mAction;

@@ -109,7 +109,7 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     ui.spawnLocationGroups->SetMainWindow(pMainWindow);
     ui.spots->SetMainWindow(pMainWindow);
 
-    ui.zoneID->Bind(pMainWindow, "ZoneData");
+    ui.zoneID->Bind(pMainWindow, "ZoneData", false);
     ui.validTeamTypes->Setup(DynamicItemType_t::PRIMITIVE_INT,
         pMainWindow);
     ui.dropSetIDs->Setup(DynamicItemType_t::COMPLEX_OBJECT_SELECTOR,
@@ -244,7 +244,70 @@ bool ZoneWindow::ShowZone()
 void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
 {
     std::vector<libcomp::String> names;
-    if(objType == "Spawn")
+    if(objType == "Actor")
+    {
+        auto hnpcDataSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mMainWindow->GetBinaryDataSet("hNPCData"));
+        auto onpcDataSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mMainWindow->GetBinaryDataSet("oNPCData"));
+
+        std::map<uint32_t, std::shared_ptr<objects::ServerObject>> actorMap;
+        for(auto npc : mMergedZone->Definition->GetNPCs())
+        {
+            if(npc->GetActorID() &&
+                actorMap.find(npc->GetActorID()) == actorMap.end())
+            {
+                actorMap[npc->GetActorID()] = npc;
+            }
+        }
+        
+        for(auto obj : mMergedZone->Definition->GetObjects())
+        {
+            if(obj->GetActorID() &&
+                actorMap.find(obj->GetActorID()) == actorMap.end())
+            {
+                actorMap[obj->GetActorID()] = obj;
+            }
+        }
+
+        std::vector<std::shared_ptr<libcomp::Object>> actors;
+        for(auto& aPair : actorMap)
+        {
+            auto sObj = aPair.second;
+            auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(sObj);
+
+            libcomp::String name;
+            if(npc)
+            {
+                name = hnpcDataSet->GetName(
+                    hnpcDataSet->GetObjectByID(npc->GetID()));
+                name = libcomp::String("%1 [%2:H]")
+                    .Arg(!name.IsEmpty() ? name : "[Unnamed]")
+                    .Arg(npc->GetID());
+            }
+            else
+            {
+                name = onpcDataSet->GetName(
+                    onpcDataSet->GetObjectByID(sObj->GetID()));
+                name = libcomp::String("%1 [%2:O]")
+                    .Arg(!name.IsEmpty() ? name : "[Unnamed]")
+                    .Arg(sObj->GetID());
+            }
+
+            actors.push_back(sObj);
+            names.push_back(name);
+        }
+        
+        auto newData = std::make_shared<BinaryDataNamedSet>(
+            [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
+            {
+                return std::dynamic_pointer_cast<objects::ServerObject>(obj)
+                    ->GetID();
+            });
+        newData->MapRecords(actors, names);
+        mMainWindow->RegisterBinaryDataSet("Actor", newData);
+    }
+    else if(objType == "Spawn")
     {
         auto devilDataSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
             mMainWindow->GetBinaryDataSet("DevilData"));
@@ -1810,6 +1873,9 @@ bool ZoneWindow::LoadMapFromZone()
 
     BindNPCs();
     BindObjects();
+
+    RebuildNamedDataSet("Actor");
+
     BindSpawns();
     BindSpots();
 

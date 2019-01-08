@@ -63,30 +63,6 @@
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
-      <layout class="QHBoxLayout" name="layoutActor">
-       <item>
-        <widget class="QComboBox" name="actor">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="editable">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="actorGo">
-         <property name="text">
-          <string>Go</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
      <item row="3" column="0">
       <widget class="QLabel" name="lblSourceClientOnly">
        <property name="text">
@@ -97,10 +73,21 @@
      <item row="3" column="1">
       <widget class="QCheckBox" name="sourceClientOnly"/>
      </item>
+     <item row="2" column="1">
+      <widget class="ObjectSelector" name="actor" native="true"/>
+     </item>
     </layout>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ObjectSelector</class>
+   <extends>QWidget</extends>
+   <header>ObjectSelector.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

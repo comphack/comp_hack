@@ -60,8 +60,8 @@ void SpawnList::SetMainWindow(MainWindow *pMainWindow)
 {
     mMainWindow = pMainWindow;
 
-    prop->type->Bind(pMainWindow, "DevilData");
-    prop->variant->Bind(pMainWindow, "CTitleData");
+    prop->type->Bind(pMainWindow, "DevilData", false);
+    prop->variant->Bind(pMainWindow, "CTitleData", false);
     prop->drops->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
     prop->dropSetIDs->Setup(DynamicItemType_t::COMPLEX_OBJECT_SELECTOR,
         pMainWindow, "DropSet", true);

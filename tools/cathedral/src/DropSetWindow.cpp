@@ -215,8 +215,8 @@ void DropSetWindow::NewDropSet()
 
     while(dropSetID == 0)
     {
-        dropSetID = QInputDialog::getInt(this, "Enter an ID", "New ID",
-            0, 0);
+        dropSetID = (uint32_t)QInputDialog::getInt(this, "Enter an ID",
+            "New ID", 0, 0);
         if(!dropSetID)
         {
             return;

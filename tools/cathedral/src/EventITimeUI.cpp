@@ -54,7 +54,7 @@ EventITime::EventITime(MainWindow *pMainWindow, QWidget *pParent)
     prop->choices->Setup(DynamicItemType_t::OBJ_EVENT_ITIME_CHOICE,
         pMainWindow);
 
-    prop->iTimeID->Bind(pMainWindow, "CHouraiData");
+    prop->iTimeID->Bind(pMainWindow, "CHouraiData", false);
     prop->message->Setup(pMainWindow, "CHouraiMessageData");
 
     prop->startActions->SetMainWindow(pMainWindow);

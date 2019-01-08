@@ -130,7 +130,7 @@ void ActionUpdateFlag::FlagTypeChanged()
         break;
     }
 
-    prop->idSelector->Bind(mMainWindow, selectorType);
+    prop->idSelector->Bind(mMainWindow, selectorType, false);
 
     prop->idNumeric->setHidden(!selectorType.IsEmpty());
     prop->idSelector->setHidden(selectorType.IsEmpty());

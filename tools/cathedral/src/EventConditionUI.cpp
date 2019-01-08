@@ -682,6 +682,7 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue1->setText("Actor ID:");
         ui->lblValue2->setText("State:");
         defaultCompareTxt = "Equal";
+        selectorObjectType = "Actor";
         minValues[1] = 0;
         maxValues[1] = 255;
         cmpBetween = cmpExists = false;
@@ -995,7 +996,7 @@ void EventCondition::RefreshTypeContext()
         ui->value1Number->hide();
         ui->value1Selector->show();
 
-        if(ui->value1Selector->Bind(mMainWindow, selectorObjectType))
+        if(ui->value1Selector->Bind(mMainWindow, selectorObjectType, false))
         {
             // If the binding changed, reset the value
             ui->value1Selector->SetValue(0);

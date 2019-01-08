@@ -48,7 +48,7 @@ ActionUpdateQuest::ActionUpdateQuest(ActionList *pList,
     prop->setupUi(pWidget);
 
     prop->flagStates->SetValueName(tr("State:"));
-    prop->quest->Bind(pMainWindow, "CQuestData");
+    prop->quest->Bind(pMainWindow, "CQuestData", false);
 
     ui->actionTitle->setText(tr("<b>Update Quest</b>"));
     ui->layoutMain->addWidget(pWidget);

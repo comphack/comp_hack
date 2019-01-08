@@ -44,7 +44,7 @@ public:
     virtual ~ObjectSelector();
 
     bool Bind(MainWindow *pMainWindow,
-        const libcomp::String& objType, bool serverData = false);
+        const libcomp::String& objType, bool serverData);
 
     void SetValue(uint32_t value) override;
     uint32_t GetValue() const override;

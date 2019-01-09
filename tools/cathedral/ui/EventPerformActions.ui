@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>300</height>
+    <height>50</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -24,21 +24,16 @@
     <number>0</number>
    </property>
    <item>
-    <layout class="QFormLayout" name="formLayout">
-     <property name="fieldGrowthPolicy">
-      <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+    <widget class="QGroupBox" name="grpActions">
+     <property name="title">
+      <string>Actions</string>
      </property>
-     <item row="0" column="0">
-      <widget class="QLabel" name="lblActions">
-       <property name="text">
-        <string>Actions:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="ActionList" name="actions" native="true"/>
-     </item>
-    </layout>
+     <layout class="QVBoxLayout" name="grpActionsLayout">
+      <item>
+       <widget class="ActionList" name="actions" native="true"/>
+      </item>
+     </layout>
+    </widget>
    </item>
   </layout>
  </widget>

@@ -66,6 +66,7 @@ void DropSetList::SetMainWindow(MainWindow *pMainWindow)
     mMainWindow = pMainWindow;
 
     prop->drops->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
+    prop->drops->SetAddText("Add Drop");
 }
 
 QString DropSetList::GetObjectID(const std::shared_ptr<

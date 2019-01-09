@@ -51,13 +51,13 @@ EventPrompt::EventPrompt(MainWindow *pMainWindow, QWidget *pParent)
     ui->next->hide();
     ui->lblQueueNext->hide();
     ui->queueNext->hide();
-    ui->lblBranches->hide();
-    ui->branches->hide();
+    ui->grpBranches->hide();
 
     ui->eventTitle->setText(tr("<b>Prompt</b>"));
     ui->layoutMain->addWidget(pWidget);
 
     prop->choices->Setup(DynamicItemType_t::OBJ_EVENT_CHOICE, pMainWindow);
+    prop->choices->SetAddText("Add Choice");
 
     prop->message->Setup(pMainWindow);
 }

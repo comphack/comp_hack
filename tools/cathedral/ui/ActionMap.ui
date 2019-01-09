@@ -49,6 +49,13 @@
       </spacer>
      </item>
      <item>
+      <widget class="QLabel" name="lblAddText">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="add">
        <property name="maximumSize">
         <size>

@@ -49,6 +49,7 @@ ActionAddRemoveItems::ActionAddRemoveItems(ActionList *pList,
 
     prop->items->SetValueName(tr("Qty:"));
     prop->items->BindSelector(pMainWindow, "CItemData");
+    prop->items->SetAddText("Add Item");
 
     ui->actionTitle->setText(tr("<b>Add/Remove Items</b>"));
     ui->layoutMain->addWidget(pWidget);

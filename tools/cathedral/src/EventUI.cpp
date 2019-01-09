@@ -46,9 +46,14 @@ Event::Event(MainWindow *pMainWindow, QWidget *pParent) :
     ui->eventTitle->setText(tr("<b>Fork</b>"));
 
     ui->branches->Setup(DynamicItemType_t::OBJ_EVENT_BASE, pMainWindow);
+    ui->branches->SetAddText("Add Branch");
+
     ui->conditions->Setup(DynamicItemType_t::OBJ_EVENT_CONDITION, pMainWindow);
+    ui->conditions->SetAddText("Add Condition");
+
     ui->comments->Setup(DynamicItemType_t::PRIMITIVE_MULTILINE_STRING,
         pMainWindow);
+    ui->comments->SetAddText("Add Comment");
 
     ui->layoutBaseBody->setVisible(false);
 

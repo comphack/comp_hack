@@ -26,7 +26,7 @@
    <item>
     <widget class="QLineEdit" name="scriptID">
      <property name="placeholderText">
-      <string>[None]</string>
+      <string>[No Script]</string>
      </property>
     </widget>
    </item>

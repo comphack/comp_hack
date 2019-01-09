@@ -37,6 +37,12 @@
      </item>
      <item row="0" column="1">
       <widget class="QSpinBox" name="value">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="minimum">
         <number>-10000</number>
        </property>

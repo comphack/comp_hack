@@ -47,7 +47,7 @@ ActionPlayBGM::ActionPlayBGM(ActionList *pList,
     prop = new Ui::ActionPlayBGM;
     prop->setupUi(pWidget);
 
-    prop->music->Bind(pMainWindow, "CSoundData", false);
+    prop->music->BindSelector(pMainWindow, "CSoundData");
 
     ui->actionTitle->setText(tr("<b>Play BGM</b>"));
     ui->layoutMain->addWidget(pWidget);

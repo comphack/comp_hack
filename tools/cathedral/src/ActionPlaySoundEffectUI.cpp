@@ -47,7 +47,7 @@ ActionPlaySoundEffect::ActionPlaySoundEffect(ActionList *pList,
     prop = new Ui::ActionPlaySoundEffect;
     prop->setupUi(pWidget);
 
-    prop->sound->Bind(pMainWindow, "CSoundData", false);
+    prop->sound->BindSelector(pMainWindow, "CSoundData");
 
     ui->actionTitle->setText(tr("<b>Play Sound Effect</b>"));
     ui->layoutMain->addWidget(pWidget);

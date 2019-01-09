@@ -64,7 +64,7 @@ void NPCList::Bind(MainWindow *pMainWindow, bool isHNPC)
 {
     SetMainWindow(pMainWindow);
 
-    prop->type->Bind(pMainWindow, isHNPC ? "hNPCData" : "oNPCData", false);
+    prop->type->BindSelector(pMainWindow, isHNPC ? "hNPCData" : "oNPCData");
     prop->position->SetMainWindow(pMainWindow);
     prop->actions->SetMainWindow(pMainWindow);
 }

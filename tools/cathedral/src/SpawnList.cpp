@@ -60,14 +60,22 @@ void SpawnList::SetMainWindow(MainWindow *pMainWindow)
 {
     mMainWindow = pMainWindow;
 
-    prop->type->Bind(pMainWindow, "DevilData", false);
-    prop->variant->Bind(pMainWindow, "CTitleData", false);
+    prop->type->BindSelector(pMainWindow, "DevilData");
+    prop->variant->BindSelector(pMainWindow, "CTitleData");
+
     prop->drops->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
+    prop->drops->SetAddText("Add Drop");
+
     prop->dropSetIDs->Setup(DynamicItemType_t::COMPLEX_OBJECT_SELECTOR,
         pMainWindow, "DropSet", true);
+    prop->dropSetIDs->SetAddText("Add Drop Set");
+
     prop->gifts->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
+    prop->gifts->SetAddText("Add Gift");
+
     prop->giftSetIDs->Setup(DynamicItemType_t::COMPLEX_OBJECT_SELECTOR,
         pMainWindow, "DropSet", true);
+    prop->giftSetIDs->SetAddText("Add Gift Drop Set");
 }
 
 QString SpawnList::GetObjectID(const std::shared_ptr<

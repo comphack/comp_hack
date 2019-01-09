@@ -92,7 +92,7 @@ void ActionMapItem::Setup(int32_t key, int32_t value,
         ui->keyNumber->hide();
         ui->keySelector->show();
 
-        ui->keySelector->Bind(pMainWindow, objectSelectorType,
+        ui->keySelector->BindSelector(pMainWindow, objectSelectorType,
             selectorServerData);
 
         ui->keySelector->SetValue((uint32_t)key);

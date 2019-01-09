@@ -109,17 +109,26 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     ui.spawnLocationGroups->SetMainWindow(pMainWindow);
     ui.spots->SetMainWindow(pMainWindow);
 
-    ui.zoneID->Bind(pMainWindow, "ZoneData", false);
+    ui.zoneID->BindSelector(pMainWindow, "ZoneData");
+
     ui.validTeamTypes->Setup(DynamicItemType_t::PRIMITIVE_INT,
         pMainWindow);
+
     ui.dropSetIDs->Setup(DynamicItemType_t::COMPLEX_OBJECT_SELECTOR,
         pMainWindow, "DropSet", true);
+    ui.dropSetIDs->SetAddText("Add Drop Set");
+
     ui.skillBlacklist->Setup(DynamicItemType_t::PRIMITIVE_UINT,
         pMainWindow);
+    ui.skillBlacklist->SetAddText("Add Skill");
+
     ui.skillWhitelist->Setup(DynamicItemType_t::PRIMITIVE_UINT,
         pMainWindow);
+    ui.skillWhitelist->SetAddText("Add Skill");
+
     ui.triggers->Setup(DynamicItemType_t::OBJ_ZONE_TRIGGER,
         pMainWindow);
+    ui.triggers->SetAddText("Add Trigger");
 
     ui.partialDynamicMapIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT,
         pMainWindow);
@@ -251,7 +260,7 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
         auto onpcDataSet = std::dynamic_pointer_cast<BinaryDataNamedSet>(
             mMainWindow->GetBinaryDataSet("oNPCData"));
 
-        std::map<uint32_t, std::shared_ptr<objects::ServerObject>> actorMap;
+        std::map<int32_t, std::shared_ptr<objects::ServerObject>> actorMap;
         for(auto npc : mMergedZone->Definition->GetNPCs())
         {
             if(npc->GetActorID() &&
@@ -301,8 +310,8 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
         auto newData = std::make_shared<BinaryDataNamedSet>(
             [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
             {
-                return std::dynamic_pointer_cast<objects::ServerObject>(obj)
-                    ->GetID();
+                return (uint32_t)std::dynamic_pointer_cast<
+                    objects::ServerObject>(obj)->GetActorID();
             });
         newData->MapRecords(actors, names);
         mMainWindow->RegisterBinaryDataSet("Actor", newData);
@@ -752,6 +761,8 @@ void ZoneWindow::mousePressEvent(QMouseEvent* event)
 
 void ZoneWindow::mouseReleaseEvent(QMouseEvent* event)
 {
+    (void)event;
+
     if(mDragging)
     {
         ui.mapScrollArea->setCursor(Qt::CursorShape::ArrowCursor);
@@ -1409,8 +1420,8 @@ void ZoneWindow::ShowToggled(bool checked)
             bool allChecked = true;
             for(auto act : ui.menuShowSpots->actions())
             {
-                int data = act->data().toInt();
-                if(data)
+                int type = act->data().toInt();
+                if(type)
                 {
                     allChecked &= act->isChecked();
                 }
@@ -2282,10 +2293,10 @@ void ZoneWindow::DrawMap()
     std::set<uint8_t> showSpotTypes;
     for(auto act : ui.menuShowSpots->actions())
     {
-        int data = act->data().toInt();
-        if(data && act->isChecked())
+        int type = act->data().toInt();
+        if(type && act->isChecked())
         {
-            showSpotTypes.insert((uint8_t)data);
+            showSpotTypes.insert((uint8_t)type);
         }
     }
 

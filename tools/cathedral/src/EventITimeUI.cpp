@@ -47,14 +47,16 @@ EventITime::EventITime(MainWindow *pMainWindow, QWidget *pParent)
     prop->setupUi(pWidget);
 
     prop->giftIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT, pMainWindow);
+    prop->giftIDs->SetAddText("Add Gift");
 
     ui->eventTitle->setText(tr("<b>I-Time</b>"));
     ui->layoutMain->addWidget(pWidget);
 
     prop->choices->Setup(DynamicItemType_t::OBJ_EVENT_ITIME_CHOICE,
         pMainWindow);
+    prop->choices->SetAddText("Add Choice");
 
-    prop->iTimeID->Bind(pMainWindow, "CHouraiData", false);
+    prop->iTimeID->BindSelector(pMainWindow, "CHouraiData");
     prop->message->Setup(pMainWindow, "CHouraiMessageData");
 
     prop->startActions->SetMainWindow(pMainWindow);

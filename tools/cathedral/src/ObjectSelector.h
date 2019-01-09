@@ -43,8 +43,8 @@ public:
     explicit ObjectSelector(QWidget *pParent = 0);
     virtual ~ObjectSelector();
 
-    bool Bind(MainWindow *pMainWindow,
-        const libcomp::String& objType, bool serverData);
+    bool BindSelector(MainWindow *pMainWindow,
+        const libcomp::String& objType, bool serverData = false);
 
     void SetValue(uint32_t value) override;
     uint32_t GetValue() const override;

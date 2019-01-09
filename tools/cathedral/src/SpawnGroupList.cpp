@@ -50,6 +50,7 @@ SpawnGroupList::SpawnGroupList(QWidget *pParent) : ObjectList(pParent)
 
     prop->spawns->SetValueName(tr("Count:"));
     prop->spawns->SetMinMax(0, 65535);
+    prop->spawns->SetAddText("Add Spawn");
 
     ui->splitter->addWidget(pWidget);
 }

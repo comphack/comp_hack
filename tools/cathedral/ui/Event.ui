@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>300</height>
+    <height>350</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="actionLayout">
@@ -101,42 +101,31 @@
       <layout class="QVBoxLayout" name="layoutMain"/>
      </item>
      <item>
-      <layout class="QVBoxLayout" name="layoutBranch">
-       <item>
-        <layout class="QFormLayout" name="formBranch">
-         <item row="0" column="0">
-          <widget class="QLabel" name="lblConditions">
-           <property name="text">
-            <string>Conditions:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="DynamicList" name="conditions" native="true"/>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="lblBranchScript">
-           <property name="text">
-            <string>Branch Script:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="ServerScript" name="branchScript" native="true"/>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="lblBranches">
-           <property name="text">
-            <string>Branches:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="DynamicList" name="branches" native="true"/>
-         </item>
-        </layout>
-       </item>
-      </layout>
+      <widget class="QGroupBox" name="grpConditions">
+       <property name="title">
+        <string>Conditions</string>
+       </property>
+       <layout class="QVBoxLayout" name="grpConditionsLayout">
+        <item>
+         <widget class="DynamicList" name="conditions" native="true"/>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="grpBranches">
+       <property name="title">
+        <string>Branches</string>
+       </property>
+       <layout class="QVBoxLayout" name="grpBranchesLayout">
+        <item>
+         <widget class="ServerScript" name="branchScript" native="true"/>
+        </item>
+        <item>
+         <widget class="DynamicList" name="branches" native="true"/>
+        </item>
+       </layout>
+      </widget>
      </item>
      <item>
       <layout class="QHBoxLayout" name="layoutBaseHeader">

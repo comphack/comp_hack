@@ -46,7 +46,7 @@ ActionSetHomepoint::ActionSetHomepoint(ActionList *pList, MainWindow *pMainWindo
     prop = new Ui::ActionSetHomepoint;
     prop->setupUi(pWidget);
 
-    prop->zone->Bind(pMainWindow, "ZoneData", false);
+    prop->zone->BindSelector(pMainWindow, "ZoneData");
     prop->spot->SetMainWindow(pMainWindow);
 
     ui->actionTitle->setText(tr("<b>Set Homepoint</b>"));

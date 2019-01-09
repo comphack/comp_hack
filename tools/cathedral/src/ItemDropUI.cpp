@@ -46,7 +46,7 @@ ItemDrop::ItemDrop(MainWindow *pMainWindow,
     prop = new Ui::ItemDrop;
     prop->setupUi(this);
 
-    prop->itemType->Bind(pMainWindow, "CItemData", false);
+    prop->itemType->BindSelector(pMainWindow, "CItemData");
 
     // Hide by default
     prop->lblModifier->hide();

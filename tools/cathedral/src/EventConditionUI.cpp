@@ -996,7 +996,8 @@ void EventCondition::RefreshTypeContext()
         ui->value1Number->hide();
         ui->value1Selector->show();
 
-        if(ui->value1Selector->Bind(mMainWindow, selectorObjectType, false))
+        if(ui->value1Selector->BindSelector(mMainWindow, selectorObjectType,
+            false))
         {
             // If the binding changed, reset the value
             ui->value1Selector->SetValue(0);

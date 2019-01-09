@@ -30,6 +30,7 @@
 
 // Qt Includes
 #include <PushIgnore.h>
+#include <QGroupBox>
 #include <QWidget>
 #include <PopIgnore.h>
 
@@ -54,6 +55,7 @@ public:
 
 protected:
     EventMessageRef *mMessage;
+    QGroupBox *mBranchGroup;
     DynamicList *mBranches;
     ServerScript *mBranchScript;
 };

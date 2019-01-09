@@ -642,6 +642,11 @@ void MainWindow::CloseAllWindows()
         pair.second->close();
     }
 
+    if(mDropSetWindow)
+    {
+        mDropSetWindow->close();
+    }
+
     if(mEventWindow)
     {
         mEventWindow->close();

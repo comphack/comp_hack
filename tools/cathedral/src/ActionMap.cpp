@@ -75,6 +75,11 @@ void ActionMap::BindSelector(MainWindow *pMainWindow,
     }
 }
 
+void ActionMap::SetAddText(const libcomp::String& text)
+{
+    ui->lblAddText->setText(qs(text));
+}
+
 void ActionMap::Load(const std::unordered_map<int32_t, int32_t>& values)
 {
     ClearValues();

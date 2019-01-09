@@ -38,6 +38,7 @@ ServerScript::ServerScript(QWidget *pParent) : QWidget(pParent)
     ui->setupUi(this);
 
     ui->params->Setup(DynamicItemType_t::PRIMITIVE_STRING, nullptr);
+    ui->params->SetAddText("Add Param");
 
     // Hide params by default until a script ID is set
     ui->grpParams->hide();

@@ -85,6 +85,8 @@ public:
         const libcomp::String& objectSelectorType = "",
         bool selectorServerData = false);
 
+    void SetAddText(const libcomp::String& text);
+
     bool AddInteger(int32_t val);
     bool AddUnsignedInteger(uint32_t val);
     bool AddString(const libcomp::String& val);

@@ -43,6 +43,7 @@ EventBase::EventBase(MainWindow *pMainWindow, QWidget *pParent) :
     ui->setupUi(this);
 
     ui->conditions->Setup(DynamicItemType_t::OBJ_EVENT_CONDITION, pMainWindow);
+    ui->conditions->SetAddText("Add Condition");
 
     ui->layoutBaseBody->setVisible(false);
 

@@ -50,10 +50,12 @@ ActionUpdateCOMP::ActionUpdateCOMP(ActionList *pList,
     prop->addDemons->BindSelector(pMainWindow, "DevilData");
     prop->addDemons->SetValueName(tr("Count:"));
     prop->addDemons->SetMinMax(0, 255);
+    prop->addDemons->SetAddText("Add Demon");
 
     prop->removeDemons->BindSelector(pMainWindow, "DevilData");
     prop->removeDemons->SetValueName(tr("Count:"));
     prop->removeDemons->SetMinMax(0, 255);
+    prop->removeDemons->SetAddText("Add Demon");
 
     ui->actionTitle->setText(tr("<b>Update COMP</b>"));
     ui->layoutMain->addWidget(pWidget);

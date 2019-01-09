@@ -57,7 +57,7 @@ void SpotRef::SetMainWindow(MainWindow *pMainWindow)
 
 void SpotRef::SetValue(uint32_t spotID)
 {
-    ui->spotID->setValue(spotID);
+    ui->spotID->setValue((int32_t)spotID);
 }
 
 uint32_t SpotRef::GetValue() const

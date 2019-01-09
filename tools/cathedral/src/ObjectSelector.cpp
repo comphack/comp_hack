@@ -54,12 +54,12 @@ ObjectSelector::~ObjectSelector()
     delete ui;
 }
 
-bool ObjectSelector::Bind(MainWindow *pMainWindow,
+bool ObjectSelector::BindSelector(MainWindow *pMainWindow,
     const libcomp::String& objType, bool serverData)
 {
     if(mObjType != objType)
     {
-        bool changed = ObjectSelectorBase::Bind(pMainWindow, objType);
+        bool changed = Bind(pMainWindow, objType);
 
         mServerData = serverData;
 

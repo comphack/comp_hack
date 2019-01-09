@@ -49,10 +49,13 @@ ActionSpawn::ActionSpawn(ActionList *pList,
 
     prop->spawnGroups->SetValueName(tr("Spot ID:"));
     prop->spawnGroups->BindSelector(pMainWindow, "SpawnGroup", true);
+    prop->spawnGroups->SetAddText("Add Spawn Group");
 
     prop->spawnLocationGroups->Setup(
         DynamicItemType_t::COMPLEX_OBJECT_SELECTOR, pMainWindow,
         "SpawnLocationGroup", true);
+    prop->spawnLocationGroups->SetAddText("Add Spawn Location Group");
+
     prop->spot->SetMainWindow(pMainWindow);
     prop->defeatActions->SetMainWindow(pMainWindow);
 

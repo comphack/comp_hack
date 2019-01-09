@@ -96,6 +96,11 @@ void DynamicList::Setup(DynamicItemType_t type, MainWindow *pMainWindow,
     }
 }
 
+void DynamicList::SetAddText(const libcomp::String& text)
+{
+    ui->lblAddText->setText(qs(text));
+}
+
 bool DynamicList::AddInteger(int32_t val)
 {
     if(mType == DynamicItemType_t::COMPLEX_EVENT_MESSAGE)
@@ -488,7 +493,7 @@ QWidget* DynamicList::GetEventMessageWidget(int32_t val)
 QWidget* DynamicList::GetObjectSelectorWidget(uint32_t val)
 {
     ObjectSelector* sel = new ObjectSelector;
-    sel->Bind(mMainWindow, mObjectSelectorType, mSelectorServerData);
+    sel->BindSelector(mMainWindow, mObjectSelectorType, mSelectorServerData);
 
     sel->SetValue(val);
 
@@ -891,7 +896,7 @@ void DynamicList::AddItem(QWidget* ctrl, bool canReorder)
 void DynamicList::RemoveRow()
 {
     QObject* senderObj = sender();
-    QObject* parent = senderObj ? senderObj->parent() : 0;
+    QObject* parent = senderObj ? senderObj->parent()->parent() : 0;
     if(parent)
     {
         bool exists = false;
@@ -922,7 +927,7 @@ void DynamicList::RemoveRow()
 void DynamicList::MoveUp()
 {
     QObject* senderObj = sender();
-    QObject* parent = senderObj ? senderObj->parent() : 0;
+    QObject* parent = senderObj ? senderObj->parent()->parent() : 0;
     if(parent)
     {
         bool exists = false;
@@ -953,7 +958,7 @@ void DynamicList::MoveUp()
 void DynamicList::MoveDown()
 {
     QObject* senderObj = sender();
-    QObject* parent = senderObj ? senderObj->parent() : 0;
+    QObject* parent = senderObj ? senderObj->parent()->parent() : 0;
     if(parent)
     {
         bool exists = false;

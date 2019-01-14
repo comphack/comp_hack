@@ -426,9 +426,11 @@ private:
      *  calculated or the target in question if the source is being calculated.
      *  If the skill is still being checked validity, supplying no entity
      *  for this while calculating against the source is valid.
-     * @return Tokusei evaluation result for the current state
+     * @return 0 if the conditions evaluated to true, 1 if the conditions
+     *  evaluated to false, -1 if the conditions cannot be evaluated yet
      */
-    bool EvaluateTokuseiSkillConditions(const std::shared_ptr<ActiveEntityState>& eState,
+    int8_t EvaluateTokuseiSkillConditions(
+        const std::shared_ptr<ActiveEntityState>& eState,
         const std::list<std::shared_ptr<objects::TokuseiSkillCondition>>& conditions,
         const std::shared_ptr<channel::ProcessingSkill>& pSkill,
         const std::shared_ptr<ActiveEntityState>& otherState);
@@ -443,9 +445,11 @@ private:
      *  calculated or the target in question if the source is being calculated.
      *  If the skill is still being checked validity, supplying no entity
      *  for this while calculating against the source is valid.
-     * @return true if the condition evaluates to true
+     * @return 0 if the conditions evaluated to true, 1 if the conditions
+     *  evaluated to false, -1 if the conditions cannot be evaluated yet
      */
-    bool EvaluateTokuseiSkillCondition(const std::shared_ptr<ActiveEntityState>& eState,
+    int8_t EvaluateTokuseiSkillCondition(
+        const std::shared_ptr<ActiveEntityState>& eState,
         const std::shared_ptr<objects::TokuseiSkillCondition>& condition,
         const std::shared_ptr<channel::ProcessingSkill>& pSkill,
         const std::shared_ptr<ActiveEntityState>& otherState);

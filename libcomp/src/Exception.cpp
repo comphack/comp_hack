@@ -28,6 +28,7 @@
 
 #include "Constants.h"
 #include "Log.h"
+#include "PlatformWindows.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -80,7 +81,7 @@ Exception::Exception(const String& msg, const String& f, int l) :
 
     SymSetOptions(SYMOPT_LOAD_LINES);
 
-    BOOL symInit = SymInitialize(GetCurrentProcess(), NULL, TRUE);
+    const static BOOL symInit = SymInitialize(GetCurrentProcess(), NULL, TRUE);
 
     if(TRUE != symInit)
     {

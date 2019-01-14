@@ -344,6 +344,7 @@ bool Parsers::DemonForce::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(success && (statRaised || toStack))
     {
+        dState->UpdateDemonState(definitionManager);
         server->GetTokuseiManager()->Recalculate(state->GetCharacterState(),
             true, std::set<int32_t>{ dState->GetEntityID() });
         characterManager->RecalculateStats(dState, client);

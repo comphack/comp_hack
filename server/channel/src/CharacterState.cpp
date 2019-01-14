@@ -685,7 +685,7 @@ bool CharacterState::UpdateQuestState(
     return false;
 }
 
-uint8_t CharacterState::GetExpertiseRank(
+int32_t CharacterState::GetExpertisePoints(
     uint32_t expertiseID, libcomp::DefinitionManager* definitionManager)
 {
     int32_t pointSum = 0;
@@ -723,7 +723,14 @@ uint8_t CharacterState::GetExpertiseRank(
         pointSum = (int32_t)(exp ? exp->GetPoints() : 0);
     }
 
-    return (uint8_t)floor((float)pointSum * 0.0001f);
+    return pointSum;
+}
+
+uint8_t CharacterState::GetExpertiseRank(
+    uint32_t expertiseID, libcomp::DefinitionManager* definitionManager)
+{
+    return (uint8_t)floor((float)GetExpertisePoints(expertiseID,
+        definitionManager) * 0.0001f);
 }
 
 bool CharacterState::ActionCooldownActive(int32_t cooldownID,

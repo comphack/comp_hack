@@ -115,6 +115,7 @@
 #include <SpawnGroup.h>
 #include <SpawnLocation.h>
 #include <SpawnLocationGroup.h>
+#include <Team.h>
 #include <Tokusei.h>
 #include <TokuseiCondition.h>
 #include <TokuseiSkillCondition.h>
@@ -2594,7 +2595,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                     primaryTarget->GetCurrentY());
 
                 // Half width on each side
-                float lineWidth = (float)skillRange->GetAoeLineWidth() * 5.f;
+                float lineWidth = (float)(skillRange->GetAoeLineWidth() * 10) *
+                    5.f;
 
                 // If not rushing, max length can go beyond the target
                 if(skill.Definition->GetBasic()->GetActionType() !=
@@ -4343,8 +4345,9 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
 
                 auto& conditions = isTarget
                     ? targetConditions : sourceConditions;
-                if(EvaluateTokuseiSkillConditions(eState, conditions, pSkill,
-                    otherState))
+                int8_t eval = EvaluateTokuseiSkillConditions(eState,
+                    conditions, pSkill, otherState);
+                if(eval == 1)
                 {
                     effectiveTokusei[tokusei->GetID()] = pair.second;
                     modified = true;
@@ -4353,6 +4356,10 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
                     {
                         aspects.insert((int8_t)aspect->GetType());
                     }
+                }
+                else if(eval == -1)
+                {
+                    stillPendingSkillTokusei[tokusei->GetID()] = pair.second;
                 }
             }
         }
@@ -4381,7 +4388,7 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
     return calcState;
 }
 
-bool SkillManager::EvaluateTokuseiSkillConditions(
+int8_t SkillManager::EvaluateTokuseiSkillConditions(
     const std::shared_ptr<ActiveEntityState>& eState,
     const std::list<std::shared_ptr<objects::TokuseiSkillCondition>>& conditions,
     const std::shared_ptr<channel::ProcessingSkill>& pSkill,
@@ -4394,8 +4401,6 @@ bool SkillManager::EvaluateTokuseiSkillConditions(
     std::unordered_map<uint8_t, bool> optionGroups;
     for(auto condition : conditions)
     {
-        bool result = false;
-
         // If the option group has already had a condition pass, skip it
         uint8_t optionGroupID = condition->GetOptionGroupID();
         if(optionGroupID != 0)
@@ -4404,25 +4409,28 @@ bool SkillManager::EvaluateTokuseiSkillConditions(
             {
                 optionGroups[optionGroupID] = false;
             }
-            else
+            else if(optionGroups[optionGroupID])
             {
-                result = optionGroups[optionGroupID];
+                continue;
             }
         }
 
-        if(!result)
+        int8_t eval = EvaluateTokuseiSkillCondition(eState, condition, pSkill,
+            otherState);
+        if(eval == -1)
         {
-            result = EvaluateTokuseiSkillCondition(eState, condition, pSkill,
-                otherState);
-            if(optionGroupID != 0)
-            {
-                optionGroups[optionGroupID] |= result;
-            }
-            else if(!result)
-            {
-                // Standalone did not pass
-                return false;
-            }
+            // If a single condition requires re-evaluation, stop here
+            return -1;
+        }
+
+        if(optionGroupID != 0)
+        {
+            optionGroups[optionGroupID] |= (eval == 1);
+        }
+        else if(eval == 0)
+        {
+            // Standalone did not pass
+            return 0;
         }
     }
 
@@ -4431,14 +4439,14 @@ bool SkillManager::EvaluateTokuseiSkillConditions(
         if(!pair.second)
         {
             // Option group did not pass
-            return false;
+            return 0;
         }
     }
 
-    return true;
+    return 1;
 }
 
-bool SkillManager::EvaluateTokuseiSkillCondition(
+int8_t SkillManager::EvaluateTokuseiSkillCondition(
     const std::shared_ptr<ActiveEntityState>& eState,
     const std::shared_ptr<objects::TokuseiSkillCondition>& condition,
     const std::shared_ptr<ProcessingSkill>& pSkill,
@@ -4447,24 +4455,27 @@ bool SkillManager::EvaluateTokuseiSkillCondition(
     ProcessingSkill& skill = *pSkill.get();
 
     // TokuseiSkillCondition comparators can only be equals or not equal
-    bool negate = condition->GetComparator() == objects::TokuseiCondition::Comparator_t::NOT_EQUAL;
+    bool negate = condition->GetComparator() ==
+        objects::TokuseiCondition::Comparator_t::NOT_EQUAL;
 
     switch(condition->GetSkillConditionType())
     {
     case TokuseiSkillConditionType::ANY_SKILL:
         // Used to bind conditions to skill processing time only
-        return true;
+        return 1;
     case TokuseiSkillConditionType::EXPLICIT_SKILL:
         // Current skill is the specified skill
-        return (skill.SkillID == (uint32_t)condition->GetValue()) == !negate;
+        return (skill.SkillID == (uint32_t)condition->GetValue()) == !negate
+            ? 1 : 0;
     case TokuseiSkillConditionType::ACTION_TYPE:
         // Current skill is the specified action type
         return ((int32_t)skill.Definition->GetBasic()->GetActionType() ==
-            condition->GetValue()) == !negate;
+            condition->GetValue()) == !negate ? 1 : 0;
     case TokuseiSkillConditionType::AFFINITY:
         // Current skill is the specified affinity type
         return ((int32_t)skill.BaseAffinity == condition->GetValue() ||
-            (int32_t)skill.EffectiveAffinity == condition->GetValue()) == !negate;
+            (int32_t)skill.EffectiveAffinity == condition->GetValue()) == !negate
+            ? 1 : 0;
     case TokuseiSkillConditionType::SKILL_CLASS:
         // Current skill is magic, physical or misc
         switch(skill.EffectiveDependencyType)
@@ -4475,7 +4486,7 @@ bool SkillManager::EvaluateTokuseiSkillCondition(
         case 8:
         case 11:
             // Magic
-            return (1 == condition->GetValue()) == !negate;
+            return (1 == condition->GetValue()) == !negate ? 1 : 0;
         case 0:
         case 1:
         case 6:
@@ -4483,47 +4494,50 @@ bool SkillManager::EvaluateTokuseiSkillCondition(
         case 10:
         case 12:
             // Physical
-            return (2 == condition->GetValue()) == !negate;
+            return (2 == condition->GetValue()) == !negate ? 1 : 0;
         case 5:
         default:
             // Misc
-            return (3 == condition->GetValue()) == !negate;
+            return (3 == condition->GetValue()) == !negate ? 1 : 0;
         }
     case TokuseiSkillConditionType::SKILL_EXPERTISE:
         // Current skill is the specified expertise type
-        return ((int32_t)skill.ExpertiseType == condition->GetValue()) == !negate;
+        return ((int32_t)skill.ExpertiseType == condition->GetValue()) ==
+            !negate ? 1 : 0;
     case TokuseiSkillConditionType::ENEMY_DIGITALIZED:
         // Enemy is digitalized (must be a player entity)
         if(!otherState)
         {
-            // Error
-            return false;
+            // Target required
+            return -1;
         }
         else
         {
             auto state = ClientState::GetEntityClientState(otherState
                 ->GetEntityID(), false);
             auto cState = state ? state->GetCharacterState() : nullptr;
-            return (cState && cState->GetDigitalizeState()) == !negate;
+            return (cState && cState->GetDigitalizeState()) == !negate ? 1 : 0;
         }
         break;
     case TokuseiSkillConditionType::ENEMY_EQUIPPED:
         // Enemy has the specified item equipped (must be a character)
         if(!otherState)
         {
-            // Error
-            return false;
+            // Target required
+            return -1;
         }
         else
         {
-            auto cState = std::dynamic_pointer_cast<CharacterState>(otherState);
+            auto cState = std::dynamic_pointer_cast<CharacterState>(
+                otherState);
 
             bool equipped = false;
             if(cState)
             {
                 for(auto equip : cState->GetEntity()->GetEquippedItems())
                 {
-                    if(!equip.IsNull() && equip->GetType() == (uint32_t)condition->GetValue())
+                    if(!equip.IsNull() &&
+                        equip->GetType() == (uint32_t)condition->GetValue())
                     {
                         equipped = true;
                         break;
@@ -4531,27 +4545,27 @@ bool SkillManager::EvaluateTokuseiSkillCondition(
                 }
             }
 
-            return equipped == !negate;
+            return equipped == !negate ? 1 : 0;
         }
         break;
     case TokuseiSkillConditionType::ENEMY_FACTION:
         // Enemy is in a different faction (0) or the same faction (1)
         if(!otherState)
         {
-            // Error
-            return false;
+            // Target required
+            return -1;
         }
         else
         {
-            return eState->SameFaction(otherState) == !negate;
+            return eState->SameFaction(otherState) == !negate ? 1 : 0;
         }
         break;
     case TokuseiSkillConditionType::ENEMY_GENDER:
         // Enemy's gender matches the specified type (can be any target type)
         if(!otherState)
         {
-            // Error
-            return false;
+            // Target required
+            return -1;
         }
         else
         {
@@ -4560,65 +4574,97 @@ bool SkillManager::EvaluateTokuseiSkillCondition(
             auto demonData = otherState->GetDevilData();
             if(demonData)
             {
-                gender = demonData ? (int32_t)demonData->GetBasic()->GetGender() : gender;
+                gender = demonData
+                    ? (int32_t)demonData->GetBasic()->GetGender() : gender;
             }
             else if(otherState->GetEntityType() == EntityType_t::CHARACTER)
             {
-                auto character = std::dynamic_pointer_cast<CharacterState>(otherState)->GetEntity();
+                auto character = std::dynamic_pointer_cast<CharacterState>(
+                    otherState)->GetEntity();
                 gender = character ? (int32_t)character->GetGender() : gender;
             }
 
-            return (gender == condition->GetValue()) == !negate;
+            return (gender == condition->GetValue()) == !negate ? 1 : 0;
         }
     case TokuseiSkillConditionType::ENEMY_LNC:
         // Enemy's LNC matches the specified type (can be any target type)
-        return otherState &&
-            (otherState->IsLNCType((uint8_t)condition->GetValue(), false) == !negate);
+        if(!otherState)
+        {
+            // Target required
+            return -1;
+        }
+        else
+        {
+            return otherState->IsLNCType((uint8_t)condition->GetValue(),
+                false) == !negate ? 1 : 0;
+        }
     case TokuseiSkillConditionType::ENEMY_TOKUSEI:
         // Enemy has a tokusei matching the specified type (tokusei cannot be
         // skill granted like the one being checked)
-        return otherState && (otherState->GetCalculatedState()
-            ->EffectiveTokuseiFinalKeyExists(condition->GetValue()) == !negate);
+        if(!otherState)
+        {
+            // Target required
+            return -1;
+        }
+        else
+        {
+            return otherState->GetCalculatedState()
+                ->EffectiveTokuseiFinalKeyExists(condition->GetValue()) ==
+                !negate ? 1 : 0;
+        }
     default:
         break;
     }
 
     // The remaining conditions depend on the other entity being a demon
+    if(!otherState)
+    {
+        // Target required
+        return -1;
+    }
+
     auto demonData = otherState ? otherState->GetDevilData() : nullptr;
     if(!demonData)
     {
-        // Rather than return the negation value, this case will always fail as it is an error
-        return false;
+        // Target is not a demon
+        return 0;
     }
 
     switch(condition->GetSkillConditionType())
     {
     case TokuseiSkillConditionType::DEMON_TYPE:
         // Demon is the specified type
-        return ((int32_t)demonData->GetBasic()->GetID() == condition->GetValue()) == !negate;
+        return ((int32_t)demonData->GetBasic()->GetID() == condition
+            ->GetValue()) == !negate ? 1 : 0;
     case TokuseiSkillConditionType::DEMON_FAMILY:
         // Demon is the specified family
-        return ((int32_t)demonData->GetCategory()->GetFamily() == condition->GetValue()) == !negate;
+        return ((int32_t)demonData->GetCategory()->GetFamily() == condition
+            ->GetValue()) == !negate ? 1 : 0;
     case TokuseiSkillConditionType::DEMON_RACE:
         // Demon is the specified race
-        return ((int32_t)demonData->GetCategory()->GetRace() == condition->GetValue()) == !negate;
+        return ((int32_t)demonData->GetCategory()->GetRace() == condition
+            ->GetValue()) == !negate ? 1 : 0;
     case TokuseiSkillConditionType::DEMON_TITLE:
         // Demon has the specified title
-        return ((int32_t)demonData->GetBasic()->GetTitle() == condition->GetValue()) == !negate;
+        return ((int32_t)demonData->GetBasic()->GetTitle() == condition
+            ->GetValue()) == !negate ? 1 : 0;
     case TokuseiSkillConditionType::DEMON_PARTNER_MATCH:
         // Demon is the same family, race or type as the entity's partner demon
         {
             std::shared_ptr<objects::MiDevilData> partnerData;
-            auto state = ClientState::GetEntityClientState(eState->GetEntityID(), false);
-            if(state && state->GetCharacterState() == eState && state->GetDemonState()->Ready())
+            auto state = ClientState::GetEntityClientState(eState
+                ->GetEntityID(), false);
+            if(state && state->GetCharacterState() == eState &&
+                state->GetDemonState()->Ready())
             {
                 partnerData = state->GetDemonState()->GetDevilData();
             }
 
             if(!partnerData)
             {
-                // Unlike the demon not existing, the partner not existing is not an error
-                return negate;
+                // Unlike the target not existing, the partner not existing is
+                // not a condition to evaluate later
+                return negate ? 1 : 0;
             }
 
             switch(condition->GetValue())
@@ -4626,17 +4672,17 @@ bool SkillManager::EvaluateTokuseiSkillCondition(
             case 0:
                 // Same family
                 return (partnerData->GetCategory()->GetFamily() ==
-                    demonData->GetCategory()->GetFamily()) == !negate;
+                    demonData->GetCategory()->GetFamily()) == !negate ? 1 : 0;
             case 1:
                 // Same race
                 return (partnerData->GetCategory()->GetRace() ==
-                    demonData->GetCategory()->GetRace()) == !negate;
+                    demonData->GetCategory()->GetRace()) == !negate ? 1 : 0;
             case 2:
                 // Same type
                 return (partnerData->GetBasic()->GetID() ==
-                    demonData->GetBasic()->GetID()) == !negate;
+                    demonData->GetBasic()->GetID()) == !negate ? 1 : 0;
             default:
-                return false;
+                return 0;
             }
         }
         break;
@@ -4644,7 +4690,7 @@ bool SkillManager::EvaluateTokuseiSkillCondition(
         break;
     }
 
-    return false;
+    return 0;
 }
 
 uint16_t SkillManager::CalculateOffenseValue(const std::shared_ptr<ActiveEntityState>& source,
@@ -6032,9 +6078,15 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                     valSum);
                 break;
             case objects::Spawn::KillValueType_t::ZIOTITE:
-                // Ziotite can only be granted to a team
-                server->GetMatchManager()->UpdateZiotite(sourceState
-                    ->GetTeam(), valSum, 0, sourceState->GetWorldCID());
+                {
+                    // Ziotite can only be granted to a team and is increased
+                    // by 15% per team member over 1
+                    auto team = sourceState->GetTeam();
+                    valSum = (int32_t)((float)valSum * (1.f +
+                        (float)(team->MemberIDsCount() - 1) * 0.15f));
+                    server->GetMatchManager()->UpdateZiotite(team, valSum, 0,
+                        sourceState->GetWorldCID());
+                }
                 break;
             case objects::Spawn::KillValueType_t::INHERITED:
             default:
@@ -7243,6 +7295,12 @@ void SkillManager::HandleDurabilityDamage(const std::shared_ptr<ActiveEntityStat
                 (0.4275 * knowledgeRank) + (double)durabilityLoss);
         }
 
+        if(durabilityLoss <= 0)
+        {
+            // Floor at 1 point
+            durabilityLoss = 1;
+        }
+
         characterManager->UpdateDurability(client, weapon, -durabilityLoss);
     }
     else
@@ -7284,6 +7342,12 @@ void SkillManager::HandleDurabilityDamage(const std::shared_ptr<ActiveEntityStat
             /// @todo: needs more research
             durabilityLoss = (int32_t)ceil(((double)durabilityLoss - 1.0) *
                 (1.0 + ((0.002 * pow(defRank, 2)) - (0.215 * defRank)) / 10.0));
+        }
+
+        if(durabilityLoss <= 0)
+        {
+            // Floor at 1 point
+            durabilityLoss = 1;
         }
 
         std::unordered_map<std::shared_ptr<objects::Item>, int32_t> equipMap;
@@ -7746,8 +7810,8 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                         source, TokuseiAspectType::PURSUIT_RATE, calcState));
                     int32_t pursuitPow = (int32_t)floor(tokuseiManager->GetAspectSum(
                         source, TokuseiAspectType::PURSUIT_POWER, calcState));
-                    if(pursuitPow > 0.0 && pursuitRate > 0.0 &&
-                        (pursuitRate >= 100.0 || RNG(int32_t, 1, 100) <= pursuitRate))
+                    if(pursuitRate > 0 &&
+                        (pursuitRate >= 100 || RNG(int32_t, 1, 100) <= pursuitRate))
                     {
                         target.PursuitAffinity = skill.EffectiveAffinity;
 
@@ -7766,30 +7830,27 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                             target.PursuitAffinity = skill.WeaponAffinity;
                         }
 
-                        // If the pursuit affinity does not match the effective affinity,
-                        // the damage must be recalculated first
-                        if(target.PursuitAffinity != skill.EffectiveAffinity)
+                        // Check NRA for pursuit affinity and stop if it is prevented
+                        if(!GetNRAResult(target, skill, target.PursuitAffinity))
                         {
-                            // Check NRA for pursuit affinity and stop if it is prevented
-                            if(!GetNRAResult(target, skill, target.PursuitAffinity))
-                            {
-                                // Calculate the new enemy resistence and determine damage
-                                float pResist = (float)(targetState->GetCorrectTbl(
-                                    (size_t)target.PursuitAffinity + RES_OFFSET) * 0.01);
+                            // Calculate the new enemy resistence and determine damage
+                            float pResist = (float)(targetState->GetCorrectTbl(
+                                (size_t)target.PursuitAffinity + RES_OFFSET) * 0.01);
 
-                                float calc = (float)target.Damage1 *
-                                    (1.f + pResist * -1.f);
-                                target.PursuitDamage = (int32_t)floor(calc < 1.f
-                                    ? 1.f : calc);
-                            }
-                        }
-                        else
-                        {
-                            target.PursuitDamage = target.Damage1;
+                            float calc = (float)target.Damage1 *
+                                (1.f + pResist * -1.f);
+                            target.PursuitDamage = (int32_t)floor(calc < 1.f
+                                ? 1.f : calc);
                         }
 
                         if(target.PursuitDamage > 0)
                         {
+                            // Pursuit power floors at 1% if it hits
+                            if(pursuitPow < 1)
+                            {
+                                pursuitPow = 1;
+                            }
+
                             // Apply the rate adjustment
                             target.PursuitDamage = (int32_t)floor(
                                 (double)target.PursuitDamage * pursuitPow * 0.01);
@@ -10081,13 +10142,13 @@ bool SkillManager::MinionDespawn(
 
     if(ProcessSkillResult(activated, ctx))
     {
-        for(auto enemy : zone->GetEnemies())
+        for(auto eState : zone->GetEnemiesAndAllies())
         {
-            auto eBase = enemy->GetEntity();
+            auto eBase = eState->GetEnemyBase();
             if(eBase->GetSummonerID() == source->GetEntityID() &&
                 eBase->GetSpawnLocationGroupID() == (uint32_t)params[1])
             {
-                zone->MarkDespawn(enemy->GetEntityID());
+                zone->MarkDespawn(eState->GetEntityID());
             }
         }
     }

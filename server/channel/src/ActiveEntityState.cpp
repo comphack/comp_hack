@@ -80,10 +80,8 @@ namespace libcomp
     {
         if(!BindingExists("ActiveEntityState", true))
         {
-            Using<AIState>();
             Using<objects::ActiveEntityStateObject>();
             Using<objects::EnemyBase>();
-            Using<Zone>();
 
             // Active entities can rotate or stop directly from the script
             // but movement must be handled via the AIManager
@@ -103,6 +101,9 @@ namespace libcomp
                 .Func("StatusEffectTimeLeft", &ActiveEntityState::StatusEffectTimeLeft);
 
             Bind<ActiveEntityState>("ActiveEntityState", binding);
+
+            Using<AIState>();
+            Using<Zone>();
         }
 
         return *this;
@@ -1465,6 +1466,7 @@ bool ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
                 {
                     if(doRegen)
                     {
+                        bool skipHPRegen = false;
                         auto calcState = GetCalculatedState();
                         if(calcState->ExistingTokuseiAspectsContains(
                             (int8_t)TokuseiAspectType::ZONE_INSTANCE_POISON))
@@ -1475,14 +1477,16 @@ bool ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
                             auto instance = zone
                                 ? zone->GetInstance() : nullptr;
                             auto cs = GetCoreStats();
-                            if(instance && cs)
+                            if(instance && cs && instance->GetPoisonLevel())
                             {
+                                skipHPRegen = true;
                                 hpTDamage = (int32_t)(hpTDamage +
                                     ceil((float)instance->GetPoisonLevel() *
                                         0.01f * (float)cs->GetMaxHP()));
                             }
                         }
-                        else
+
+                        if(!skipHPRegen)
                         {
                             hpTDamage = (int32_t)(hpTDamage -
                                 GetCorrectValue(CorrectTbl::HP_REGEN));

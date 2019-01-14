@@ -27,97 +27,20 @@
 #include "ZoneGeometryLoader.h"
 
 // libcomp Includes
-#include <Constants.h>
 #include <DefinitionManager.h>
 #include <Log.h>
-#include <PacketCodes.h>
-#include <Randomizer.h>
-#include <ScriptEngine.h>
-#include <ServerConstants.h>
-#include <ServerDataManager.h>
 
 // objects Include
-#include <Account.h>
-#include <AccountLogin.h>
-#include <AccountWorldData.h>
-#include <ActionSpawn.h>
-#include <ActionStartEvent.h>
-#include <Ally.h>
-#include <ChannelLogin.h>
-#include <CharacterLogin.h>
-#include <CharacterProgress.h>
-#include <DestinyBox.h>
-#include <DiasporaBase.h>
-#include <DigitalizeState.h>
-#include <Enemy.h>
-#include <EntityStats.h>
-#include <InstanceAccess.h>
-#include <Item.h>
-#include <ItemDrop.h>
-#include <Loot.h>
-#include <LootBox.h>
-#include <Match.h>
-#include <MiAIData.h>
-#include <MiDevilData.h>
-#include <MiDynamicMapData.h>
-#include <MiGrowthData.h>
 #include <MiSpotData.h>
-#include <MiTimeLimitData.h>
-#include <MiUraFieldTowerData.h>
 #include <MiZoneData.h>
 #include <MiZoneFileData.h>
-#include <MiONPCData.h>
-#include <Party.h>
-#include <PentalphaEntry.h>
-#include <PlasmaSpawn.h>
-#include <PlayerExchangeSession.h>
-#include <PvPBase.h>
-#include <PvPInstanceStats.h>
-#include <PvPInstanceVariant.h>
-#include <PvPMatch.h>
 #include <QmpBoundary.h>
 #include <QmpBoundaryLine.h>
 #include <QmpElement.h>
 #include <QmpFile.h>
 #include <QmpNavPoint.h>
-#include <ServerBazaar.h>
-#include <ServerCultureMachineSet.h>
-#include <ServerNPC.h>
-#include <ServerObject.h>
-#include <ServerZone.h>
-#include <ServerZoneInstance.h>
-#include <ServerZoneInstanceVariant.h>
-#include <ServerZonePartial.h>
-#include <ServerZoneSpot.h>
-#include <Spawn.h>
-#include <SpawnGroup.h>
-#include <SpawnLocation.h>
-#include <SpawnLocationGroup.h>
-#include <SpawnRestriction.h>
-#include <Team.h>
-#include <UBMatch.h>
-#include <WorldSharedConfig.h>
-
-// channel Includes
-#include "AccountManager.h"
-#include "ActionManager.h"
-#include "AIManager.h"
-#include "AIState.h"
-#include "ChannelServer.h"
-#include "ChannelSyncManager.h"
-#include "CharacterManager.h"
-#include "CultureMachineState.h"
-#include "EventManager.h"
-#include "ManagerConnection.h"
-#include "MatchManager.h"
-#include "PlasmaState.h"
-#include "SkillManager.h"
-#include "TokuseiManager.h"
-#include "Zone.h"
-#include "ZoneInstance.h"
 
 // Standard C++11 Includes
-#include <cmath>
 #include <thread>
 
 using namespace channel;

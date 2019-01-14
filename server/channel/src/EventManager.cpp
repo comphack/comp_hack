@@ -1652,11 +1652,12 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         else
         {
             // Expertise ID [value 1] compares to [value 2] (points or class check)
-            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
-            auto exp = character->GetExpertises((size_t)condition->GetValue1()).Get();
+            auto cState = client->GetClientState()->GetCharacterState();
 
             int32_t val = condition->GetValue2();
-            int32_t compareTo = exp ? exp->GetPoints() : 0;
+            int32_t compareTo = cState->GetExpertisePoints(
+                (uint32_t)condition->GetValue1(),
+                mServer.lock()->GetDefinitionManager());
             if(val <= 10)
             {
                 // Class check

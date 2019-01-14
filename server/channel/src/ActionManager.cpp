@@ -263,18 +263,7 @@ void ActionManager::PerformActions(
                 for(auto z : zones)
                 {
                     // Include all enemy base entities (so allies too)
-                    std::list<std::shared_ptr<ActiveEntityState>> eBases;
-                    for(auto enemy : z->GetEnemies())
-                    {
-                        eBases.push_back(enemy);
-                    }
-
-                    for(auto ally : z->GetAllies())
-                    {
-                        eBases.push_back(ally);
-                    }
-
-                    for(auto eBase : eBases)
+                    for(auto eBase : z->GetEnemiesAndAllies())
                     {
                         ActionContext copyCtx = ctx;
                         copyCtx.Client = nullptr;

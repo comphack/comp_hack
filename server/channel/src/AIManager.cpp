@@ -82,6 +82,7 @@ namespace libcomp
         if(!BindingExists("AIManager", true))
         {
             Using<ActiveEntityState>();
+            Using<Zone>();
 
             Sqrat::Class<AIManager,
                 Sqrat::NoConstructor<AIManager>> binding(mVM, "AIManager");
@@ -247,19 +248,11 @@ void AIManager::UpdateActiveStates(const std::shared_ptr<Zone>& zone,
     uint64_t now, bool isNight)
 {
     std::list<std::shared_ptr<ActiveEntityState>> updated;
-    for(auto enemy : zone->GetEnemies())
+    for(auto eState : zone->GetEnemiesAndAllies())
     {
-        if(UpdateState(enemy, now, isNight))
+        if(UpdateState(eState, now, isNight))
         {
-            updated.push_back(enemy);
-        }
-    }
-
-    for(auto ally : zone->GetAllies())
-    {
-        if(UpdateState(ally, now, isNight))
-        {
-            updated.push_back(ally);
+            updated.push_back(eState);
         }
     }
 

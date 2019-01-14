@@ -831,6 +831,15 @@ public:
         const std::shared_ptr<ChannelClientConnection>& client = nullptr);
 
     /**
+     * Start an event contextual to the supplied zone with no source entity
+     * @param zone Pointer to the zone to start the event for
+     * @param eventID ID of the event to start
+     * @return true if the event started successfully, false if it did not
+     */
+    bool StartZoneEvent(const std::shared_ptr<Zone>& zone,
+        const libcomp::String& eventID);
+
+    /**
      * Update zone geometry information bound to a server object in the
      * supplied zone
      * @param zone Pointer to a zone

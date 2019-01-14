@@ -35,7 +35,7 @@
 
 // object Includes
 #include <ActionSpawn.h>
-#include <Ally.h>
+#include <AllyState.h>
 #include <CultureMachineState.h>
 #include <DiasporaBase.h>
 #include <EnemyBase.h>
@@ -64,19 +64,40 @@ using namespace channel;
 namespace libcomp
 {
     template<>
+    ScriptEngine& ScriptEngine::Using<DiasporaBaseState>()
+    {
+        if(!BindingExists("DiasporaBaseState", true))
+        {
+            Using<objects::EntityStateObject>();
+            Using<objects::DiasporaBase>();
+
+            Sqrat::DerivedClass<DiasporaBaseState,
+                objects::EntityStateObject,
+                Sqrat::NoConstructor<DiasporaBaseState>>
+                binding(mVM, "DiasporaBaseState");
+            binding
+                .Func("GetEntity", &DiasporaBaseState::GetEntity);
+
+            Bind<DiasporaBaseState>("DiasporaBaseState", binding);
+        }
+
+        return *this;
+    }
+
+    template<>
     ScriptEngine& ScriptEngine::Using<Zone>()
     {
         if(!BindingExists("Zone", true))
         {
-            Using<objects::ZoneObject>();
-            Using<ActiveEntityState>();
-            Using<PlasmaState>();
             Using<objects::UBMatch>();
-            Using<ZoneInstance>();
+            Using<objects::ZoneObject>();
 
-            /// @todo: For some reason this crashes sqrat
-            //Using<AllyState>();
-            //Using<EnemyState>();
+            Using<ActiveEntityState>();
+            Using<AllyState>();
+            Using<DiasporaBaseState>();
+            Using<EnemyState>();
+            Using<PlasmaState>();
+            Using<ZoneInstance>();
 
             Sqrat::DerivedClass<Zone,
                 objects::ZoneObject,
@@ -86,12 +107,14 @@ namespace libcomp
                 .Func("GetDynamicMapID", &Zone::GetDynamicMapID)
                 .Func("GetInstanceID", &Zone::GetInstanceID)
                 .Func("GetFlagState", &Zone::GetFlagStateValue)
+                .Func("GetDiasporaBases", &Zone::GetDiasporaBases)
                 .Func("GetUBMatch", &Zone::GetUBMatch)
                 .Func("GetZoneInstance", &Zone::GetInstance)
                 .Func("GroupHasSpawned", &Zone::GroupHasSpawned)
                 .Func("GetActiveEntity", &Zone::GetActiveEntity)
-                //.Func("GetAllies", &Zone::GetAllies)
-                //.Func("GetEnemies", &Zone::GetEnemies)
+                .Func("MarkDespawn", &Zone::MarkDespawn)
+                .Func("GetAllies", &Zone::GetAllies)
+                .Func("GetEnemies", &Zone::GetEnemies)
                 .Func<std::shared_ptr<PlasmaState>(Zone::*)(uint32_t)>(
                     "GetPlasma", &Zone::GetPlasma)
                 .Func("EnableDisableSpawnGroup", &Zone::EnableDisableSpawnGroup);
@@ -720,6 +743,23 @@ const std::list<std::shared_ptr<EnemyState>> Zone::GetBosses()
     }
 
     return result;
+}
+
+std::list<std::shared_ptr<ActiveEntityState>>
+    Zone::GetEnemiesAndAllies() const
+{
+    std::list<std::shared_ptr<ActiveEntityState>> all;
+    for(auto enemy : GetEnemies())
+    {
+        all.push_back(enemy);
+    }
+
+    for(auto ally : GetAllies())
+    {
+        all.push_back(ally);
+    }
+
+    return all;
 }
 
 std::shared_ptr<LootBoxState> Zone::GetLootBox(int32_t id)
@@ -1525,7 +1565,7 @@ std::pair<uint8_t, uint8_t> Zone::GetDiasporaMiniBossCount()
             auto base = bState->GetEntity();
 
             uint32_t slgID = base->GetDefinition()
-                ->GetPhaseMiniBosses(DIASPORA_PHASE_BOSS);
+                ->GetPhaseMiniBosses((size_t)(DIASPORA_PHASE_BOSS - 1));
             if(slgID)
             {
                 // Update total count

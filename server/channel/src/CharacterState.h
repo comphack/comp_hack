@@ -161,6 +161,18 @@ public:
         uint32_t completedQuestID = 0);
 
     /**
+     * Determine the character's current expertise points for the
+     * specified ID. This includes chain expertise calculations.
+     * @param expertiseID ID of the expertise to calculate
+     * @param definitionManager Pointer to the definition manager to use
+     *  for determining chain expertise relationships. If null, the expertise
+     *  will be retrieved as a non-chain expertise.
+     * @return Total points of the supplied expertise ID
+     */
+    int32_t GetExpertisePoints(uint32_t expertiseID,
+        libcomp::DefinitionManager* definitionManager = nullptr);
+
+    /**
      * Determine the character's current expertise rank for the
      * specified ID. This includes chain expertise calculations.
      * @param expertiseID ID of the expertise to calculate

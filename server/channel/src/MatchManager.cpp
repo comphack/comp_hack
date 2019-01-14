@@ -2122,51 +2122,52 @@ bool MatchManager::ToggleDiasporaBase(const std::shared_ptr<Zone>& zone,
         auto def = base->GetDefinition();
 
         float resetTime = 0.f;
-
-        std::lock_guard<std::mutex> lock(mLock);
-        if(capture)
         {
-            if(base->GetCaptured())
+            std::lock_guard<std::mutex> lock(mLock);
+            if(capture)
             {
-                // Captured by someone else
-                return false;
+                if(base->GetCaptured())
+                {
+                    // Captured by someone else
+                    return false;
+                }
+
+                uint32_t duration = def->GetCaptureDuration();
+
+                base->SetCaptured(true);
+
+                resetTime = (float)duration;
+
+                // Don't bother actually scheduling the reset time if it is longer
+                // than the entire match
+                if(duration <= (uint32_t)variant->GetTimePoints(1))
+                {
+                    uint64_t reset = ChannelServer::GetServerTime() +
+                        (uint64_t)((uint64_t)duration * 1000000ULL);
+                    base->SetResetTime(reset);
+
+                    mServer.lock()->GetTimerManager()->ScheduleEventIn(
+                        (int)duration, []
+                        (MatchManager* pMatchManager, int32_t pBaseID,
+                            uint32_t pZoneID, uint32_t pInstanceID,
+                            uint64_t pReset)
+                        {
+                            pMatchManager->ResetDiasporaBase(pZoneID, pInstanceID,
+                                pBaseID, pReset);
+                        }, this, baseID, zone->GetID(), instance->GetID(), reset);
+                }
             }
-
-            uint32_t duration = def->GetCaptureDuration();
-
-            base->SetCaptured(true);
-
-            resetTime = (float)duration;
-
-            // Don't bother actually scheduling the reset time if it is longer
-            // than the entire match
-            if(duration <= (uint32_t)variant->GetTimePoints(1))
+            else
             {
-                uint64_t reset = ChannelServer::GetServerTime() +
-                    (uint64_t)((uint64_t)duration * 1000000ULL);
-                base->SetResetTime(reset);
+                if(!base->GetCaptured())
+                {
+                    // Nothing to do
+                    return true;
+                }
 
-                mServer.lock()->GetTimerManager()->ScheduleEventIn(
-                    (int)duration, []
-                    (MatchManager* pMatchManager, int32_t pBaseID,
-                        uint32_t pZoneID, uint32_t pInstanceID,
-                        uint64_t pReset)
-                    {
-                        pMatchManager->ResetDiasporaBase(pZoneID, pInstanceID,
-                            pBaseID, pReset);
-                    }, this, baseID, zone->GetID(), instance->GetID(), reset);
+                base->SetCaptured(false);
+                base->SetResetTime(0);
             }
-        }
-        else
-        {
-            if(!base->GetCaptured())
-            {
-                // Nothing to do
-                return true;
-            }
-
-            base->SetCaptured(false);
-            base->SetResetTime(0);
         }
 
         auto server = mServer.lock();
@@ -2190,7 +2191,7 @@ bool MatchManager::ToggleDiasporaBase(const std::shared_ptr<Zone>& zone,
             const std::shared_ptr<objects::ServerZoneTrigger>& t)
             {
                 return t->GetValue() != 0 &&
-                    (uint32_t)t->GetValue() == def->GetID();
+                    (uint32_t)t->GetValue() != def->GetID();
             });
 
         if(triggers.size() > 0)

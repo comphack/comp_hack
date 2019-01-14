@@ -379,6 +379,12 @@ public:
     const std::list<std::shared_ptr<EnemyState>> GetBosses();
 
     /**
+     * Get all enemy and ally instances in the zone
+     * @return List of all enemy and ally instances in the zone
+     */
+    std::list<std::shared_ptr<ActiveEntityState>> GetEnemiesAndAllies() const;
+
+    /**
      * Get a loot box instance by it's ID.
      * @param id Instance ID of the loot box.
      * @return Pointer to the loot box instance.

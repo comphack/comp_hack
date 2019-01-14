@@ -75,10 +75,7 @@
 #include <PvPInstanceStats.h>
 #include <PvPInstanceVariant.h>
 #include <PvPMatch.h>
-#include <QmpBoundary.h>
-#include <QmpBoundaryLine.h>
 #include <QmpElement.h>
-#include <QmpFile.h>
 #include <QmpNavPoint.h>
 #include <ServerBazaar.h>
 #include <ServerCultureMachineSet.h>
@@ -144,7 +141,8 @@ namespace libcomp
                 .Func<bool(ZoneManager::*)(
                     std::list<std::shared_ptr<ActiveEntityState>>,
                     const std::shared_ptr<Zone>&, bool, bool, const libcomp::String&)>(
-                    "AddEnemiesToZone", &ZoneManager::AddEnemiesToZone);
+                    "AddEnemiesToZone", &ZoneManager::AddEnemiesToZone)
+                .Func("StartZoneEvent", &ZoneManager::StartZoneEvent);
 
             Bind<ZoneManager>("ZoneManager", binding);
         }
@@ -3077,11 +3075,11 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         {
             // Match enemies in zone on specified locations and
             // group/location pairs
-            for(auto eState : zone->GetEnemies())
+            for(auto eState : zone->GetEnemiesAndAllies())
             {
-                auto enemy = eState->GetEntity();
-                if(enemy->GetSpawnGroupID() > 0 ||
-                    enemy->GetSpawnLocationGroupID() > 0)
+                auto eBase = eState->GetEnemyBase();
+                if(eBase->GetSpawnGroupID() > 0 ||
+                    eBase->GetSpawnLocationGroupID() > 0)
                 {
                     bool despawn = false;
                     for(auto& pair : checking)
@@ -3090,7 +3088,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                         {
                             // Location
                             uint32_t slgID = pair.second.first;
-                            if(enemy->GetSpawnLocationGroupID() == slgID)
+                            if(eBase->GetSpawnLocationGroupID() == slgID)
                             {
                                 despawn = true;
                                 break;
@@ -3103,8 +3101,8 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                             uint32_t slgID = pair.second.second;
 
                             // Use specified location or any if zero
-                            if(enemy->GetSpawnGroupID() == sgID && (!slgID ||
-                                enemy->GetSpawnLocationGroupID() == slgID))
+                            if(eBase->GetSpawnGroupID() == sgID && (!slgID ||
+                                eBase->GetSpawnLocationGroupID() == slgID))
                             {
                                 despawn = true;
                                 break;
@@ -5941,6 +5939,15 @@ bool ZoneManager::HandleZoneTriggers(const std::shared_ptr<Zone>& zone,
     return executed;
 }
 
+bool ZoneManager::StartZoneEvent(const std::shared_ptr<Zone>& zone,
+    const libcomp::String& eventID)
+{
+    auto server = mServer.lock();
+    auto eventManager = server->GetEventManager();
+
+    return eventManager->HandleEvent(nullptr, eventID, 0, zone);
+}
+
 bool ZoneManager::UpdateGeometryElement(const std::shared_ptr<Zone>& zone,
     std::shared_ptr<objects::ServerObject> elemObject)
 {
@@ -6725,7 +6732,6 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
 
     std::shared_ptr<objects::ServerZone> zoneDefinition;
 
-    bool startingZone = false;
     for(size_t i = 0; i < instanceDef->ZoneIDsCount(); i++)
     {
         uint32_t zID = instanceDef->GetZoneIDs(i);
@@ -6740,8 +6746,6 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
 
             zoneDefinition = serverDataManager->GetZoneData(zID, dID, true,
                 partialIDs);
-
-            startingZone = i == 0;
             break;
         }
     }
@@ -6757,32 +6761,6 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
             std::lock_guard<std::mutex> lock(mLock);
             RemoveZone(zone, false);
             return nullptr;
-        }
-
-        zone->SetInstance(instance);
-        zone->SetMatch(instance->GetMatch());
-
-        // Apply any special instance changes
-        if(instVariant)
-        {
-            switch(instVariant->GetInstanceType())
-            {
-            case InstanceType_t::PVP:
-                {
-                    auto pvpVariant = std::dynamic_pointer_cast<
-                        objects::PvPInstanceVariant>(instVariant);
-                    if(startingZone && pvpVariant)
-                    {
-                        AddPvPBases(zone, pvpVariant);
-                    }
-                }
-                break;
-            case InstanceType_t::DIASPORA:
-                AddDiasporaBases(zone);
-                break;
-            default:
-                break;
-            }
         }
     }
     else
@@ -6935,6 +6913,12 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
 
         zone = std::shared_ptr<Zone>(new Zone(id, definition));
 
+        if(instance)
+        {
+            zone->SetInstance(instance);
+            zone->SetMatch(instance->GetMatch());
+        }
+
         auto qmpFile = zoneData->GetFile()->GetQmpFile();
         auto geoIter = !qmpFile.IsEmpty()
             ? mZoneGeometry.find(qmpFile.C()) : mZoneGeometry.end();
@@ -6976,18 +6960,43 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         zone->AddNPC(state);
     }
 
-    // If a server object is placed on the same spot ID as a diaspora base,
-    // do not place it as the spot will be bound to it later
     std::set<uint32_t> diasporaSpots;
-    if(instance && instance->GetVariant() && instance->GetVariant()
-        ->GetInstanceType() == InstanceType_t::DIASPORA)
+    if(instance && instance->GetVariant())
     {
-        for(auto& spotPair : definition->GetSpots())
+        auto instDef = instance->GetDefinition();
+        auto instVariant = instance->GetVariant();
+
+        // Apply any special instance changes
+        switch(instVariant->GetInstanceType())
         {
-            if(spotPair.second->GetMatchBase())
+        case InstanceType_t::PVP:
+            // PvP instances should have bases added to the starting zone
+            if(instDef->GetZoneIDs(0) == definition->GetID() &&
+                instDef->GetDynamicMapIDs(0) == definition->GetDynamicMapID())
             {
-                diasporaSpots.insert(spotPair.first);
+                auto pvpVariant = std::dynamic_pointer_cast<
+                    objects::PvPInstanceVariant>(instVariant);
+                if(pvpVariant)
+                {
+                    AddPvPBases(zone, pvpVariant);
+                }
             }
+            break;
+        case InstanceType_t::DIASPORA:
+            // If a server object is placed on the same spot ID as a diaspora
+            // base, do not place it as the spot will be bound to it later
+            for(auto& spotPair : definition->GetSpots())
+            {
+                if(spotPair.second->GetMatchBase())
+                {
+                    diasporaSpots.insert(spotPair.first);
+                }
+            }
+
+            AddDiasporaBases(zone);
+            break;
+        default:
+            break;
         }
     }
 

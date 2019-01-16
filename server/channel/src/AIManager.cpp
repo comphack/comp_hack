@@ -91,6 +91,7 @@ namespace libcomp
                 .Func("QueueScriptCommand", &AIManager::QueueScriptCommand)
                 .Func("QueueUseSkillCommand", &AIManager::QueueUseSkillCommand)
                 .Func("QueueWaitCommand", &AIManager::QueueWaitCommand)
+                .Func("UseDiasporaQuake", &AIManager::UseDiasporaQuake)
                 .Func("Chase", &AIManager::Chase)
                 .Func("Circle", &AIManager::Circle)
                 .Func("Retreat", &AIManager::Retreat);
@@ -621,6 +622,76 @@ void AIManager::UpdateAggro(const std::shared_ptr<ActiveEntityState>& eState,
             ChannelClientConnection::BroadcastPacket(zone->GetConnectionList(), p);
         }
     }
+}
+
+bool AIManager::UseDiasporaQuake(const std::shared_ptr<
+    ActiveEntityState>& source, uint32_t skillID, float delay)
+{
+    auto zone = source ? source->GetZone() : nullptr;
+    if(!zone)
+    {
+        return false;
+    }
+    else if(zone->GetInstanceType() != InstanceType_t::DIASPORA)
+    {
+        LOG_ERROR(libcomp::String("Attempted to use a Diaspora quake skill"
+            " outside of a Diaspora instance: %1\n").Arg(skillID));
+        return false;
+    }
+
+    auto server = mServer.lock();
+
+    auto validSkillIDs = server->GetDefinitionManager()
+        ->GetFunctionIDSkills(SVR_CONST.SKILL_DIASPORA_QUAKE);
+    if(validSkillIDs.find(skillID) == validSkillIDs.end())
+    {
+        LOG_ERROR(libcomp::String("Attempted to use invalid Diaspora quake"
+            " skill: %1\n").Arg(skillID));
+        return false;
+    }
+
+    libcomp::Packet start;
+    start.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DIASPORA_QUAKE);
+    start.WriteS32Little(0);    // Not ending
+    start.WriteFloat(delay);
+    start.WriteS32Little(source->GetEntityID());
+
+    server->GetZoneManager()->BroadcastPacket(zone, start);
+
+    // Calculate use time to the half second
+    uint64_t useTime = ChannelServer::GetServerTime() +
+        ((uint64_t)(delay * 10.f) * 100000ULL);
+
+    // Schedule end signifier and skill usage
+    server->ScheduleWork(useTime, [](
+        const std::shared_ptr<ChannelServer> pServer,
+        const std::shared_ptr<ActiveEntityState> pSource, uint32_t pSkillID)
+        {
+            auto pZone = pSource->GetZone();
+            if(!pZone)
+            {
+                return;
+            }
+
+            libcomp::Packet stop;
+            stop.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_DIASPORA_QUAKE);
+            stop.WriteS32Little(1); // Ending
+            stop.WriteFloat(0.f);
+            stop.WriteS32Little(pSource->GetEntityID());
+
+            pServer->GetZoneManager()->BroadcastPacket(pZone, stop);
+
+            // Perform instant activation usage if the source is still alive
+            auto pSkillManager = pServer->GetSkillManager();
+            if(pSkillManager && pSource->IsAlive())
+            {
+                pSkillManager->ActivateSkill(pSource, pSkillID, 0, 0,
+                    ACTIVATION_NOTARGET);
+            }
+        }, server, source, skillID);
+
+    return true;
 }
 
 bool AIManager::Chase(const std::shared_ptr<ActiveEntityState>& eState,

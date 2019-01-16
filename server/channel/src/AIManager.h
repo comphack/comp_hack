@@ -195,6 +195,19 @@ public:
         int32_t targetID);
 
     /**
+     * Begin using a Diaspora quake skill from the supplied source entity.
+     * Notifications will be sent to players in the zone that the skill
+     * has started and another when it hits.
+     * @param source Pointer to the source of the skill
+     * @param skillID ID of the quake skill being used. The function ID
+     *  of this skill must match the correct type
+     * @param delay Delay from start to completion for the skill in seconds
+     * @return true if the skill started properly, false if it did not
+     */
+    bool UseDiasporaQuake(const std::shared_ptr<ActiveEntityState>& source,
+        uint32_t skillID, float delay);
+
+    /**
      * Create a move command that chases a specified target in the same
      * zone.
      * @param eState Pointer to the entity state

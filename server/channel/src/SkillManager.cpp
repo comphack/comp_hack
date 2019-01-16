@@ -966,9 +966,18 @@ void SkillManager::SendFailure(const std::shared_ptr<ActiveEntityState> source,
     }
 }
 
-bool SkillManager::SkillRestricted(const std::shared_ptr<ActiveEntityState> source,
+bool SkillManager::SkillRestricted(
+    const std::shared_ptr<ActiveEntityState> source,
     const std::shared_ptr<objects::MiSkillData>& skillData)
 {
+    if(skillData->GetDamage()->GetFunctionID() ==
+        SVR_CONST.SKILL_DIASPORA_QUAKE)
+    {
+        // The current state of the source is not checked for quakes, they
+        // just need to be alive when processed
+        return false;
+    }
+
     if(source->StatusRestrictActCount() > 0)
     {
         return true;

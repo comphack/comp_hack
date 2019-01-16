@@ -32,6 +32,7 @@
 
 // Qt Includes
 #include <PushIgnore.h>
+#include <QCloseEvent>
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -72,7 +73,9 @@
 #include <SpawnGroup.h>
 
 // Standard C++11 Includes
+#include <chrono>
 #include <fstream>
+#include <future>
 #include <iostream>
 
 FindRefWindow::FindRefWindow(MainWindow *pMainWindow, QWidget *pParent) :
@@ -208,6 +211,15 @@ bool FindRefWindow::Open(const libcomp::String& objType, uint32_t val)
     raise();
 
     return true;
+}
+
+void FindRefWindow::closeEvent(QCloseEvent* event)
+{
+    if(!ui->centralwidget->isEnabled())
+    {
+        // If we're currently running the search process, block close events
+        event->ignore();
+    }
 }
 
 void FindRefWindow::BuildDropSetFilters()
@@ -768,6 +780,59 @@ void FindRefWindow::Find()
     }
 
     ui->progressBar->show();
+    ui->centralwidget->setDisabled(true);
+    ui->menubar->setDisabled(true);
+
+    std::future<void> f = std::async(&FindRefWindow::FindAsync, this);
+
+    std::chrono::milliseconds span(10);
+    while(f.wait_for(span) == std::future_status::timeout)
+    {
+        // Actively wait by calling the event processor
+        QApplication::processEvents();
+    }
+
+    ui->progressBar->hide();
+    ui->centralwidget->setDisabled(false);
+    ui->menubar->setDisabled(false);
+}
+
+void FindRefWindow::SetZoneDirectory()
+{
+    auto defaultDirectory = ui->zoneDirectory->text();
+    if(defaultDirectory.isEmpty())
+    {
+        defaultDirectory = mMainWindow->GetDialogDirectory();
+    }
+
+    QString qPath = QFileDialog::getExistingDirectory(this,
+        tr("Set Zone XML folder"), defaultDirectory);
+    if(qPath.isEmpty())
+    {
+        return;
+    }
+
+    ui->zoneDirectory->setText(qPath);
+}
+
+void FindRefWindow::ToggleZoneDirectory()
+{
+    if(ui->useZoneDirectory->isChecked())
+    {
+        ui->zoneDirectory->setDisabled(false);
+        ui->zoneDirectoryBrowse->setDisabled(false);
+    }
+    else
+    {
+        ui->zoneDirectory->setDisabled(true);
+        ui->zoneDirectoryBrowse->setDisabled(true);
+    }
+}
+
+void FindRefWindow::FindAsync()
+{
+    uint32_t val = (uint32_t)ui->value->value();
+    uint32_t maxVal = (uint32_t)ui->maxValue->value();
 
     ui->results->clear();
     ui->results->setColumnCount(0);
@@ -1165,40 +1230,6 @@ void FindRefWindow::Find()
     else
     {
         ui->lblRefs->setText("No references found");
-    }
-
-    ui->progressBar->hide();
-}
-
-void FindRefWindow::SetZoneDirectory()
-{
-    auto defaultDirectory = ui->zoneDirectory->text();
-    if(defaultDirectory.isEmpty())
-    {
-        defaultDirectory = mMainWindow->GetDialogDirectory();
-    }
-
-    QString qPath = QFileDialog::getExistingDirectory(this,
-        tr("Set Zone XML folder"), defaultDirectory);
-    if(qPath.isEmpty())
-    {
-        return;
-    }
-
-    ui->zoneDirectory->setText(qPath);
-}
-
-void FindRefWindow::ToggleZoneDirectory()
-{
-    if(ui->useZoneDirectory->isChecked())
-    {
-        ui->zoneDirectory->setDisabled(false);
-        ui->zoneDirectoryBrowse->setDisabled(false);
-    }
-    else
-    {
-        ui->zoneDirectory->setDisabled(true);
-        ui->zoneDirectoryBrowse->setDisabled(true);
     }
 }
 

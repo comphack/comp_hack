@@ -33,6 +33,7 @@
 
 // Qt Includes
 #include <PushIgnore.h>
+#include <QCloseEvent>
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QInputDialog>
@@ -190,16 +191,20 @@ size_t DropSetWindow::GetLoadedDropSetCount()
 
 void DropSetWindow::closeEvent(QCloseEvent* event)
 {
-    (void)event;
-
-    mMainWindow->CloseSelectors(this);
-
     if(mFindWindow)
     {
-        mFindWindow->close();
+        if(!mFindWindow->close())
+        {
+            // Close failed (possibly searching) so ignore
+            event->ignore();
+            return;
+        }
+
         mFindWindow->deleteLater();
         mFindWindow = 0;
     }
+
+    mMainWindow->CloseSelectors(this);
 }
 
 void DropSetWindow::FileSelectionChanged()

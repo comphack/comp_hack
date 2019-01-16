@@ -64,6 +64,8 @@ public:
 
     bool Open(const libcomp::String& objType, uint32_t val);
 
+    void closeEvent(QCloseEvent* event);
+
 private slots:
     void Export();
     void Find();
@@ -91,6 +93,8 @@ private:
 
     void GetValue1(const std::shared_ptr<objects::EventCondition>& c,
         std::set<uint32_t>& ids);
+
+    void FindAsync();
 
     void AddResult(uint32_t id, const libcomp::String& location,
         const libcomp::String& section);

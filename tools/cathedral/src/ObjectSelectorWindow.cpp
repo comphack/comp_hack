@@ -33,6 +33,7 @@
 
 // Qt Includes
 #include <PushIgnore.h>
+#include <QCloseEvent>
 #include "ui_ObjectSelectorWindow.h"
 #include <PopIgnore.h>
 
@@ -132,11 +133,15 @@ bool ObjectSelectorWindow::CloseIfConnected(QWidget* topLevel)
 
 void ObjectSelectorWindow::closeEvent(QCloseEvent* event)
 {
-    (void)event;
-
     if(mFindWindow)
     {
-        mFindWindow->close();
+        if(!mFindWindow->close())
+        {
+            // Close failed (possibly searching) so ignore
+            event->ignore();
+            return;
+        }
+
         mFindWindow->deleteLater();
         mFindWindow = 0;
     }

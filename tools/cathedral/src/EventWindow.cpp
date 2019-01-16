@@ -66,6 +66,8 @@
 #include <QShortcut>
 #include <QSpinBox>
 #include <QTextEdit>
+
+#include "ui_FindEventAction.h"
 #include <PopIgnore.h>
 
 // object Includes
@@ -141,6 +143,11 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
     ui = new Ui::EventWindow;
     ui->setupUi(this);
 
+    findActionWidget = new QWidget;
+
+    findAction = new Ui::FindEventAction;
+    findAction->setupUi(findActionWidget);
+
     QAction *pAction = nullptr;
 
     QMenu *pMenu = new QMenu(tr("Add Event"));
@@ -197,6 +204,11 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
 
     ui->addEvent->setMenu(pMenu);
 
+    for(auto pair : ActionList::GetActions())
+    {
+        findAction->action->addItem(qs(pair.first), pair.second);
+    }
+
     ui->removeEvent->hide();
     ui->actionMoveUp->setDisabled(true);
     ui->actionMoveDown->setDisabled(true);
@@ -224,6 +236,8 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
 
     connect(ui->actionRefresh, SIGNAL(triggered()), this, SLOT(Refresh()));
     connect(ui->actionGoto, SIGNAL(triggered()), this, SLOT(GoTo()));
+    connect(ui->actionFindAction, SIGNAL(triggered()), this,
+        SLOT(FindAction()));
     connect(ui->actionFileView, SIGNAL(toggled(bool)), this,
         SLOT(FileViewChanged()));
     connect(ui->actionCollapseAll, SIGNAL(triggered()), this,
@@ -241,11 +255,15 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
         SLOT(ChangeFileEventIDs()));
     connect(ui->actionChangeTreeIDs, SIGNAL(triggered()), this,
         SLOT(ChangeTreeBranchIDs()));
+
+    connect(findAction->next, SIGNAL(clicked()), this,
+        SLOT(FindNextAction()));
 }
 
 EventWindow::~EventWindow()
 {
     delete ui;
+    delete findActionWidget;
 }
 
 bool EventWindow::GoToEvent(const libcomp::String& eventID)
@@ -449,6 +467,8 @@ void EventWindow::closeEvent(QCloseEvent* event)
     (void)event;
 
     mMainWindow->CloseSelectors(this);
+
+    findActionWidget->close();
 }
 
 void EventWindow::FileSelectionChanged()
@@ -801,6 +821,83 @@ void EventWindow::GoTo()
     }
 
     GoToEvent(cs(qEventID));
+}
+
+void EventWindow::FindAction()
+{
+    findActionWidget->show();
+    findActionWidget->raise();
+
+    findAction->lblError->setText("");
+}
+
+void EventWindow::FindNextAction()
+{
+    auto fIter = mFiles.find(mCurrentFileName);
+    if(fIter == mFiles.end())
+    {
+        // No file
+        return;
+    }
+
+    auto file = fIter->second;
+
+    findAction->lblError->setText("");
+
+    auto actionType = (objects::Action::ActionType_t)
+        findAction->action->currentData().toInt();
+
+    // Build out the event list, ending with the current event
+    std::list<std::shared_ptr<FileEvent>> toEnd;
+    std::list<std::shared_ptr<FileEvent>> allEvents;
+
+    auto* currentList = mCurrentEvent ? &toEnd : &allEvents;
+    for(auto fEvent : file->Events)
+    {
+        currentList->push_back(fEvent);
+
+        if(fEvent == mCurrentEvent)
+        {
+            currentList = &allEvents;
+        }
+    }
+
+    for(auto fEvent : toEnd)
+    {
+        allEvents.push_back(fEvent);
+    }
+
+    // Go to the first event with the selected action type
+    for(auto fEvent : allEvents)
+    {
+        auto pa = std::dynamic_pointer_cast<objects::EventPerformActions>(
+            fEvent->Event);
+        if(pa)
+        {
+            auto actions = pa->GetActions();
+            for(auto action : GetAllActions(actions))
+            {
+                if(action->GetActionType() == actionType)
+                {
+                    // Match found, go to new event or do nothing if current
+                    if(mCurrentEvent == fEvent)
+                    {
+                        findAction->lblError->setText("Only one event found");
+                        return;
+                    }
+                    else
+                    {
+                        GoToEvent(pa->GetID());
+                        findActionWidget->raise();
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    // Nothing found, print error
+    findAction->lblError->setText("Action type not found");
 }
 
 void EventWindow::Back()
@@ -1428,6 +1525,8 @@ bool EventWindow::SelectFile(const libcomp::String& path)
 
     ui->treeWidget->expandAll();
     ui->treeWidget->resizeColumnToContents(0);
+
+    findAction->lblError->setText("");
 
     return true;
 }
@@ -2402,6 +2501,47 @@ bool EventWindow::ChangeActionEventIDs(const std::unordered_map<
     const std::list<std::shared_ptr<objects::Action>>& actions)
 {
     bool updated = false;
+    for(auto action : GetAllActions(actions))
+    {
+        switch(action->GetActionType())
+        {
+        case objects::Action::ActionType_t::START_EVENT:
+            {
+                auto act = std::dynamic_pointer_cast<
+                    objects::ActionStartEvent>(action);
+                auto iter = idMap.find(act->GetEventID());
+                if(iter != idMap.end())
+                {
+                    act->SetEventID(iter->second);
+                    updated = true;
+                }
+            }
+            break;
+        case objects::Action::ActionType_t::ZONE_INSTANCE:
+            {
+                auto act = std::dynamic_pointer_cast<
+                    objects::ActionZoneInstance>(action);
+                auto iter = idMap.find(act->GetTimerExpirationEventID());
+                if(iter != idMap.end())
+                {
+                    act->SetTimerExpirationEventID(iter->second);
+                    updated = true;
+                }
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    return updated;
+}
+
+std::list<std::shared_ptr<objects::Action>> EventWindow::GetAllActions(
+    const std::list<std::shared_ptr<objects::Action>>& actions)
+{
+    std::list<std::shared_ptr<objects::Action>> allActions;
+
     auto currentActions = actions;
 
     std::list<std::shared_ptr<objects::Action>> newActions;
@@ -2410,6 +2550,8 @@ bool EventWindow::ChangeActionEventIDs(const std::unordered_map<
         // Actions can't nest forever so loop until we're done
         for(auto action : currentActions)
         {
+            allActions.push_back(action);
+
             switch(action->GetActionType())
             {
             case objects::Action::ActionType_t::DELAY:
@@ -2432,30 +2574,6 @@ bool EventWindow::ChangeActionEventIDs(const std::unordered_map<
                     }
                 }
                 break;
-            case objects::Action::ActionType_t::START_EVENT:
-                {
-                    auto act = std::dynamic_pointer_cast<
-                        objects::ActionStartEvent>(action);
-                    auto iter = idMap.find(act->GetEventID());
-                    if(iter != idMap.end())
-                    {
-                        act->SetEventID(iter->second);
-                        updated = true;
-                    }
-                }
-                break;
-            case objects::Action::ActionType_t::ZONE_INSTANCE:
-                {
-                    auto act = std::dynamic_pointer_cast<
-                        objects::ActionZoneInstance>(action);
-                    auto iter = idMap.find(act->GetTimerExpirationEventID());
-                    if(iter != idMap.end())
-                    {
-                        act->SetTimerExpirationEventID(iter->second);
-                        updated = true;
-                    }
-                }
-                break;
             default:
                 break;
             }
@@ -2465,7 +2583,7 @@ bool EventWindow::ChangeActionEventIDs(const std::unordered_map<
         newActions.clear();
     }
 
-    return updated;
+    return allActions;
 }
 
 libcomp::String EventWindow::GetCommonEventPrefix(

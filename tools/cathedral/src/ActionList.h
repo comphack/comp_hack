@@ -63,6 +63,8 @@ public:
     void MoveUp(Action *pAction);
     void MoveDown(Action *pAction);
 
+    static std::list<std::pair<libcomp::String, int32_t>> GetActions();
+
 protected slots:
     void AddNewAction();
     void RefreshPositions();

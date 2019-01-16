@@ -93,7 +93,7 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>306</width>
+             <width>362</width>
              <height>376</height>
             </rect>
            </property>
@@ -202,6 +202,7 @@
     <addaction name="actionRefresh"/>
     <addaction name="actionGoto"/>
     <addaction name="actionFileView"/>
+    <addaction name="actionFindAction"/>
     <addaction name="separator"/>
     <addaction name="actionCollapseAll"/>
     <addaction name="actionExpandAll"/>
@@ -358,6 +359,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionFindAction">
+   <property name="text">
+    <string>Find File Action</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+F</string>
    </property>
   </action>
  </widget>

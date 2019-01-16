@@ -98,125 +98,12 @@ ActionList::ActionList(QWidget *pParent) : QWidget(pParent)
 
     QMenu *pAddMenu = new QMenu(tr("Add"));
 
-    pAction = pAddMenu->addAction("Add/Remove Items");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::ADD_REMOVE_ITEMS));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Add/Remove Status");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::ADD_REMOVE_STATUS));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Create Loot");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::CREATE_LOOT));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Delay");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::DELAY));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Display Message");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::DISPLAY_MESSAGE));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Grant Skills");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::GRANT_SKILLS));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Grant XP");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::GRANT_XP));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Play BGM");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::PLAY_BGM));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Play Sound Effect");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::PLAY_SOUND_EFFECT));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Run Script");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::RUN_SCRIPT));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Set Homepoint");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::SET_HOMEPOINT));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Set NPC State");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::SET_NPC_STATE));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Spawn");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::SPAWN));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Special Direction");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::SPECIAL_DIRECTION));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Stage Effect");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::STAGE_EFFECT));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Start Event");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::START_EVENT));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Update COMP");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::UPDATE_COMP));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Update Flag");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::UPDATE_FLAG));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Update LNC");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::UPDATE_LNC));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Update Points");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::UPDATE_POINTS));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Update Quest");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::UPDATE_QUEST));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Update Zone Flags");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::UPDATE_ZONE_FLAGS));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Zone Change");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::ZONE_CHANGE));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
-
-    pAction = pAddMenu->addAction("Zone Instance");
-    pAction->setData(to_underlying(
-        objects::Action::ActionType_t::ZONE_INSTANCE));
-    connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
+    for(auto pair : GetActions())
+    {
+        pAction = pAddMenu->addAction(qs(pair.first));
+        pAction->setData(pair.second);
+        connect(pAction, SIGNAL(triggered()), this, SLOT(AddNewAction()));
+    }
 
     ui->actionAdd->setMenu(pAddMenu);
 }
@@ -417,6 +304,63 @@ void ActionList::MoveDown(Action *pAction)
     RefreshPositions();
 
     emit rowEdit();
+}
+
+std::list<std::pair<libcomp::String, int32_t>> ActionList::GetActions()
+{
+    static std::list<std::pair<libcomp::String, int32_t>> actions =
+        { {
+            std::make_pair(libcomp::String("Add/Remove Items"),
+                (int32_t)objects::Action::ActionType_t::ADD_REMOVE_ITEMS),
+            std::make_pair(libcomp::String("Add/Remove Status"),
+                (int32_t)objects::Action::ActionType_t::ADD_REMOVE_STATUS),
+            std::make_pair(libcomp::String("Create Loot"),
+                (int32_t)objects::Action::ActionType_t::CREATE_LOOT),
+            std::make_pair(libcomp::String("Delay"),
+                (int32_t)objects::Action::ActionType_t::DELAY),
+            std::make_pair(libcomp::String("Display Message"),
+                (int32_t)objects::Action::ActionType_t::DISPLAY_MESSAGE),
+            std::make_pair(libcomp::String("Grant Skills"),
+                (int32_t)objects::Action::ActionType_t::GRANT_SKILLS),
+            std::make_pair(libcomp::String("Grant XP"),
+                (int32_t)objects::Action::ActionType_t::GRANT_XP),
+            std::make_pair(libcomp::String("Play BGM"),
+                (int32_t)objects::Action::ActionType_t::PLAY_BGM),
+            std::make_pair(libcomp::String("Play Sound Effect"),
+                (int32_t)objects::Action::ActionType_t::PLAY_SOUND_EFFECT),
+            std::make_pair(libcomp::String("Run Script"),
+                (int32_t)objects::Action::ActionType_t::RUN_SCRIPT),
+            std::make_pair(libcomp::String("Set Homepoint"),
+                (int32_t)objects::Action::ActionType_t::SET_HOMEPOINT),
+            std::make_pair(libcomp::String("Set NPC State"),
+                (int32_t)objects::Action::ActionType_t::SET_NPC_STATE),
+            std::make_pair(libcomp::String("Spawn"),
+                (int32_t)objects::Action::ActionType_t::SPAWN),
+            std::make_pair(libcomp::String("Special Direction"),
+                (int32_t)objects::Action::ActionType_t::SPECIAL_DIRECTION),
+            std::make_pair(libcomp::String("Stage Effect"),
+                (int32_t)objects::Action::ActionType_t::STAGE_EFFECT),
+            std::make_pair(libcomp::String("Start Event"),
+                (int32_t)objects::Action::ActionType_t::START_EVENT),
+            std::make_pair(libcomp::String("Update COMP"),
+                (int32_t)objects::Action::ActionType_t::UPDATE_COMP),
+            std::make_pair(libcomp::String("Update Flag"),
+                (int32_t)objects::Action::ActionType_t::UPDATE_FLAG),
+            std::make_pair(libcomp::String("Update LNC"),
+                (int32_t)objects::Action::ActionType_t::UPDATE_LNC),
+            std::make_pair(libcomp::String("Update Points"),
+                (int32_t)objects::Action::ActionType_t::UPDATE_POINTS),
+            std::make_pair(libcomp::String("Update Quest"),
+                (int32_t)objects::Action::ActionType_t::UPDATE_QUEST),
+            std::make_pair(libcomp::String("Update Zone Flags"),
+                (int32_t)objects::Action::ActionType_t::UPDATE_ZONE_FLAGS),
+            std::make_pair(libcomp::String("Zone Change"),
+                (int32_t)objects::Action::ActionType_t::ZONE_CHANGE),
+            std::make_pair(libcomp::String("Zone Instance"),
+                (int32_t)objects::Action::ActionType_t::ZONE_INSTANCE)
+        } };
+
+    return actions;
 }
 
 void ActionList::ClearActions()

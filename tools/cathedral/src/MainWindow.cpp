@@ -498,7 +498,7 @@ void MainWindow::RegisterBinaryDataSet(const libcomp::String& objType,
         {
             if(createSelector)
             {
-                mObjectSelectors[objType] = new ObjectSelectorWindow();
+                mObjectSelectors[objType] = new ObjectSelectorWindow(this);
                 iter = mObjectSelectors.find(objType);
             }
             else
@@ -508,7 +508,8 @@ void MainWindow::RegisterBinaryDataSet(const libcomp::String& objType,
             }
         }
 
-        iter->second->Bind(new ObjectSelectorList(namedSet, false));
+        iter->second->Bind(new ObjectSelectorList(namedSet, objType, false),
+            false);
     }
 }
 
@@ -617,9 +618,9 @@ bool MainWindow::LoadBinaryData(const libcomp::String& binaryFile,
         if(addSelector && namedSet &&
             mObjectSelectors.find(objName) == mObjectSelectors.end())
         {
-            ObjectSelectorWindow* selector = new ObjectSelectorWindow();
-            selector->Bind(new ObjectSelectorList(namedSet,
-                selectorAllowBlanks));
+            ObjectSelectorWindow* selector = new ObjectSelectorWindow(this);
+            selector->Bind(new ObjectSelectorList(namedSet, objName,
+                selectorAllowBlanks), true);
             mObjectSelectors[objName] = selector;
 
             // Build a menu action for viewing without selection

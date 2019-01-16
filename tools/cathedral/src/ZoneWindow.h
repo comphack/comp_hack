@@ -58,6 +58,7 @@ public:
     std::shared_ptr<objects::ServerZone> Definition;
     std::shared_ptr<objects::ServerZone> CurrentZone;
     std::shared_ptr<objects::ServerZonePartial> CurrentPartial;
+    libcomp::String Path;
 };
 
 class ZoneWindow : public QMainWindow
@@ -81,6 +82,9 @@ public:
         bool forUpdate);
 
     bool ShowSpot(uint32_t spotID);
+
+    std::shared_ptr<objects::ServerZone> LoadZoneFromFile(
+        const libcomp::String& path);
 
     void closeEvent(QCloseEvent* event) override;
 
@@ -169,7 +173,6 @@ private:
     QPoint mLastMousePos;
     bool mDragging;
 
-    libcomp::String mZonePath;
     std::shared_ptr<MergedZone> mMergedZone;
     std::shared_ptr<objects::MiZoneData> mZoneData;
     std::shared_ptr<objects::QmpFile> mQmpFile;

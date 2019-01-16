@@ -53,6 +53,7 @@ public:
 };
 
 class DropSetFile;
+class FindRefWindow;
 class MainWindow;
 
 class DropSetWindow : public QMainWindow
@@ -81,6 +82,8 @@ private slots:
     void Refresh();
     void SelectDropSet();
 
+    void Find();
+
 private:
     bool LoadFileFromPath(const libcomp::String& path);
     bool SelectFile(const libcomp::String& path);
@@ -88,6 +91,8 @@ private:
     void SaveFiles(const std::list<libcomp::String>& paths);
 
     MainWindow *mMainWindow;
+
+    FindRefWindow* mFindWindow;
 
     std::unordered_map<libcomp::String, std::shared_ptr<DropSetFile>> mFiles;
 

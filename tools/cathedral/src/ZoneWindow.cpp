@@ -607,6 +607,52 @@ bool ZoneWindow::ShowSpot(uint32_t spotID)
     return true;
 }
 
+std::shared_ptr<objects::ServerZone> ZoneWindow::LoadZoneFromFile(
+    const libcomp::String& path)
+{
+    tinyxml2::XMLDocument doc;
+    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+    {
+        LOG_ERROR(libcomp::String("Failed to parse file: %1\n").Arg(path));
+        return nullptr;
+    }
+
+    libcomp::BinaryDataSet pSet([]()
+        {
+            return std::make_shared<objects::ServerZone>();
+        },
+
+        [](const std::shared_ptr<libcomp::Object>& obj)
+        {
+            return std::dynamic_pointer_cast<objects::ServerZone>(
+                obj)->GetID();
+        }
+    );
+
+    if(!pSet.LoadXml(doc))
+    {
+        LOG_ERROR(libcomp::String("Failed to load file: %1\n").Arg(path));
+        return nullptr;
+    }
+
+    auto objs = pSet.GetObjects();
+    if(1 != objs.size())
+    {
+        LOG_ERROR(libcomp::String("More than 1 zone in the XML file: %1\n")
+            .Arg(path));
+        return nullptr;
+    }
+
+    auto zone = std::dynamic_pointer_cast<objects::ServerZone>(objs.front());
+    if(!zone)
+    {
+        LOG_ERROR(libcomp::String("Internal error loading zone from file:"
+            " %1\n").Arg(path));
+    }
+
+    return zone;
+}
+
 void ZoneWindow::closeEvent(QCloseEvent* event)
 {
     (void)event;
@@ -625,60 +671,17 @@ void ZoneWindow::LoadZoneFile()
 
     mMainWindow->SetDialogDirectory(path, true);
 
-    tinyxml2::XMLDocument doc;
-    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.toLocal8Bit().constData()))
-    {
-        LOG_ERROR(libcomp::String("Failed to parse file: %1\n").Arg(
-            path.toLocal8Bit().constData()));
-
-        return;
-    }
-
-    libcomp::BinaryDataSet pSet([]()
-        {
-            return std::make_shared<objects::ServerZone>();
-        },
-
-        [](const std::shared_ptr<libcomp::Object>& obj)
-        {
-            return std::dynamic_pointer_cast<objects::ServerZone>(
-                obj)->GetID();
-        }
-    );
-
-    if(!pSet.LoadXml(doc))
-    {
-        LOG_ERROR(libcomp::String("Failed to load file: %1\n").Arg(
-            path.toLocal8Bit().constData()));
-
-        return;
-    }
-
-    auto objs = pSet.GetObjects();
-    if(1 != objs.size())
-    {
-        LOG_ERROR("There must be exactly 1 zone in the XML file.\n");
-
-        return;
-    }
-
-    auto zone = std::dynamic_pointer_cast<objects::ServerZone>(objs.front());
-    if(!zone)
-    {
-        LOG_ERROR("Internal error loading zone.\n");
-
-        return;
-    }
+    auto zone = LoadZoneFromFile(cs(path));
 
     // Save any properties currently set (do not save to zone file)
     SaveProperties();
 
-    mZonePath = cs(path);
+    mMergedZone->Path = cs(path);
     mMergedZone->Definition = zone;
     mMergedZone->CurrentZone = zone;
     mMergedZone->CurrentPartial = nullptr;
 
-    mMainWindow->UpdateActiveZone(mZonePath);
+    mMainWindow->UpdateActiveZone(mMergedZone->Path);
 
     // Reset all "show" flags and rebuild the spot filters
     ui.actionShowNPCs->blockSignals(true);
@@ -1515,7 +1518,8 @@ bool ZoneWindow::LoadZonePartials(const libcomp::String& path)
 
 void ZoneWindow::SaveZone()
 {
-    if(mZonePath.Length() == 0 || !mMergedZone || !mMergedZone->CurrentZone)
+    if(mMergedZone->Path.Length() == 0 || !mMergedZone ||
+        !mMergedZone->CurrentZone)
     {
         // No zone file loaded
         return;
@@ -1537,9 +1541,10 @@ void ZoneWindow::SaveZone()
 
     XmlHandler::SimplifyObjects(updatedNodes);
 
-    doc.SaveFile(mZonePath.C());
+    doc.SaveFile(mMergedZone->Path.C());
 
-    LOG_DEBUG(libcomp::String("Updated zone file '%1'\n").Arg(mZonePath));
+    LOG_DEBUG(libcomp::String("Updated zone file '%1'\n")
+        .Arg(mMergedZone->Path));
 }
 
 void ZoneWindow::SavePartials(const std::set<uint32_t>& partialIDs)

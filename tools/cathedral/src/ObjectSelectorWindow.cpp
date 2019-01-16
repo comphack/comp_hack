@@ -26,6 +26,7 @@
 #include "ObjectSelectorWindow.h"
 
 // Cathedral Includes
+#include "FindRefWindow.h"
 #include "MainWindow.h"
 #include "ObjectSelectorBase.h"
 #include "ObjectSelectorList.h"
@@ -35,15 +36,20 @@
 #include "ui_ObjectSelectorWindow.h"
 #include <PopIgnore.h>
 
-ObjectSelectorWindow::ObjectSelectorWindow(QWidget *pParent) :
-    QWidget(pParent), mSelectorControl(0)
+ObjectSelectorWindow::ObjectSelectorWindow(MainWindow* pMainWindow,
+    QWidget *pParent) : QMainWindow(pParent), mMainWindow(pMainWindow),
+    mSelectorControl(0), mFindWindow(0)
 {
     ui = new Ui::ObjectSelectorWindow;
     ui->setupUi(this);
 
     ui->select->setDisabled(true);
 
+    // Hide find button by default
+    ui->find->hide();
+
     connect(ui->select, SIGNAL(clicked()), this, SLOT(ObjectSelected()));
+    connect(ui->find, SIGNAL(clicked()), this, SLOT(Find()));
 }
 
 ObjectSelectorWindow::~ObjectSelectorWindow()
@@ -51,7 +57,7 @@ ObjectSelectorWindow::~ObjectSelectorWindow()
     delete ui;
 }
 
-void ObjectSelectorWindow::Bind(ObjectSelectorList* listControl)
+void ObjectSelectorWindow::Bind(ObjectSelectorList* listControl, bool findRef)
 {
     auto existingControls = findChildren<ObjectSelectorList*>();
     for(auto ctrl : existingControls)
@@ -59,6 +65,11 @@ void ObjectSelectorWindow::Bind(ObjectSelectorList* listControl)
         ui->listContainerLayout->removeWidget(ctrl);
 
         ctrl->deleteLater();
+    }
+
+    if(findRef)
+    {
+        ui->find->show();
     }
 
     ui->listContainerLayout->addWidget(listControl);
@@ -83,15 +94,14 @@ void ObjectSelectorWindow::Open(ObjectSelectorBase* ctrl)
     }
 
     // Load object list if needed
-    auto item = ui->listContainerLayout->itemAt(0);
-    if(item)
+    auto listControl = findChild<ObjectSelectorList*>();
+    if(listControl)
     {
-        auto list = (ObjectSelectorList*)item->widget();
-        list->LoadIfNeeded();
+        listControl->LoadIfNeeded();
 
         if(value)
         {
-            list->Select(value);
+            listControl->Select(value);
         }
     }
 
@@ -120,17 +130,27 @@ bool ObjectSelectorWindow::CloseIfConnected(QWidget* topLevel)
     return false;
 }
 
+void ObjectSelectorWindow::closeEvent(QCloseEvent* event)
+{
+    (void)event;
+
+    if(mFindWindow)
+    {
+        mFindWindow->close();
+        mFindWindow->deleteLater();
+        mFindWindow = 0;
+    }
+}
+
 void ObjectSelectorWindow::ObjectSelected()
 {
-    auto item = ui->listContainerLayout->itemAt(0);
-    if(item && mSelectorControl)
+    auto listControl = findChild<ObjectSelectorList*>();
+    if(listControl && mSelectorControl)
     {
-        auto list = (ObjectSelectorList*)item->widget();
-
-        auto obj = list->GetSelectedObject();
+        auto obj = listControl->GetSelectedObject();
         if(obj)
         {
-            mSelectorControl->SetValue((uint32_t)list
+            mSelectorControl->SetValue((uint32_t)listControl
                 ->GetObjectID(obj).toUInt());
             mSelectorControl = nullptr;
             close();
@@ -140,12 +160,10 @@ void ObjectSelectorWindow::ObjectSelected()
 
 void ObjectSelectorWindow::SelectedObjectChanged()
 {
-    auto item = ui->listContainerLayout->itemAt(0);
-    if(item)
+    auto listControl = findChild<ObjectSelectorList*>();
+    if(listControl)
     {
-        auto list = (ObjectSelectorList*)item->widget();
-
-        auto obj = list->GetSelectedObject();
+        auto obj = listControl->GetSelectedObject();
         if(obj)
         {
             ui->select->setDisabled(false);
@@ -154,5 +172,26 @@ void ObjectSelectorWindow::SelectedObjectChanged()
         {
             ui->select->setDisabled(true);
         }
+    }
+}
+
+void ObjectSelectorWindow::Find()
+{
+    auto listControl = findChild<ObjectSelectorList*>();
+    if(listControl)
+    {
+        if(!mFindWindow)
+        {
+            mFindWindow = new FindRefWindow(mMainWindow);
+        }
+        
+        uint32_t val = 0;
+        auto obj = listControl->GetSelectedObject();
+        if(obj)
+        {
+            val = (uint32_t)listControl->GetObjectID(obj).toUInt();
+        }
+
+        mFindWindow->Open(listControl->GetObjectType(), val);
     }
 }

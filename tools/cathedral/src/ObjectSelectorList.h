@@ -27,6 +27,9 @@
 
 #include "ObjectList.h"
 
+// libcomp Includes
+#include <CString.h>
+
 class BinaryDataNamedSet;
 
 class ObjectSelectorList : public ObjectList
@@ -35,8 +38,8 @@ class ObjectSelectorList : public ObjectList
 
 public:
     explicit ObjectSelectorList(const std::shared_ptr<
-        BinaryDataNamedSet>& dataSet, bool emptySelectable,
-        QWidget *pParent = 0);
+        BinaryDataNamedSet>& dataSet, const libcomp::String& objType,
+        bool emptySelectable, QWidget *pParent = 0);
     virtual ~ObjectSelectorList();
     
     QString GetObjectID(const std::shared_ptr<
@@ -49,10 +52,14 @@ public:
 
     void LoadIfNeeded();
 
+    libcomp::String GetObjectType() const;
+
     std::shared_ptr<libcomp::Object> GetSelectedObject();
 
 private:
     std::shared_ptr<BinaryDataNamedSet> mDataSet;
+
+    libcomp::String mObjType;
 
     bool mEmptySelectable;
 

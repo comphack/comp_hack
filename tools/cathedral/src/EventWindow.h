@@ -69,6 +69,13 @@ public:
 
     std::list<libcomp::String> GetCurrentEventIDs() const;
 
+    libcomp::String GetCurrentFile() const;
+
+    std::list<libcomp::String> GetCurrentFiles() const;
+
+    std::list<std::shared_ptr<objects::Event>> GetFileEvents(
+        const libcomp::String& path) const;
+
     void closeEvent(QCloseEvent* event) override;
 
 private slots:

@@ -27,7 +27,7 @@
 
 // Qt Includes
 #include <PushIgnore.h>
-#include <QWidget>
+#include <QMainWindow>
 #include <PopIgnore.h>
 
 // libcomp Includes
@@ -41,31 +41,41 @@ class ObjectSelectorWindow;
 
 } // namespace Ui
 
+class FindRefWindow;
+class MainWindow;
 class ObjectSelectorBase;
 class ObjectSelectorList;
 
-class ObjectSelectorWindow : public QWidget
+class ObjectSelectorWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    explicit ObjectSelectorWindow(QWidget *pParent = 0);
+    explicit ObjectSelectorWindow(MainWindow* pMainWindow,
+        QWidget *pParent = 0);
     virtual ~ObjectSelectorWindow();
 
-    void Bind(ObjectSelectorList* listControl);
+    void Bind(ObjectSelectorList* listControl, bool findRef);
 
     void Open(ObjectSelectorBase* ctrl = 0);
 
     bool CloseIfConnected(QWidget* topLevel);
 
+    void closeEvent(QCloseEvent* event) override;
+
 protected slots:
     void ObjectSelected();
     void SelectedObjectChanged();
+    void Find();
 
 private:
     Ui::ObjectSelectorWindow *ui;
 
+    MainWindow* mMainWindow;
+
     ObjectSelectorBase* mSelectorControl;
+
+    FindRefWindow* mFindWindow;
 };
 
 #endif // TOOLS_CATHEDRAL_SRC_OBJECTSELECTORWINDOW_H

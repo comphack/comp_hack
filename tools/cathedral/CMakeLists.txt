@@ -78,6 +78,7 @@ SET(${PROJECT_NAME}_SRCS
     src/EventPromptUI.cpp
     src/EventRef.cpp
     src/EventWindow.cpp
+    src/FindRefWindow.cpp
     src/ItemDropUI.cpp
     src/MainWindow.cpp
     src/NPCList.cpp
@@ -152,6 +153,7 @@ SET(${PROJECT_NAME}_HDRS
     src/EventPromptUI.h
     src/EventRef.h
     src/EventWindow.h
+    src/FindRefWindow.h
     src/ItemDropUI.h
     src/MainWindow.h
     src/NPCList.h
@@ -229,6 +231,7 @@ SET(${PROJECT_NAME}_UIS
     ui/EventPrompt.ui
     ui/EventRef.ui
     ui/EventWindow.ui
+    ui/FindRefWindow.ui
     ui/ItemDrop.ui
     ui/MainWindow.ui
     ui/ObjectList.ui

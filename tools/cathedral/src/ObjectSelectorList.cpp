@@ -31,9 +31,10 @@
 #include "ObjectListModel.h"
 
 ObjectSelectorList::ObjectSelectorList(const std::shared_ptr<
-    BinaryDataNamedSet>& dataSet, bool emtpySelectable,
-    QWidget *pParent) : ObjectList(pParent), mDataSet(dataSet),
-    mEmptySelectable(emtpySelectable), mLoaded(false)
+    BinaryDataNamedSet>& dataSet, const libcomp::String& objType,
+    bool emtpySelectable, QWidget *pParent) : ObjectList(pParent),
+    mDataSet(dataSet), mObjType(objType), mEmptySelectable(emtpySelectable),
+    mLoaded(false)
 {
 }
 
@@ -97,6 +98,11 @@ void ObjectSelectorList::LoadIfNeeded()
 
         mLoaded = true;
     }
+}
+
+libcomp::String ObjectSelectorList::GetObjectType() const
+{
+    return mObjType;
 }
 
 std::shared_ptr<libcomp::Object> ObjectSelectorList::GetSelectedObject()

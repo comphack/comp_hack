@@ -411,6 +411,39 @@ std::list<libcomp::String> EventWindow::GetCurrentEventIDs() const
     return eventIDs;
 }
 
+libcomp::String EventWindow::GetCurrentFile() const
+{
+    return mCurrentFileName;
+}
+
+std::list<libcomp::String> EventWindow::GetCurrentFiles() const
+{
+    std::list<libcomp::String> files;
+    for(auto& pair : mFiles)
+    {
+        files.push_back(pair.first);
+    }
+
+    return files;
+}
+
+std::list<std::shared_ptr<objects::Event>> EventWindow::GetFileEvents(
+    const libcomp::String& path) const
+{
+    std::list<std::shared_ptr<objects::Event>> events;
+
+    auto it = mFiles.find(path);
+    if(it != mFiles.end())
+    {
+        for(auto fEvent : it->second->Events)
+        {
+            events.push_back(fEvent->Event);
+        }
+    }
+
+    return events;
+}
+
 void EventWindow::closeEvent(QCloseEvent* event)
 {
     (void)event;

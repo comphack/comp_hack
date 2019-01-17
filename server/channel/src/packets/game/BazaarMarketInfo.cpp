@@ -89,8 +89,9 @@ bool Parsers::BazaarMarketInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             reply.WriteS32Little(0);    // Success
 
+            auto owner = market->GetCharacter().Get(worldDB);
             reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                market->GetComment(), true);
+                owner ? owner->GetName() : "", true);
 
             int32_t itemCount = 0;
             for(auto bItem : market->GetItems())

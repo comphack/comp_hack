@@ -729,8 +729,8 @@ int32_t CharacterState::GetExpertisePoints(
 uint8_t CharacterState::GetExpertiseRank(
     uint32_t expertiseID, libcomp::DefinitionManager* definitionManager)
 {
-    return (uint8_t)floor((float)GetExpertisePoints(expertiseID,
-        definitionManager) * 0.0001f);
+    return (uint8_t)(GetExpertisePoints(expertiseID, definitionManager) /
+        10000);
 }
 
 bool CharacterState::ActionCooldownActive(int32_t cooldownID,

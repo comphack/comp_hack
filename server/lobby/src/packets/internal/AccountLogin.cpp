@@ -110,36 +110,13 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
             character.GetUUID().ToString()).Arg(worldID).Arg(
             channelID).Arg(login->GetSessionKey()));
 
-        auto characters = account->GetCharacters();
-
-        uint8_t cid = 0;
-        for(; cid < MAX_CHARACTER; cid++)
-        {
-            if(characters[cid].GetUUID() == character->GetUUID())
-            {
-                // Character found
-                break;
-            }
-        }
-
-        if(cid == MAX_CHARACTER)
-        {
-            LOG_ERROR(libcomp::String("Attempted to login a character"
-                " no longer associated to its parent account: %1\n").Arg(
-                character->GetUUID().ToString()));
-            clientConnection->Close();
-
-            return;
-        }
-
         libcomp::Packet reply;
         reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_START_GAME);
         reply.WriteU32Little(login->GetSessionKey());
         reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
             libcomp::String("%1:%2").Arg(channel->GetIP()).Arg(
             channel->GetPort()), true);
-        reply.WriteU8(cid);
-        reply.WriteS32Little(0); // Bazaars broke == false
+        reply.WriteS32Little(channelID);
 
         clientConnection->SendPacket(reply);
 

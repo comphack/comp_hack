@@ -80,7 +80,10 @@ bool BazaarState::AddItem(channel::ClientState* state, int8_t slot, int64_t item
     std::lock_guard<std::mutex> lock(mLock);
     if(VerifyMarket(bazaarData))
     {   
-        if(item && bazaarData->GetItems((size_t)slot).IsNull())
+        // Make sure the item is valid, the slot is not taken and the item is
+        // not already outside of a normal box (already in the bazaar etc)
+        if(item && bazaarData->GetItems((size_t)slot).IsNull() &&
+            item->GetBoxSlot() != -1)
         {
             // Create the item
             auto bItem = libcomp::PersistentObject::New<objects::BazaarItem>(true);

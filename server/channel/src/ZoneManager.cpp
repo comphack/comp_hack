@@ -992,7 +992,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                 // disconnecting until the instance is removed
                 auto relogin = std::make_shared<objects::ChannelLogin>();
                 relogin->SetWorldCID(state->GetWorldCID());
-                relogin->SetToChannel(server->GetChannelID());
+                relogin->SetToChannel((int8_t)server->GetChannelID());
                 relogin->SetToZoneID(zone->GetDefinitionID());
                 relogin->SetToDynamicMapID(zone->GetDynamicMapID());
 

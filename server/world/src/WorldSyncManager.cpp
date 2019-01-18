@@ -1184,9 +1184,9 @@ std::shared_ptr<objects::ChannelLogin> WorldSyncManager::PopRelogin(
         uint32_t instanceID = rPair.first;
         for(auto& pair : mInstanceAccess)
         {
-            auto it = pair.second.find(instanceID);
-            if(it != pair.second.end() &&
-                it->second->AccessCIDsContains(worldCID))
+            auto it2 = pair.second.find(instanceID);
+            if(it2 != pair.second.end() &&
+                it2->second->AccessCIDsContains(worldCID))
             {
                 result = rPair.second;
                 break;

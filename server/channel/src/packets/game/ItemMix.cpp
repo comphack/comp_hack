@@ -434,6 +434,13 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
                     stackSize = it->second;
                 }
 
+                if(stackSize == 0)
+                {
+                    // Do not reuse an item if its being removed (covers
+                    // anything equippable or with an expiration too)
+                    continue;
+                }
+
                 if((uint16_t)(stackSize + itemCount) <=
                     itemData->GetPossession()->GetStackSize())
                 {

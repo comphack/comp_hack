@@ -44,6 +44,7 @@
 #include "CharacterManager.h"
 #include "WorldConfig.h"
 #include "WorldServer.h"
+#include "WorldSyncManager.h"
 
 using namespace world;
 
@@ -57,7 +58,7 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
     auto accountManager = server->GetAccountManager();
-    
+
     int8_t channelID;
     if(!accountManager->IsLoggedIn(username, channelID))
     {
@@ -105,9 +106,28 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     else if(p.Left() > 0)
     {
         // Special disconnect request
-        uint8_t kickLevel = p.ReadU8();
-        switch(kickLevel)
+        int8_t disconnectType = p.ReadS8();
+        switch(disconnectType)
         {
+        case -1:
+            {
+                // Disconnected from an instance suddenly. Push relog into
+                // the sync manager in case they come back and still have
+                // access to it.
+                auto relogin = std::make_shared<objects::ChannelLogin>();
+                if(!relogin->LoadPacket(p))
+                {
+                    LOG_ERROR("Failed to load channel disconnect info from"
+                        " channel\n");
+                    return false;
+                }
+
+                uint32_t instanceID = p.ReadU32Little();
+
+                server->GetWorldSyncManager()->PushRelogin(relogin,
+                    instanceID);
+            }
+            break;
         case 1:
             {
                 // Tell the source channel to disconnect
@@ -128,7 +148,7 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
                 // connection directly on the world or lobby (skip supplied
                 // character login). For kick level 3, skip trying to remove
                 // from channel (last resort if stuck).
-                if(kickLevel == 2)
+                if(disconnectType == 2)
                 {
                     cLogin = login->GetCharacterLogin();
                     if(cLogin && server->GetCharacterManager()
@@ -168,7 +188,7 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
             break;
         default:
             LOG_ERROR(libcomp::String("Unknown logout request received"
-                " %1: '%2'\n").Arg(kickLevel).Arg(username));
+                " %1: '%2'\n").Arg(disconnectType).Arg(username));
             break;
         }
     }

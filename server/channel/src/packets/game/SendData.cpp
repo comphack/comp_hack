@@ -63,8 +63,6 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
 
-    bool channelSwitched = channelLogin && channelLogin->GetFromChannel() >= 0;
-
     // Send world time
     {
         auto clock = server->GetWorldClockTime();
@@ -126,9 +124,9 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
     // Add to the login zone
     {
         std::shared_ptr<objects::InstanceAccess> instAccess;
-        if(channelSwitched)
+        if(channelLogin && channelLogin->GetToZoneID())
         {
-            // Switched from another channel, enter instance if valid
+            // Enter instance if valid
             auto access = zoneManager->GetInstanceAccess(state
                 ->GetWorldCID());
             if(access && serverDataManager->ExistsInInstance(

@@ -181,6 +181,14 @@ public:
         const std::shared_ptr<objects::InstanceAccess>& access);
 
     /**
+     * Expire and remove an instance matching the supplied values
+     * @param instanceID ID of the instance to expire
+     * @param timeOut Disconnect time out to check on the instance to make
+     *  sure no one has reconnected
+     */
+    void ExpireInstance(uint32_t instanceID, uint64_t timeOut);
+
+    /**
      * Get a zone instance by ID
      * @param instanceID ID of the instance to retrieve
      * @return Pointer to the zone instance associated to the supplied ID
@@ -1070,6 +1078,14 @@ private:
     void SendAllyData(const std::shared_ptr<AllyState>& allyState,
         const std::shared_ptr<ChannelClientConnection>& client,
         const std::shared_ptr<Zone>& zone, bool queue = false);
+
+    /**
+     * Schedule instance access time-out and remove the instance if no
+     * player accesses it before then
+     * @param instance Pointer to the zone instance to update
+     */
+    void ScheduleInstanceAccessTimeOut(
+        const std::shared_ptr<ZoneInstance>& instance);
 
     /**
      * Schedule the expiration of a zone instance timer

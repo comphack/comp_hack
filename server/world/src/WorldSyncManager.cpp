@@ -37,6 +37,7 @@
 
 // object Includes
 #include <Account.h>
+#include <ChannelLogin.h>
 #include <Character.h>
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
@@ -442,6 +443,21 @@ int8_t WorldSyncManager::Update<objects::InstanceAccess>(const libcomp::String& 
         if(mInstanceAccess[access->GetChannelID()].size() == 0)
         {
             mInstanceAccess.erase(access->GetChannelID());
+        }
+
+        // Remove any relogins associated to the instance
+        std::set<int32_t> worldCIDs;
+        for(auto& pair : mRelogins)
+        {
+            if(pair.second.first == access->GetInstanceID())
+            {
+                worldCIDs.insert(pair.first);
+            }
+        }
+
+        for(int32_t worldCID : worldCIDs)
+        {
+            worldCIDs.erase(worldCID);
         }
 
         // Forward to all
@@ -1150,6 +1166,66 @@ bool WorldSyncManager::RemoveRecord(const std::shared_ptr<libcomp::Object>& reco
     return false;
 }
 
+std::shared_ptr<objects::ChannelLogin> WorldSyncManager::PopRelogin(
+    int32_t worldCID)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+
+    std::shared_ptr<objects::ChannelLogin> result;
+
+    auto it = mRelogins.find(worldCID);
+    if(it != mRelogins.end())
+    {
+        auto rPair = it->second;
+        mRelogins.erase(it);
+
+        // If the instance doesn't exist anymore or access is no longer
+        // granted, don't return the relogin
+        uint32_t instanceID = rPair.first;
+        for(auto& pair : mInstanceAccess)
+        {
+            auto it = pair.second.find(instanceID);
+            if(it != pair.second.end() &&
+                it->second->AccessCIDsContains(worldCID))
+            {
+                result = rPair.second;
+                break;
+            }
+        }
+    }
+
+    return result;
+}
+
+bool WorldSyncManager::PushRelogin(const std::shared_ptr<
+    objects::ChannelLogin>& login, uint32_t instanceID)
+{
+    std::shared_ptr<objects::InstanceAccess> access;
+    {
+        std::lock_guard<std::mutex> lock(mLock);
+
+        int32_t worldCID = login->GetWorldCID();
+        for(auto& pair : mInstanceAccess)
+        {
+            auto it = pair.second.find(instanceID);
+            if(it != pair.second.end())
+            {
+                access = it->second;
+                access->InsertAccessCIDs(worldCID);
+                mRelogins[worldCID] = std::make_pair(instanceID, login);
+            }
+        }
+    }
+
+    if(access)
+    {
+        SyncRecordUpdate(access, "InstanceAccess");
+        return true;
+    }
+
+    return false;
+}
+
 std::shared_ptr<objects::MatchEntry> WorldSyncManager::GetMatchEntry(
     int32_t worldCID)
 {
@@ -1196,12 +1272,20 @@ bool WorldSyncManager::CleanUpCharacterLogin(int32_t worldCID, bool flushOutgoin
             matchEntry = it->second;
         }
 
+        // Get the relogin instance ID so access is not removed from it
+        uint32_t reloginInstanceID = 0;
+        auto rIter = mRelogins.find(worldCID);
+        if(rIter != mRelogins.end())
+        {
+            reloginInstanceID = rIter->second.first;
+        }
+
         for(auto& pair : mInstanceAccess)
         {
             for(auto& subPair : pair.second)
             {
-                if(subPair.second->AccessCIDsContains(worldCID) ||
-                    subPair.second->AccessCIDsCount() == 0)
+                if(subPair.second->AccessCIDsContains(worldCID) &&
+                    subPair.first != reloginInstanceID)
                 {
                     instAccess.push_back(subPair.second);
                 }
@@ -1237,14 +1321,10 @@ bool WorldSyncManager::CleanUpCharacterLogin(int32_t worldCID, bool flushOutgoin
     for(auto access : instAccess)
     {
         access->RemoveAccessCIDs(worldCID);
-        if(access->AccessCIDsCount() == 0)
-        {
-            result |= RemoveRecord(access, "InstanceAccess");
-        }
-        else
-        {
-            result |= UpdateRecord(access, "InstanceAccess");
-        }
+
+        // Only remove access CIDs here, let the channel handle removing
+        // the instance access itself in case of access time-outs
+        result |= UpdateRecord(access, "InstanceAccess");
     }
 
     if(result && flushOutgoing)

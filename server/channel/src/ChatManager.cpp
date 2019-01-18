@@ -578,7 +578,7 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
             "@ban requires one argument, <username>"));
     }
 
-    uint8_t kickLevel = 1;
+    int8_t kickLevel = 1;
 
     std::shared_ptr<objects::Character> target;
     std::shared_ptr<objects::Account> targetAccount;
@@ -626,7 +626,7 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
             (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
         p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
             targetAccount->GetUsername());
-        p.WriteU8(kickLevel);
+        p.WriteS8(kickLevel);
 
         server->GetManagerConnection()->GetWorldConnection()
             ->SendPacket(p);
@@ -2308,7 +2308,7 @@ bool ChatManager::GMCommand_Kick(const std::shared_ptr<
             "@kick requires one argument, <username>");
     }
 
-    uint8_t kickLevel = 1;
+    int8_t kickLevel = 1;
 
     std::shared_ptr<objects::Character> target;
     std::shared_ptr<objects::Account> targetAccount;
@@ -2351,7 +2351,7 @@ bool ChatManager::GMCommand_Kick(const std::shared_ptr<
         p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
         p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
             targetAccount->GetUsername());
-        p.WriteU8(kickLevel);
+        p.WriteS8(kickLevel);
 
         mServer.lock()->GetManagerConnection()->GetWorldConnection()
             ->SendPacket(p);

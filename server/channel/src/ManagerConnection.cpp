@@ -197,6 +197,11 @@ void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
 
     if(removed)
     {
+        auto server = std::dynamic_pointer_cast<ChannelServer>(
+            mServer.lock());
+        auto accountManager = server->GetAccountManager();
+        accountManager->Logout(connection);
+
         // Inform the world that the connection has closed, whether they've
         // been logged in successfully or not yet
         libcomp::Packet p;
@@ -204,12 +209,8 @@ void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
         p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
         p.WriteString16Little(
             libcomp::Convert::Encoding_t::ENCODING_UTF8, username);
-        GetWorldConnection()->SendPacket(p);
 
-        auto server = std::dynamic_pointer_cast<ChannelServer>(
-            mServer.lock());
-        auto accountManager = server->GetAccountManager();
-        accountManager->Logout(connection);
+        GetWorldConnection()->SendPacket(p);
     }
 }
 
@@ -379,7 +380,7 @@ void ManagerConnection::HandleClientTimeouts(uint64_t now, uint16_t timeout)
             p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
             p.WriteString16Little(
                 libcomp::Convert::Encoding_t::ENCODING_UTF8, timedOut);
-            p.WriteU8(1);
+            p.WriteS8(1);   // Normal kick
             mWorldConnection->QueuePacket(p);
         }
         mWorldConnection->FlushOutgoing();

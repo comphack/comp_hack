@@ -37,6 +37,7 @@
 
 namespace objects
 {
+class ChannelLogin;
 class Character;
 class InstanceAccess;
 class MatchEntry;
@@ -111,6 +112,25 @@ public:
      * @param expirationTime Expiration time of the record
      */
     template<class T> void Expire(int32_t entryID, uint32_t expirationTime);
+
+    /**
+     * Pop and return any valid instance relogin access. If the stored access
+     * is not valid, it will just be removed.
+     * @param worldCID World CID to check access for
+     * @return Pointer to an instance relogin configuration that allows the
+     *  player to enter a still active instance
+     */
+    std::shared_ptr<objects::ChannelLogin> PopRelogin(int32_t worldCID);
+
+    /**
+     * Register relogin access to an instance a player should have access to
+     * if they log in again before a time-out period passes.
+     * @param login Pointer to the relogin access definition
+     * @param instanceID Instance ID being given access
+     * @return true if the access was set correctly, false if it was not
+     */
+    bool PushRelogin(const std::shared_ptr<objects::ChannelLogin>& login,
+        uint32_t instanceID);
 
     /**
      * Get any existing match entry by world CID
@@ -247,6 +267,12 @@ private:
     /// Records are only stored here after they have an instance ID.
     std::unordered_map<uint8_t, std::unordered_map<uint32_t,
         std::shared_ptr<objects::InstanceAccess>>> mInstanceAccess;
+
+    /// Map of world CIDs to ChannelLogin configurations associated to a
+    /// zone instance ID which allows players to re-enter following an
+    /// unexpected disconnect.
+    std::unordered_map<int32_t,
+        std::pair<uint32_t, std::shared_ptr<objects::ChannelLogin>>> mRelogins;
 
     /// Map of character CIDs to queued match entries
     std::unordered_map<int32_t,

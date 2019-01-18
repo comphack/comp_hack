@@ -47,6 +47,7 @@
 #include <FriendSettings.h>
 #include <Hotbar.h>
 #include <InheritedSkill.h>
+#include <InstanceAccess.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <PvPData.h>
@@ -459,9 +460,19 @@ void AccountManager::HandleLobbyLogin(
     auto config = std::dynamic_pointer_cast<objects::WorldConfig>(
         server->GetConfig());
 
-    if(config->GetWorldSharedConfig()->ChannelDistributionCount())
+    // Check if there is a channel login pending from last session
+    // which would only occur if the character login is already
+    // registered here
+    auto cLogin = server->GetCharacterManager()->GetCharacterLogin(login
+        ->GetCharacterLogin()->GetCharacter().GetUUID());
+    auto channelLogin = cLogin ? server->GetWorldSyncManager()
+        ->PopRelogin(cLogin->GetWorldCID()) : nullptr;
+
+    if(!channelLogin &&
+        config->GetWorldSharedConfig()->ChannelDistributionCount())
     {
-        // Dedicated channels exist, validate location with primary channel
+        // Dedicated channels exist and no channel login built already,
+        // validate location with primary channel
         libcomp::Packet p;
         p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
 
@@ -492,7 +503,7 @@ void AccountManager::HandleLobbyLogin(
     else
     {
         // No dedicated channels, login now
-        CompleteLobbyLogin(login);
+        CompleteLobbyLogin(login, channelLogin);
     }
 }
 
@@ -570,6 +581,16 @@ void AccountManager::CompleteLobbyLogin(
 
         // Get the cached character login or register a new one
         cLogin = characterManager->RegisterCharacter(cLogin);
+
+        // If a relogin still exists, pop that now that the destination is set
+        server->GetWorldSyncManager()->PopRelogin(cLogin->GetWorldCID());
+
+        if(channelLogin && channelLogin->GetFromChannel() == -1)
+        {
+            // If a relogin was supplied, push it as a channel switch so
+            // it is returned to the channel once the connection arrives
+            PushChannelSwitch(account->GetUsername(), channelLogin);
+        }
 
         auto character = cLogin->GetCharacter().Get();
         if(!character->GetClan().IsNull())

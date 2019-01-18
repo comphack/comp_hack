@@ -101,7 +101,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         ->GetMoveCorrection();
 
     eState->ExpireStatusTimes(ChannelServer::GetServerTime());
-    if(!eState->CanMove())
+    if(!eState->CanMove() || state->GetLockMovement())
     {
         destX = originX;
         destY = originY;

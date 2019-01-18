@@ -720,21 +720,24 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
             }
         }
 
+        nextInstance->SetAccessTimeOut(0);
         nextInstance->RefreshPlayerState();
     }
 
-    // Move the entity to the new location.
+    // Lock movement and move the entities to the new location
+    state->SetLockMovement(true);
+
     for(auto eState : { std::dynamic_pointer_cast<ActiveEntityState>(cState),
         std::dynamic_pointer_cast<ActiveEntityState>(dState) })
     {
         eState->SetOriginX(xCoord);
         eState->SetOriginY(yCoord);
         eState->SetOriginRotation(rotation);
-        cState->SetOriginTicks(ticks);
+        eState->SetOriginTicks(ticks);
         eState->SetDestinationX(xCoord);
         eState->SetDestinationY(yCoord);
         eState->SetDestinationRotation(rotation);
-        cState->SetDestinationTicks(ticks);
+        eState->SetDestinationTicks(ticks);
         eState->SetCurrentX(xCoord);
         eState->SetCurrentY(yCoord);
         eState->SetCurrentRotation(rotation);
@@ -952,6 +955,68 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                 ->ExistsInInstance(instance->GetDefinitionID(), newZoneID,
                     newDynamicMapID);
 
+            bool instanceDisconnect = instanceLeft && logOut &&
+                !state->GetLogoutTimer() && !state->GetChannelLogin();
+            if(instanceDisconnect)
+            {
+                // Disconnecting from an instance puts the player's last
+                // zone location at their most recent zone-in point
+                auto character = cState->GetEntity();
+
+                float x = cState->GetDestinationX();
+                float y = cState->GetDestinationY();
+                float rot = cState->GetDestinationRotation();
+
+                if(state->GetZoneInSpotID())
+                {
+                    GetSpotPosition(state->GetZoneInSpotID(), zone
+                        ->GetDynamicMapID(), x, y, rot);
+                }
+
+                // Make sure nothing incorrect updates it later
+                character->SetLogoutX(x);
+                character->SetLogoutY(y);
+                character->SetLogoutRotation(rot);
+
+                cState->SetOriginX(x);
+                cState->SetOriginY(y);
+                cState->SetOriginRotation(rot);
+                cState->SetDestinationX(x);
+                cState->SetDestinationY(y);
+                cState->SetDestinationRotation(rot);
+                cState->SetCurrentX(x);
+                cState->SetCurrentY(y);
+                cState->SetCurrentRotation(rot);
+
+                // Notify the world that the character can relog after
+                // disconnecting until the instance is removed
+                auto relogin = std::make_shared<objects::ChannelLogin>();
+                relogin->SetWorldCID(state->GetWorldCID());
+                relogin->SetToChannel(server->GetChannelID());
+                relogin->SetToZoneID(zone->GetDefinitionID());
+                relogin->SetToDynamicMapID(zone->GetDynamicMapID());
+
+                libcomp::Packet p;
+                p.WritePacketCode(
+                    InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+                p.WriteU32Little((uint32_t)
+                    LogoutPacketAction_t::LOGOUT_DISCONNECT);
+                p.WriteString16Little(
+                    libcomp::Convert::Encoding_t::ENCODING_UTF8, state
+                    ->GetAccountLogin()->GetAccount()->GetUsername());
+                p.WriteS8(-1);   // Can relog
+                relogin->SavePacket(p);
+                p.WriteU32Little(instance->GetID());
+
+                server->GetManagerConnection()->GetWorldConnection()
+                    ->SendPacket(p);
+
+                // Put the original instance access back for the character
+                auto access = instance->GetAccess();
+                access->InsertAccessCIDs(state->GetWorldCID());
+                mZoneInstanceAccess[state->GetWorldCID()] = access;
+            }
+
             // Determine actions needed if the last connection has left
             if(zone->GetConnections().size() == 0)
             {
@@ -972,7 +1037,19 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                 // is empty and can be removed
                 if(!keepZone && instance)
                 {
-                    instanceRemoved = RemoveInstance(instance->GetID());
+                    if(instanceDisconnect)
+                    {
+                        // Sudden disconnects will delay instance cleanup for
+                        // 5 minutes
+                        LOG_DEBUG(libcomp::String("Last disconnect occurred"
+                            " in zone instance %1. Access time-out started.\n")
+                            .Arg(instance->GetID()));
+                        ScheduleInstanceAccessTimeOut(instance);
+                    }
+                    else
+                    {
+                        instanceRemoved = RemoveInstance(instance->GetID());
+                    }
                 }
 
                 if(keepZone)
@@ -1268,11 +1345,24 @@ uint8_t ZoneManager::CreateInstance(
             syncManager->UpdateRecord(match, "Match");
         }
 
+        // Expire the instance access if no one ever enters
+        ScheduleInstanceAccessTimeOut(instance);
+
         // Sync the record to notify the rest
         syncManager->UpdateRecord(access, "InstanceAccess");
         syncManager->SyncOutgoing();
 
         return 1;   // Created local
+    }
+}
+
+void ZoneManager::ExpireInstance(uint32_t instanceID, uint64_t timeOut)
+{
+    auto instance = GetInstance(instanceID);
+
+    if(instance && instance->GetAccessTimeOut() == timeOut)
+    {
+        RemoveInstance(instanceID);
     }
 }
 
@@ -1495,6 +1585,12 @@ bool ZoneManager::MoveToInstance(
                     " spot. Using the starting coordinates instead.\n");
             }
 
+            if(instance->GetAccessTimeOut())
+            {
+                LOG_DEBUG(libcomp::String("Zone instance %1 recovered"
+                    " before access expired.\n").Arg(instance->GetID()));
+            }
+
             return EnterZone(client, zoneDef->GetID(),
                 zoneDef->GetDynamicMapID(), x, y, rot);
         }
@@ -1546,6 +1642,9 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
         // Not in a zone, quit now
         return false;
     }
+
+    // Unlock movement now that the client is acknowledging being in the zone
+    state->SetLockMovement(false);
 
     auto zoneDef = zone->GetDefinition();
     auto characterManager = server->GetCharacterManager();
@@ -6475,6 +6574,20 @@ std::list<std::shared_ptr<ActiveEntityState>> ZoneManager::GetEntitiesInFoV(
     return results;
 }
 
+void ZoneManager::ScheduleInstanceAccessTimeOut(
+    const std::shared_ptr<ZoneInstance>& instance)
+{
+    uint64_t timeOut = (uint64_t)(
+        300000000ULL + ChannelServer::GetServerTime());
+    instance->SetAccessTimeOut(timeOut);
+
+    mServer.lock()->ScheduleWork(timeOut, []
+        (ZoneManager* pZoneManager, uint32_t pInstanceID, uint64_t pExpireTime)
+        {
+            pZoneManager->ExpireInstance(pInstanceID, pExpireTime);
+        }, this, instance->GetID(), timeOut);
+}
+
 void ZoneManager::ScheduleTimerExpiration(const std::shared_ptr<
     ZoneInstance>& instance)
 {
@@ -7660,7 +7773,8 @@ bool ZoneManager::RemoveInstance(uint32_t instanceID)
 
     access->ClearAccessCIDs();
 
-    LOG_DEBUG(libcomp::String("Cleaning up zone instance: %1 (%2)\n")
+    LOG_DEBUG(libcomp::String("%1 zone instance: %2 (%3)\n")
+        .Arg(instance->GetAccessTimeOut() ? "Expiring" : "Cleaning up")
         .Arg(instance->GetID()).Arg(instance->GetDefinitionID()));
 
     mZoneInstances.erase(instance->GetID());

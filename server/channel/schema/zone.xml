@@ -58,6 +58,7 @@
         <member type="u64" name="TimerStart"/>
         <member type="u64" name="TimerStop"/>
         <member type="u64" name="TimerExpire"/>
+        <member type="u64" name="AccessTimeOut"/>
         <member type="string" name="TimerExpirationEventID"/>
         <member type="float" name="XPMultiplier"/>
         <member type="map" name="DestinyBoxes">

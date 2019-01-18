@@ -952,7 +952,7 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
 
     int8_t responseType1 = -1, responseType2 = -1;
 
-    int64_t xpLoss = 0;
+    float xpLossPercent = 0.f;
     uint32_t newZoneID = 0;
     float newX = 0.f, newY = 0.f, newRot = 0.f;
     std::unordered_map<std::shared_ptr<ActiveEntityState>,
@@ -973,10 +973,7 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
             // Adjust XP
             if(xpLossLevel)
             {
-                size_t lvlIdx = (size_t)characterLevel;
-                xpLoss = (int64_t)floorl(
-                    (double)libcomp::LEVEL_XP_REQUIREMENTS[lvlIdx] *
-                    (double)(0.01 - (0.00005 * characterLevel)) - 0.01);
+                xpLossPercent = (float)(0.01 - (0.00005 * characterLevel));
             }
 
             // Change zone
@@ -1001,10 +998,7 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
             // Adjust XP
             if(xpLossLevel)
             {
-                size_t lvlIdx = (size_t)characterLevel;
-                xpLoss = (int64_t)floorl(
-                    (double)libcomp::LEVEL_XP_REQUIREMENTS[lvlIdx] *
-                    (double)(0.02 - (0.00005 * characterLevel)));
+                xpLossPercent = (float)(0.02 - (0.00005 * characterLevel));
             }
 
             // Move to entrance unless a zone-in spot overrides it
@@ -1150,34 +1144,9 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
         return;
     }
 
-    bool deathPenaltyDisabled = server->GetWorldSharedConfig()
-        ->GetDeathPenaltyDisabled();
-
-    if(xpLoss > 0 && !deathPenaltyDisabled)
+    if(xpLossPercent)
     {
-        // XP loss can be adjusted by tokusei
-        double xpAdjust = 100.0;
-        for(double val : server->GetTokuseiManager()->GetAspectValueList(
-            cState, TokuseiAspectType::DEATH_PENALTY))
-        {
-            if(val >= 0.0 && val < xpAdjust)
-            {
-                xpAdjust = val;
-            }
-        }
-
-        if(xpAdjust < 100.0)
-        {
-            xpLoss = (int64_t)floor((double)xpLoss * xpAdjust * 0.01);
-        }
-
-        auto cs = character->GetCoreStats().Get();
-        if(xpLoss > cs->GetXP())
-        {
-            xpLoss = cs->GetXP();
-        }
-
-        cs->SetXP(cs->GetXP() - xpLoss);
+        UpdateRevivalXP(cState, xpLossPercent);
     }
 
     if(hpRestores.size() > 0)
@@ -1273,6 +1242,55 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
                     ZoneTrigger_t::ON_RESPAWN, client);
             }
         }
+    }
+}
+
+bool CharacterManager::UpdateRevivalXP(const std::shared_ptr<
+    CharacterState>& cState, float lossPercent)
+{
+    auto server = mServer.lock();
+    bool deathPenaltyDisabled = server->GetWorldSharedConfig()
+        ->GetDeathPenaltyDisabled();
+    if(deathPenaltyDisabled || !lossPercent)
+    {
+        return false;
+    }
+
+    // XP loss can be adjusted by tokusei
+    double xpAdjust = 100.0;
+    for(double val : server->GetTokuseiManager()
+        ->GetAspectValueList(cState, TokuseiAspectType::DEATH_PENALTY))
+    {
+        if(val >= 0.0 && val < xpAdjust)
+        {
+            xpAdjust = val;
+        }
+    }
+
+    auto cs = cState->GetCoreStats();
+    int8_t lvl = cs->GetLevel();
+
+    int64_t xpLoss = (int64_t)floorl(
+        (double)libcomp::LEVEL_XP_REQUIREMENTS[(size_t)lvl] *
+        (double)lossPercent - 0.01);
+    if(xpAdjust < 100.0)
+    {
+        xpLoss = (int64_t)floor((double)xpLoss * xpAdjust * 0.01);
+    }
+
+    if(xpLoss > cs->GetXP())
+    {
+        xpLoss = cs->GetXP();
+    }
+
+    if(xpLoss > 0)
+    {
+        cs->SetXP(cs->GetXP() - xpLoss);
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 

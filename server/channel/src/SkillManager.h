@@ -590,6 +590,17 @@ private:
         const std::unordered_map<uint32_t, uint32_t>& encounterGroups);
 
     /**
+     * Handle all logic related to revivals that occurred from a skill's
+     * execution.
+     * @param zone Pointer to the zone where the skill was executed
+     * @param revived Set of entities revived by the skill's execution
+     * @param pSkill Skill processing state of the skill being executed
+     */
+    void HandleRevives(const std::shared_ptr<Zone>& zone,
+        const std::set<std::shared_ptr<ActiveEntityState>> revived,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+    /**
      * After calculating the normal skill results during final processing
      * zone specific changes are applied here.
      * @param pSkill Skill processing state of the skill being executed

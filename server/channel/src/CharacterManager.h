@@ -183,6 +183,15 @@ public:
         ChannelClientConnection> client, int32_t revivalMode);
 
     /**
+     * Calculate and update a character based how much XP is lost by reviving
+     * @param cState Pointer to the character state
+     * @param lossPercent Percentage of XP lost for their current level
+     * @return true if XP was adjusted, false if it was not
+     */
+    bool UpdateRevivalXP(const std::shared_ptr<CharacterState>& cState,
+        float lossPercent);
+
+    /**
      * Write a revival action notification packet.
      * @param p Packet to write the data to
      * @param entity Entity that has had a revival action performed

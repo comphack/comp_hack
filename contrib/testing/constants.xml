@@ -181,6 +181,16 @@
         <!-- Function 2: Swordsmith mod slot creation success -->
         <!-- Function 3: Armsmaker mod slot creation success -->
         <!-- Function 4: Culture point/slot rate scalers -->
+        <!-- Function 5: Revival XP loss skill, 1/100000% of XP lost and the
+             reduction per level past 1, defaults to 1000/5 if not specified -->
+        <pair>
+            <key>847</key>
+            <value>5,0,0</value>
+        </pair>
+        <pair>
+            <key>8023</key>
+            <value>5,0,0</value>
+        </pair>
         <pair>
             <key>20007</key>
             <value>2,10,5</value>

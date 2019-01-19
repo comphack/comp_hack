@@ -39,7 +39,7 @@ namespace Sqrat
 class s64
 {
 private:
-    uint64_t mValue;
+    int64_t mValue;
 
 public:
     s64();

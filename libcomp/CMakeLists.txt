@@ -109,6 +109,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ServerConstants.cpp
     src/ServerDataManager.cpp
     src/Shutdown.cpp
+    src/SqratInt64.cpp
     #src/Structgen.cpp
     src/TcpConnection.cpp
     src/TcpServer.cpp
@@ -666,6 +667,8 @@ IF(NOT USE_PREBUILT_OBJECTS)
         TestObjectC.cpp
         TestObjectD.h
         TestObjectD.cpp
+        TestObjectE.h
+        TestObjectE.cpp
         Tokusei.h
         Tokusei.cpp
         TokuseiAspect.h

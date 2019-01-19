@@ -244,6 +244,10 @@ ScriptEngine::ScriptEngine(bool useRawPrint) : mUseRawPrint(useRawPrint)
     Sqrat::RootTable(mVM).Func("ToAccountWorldData", ToAccountWorldData);
     Sqrat::RootTable(mVM).Func("ToCharacter", ToCharacter);
     Sqrat::RootTable(mVM).Func("ToDemon", ToDemon);
+
+    // These are required by most things so just bind them now.
+    Using<Sqrat::s64>();
+    Using<Sqrat::u64>();
 }
 
 ScriptEngine::~ScriptEngine()

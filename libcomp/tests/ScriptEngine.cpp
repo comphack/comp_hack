@@ -29,6 +29,7 @@
 #include <sqrat.h>
 #include <PopIgnore.h>
 
+#include <Decrypt.h>
 #include <Log.h>
 #include <Packet.h>
 #include <ScriptEngine.h>
@@ -37,6 +38,7 @@
 #include <TestObjectB.h>
 #include <TestObjectC.h>
 #include <TestObjectD.h>
+#include <TestObjectE.h>
 
 using namespace libcomp;
 
@@ -948,6 +950,153 @@ TEST(ScriptEngine, SetBadObjectListProp)
 
     auto objs = a->GetObjectBList();
     ASSERT_EQ(objs.size(), 0);
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, ListOfIntegers)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectE>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(e)\n"
+        "{\n"
+            "local sum = 0;\n"
+            "local intList = e.IntList;\n"
+            "\n"
+            "for(local i = 0; i < e.IntList.len(); ++i) {\n"
+                "sum += e.IntList[i];\n"
+            "}\n"
+            "\n"
+            "intList.append(sum);\n"
+            "e.IntList = intList;\n"
+            "\n"
+            "return e;\n"
+        "}\n"
+        ));
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectE>> ref;
+    auto e = std::make_shared<objects::TestObjectE>();
+    e->AppendIntList(1);
+    e->AppendIntList(3);
+    e->AppendIntList(3);
+    e->AppendIntList(7);
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectE>>(e);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    ASSERT_TRUE(ref);
+
+    auto e2 = ref->GetSharedObject();
+
+    ASSERT_TRUE(e2);
+
+    EXPECT_EQ(scriptMessages, "");
+
+    EXPECT_EQ(e, e2);
+    ASSERT_EQ(e->IntListCount(), 5);
+    EXPECT_EQ(e->GetIntList(0), 1);
+    EXPECT_EQ(e->GetIntList(1), 3);
+    EXPECT_EQ(e->GetIntList(2), 3);
+    EXPECT_EQ(e->GetIntList(3), 7);
+    EXPECT_EQ(e->GetIntList(4), (1 + 3 + 3 + 7));
+
+    scriptMessages.Clear();
+
+    Log::GetSingletonPtr()->ClearHooks();
+}
+
+TEST(ScriptEngine, Integer64)
+{
+    String scriptMessages;
+
+    Log::GetSingletonPtr()->AddLogHook(
+        [&scriptMessages](Log::Level_t level, const String& msg)
+    {
+        (void)level;
+
+        scriptMessages += msg;
+    });
+
+    ScriptEngine engine;
+    engine.Using<objects::TestObjectE>();
+
+    EXPECT_TRUE(engine.Eval(
+        "function TestFunction(e)\n"
+        "{\n"
+            "print(typeof(e.Signed64));\n"
+            "print(typeof(e.Unsigned64));\n"
+            "e.Signed64 += 500;\n"
+            "e.Unsigned64 -= 1000;\n"
+            "return e;\n"
+        "}\n"
+        ));
+
+    union
+    {
+        int64_t resultSigned;
+        uint8_t randomDataSigned[8];
+    };
+
+    union
+    {
+        uint64_t resultUnsigned;
+        uint8_t randomDataUnsigned[8];
+    };
+
+    for(int i = 0; i < 8; ++i)
+    {
+        randomDataSigned[i] = (uint8_t)libcomp::Decrypt::GenerateSessionKey();
+        randomDataUnsigned[i] = (uint8_t)libcomp::Decrypt::GenerateSessionKey();
+    }
+
+    std::shared_ptr<Sqrat::ObjectReference<objects::TestObjectE>> ref;
+    auto e = std::make_shared<objects::TestObjectE>();
+    e->SetSigned64(resultSigned);
+    e->SetUnsigned64(resultUnsigned);
+
+    ref = Sqrat::RootTable(engine.GetVM()).GetFunction("TestFunction"
+        ).Evaluate<Sqrat::ObjectReference<objects::TestObjectE>>(e);
+
+#ifdef SQRAT_WRAP_INTEGER64
+    EXPECT_EQ(scriptMessages, "SQUIRREL: s64\nSQUIRREL: u64\n");
+#else
+    EXPECT_EQ(scriptMessages, "SQUIRREL: integer\nSQUIRREL: integer\n");
+#endif
+
+    ASSERT_TRUE(ref);
+
+    auto e2 = ref->GetSharedObject();
+
+    ASSERT_TRUE(e2);
+
+#ifdef SQRAT_WRAP_INTEGER64
+    EXPECT_EQ(scriptMessages, "SQUIRREL: s64\nSQUIRREL: u64\n");
+#else
+    EXPECT_EQ(scriptMessages, "SQUIRREL: integer\nSQUIRREL: integer\n");
+#endif
+
+    resultSigned += 500;
+    resultUnsigned -= 1000;
+
+    EXPECT_EQ(e, e2);
+    EXPECT_EQ(e->GetSigned64(), resultSigned);
+    EXPECT_EQ(e->GetUnsigned64(), resultUnsigned);
 
     scriptMessages.Clear();
 

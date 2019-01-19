@@ -247,4 +247,208 @@ struct Var<const std::list<std::shared_ptr<T>>&> {
     }
 };
 
+#ifdef SQRAT_WRAP_INTEGER64
+template<>
+struct Var<int64_t>
+{
+    int64_t value;
+
+    Var(HSQUIRRELVM vm, SQInteger idx)
+    {
+        Var<s64> instance(vm, idx);
+        SQCATCH_NOEXCEPT(vm) {
+            return;
+        }
+
+        sq_pop(vm,1);
+
+        value = instance.value.value();
+    }
+
+    static void push(HSQUIRRELVM vm, const int64_t& value)
+    {
+        s64 v;
+        v.set(value);
+
+        Var<s64>::push(vm, v);
+    }
+};
+
+template<>
+struct Var<const int64_t&>
+{
+    int64_t value;
+
+    Var(HSQUIRRELVM vm, SQInteger idx)
+    {
+        Var<s64> instance(vm, idx);
+        SQCATCH_NOEXCEPT(vm) {
+            return;
+        }
+
+        sq_pop(vm,1);
+
+        value = instance.value.value();
+    }
+
+    static void push(HSQUIRRELVM vm, const int64_t& value)
+    {
+        s64 v;
+        v.set(value);
+
+        Var<s64>::push(vm, v);
+    }
+};
+
+template<>
+struct Var<uint64_t>
+{
+    uint64_t value;
+
+    Var(HSQUIRRELVM vm, SQInteger idx)
+    {
+        Var<u64> instance(vm, idx);
+        SQCATCH_NOEXCEPT(vm) {
+            return;
+        }
+
+        sq_pop(vm,1);
+
+        value = instance.value.value();
+    }
+
+    static void push(HSQUIRRELVM vm, const uint64_t& value)
+    {
+        u64 v;
+        v.set(value);
+
+        Var<u64>::push(vm, v);
+    }
+};
+
+template<>
+struct Var<const uint64_t&>
+{
+    uint64_t value;
+
+    Var(HSQUIRRELVM vm, SQInteger idx)
+    {
+        Var<u64> instance(vm, idx);
+        SQCATCH_NOEXCEPT(vm) {
+            return;
+        }
+
+        sq_pop(vm,1);
+
+        value = instance.value.value();
+    }
+
+    static void push(HSQUIRRELVM vm, const uint64_t& value)
+    {
+        u64 v;
+        v.set(value);
+
+        Var<u64>::push(vm, v);
+    }
+};
+#endif // SQRAT_WRAP_INTEGER64
+
+#define INTEGER_LIST(type) \
+template<> \
+struct Var< std::list<type> > { \
+\
+    std::list<type> value; \
+\
+    Var(HSQUIRRELVM vm, SQInteger idx) { \
+        SQObjectType value_type = sq_gettype(vm, idx); \
+\
+        if(OT_ARRAY != value_type) \
+        { \
+            SQTHROW(vm, FormatTypeError(vm, idx, _SC("array"))); \
+        } \
+\
+        sq_push(vm, idx); \
+        sq_pushnull(vm); \
+\
+        while(SQ_SUCCEEDED(sq_next(vm, -2))) \
+        { \
+            Var<type> instance(vm, -1); \
+            SQCATCH_NOEXCEPT(vm) { \
+                return; \
+            } \
+\
+            value.push_back(instance.value); \
+            sq_pop(vm, 2); \
+        } \
+\
+        sq_pop(vm, 2); \
+    } \
+\
+    static void push(HSQUIRRELVM vm, const std::list<type>& value) { \
+        SQInteger i = 0; \
+\
+        sq_newarray(vm, value.size()); \
+\
+        for(auto v : value) \
+        { \
+            sq_pushinteger(vm, i++); \
+            Var<type>::push(vm, v); \
+            sq_set(vm, -3); \
+        } \
+    } \
+}; \
+\
+template<> \
+struct Var<const std::list<type>&> { \
+\
+    std::list<type> value; \
+\
+    Var(HSQUIRRELVM vm, SQInteger idx) { \
+        SQObjectType value_type = sq_gettype(vm, idx); \
+\
+        if(OT_ARRAY != value_type) \
+        { \
+            SQTHROW(vm, FormatTypeError(vm, idx, _SC("array"))); \
+        } \
+\
+        sq_push(vm, idx); \
+        sq_pushnull(vm); \
+\
+        while(SQ_SUCCEEDED(sq_next(vm, -2))) \
+        { \
+            Var<type> instance(vm, -1); \
+            SQCATCH_NOEXCEPT(vm) { \
+                return; \
+            } \
+\
+            value.push_back(instance.value); \
+            sq_pop(vm, 2); \
+        } \
+\
+        sq_pop(vm, 2); \
+    } \
+\
+    static void push(HSQUIRRELVM vm, const std::list<type>& value) { \
+        SQInteger i = 0; \
+\
+        sq_newarray(vm, value.size()); \
+\
+        for(auto v : value) \
+        { \
+            sq_pushinteger(vm, i++); \
+            Var<type>::push(vm, v); \
+            sq_set(vm, -3); \
+        } \
+    } \
+};
+
+INTEGER_LIST(int8_t)
+INTEGER_LIST(uint8_t)
+INTEGER_LIST(int16_t)
+INTEGER_LIST(uint16_t)
+INTEGER_LIST(int32_t)
+INTEGER_LIST(uint32_t)
+INTEGER_LIST(int64_t)
+INTEGER_LIST(uint64_t)
+
 #endif // LIBCOMP_SRC_SQRATTYPESSOURCE_H

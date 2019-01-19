@@ -32,5 +32,13 @@
 
 // libcomp Includes
 #include "CString.h"
+#include "SqratInt64.h"
+
+// We want to wrap 64-bit integers a different way to preserve the value.
+// #define SQRAT_WRAP_INTEGER64 1
+
+#ifdef SQRAT_WRAP_INTEGER64
+#define SQRAT_OMIT_INT64 1
+#endif // SQRAT_WRAP_INTEGER64
 
 #endif // LIBCOMP_SRC_SQRATTYPESINCLUDE_H

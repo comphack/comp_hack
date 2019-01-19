@@ -41,4 +41,11 @@
     <object name="TestObjectD" persistent="false" scriptenabled="true">
         <member type="s32" name="Value"/>
     </object>
+    <object name="TestObjectE" persistent="false" scriptenabled="true">
+        <member type="list" name="IntList">
+            <element type="s32"/>
+        </member>
+        <member type="s64" name="signed64"/>
+        <member type="u64" name="unsigned64"/>
+    </object>
 </objgen>

@@ -107,6 +107,7 @@ namespace libcomp
                 .Func("GetDynamicMapID", &Zone::GetDynamicMapID)
                 .Func("GetInstanceID", &Zone::GetInstanceID)
                 .Func("GetFlagState", &Zone::GetFlagStateValue)
+                .Func("SetFlagState", &ZoneInstance::SetFlagState)
                 .Func("GetDiasporaBases", &Zone::GetDiasporaBases)
                 .Func("GetUBMatch", &Zone::GetUBMatch)
                 .Func("GetZoneInstance", &Zone::GetInstance)
@@ -115,9 +116,11 @@ namespace libcomp
                 .Func("MarkDespawn", &Zone::MarkDespawn)
                 .Func("GetAllies", &Zone::GetAllies)
                 .Func("GetEnemies", &Zone::GetEnemies)
+                .Func("GetBosses", &Zone::GetBosses)
                 .Func<std::shared_ptr<PlasmaState>(Zone::*)(uint32_t)>(
                     "GetPlasma", &Zone::GetPlasma)
-                .Func("EnableDisableSpawnGroup", &Zone::EnableDisableSpawnGroup);
+                .Func("EnableDisableSpawnGroup", &Zone::EnableDisableSpawnGroup)
+                .Func("SpawnedAtSpot", &Zone::SpawnedAtSpot);
 
             Bind<Zone>("Zone", binding);
         }

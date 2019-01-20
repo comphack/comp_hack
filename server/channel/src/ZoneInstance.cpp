@@ -51,14 +51,14 @@ namespace libcomp
         {
             Using<objects::ZoneInstanceObject>();
             Using<ActiveEntityState>();
-            Using<objects::Demon>();
 
             Sqrat::DerivedClass<ZoneInstance,
                 objects::ZoneInstanceObject,
                 Sqrat::NoConstructor<ZoneInstance>> binding(mVM, "ZoneInstance");
             binding
                 .Func("GetDefinitionID", &ZoneInstance::GetDefinitionID)
-                .Func("GetFlagState", &ZoneInstance::GetFlagStateValue);
+                .Func("GetFlagState", &ZoneInstance::GetFlagStateValue)
+                .Func("SetFlagState", &ZoneInstance::SetFlagState);
 
             Bind<ZoneInstance>("ZoneInstance", binding);
         }

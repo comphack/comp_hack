@@ -393,7 +393,33 @@ void AIManager::CombatSkillComplete(
     // itself so they're not spamming skills non-stop
     bool reset = false;
     bool wait = true;
-    if(target)
+
+    bool normalProcesing = true;
+    if(aiState->ActionOverridesKeyExists("combatSkillComplete"))
+    {
+        libcomp::String fOverride = aiState->GetActionOverrides(
+            "combatSkillComplete");
+
+        Sqrat::Function f(Sqrat::RootTable(aiState->GetScript()->GetVM()),
+            fOverride.IsEmpty() ? "combatSkillComplete" : fOverride.C());
+
+        auto scriptResult = !f.IsNull()
+            ? f.Evaluate<int32_t>(eState, this, activated, target, hit) : 0;
+        if(!scriptResult || *scriptResult == -1)
+        {
+            // Do not continue
+            return;
+        }
+        else if(*scriptResult & 0x01)
+        {
+            // Skip normal processing
+            normalProcesing = false;
+            reset = (*scriptResult & 0x02) != 0;
+            wait = (*scriptResult & 0x04) == 0;
+        }
+    }
+
+    if(normalProcesing && target)
     {
         if(target->GetStatusTimes(STATUS_KNOCKBACK))
         {

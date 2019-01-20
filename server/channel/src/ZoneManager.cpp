@@ -2557,8 +2557,9 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
     int32_t hpTDamage, mpTDamage, upkeepCost;
     for(auto entity : effectEntities)
     {
-        if(!entity->PopEffectTicks(now, hpTDamage, mpTDamage, upkeepCost,
-            added, updated, removed)) continue;
+        uint8_t result = entity->PopEffectTicks(now, hpTDamage, mpTDamage,
+            upkeepCost, added, updated, removed);
+        if(!result) continue;
 
         if(added.size() > 0 || updated.size() > 0)
         {
@@ -2672,6 +2673,12 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
                     break;
                 }
             }
+        }
+
+        if(result & 0x02)
+        {
+            // Special T-damage effect should occur
+            characterManager->ApplyTDamageSpecial(entity);
         }
     }
 

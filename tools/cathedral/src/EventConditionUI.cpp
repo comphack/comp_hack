@@ -76,8 +76,12 @@ EventCondition::EventCondition(MainWindow *pMainWindow, QWidget *pParent)
         (int)objects::EventCondition::Type_t::EXPERTISE);
     ui->typeNormal->addItem("Expertise Active",
         (int)objects::EventCondition::Type_t::EXPERTISE_ACTIVE);
-    ui->typeNormal->addItem("Expertise Not Max",
-        (int)objects::EventCondition::Type_t::EXPERTISE_NOT_MAX);
+    ui->typeNormal->addItem("Expertise Class Obtainable",
+        (int)objects::EventCondition::Type_t::EXPERTISE_CLASS_OBTAINABLE);
+    ui->typeNormal->addItem("Expertise Points Obtainable",
+        (int)objects::EventCondition::Type_t::EXPERTISE_POINTS_OBTAINABLE);
+    ui->typeNormal->addItem("Expertise Points Remaining",
+        (int)objects::EventCondition::Type_t::EXPERTISE_POINTS_REMAINING);
     ui->typeNormal->addItem("Faction Group",
         (int)objects::EventCondition::Type_t::FACTION_GROUP);
     ui->typeNormal->addItem("Gender",
@@ -555,11 +559,28 @@ void EventCondition::RefreshTypeContext()
         maxValues[1] = 1;
         cmpNumeric = cmpBetween = cmpExists = false;
         break;
-    case objects::EventCondition::Type_t::EXPERTISE_NOT_MAX:
-        ui->lblValue1->setText("Expertise Index:");
-        ui->lblValue2->setText("(or) Total Points Left:");
+    case objects::EventCondition::Type_t::EXPERTISE_CLASS_OBTAINABLE:
+        ui->lblValue1->setText("Expertise Index (No Chain):");
+        ui->lblValue2->setText("Class Obtainable:");
         defaultCompareTxt = "Equal";
         minValues[0] = minValues[1] = 0;
+        maxValues[0] = 38;
+        cmpNumeric = cmpBetween = cmpExists = false;
+        break;
+    case objects::EventCondition::Type_t::EXPERTISE_POINTS_OBTAINABLE:
+        ui->lblValue1->setText("Expertise Index (No Chain):");
+        ui->lblValue2->setText("Points Obtainable:");
+        defaultCompareTxt = "Equal";
+        minValues[0] = minValues[1] = 0;
+        maxValues[0] = 38;
+        cmpNumeric = cmpBetween = cmpExists = false;
+        break;
+    case objects::EventCondition::Type_t::EXPERTISE_POINTS_REMAINING:
+        ui->lblValue1->setText("Expertise Index (-1 = all):");
+        ui->lblValue2->setText("Points Remaining:");
+        defaultCompareTxt = "GTE";
+        minValues[0] = -1;
+        minValues[0] = 0;
         maxValues[0] = 58;
         cmpBetween = cmpExists = false;
         break;

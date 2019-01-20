@@ -34,6 +34,7 @@
 
 // object Includes
 #include <AccountWorldData.h>
+#include <CalculatedEntityState.h>
 #include <Character.h>
 #include <DemonBox.h>
 #include <InheritedSkill.h>
@@ -46,6 +47,7 @@
 #include <MiNPCBasicData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
+#include <TokuseiAspect.h>
 
 // libcomp Includes
 #include "CharacterManager.h"
@@ -509,4 +511,11 @@ int8_t DemonState::GetGender()
     }
 
     return 2;   // None
+}
+
+bool DemonState::HasSpecialTDamage()
+{
+    auto calcState = GetCalculatedState();
+    return calcState->ExistingTokuseiAspectsContains((int8_t)
+        objects::TokuseiAspect::Type_t::FAMILIARITY_REGEN);
 }

@@ -656,11 +656,20 @@ public:
      *  effects that have been queued since the specified time
      * @param removed Output set to store the effect type IDs of removed
      *  effects that have been queued since the specified time
-     * @return true if any events have passed, false if none have
+     * @return Flag mask with the following flags:
+     *  1) At least one effect tick passed
+     *  2) Special T-damage effect occurred
      */
-    bool PopEffectTicks(uint32_t time, int32_t& hpTDamage, int32_t& mpTDamage,
+    uint8_t PopEffectTicks(uint32_t time, int32_t& hpTDamage, int32_t& mpTDamage,
         int32_t& tUpkeep, std::set<uint32_t>& added, std::set<uint32_t>& updated,
         std::set<uint32_t>& removed);
+
+    /**
+     * Check if the entity currently has active T-damage effects
+     * @return true if the entity has special T-damage effects, false if it
+     *  does not
+     */
+    virtual bool HasSpecialTDamage();
 
     /**
      * Clear or reset any active skill upkeep costs timer
@@ -825,25 +834,6 @@ protected:
     void AdjustStats(const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
         libcomp::EnumMap<CorrectTbl, int16_t>& stats,
         std::shared_ptr<objects::CalculatedEntityState> calcState, bool baseMode);
-
-    /**
-     * Generic handler for anything that needs to occur between calculating
-     * entity base stats and calculating the rest of the entity. This is also
-     * reponsible for setting the CalculatedEntityState's final tokusei effects.
-     * Should base stats be adjusted further by the outcome of this function, it
-     * is also responsible for setting the new values.
-     * @param definitionManager Pointer to the DefinitionManager to use when
-     *  determining how various things interact with the entity
-     * @param calcState Override CalculatedEntityState to use instead of the
-     *  entity's default
-     * @param stats Output map parameter of base or calculated stats to adjust for
-     *  the current entity
-     * @param adjustments List of adjustments to the correct table values supplied
-     */
-    virtual void BaseStatsCalculated(libcomp::DefinitionManager* definitionManager,
-        std::shared_ptr<objects::CalculatedEntityState> calcState,
-        libcomp::EnumMap<CorrectTbl, int16_t>& stats,
-        std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
 
     /**
      * Update the entity's calculated NRA chances for each affinity from base and

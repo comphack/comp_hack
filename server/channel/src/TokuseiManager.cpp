@@ -794,8 +794,6 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
             auto& skillPending = newMaps[eState->GetEntityID()][true];
             calcState->SetEffectiveTokusei(effective);
             calcState->SetPendingSkillTokusei(skillPending);
-            calcState->ClearEffectiveTokuseiFinal();
-            calcState->ClearPendingSkillTokuseiFinal();
 
             // Gather all possible aspects on the entity for quick
             // reference later
@@ -983,6 +981,8 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
     // pulling the skill tokusei
 
     std::list<int32_t> tokuseiIDs;
+    std::list<std::shared_ptr<
+        objects::MiSpecialConditionData>> statConditionals;
     switch(eState->GetEntityType())
     {
     case EntityType_t::CHARACTER:
@@ -1016,22 +1016,34 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
                 int16_t p2 = condition->GetParams(1);
 
                 int16_t conditionType = condition->GetType();
-                if(conditionType == 1)
+                switch(conditionType)
                 {
+                case (int16_t)(10 + (int16_t)CorrectTbl::STR):
+                case (int16_t)(10 + (int16_t)CorrectTbl::VIT):
+                case (int16_t)(10 + (int16_t)CorrectTbl::INT):
+                case (int16_t)(10 + (int16_t)CorrectTbl::SPEED):
+                case (int16_t)(10 + (int16_t)CorrectTbl::LUCK):
+                    // Core stat check, put aside until later
+                    statConditionals.push_back(condition);
+                    break;
+                case 1:
                     // Level check
                     add = (p1 == 0 || (int16_t)lvl >= p1) &&
                         (p2 == 0 || (int16_t)lvl <= p2);
-                }
-                else if(conditionType == 2)
-                {
+                    break;
+                case 2:
                     // LNC check (inverted format)
                     add = cState->IsLNCType((uint8_t)p1, true);
-                }
-                else if(conditionType >= 100 && conditionType <= 158)
-                {
-                    // Expertise #(type - 100) rank check
-                    add = cState->GetExpertiseRank((uint32_t)(
-                        conditionType - 100), definitionManager) >= (uint8_t)p1;
+                    break;
+                default:
+                    if(conditionType >= 100 && conditionType <= 158)
+                    {
+                        // Expertise #(type - 100) rank check
+                        add = cState->GetExpertiseRank((uint32_t)(
+                            conditionType - 100), definitionManager) >=
+                            (uint8_t)p1;
+                    }
+                    break;
                 }
 
                 if(add)
@@ -1143,6 +1155,56 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
                 if(tokusei)
                 {
                     retval.push_back(tokusei);
+                }
+            }
+        }
+    }
+
+    // If stat conditionals exist (character only), calculate current stats
+    // with other self-targeting direct tokusei gathered and compare based
+    // upon the results of that. Effects from other entities are not used
+    // here to avoid looping effects that activate effects.
+    if(statConditionals.size() > 0)
+    {
+        auto tempCalc = std::make_shared<objects::CalculatedEntityState>();
+
+        std::unordered_map<int32_t, uint16_t> directTokusei;
+        for(auto tokusei : retval)
+        {
+            if(tokusei->SkillConditionsCount() == 0 && tokusei
+                ->GetTargetType() == objects::Tokusei::TargetType_t::SELF)
+            {
+                if(directTokusei.find(tokusei->GetID()) == directTokusei.end())
+                {
+                    directTokusei[tokusei->GetID()] = 1;
+                }
+                else
+                {
+                    directTokusei[tokusei->GetID()] = (uint16_t)(
+                        directTokusei[tokusei->GetID()] + 1);
+                }
+            }
+        }
+
+        tempCalc->SetEffectiveTokusei(directTokusei);
+        eState->RecalculateStats(definitionManager, tempCalc);
+
+        for(auto condition : statConditionals)
+        {
+            // If the stat is greater than or equal to the first param
+            // the tokusei are active
+            int16_t stat = tempCalc->GetCorrectTbl((size_t)
+                (condition->GetType() - 10));
+            if(stat > -1 && (stat >= condition->GetParams(0)))
+            {
+                for(uint32_t tokuseiID : condition->GetTokusei())
+                {
+                    auto tokusei = definitionManager->GetTokuseiData(
+                        (int32_t)tokuseiID);
+                    if(tokusei)
+                    {
+                        retval.push_back(tokusei);
+                    }
                 }
             }
         }
@@ -1691,7 +1753,7 @@ double TokuseiManager::GetAspectSum(const std::shared_ptr<ActiveEntityState>& eS
         }
 
         auto definitionManager = mServer.lock()->GetDefinitionManager();
-        auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
+        auto effectiveTokusei = calcState->GetEffectiveTokusei();
         for(auto pair : effectiveTokusei)
         {
             auto tokusei = definitionManager->GetTokuseiData(pair.first);
@@ -1748,7 +1810,7 @@ std::unordered_map<int32_t, double> TokuseiManager::GetAspectMap(
         }
 
         auto definitionManager = mServer.lock()->GetDefinitionManager();
-        auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
+        auto effectiveTokusei = calcState->GetEffectiveTokusei();
         for(auto pair : effectiveTokusei)
         {
             auto tokusei = definitionManager->GetTokuseiData(pair.first);
@@ -1803,7 +1865,7 @@ std::list<double> TokuseiManager::GetAspectValueList(const std::shared_ptr<
         }
 
         auto definitionManager = mServer.lock()->GetDefinitionManager();
-        auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
+        auto effectiveTokusei = calcState->GetEffectiveTokusei();
         for(auto pair : effectiveTokusei)
         {
             auto tokusei = definitionManager->GetTokuseiData(pair.first);
@@ -1935,7 +1997,7 @@ void TokuseiManager::UpdateMovementDecay(const std::shared_ptr<
     std::unordered_map<std::shared_ptr<objects::Item>, int32_t> updates;
     for(int32_t tokuseiID : mMoveDecayTokusei)
     {
-        uint16_t count = calcState->GetEffectiveTokuseiFinal(tokuseiID);
+        uint16_t count = calcState->GetEffectiveTokusei(tokuseiID);
         if(count > 0)
         {
             auto tokusei = server->GetDefinitionManager()->GetTokuseiData(

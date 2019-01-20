@@ -55,7 +55,9 @@
             <value num="16">MAP</value>
             <value num="17">QUEST_ACTIVE</value>
             <value num="18">QUEST_SEQUENCE</value>
-            <value num="21">EXPERTISE_NOT_MAX</value>
+            <value num="19">EXPERTISE_POINTS_REMAINING</value>
+            <value num="20">EXPERTISE_POINTS_OBTAINABLE</value>
+            <value num="21">EXPERTISE_CLASS_OBTAINABLE</value>
             <value num="22">EXPERTISE</value>
             <value num="23">SI_EQUIPPED</value>
             <value num="24">SUMMONED</value>

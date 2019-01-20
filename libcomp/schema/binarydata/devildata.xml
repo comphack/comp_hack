@@ -10,7 +10,8 @@
             <value>NONE</value>
         </member>
         <member type="u8" name="fusionModifier" pad="1"/>
-        <member type="s16" name="LNC" pad="2"/>
+        <member type="s16" name="LNC"/>
+        <member type="s16" name="unused"/>
         <member type="u32" name="modelID"/>
     </object>
     <object name="MiDCategoryData" persistent="false" scriptenabled="true">

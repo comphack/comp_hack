@@ -140,6 +140,8 @@ public:
 
     virtual int8_t GetGender();
 
+    virtual bool HasSpecialTDamage();
+
 private:
     /// Map of inherited skills not yet maxed by affinity ID. This
     /// map is refreshed by calling RefreshLearningSkills

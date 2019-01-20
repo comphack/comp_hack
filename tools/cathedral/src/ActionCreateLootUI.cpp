@@ -93,6 +93,8 @@ void ActionCreateLoot::Load(const std::shared_ptr<objects::Action>& act)
     prop->position->setCurrentIndex(to_underlying(
         mAction->GetPosition()));
 
+    prop->bossGroupID->setValue((int32_t)mAction->GetBossGroupID());
+
     for(auto loc : mAction->GetLocations())
     {
         prop->locations->AddObject(loc);
@@ -118,6 +120,8 @@ std::shared_ptr<objects::Action> ActionCreateLoot::Save() const
     mAction->SetExpirationTime((float)prop->expirationTime->value());
     mAction->SetPosition((objects::ActionCreateLoot::Position_t)
         prop->position->currentIndex());
+
+    mAction->SetBossGroupID((uint32_t)prop->bossGroupID->value());
 
     auto locations = prop->locations->GetObjectList<objects::ObjectPosition>();
     mAction->SetLocations(locations);

@@ -371,7 +371,6 @@ void CharacterState::RecalcEquipState(
     std::lock_guard<std::mutex> lock(mLock);
     mEquipmentTokuseiIDs.clear();
     mConditionalTokusei.clear();
-    mStatConditionalTokusei.clear();
     mEquipFuseBonuses.clear();
 
     mNextEquipmentExpiration = 0;
@@ -571,23 +570,21 @@ void CharacterState::RecalcEquipState(
     // Add all conditions to their correct collections
     for(auto condition : conditions)
     {
-        switch(condition->GetType())
+        if(condition->GetType() != 0)
         {
-        case 0:
-            // No condition, skip
-            break;
-        case (int16_t)(10 + (int16_t)CorrectTbl::STR):
-        case (int16_t)(10 + (int16_t)CorrectTbl::VIT):
-        case (int16_t)(10 + (int16_t)CorrectTbl::INT):
-        case (int16_t)(10 + (int16_t)CorrectTbl::SPEED):
-        case (int16_t)(10 + (int16_t)CorrectTbl::LUCK):
-            // Checked during stat calculation
-            mStatConditionalTokusei.push_back(condition);
-            break;
-        default:
-            // Checked during tokusei calculation
             mConditionalTokusei.push_back(condition);
-            break;
+        }
+        else
+        {
+            // In some instances the conditional tokusei are used
+            // as an additional effect section
+            for(uint32_t tokuseiID : condition->GetTokusei())
+            {
+                if(tokuseiID)
+                {
+                    mEquipmentTokuseiIDs.push_back((int32_t)tokuseiID);
+                }
+            }
         }
     }
 
@@ -980,7 +977,12 @@ uint8_t CharacterState::RecalculateStats(
 
     UpdateNRAChances(stats, calcState, nraTbls);
     AdjustStats(correctTbls, stats, calcState, true);
-    BaseStatsCalculated(definitionManager, calcState, stats, correctTbls);
+
+    // Base stats calcualted, Apply equipment fusion bonuses now
+    for(auto& pair : mEquipFuseBonuses)
+    {
+        stats[pair.first] = (int16_t)(stats[pair.first] + pair.second);
+    }
 
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), false);
 
@@ -1082,123 +1084,6 @@ int8_t CharacterState::GetGender()
 {
     auto entity = GetEntity();
     return entity ? (int8_t)entity->GetGender() : 2;
-}
-
-void CharacterState::BaseStatsCalculated(
-    libcomp::DefinitionManager* definitionManager,
-    std::shared_ptr<objects::CalculatedEntityState> calcState,
-    libcomp::EnumMap<CorrectTbl, int16_t>& stats,
-    std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
-{
-    // Apply equipment fusion bonuses
-    for(auto& pair : mEquipFuseBonuses)
-    {
-        stats[pair.first] = (int16_t)(stats[pair.first] + pair.second);
-    }
-
-    if(calcState != GetCalculatedState())
-    {
-        // Do not calculate again, just use the base calculation mode
-        ActiveEntityState::BaseStatsCalculated(definitionManager,
-            calcState, stats, adjustments);
-        return;
-    }
-
-    auto effectiveTokusei = calcState->GetEffectiveTokusei();
-    auto pendingSkillTokusei = calcState->GetPendingSkillTokusei();
-
-    // Keep track of any additional base stats that need to be adjusted
-    // (run-time verified numeric adjust only) based on the current state
-    // of the stats
-    std::list<std::shared_ptr<objects::MiCorrectTbl>> conditionalStatAdjusts;
-
-    for(auto condition : mStatConditionalTokusei)
-    {
-        int16_t stat = -1;
-        switch(condition->GetType())
-        {
-        case (int16_t)(10 + (int16_t)CorrectTbl::STR):
-        case (int16_t)(10 + (int16_t)CorrectTbl::VIT):
-        case (int16_t)(10 + (int16_t)CorrectTbl::INT):
-        case (int16_t)(10 + (int16_t)CorrectTbl::SPEED):
-        case (int16_t)(10 + (int16_t)CorrectTbl::LUCK):
-            stat = stats[(CorrectTbl)(condition->GetType() - 10)];
-            break;
-        default:
-            // Should never happen
-            break;
-        }
-
-        // If the stat is greater than or equal to the first param
-        // the tokusei are active
-        if(stat > -1 && (stat >= condition->GetParams(0)))
-        {
-            for(uint32_t conditionTokusei : condition->GetTokusei())
-            {
-                int32_t tokuseiID = (int32_t)conditionTokusei;
-
-                auto tokusei = tokuseiID != 0
-                    ? definitionManager->GetTokuseiData(tokuseiID)
-                    : nullptr;
-                if(tokusei)
-                {
-                    // Update the tokusei maps
-                    std::unordered_map<int32_t, uint16_t>* map;
-                    if(tokusei->SkillConditionsCount() > 0)
-                    {
-                        map = &pendingSkillTokusei;
-                    }
-                    else
-                    {
-                        map = &effectiveTokusei;
-                    }
-
-                    if(map->find(tokuseiID) == map->end())
-                    {
-                        (*map)[tokuseiID] = 1;
-                    }
-                    else
-                    {
-                        (*map)[tokuseiID] = (uint16_t)(
-                            (*map)[tokuseiID] + 1);
-                    }
-
-                    // Add any correct tbl adjustments
-                    for(auto ct : tokusei->GetCorrectValues())
-                    {
-                        if((uint8_t)ct->GetID() <= (uint8_t)CorrectTbl::LUCK)
-                        {
-                            conditionalStatAdjusts.push_back(ct);
-                        }
-                        else
-                        {
-                            adjustments.push_back(ct);
-                        }
-                    }
-
-                    for(auto ct : tokusei->GetTokuseiCorrectValues())
-                    {
-                        if((uint8_t)ct->GetID() <= (uint8_t)CorrectTbl::LUCK)
-                        {
-                            conditionalStatAdjusts.push_back(ct);
-                        }
-                        else
-                        {
-                            adjustments.push_back(ct);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    calcState->SetEffectiveTokuseiFinal(effectiveTokusei);
-    calcState->SetPendingSkillTokuseiFinal(pendingSkillTokusei);
-
-    if(conditionalStatAdjusts.size() > 0)
-    {
-        AdjustStats(conditionalStatAdjusts, stats, calcState, true);
-    }
 }
 
 void CharacterState::AdjustFuseBonus(libcomp::DefinitionManager* definitionManager,

@@ -15,6 +15,7 @@
             <value>ABS</value>
             <value>SOURCE_RELATIVE</value>
         </member>
+        <member type="u32" name="bossGroupID"/>
         <member type="list" name="locations">
             <element type="ObjectPosition*"/>
         </member>

@@ -1388,7 +1388,7 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
     }
 }
 
-bool ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
+uint8_t ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
     int32_t& mpTDamage, int32_t& tUpkeep, std::set<uint32_t>& added,
     std::set<uint32_t>& updated, std::set<uint32_t>& removed)
 {
@@ -1404,11 +1404,12 @@ bool ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
     // If effects are not active, stop now
     if(!mEffectsActive)
     {
-        return false;
+        return 0;
     }
 
     bool found = false;
     bool reregister = false;
+    bool tDamageSpecial = false;
     do
     {
         std::set<uint32_t> passed;
@@ -1464,6 +1465,8 @@ bool ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
                 // Adjust T-Damage if the entity is not dead
                 if(mAlive)
                 {
+                    tDamageSpecial = HasSpecialTDamage();
+
                     if(doRegen)
                     {
                         bool skipHPRegen = false;
@@ -1476,13 +1479,12 @@ bool ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
                             auto zone = GetZone();
                             auto instance = zone
                                 ? zone->GetInstance() : nullptr;
-                            auto cs = GetCoreStats();
-                            if(instance && cs && instance->GetPoisonLevel())
+                            if(instance && instance->GetPoisonLevel())
                             {
                                 skipHPRegen = true;
                                 hpTDamage = (int32_t)(hpTDamage +
                                     ceil((float)instance->GetPoisonLevel() *
-                                        0.01f * (float)cs->GetMaxHP()));
+                                        0.01f * (float)GetMaxHP()));
                             }
                         }
 
@@ -1507,7 +1509,7 @@ bool ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
                     }
                 }
 
-                // T-Damage applies is every 10 seconds
+                // T-Damage application is every 10 seconds
                 mNextRegenSync = pair.first + 10;
                 next.push_back(std::pair<uint32_t, uint32_t>(0,
                     mNextRegenSync));
@@ -1543,15 +1545,19 @@ bool ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
     }
 
     // If anything was popped off the map, update the entity
+    uint8_t result = tDamageSpecial ? 2 : 0;
     if(hpTDamage || mpTDamage || added.size() > 0 ||
         updated.size() > 0 || removed.size() > 0)
     {
-        return true;
+        result |= 1;
     }
-    else
-    {
-        return false;
-    }
+
+    return result;
+}
+
+bool ActiveEntityState::HasSpecialTDamage()
+{
+    return false;
 }
 
 bool ActiveEntityState::ResetUpkeep()
@@ -2746,19 +2752,6 @@ void ActiveEntityState::AdjustStats(
     }
 }
 
-void ActiveEntityState::BaseStatsCalculated(libcomp::DefinitionManager* definitionManager,
-    std::shared_ptr<objects::CalculatedEntityState> calcState,
-    libcomp::EnumMap<CorrectTbl, int16_t>& stats,
-    std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
-{
-    (void)definitionManager;
-    (void)stats;
-    (void)adjustments;
-
-    calcState->SetEffectiveTokuseiFinal(calcState->GetEffectiveTokusei());
-    calcState->SetPendingSkillTokuseiFinal(calcState->GetPendingSkillTokusei());
-}
-
 void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
     const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
@@ -2929,7 +2922,6 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
 
     UpdateNRAChances(stats, calcState);
     AdjustStats(correctTbls, stats, calcState, true);
-    BaseStatsCalculated(definitionManager, calcState, stats, correctTbls);
 
     CharacterManager::CalculateDependentStats(stats,
         GetCoreStats()->GetLevel(), true);

@@ -3004,6 +3004,12 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
 
     auto zoneSpots = zone->GetDynamicMap()->Spots;
 
+    uint32_t bossGroupID = ctx.Options.GroupID;
+    if(act->GetBossGroupID())
+    {
+        bossGroupID = act->GetBossGroupID();
+    }
+
     std::list<int32_t> entityIDs;
     for(auto loc : locations)
     {
@@ -3056,7 +3062,7 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
         lState->SetEntityID(server->GetNextEntityID());
         entityIDs.push_back(lState->GetEntityID());
 
-        zone->AddLootBox(lState, ctx.Options.GroupID);
+        zone->AddLootBox(lState, bossGroupID);
 
         if(firstClient)
         {

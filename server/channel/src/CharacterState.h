@@ -236,13 +236,6 @@ public:
 
     virtual int8_t GetGender();
 
-protected:
-    virtual void BaseStatsCalculated(
-        libcomp::DefinitionManager* definitionManager,
-        std::shared_ptr<objects::CalculatedEntityState> calcState,
-        libcomp::EnumMap<CorrectTbl, int16_t>& stats,
-        std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
-
 private:
     /**
      * Calculate and update item fuse bonuses for the supplied equipment
@@ -262,11 +255,6 @@ private:
     /// of the character other than base stats
     std::list<std::shared_ptr<
         objects::MiSpecialConditionData>> mConditionalTokusei;
-
-    /// List of tokusei conditions that apply based upon the state
-    /// of the character's base stats
-    std::list<std::shared_ptr<
-        objects::MiSpecialConditionData>> mStatConditionalTokusei;
 
     /// Tokusei effect IDs available due to the number of quests completed
     std::list<int32_t> mQuestBonusTokuseiIDs;

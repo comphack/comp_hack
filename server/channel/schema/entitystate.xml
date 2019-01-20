@@ -48,15 +48,7 @@
             <key type="s32"/>
             <value type="u16"/>
         </member>
-        <member type="map" name="EffectiveTokuseiFinal">
-            <key type="s32"/>
-            <value type="u16"/>
-        </member>
         <member type="map" name="PendingSkillTokusei">
-            <key type="s32"/>
-            <value type="u16"/>
-        </member>
-        <member type="map" name="PendingSkillTokuseiFinal">
             <key type="s32"/>
             <value type="u16"/>
         </member>

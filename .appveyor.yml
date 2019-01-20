@@ -35,11 +35,11 @@ build_script:
   - 7z x external.zip
   - del external.zip
   - mv external* ..\binaries
-  - if %platform%==x64 (appveyor DownloadFile https://github.com/comphack/objgen/releases/download/v1.0.1/objgen-win64.zip -FileName objgen.zip)
+  - if %platform%==x64 (appveyor DownloadFile https://github.com/comphack/objgen/releases/download/v1.0.3/objgen-win64.zip -FileName objgen.zip)
   - if %platform%==x64 (7z x objgen.zip)
   - if %platform%==x64 (del objgen.zip)
   - if %platform%==x64 (mv objgen* ..\deps\objgen)
-  - if %platform%==x64 (appveyor DownloadFile https://github.com/comphack/libobjects/releases/download/v1.0.16/libobjects-win64.zip -FileName libobjects.zip)
+  - if %platform%==x64 (appveyor DownloadFile https://github.com/comphack/libobjects/releases/download/v1.0.17/libobjects-win64.zip -FileName libobjects.zip)
   - if %platform%==x64 (7z x libobjects.zip)
   - if %platform%==x64 (del libobjects.zip)
   - if %platform%==x64 (mv libobjects* ..\deps\libobjects)

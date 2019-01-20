@@ -704,6 +704,13 @@ public:
         objects::MiDevilData>& devilData) const;
 
     /**
+     * Apply special effects that occur as part of the normal regen synced
+     * "t-damage" processing that occurs every 10 seconds.
+     * @param eState Pointer to the entity that just applied regen
+     */
+    void ApplyTDamageSpecial(const std::shared_ptr<ActiveEntityState>& eState);
+
+    /**
      * Get a demon's familiarity rank from their current familiarity points.
      * @param familiarity Demon's familiarity points
      * @return Converted familiarity rank from -3 to +4
@@ -1194,6 +1201,7 @@ public:
      * @param allowAdjust If true, tokusei effects can increase the amount of
      *  points beinga added
      * @param validate Optional parameter to disable checking unlock criteria
+     *  and current digitalize state level limits
      * @return true if an updateable digitalize race was supplied, false
      *  if they were all invalid or not unlockable
      */

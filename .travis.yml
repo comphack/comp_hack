@@ -62,12 +62,12 @@ before_install:
   - if [ ! -f clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz ]; then wget -q http://llvm.org/releases/3.8.0/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz; fi
   - if [ ! -f external-0.1.1-clang.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-21/external-0.1.1-clang.tar.bz2; fi
   - if [ ! -f external-0.1.1-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-21/external-0.1.1-gcc5.tar.bz2; fi
-  - if [ ! -f objgen-clang.tar.bz2 ]; then wget -q https://github.com/comphack/objgen/releases/download/v1.0.1/objgen-clang.tar.bz2; fi
-  - if [ ! -f objgen-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/objgen/releases/download/v1.0.1/objgen-gcc5.tar.bz2; fi
+  - if [ ! -f objgen-clang.tar.bz2 ]; then wget -q https://github.com/comphack/objgen/releases/download/v1.0.3/objgen-clang.tar.bz2; fi
+  - if [ ! -f objgen-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/objgen/releases/download/v1.0.3/objgen-gcc5.tar.bz2; fi
   - if [ -f libobjects-clang.tar.bz2 ]; then rm libobjects-clang.tar.bz2; fi
-  - wget -q https://github.com/comphack/libobjects/releases/download/v1.0.16/libobjects-clang.tar.bz2
+  - wget -q https://github.com/comphack/libobjects/releases/download/v1.0.17/libobjects-clang.tar.bz2
   - if [ -f libobjects-gcc5.tar.bz2 ]; then rm libobjects-gcc5.tar.bz2; fi
-  - wget -q https://github.com/comphack/libobjects/releases/download/v1.0.16/libobjects-gcc5.tar.bz2
+  - wget -q https://github.com/comphack/libobjects/releases/download/v1.0.17/libobjects-gcc5.tar.bz2
   - ls -lh
   - cd ${ROOT_DIR}
   - sudo apt-get update -q

@@ -4303,8 +4303,8 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
         // CAN become active given the correct target (only valid for source)
         std::unordered_map<int32_t, uint16_t> stillPendingSkillTokusei;
 
-        auto effectiveTokusei = calcState->GetEffectiveTokuseiFinal();
-        auto pendingSkillTokusei = calcState->GetPendingSkillTokuseiFinal();
+        auto effectiveTokusei = calcState->GetEffectiveTokusei();
+        auto pendingSkillTokusei = calcState->GetPendingSkillTokusei();
         auto aspects = calcState->GetExistingTokuseiAspects();
 
         bool modified = false;
@@ -4587,9 +4587,8 @@ int8_t SkillManager::EvaluateTokuseiSkillCondition(
         }
         else
         {
-            return otherState->GetCalculatedState()
-                ->EffectiveTokuseiFinalKeyExists(condition->GetValue()) ==
-                !negate ? 1 : 0;
+            return otherState->GetCalculatedState()->EffectiveTokuseiKeyExists(
+                condition->GetValue()) == !negate ? 1 : 0;
         }
     default:
         break;

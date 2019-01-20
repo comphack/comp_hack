@@ -1598,51 +1598,101 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             // Compare adjusting for zero index
             return prevQuestData->GetPhaseCount() == (uint32_t)(prevQuest->GetPhase() + 1);
         }
-    case objects::EventConditionData::Type_t::EXPERTISE_NOT_MAX:
-        if(!client || (compareMode != EventCompareMode::EQUAL &&
-            compareMode != EventCompareMode::DEFAULT_COMPARE))
+    case objects::EventConditionData::Type_t::EXPERTISE_POINTS_REMAINING:
+    case objects::EventConditionData::Type_t::EXPERTISE_POINTS_OBTAINABLE:
+    case objects::EventConditionData::Type_t::EXPERTISE_CLASS_OBTAINABLE:
+        if(!client)
         {
             return false;
         }
-        else if(condition->GetValue2() > 0)
+        else
         {
-            // Ignore [value 1] and check if the number of points left to gain is greater than
-            // [value 2]
-            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+            auto cState = client->GetClientState()->GetCharacterState();
+            auto character = cState->GetEntity();
 
-            int32_t maxTotalPoints = mServer.lock()->GetCharacterManager()
+            auto server = mServer.lock();
+            auto definitionManager = server->GetDefinitionManager();
+
+            int32_t maxTotalPoints = server->GetCharacterManager()
                 ->GetMaxExpertisePoints(character);
 
-            int32_t currentPoints = 0;
-            for(auto expertise : character->GetExpertises())
+            int32_t totalUsed = 0;
+            for(size_t i = 0; i < (size_t)(EXPERTISE_COUNT - 1); i++)
             {
+                auto expertise = character->GetExpertises(i);
                 if(!expertise.IsNull())
                 {
-                    currentPoints = currentPoints + expertise->GetPoints();
+                    totalUsed = totalUsed + expertise->GetPoints();
                 }
             }
 
-            return Compare(condition->GetValue2(), maxTotalPoints - currentPoints, 0, compareMode,
-                EventCompareMode::GTE, EVENT_COMPARE_NUMERIC);
-        }
-        else
-        {
-            // Expertise ID [value 1] is not maxed out
-            auto definitionManager = mServer.lock()->GetDefinitionManager();
-            auto expDef = definitionManager->GetExpertClassData((uint32_t)condition->GetValue1());
-            if(expDef == nullptr)
+            int32_t remaining = maxTotalPoints - totalUsed;
+            switch(condition->GetType())
             {
-                LOG_ERROR(libcomp::String("Invalid expertise ID supplied for"
-                    " EvaluateCondition: %1\n").Arg(condition->GetValue1()));
-                return false;
+            case objects::EventConditionData::Type_t::
+                EXPERTISE_POINTS_OBTAINABLE:
+                // Expertise [value 1] points are lower than but can reach
+                // point total [value 2]
+                if((compareMode != EventCompareMode::EQUAL &&
+                    compareMode != EventCompareMode::DEFAULT_COMPARE) ||
+                    condition->GetValue1() < 0)
+                {
+                    return false;
+                }
+                else
+                {
+                    int32_t points = cState->GetExpertisePoints((uint32_t)
+                        condition->GetValue1(), definitionManager);
+                    int32_t required = condition->GetValue2();
+                    return required > points &&
+                        (points + remaining) >= required;
+                }
+            case objects::EventConditionData::Type_t::
+                EXPERTISE_CLASS_OBTAINABLE:
+                // Expertise [value 1] class is lower than but can reach
+                // class [value 2]
+                if((compareMode != EventCompareMode::EQUAL &&
+                    compareMode != EventCompareMode::DEFAULT_COMPARE) ||
+                    condition->GetValue1() < 0)
+                {
+                    return false;
+                }
+                else
+                {
+                    int32_t points = cState->GetExpertisePoints((uint32_t)
+                        condition->GetValue1(), definitionManager);
+                    int32_t required = condition->GetValue2();
+                    return required > (points / 100000) &&
+                        ((points + remaining) / 100000) >= required;
+                }
+            default:
+                break;
             }
 
-            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
-            auto exp = character->GetExpertises((size_t)condition->GetValue1()).Get();
-            int32_t maxPoints = (expDef->GetMaxClass() * 100 * 1000)
-                + (expDef->GetMaxRank() * 100 * 100);
+            // Check if the number of points left to gain for expertise
+            // [value 1] conpares to [value 2]. If [value 1] is -1, check the
+            // number of points until the cap are left.
+            if(condition->GetValue1() > -1 && remaining)
+            {
+                // Check if the remaining points to max is lower than the
+                // total left
+                auto expDef = definitionManager->GetExpertClassData((uint32_t)
+                    condition->GetValue1());
+                if(expDef)
+                {
+                    int32_t maxPoints = (expDef->GetMaxClass() * 100 * 1000)
+                        + (expDef->GetMaxRank() * 100 * 100);
+                    int32_t diff = maxPoints - cState->GetExpertisePoints(
+                        (uint32_t)condition->GetValue1(), definitionManager);
+                    if(diff < remaining)
+                    {
+                        remaining = diff;
+                    }
+                }
+            }
 
-            return exp == nullptr || (exp->GetPoints() < maxPoints);
+            return Compare(remaining, condition->GetValue2(),
+                0, compareMode, EventCompareMode::GTE, EVENT_COMPARE_NUMERIC);
         }
     case objects::EventConditionData::Type_t::EXPERTISE:
         if(!client)

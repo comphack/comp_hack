@@ -3941,6 +3941,38 @@ bool CharacterManager::IsMitamaDemon(const std::shared_ptr<
         (devilData->GetUnionData()->GetFusionOptions() & 0x08) != 0;
 }
 
+void CharacterManager::ApplyTDamageSpecial(const std::shared_ptr<
+    ActiveEntityState>& eState)
+{
+    auto dState = std::dynamic_pointer_cast<DemonState>(eState);
+    if(dState)
+    {
+        // Apply demon specific effects
+        auto demon = dState->GetEntity();
+        if(!demon)
+        {
+            return;
+        }
+
+        auto server = mServer.lock();
+        auto tokuseiManager = server->GetTokuseiManager();
+
+        // Don't bother with familiarity regen if at max already
+        double fRegen = demon->GetFamiliarity() < MAX_FAMILIARITY
+            ? tokuseiManager->GetAspectSum(dState,
+                TokuseiAspectType::FAMILIARITY_REGEN) : 0.0;
+        if(fRegen > 0.0)
+        {
+            auto client = server->GetManagerConnection()->GetEntityClient(
+                dState->GetEntityID());
+            if(client)
+            {
+                UpdateFamiliarity(client, (int32_t)fRegen, true);
+            }
+        }
+    }
+}
+
 int8_t CharacterManager::GetFamiliarityRank(uint16_t familiarity)
 {
     if(familiarity <= 1000)
@@ -6421,6 +6453,7 @@ bool CharacterManager::UpdateDigitalizePoints(const std::shared_ptr<
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto dgState = cState->GetDigitalizeState();
     auto character = cState->GetEntity();
     auto progress = character ? character->GetProgress().Get() : nullptr;
     if(!progress)
@@ -6476,7 +6509,20 @@ bool CharacterManager::UpdateDigitalizePoints(const std::shared_ptr<
 
         validExists = true;
 
-        if(lvl < 10 && pair.second > 0)
+        // If validating and the current race is the digitalize race,
+        // apply mitama level limit
+        int8_t levelCap = 10;
+        if(validate && dgState && dgState->GetRaceID() == raceID)
+        {
+            auto devilData = definitionManager->GetDevilData(
+                dgState->GetDemon()->GetType());
+            if(IsMitamaDemon(devilData))
+            {
+                levelCap = 5;
+            }
+        }
+
+        if(lvl < levelCap && pair.second > 0)
         {
             int32_t addPoints = pair.second;
             if(allowAdjust)
@@ -6505,7 +6551,7 @@ bool CharacterManager::UpdateDigitalizePoints(const std::shared_ptr<
 
                 levelUpdated.insert(raceID);
 
-                if(lvl == 10)
+                if(lvl == levelCap)
                 {
                     newPoints = 0;
                     break;

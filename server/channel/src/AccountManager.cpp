@@ -1701,7 +1701,7 @@ libcomp::String AccountManager::DumpAccount(channel::ClientState *state)
     {
         // There may be a few characters that are not there since this is
         // an array and not a list.
-        if(!character)
+        if(character.IsNull())
         {
             continue;
         }

@@ -362,7 +362,7 @@ Sqrat::u64::u64()
 
 Sqrat::u64::u64(int32_t value)
 {
-    mValue = value;
+    mValue = (uint64_t)value;
 }
 
 Sqrat::u64::u64(const u64& other)

@@ -15,6 +15,17 @@ bool @OBJECT_NAME@::@VAR_CAMELCASE_NAME@KeyExists(@VAR_KEY_ARG_TYPE@ key) const
     return @VAR_NAME@.find(key) != @VAR_NAME@.end();
 }
 
+std::list<@VAR_KEY_TYPE@> @OBJECT_NAME@::Get@VAR_CAMELCASE_NAME@Keys() const
+{
+    std::list<@VAR_KEY_TYPE@> results;
+    for(auto& pair : @VAR_NAME@)
+    {
+        results.push_back(pair.first);
+    }
+
+    return results;
+}
+
 bool @OBJECT_NAME@::Set@VAR_CAMELCASE_NAME@(@VAR_KEY_ARG_TYPE@ key, @VAR_VALUE_ARG_TYPE@ val)
 {
     std::lock_guard<std::mutex> lock(mFieldLock);

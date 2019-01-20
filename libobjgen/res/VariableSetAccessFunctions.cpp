@@ -49,3 +49,14 @@ std::set<@VAR_TYPE@>::const_iterator @OBJECT_NAME@::@VAR_CAMELCASE_NAME@End() co
 {
     return @VAR_NAME@.end();
 }
+
+std::list<@VAR_TYPE@> @OBJECT_NAME@::Get@VAR_CAMELCASE_NAME@List() const
+{
+    std::list<@VAR_TYPE@> results;
+    for(auto entry : @VAR_NAME@)
+    {
+        results.push_back(entry);
+    }
+
+    return results;
+}

@@ -133,7 +133,7 @@ void SendStateData(std::shared_ptr<ChannelServer> server,
 
     if(channelLogin)
     {
-        if(channelLogin && channelLogin->ActiveSwitchSkillsCount())
+        if(channelLogin->ActiveSwitchSkillsCount())
         {
             for(uint32_t skillID : channelLogin->GetActiveSwitchSkills())
             {

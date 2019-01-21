@@ -145,20 +145,28 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
 
         // Get entity IDs for the character and demon
         auto cState = state->GetCharacterState();
-        cState->SetEntity(character.Get(), nullptr);
+        cState->SetEntity(character.Get(), definitionManager);
         cState->SetEntityID(server->GetNextEntityID());
 
         // If we don't have an active demon, set up the state anyway
         auto dState = state->GetDemonState();
-        dState->SetEntity(demon, demon
-            ? definitionManager->GetDevilData(demon->GetType()) : nullptr);
+        dState->SetEntity(demon, definitionManager);
         dState->SetEntityID(server->GetNextEntityID());
         dState->RefreshLearningSkills(0, definitionManager);
 
-        // Cancel any status effects that shouldn't still be here
-        characterManager->CancelStatusEffects(client, EFFECT_CANCEL_ZONEOUT);
-
         auto channelLogin = state->GetChannelLogin();
+        if(channelLogin && channelLogin->GetFromChannel() == -1)
+        {
+            // Recovering from an instance disconnect, do not cancel zone
+            // status here. If anything needs to be removed it will happen
+            // when going back to the lobby.
+        }
+        else
+        {
+            // Cancel any status effects that shouldn't still be here
+            characterManager->CancelStatusEffects(client, EFFECT_CANCEL_ZONEOUT);
+        }
+
         if(channelLogin && channelLogin->GetFromChannel() >= 0)
         {
             // Update the player state to match previous channel's state
@@ -191,7 +199,7 @@ void AccountManager::HandleLoginResponse(const std::shared_ptr<
         else
         {
             // No channel switch happening, we shouldn't have logout
-            // cancel effects
+            // cancel effects so check again
             characterManager->CancelStatusEffects(client,
                 EFFECT_CANCEL_LOGOUT);
         }

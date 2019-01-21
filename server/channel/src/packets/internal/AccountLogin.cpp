@@ -80,10 +80,11 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             return false;
         }
 
-        auto channelLogin = std::make_shared<objects::ChannelLogin>();
+        std::shared_ptr<objects::ChannelLogin> channelLogin;
         if(p.ReadU8() == 1)
         {
             // Channel login also exists
+            channelLogin = std::make_shared<objects::ChannelLogin>();
             if(!channelLogin->LoadPacket(p, false))
             {
                 LOG_ERROR("Invalid ChannelLogin response received for"

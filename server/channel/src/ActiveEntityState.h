@@ -562,9 +562,12 @@ public:
     /**
      * Set the status effects currently on the entity
      * @param List of status effects currently on the entity
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how the effects behave
      */
     void SetStatusEffects(
-        const std::list<std::shared_ptr<objects::StatusEffect>>& effects);
+        const std::list<std::shared_ptr<objects::StatusEffect>>& effects,
+        libcomp::DefinitionManager* definitionManager);
 
     /**
      * Add new status effects to the entity and activate them. If there are
@@ -749,13 +752,6 @@ public:
 
 protected:
     /**
-     * Set the status effects currently on the entity
-     * @param List of status effects currently on the entity as object references
-     */
-    void SetStatusEffects(
-        const std::list<libcomp::ObjectReference<objects::StatusEffect>>& effects);
-
-    /**
      * Remove the set of supplied status effects from all registered
      * collections. This function should not be called directly in place of
      * being expired first.
@@ -801,6 +797,17 @@ protected:
      * @param time Absolute system time to register for the event
      */
     void SetNextEffectTime(uint32_t effectType, uint32_t time);
+
+    /**
+     * Set a status effect currently on the entity and register its cancel
+     * conditions
+     * @param effect Pointer to a status effect to add to the entity
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how the effect behaves
+     */
+    void RegisterStatusEffect(
+        const std::shared_ptr<objects::StatusEffect>& effect,
+        libcomp::DefinitionManager* definitionManager);
 
     /**
      * Register the entity's next effect event time with the current zone.
@@ -1057,11 +1064,11 @@ public:
     /**
      * Set the active entity
      * @param entity Pointer to the active entity
-     * @param devilData Pointer to the MiDevilData definition
-     *  null is expected for characters
+     * @param definitionManager Pointer to the definition manager to use
+     *  for definining entity definitions
      */
     void SetEntity(const std::shared_ptr<T>& entity,
-        const std::shared_ptr<objects::MiDevilData>& devilData);
+        libcomp::DefinitionManager* definitionManager);
 
     virtual std::shared_ptr<objects::EntityStats> GetCoreStats()
     {

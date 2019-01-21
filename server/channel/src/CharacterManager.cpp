@@ -1443,7 +1443,7 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     }
 
     character->SetActiveDemon(demon);
-    dState->SetEntity(demon, def);
+    dState->SetEntity(demon, definitionManager);
     dState->RefreshLearningSkills(0, definitionManager);
     dState->UpdateDemonState(definitionManager);
 

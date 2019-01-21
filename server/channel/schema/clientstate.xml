@@ -9,6 +9,7 @@
         <member type="bool" name="InstanceTimerActive"/>
         <member type="bool" name="LockMovement"/>
         <member type="u32" name="LastZoneID"/>
+        <member type="u32" name="LastInstanceID"/>
         <member type="u32" name="ZoneInSpotID"/>
         <member type="u64" name="LogoutTimer"/>
         <member type="AccountLogin*" name="AccountLogin"/>

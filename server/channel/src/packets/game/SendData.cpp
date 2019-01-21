@@ -134,6 +134,14 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
                 channelLogin->GetToDynamicMapID()))
             {
                 instAccess = access;
+
+                if(channelLogin->GetFromChannel() == -1)
+                {
+                    // Recovering from an instance disconnect, set last
+                    // zone and instance ID to simulate respawn
+                    state->SetLastZoneID(channelLogin->GetToZoneID());
+                    state->SetLastInstanceID(instAccess->GetInstanceID());
+                }
             }
         }
 

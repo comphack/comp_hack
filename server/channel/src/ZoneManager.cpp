@@ -566,6 +566,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         // Unlike PreviousZone on the character, always set last zone
         // on the state so populate zone actions can act accordingly
         state->SetLastZoneID(currentZone->GetID());
+        state->SetLastInstanceID(currentZone->GetInstanceID());
     }
 
     auto uniqueID = nextZone->GetID();
@@ -937,6 +938,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     std::shared_ptr<Zone> zone = nullptr;
     bool instanceLeft = false;
     bool instanceRemoved = false;
+    bool instanceDisconnect = false;
     {
         std::lock_guard<std::mutex> lock(mLock);
         auto iter = mEntityMap.find(worldCID);
@@ -955,7 +957,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                 ->ExistsInInstance(instance->GetDefinitionID(), newZoneID,
                     newDynamicMapID);
 
-            bool instanceDisconnect = instanceLeft && logOut &&
+            instanceDisconnect = instanceLeft && logOut &&
                 !state->GetLogoutTimer() && !state->GetChannelLogin();
             if(instanceDisconnect)
             {
@@ -1136,20 +1138,23 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
         // Set the previous zone
         cState->GetEntity()->SetPreviousZone(zone->GetDefinitionID());
         state->SetLastZoneID(zone->GetID());
+        state->SetLastInstanceID(zone->GetInstanceID());
     }
 
     // If logging out, cancel zone out and log out effects (zone out effects
     // are cancelled on zone enter instead if not logging out)
     if(logOut)
     {
-        uint8_t cancelFlags = EFFECT_CANCEL_ZONEOUT;
+        // Instance disconnects don't trigger zone out effect cancellations
+        uint8_t cancelFlags = instanceDisconnect ? 0 : EFFECT_CANCEL_ZONEOUT;
 
         auto channelLogin = state->GetChannelLogin();
         bool channelChange = channelLogin &&
             channelLogin->GetToChannel() != server->GetChannelID();
         if(!channelChange)
         {
-            // Only cancel logout status effects if we're not changing channels
+            // Only cancel logout status effects if we're not changing
+            // channels
             cancelFlags |= EFFECT_CANCEL_LOGOUT;
         }
 
@@ -1665,11 +1670,13 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
         }
     }
 
-    // Does not appear to actually need to be sent for player characters
-    //PopEntityForZoneProduction(zone, cState->GetEntityID(), 0);
-
-    // Expire zone change status effects
-    characterManager->CancelStatusEffects(client, EFFECT_CANCEL_ZONEOUT);
+    // Expire zone change status effects. Do not expire if changing zones in
+    // the same instance
+    if(!state->GetLastInstanceID() ||
+        (zone->GetInstanceID() != state->GetLastInstanceID()))
+    {
+        characterManager->CancelStatusEffects(client, EFFECT_CANCEL_ZONEOUT);
+    }
 
     HandleSpecialInstancePopulate(client, zone);
 
@@ -4066,7 +4073,7 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
         eBase = enemy;
 
         auto eState = std::make_shared<EnemyState>();
-        eState->SetEntity(enemy, def);
+        eState->SetEntity(enemy, definitionManager);
         state = eState;
     }
     else
@@ -4080,7 +4087,7 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
         eBase = ally;
 
         auto aState = std::make_shared<AllyState>();
-        aState->SetEntity(ally, def);
+        aState->SetEntity(ally, definitionManager);
         state = aState;
     }
 

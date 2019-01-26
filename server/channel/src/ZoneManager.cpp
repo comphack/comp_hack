@@ -6290,10 +6290,10 @@ uint8_t ZoneManager::CorrectClientPosition(const std::shared_ptr<
             // Last movement was actually stationary
             correctSrc = true;
         }
-        else if((src.x > serverX1 == src.x > serverX2) ||
-            (src.x < serverX1 == src.x < serverX2) ||
-            (src.y > serverY1 == src.y > serverY2) ||
-            (src.y < serverY1 == src.y < serverY2))
+        else if(((src.x > serverX1) == (src.x > serverX2)) ||
+            ((src.x < serverX1) == (src.x < serverX2)) ||
+            ((src.y > serverY1) == (src.y > serverY2)) ||
+            ((src.y < serverY1) == (src.y < serverY2)))
         {
             // Movement origin not between movement points
             correctSrc = true;

@@ -60,23 +60,19 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     auto accountManager = server->GetAccountManager();
 
     int8_t channelID;
-    if(!accountManager->IsLoggedIn(username, channelID))
-    {
-        // Nothing to do
-        return true;
-    }
+    bool isLoggedIn = accountManager->IsLoggedIn(username, channelID);
 
     auto login = accountManager->GetUserLogin(username);
-    if(!login)
-    {
-        LOG_DEBUG(libcomp::String("Unknown username supplied for"
-            " AccountLogout: '%1'\n").Arg(username));
-        return true;
-    }
-
-    auto cLogin = login->GetCharacterLogin();
+    auto cLogin = login ? login->GetCharacterLogin() : nullptr;
     if(action == LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH)
     {
+        if(!isLoggedIn || !cLogin)
+        {
+            LOG_DEBUG(libcomp::String("Channel switch requested for user not"
+                " currently logged in: '%1'\n").Arg(username));
+            return true;
+        }
+
         auto channelLogin = std::make_shared<objects::ChannelLogin>();
         if(!channelLogin->LoadPacket(p))
         {
@@ -129,6 +125,14 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             break;
         case 1:
+            if(!cLogin)
+            {
+                LOG_DEBUG(libcomp::String("Special channel disconnect failed"
+                    " because user is not currently logged in: '%1'\n")
+                    .Arg(username));
+                return true;
+            }
+            else
             {
                 // Tell the source channel to disconnect
                 libcomp::Packet reply;
@@ -150,7 +154,6 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
                 // from channel (last resort if stuck).
                 if(disconnectType == 2)
                 {
-                    cLogin = login->GetCharacterLogin();
                     if(cLogin && server->GetCharacterManager()
                         ->RequestChannelDisconnect(cLogin->GetWorldCID()))
                     {
@@ -194,6 +197,13 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
+        if(!isLoggedIn || !login)
+        {
+            LOG_DEBUG(libcomp::String("Logout requested for user not"
+                " currently logged in: '%1'\n").Arg(username));
+            return true;
+        }
+
         if(accountManager->ChannelSwitchPending(username, channelID))
         {
             LOG_DEBUG(libcomp::String("User is switching to channel %1: '%2'\n")

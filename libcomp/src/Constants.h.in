@@ -266,8 +266,14 @@ namespace libcomp
 /// Minimum distance for all skills added to the target distance formula
 #define SKILL_DISTANCE_OFFSET (100)
 
+/// Max draw distance for the client before entities are no longer visible
+#define MAX_ENTITY_DRAW_DISTANCE (3600.f)
+
 /// Default aggro range for any unbound AI controlled entity
 #define AI_DEFAULT_AGGRO_RANGE (800.f)
+
+/// Maximum distance allowed for (non-GM) characters to interact with an object
+#define MAX_INTERACT_DISTANCE (600.f)
 
 /// Hitbox size of player character entities which do not have a defined
 /// DevilData entry

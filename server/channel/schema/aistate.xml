@@ -26,5 +26,7 @@
         <member type="bool" name="NormalSkillUse" default="true"/>
         <member type="bool" name="SkillsMapped"/>
         <member type="bool" name="DespawnWhenLost" default="true"/>
+        <member type="bool" name="IgnoreDeaggroMin"/>
+        <member type="bool" name="IgnoreDeaggroMax"/>
     </object>
 </objgen>

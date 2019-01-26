@@ -1310,6 +1310,11 @@ bool AIManager::UpdateEnemyState(
     }
 
     auto zone = eState->GetZone();
+    if(!zone)
+    {
+        return false;
+    }
+
     int32_t targetEntityID = aiState->GetTargetEntityID();
     auto target = targetEntityID > 0
         ? zone->GetActiveEntity(targetEntityID) : nullptr;

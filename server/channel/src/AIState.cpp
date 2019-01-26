@@ -197,8 +197,24 @@ float AIState::GetAggroValue(uint8_t mode, bool fov, float defaultVal)
 
 float AIState::GetDeaggroDistance(bool isNight)
 {
-    float dist = GetAggroValue(isNight ? 1 : 0, false, AI_DEFAULT_AGGRO_RANGE);
-    return (dist < 200.f ? 200.f : dist) * (float)GetDeaggroScale();
+    float dist = GetAggroValue(isNight ? 1 : 0, false, 0.f);
+
+    // Enforce lower limit
+    const static float LOWER_LIMIT = AI_DEFAULT_AGGRO_RANGE;
+    if(!GetIgnoreDeaggroMin() && dist < LOWER_LIMIT)
+    {
+        dist = LOWER_LIMIT;
+    }
+
+    dist = (dist < 200.f ? 200.f : dist) * (float)GetDeaggroScale();
+
+    // Enforce upper limit
+    if(!GetIgnoreDeaggroMax() && dist > MAX_ENTITY_DRAW_DISTANCE)
+    {
+        return MAX_ENTITY_DRAW_DISTANCE;
+    }
+
+    return dist;
 }
 
 std::shared_ptr<AICommand> AIState::GetCurrentCommand() const

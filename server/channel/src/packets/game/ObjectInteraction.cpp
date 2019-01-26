@@ -82,15 +82,17 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
         return true;
     }
 
-    std::list<std::shared_ptr<objects::Action>> actions;
+    // Lookup the entity to gather actions.
+    std::shared_ptr<objects::EntityStateObject> objState;
+    std::shared_ptr<objects::ServerObject> objDef;
+    bool isHidden = false;
 
-    // Lookup the entity and see if it has actions.
-    bool valid = false;
     auto npc = zone->GetNPC(entityID);
     if(npc)
     {
-        actions = npc->GetEntity()->GetActions();
-        valid = true;
+        objState = npc;
+        objDef = npc->GetEntity();
+        isHidden = objDef->GetState() != 1;
     }
     else
     {
@@ -98,18 +100,58 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
         auto obj = zone->GetServerObject(entityID);
         if(obj)
         {
-            actions = obj->GetEntity()->GetActions();
-            valid = true;
+            objState = obj;
+            objDef = obj->GetEntity();
+            isHidden = objDef->GetState() != 1;
         }
     }
 
-    LOG_DEBUG(libcomp::String("Interacted with entity %1\n").Arg(entityID));
+    bool valid = false;
+    if(objDef)
+    {
+        auto state = client->GetClientState();
+
+        bool skipChecks = state->GetUserLevel() > 0;
+        if(!skipChecks)
+        {
+            auto cState = state->GetCharacterState();
+            if(isHidden)
+            {
+                LOG_WARNING(libcomp::String("Entity %1 is currently hidden"
+                    " from and cannot be interacted with by player: %1\n")
+                    .Arg(objDef->GetID())
+                    .Arg(state->GetAccountUID().ToString()));
+            }
+            else if(cState && cState->GetDistance(objState->GetCurrentX(),
+                objState->GetCurrentY()) > MAX_INTERACT_DISTANCE)
+            {
+                LOG_WARNING(libcomp::String("Entity %1 too far from player"
+                    " character to interact with: %1\n").Arg(objDef->GetID())
+                    .Arg(state->GetAccountUID().ToString()));
+            }
+            else
+            {
+                valid = true;
+            }
+        }
+        else
+        {
+            valid = true;
+        }
+    }
+    else
+    {
+        LOG_WARNING(libcomp::String("Unknown entity %1\n").Arg(
+            entityID));
+    }
 
     if(valid)
     {
+        LOG_DEBUG(libcomp::String("Interacted with entity %1\n").Arg(entityID));
+
         // Get the action list.
         auto pActionList = new ActionList;
-        pActionList->actions = actions;
+        pActionList->actions = objDef->GetActions();
         pActionList->sourceEntityID = entityID;
 
         LOG_DEBUG(libcomp::String("Got entity with %1 actions.\n").Arg(
@@ -134,11 +176,6 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
 
             delete pActionListWork;
         }, server, client, pActionList);
-    }
-    else
-    {
-        LOG_WARNING(libcomp::String("Unknown entity %1\n").Arg(
-            entityID));
     }
 
     return true;

@@ -202,6 +202,17 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
                     break;
                 }
 
+                if(srcItem == targetItem)
+                {
+                    LOG_ERROR(libcomp::String("Player '%1' on connection '%2' "
+                        "tried to merge an item into itself! Killing their "
+                        "connection.\n").Arg(character->GetName()).Arg(
+                        client->GetName()));
+                    client->Close();
+                    valid = false;
+                    break;
+                }
+
                 srcItem->SetStackSize((uint16_t)oldStack);
 
                 if(srcItem->GetStackSize() == 0)
@@ -254,7 +265,7 @@ bool Parsers::ItemStack::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         return false;
     }
-    
+
     uint32_t srcItemCount = p.ReadU32Little();
 
     std::list<std::pair<uint32_t, uint16_t>> srcItems;

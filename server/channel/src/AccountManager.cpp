@@ -816,6 +816,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         allBoxes.push_back(itemBox);
     }
 
+    std::set<std::shared_ptr<objects::Item>> allItems;
+
     for(auto itemBox : allBoxes)
     {
         if(itemBox.IsNull()) continue;
@@ -857,10 +859,23 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 continue;
             }
 
+            // Check for duplicates of the same item.
+            if(allItems.count(item.Get()))
+            {
+                LOG_WARNING(libcomp::String("Clearing duplicate"
+                    " Item %1 saved on ItemBox for account: %2\n")
+                    .Arg(item.GetUUID().ToString())
+                    .Arg(state->GetAccountUID().ToString()));
+                itemBox->SetItems(i, NULLUUID);
+                openSlots.insert(i);
+                continue;
+            }
+
             state->SetObjectID(item->GetUUID(),
                 server->GetNextObjectID());
 
             loaded.insert(item.Get());
+            allItems.insert(item.Get());
         }
 
         // Recover any orphaned items

@@ -649,7 +649,8 @@ const std::list<std::shared_ptr<ActiveEntityState>> Zone::GetActiveEntities()
 }
 
 const std::list<std::shared_ptr<ActiveEntityState>>
-    Zone::GetActiveEntitiesInRadius(float x, float y, double radius)
+    Zone::GetActiveEntitiesInRadius(float x, float y, double radius,
+        bool useHitbox)
 {
     std::list<std::shared_ptr<ActiveEntityState>> results;
 
@@ -660,9 +661,22 @@ const std::list<std::shared_ptr<ActiveEntityState>>
     for(auto active : GetActiveEntities())
     {
         active->RefreshCurrentPosition(now);
-        if(rSquared >= active->GetDistance(x, y, true))
+
+        float sqDist = active->GetDistance(x, y, true);
+        if(rSquared >= sqDist)
         {
             results.push_back(active);
+        }
+        else if(useHitbox)
+        {
+            // Use the entity's hitbox to determine if it overlaps into the
+            // radius. If the distance minus the hitbox as a radius (squared)
+            // is still too far out, there is no overlap
+            float extend = (float)active->GetHitboxSize() * 10.f;
+            if(sqDist - (float)std::pow(extend, 2) <= radius)
+            {
+                results.push_back(active);
+            }
         }
     }
 

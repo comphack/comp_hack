@@ -380,11 +380,13 @@ public:
 
     /**
      * Get the entity's adjusted movement speed.
+     * @param ignoreSkill If true the current activated ability will be ignored
+     *  for determining current speed state
      * @param altSpeed true if the alternate speed used for walking should
      *  be retrieved instead of the default run speed
      * @return Movement speed of the entity
      */
-    float GetMovementSpeed(bool altSpeed = false);
+    float GetMovementSpeed(bool ignoreSkill = false, bool altSpeed = false);
 
     /**
      * Get the hitbox size for the current entity as defined by MiDevilData.

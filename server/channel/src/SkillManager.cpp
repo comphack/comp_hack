@@ -521,39 +521,10 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         chargedTime = now + (chargeTime * 1000);
 
         activated->SetChargedTime(chargedTime);
-        source->SetActivatedAbility(nullptr);
 
-        float chargeSpeed = 0.f, chargeCompleteSpeed = 0.f;
-
-        // Send movement speed based off skill action type
-        switch(def->GetBasic()->GetActionType())
-        {
-        case objects::MiSkillBasicData::ActionType_t::SPIN:
-        case objects::MiSkillBasicData::ActionType_t::RAPID:
-        case objects::MiSkillBasicData::ActionType_t::COUNTER:
-        case objects::MiSkillBasicData::ActionType_t::DODGE:
-            // No movement during or after
-            break;
-        case objects::MiSkillBasicData::ActionType_t::SHOT:
-        case objects::MiSkillBasicData::ActionType_t::TALK:
-        case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
-        case objects::MiSkillBasicData::ActionType_t::TAUNT:
-        case objects::MiSkillBasicData::ActionType_t::SUPPORT:
-            // Move after only
-            chargeCompleteSpeed = source->GetMovementSpeed();
-            break;
-        case objects::MiSkillBasicData::ActionType_t::GUARD:
-            // Move during and after charge (1/2 normal speed)
-            chargeSpeed = chargeCompleteSpeed = (source->GetMovementSpeed() *
-                0.5f);
-            break;
-        case objects::MiSkillBasicData::ActionType_t::ATTACK:
-        case objects::MiSkillBasicData::ActionType_t::RUSH:
-        default:
-            // Move during and after charge (normal speed)
-            chargeSpeed = chargeCompleteSpeed = source->GetMovementSpeed();
-            break;
-        }
+        auto speeds = GetMovementSpeeds(source, def);
+        activated->SetChargeMoveSpeed(speeds.first);
+        activated->SetChargeCompleteMoveSpeed(speeds.second);
 
         source->SetActivatedAbility(activated);
 
@@ -565,16 +536,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
                 source->SetSpecialActivations(activated->GetActivationID(),
                     activated);
             }
-
-            if(pSkill->FunctionID == SVR_CONST.SKILL_REST)
-            {
-                // Rest has a special no movement rule after charging
-                chargeCompleteSpeed = 0;
-            }
         }
-
-        activated->SetChargeMoveSpeed(chargeSpeed);
-        activated->SetChargeCompleteMoveSpeed(chargeCompleteSpeed);
 
         SendActivateSkill(pSkill);
 
@@ -1085,8 +1047,12 @@ bool SkillManager::TargetInRange(
     float distance = source->GetDistance(target->GetCurrentX(),
         target->GetCurrentY());
 
+    // Occasionally the client will send requests from distances SLIGHTLY off
+    // from the allowed range but seemingly only from the partner demon. Allow
+    // it up to the source hitbox size.
     uint32_t maxTargetRange = (uint32_t)(SKILL_DISTANCE_OFFSET +
         (target->GetHitboxSize() * 10) +
+        (source->GetHitboxSize() * 10) +
         (uint32_t)(skillData->GetTarget()->GetRange() * 10));
 
     return (float)maxTargetRange >= distance;
@@ -1299,6 +1265,58 @@ int8_t SkillManager::ValidateSkillTarget(
     }
 
     return -1;
+}
+
+bool SkillManager::SkillHasMoreUses(
+    const std::shared_ptr<objects::ActivatedAbility>& activated)
+{
+    return activated &&
+        activated->GetExecuteCount() < activated->GetMaxUseCount();
+}
+
+std::pair<float, float> SkillManager::GetMovementSpeeds(
+    const std::shared_ptr<ActiveEntityState>& source,
+    const std::shared_ptr<objects::MiSkillData>& skillData)
+{
+    float chargeSpeed = 0.f, chargeCompleteSpeed = 0.f;
+
+    // Send movement speed based off skill action type
+    switch(skillData->GetBasic()->GetActionType())
+    {
+    case objects::MiSkillBasicData::ActionType_t::SPIN:
+    case objects::MiSkillBasicData::ActionType_t::RAPID:
+    case objects::MiSkillBasicData::ActionType_t::COUNTER:
+    case objects::MiSkillBasicData::ActionType_t::DODGE:
+        // No movement during or after
+        break;
+    case objects::MiSkillBasicData::ActionType_t::SHOT:
+    case objects::MiSkillBasicData::ActionType_t::TALK:
+    case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
+    case objects::MiSkillBasicData::ActionType_t::TAUNT:
+    case objects::MiSkillBasicData::ActionType_t::SUPPORT:
+        // Move after only
+        chargeCompleteSpeed = source->GetMovementSpeed(true);
+        break;
+    case objects::MiSkillBasicData::ActionType_t::GUARD:
+        // Move during and after charge (1/2 normal speed)
+        chargeSpeed = chargeCompleteSpeed = (source->GetMovementSpeed(true) *
+            0.5f);
+        break;
+    case objects::MiSkillBasicData::ActionType_t::ATTACK:
+    case objects::MiSkillBasicData::ActionType_t::RUSH:
+    default:
+        // Move during and after charge (normal speed)
+        chargeSpeed = chargeCompleteSpeed = source->GetMovementSpeed(true);
+        break;
+    }
+
+    if(skillData->GetDamage()->GetFunctionID() == SVR_CONST.SKILL_REST)
+    {
+        // Rest has a special no movement rule after charging
+        chargeCompleteSpeed = 0;
+    }
+
+    return std::make_pair(chargeSpeed, chargeCompleteSpeed);
 }
 
 bool SkillManager::PrepareFusionSkill(
@@ -2421,6 +2439,35 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         return false;
     }
 
+    if(pSkill->PrimaryTarget &&
+        (pSkill->PrimaryTarget->GetEntityType() == EntityType_t::CHARACTER ||
+        pSkill->PrimaryTarget->GetEntityType() == EntityType_t::PARTNER_DEMON))
+    {
+        // If the primary target is a player entity and the player has changed
+        // zones, fizzle the skill
+        bool targetZoneInvalid = false;
+        if(pSkill->PrimaryTarget->GetZone() != zone)
+        {
+            targetZoneInvalid = true;
+        }
+        else
+        {
+            auto targetClient = server->GetManagerConnection()
+                ->GetEntityClient(pSkill->PrimaryTarget->GetWorldCID(), true);
+            auto targetState = targetClient
+                ? targetClient->GetClientState() : nullptr;
+            targetZoneInvalid = targetState &&
+                (!targetState->GetZoneInTime() ||
+                 targetState->GetZoneInTime() > activated->GetExecutionTime());
+        }
+
+        if(targetZoneInvalid)
+        {
+            Fizzle(ctx);
+            return false;
+        }
+    }
+
     ProcessingSkill& skill = *pSkill.get();
 
     bool initialHitReflect = pSkill->Reflected != 0;
@@ -2544,8 +2591,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     {
         effectiveTargets = zone->GetActiveEntities();
     }
-    else if(gatherTargets &&
-        skillRange->GetAreaType() != objects::MiEffectiveRangeData::AreaType_t::NONE)
+    else if(gatherTargets && skillRange->GetAreaType() !=
+        objects::MiEffectiveRangeData::AreaType_t::NONE)
     {
         // Determine area effects
         // Unlike damage calculations, this will use effectiveSource instead
@@ -2553,27 +2600,37 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
         double aoeRange = (double)(skillRange->GetAoeRange() * 10);
 
+        Point srcPoint(effectiveSource->GetCurrentX(),
+            effectiveSource->GetCurrentY());
+        if(pSkill->RushStartPoint)
+        {
+            srcPoint = *pSkill->RushStartPoint;
+        }
+
         switch(skillRange->GetAreaType())
         {
         case objects::MiEffectiveRangeData::AreaType_t::SOURCE:
-            // Not exactly an area but skills targetting the source only should pass
-            // both this check and area target type filtering for "Ally" or "Source"
+            // Not exactly an area but skills targetting the source only should
+            // pass both this check and area target type filtering for "Ally"
+            // or "Source"
             effectiveTargets.push_back(effectiveSource);
             break;
         case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS:
             if(!initialHitReflect)
             {
                 effectiveTargets = zone->GetActiveEntitiesInRadius(
-                    effectiveSource->GetCurrentX(), effectiveSource->GetCurrentY(), aoeRange);
+                    srcPoint.x, srcPoint.y, aoeRange, true);
             }
             break;
         case objects::MiEffectiveRangeData::AreaType_t::TARGET_RADIUS:
-            // If the primary target is set and NRA did not occur, gather other targets
-            if(primaryTarget && !skill.Nulled && !skill.Reflected && !skill.Absorbed)
+            // If the primary target is set and NRA did not occur, gather other
+            // targets
+            if(primaryTarget && !skill.Nulled && !skill.Reflected &&
+                !skill.Absorbed)
             {
                 effectiveTargets = zone->GetActiveEntitiesInRadius(
                     primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(),
-                    aoeRange);
+                    aoeRange, true);
             }
             break;
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_1:
@@ -2583,38 +2640,34 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             {
                 /// @todo: figure out how these 3 differ
 
-                float sourceX = effectiveSource->GetCurrentX();
-                float sourceY = effectiveSource->GetCurrentY();
-
-                double maxTargetRange = (double)(skillData->GetTarget()->GetRange() * 10);
+                double maxTargetRange = (double)(skillData->GetTarget()
+                    ->GetRange() * 10);
 
                 // Get entities in range using the target distance
                 auto potentialTargets = zone->GetActiveEntitiesInRadius(
-                    sourceX, sourceY, maxTargetRange);
+                    srcPoint.x, srcPoint.y, maxTargetRange, true);
 
                 // Center pointer of the arc
                 float sourceRot = ActiveEntityState::CorrectRotation(
                     effectiveSource->GetCurrentRotation());
 
-                // AoE range for this is the percentage of a half circle included on either side
-                // (ex: 20 would mean 20% of a full radian on both sides is included and 100 would
-                // behave like a source radius AoE)
+                // AoE range for this is the percentage of a half circle
+                // included on either side (ex: 20 would mean 20% of a full
+                // radian on both sides is included and 100 would behave like
+                // a source radius AoE)
                 float maxRotOffset = (float)aoeRange * 0.001f * 3.14f;
 
-                effectiveTargets = ZoneManager::GetEntitiesInFoV(potentialTargets, sourceX,
-                    sourceY, sourceRot, maxRotOffset);
+                effectiveTargets = ZoneManager::GetEntitiesInFoV(
+                    potentialTargets, srcPoint.x, srcPoint.y, sourceRot,
+                    maxRotOffset, true);
             }
             break;
         case objects::MiEffectiveRangeData::AreaType_t::STRAIGHT_LINE:
             if(!initialHitReflect && primaryTarget &&
-                skillRange->GetAoeLineWidth() > 0)
+                skillRange->GetAoeLineWidth() >= 0)
             {
                 // Create a rotated rectangle to represent the line with
                 // a designated width equal to the AoE range
-
-                Point src(effectiveSource->GetCurrentX(),
-                    effectiveSource->GetCurrentY());
-
                 Point dest(primaryTarget->GetCurrentX(),
                     primaryTarget->GetCurrentY());
 
@@ -2626,17 +2679,18 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 if(skill.Definition->GetBasic()->GetActionType() !=
                     objects::MiSkillBasicData::ActionType_t::RUSH)
                 {
-                    dest = server->GetZoneManager()->GetLinearPoint(
-                        src.x, src.y, dest.x, dest.y, (float)aoeRange, false);
+                    dest = server->GetZoneManager()->GetLinearPoint(srcPoint.x,
+                        srcPoint.y, dest.x, dest.y, (float)aoeRange, false);
                 }
-                
+
                 std::list<Point> rect;
-                if(dest.y != src.y)
+                if(dest.y != srcPoint.y)
                 {
                     // Set the line rectangle corner points from the source,
                     // destination and perpendicular slope
 
-                    float pSlope = ((dest.x - src.x)/(dest.y - src.y)) * -1.f;
+                    float pSlope = ((dest.x - srcPoint.x) /
+                        (dest.y - srcPoint.y)) * -1.f;
                     float denom = (float)std::sqrt(1.0f + std::pow(pSlope, 2));
 
                     float xOffset = (float)(lineWidth / denom);
@@ -2644,24 +2698,32 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
                     if(pSlope > 0)
                     {
-                        rect.push_back(Point(src.x + xOffset, src.y + yOffset));
-                        rect.push_back(Point(src.x - xOffset, src.y - yOffset));
-                        rect.push_back(Point(dest.x - xOffset, dest.y - yOffset));
-                        rect.push_back(Point(dest.x + xOffset, dest.y + yOffset));
+                        rect.push_back(Point(srcPoint.x + xOffset,
+                            srcPoint.y + yOffset));
+                        rect.push_back(Point(srcPoint.x - xOffset,
+                            srcPoint.y - yOffset));
+                        rect.push_back(Point(dest.x - xOffset,
+                            dest.y - yOffset));
+                        rect.push_back(Point(dest.x + xOffset,
+                            dest.y + yOffset));
                     }
                     else
                     {
-                        rect.push_back(Point(src.x - xOffset, src.y + yOffset));
-                        rect.push_back(Point(src.x + xOffset, src.y - yOffset));
-                        rect.push_back(Point(dest.x - xOffset, dest.y + yOffset));
-                        rect.push_back(Point(dest.x + xOffset, dest.y - yOffset));
+                        rect.push_back(Point(srcPoint.x - xOffset,
+                            srcPoint.y + yOffset));
+                        rect.push_back(Point(srcPoint.x + xOffset,
+                            srcPoint.y - yOffset));
+                        rect.push_back(Point(dest.x - xOffset,
+                            dest.y + yOffset));
+                        rect.push_back(Point(dest.x + xOffset,
+                            dest.y - yOffset));
                     }
                 }
-                else if(dest.x != src.x)
+                else if(dest.x != srcPoint.x)
                 {
                     // Horizontal line, add points directly to +Y/-Y
-                    rect.push_back(Point(src.x, src.y + lineWidth));
-                    rect.push_back(Point(src.x, src.y - lineWidth));
+                    rect.push_back(Point(srcPoint.x, srcPoint.y + lineWidth));
+                    rect.push_back(Point(srcPoint.x, srcPoint.y - lineWidth));
                     rect.push_back(Point(dest.x, dest.y - lineWidth));
                     rect.push_back(Point(dest.x, dest.y + lineWidth));
                 }
@@ -2672,14 +2734,23 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                     break;
                 }
 
-                // Gather entities in the polygon
+                // Gather entities in the polygon as well as ones bisected
+                // by the boundaries on their hitbox
                 uint64_t now = ChannelServer::GetServerTime();
                 for(auto t : zone->GetActiveEntities())
                 {
+                    if(t == effectiveSource)
+                    {
+                        // Do not check, just add
+                        effectiveTargets.push_back(t);
+                        continue;
+                    }
+
                     t->RefreshCurrentPosition(now);
 
                     Point p(t->GetCurrentX(), t->GetCurrentY());
-                    if(ZoneManager::PointInPolygon(p, rect))
+                    if(ZoneManager::PointInPolygon(p, rect,
+                        (float)t->GetHitboxSize() * 10.f))
                     {
                         effectiveTargets.push_back(t);
                     }
@@ -2688,8 +2759,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             break;
         case objects::MiEffectiveRangeData::AreaType_t::UNKNOWN_9:
         default:
-            LOG_ERROR(libcomp::String("Unsupported skill area type encountered: %1\n")
-                .Arg((uint8_t)skillRange->GetAreaType()));
+            LOG_ERROR(libcomp::String("Unsupported skill area type"
+                " encountered: %1\n").Arg((uint8_t)skillRange->GetAreaType()));
             Fizzle(ctx);
             return false;
         }
@@ -3908,7 +3979,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
     // Handle all skill side effects
     std::set<std::shared_ptr<ActiveEntityState>> durabilityHit;
-    std::set<std::shared_ptr<ActiveEntityState>> partnerDemons;
+    std::set<std::shared_ptr<ActiveEntityState>> inheritSkill;
     std::set<std::shared_ptr<ActiveEntityState>> revived;
     std::set<std::shared_ptr<ActiveEntityState>> killed;
     std::list<std::shared_ptr<ActiveEntityState>> aiHit;
@@ -3928,7 +3999,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         playerSkill = true;
         break;
     case EntityType_t::PARTNER_DEMON:
-        partnerDemons.insert(source);
+        inheritSkill.insert(source);
         playerSkill = true;
         break;
     default:
@@ -3951,7 +4022,10 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             playerEntity = true;
             break;
         case EntityType_t::PARTNER_DEMON:
-            partnerDemons.insert(eState);
+            if(!target.HitAvoided)
+            {
+                inheritSkill.insert(eState);
+            }
             playerEntity = true;
             break;
         default:
@@ -4046,7 +4120,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     }
 
     // Update inherited skills
-    for(auto entity : partnerDemons)
+    for(auto entity : inheritSkill)
     {
         // Even if the hit is avoided, anything that touches the entity will
         // update inheriting skills
@@ -4686,7 +4760,8 @@ int8_t SkillManager::EvaluateTokuseiSkillCondition(
     return 0;
 }
 
-uint16_t SkillManager::CalculateOffenseValue(const std::shared_ptr<ActiveEntityState>& source,
+uint16_t SkillManager::CalculateOffenseValue(
+    const std::shared_ptr<ActiveEntityState>& source,
     const std::shared_ptr<ActiveEntityState>& target,
     const std::shared_ptr<ProcessingSkill>& pSkill)
 {
@@ -8329,10 +8404,17 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
 
             // Get tokusei adjustments
             double tokuseiBoost = tokuseiManager->GetAspectSum(source,
-                TokuseiAspectType::DAMAGE_DEALT, calcState) * 0.01;
-            double tokuseiReduction = tokuseiManager->GetAspectSum(
-                target.EntityState, TokuseiAspectType::DAMAGE_TAKEN,
-                targetState) * -0.01;
+                TokuseiAspectType::EFFECT_POWER, calcState) * 0.01;
+            double tokuseiReduction = 0.0;
+            if(!isHeal)
+            {
+                // Only apply damage adjustments if not healing
+                tokuseiBoost += tokuseiManager->GetAspectSum(source,
+                    TokuseiAspectType::DAMAGE_DEALT, calcState) * 0.01;
+                tokuseiReduction -= tokuseiManager->GetAspectSum(
+                    target.EntityState, TokuseiAspectType::DAMAGE_TAKEN,
+                    targetState) * 0.01;
+            }
 
             // Scale the current value by the critical, limit break or min to
             // max damage factor
@@ -9111,7 +9193,7 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
         activated->SetCancelled(true);
     }
 
-    bool moreUses = execCount < activated->GetMaxUseCount();
+    bool moreUses = SkillHasMoreUses(activated);
 
     // If the skill was executed, set lockout time and increase
     // the execution count
@@ -11157,14 +11239,22 @@ bool SkillManager::SummonDemon(
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto dgState = cState->GetDigitalizeState();
     auto demonID = activated->GetActivationObjectID();
     auto demon = demonID > 0 ? std::dynamic_pointer_cast<objects::Demon>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID))) : nullptr;
     if(!demon)
     {
-        LOG_ERROR(libcomp::String("Invalid demon specified to summon: %1\n")
-            .Arg(demonID));
+        LOG_ERROR(libcomp::String("Invalid demon specified to summon on"
+            " account: %1\n").Arg(state->GetAccountUID().ToString()));
 
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
+        return false;
+    }
+    else if(dgState && dgState->GetDemon().Get() == demon)
+    {
+        // Cannot summon the digitalized demon
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
         return false;

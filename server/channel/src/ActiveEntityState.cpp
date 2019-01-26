@@ -298,22 +298,31 @@ float ActiveEntityState::GetDistance(float x, float y, bool squared)
     return squared ? dSquared : std::sqrt(dSquared);
 }
 
-float ActiveEntityState::GetMovementSpeed(bool altSpeed)
+float ActiveEntityState::GetMovementSpeed(bool ignoreSkill,
+    bool altSpeed)
 {
     int16_t speed = 0;
-    auto activated = GetActivatedAbility();
+    auto activated = ignoreSkill ? nullptr : GetActivatedAbility();
     if(altSpeed)
     {
         // Get alternate "walk" speed
         speed = GetCorrectValue(CorrectTbl::MOVE1);
     }
-    else if(activated && activated->GetChargedTime() &&
-        !activated->GetExecutionTime())
+    else if(activated)
     {
-        // Charge speed is preserved regardless of
-        return activated->GetChargeCompleteMoveSpeed();
+        // Current skill is always updated with combat state and is not
+        // set on the entity without a charge time (even if its "now"),
+        // therefore we only have the concept of charged or not
+        if(activated->GetChargedTime() < ChannelServer::GetServerTime())
+        {
+            return activated->GetChargeCompleteMoveSpeed();
+        }
+        else
+        {
+            return activated->GetChargeMoveSpeed();
+        }
     }
-    else if((GetCombatTimeOut() || activated) &&
+    else if(GetCombatTimeOut() &&
         !GetCalculatedState()->ExistingTokuseiAspectsContains(
             (int8_t)TokuseiAspectType::COMBAT_SPEED_NULL))
     {

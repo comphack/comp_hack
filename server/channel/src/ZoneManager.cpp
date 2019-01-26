@@ -894,6 +894,9 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto dState = state->GetDemonState();
     auto worldCID = state->GetWorldCID();
 
+    // Lock entity interactions in the zone
+    state->SetZoneInTime(0);
+
     // Detach from zone specific state info
     auto exchangeSession = state->GetExchangeSession();
     if(exchangeSession)
@@ -1650,6 +1653,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
 
     // Unlock movement now that the client is acknowledging being in the zone
     state->SetLockMovement(false);
+    state->SetZoneInTime(ChannelServer::GetServerTime());
 
     auto zoneDef = zone->GetDefinition();
     auto characterManager = server->GetCharacterManager();
@@ -6250,6 +6254,128 @@ Point ZoneManager::MoveRelative(const std::shared_ptr<ActiveEntityState>& eState
     return point;
 }
 
+bool ZoneManager::CorrectClientPosition(const std::shared_ptr<
+    ActiveEntityState>& eState, Point& dest)
+{
+    Point src(eState->GetOriginX(), eState->GetOriginY());
+    ServerTime unused = 0;
+
+    return CorrectClientPosition(eState, src, dest, unused, unused) != 0;
+}
+
+uint8_t ZoneManager::CorrectClientPosition(const std::shared_ptr<
+    ActiveEntityState>& eState, Point& src, Point& dest,
+    ServerTime& startTime, ServerTime& stopTime, bool isMove)
+{
+    auto zone = eState->GetZone();
+    if(!zone)
+    {
+        return false;
+    }
+
+    uint8_t result = 0;
+
+    float serverX1 = eState->GetOriginX();
+    float serverY1 = eState->GetOriginY();
+    float serverX2 = eState->GetDestinationX();
+    float serverY2 = eState->GetDestinationY();
+
+    // If moving, check if the source position is valid
+    if(isMove && (src.x != serverX2 || src.y != serverY2))
+    {
+        // Movement origin is not the previous destination
+        bool correctSrc = false;
+        if(serverX1 == serverX2 && serverY1 == serverY2)
+        {
+            // Last movement was actually stationary
+            correctSrc = true;
+        }
+        else if((src.x > serverX1 == src.x > serverX2) ||
+            (src.x < serverX1 == src.x < serverX2) ||
+            (src.y > serverY1 == src.y > serverY2) ||
+            (src.y < serverY1 == src.y < serverY2))
+        {
+            // Movement origin not between movement points
+            correctSrc = true;
+        }
+        else if((serverX1 * (serverY2 - src.y) +
+            serverX2 * (src.y - serverY1) +
+            src.x * (serverY1 - serverY2)) != 0.f)
+        {
+            // Movement origin is not collinear with last movement
+            correctSrc = true;
+        }
+
+        if(correctSrc)
+        {
+            // Check if it lies within the allowed movement threshold based
+            // on max movement speed per before checking collision.
+            float maxRatePerSec = eState->GetMovementSpeed();
+
+            // Check distance to previous movement points first as it is
+            // quicker than the point to line distance formula
+            if(src.GetDistance(Point(serverX2, serverY2)) > maxRatePerSec &&
+                src.GetDistance(Point(serverX1, serverY1)) > maxRatePerSec)
+            {
+                float distance = 0.f;
+                if(serverX2 == serverX1)
+                {
+                    // Check perpendicular horizontal line distance
+                    distance = src.GetDistance(Point(serverX2, serverY2));
+                }
+                else
+                {
+                    // Check point to line distance
+                    Line lastMove(Point(serverX1, serverY1),
+                        Point(serverX2, serverY2));
+                    distance = GetPointToLineDistance(lastMove, src);
+                }
+
+                if(distance > maxRatePerSec)
+                {
+                    // Roll back movement
+                    src.x = dest.x = serverX1;
+                    src.y = dest.y = serverY1;
+                    startTime = stopTime = eState->GetDestinationTicks();
+                    result = 0x01;
+                }
+            }
+
+            if(!result)
+            {
+                // Check collision based on the last destination, not new
+                // origin because the client has skipped ahead an acceptable
+                // distance. If we don't do this the movement will ocassionally
+                // "start" from outside of the wall etc. Do not bother to send
+                // the corrected origin to the source as the server values
+                // have not actually changed yet.
+                src.x = serverX2;
+                src.y = serverY2;
+            }
+        }
+    }
+
+    auto geometry = zone->GetGeometry();
+    if(!result && geometry)
+    {
+        // Movement origin valid and geometry exists, check collision
+        Line path(Point(src.x, src.y), Point(dest.x, dest.y));
+
+        Point collidePoint;
+        Line outSurface;
+        std::shared_ptr<ZoneShape> outShape;
+        if(zone->Collides(path, collidePoint, outSurface, outShape))
+        {
+            // Back off by 10
+            dest = GetLinearPoint(collidePoint.x,
+                collidePoint.y, src.x, src.y, 10.f, false);
+            result = 0x02;
+        }
+    }
+
+    return result;
+}
+
 std::list<Point> ZoneManager::GetShortestPath(const std::shared_ptr<Zone>& zone,
     const Point& source, const Point& dest, float maxDistance)
 {
@@ -6528,7 +6654,35 @@ std::list<uint32_t> ZoneManager::GetShortestPath(
     return result;
 }
 
-bool ZoneManager::PointInPolygon(const Point& p, const std::list<Point> vertices)
+float ZoneManager::GetPointToLineDistance(const Line& line, const Point& point)
+{
+    float xDiff = line.second.x - line.first.x;
+    float yDiff = line.second.y - line.first.y;
+
+    float calc = ((point.x - line.first.x) * xDiff +
+        (point.y - line.first.y) * yDiff) /
+        (xDiff * xDiff + yDiff * yDiff);
+
+    Point nearest;
+    if(calc < 0.f)
+    {
+        nearest = line.first;
+    }
+    else if(calc > 1.f)
+    {
+        nearest = line.second;
+    }
+    else
+    {
+        nearest.x = line.first.x + calc * xDiff;
+        nearest.y = line.first.y + calc * yDiff;
+    }
+
+    return point.GetDistance(nearest);
+}
+
+bool ZoneManager::PointInPolygon(const Point& p, const std::list<
+    Point> vertices, float overlapRadius)
 {
     auto p1 = vertices.begin();
     auto p2 = vertices.begin();
@@ -6551,6 +6705,26 @@ bool ZoneManager::PointInPolygon(const Point& p, const std::list<Point> vertices
             crosses++;
         }
 
+        if(overlapRadius && (p1->x != p2->x || p1->y != p2->y))
+        {
+            // Check if a circle with a center at the point and radius matching
+            // the supplied value enters the polygon by checking line distances
+            if(p.GetDistance(*p1) <= overlapRadius)
+            {
+                // Distance to current point is smaller
+                return true;
+            }
+            else
+            {
+                // Check point to line distance
+                Line l(*p1, *p2);
+                if(GetPointToLineDistance(l, p) <= overlapRadius)
+                {
+                    return true;
+                }
+            }
+        }
+
         p1++;
         p2++;
 
@@ -6566,7 +6740,7 @@ bool ZoneManager::PointInPolygon(const Point& p, const std::list<Point> vertices
 
 std::list<std::shared_ptr<ActiveEntityState>> ZoneManager::GetEntitiesInFoV(
     const std::list<std::shared_ptr<ActiveEntityState>>& entities,
-    float x, float y, float rot, float maxAngle)
+    float x, float y, float rot, float maxAngle, bool useHitbox)
 {
     std::list<std::shared_ptr<ActiveEntityState>> results;
 
@@ -6576,12 +6750,32 @@ std::list<std::shared_ptr<ActiveEntityState>> ZoneManager::GetEntitiesInFoV(
 
     for(auto e : entities)
     {
-        float eRot = (float)atan2((float)(y - e->GetCurrentY()),
-            (float)(x - e->GetCurrentX()));
+        Point ePoint(e->GetCurrentX(), e->GetCurrentY());
+        float eRot = (float)atan2((float)(y - ePoint.y),
+            (float)(x - ePoint.x));
 
         if(maxRotL >= eRot && maxRotR <= eRot)
         {
             results.push_back(e);
+        }
+        else if(useHitbox)
+        {
+            // "Shift" the center of the entity based on the rotation and
+            // recalculate to see if the hitbox is included for each side
+            float extend = (float)e->GetHitboxSize() * 10.f;
+            for(float max : { maxRotL, maxRotR })
+            {
+                Point exPoint(ePoint.x, ePoint.y + extend);
+                exPoint = RotatePoint(exPoint, ePoint,
+                    ActiveEntityState::CorrectRotation(-max));
+                eRot = (float)atan2((float)(y - exPoint.y),
+                    (float)(x - exPoint.x));
+                if(maxRotL >= eRot && maxRotR <= eRot)
+                {
+                    results.push_back(e);
+                    break;
+                }
+            }
         }
     }
 

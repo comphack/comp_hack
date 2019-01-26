@@ -914,6 +914,7 @@ public:
      * Set an entity's destination position at a distace directly away or
      * directly towards the specified point. Communicating that the move
      * has taken place must be done elsewhere.
+     * @param eState Pointer to the entity state
      * @param targetX X coordinate to move relative to
      * @param targetY Y coordinate to move relative to
      * @param distance Distance to move
@@ -926,6 +927,34 @@ public:
     Point MoveRelative(const std::shared_ptr<ActiveEntityState>& eState,
         float targetX, float targetY, float distance, bool away,
         uint64_t now, uint64_t endTime);
+
+    /**
+     * Correct a client supplied entity position to ensure it does not move
+     * out of bounds. No communication to the client takes place within.
+     * @param eState Pointer to the entity state
+     * @param dest Destination point
+     * @return true if the destination was corrected and should be communicated
+     *  to the client
+     */
+    bool CorrectClientPosition(const std::shared_ptr<
+        ActiveEntityState>& eState, Point& dest);
+
+    /**
+     * Correct a client supplied entity position to ensure it does not move
+     * out of bounds. No communication to the client takes place within.
+     * @param eState Pointer to the entity state
+     * @param src Source movement point (ignored if not moving)
+     * @param dest Destination point
+     * @param startTime Server time representing when the position is starting
+     *  to change (ignore if not moving)
+     * @param stopTime Server time representing when the position is ending
+     * @param isMove Designates if the entity is moving or not
+     * @return 0 if no change of note took place, 1 if the movement was rolled
+     *  back, 2 if only the end point was corrected
+     */
+    uint8_t CorrectClientPosition(const std::shared_ptr<
+        ActiveEntityState>& eState, Point& src, Point& dest,
+        ServerTime& startTime, ServerTime& stopTime, bool isMove = false);
 
     /**
      * Calculate the shortest path between the supplied source and destination
@@ -941,12 +970,23 @@ public:
         const Point& source, const Point& dest, float maxDistance = 0.f);
 
     /**
+     * Determine the shortest distance from a point to a line segment
+     * @param line Line segment to measure distance to
+     * @param point Point to measure distance from
+     * @return Shortest distance between the point and line
+     */
+    static float GetPointToLineDistance(const Line& line, const Point& point);
+
+    /**
      * Determine if the specified point is within a polygon defined by vertices
      * @param p Point to check
      * @param vertices List of points representing a polygon's vertices
+     * @param overlapRadius Optional modifier to handle the point as a circle
+     *  using this value as the radius and checking if it overlaps anywhere
      * @return true if the point is within the polygon, false if it is not
      */
-    static bool PointInPolygon(const Point& p, const std::list<Point> vertices);
+    static bool PointInPolygon(const Point& p, const std::list<Point> vertices,
+        float overlapRadius = 0.f);
 
     /**
      * Filter the list of supplied entities to only those visible in the
@@ -956,11 +996,13 @@ public:
      * @param y Y coordinate of the FoV origin
      * @param rot Rotation in radians for the center of the FoV
      * @param maxAngle Maximum angle in radians for either side of the FoV
+     * @param useHitbox If true, the entities' hitboxes will be used to
+     *  determine if they are in the FoV, even if the center point is not
      * @return Filtered list of entities visible
      */
     static std::list<std::shared_ptr<ActiveEntityState>> GetEntitiesInFoV(
         const std::list<std::shared_ptr<ActiveEntityState>>& entities,
-        float x, float y, float rot, float maxAngle);
+        float x, float y, float rot, float maxAngle, bool useHitbox = false);
 
     /**
      * Rotate a point around an origin point by the specified radians amount

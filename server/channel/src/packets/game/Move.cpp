@@ -81,7 +81,8 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         return true;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
     auto zoneManager = server->GetZoneManager();
 
     float destX = p.ReadFloat();
@@ -97,7 +98,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
 
     bool positionCorrected = false;
 
-    const static bool checkCollision = server->GetWorldSharedConfig()
+    const static bool moveCorrection = server->GetWorldSharedConfig()
         ->GetMoveCorrection();
 
     eState->ExpireStatusTimes(ChannelServer::GetServerTime());
@@ -107,32 +108,43 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         destY = originY;
         positionCorrected = true;
     }
-    else if(checkCollision)
+    else if(moveCorrection)
     {
-        auto geometry = zone->GetGeometry();
-        if(geometry)
+        Point src(originX, originY);
+        Point dest(destX, destY);
+
+        uint8_t result = zoneManager->CorrectClientPosition(eState, src, dest,
+            startTime, stopTime, true);
+        if(result)
         {
-            Line path(Point(originX, originY), Point(destX, destY));
-
-            Point collidePoint;
-            Line outSurface;
-            std::shared_ptr<ZoneShape> outShape;
-            if(zone->Collides(path, collidePoint, outSurface, outShape))
+            switch(result)
             {
-                // Back off by 10
-                collidePoint = zoneManager->GetLinearPoint(collidePoint.x,
-                    collidePoint.y, originX, originY, 10.f, false);
-
-                destX = collidePoint.x;
-                destY = collidePoint.y;
-                positionCorrected = true;
-
-                // Monitor for ne'er-do-wells
-                LOG_DEBUG(libcomp::String("Player movement corrected: %1"
-                    " (%2, %3)\n").Arg(state->GetAccountUID().ToString())
-                    .Arg(destX).Arg(destY));
+            case 1:
+                LOG_DEBUG(libcomp::String("Player movement rolled-back in"
+                    " zone %1: %2\n").Arg(zone->GetDefinitionID())
+                    .Arg(state->GetAccountUID().ToString()));
+                break;
+            case 2:
+                LOG_DEBUG(libcomp::String("Player movement corrected in"
+                    " zone %1: %2 ([%3, %4] => [%5, %6] to [%7, %8])\n")
+                    .Arg(zone->GetDefinitionID())
+                    .Arg(state->GetAccountUID().ToString())
+                    .Arg(src.x).Arg(src.y).Arg(destX).Arg(destY)
+                    .Arg(dest.x).Arg(dest.y));
+                break;
+            default:
+                break;
             }
+
+            destX = dest.x;
+            destY = dest.y;
+            positionCorrected = true;
         }
+
+        // Origin may be changed for other players even if it was not
+        // functionally changed for the source player
+        originX = src.x;
+        originY = src.y;
     }
 
     eState->SetOriginX(originX);

@@ -287,10 +287,13 @@ public:
      * @param x X coordinate of the center of the radius
      * @param y Y coordinate of the center of the radius
      * @param radius Radius to check for entities
+     * @param useHitbox If true, the entities' hitboxes will be used to
+     *  determine if they are in the radius, even if the center point is not
      * @return List of pointers to active entities in the radius
      */
     const std::list<std::shared_ptr<ActiveEntityState>>
-        GetActiveEntitiesInRadius(float x, float y, double radius);
+        GetActiveEntitiesInRadius(float x, float y, double radius,
+            bool useHitbox = false);
 
     /**
      * Get an entity instance by it's ID.

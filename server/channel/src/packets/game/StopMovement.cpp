@@ -32,6 +32,9 @@
 #include <ManagerPacket.h>
 #include <PacketCodes.h>
 
+// object Includes
+#include <WorldSharedConfig.h>
+
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
@@ -48,8 +51,8 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
     auto state = client->GetClientState();
 
     int32_t entityID = p.ReadS32Little();
@@ -68,16 +71,47 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
         return true;
     }
 
+    auto zone = eState->GetZone();
+    if(!zone)
+    {
+        // Not actually in a zone
+        return true;
+    }
+
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
+    auto zoneManager = server->GetZoneManager();
+
     float destX = p.ReadFloat();
     float destY = p.ReadFloat();
     ClientTime stop = (ClientTime)p.ReadFloat();
 
     ServerTime stopTime = state->ToServerTime(stop);
 
+    bool positionCorrected = false;
+
     // Stop using the current rotation value
-    eState->RefreshCurrentPosition(server->GetServerTime());
+    eState->RefreshCurrentPosition(ChannelServer::GetServerTime());
+
     float rot = eState->GetCurrentRotation();
     eState->SetDestinationRotation(rot);
+
+    const static bool moveCorrection = server->GetWorldSharedConfig()
+        ->GetMoveCorrection();
+    if(moveCorrection)
+    {
+        Point dest(destX, destY);
+        if(zoneManager->CorrectClientPosition(eState, dest))
+        {
+            LOG_DEBUG(libcomp::String("Player movement stop corrected in"
+                " zone %1: %2\n").Arg(zone->GetDefinitionID())
+                .Arg(state->GetAccountUID().ToString()));
+
+            destX = dest.x;
+            destY = dest.y;
+            positionCorrected = true;
+        }
+    }
 
     eState->SetDestinationX(destX);
     eState->SetCurrentX(destX);
@@ -87,12 +121,13 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
     eState->SetOriginTicks(stopTime);
     eState->SetDestinationTicks(stopTime);
 
-    // If the entity is still visible to others, relay info
-    if(eState->IsClientVisible())
+    // If the entity is still visible to others or the position was corrected,
+    // relay info
+    if(positionCorrected || eState->IsClientVisible())
     {
-        auto zConnections = server->GetZoneManager()->GetZoneConnections(client,
-            false);
-        
+        auto zConnections = zoneManager->GetZoneConnections(client,
+            positionCorrected);
+
         if(zConnections.size() > 0)
         {
             libcomp::Packet reply;

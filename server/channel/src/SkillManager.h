@@ -223,6 +223,25 @@ public:
         const std::shared_ptr<ActiveEntityState>& target);
 
     /**
+     * Determine if a skill has more uses pending
+     * @param activated Pointer to the activated skill ability
+     * @return true if the skill has more uses pending
+     */
+    static bool SkillHasMoreUses(
+        const std::shared_ptr<objects::ActivatedAbility>& activated);
+
+    /**
+     * Get the charge and post charge movement speeds for a skill for the
+     * supplied entity's current state
+     * @param source Pointer to the state of the source entity
+     * @param skillData Pointer to the skill's definition
+     * @return Charge and post charage movement speeds
+     */
+    static std::pair<float, float> GetMovementSpeeds(
+        const std::shared_ptr<ActiveEntityState>& source,
+        const std::shared_ptr<objects::MiSkillData>& skillData);
+
+    /**
      * Check fusion skill usage pre-skill validation and determine which one
      * should be used. Fusion skills are decided based upon the two demons
      * involved, defaulting to the COMP demon if no special skill exists.

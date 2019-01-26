@@ -1149,6 +1149,13 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
         UpdateRevivalXP(cState, xpLossPercent);
     }
 
+    if(newZoneID)
+    {
+        // If we're changing zones, make sure the client is not considered
+        // in the same zone until we get there
+        state->SetZoneInTime(0);
+    }
+
     if(hpRestores.size() > 0)
     {
         std::set<std::shared_ptr<ActiveEntityState>> displayState;
@@ -6367,6 +6374,19 @@ bool CharacterManager::AddRemoveOpponent(
 
         for(auto entity : battleStarted)
         {
+            auto activated = entity->GetActivatedAbility();
+            if(SkillManager::SkillHasMoreUses(activated))
+            {
+                // If a skill is pending, verify that the charge speed is still
+                // valid with the new opponent(s) added
+                auto speeds = SkillManager::GetMovementSpeeds(entity,
+                    activated->GetSkillData());
+                if(speeds.second != activated->GetChargeCompleteMoveSpeed())
+                {
+                    activated->SetChargeCompleteMoveSpeed(speeds.second);
+                }
+            }
+
             auto aiState = entity->GetAIState();
             if(aiState)
             {
@@ -6416,6 +6436,21 @@ bool CharacterManager::AddRemoveOpponent(
 
                     for(auto entity : entities)
                     {
+                        auto activated = entity->GetActivatedAbility();
+                        if(SkillManager::SkillHasMoreUses(activated))
+                        {
+                            // If a skill is pending, verify that the charge
+                            // speed is still valid with combat ending
+                            auto speeds = SkillManager::GetMovementSpeeds(
+                                entity, activated->GetSkillData());
+                            if(speeds.second != activated
+                                ->GetChargeCompleteMoveSpeed())
+                            {
+                                activated->SetChargeCompleteMoveSpeed(
+                                    speeds.second);
+                            }
+                        }
+
                         libcomp::Packet p;
                         p.WritePacketCode(ChannelToClientPacketCode_t::
                             PACKET_BATTLE_STOPPED);

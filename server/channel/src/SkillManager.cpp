@@ -592,6 +592,10 @@ bool SkillManager::TargetSkill(const std::shared_ptr<ActiveEntityState> source,
     {
         success = false;
     }
+    else if(activated->GetExecutionTime() && activated->GetErrorCode() == -1)
+    {
+        success = false;
+    }
     else
     {
         activated->SetTargetObjectID(targetObjectID);
@@ -9208,13 +9212,21 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
         uint64_t lockOutTime = currentTime + (uint64_t)(stiffness * 1000);
         if(stiffness)
         {
-            source->SetStatusTimes(STATUS_LOCKOUT, lockOutTime);
-
             if(source->IsMoving())
             {
                 mServer.lock()->GetZoneManager()->FixCurrentPosition(source,
                     lockOutTime, currentTime);
             }
+
+            // Use the longer lockout if one exists (only fix position for
+            // normal amount)
+            uint64_t lastLockout = source->GetStatusTimes(STATUS_LOCKOUT);
+            if(lastLockout > lockOutTime)
+            {
+                lockOutTime = lastLockout;
+            }
+
+            source->SetStatusTimes(STATUS_LOCKOUT, lockOutTime);
         }
 
         activated->SetLockOutTime(lockOutTime);

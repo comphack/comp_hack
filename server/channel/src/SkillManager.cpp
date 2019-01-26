@@ -3211,8 +3211,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         }
 
         auto battleDamage = damageData->GetBattleDamage();
-        bool applyKnockback = skill.HardStrike && !target.HitAvoided &&
-            !target.HitAbsorb;
+        bool applyKnockback = skill.HardStrike && !target.IndirectTarget &&
+            !target.HitAvoided && !target.HitAbsorb;
         if(!applyKnockback && kbMod && kbType != 2)
         {
             if(battleDamage->GetFormula()

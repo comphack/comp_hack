@@ -3420,10 +3420,13 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 target.EffectCancellations |= EFFECT_CANCEL_HIT |
                     EFFECT_CANCEL_DAMAGE;
             }
-            else if(target.EntityState == skill.PrimaryTarget &&
-                skill.Definition->GetBasic()->GetActionType() ==
-                objects::MiSkillBasicData::ActionType_t::GUARD)
+            else if(!target.IndirectTarget && battleDamage->GetFormula()
+                == objects::MiBattleDamageData::Formula_t::NONE &&
+                !target.HitAvoided && !target.HitAbsorb &&
+                skill.Definition->GetDamage()->GetHitStopTime())
             {
+                // If neither damage nor healing applies and the target is
+                // "hit", hitstun applies when set
                 calcHitstun = true;
             }
 

@@ -396,11 +396,16 @@ void AccountManager::Logout(const std::shared_ptr<
 
     if(!delay)
     {
+        auto eventManager = server->GetEventManager();
+
+        // If a web game is active, end it
+        eventManager->EndWebGame(client, true);
+
         auto dQuest = character->GetDemonQuest().Get();
         if(dQuest && dQuest->GetUUID().IsNull())
         {
             // Pending demon quest must be rejected
-            server->GetEventManager()->EndDemonQuest(client);
+            eventManager->EndDemonQuest(client);
         }
 
         auto dgState = cState->GetDigitalizeState();

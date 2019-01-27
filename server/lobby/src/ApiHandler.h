@@ -37,6 +37,7 @@
 // libcomp Includes
 #include <CString.h>
 #include <Database.h>
+#include <ServerDataManager.h>
 
 // libobjgen Includes
 #include <Account.h>
@@ -50,6 +51,11 @@
 namespace objects
 {
 class WebGameSession;
+}
+
+namespace libobjects
+{
+class ScriptEngine;
 }
 
 namespace lobby
@@ -75,6 +81,7 @@ class WebGameApiSession : public ApiSession
 {
 public:
     std::shared_ptr<objects::WebGameSession> webGameSession;
+    std::shared_ptr<libcomp::ScriptEngine> gameState;
 };
 
 class ApiHandler : public CivetHandler
@@ -138,12 +145,21 @@ protected:
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
 
-    bool WebGame_GetCharacter(const JsonBox::Object& request,
+    bool WebGame_GetCoins(const JsonBox::Object& request,
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
-    bool WebGame_UpdateCoins(const JsonBox::Object& request,
+    bool WebGame_Start(const JsonBox::Object& request,
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
+    bool WebGame_Update(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+
+    int64_t WebGameScript_GetCoins(const std::shared_ptr<ApiSession>& session);
+    void WebGameScript_SetResponse(JsonBox::Object* response,
+        const libcomp::String& key, const libcomp::String& value);
+    bool WebGameScript_UpdateCoins(const std::shared_ptr<ApiSession>& session,
+        int64_t coins, bool adjust);
 
 private:
     bool GetWebGameSession(JsonBox::Object& response,
@@ -161,6 +177,9 @@ private:
 
     std::shared_ptr<objects::LobbyConfig> mConfig;
     std::shared_ptr<lobby::LobbyServer> mServer;
+
+    std::unordered_map<libcomp::String,
+        std::shared_ptr<libcomp::ServerScript>> mGameDefinitions;
 
     AccountManager *mAccountManager;
 };

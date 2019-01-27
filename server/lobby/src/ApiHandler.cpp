@@ -36,6 +36,7 @@
 #include <ErrorCodes.h>
 #include <Log.h>
 #include <PacketCodes.h>
+#include <ScriptEngine.h>
 
 // object Includes
 #include <Character.h>
@@ -51,6 +52,12 @@
 using namespace lobby;
 
 #define MAX_PAYLOAD (4096)
+
+#ifdef _WIN32
+    // Disable "decorated name length exceeded" warning for
+    // JsonBox::Object binding
+    #pragma warning(disable : 4503)
+#endif
 
 void ApiSession::Reset()
 {
@@ -76,8 +83,40 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
     mParsers["/admin/get_promos"] = &ApiHandler::Admin_GetPromos;
     mParsers["/admin/create_promo"] = &ApiHandler::Admin_CreatePromo;
     mParsers["/admin/delete_promo"] = &ApiHandler::Admin_DeletePromo;
-    mParsers["/webgame/get_character"] = &ApiHandler::WebGame_GetCharacter;
-    mParsers["/webgame/update_coins"] = &ApiHandler::WebGame_UpdateCoins;
+    mParsers["/webgame/get_coins"] = &ApiHandler::WebGame_GetCoins;
+    mParsers["/webgame/start"] = &ApiHandler::WebGame_Start;
+    mParsers["/webgame/update"] = &ApiHandler::WebGame_Update;
+
+    LOG_DEBUG("Loading web games...\n");
+
+    auto serverDataManager =  new libcomp::ServerDataManager;
+
+    bool gamesLoaded = false;
+    for(auto serverScript : serverDataManager->LoadScripts(server
+        ->GetDataStore(), "/webgames", gamesLoaded, false))
+    {
+        if(serverScript->Type.ToLower() == "webgame")
+        {
+            mGameDefinitions[serverScript->Name.ToLower()] = serverScript;
+        }
+    }
+
+    if(!gamesLoaded)
+    {
+        LOG_ERROR(libcomp::String("API handler failed after loading %1"
+            " web game(s)\n").Arg(mGameDefinitions.size()));
+    }
+    else if(mGameDefinitions.size() == 0)
+    {
+        LOG_DEBUG("No web games found\n");
+    }
+    else
+    {
+        LOG_DEBUG(libcomp::String("API handler successfully loaded %1"
+            " web game(s)\n").Arg(mGameDefinitions.size()));
+    }
+
+    delete serverDataManager;
 }
 
 ApiHandler::~ApiHandler()
@@ -990,16 +1029,87 @@ bool ApiHandler::Admin_DeletePromo(const JsonBox::Object& request,
     return true;
 }
 
-bool ApiHandler::WebGame_GetCharacter(const JsonBox::Object& request,
+bool ApiHandler::WebGame_GetCoins(const JsonBox::Object& request,
     JsonBox::Object& response,
     const std::shared_ptr<ApiSession>& session)
 {
-    (void)request;
+    int64_t coins = WebGameScript_GetCoins(session);
+    if(coins == -1)
+    {
+        response["error"] = "Failed to get coins";
+        return true;
+    }
 
+    response["error"] = "Success";
+    response["coins"] = libcomp::String("%1").Arg(coins).C();
+
+    return true;
+}
+
+bool ApiHandler::WebGame_Start(const JsonBox::Object& request,
+    JsonBox::Object& response,
+    const std::shared_ptr<ApiSession>& session)
+{
     std::shared_ptr<objects::WebGameSession> gameSession;
     std::shared_ptr<World> world;
     if(!GetWebGameSession(response, session, gameSession, world))
     {
+        return true;
+    }
+
+    auto webGameSession = std::dynamic_pointer_cast<WebGameApiSession>(
+        session);
+    if(webGameSession->gameState)
+    {
+        response["error"] = "Game has already been started";
+        return true;
+    }
+
+    auto it = request.find("type");
+    if(it == request.end())
+    {
+        response["error"] = "Game type was not specified";
+        return true;
+    }
+
+    libcomp::String type(it->second.getString());
+
+    auto gameIter = mGameDefinitions.find(type);
+    if(gameIter == mGameDefinitions.end())
+    {
+        response["error"] = "Specified game type is not valid";
+        return true;
+    }
+
+    webGameSession->gameState = std::make_shared<libcomp::ScriptEngine>();
+    webGameSession->gameState->Using<objects::Character>();
+
+    // Bind the handler and the JSON response structure and session as well
+    // but nothing on them since we only need to pass through to the API
+    // functions
+    {
+        auto vm = webGameSession->gameState->GetVM();
+
+        Sqrat::Class<ApiSession,
+            Sqrat::NoConstructor<ApiSession>> sBinding(vm, "ApiSession");
+        Sqrat::RootTable(vm).Bind("ApiSession", sBinding);
+
+        Sqrat::Class<JsonBox::Object,
+            Sqrat::NoConstructor<JsonBox::Object>> oBinding(vm, "JsonObject");
+        Sqrat::RootTable(vm).Bind("JsonObject", oBinding);
+
+        Sqrat::Class<ApiHandler,
+            Sqrat::NoConstructor<ApiHandler>> apiBinding(vm, "ApiHandler");
+        apiBinding
+            .Func("GetCoins", &ApiHandler::WebGameScript_GetCoins)
+            .Func("SetResponse", &ApiHandler::WebGameScript_SetResponse)
+            .Func("UpdateCoins", &ApiHandler::WebGameScript_UpdateCoins);
+        Sqrat::RootTable(vm).Bind("ApiHandler", apiBinding);
+    }
+
+    if(!webGameSession->gameState->Eval(gameIter->second->Source))
+    {
+        response["error"] = "Game could not be started";
         return true;
     }
 
@@ -1014,14 +1124,49 @@ bool ApiHandler::WebGame_GetCharacter(const JsonBox::Object& request,
         return true;
     }
 
-    response["error"] = "Success";
+    // Call the start function first then write standard response values
+    auto vm = webGameSession->gameState->GetVM();
+    Sqrat::Function f(Sqrat::RootTable(vm), "start");
+    if(!f.IsNull())
+    {
+        Sqrat::Table sqOutTable(vm);
+
+        auto result = !f.IsNull() ? f.Evaluate<int>(character,
+            progress->GetCoins(), sqOutTable) : 0;
+        if(!result || (*result != 0))
+        {
+            response["error"] = "Unknown error encountered while starting"
+                " game";
+            return true;
+        }
+
+        Sqrat::Table::iterator it;
+        while(sqOutTable.Next(it))
+        {
+            auto name = it.getName();
+            if(name)
+            {
+                auto val = sqOutTable.GetValue<std::string>(name);
+                if(val)
+                {
+                    response[name] = val->c_str();
+                }
+            }
+        }
+
+        if(response.find("error") == response.end())
+        {
+            response["error"] = "Success";
+        }
+    }
+
     response["name"] = character->GetName().C();
     response["coins"] = libcomp::String("%1").Arg(progress->GetCoins()).C();
 
     return true;
 }
 
-bool ApiHandler::WebGame_UpdateCoins(const JsonBox::Object& request,
+bool ApiHandler::WebGame_Update(const JsonBox::Object& request,
     JsonBox::Object& response,
     const std::shared_ptr<ApiSession>& session)
 {
@@ -1032,14 +1177,128 @@ bool ApiHandler::WebGame_UpdateCoins(const JsonBox::Object& request,
         return true;
     }
 
-    auto it = request.find("coins");
-
-    int64_t coins = it == response.end() ? 0
-        : (int64_t)it->second.tryGetInteger(0);
-    if(!coins)
+    auto webGameSession = std::dynamic_pointer_cast<WebGameApiSession>(
+        session);
+    if(!webGameSession->gameState)
     {
-        response["error"] = "Invalid coin amount";
+        response["error"] = "Game not started";
         return true;
+    }
+
+    auto it = request.find("action");
+    if(it == request.end())
+    {
+        response["error"] = "No action specified";
+        return true;
+    }
+
+    libcomp::String action(it->second.getString());
+
+    auto vm = webGameSession->gameState->GetVM();
+    Sqrat::Function f(Sqrat::RootTable(vm), action.C());
+    if(!f.IsNull())
+    {
+        Sqrat::Table sqTable(vm);
+        for(auto& rPair : request)
+        {
+            // Forward everything but the system params
+            if(rPair.first != "action" && rPair.first != "sessionid" &&
+                rPair.first != "username")
+            {
+                libcomp::String val;
+                if(rPair.second.isInteger())
+                {
+                    val = libcomp::String("%1").Arg(rPair.second.getInteger());
+                }
+                else
+                {
+                    val = libcomp::String(rPair.second.getString());
+                }
+
+                sqTable.SetValue<libcomp::String>(rPair.first.c_str(),
+                    val);
+            }
+        }
+
+        // Tables work fine as input parameters but seem to be read-only
+        // so bind the response directly and write to it with a utility
+        // function
+        auto result = !f.IsNull() ? f.Evaluate<int>(this, session, sqTable,
+            &response) : 0;
+        if(!result || (*result != 0))
+        {
+            response["error"] = "Unknown error encountered";
+            return true;
+        }
+
+        if(response.find("error") == response.end())
+        {
+            response["error"] = "Success";
+        }
+    }
+    else
+    {
+        response["error"] = "Invalid action attempted";
+        return true;
+    }
+
+    return true;
+}
+
+int64_t ApiHandler::WebGameScript_GetCoins(const std::shared_ptr<
+    ApiSession>& session)
+{
+    auto wgSession = std::dynamic_pointer_cast<WebGameApiSession>(session);
+    auto gameSession = wgSession ? wgSession->webGameSession : nullptr;
+    if(!gameSession)
+    {
+        return -1;
+    }
+
+    auto world = mServer->GetManagerConnection()->GetWorldByID(
+        gameSession->GetWorldID());
+    if(!world)
+    {
+        return -1;
+    }
+
+    auto worldDB = world->GetWorldDatabase();
+
+    auto character = gameSession->GetCharacter().Get(worldDB);
+    auto progress = character
+        ? character->GetProgress().Get(worldDB) : nullptr;
+    if(progress)
+    {
+        return progress->GetCoins();
+    }
+
+    return -1;
+}
+
+void ApiHandler::WebGameScript_SetResponse(JsonBox::Object* response,
+    const libcomp::String& key, const libcomp::String& value)
+{
+    if(response)
+    {
+        (*response)[key.C()] = value.C();
+    }
+}
+
+bool ApiHandler::WebGameScript_UpdateCoins(
+    const std::shared_ptr<ApiSession>& session, int64_t coins, bool adjust)
+{
+    auto wgSession = std::dynamic_pointer_cast<WebGameApiSession>(session);
+    auto gameSession = wgSession ? wgSession->webGameSession : nullptr;
+    if(!gameSession)
+    {
+        return false;
+    }
+
+    auto world = mServer->GetManagerConnection()->GetWorldByID(
+        gameSession->GetWorldID());
+    if(!world)
+    {
+        return false;
     }
 
     auto worldDB = world->GetWorldDatabase();
@@ -1052,7 +1311,7 @@ bool ApiHandler::WebGame_UpdateCoins(const JsonBox::Object& request,
     if(!failure)
     {
         int64_t amount = progress->GetCoins();
-        int64_t newAmount = amount + coins;
+        int64_t newAmount = adjust ? amount + coins : coins;
         if(newAmount < 0)
         {
             newAmount = 0;
@@ -1079,9 +1338,6 @@ bool ApiHandler::WebGame_UpdateCoins(const JsonBox::Object& request,
             // Sync with the world
             mServer->GetLobbySyncManager()->UpdateRecord(progress,
                 "CharacterProgress");
-
-            response["error"] = "Success";
-            response["coins"] = libcomp::String("%1").Arg(newAmount).C();
         }
         else
         {
@@ -1089,12 +1345,7 @@ bool ApiHandler::WebGame_UpdateCoins(const JsonBox::Object& request,
         }
     }
 
-    if(failure)
-    {
-        response["error"] = "Update failed";
-    }
-
-    return true;
+    return !failure;
 }
 
 bool ApiHandler::Authenticate(const JsonBox::Object& request,

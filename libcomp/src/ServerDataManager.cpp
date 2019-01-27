@@ -518,6 +518,42 @@ bool ServerDataManager::LoadData(DataStore *pDataStore,
     return !failure;
 }
 
+std::list<std::shared_ptr<ServerScript>> ServerDataManager::LoadScripts(
+    DataStore *pDataStore, const libcomp::String& path, bool& success, bool store)
+{
+    std::list<std::shared_ptr<ServerScript>> scripts;
+
+    auto scriptsOld = mScripts;
+    auto aiScriptsOld = mAIScripts;
+
+    success = LoadScripts(pDataStore, path, &ServerDataManager::LoadScript);
+
+    // Return only ones that just loaded
+    for(auto& pair : mScripts)
+    {
+        if(scriptsOld.find(pair.first) == scriptsOld.end())
+        {
+            scripts.push_back(pair.second);
+        }
+    }
+
+    for(auto& pair : mAIScripts)
+    {
+        if(aiScriptsOld.find(pair.first) == aiScriptsOld.end())
+        {
+            scripts.push_back(pair.second);
+        }
+    }
+
+    if(!store)
+    {
+        mScripts = scriptsOld;
+        mAIScripts = aiScriptsOld;
+    }
+
+    return scripts;
+}
+
 bool ServerDataManager::ApplyZonePartial(std::shared_ptr<objects::ServerZone> zone,
     uint32_t partialID)
 {
@@ -1506,6 +1542,16 @@ bool ServerDataManager::LoadScript(const libcomp::String& path,
             {
                 LOG_ERROR(libcomp::String("Custom action script encountered"
                     " with no 'run' function: %1\n").Arg(script->Name.C()));
+                return false;
+            }
+        }
+        else if(type == "webgame")
+        {
+            fDef = root.GetFunction("start");
+            if(fDef.IsNull())
+            {
+                LOG_ERROR(libcomp::String("Web game script encountered"
+                    " with no 'start' function: %1\n").Arg(script->Name.C()));
                 return false;
             }
         }

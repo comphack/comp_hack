@@ -263,6 +263,19 @@ public:
         DefinitionManager* definitionManager);
 
     /**
+     * Load all script files in the specified datastore and return them in
+     * a list
+     * @param pDataStore Pointer to the datastore to use
+     * @param path Path within the data store to load scripts from
+     * @param success Output result designating success or failure
+     * @param store If false, scripts loaded by this function will be unloaded
+     *  after they are gathered for the return results
+     * @return List of pointers to server script definitions
+     */
+    std::list<std::shared_ptr<ServerScript>> LoadScripts(DataStore *pDataStore,
+        const libcomp::String& path, bool& success, bool store = true);
+
+    /**
      * Apply modifications from a zone partial to an instanced zone definition.
      * Unique IDs and NPCs/objects in the same spot that already exist on the
      * definition will be replaced by the partial definition, including deletes.

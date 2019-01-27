@@ -957,6 +957,15 @@ public:
         ServerTime& startTime, ServerTime& stopTime, bool isMove = false);
 
     /**
+     * Adjust a destination point based on a source point and the point where
+     * it collides with the nearest zone geometry point
+     * @param src Source point
+     * @param collidePoint Point where the path collides with geometry
+     * @return Adjusted linear destination point
+     */
+    Point CollisionAdjust(const Point& src, const Point& collidePoint);
+
+    /**
      * Calculate the shortest path between the supplied source and destination
      * points for the specified zone
      * @param zone Pointer to the zone

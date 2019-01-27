@@ -6173,9 +6173,7 @@ Point ZoneManager::GetRandomSpotPoint(
         Point collision;
         if(geometry && geometry->Collides(centerLine, collision))
         {
-            // Move off the collision point by a small amount
-            transformed = GetLinearPoint(collision.x, collision.y,
-                center.x, center.y, 10.f, false);
+            transformed = CollisionAdjust(center, collision);
         }
     }
 
@@ -6220,10 +6218,7 @@ Point ZoneManager::GetLinearPoint(float sourceX, float sourceY,
         Point collidePoint;
         if(zone->Collides(Line(src, dest), collidePoint))
         {
-            // 10 units seems to be the approximate distance you
-            // can walk up to a boundary before it stops you
-            dest = GetLinearPoint(collidePoint.x,
-                collidePoint.y, src.x, src.y, 10.f, false);
+            dest = CollisionAdjust(src, collidePoint);
         }
     }
 
@@ -6366,14 +6361,37 @@ uint8_t ZoneManager::CorrectClientPosition(const std::shared_ptr<
         std::shared_ptr<ZoneShape> outShape;
         if(zone->Collides(path, collidePoint, outSurface, outShape))
         {
-            // Back off by 10
-            dest = GetLinearPoint(collidePoint.x,
-                collidePoint.y, src.x, src.y, 10.f, false);
+            dest = CollisionAdjust(src, collidePoint);
             result = 0x02;
         }
     }
 
     return result;
+}
+
+Point ZoneManager::CollisionAdjust(const Point& src, const Point& collidePoint)
+{
+    // Back off by 10 units. Typically the client stops you when you approach
+    // 10 units from any geometry. Functionally you will not get "stuck" until
+    // you are less than 1 unit away (but only sometimes, oddly enough).
+    Point adjusted = GetLinearPoint(collidePoint.x, collidePoint.y, src.x,
+        src.y, 10.f, false);
+
+    // Make sure we're at least 1 full unit away from the collision point and
+    // pray that the zone geometry doesn't get TOO close to another line
+    if(std::fabs(adjusted.x - collidePoint.x) < 1.f)
+    {
+        adjusted.x = collidePoint.x +
+            (adjusted.x < collidePoint.x ? -1.f : 1.f);
+    }
+
+    if(std::fabs(adjusted.y - collidePoint.y) < 1.f)
+    {
+        adjusted.y = collidePoint.y +
+            (adjusted.y < collidePoint.y ? -1.f : 1.f);
+    }
+
+    return adjusted;
 }
 
 std::list<Point> ZoneManager::GetShortestPath(const std::shared_ptr<Zone>& zone,

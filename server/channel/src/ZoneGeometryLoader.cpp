@@ -144,24 +144,31 @@ bool ZoneGeometryLoader::LoadZoneQMP(
     uint32_t instanceID = 1;
     for(auto pair : lineMap)
     {
-        auto shape =  std::make_shared<ZoneQmpShape>();
-        shape->ShapeID = pair.first;
-        shape->Element = elementMap[pair.first];
-        shape->OneWay = shape->Element->GetType() ==
-            objects::QmpElement::Type_t::ONE_WAY;
-
         // Build a complete shape from the lines provided
         // If there is a gap in the shape, it is a line instead
         // of a full shape
         auto lines = pair.second;
 
-        shape->Lines.push_back(lines.front());
-        lines.pop_front();
-        Line firstLine = shape->Lines.front();
-
-        Point* connectPoint = &shape->Lines.back().second;
+        std::shared_ptr<ZoneQmpShape> shape;
+        Line firstLine;
+        Point* connectPoint = 0;
         while(lines.size() > 0)
         {
+            if(!shape)
+            {
+                // Lines still exist, start a new shape
+                shape = std::make_shared<ZoneQmpShape>();
+                shape->ShapeID = pair.first;
+                shape->Element = elementMap[pair.first];
+                shape->OneWay = shape->Element->GetType() ==
+                    objects::QmpElement::Type_t::ONE_WAY;
+
+                shape->Lines.push_back(lines.front());
+                lines.pop_front();
+                firstLine = shape->Lines.front();
+                connectPoint = &shape->Lines.back().second;
+            }
+
             bool connected = false;
             for(auto it = lines.begin(); it != lines.end(); it++)
             {
@@ -229,20 +236,9 @@ bool ZoneGeometryLoader::LoadZoneQMP(
                 shape->Boundaries[0] = Point(xVals.front(), yVals.front());
                 shape->Boundaries[1] = Point(xVals.back(), yVals.back());
 
-                if(lines.size() > 0)
-                {
-                    // Start a new shape
-                    shape = std::make_shared<ZoneQmpShape>();
-                    shape->ShapeID = pair.first;
-                    shape->Element = elementMap[pair.first];
-                    shape->OneWay = shape->Element->GetType() ==
-                        objects::QmpElement::Type_t::ONE_WAY;
-
-                    shape->Lines.push_back(lines.front());
-                    lines.pop_front();
-                    firstLine = shape->Lines.front();
-                    connectPoint = &shape->Lines.back().second;
-                }
+                // If we still have more lines, start a new shape at the start
+                // of the loop
+                shape = nullptr;
             }
         }
     }

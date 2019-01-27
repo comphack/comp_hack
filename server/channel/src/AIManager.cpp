@@ -1305,6 +1305,14 @@ bool AIManager::UpdateEnemyState(
     auto aiState = eState->GetAIState();
     if(aiState->GetStatus() == AIStatus_t::WANDERING && eBase)
     {
+        // If we're wandering but have opponents (typically from being hit)
+        // try to target one of them and stop here if we do
+        if(eState->GetOpponentIDs().size() > 0 &&
+            Retarget(eState, now, isNight))
+        {
+            return false;
+        }
+
         Wander(eState, eBase);
         return true;
     }
@@ -1754,15 +1762,11 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
     std::list<std::shared_ptr<ActiveEntityState>> possibleTargets;
     if(opponentIDs.size() > 0)
     {
-        float aggroNormal = aiState->GetAggroValue(isNight ? 1 : 0, false,
-            AI_DEFAULT_AGGRO_RANGE);
-        float aggroCast = aiState->GetAggroValue(2, false,
-            AI_DEFAULT_AGGRO_RANGE);
-        float aggroMax = aggroNormal > aggroCast ? aggroNormal : aggroCast;
-
-        // Currently in combat, only pull from opponents
+        // Currently in combat, only pull from opponents. Use deaggro
+        // distance instead of the normal aggro distance since the AI
+        // should technically be aggro until no opponents are still around
         auto inRange = zone->GetActiveEntitiesInRadius(
-            sourceX, sourceY, aggroMax);
+            sourceX, sourceY, aiState->GetDeaggroDistance(isNight));
 
         for(auto entity : inRange)
         {

@@ -1033,6 +1033,15 @@ bool ApiHandler::WebGame_GetCoins(const JsonBox::Object& request,
     JsonBox::Object& response,
     const std::shared_ptr<ApiSession>& session)
 {
+    (void)request;
+
+    std::shared_ptr<objects::WebGameSession> gameSession;
+    std::shared_ptr<World> world;
+    if(!GetWebGameSession(response, session, gameSession, world))
+    {
+        return true;
+    }
+
     int64_t coins = WebGameScript_GetCoins(session);
     if(coins == -1)
     {
@@ -1140,10 +1149,10 @@ bool ApiHandler::WebGame_Start(const JsonBox::Object& request,
             return true;
         }
 
-        Sqrat::Table::iterator it;
-        while(sqOutTable.Next(it))
+        Sqrat::Table::iterator tableIter;
+        while(sqOutTable.Next(tableIter))
         {
-            auto name = it.getName();
+            auto name = tableIter.getName();
             if(name)
             {
                 auto val = sqOutTable.GetValue<std::string>(name);

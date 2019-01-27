@@ -104,7 +104,8 @@ QMap<QString, FileData*> Downloader::parseFileList(const QByteArray& d)
 }
 
 Downloader::Downloader(const QString& url, QObject *p) : QObject(p),
-    mTotalFiles(0), mCurrentReq(0), mHaveVersion(false), mCurrentFile(0)
+    mTotalFiles(0), mCurrentReq(0), mHaveVersion(false), mCurrentFile(0),
+    mActiveRetries(0)
 {
     mURL = url;
     mBare = false;
@@ -177,6 +178,13 @@ void Downloader::startUpdate()
 void Downloader::requestError(QNetworkReply::NetworkError code)
 {
     (void)code;
+
+    // If there was a timeout, try again before reporting the error.
+    if(mActiveRetries && QNetworkReply::TimeoutError == mCurrentReq->error())
+    {
+        startDownload(mActiveURL, mActivePath);
+        return;
+    }
 
     auto errorString = mCurrentReq->errorString();
 
@@ -647,6 +655,17 @@ void Downloader::advanceToNextFile()
 void Downloader::startDownload(const QString& url, const QString& path)
 {
     mStatusCode = 0;
+
+    if(mActiveURL == url || mActivePath == path)
+    {
+        mActiveRetries--;
+    }
+    else
+    {
+        mActiveRetries = 5;
+        mActiveURL = url;
+        mActivePath = path;
+    }
 
 #ifdef COMP_HACK_HEADLESS
     if( path.isEmpty() )

@@ -121,6 +121,10 @@ protected:
 
     QList<FileData*> mFiles;
     QMap<QString, FileData*> mOldFiles;
+
+    QString mActiveURL;
+    QString mActivePath;
+    int mActiveRetries;
 };
 
 #endif // TOOLS_UPDATER_SRC_DOWNLOADER_H

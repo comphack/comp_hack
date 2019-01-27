@@ -63,6 +63,7 @@ protected slots:
     void showScreenshots();
     void showDXDiag();
     void recheck();
+    void retry();
 
     void errorMessage(const QString& msg);
 

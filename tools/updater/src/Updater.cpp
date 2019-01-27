@@ -96,6 +96,8 @@ Updater::Updater(QWidget *p) : QWidget(p), mDone(false)
         this, SLOT(showDXDiag()));
     connect(ui.checkButton, SIGNAL(clicked(bool)),
         this, SLOT(recheck()));
+    connect(ui.retryButton, SIGNAL(clicked(bool)),
+        this, SLOT(retry()));
 
     mDownloadThread.start();
 }
@@ -462,6 +464,21 @@ void Updater::showDXDiag()
 
 void Updater::recheck()
 {
+    QString path = QString("%1/ImagineUpdate2.dat").arg(
+        qApp->applicationDirPath() );
+
+    QFile(path).remove();
+
+    path = QString("%1/ImagineUpdate2.ver").arg(
+        qApp->applicationDirPath() );
+
+    QFile(path).remove();
+
+    retry();
+}
+
+void Updater::retry()
+{
     mDone = false;
 
     bool block = mDL->blockSignals(true);
@@ -472,16 +489,6 @@ void Updater::recheck()
     mDownloadThread.wait();
 
     mDL->blockSignals(block);
-
-    QString path = QString("%1/ImagineUpdate2.dat").arg(
-        qApp->applicationDirPath() );
-
-    QFile(path).remove();
-
-    path = QString("%1/ImagineUpdate2.ver").arg(
-        qApp->applicationDirPath() );
-
-    QFile(path).remove();
 
     ui.settingsButton->setEnabled(false);
     ui.playButton->setEnabled(false);

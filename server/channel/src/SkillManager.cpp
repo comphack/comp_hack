@@ -11121,6 +11121,14 @@ bool SkillManager::Spawn(
             }
         }
 
+        if(client)
+        {
+            LOG_DEBUG(libcomp::String("Global spawn group %1 created by"
+                " player in zone %2: %3\n").Arg(spawnGroup->GetID())
+                .Arg(zone->GetDefinitionID())
+                .Arg(client->GetClientState()->GetAccountUID().ToString()));
+        }
+
         std::list<std::shared_ptr<objects::Action>> empty;
         zoneManager->AddEnemiesToZone(enemies, zone, true, true, empty);
     }
@@ -11228,6 +11236,14 @@ bool SkillManager::SpawnZone(
                         " SpawnZone skill: %1\n").Arg(spawnPair.first));
                 }
             }
+        }
+
+        if(client)
+        {
+            LOG_DEBUG(libcomp::String("Zone spawn group %1 created by"
+                " player in zone %2: %3\n").Arg(spawnGroup->GetID())
+                .Arg(zone->GetDefinitionID())
+                .Arg(client->GetClientState()->GetAccountUID().ToString()));
         }
 
         std::list<std::shared_ptr<objects::Action>> empty;

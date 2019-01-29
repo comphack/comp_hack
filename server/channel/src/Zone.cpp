@@ -130,7 +130,8 @@ namespace libcomp
 }
 
 Zone::Zone(uint32_t id, const std::shared_ptr<objects::ServerZone>& definition)
-    : mNextRentalExpiration(0), mNextEncounterID(1)
+    : mNextRentalExpiration(0), mNextEncounterID(1),
+    mDiasporaMiniBossUpdated(false)
 {
     SetDefinition(definition);
     SetID(id);
@@ -418,7 +419,7 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                             auto base = bState->GetEntity();
 
                             if(slgID == base->GetDefinition()
-                                ->GetPhaseMiniBosses(DIASPORA_PHASE_BOSS))
+                                ->GetPhaseMiniBosses((size_t)DIASPORA_PHASE_BOSS - 1))
                             {
                                 mDiasporaMiniBossUpdated = true;
                                 break;
@@ -1856,7 +1857,7 @@ void Zone::AddSpawnedEntity(const std::shared_ptr<ActiveEntityState>& state,
                 auto base = bState->GetEntity();
 
                 if(slgID == base->GetDefinition()
-                    ->GetPhaseMiniBosses(DIASPORA_PHASE_BOSS))
+                    ->GetPhaseMiniBosses((size_t)DIASPORA_PHASE_BOSS - 1))
                 {
                     mDiasporaMiniBossUpdated = true;
                     break;

@@ -5688,7 +5688,7 @@ bool ZoneManager::UpdateTrackedZone(const std::shared_ptr<Zone>& zone,
             notify.WriteU32Little(enemy->GetType());
             notify.WriteS32Little(boss->GetCoreStats()->GetHP());
             notify.WriteS32Little(boss->GetMaxHP());
-            notify.WriteS32Little((int32_t)mbCounts.first);
+            notify.WriteS32Little((int32_t)(mbCounts.second - mbCounts.first));
             notify.WriteS32Little((int32_t)mbCounts.second);
         }
 

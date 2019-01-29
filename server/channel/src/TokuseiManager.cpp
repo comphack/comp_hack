@@ -1066,6 +1066,13 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
                 {
                     tokuseiIDs.push_back(tokuseiID);
                 }
+
+                // Digitalize skills are not directly on the character so
+                // gather them now
+                for(uint32_t skillID : dgState->GetPassiveSkills())
+                {
+                    skillIDs.insert(skillID);
+                }
             }
         }
         break;
@@ -1321,7 +1328,6 @@ bool TokuseiManager::EvaluateTokuseiCondition(const std::shared_ptr<ActiveEntity
             return digitalized == (condition->GetComparator() ==
                 objects::TokuseiCondition::Comparator_t::EQUALS);
         }
-        return false;
         break;
     case TokuseiConditionType::EQUIPPED_WEAPON_TYPE:
         // Entity is a character and has the specified weapon type equipped

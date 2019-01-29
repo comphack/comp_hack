@@ -872,6 +872,17 @@ protected:
         std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
 
     /**
+     * Apply a set of skill correct table value adjustments.
+     * @param skillIDs Set of skill IDs on the entity
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how the skills behave
+     * @param adjustments Output list parameter to add the adjustments to
+     */
+    void ApplySkillCorrectTbls(const std::set<uint32_t>& skillIDs,
+        libcomp::DefinitionManager* definitionManager,
+        std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
+
+    /**
      * Recalculate a demon or enemy entity's stats.
      * @param definitionManager Pointer to the DefinitionManager to use when
      *  determining how effects and items interact with the entity

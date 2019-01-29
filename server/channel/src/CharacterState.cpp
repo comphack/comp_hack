@@ -281,13 +281,13 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
                 case 0:
                     if(skillPassives)
                     {
-                        mDigitalizeState->InsertActiveSkills(skillID);
+                        mDigitalizeState->InsertPassiveSkills(skillID);
                     }
                     break;
                 case 1:
                     if(skillActives)
                     {
-                        mDigitalizeState->InsertPassiveSkills(skillID);
+                        mDigitalizeState->InsertActiveSkills(skillID);
                     }
                     break;
                 default:
@@ -973,6 +973,13 @@ uint8_t CharacterState::RecalculateStats(
         }
     }
 
+    if(dgState)
+    {
+        // Digitalize passives are "floating" and not directly on the character
+        auto dgPassives = dgState->GetPassiveSkills();
+        ApplySkillCorrectTbls(dgPassives, definitionManager, correctTbls);
+    }
+
     GetAdditionalCorrectTbls(definitionManager, calcState, correctTbls);
 
     UpdateNRAChances(stats, calcState, nraTbls);
@@ -1026,6 +1033,7 @@ uint8_t CharacterState::RecalculateStats(
 std::set<uint32_t> CharacterState::GetAllSkills(
     libcomp::DefinitionManager* definitionManager, bool includeTokusei)
 {
+    // If skills are gained from digitalize they are NOT included here
     std::set<uint32_t> skillIDs;
     
     auto character = GetEntity();
@@ -1054,20 +1062,6 @@ std::set<uint32_t> CharacterState::GetAllSkills(
             {
                 skillIDs.insert(skillID);
             }
-        }
-    }
-
-    auto dgState = mDigitalizeState;
-    if(dgState)
-    {
-        for(uint32_t skillID : dgState->GetActiveSkills())
-        {
-            skillIDs.insert(skillID);
-        }
-
-        for(uint32_t skillID : dgState->GetPassiveSkills())
-        {
-            skillIDs.insert(skillID);
         }
     }
 

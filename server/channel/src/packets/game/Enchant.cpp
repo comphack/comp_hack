@@ -37,6 +37,7 @@
 #include <ServerConstants.h>
 
 // object Includes
+#include <EnchantSpecialData.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <MiItemBasicData.h>
@@ -145,6 +146,7 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
     // If no error has occurred yet, go forward with the enchantment
     bool success = false;
     int16_t effectID = 0;
+    uint32_t enchantSpecialID = 0;
     std::list<int32_t> successRates;
     uint32_t specialEnchantItemType = static_cast<uint32_t>(-1);
 
@@ -154,7 +156,8 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
     if(responseCode == EntrustErrorCodes_t::SUCCESS)
     {
         if(characterManager->GetSynthOutcome(state, exchangeSession,
-            specialEnchantItemType, successRates, &effectID))
+            specialEnchantItemType, successRates, &effectID,
+            &enchantSpecialID))
         {
             int32_t successRate = choice == 0
                 ? successRates.front() : successRates.back();
@@ -184,8 +187,25 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
                 else if(specialEnchantItemType)
                 {
                     // Item becomes new item
-                    updateItem = characterManager->GenerateItem(specialEnchantItemType,
-                        1);
+                    updateItem = characterManager->GenerateItem(
+                        specialEnchantItemType, 1);
+                    if(enchantSpecialID)
+                    {
+                        // Set mod slots if we have them (number can only
+                        // go up from base item)
+                        auto specialEnchant = definitionManager
+                            ->GetEnchantSpecialData(enchantSpecialID);
+                        if(specialEnchant && specialEnchant->GetSlots())
+                        {
+                            for(uint8_t i = 0; i < specialEnchant
+                                ->GetSlots() && i < 5; i++)
+                            {
+                                updateItem->SetModSlots((size_t)i,
+                                    MOD_SLOT_NULL_EFFECT);
+                            }
+                        }
+                    }
+
                     updateItem->SetBoxSlot(inputItem->GetBoxSlot());
                     success = true;
                 }

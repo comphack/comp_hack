@@ -5198,7 +5198,8 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<
 
 bool CharacterManager::GetSynthOutcome(ClientState* synthState,
     const std::shared_ptr<objects::PlayerExchangeSession>& exchangeSession,
-    uint32_t& outcomeItemType, std::list<int32_t>& successRates, int16_t* effectID)
+    uint32_t& outcomeItemType, std::list<int32_t>& successRates,
+    int16_t* effectID, uint32_t* enchantSpecialID)
 {
     successRates.clear();
     outcomeItemType = static_cast<uint32_t>(-1);
@@ -5236,7 +5237,10 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
                 return false;
             }
 
-            *effectID = enchantData->GetID();
+            if(effectID)
+            {
+                *effectID = enchantData->GetID();
+            }
 
             double expRank = (double)cState->GetExpertiseRank(
                 EXPERTISE_CHAIN_SYNTHESIS, definitionManager);
@@ -5344,6 +5348,11 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
                 {
                     outcomeItemType = specialEnchant->GetResultItem();
                     rates.push_back(rate);
+
+                    if(enchantSpecialID)
+                    {
+                        *enchantSpecialID = specialEnchant->GetID();
+                    }
 
                     // There should never be multiple but break just in case
                     break;

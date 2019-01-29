@@ -52,6 +52,7 @@
         <member type="u32" name="inputItem"/>
         <member type="s16" name="tarot"/>
         <member type="s16" name="soul"/>
+        <member type="u8" name="slots"/>
         <member type="u32" name="resultItem"/>
         <member type="s16" name="difficulty"/>
     </object>

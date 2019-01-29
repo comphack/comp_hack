@@ -966,12 +966,14 @@ public:
      *  associated with the operation
      * @param effectID Output parameter only used by enchantment to contain
      *  the effect that will be applied
+     * @param enchantSpecialID Output parameter only used by enchantment to
+     *  contain the EnchantSpecialData ID
      * @return true if the calculation succeeded, false if an error occured
      */
     bool GetSynthOutcome(ClientState* synthState,
         const std::shared_ptr<objects::PlayerExchangeSession>& exchangeSession,
         uint32_t& outcomeItemType, std::list<int32_t>& successRates,
-        int16_t* effectID = 0);
+        int16_t* effectID = 0, uint32_t* enchantSpecialID = 0);
 
     /**
      * Convert the supplied ID to its corresponding flag array index

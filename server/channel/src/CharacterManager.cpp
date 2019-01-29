@@ -1636,6 +1636,17 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
     if(updatePartyState)
     {
         // Recalc and send new HP/MP display
+        auto cs = demon->GetCoreStats().Get();
+        if(cs->GetMaxHP() < cs->GetHP())
+        {
+            cs->SetHP(cs->GetMaxHP());
+        }
+
+        if(cs->GetMaxMP() < cs->GetMP())
+        {
+            cs->SetMP(cs->GetMaxMP());
+        }
+
         SendDemonBoxData(client, 0, std::set<int8_t>{ demon->GetBoxSlot() });
 
         server->GetTokuseiManager()->Recalculate(cState, true);

@@ -366,12 +366,14 @@ private:
      * @param client Pointer to the client connection, can be null if not coming
      *  from a player entity
      * @param ctx Special execution state for the skill
+     * @param delayedAuto If true, the skill is being executed as the result
+     *  of delayed auto-exection from an activation request
      * @return true if the skill was executed successfully, false otherwise
      */
     bool ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         std::shared_ptr<objects::ActivatedAbility> activated,
         const std::shared_ptr<ChannelClientConnection> client,
-        std::shared_ptr<SkillExecutionContext> ctx);
+        std::shared_ptr<SkillExecutionContext> ctx, bool delayedAuto = false);
 
     /**
      * Execute a normal skill, not handled by a special handler.

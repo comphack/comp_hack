@@ -573,7 +573,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
                     if(pSkillManager)
                     {
                         pSkillManager->ExecuteSkill(pSource, pActivated,
-                            pClient, nullptr);
+                            pClient, nullptr, true);
                     }
                 }, server, source, activated, client);
         }
@@ -652,7 +652,7 @@ bool SkillManager::ExecuteSkill(const std::shared_ptr<ActiveEntityState> source,
 bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     std::shared_ptr<objects::ActivatedAbility> activated,
     const std::shared_ptr<ChannelClientConnection> client,
-    std::shared_ptr<SkillExecutionContext> ctx)
+    std::shared_ptr<SkillExecutionContext> ctx, bool delayedAuto)
 {
     auto skillData = activated->GetSkillData();
     auto zone = source ? source->GetZone() : nullptr;
@@ -661,6 +661,16 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         LOG_ERROR("Skill activation attempted outside of a zone.\n");
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+        return false;
+    }
+    else if(activated->GetCancelled())
+    {
+        if(!delayedAuto)
+        {
+            SendFailure(activated, client,
+                (uint8_t)SkillErrorCodes_t::GENERIC);
+        }
+
         return false;
     }
 
@@ -905,6 +915,11 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
         {
             auto pSkill = GetProcessingSkill(activated, nullptr);
             SetSkillCompleteState(pSkill, false);
+        }
+        else
+        {
+            // Make sure to cancel the skill even if it didn't execute
+            activated->SetCancelled(true);
         }
 
         if(source->GetSpecialActivations(activationID) == activated)

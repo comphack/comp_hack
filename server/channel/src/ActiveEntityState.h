@@ -472,6 +472,13 @@ public:
     virtual bool Ready(bool ignoreDisplayState = false);
 
     /**
+     * Check if the entity state has an entity set currently. Under normal
+     * circumstances, this will always be true for all but partner demons.
+     * @return true if an entity is set, otherwise false
+     */
+    virtual bool EntityIsSet() const;
+
+    /**
      * Check if the entity state is visible to any game client and should
      * be included when sending entity definitions or movement actions
      * @return true if the entity is visible, false if it is not
@@ -1099,6 +1106,11 @@ public:
         return mEntity != nullptr && (ignoreDisplayState ||
             (GetDisplayState() == ActiveDisplayState_t::ACTIVE &&
                 !GetIsHidden()));
+    }
+
+    virtual bool EntityIsSet() const
+    {
+        return mEntity != nullptr;
     }
 
     virtual bool IsClientVisible()

@@ -1325,6 +1325,12 @@ std::set<uint32_t> ActiveEntityState::CancelStatusEffects(
 void ActiveEntityState::SetStatusEffectsActive(bool activate,
     libcomp::DefinitionManager* definitionManager, uint32_t now)
 {
+    if(activate && !EntityIsSet())
+    {
+        // Do not activate effects if no entity is set yet
+        return;
+    }
+
     if(now == 0)
     {
         now = (uint32_t)std::time(0);
@@ -2215,6 +2221,11 @@ bool ActiveEntityState::Ready(bool ignoreDisplayState)
 {
     (void)ignoreDisplayState;
 
+    return false;
+}
+
+bool ActiveEntityState::EntityIsSet() const
+{
     return false;
 }
 

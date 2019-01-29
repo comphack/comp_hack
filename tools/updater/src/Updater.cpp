@@ -351,7 +351,15 @@ void Updater::unlock()
         while( !versionMap.atEnd() );
     }
 
-    ui.playButton->setMenu(playMenu);
+    if (mVersionMap.size() > 1)
+    {
+        ui.playButton->setMenu(playMenu);
+    }
+    else
+    {
+        connect(ui.playButton, SIGNAL(clicked(bool)), this, SLOT(startGame()));
+    }
+
     ui.playButton->setEnabled(true);
     ui.settingsButton->setEnabled(true);
 }
@@ -371,47 +379,53 @@ bool Updater::copyFile(const QString& src, const QString& dest)
 
 void Updater::startGame()
 {
+    QFile serverInfo("ImagineClient.dat");
+    serverInfo.open(QIODevice::WriteOnly);
+
+    VersionData *ver;
     QAction *action = qobject_cast<QAction*>(sender());
-    if(action)
+
+    if (action)
     {
-        QFile serverInfo("ImagineClient.dat");
-        serverInfo.open(QIODevice::WriteOnly);
-
         QString tag = action->data().toString();
-        if( !mVersionMap.contains(tag) )
+        if (!mVersionMap.contains(tag))
             return;
+        ver = mVersionMap.value(tag);
+    }
+    else 
+    {
+        ver = *mVersionMap.begin();
+    }
+    
+    if (!ver)
+        return;
 
-        VersionData *ver = mVersionMap.value(tag);
-        if(!ver)
-            return;
+    QStringList serv = ver->server.split(':');
 
-        QStringList serv = ver->server.split(':');
+    serverInfo.write(QString("-ip %1\r\n").arg(serv.at(0)).toUtf8());
+    serverInfo.write(QString("-port %1\r\n").arg(serv.at(1)).toUtf8());
+    serverInfo.close();
 
-        serverInfo.write( QString("-ip %1\r\n").arg(serv.at(0)).toUtf8() );
-        serverInfo.write( QString("-port %1\r\n").arg(serv.at(1)).toUtf8() );
-        serverInfo.close();
+    QMapIterator<QString, QString> it(ver->files);
 
-        QMapIterator<QString, QString> it(ver->files);
+    while (it.hasNext())
+    {
+        it.next();
 
-        while( it.hasNext() )
+        QString file = it.key();
+        QString suffix = it.value();
+
+        QString source = tr("%1/%2.%3").arg(
+            qApp->applicationDirPath()).arg(file).arg(suffix);
+        QString dest = tr("%1/%2").arg(
+            qApp->applicationDirPath()).arg(file);
+
+        if (!copyFile(source, dest))
         {
-            it.next();
+            QMessageBox::critical(this, tr("Updater Error"),
+                tr("Failed to patch %1").arg(file));
 
-            QString file = it.key();
-            QString suffix = it.value();
-
-            QString source = tr("%1/%2.%3").arg(
-                qApp->applicationDirPath()).arg(file).arg(suffix);
-            QString dest = tr("%1/%2").arg(
-                qApp->applicationDirPath()).arg(file);
-
-            if( !copyFile(source, dest) )
-            {
-                QMessageBox::critical(this, tr("Updater Error"),
-                    tr("Failed to patch %1").arg(file));
-
-                return qApp->quit();
-            }
+            return qApp->quit();
         }
     }
 

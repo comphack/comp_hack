@@ -4,165 +4,165 @@
 <context>
     <name>Downloader</name>
     <message>
-        <location filename="../src/Downloader.cpp" line="169"/>
+        <location filename="../src/Downloader.cpp" line="170"/>
         <source>%1/hashlist.dat</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="173"/>
+        <location filename="../src/Downloader.cpp" line="174"/>
         <source>%1/hashlist.ver</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="190"/>
+        <location filename="../src/Downloader.cpp" line="198"/>
         <source>Download failed: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Ошибка загрузки: %1</translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="204"/>
+        <location filename="../src/Downloader.cpp" line="212"/>
         <source>Download failed: Server returned status code %1 %2</source>
-        <translation type="unfinished"></translation>
+        <translation>Ошибка загрузки: Код ответа сервера: %1 %2</translation>
     </message>
 </context>
 <context>
     <name>LanguageSelection</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_LanguageSelection.h" line="81"/>
+        <location filename="../../../build32/tools/updater/ui_LanguageSelection.h" line="78"/>
         <source>Language Selection</source>
-        <translation type="unfinished"></translation>
+        <translation>Выбор языка</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_LanguageSelection.h" line="82"/>
+        <location filename="../../../build32/tools/updater/ui_LanguageSelection.h" line="79"/>
         <source>Please select a language:</source>
-        <translation type="unfinished"></translation>
+        <translation>Пожалуйста выберите язык:</translation>
     </message>
     <message>
         <location filename="../src/LanguageSelection.cpp" line="109"/>
         <location filename="../src/LanguageSelection.cpp" line="122"/>
         <source>Save Error</source>
-        <translation type="unfinished"></translation>
+        <translation>Ошибка сохранения</translation>
     </message>
     <message>
         <location filename="../src/LanguageSelection.cpp" line="110"/>
         <source>Failed to save the language selection!</source>
-        <translation type="unfinished"></translation>
+        <translation>Не могу сохранить выбранный язык!</translation>
     </message>
     <message>
         <location filename="../src/LanguageSelection.cpp" line="119"/>
         <source>translations/ImagineUpdate_en_US.dat</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../src/LanguageSelection.cpp" line="123"/>
         <source>Failed to save the updater URL!</source>
-        <translation type="unfinished"></translation>
+        <translation>Не могу сохранить URL сервера обновлений!</translation>
     </message>
 </context>
 <context>
     <name>Options</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="213"/>
+        <location filename="../../../build32/tools/updater/ui_Options.h" line="210"/>
         <source>Shin Megami Tensei IMAGINE - Game Option Configuration</source>
-        <translation type="unfinished"></translation>
+        <translation>Shin Megami Tensei IMAGINE - Настройка</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="214"/>
+        <location filename="../../../build32/tools/updater/ui_Options.h" line="211"/>
         <source>Mode:</source>
-        <translation type="unfinished"></translation>
+        <translation>Режим:</translation>
+    </message>
+    <message>
+        <location filename="../../../build32/tools/updater/ui_Options.h" line="212"/>
+        <source>Window</source>
+        <translation>Оконный режим</translation>
+    </message>
+    <message>
+        <location filename="../../../build32/tools/updater/ui_Options.h" line="213"/>
+        <source>Full Screen</source>
+        <translation>Полноэкранный режим</translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="215"/>
-        <source>Window</source>
-        <translation type="unfinished"></translation>
+        <source>Video Card:</source>
+        <translation>Видеоадптер:</translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="216"/>
-        <source>Full Screen</source>
-        <translation type="unfinished"></translation>
+        <source>Screen Size:</source>
+        <translation>Размер экрана:</translation>
+    </message>
+    <message>
+        <location filename="../../../build32/tools/updater/ui_Options.h" line="217"/>
+        <source>Chat Text Size:</source>
+        <translation>Размер шрифта в чате:</translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="218"/>
-        <source>Video Card:</source>
-        <translation type="unfinished"></translation>
+        <source>Preset</source>
+        <translation>Разрешение</translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="219"/>
-        <source>Screen Size:</source>
-        <translation type="unfinished"></translation>
+        <source>Custom</source>
+        <translation>Другое</translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="220"/>
-        <source>Chat Text Size:</source>
-        <translation type="unfinished"></translation>
+        <source>x</source>
+        <translation></translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="221"/>
-        <source>Preset</source>
-        <translation type="unfinished"></translation>
+        <source>Small (12pt)</source>
+        <translation>Маленький (12pt)</translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="222"/>
-        <source>Custom</source>
-        <translation type="unfinished"></translation>
+        <source>Medium (14pt)</source>
+        <translation>Средний (14pt)</translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="223"/>
-        <source>x</source>
-        <translation type="unfinished"></translation>
+        <source>Large (16pt)</source>
+        <translation>Большой (16pt)</translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="224"/>
-        <source>Small (12pt)</source>
-        <translation type="unfinished"></translation>
+        <source>Small (12pt no antialiasing)</source>
+        <translation>Маленький (12pt без сглаж.)</translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="225"/>
-        <source>Medium (14pt)</source>
-        <translation type="unfinished"></translation>
+        <source>Medium (14pt no antialiasing)</source>
+        <translation>Средний (14pt без сглаж.)</translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="226"/>
-        <source>Large (16pt)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="227"/>
-        <source>Small (12pt no antialiasing)</source>
-        <translation type="unfinished"></translation>
+        <source>Large (16pt no antialiasing)</source>
+        <translation>Большой (16pt без сглаж.)</translation>
     </message>
     <message>
         <location filename="../../../build32/tools/updater/ui_Options.h" line="228"/>
-        <source>Medium (14pt no antialiasing)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="229"/>
-        <source>Large (16pt no antialiasing)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="231"/>
         <source>Language:</source>
-        <translation type="unfinished"></translation>
+        <translation>Язык:</translation>
     </message>
     <message>
         <location filename="../src/Options.cpp" line="86"/>
         <location filename="../src/Options.cpp" line="170"/>
         <location filename="../src/Options.cpp" line="258"/>
         <source>%1 x %2</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../src/Options.cpp" line="273"/>
         <location filename="../src/Options.cpp" line="308"/>
         <location filename="../src/Options.cpp" line="321"/>
         <source>Save Error</source>
-        <translation type="unfinished"></translation>
+        <translation>Ошибка сохранения</translation>
     </message>
     <message>
         <location filename="../src/Options.cpp" line="274"/>
         <source>Failed to save configuration to OutsideOption.txt!</source>
-        <translation type="unfinished"></translation>
+        <translation>Не могу сохранить конфигурацию в OutsideOption.txt!</translation>
     </message>
     <message>
         <location filename="../src/Options.cpp" line="290"/>
@@ -173,151 +173,156 @@
 -ResolutionX %4
 -ResolutionY %5
 </source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../src/Options.cpp" line="309"/>
         <source>Failed to save the language selection!</source>
-        <translation type="unfinished"></translation>
+        <translation>Не могу сохранить конфигурацию языка!</translation>
     </message>
     <message>
         <location filename="../src/Options.cpp" line="318"/>
         <source>translations/ImagineUpdate_en_US.dat</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../src/Options.cpp" line="322"/>
         <source>Failed to save the updater URL!</source>
-        <translation type="unfinished"></translation>
+        <translation>Не могу сохранить URL сервера обновлений!</translation>
     </message>
 </context>
 <context>
     <name>Updater</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="155"/>
+        <location filename="../../../build32/tools/updater/ui_Updater.h" line="165"/>
         <source>COMP_hack Updater v1.0</source>
-        <translation type="unfinished"></translation>
+        <translation>Лаунчер COMP_hack v1.0</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="158"/>
+        <location filename="../../../build32/tools/updater/ui_Updater.h" line="168"/>
         <source>Please wait...</source>
-        <translation type="unfinished"></translation>
+        <translation>Подождите, пожалуйста...</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="159"/>
+        <location filename="../../../build32/tools/updater/ui_Updater.h" line="169"/>
         <source>Screenshots</source>
-        <translation type="unfinished"></translation>
+        <translation>Скриншоты</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="160"/>
+        <location filename="../../../build32/tools/updater/ui_Updater.h" line="172"/>
+        <source>Retry</source>
+        <translation>Повторить</translation>
+    </message>
+    <message>
+        <location filename="../../../build32/tools/updater/ui_Updater.h" line="173"/>
         <source>Full Check</source>
-        <translation type="unfinished"></translation>
+        <translation>Полная проверка</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="161"/>
+        <location filename="../../../build32/tools/updater/ui_Updater.h" line="170"/>
         <source>Diagnostics</source>
-        <translation type="unfinished"></translation>
+        <translation>Диагностика</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="162"/>
+        <location filename="../../../build32/tools/updater/ui_Updater.h" line="171"/>
         <source>Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>Настройки</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="163"/>
+        <location filename="../../../build32/tools/updater/ui_Updater.h" line="174"/>
         <source>PLAY GAME</source>
-        <translation type="unfinished"></translation>
+        <translation>ИГРАТЬ</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="162"/>
-        <location filename="../src/Updater.cpp" line="183"/>
-        <location filename="../src/Updater.cpp" line="196"/>
-        <location filename="../src/Updater.cpp" line="208"/>
-        <location filename="../src/Updater.cpp" line="222"/>
-        <location filename="../src/Updater.cpp" line="230"/>
-        <location filename="../src/Updater.cpp" line="240"/>
-        <location filename="../src/Updater.cpp" line="271"/>
-        <location filename="../src/Updater.cpp" line="300"/>
-        <location filename="../src/Updater.cpp" line="321"/>
-        <location filename="../src/Updater.cpp" line="335"/>
+        <location filename="../src/Updater.cpp" line="164"/>
+        <location filename="../src/Updater.cpp" line="185"/>
+        <location filename="../src/Updater.cpp" line="198"/>
+        <location filename="../src/Updater.cpp" line="210"/>
+        <location filename="../src/Updater.cpp" line="224"/>
+        <location filename="../src/Updater.cpp" line="232"/>
+        <location filename="../src/Updater.cpp" line="242"/>
+        <location filename="../src/Updater.cpp" line="273"/>
+        <location filename="../src/Updater.cpp" line="302"/>
+        <location filename="../src/Updater.cpp" line="323"/>
+        <location filename="../src/Updater.cpp" line="337"/>
         <source>VersionData.txt Error</source>
-        <translation type="unfinished"></translation>
+        <translation>Ошибка VersionData.txt</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="163"/>
+        <location filename="../src/Updater.cpp" line="165"/>
         <source>The first line of the file was not: [versions]</source>
-        <translation type="unfinished"></translation>
+        <translation>Первая строка файла не содержит [versions]</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="184"/>
+        <location filename="../src/Updater.cpp" line="186"/>
         <source>Invalid line found in versions section: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Неверная строка в файле выбора сервера: %1</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="197"/>
+        <location filename="../src/Updater.cpp" line="199"/>
         <source>Duplicate title value found</source>
-        <translation type="unfinished"></translation>
+        <translation>Дублирющийся ключ &quot;title&quot;</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="209"/>
+        <location filename="../src/Updater.cpp" line="211"/>
         <source>Duplicate server value found</source>
-        <translation type="unfinished"></translation>
+        <translation>Дублирющийся ключ &quot;server&quot;</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="223"/>
+        <location filename="../src/Updater.cpp" line="225"/>
         <source>Duplicate tag value found</source>
-        <translation type="unfinished"></translation>
+        <translation>Дублирющийся ключ &quot;tag&quot;</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="231"/>
+        <location filename="../src/Updater.cpp" line="233"/>
         <source>Non-unique tag value found</source>
-        <translation type="unfinished"></translation>
+        <translation>Не уникальное значение&quot;tag&quot;</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="241"/>
+        <location filename="../src/Updater.cpp" line="243"/>
         <source>Version contains invalid value</source>
-        <translation type="unfinished"></translation>
+        <translation>Неверное значение в файле выбора сервера</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="272"/>
+        <location filename="../src/Updater.cpp" line="274"/>
         <source>Version missing one or more of: title, server, tag</source>
-        <translation type="unfinished"></translation>
+        <translation>Неверное значение в файле выбора сервера: отсутствуют title, server, tag</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="301"/>
+        <location filename="../src/Updater.cpp" line="303"/>
         <source>Section contains invalid tag name</source>
-        <translation type="unfinished"></translation>
+        <translation>Выбрано неверное имя тэга</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="322"/>
+        <location filename="../src/Updater.cpp" line="324"/>
         <source>Invalid line found in file list section</source>
-        <translation type="unfinished"></translation>
+        <translation>Неверная строка в файле выбора сервера</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="336"/>
+        <location filename="../src/Updater.cpp" line="338"/>
         <source>Duplicate file &apos;%1&apos; found for tag &apos;%2&apos;</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/Updater.cpp" line="401"/>
-        <source>%1/%2.%3</source>
-        <translation type="unfinished"></translation>
+        <translation>Найден дубликат файла &apos;%1&apos; для тэга &apos;%2&apos;</translation>
     </message>
     <message>
         <location filename="../src/Updater.cpp" line="403"/>
+        <source>%1/%2.%3</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../src/Updater.cpp" line="405"/>
         <source>%1/%2</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="408"/>
-        <location filename="../src/Updater.cpp" line="522"/>
+        <location filename="../src/Updater.cpp" line="410"/>
+        <location filename="../src/Updater.cpp" line="529"/>
         <source>Updater Error</source>
-        <translation type="unfinished"></translation>
+        <translation>Ошибка обновления</translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="409"/>
+        <location filename="../src/Updater.cpp" line="411"/>
         <source>Failed to patch %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Не удалось пропатчить %1</translation>
     </message>
 </context>
 </TS>

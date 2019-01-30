@@ -4534,7 +4534,8 @@ bool CharacterManager::UpdateEventCounter(const std::shared_ptr<
 }
 
 void CharacterManager::ExperienceGain(const std::shared_ptr<
-    channel::ChannelClientConnection>& client, uint64_t xpGain, int32_t entityID)
+    channel::ChannelClientConnection>& client, uint64_t xpGain,
+    int32_t entityID)
 {
     auto server = mServer.lock();
 
@@ -4551,134 +4552,170 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
         return;
     }
 
-    int8_t levelCap = server->GetWorldSharedConfig()->GetLevelCap();
+    const static int8_t levelCap = server->GetWorldSharedConfig()
+        ->GetLevelCap();
 
-    auto level = stats->GetLevel();
+    int8_t level = stats->GetLevel();
     if(level >= levelCap)
     {
         return;
     }
 
-    bool isDemon = false;
     auto demonData = eState->GetDevilData();
-    int32_t fType = 0;
-
-    std::set<uint32_t> demonSkills;
-    if(eState == dState)
+    if(eState == dState && (!dState->IsAlive() || !demonData))
     {
-        isDemon = true;
-
         // Demons cannot level when dead
-        if(!dState->IsAlive() || !demonData)
-        {
-            return;
-        }
-
-        fType = demonData->GetFamiliarity()->GetFamiliarityType();
-
-        // Gather all skills so nothing is "re-acquired"
-        for(uint32_t skillID : demon->GetLearnedSkills())
-        {
-            if(skillID)
-            {
-                demonSkills.insert(skillID);
-            }
-        }
-
-        for(uint32_t skillID : demon->GetAcquiredSkills())
-        {
-            if(skillID)
-            {
-                demonSkills.insert(skillID);
-            }
-        }
-
-        for(auto iSkill : demon->GetInheritedSkills())
-        {
-            if(iSkill)
-            {
-                demonSkills.insert(iSkill->GetSkill());
-            }
-        }
+        return;
     }
 
-    bool levelup = false;
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(state
+        ->GetAccountUID());
+
+    int8_t startingLevel = level;
     int64_t xpDelta = stats->GetXP() + (int64_t)xpGain;
+    int64_t xpCurrent = xpDelta;
     while(level < levelCap &&
         xpDelta >= (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level])
     {
-        xpDelta = xpDelta - (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level];
+        xpDelta = xpDelta - (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level++];
+    }
 
-        level++;
-        levelup = true;
+    if(level == levelCap)
+    {
+        xpCurrent -= xpDelta;
+        xpDelta = 0;
+    }
 
+    stats->SetXP(xpDelta);
+    dbChanges->Update(stats);
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_XP_UPDATE);
+    reply.WriteS32Little(entityID);
+    reply.WriteS64(xpCurrent);  // Can show above 100% until level up
+    reply.WriteS32Little((int32_t)xpGain);
+    reply.WriteS32Little(0);    // Unknown, always 0
+
+    client->QueuePacket(reply);
+
+    if(level > startingLevel)
+    {
+        // Level gained, update contextual to character or demon. Stat
+        // recalcs always happen first
         stats->SetLevel(level);
 
-        libcomp::Packet reply;
-        if(isDemon)
+        if(eState == dState)
         {
+            CalculateDemonBaseStats(demon);
+        }
+        else
+        {
+            CalculateCharacterBaseStats(stats);
+        }
+
+        server->GetTokuseiManager()->Recalculate(eState, true,
+            std::set<int32_t>{ eState->GetEntityID() });
+        RecalculateStats(eState, client, false);
+        if(eState->IsAlive())
+        {
+            stats->SetHP(eState->GetMaxHP());
+            stats->SetMP(eState->GetMaxMP());
+        }
+
+        if(eState == dState)
+        {
+            // Gather all skills so nothing is "re-acquired"
+            std::set<uint32_t> demonSkills;
+            for(uint32_t skillID : demon->GetLearnedSkills())
+            {
+                demonSkills.insert(skillID);
+            }
+
+            for(uint32_t skillID : demon->GetAcquiredSkills())
+            {
+                demonSkills.insert(skillID);
+            }
+
+            for(auto iSkill : demon->GetInheritedSkills())
+            {
+                demonSkills.insert(iSkill ? iSkill->GetSkill() : 0);
+            }
+
+            demonSkills.erase(0);
+
             std::list<uint32_t> newSkills;
             auto growth = demonData->GetGrowth();
             for(auto acSkill : growth->GetAcquisitionSkills())
             {
-                if(acSkill->GetLevel() == (uint32_t)level &&
-                    demonSkills.find(acSkill->GetID()) == demonSkills.end())
+                uint32_t skillID = acSkill->GetID();
+                if(acSkill->GetLevel() <= (uint32_t)level &&
+                    demonSkills.find(skillID) == demonSkills.end())
                 {
-                    demon->AppendAcquiredSkills(acSkill->GetID());
-                    newSkills.push_back(acSkill->GetID());
-                    demonSkills.insert(acSkill->GetID());
+                    demon->AppendAcquiredSkills(skillID);
+                    newSkills.push_back(skillID);
+                    demonSkills.insert(skillID);
                 }
             }
 
-            CalculateDemonBaseStats(dState->GetEntity());
-            server->GetTokuseiManager()->Recalculate(cState, true,
-                std::set<int32_t>{ dState->GetEntityID() });
-            RecalculateStats(dState, client, false);
-            stats->SetHP(dState->GetMaxHP());
-            stats->SetMP(dState->GetMaxMP());
+            libcomp::Packet notify;
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_PARTNER_LEVEL_UP);
+            notify.WriteS32Little(entityID);
+            notify.WriteS8(level);
+            notify.WriteS64Little(xpDelta);
+            GetEntityStatsPacketData(notify, stats, dState, 1);
 
-            reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_LEVEL_UP);
-            reply.WriteS32Little(entityID);
-            reply.WriteS8(level);
-            reply.WriteS64Little(state->GetObjectID(demon->GetUUID()));
-            GetEntityStatsPacketData(reply, stats, dState, 1);
-
-            size_t newSkillCount = newSkills.size();
-            reply.WriteU32Little(static_cast<uint32_t>(newSkillCount));
-            for(auto aSkill : newSkills)
+            notify.WriteU32Little((uint32_t)newSkills.size());
+            for(uint32_t skillID : newSkills)
             {
-                reply.WriteU32Little(aSkill);
+                notify.WriteU32Little(skillID);
             }
+
+            // All players see the level up
+            server->GetZoneManager()->BroadcastPacket(client, notify, true);
 
             // Familiarity is adjusted based on the demon's familiarity type
             // and level achieved
+            int32_t fType = demonData->GetFamiliarity()->GetFamiliarityType();
             const uint8_t fTypeMultiplier[17] =
-                {
-                    10,     // Type 0
-                    15,     // Type 1
-                    40,     // Type 2
-                    40,     // Type 3
-                    50,     // Type 4
-                    150,    // Type 5
-                    50,     // Type 6
-                    40,     // Type 7
-                    50,     // Type 8
-                    120,    // Type 9
-                    200,    // Type 10
-                    100,    // Type 11
-                    40,     // Type 12
-                    50,     // Type 13
-                    0,      // Type 14 (invalid)
-                    0,      // Type 15 (invalid)
-                    100     // Type 16
-                };
+            {
+                10,     // Type 0
+                15,     // Type 1
+                40,     // Type 2
+                40,     // Type 3
+                50,     // Type 4
+                150,    // Type 5
+                50,     // Type 6
+                40,     // Type 7
+                50,     // Type 8
+                120,    // Type 9
+                200,    // Type 10
+                100,    // Type 11
+                40,     // Type 12
+                50,     // Type 13
+                0,      // Type 14 (invalid)
+                0,      // Type 15 (invalid)
+                100     // Type 16
+            };
 
-            int32_t familiarityGain = (int32_t)(level * fTypeMultiplier[fType]);
-            UpdateFamiliarity(client, familiarityGain, true);
+            // Gain familiarity and expertise points per level
+            int32_t familiarityGain = 0;
+            int32_t ePoints = 0;
+            for(int8_t lvl = startingLevel; lvl <= level; lvl++)
+            {
+                familiarityGain = familiarityGain +
+                    (int32_t)(lvl * fTypeMultiplier[fType]);
+
+                ePoints = ePoints + (100 - (int32_t)(
+                    (cState->GetLevel() - lvl) / 10) * 20);
+            }
+
+            if(familiarityGain > 0)
+            {
+                UpdateFamiliarity(client, familiarityGain, true);
+            }
 
             // Update psychology expertise
-            int32_t ePoints = 100 - (int32_t)((cState->GetLevel() - level) /
-                10) * 20;
             if(ePoints > 0)
             {
                 double rate = (double)cState->GetCorrectValue(
@@ -4690,81 +4727,87 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
 
                 UpdateExpertisePoints(client, expPoints);
             }
+
+            dbChanges->Update(demon);
         }
         else
         {
-            CalculateCharacterBaseStats(stats);
-            server->GetTokuseiManager()->Recalculate(cState, true,
-                std::set<int32_t>{ cState->GetEntityID() });
-            RecalculateStats(cState, client, false);
-            if(cState->IsAlive())
+            // Gain skill points per level and randomly gain bonuses at a
+            // rate of 2 per level (can be repeated up to a configurable
+            // amount of times)
+            const static float bonusChance = server->GetWorldSharedConfig()
+                ->GetLevelUpBonusChance();
+            const static uint8_t bonusMax = server->GetWorldSharedConfig()
+                ->GetLevelUpBonusMax();
+
+            int32_t points = 0;
+            int32_t bonusCount = 0;
+            for(int8_t lvl = startingLevel; lvl < level; lvl++)
             {
-                stats->SetHP(cState->GetMaxHP());
-                stats->SetMP(cState->GetMaxMP());
+                points = points + (int32_t)(floorl((float)lvl / 5) + 2);
+
+                if(bonusChance > 0.f)
+                {
+                    for(uint8_t i = 0; i < bonusMax; i++)
+                    {
+                        if(bonusChance >= 100.f ||
+                            RNG_DEC(float, 0.01f, 100.f, 2) <= bonusChance)
+                        {
+                            points = points + 2;
+                            bonusCount++;
+                        }
+                    }
+                }
             }
 
-            int32_t points = (int32_t)(floorl((float)level / 5) + 2);
             character->SetPoints(character->GetPoints() + points);
 
-            reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHARACTER_LEVEL_UP);
-            reply.WriteS32Little(entityID);
-            reply.WriteS32(0);  //Unknown
-            reply.WriteS8(level);
-            reply.WriteS64(xpDelta);
-            reply.WriteS16Little((int16_t)cState->GetMaxHP());
-            reply.WriteS16Little((int16_t)cState->GetMaxMP());
-            reply.WriteS32Little(points);
-        }
-
-        server->GetZoneManager()->BroadcastPacket(client, reply, true);
-    }
-
-    if(level == levelCap)
-    {
-        xpDelta = 0;
-    }
-
-    stats->SetXP(xpDelta);
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_XP_UPDATE);
-    reply.WriteS32Little(entityID);
-    reply.WriteS64(xpDelta);
-    reply.WriteS32Little((int32_t)xpGain);
-    reply.WriteS32Little(0);    //Unknown
-
-    client->QueuePacket(reply);
-
-    if(levelup && !isDemon)
-    {
-        if(demon)
-        {
-            // Send congrats message from demon
             libcomp::Packet notify;
             notify.WritePacketCode(
-                ChannelToClientPacketCode_t::PACKET_LEVEL_UP_CONGRATS);
-            notify.WriteS64Little(state->GetObjectID(demon->GetUUID()));
+                ChannelToClientPacketCode_t::PACKET_CHARACTER_LEVEL_UP);
+            notify.WriteS32Little(entityID);
+            notify.WriteS32(bonusCount);
+            notify.WriteS8(level);
+            notify.WriteS64(xpDelta);
+            notify.WriteS16Little((int16_t)cState->GetMaxHP());
+            notify.WriteS16Little((int16_t)cState->GetMaxMP());
+            notify.WriteS32Little(points);
 
-            client->QueuePacket(notify);
-        }
+            // All players see the level up
+            server->GetZoneManager()->BroadcastPacket(client, notify, true);
 
-        // Add levelup status effects
-        StatusEffectChanges effects;
-        for(auto& pair : SVR_CONST.LEVELUP_STATUSES)
-        {
-            effects[pair.first] = StatusEffectChange(pair.first,
-                (int8_t)pair.second, true);
-        }
+            if(demon)
+            {
+                // Send congrats message from demon
+                notify.Clear();
+                notify.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_LEVEL_UP_CONGRATS);
+                notify.WriteS64Little(state->GetObjectID(demon->GetUUID()));
 
-        if(effects.size() > 0)
-        {
-            cState->AddStatusEffects(effects, server->GetDefinitionManager());
+                client->QueuePacket(notify);
+            }
+
+            // Add levelup status effects
+            StatusEffectChanges effects;
+            for(auto& pair : SVR_CONST.LEVELUP_STATUSES)
+            {
+                effects[pair.first] = StatusEffectChange(pair.first,
+                    (int8_t)pair.second, true);
+            }
+
+            if(effects.size() > 0)
+            {
+                cState->AddStatusEffects(effects,
+                    server->GetDefinitionManager());
+            }
+
+            dbChanges->Update(character);
         }
     }
 
     client->FlushOutgoing();
 
-    server->GetWorldDatabase()->QueueUpdate(stats, state->GetAccountUID());
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }
 
 void CharacterManager::LevelUp(const std::shared_ptr<

@@ -189,6 +189,32 @@
 </section><!-- DigitalizePointBonus -->
 
 <section>
+<title>LevelUpBonusChance</title>
+<para><emphasis role="strong">Type:</emphasis> float</para>
+<para><emphasis role="strong">Default:</emphasis> 20.0</para>
+<para>Flat chance per level gained by characters to get 2 bonus unallocated skill points. If multiple levels are gained at once, this is checked once per level. Can be further increased using the LevelUpBonusMax setting.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LevelUpBonusChance">50.0</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LevelUpBonusChance -->
+
+<section>
+<title>LevelUpBonusMax</title>
+<para><emphasis role="strong">Type:</emphasis> int</para>
+<para><emphasis role="strong">Default:</emphasis> 1</para>
+<para>Number of times per level up bonus points can be gained for a character. Bonus points are gained in pairs of 2 so a value of 4 can result in 0, 2, 4, 6 or 8 points per level. For each bonus the LevelUpBonusChance setting is checked again.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="LevelUpBonusMax">2</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- LevelUpBonusMax -->
+
+<section>
 <title>EnabledDemonQuests</title>
 <para><emphasis role="strong">Type:</emphasis> integer</para>
 <para><emphasis role="strong">Default:</emphasis> 0x0777</para>

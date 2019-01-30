@@ -45,6 +45,8 @@
         <member type="float" name="FusionGaugeBonus" default="3.0"/>
         <member type="float" name="BethelBonus"/>
         <member type="float" name="DigitalizePointBonus"/>
+        <member type="float" name="LevelUpBonusChance" default="20.0"/>
+        <member type="u8" name="LevelUpBonusMax" default="1"/>
         <member type="u16" name="EnabledDemonQuests" default="0x0777"
             max="0x07FF"/>
         <member type="s8" name="LevelCap" min="1" max="99" default="99"/>

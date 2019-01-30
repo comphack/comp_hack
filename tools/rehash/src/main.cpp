@@ -56,7 +56,7 @@ std::unordered_map<libcomp::String, FileData*> ParseFileList(
 {
     std::unordered_map<libcomp::String, FileData*> files;
 
-    std::list<libcomp::String> lines = libcomp::String(&data[0]).Split("\n");
+    std::list<libcomp::String> lines = libcomp::String(&data[0], data.size()).Split("\n");
 
     std::regex fileMatcher("FILE : (.+),([0-9a-fA-F]{32}),([0-9]+),"
         "([0-9a-fA-F]{32}),([0-9]+)");
@@ -196,6 +196,12 @@ int main(int argc, char *argv[])
         // Get the original file contents.
         std::vector<char> uncomp_data = libcomp::Decrypt::LoadFile(
             file.ToUtf8());
+
+        // Ignore empty files
+        if (uncomp_data.empty()) 
+        {
+            continue;
+        }
 
         // Hash the original file.
         d->uncompressed_hash = libcomp::Decrypt::MD5(uncomp_data).ToUpper();

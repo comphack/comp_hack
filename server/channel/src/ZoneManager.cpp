@@ -2876,7 +2876,7 @@ void ZoneManager::SendToRange(const std::shared_ptr<ChannelClientConnection>& cl
         zConnections.push_back(client);
     }
 
-    float rSquared = (float)std::pow(CHAT_RADIUS_SAY, 2);
+    float rSquared = (float)std::pow(MAX_ENTITY_DRAW_DISTANCE, 2);
     for(auto zConnection : GetZoneConnections(client, false))
     {
         auto otherCState = zConnection->GetClientState()->GetCharacterState();

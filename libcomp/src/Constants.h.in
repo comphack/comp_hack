@@ -203,9 +203,6 @@ namespace libcomp
 /// network issues is not able to confirm socket closure on their end.
 #define TIMEOUT_SOCKET (17)
 
-/// Chat Radius for Say Chat.
-#define CHAT_RADIUS_SAY (8000)
-
 /// Number of characters that can be in a party at once.
 #define MAX_PARTY_SIZE (5)
 

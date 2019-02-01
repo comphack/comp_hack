@@ -6614,7 +6614,7 @@ bool CharacterManager::UpdateDigitalizePoints(const std::shared_ptr<
         {
             auto devilData = definitionManager->GetDevilData(
                 dgState->GetDemon()->GetType());
-            if(IsMitamaDemon(devilData))
+            if(!IsMitamaDemon(devilData))
             {
                 levelCap = 5;
             }

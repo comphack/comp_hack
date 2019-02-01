@@ -62,7 +62,7 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
     // Find any existing conflicting records (skip check if odd type signifying
     // an application)
     std::shared_ptr<objects::SearchEntry> existing;
-    if(type % 2 == 1)
+    if(type % 2 != 1)
     {
         for(auto ePair : syncManager->GetSearchEntries())
         {

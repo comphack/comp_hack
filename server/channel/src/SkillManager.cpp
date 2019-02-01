@@ -910,6 +910,10 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
             fIter->second(*this, activated, ctx, client);
         }
 
+        // A skill is considered hit cancelled if its pending a hit
+        bool hitCancel = !activated->GetCancelled() &&
+            activated->GetHitTime();
+
         // If any executions have occurred, the cooldown needs to be activated
         if(activated->GetExecuteCount() > 0)
         {
@@ -920,6 +924,24 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
         {
             // Make sure to cancel the skill even if it didn't execute
             activated->SetCancelled(true);
+        }
+
+        if(hitCancel)
+        {
+            // Hit cancellations need to send an empty skill report or the
+            // player who used the skill will display a visual effect bug
+            // the next time the activation ID rolls around
+            libcomp::Packet notify;
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
+            notify.WriteS32Little(source->GetEntityID());
+            notify.WriteU32Little(activated->GetSkillData()->GetCommon()
+                ->GetID());
+            notify.WriteS8(activated->GetActivationID());
+            notify.WriteU32Little(0);    // Nothing hit
+
+            mServer.lock()->GetZoneManager()->BroadcastPacket(source
+                ->GetZone(), notify);
         }
 
         if(source->GetSpecialActivations(activationID) == activated)

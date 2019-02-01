@@ -97,6 +97,7 @@ public:
 protected slots:
     void OpenDropSets();
     void OpenEvents();
+    void OpenSettings();
     void OpenZone();
     void ViewObjectList();
 

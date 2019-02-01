@@ -30,6 +30,7 @@
 #include "EventWindow.h"
 #include "ObjectSelectorList.h"
 #include "ObjectSelectorWindow.h"
+#include "SettingsWindow.h"
 #include "ZoneWindow.h"
 
 // objects Includes
@@ -69,9 +70,11 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QSettings>
+#include <QTextStream>
 #include <PopIgnore.h>
 
 // libcomp Includes
+#include <Exception.h>
 #include <Log.h>
 
 #define BDSET(objname, getid, getname) \
@@ -111,6 +114,8 @@ MainWindow::MainWindow(QWidget *pParent) : QMainWindow(pParent)
     connect(ui->eventsView, SIGNAL(clicked(bool)), this, SLOT(OpenEvents()));
     connect(ui->zoneView, SIGNAL(clicked(bool)), this, SLOT(OpenZone()));
 
+    connect(ui->actionSettings, SIGNAL(triggered()), this,
+        SLOT(OpenSettings()));
     connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(close()));
 }
 
@@ -134,6 +139,7 @@ bool MainWindow::Init()
         ui->log->moveCursor(QTextCursor::End);
         ui->log->setFontWeight(QFont::Normal);
 
+        bool logCrash = false;
         switch(level)
         {
             case libcomp::Log::Level_t::LOG_LEVEL_DEBUG:
@@ -151,6 +157,7 @@ bool MainWindow::Init()
             case libcomp::Log::Level_t::LOG_LEVEL_CRITICAL:
                 ui->log->setTextColor(QColor(Qt::red));
                 ui->log->setFontWeight(QFont::Bold);
+                logCrash = true;
                 break;
             default:
                 break;
@@ -158,7 +165,26 @@ bool MainWindow::Init()
 
         ui->log->insertPlainText(msg.C());
         ui->log->moveCursor(QTextCursor::End);
+
+        if(logCrash)
+        {
+            QSettings settings;
+            auto dumpFile = settings.value("crashDump").toString();
+            if(!dumpFile.isEmpty())
+            {
+                QFile file(dumpFile);
+                file.open(QIODevice::WriteOnly | QIODevice::Append);
+                if(file.isOpen())
+                {
+                    QTextStream oStream(&file);
+                    oStream << qs(msg);
+                    file.close();
+                }
+            }
+        }
     });
+
+    libcomp::Exception::RegisterSignalHandler();
 
     mDatastore = std::make_shared<libcomp::DataStore>("comp_cathedral");
     mDefinitions = std::make_shared<libcomp::DefinitionManager>();
@@ -167,19 +193,22 @@ bool MainWindow::Init()
 
     QString settingVal = settings.value("datastore", "error").toString();
 
-    bool settingPath = false;
-
-    if(settingVal == "error")
+    if(settingVal == "error" || !QDir(settingVal).exists())
     {
-        settingVal = QFileDialog::getExistingDirectory(nullptr,
-            "Datastore path", "", QFileDialog::ShowDirsOnly);
+        SettingsWindow* settingWindow = new SettingsWindow(this, true, this);
+        settingWindow->setWindowModality(Qt::ApplicationModal);
+
+        settingWindow->exec();
+
+        delete settingWindow;
+
+        settingVal = settings.value("datastore", "").toString();
 
         if(settingVal.isEmpty())
         {
             // Cancelling
             return false;
         }
-        settingPath = true;
     }
 
     mBinaryDataSets["CEventMessageData"] = std::make_shared<
@@ -432,13 +461,6 @@ bool MainWindow::Init()
         return false;
     }
 
-    if(settingPath)
-    {
-        // Save the new ini now that we know its valid
-        settings.setValue("datastore", settingVal);
-        settings.sync();
-    }
-
     return true;
 }
 
@@ -676,6 +698,16 @@ void MainWindow::OpenEvents()
 {
     mEventWindow->show();
     mEventWindow->raise();
+}
+
+void MainWindow::OpenSettings()
+{
+    SettingsWindow* settings = new SettingsWindow(this, false, this);
+    settings->setWindowModality(Qt::ApplicationModal);
+
+    settings->exec();
+
+    delete settings;
 }
 
 void MainWindow::OpenZone()

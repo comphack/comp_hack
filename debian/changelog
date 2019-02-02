@@ -9,7 +9,7 @@ comphack (4.0.1) xenial; urgency=low
   * Better API session handling
   * Various other fixes
 
- -- COMP Omega <compomega@tutanota.com>  Sat, 2 Feb 2019 10:21:00 -0700
+ -- COMP Omega <compomega@tutanota.com>  Sat, 02 Feb 2019 10:21:00 -0700
 
 comphack (4.0.0) xenial; urgency=low
 

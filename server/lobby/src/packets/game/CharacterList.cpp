@@ -197,11 +197,11 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
         // Hair color.
         reply.WriteU8(character->GetHairColor());
 
-        // Left eye color.
-        reply.WriteU8(character->GetLeftEyeColor());
-
         // Right eye color.
         reply.WriteU8(character->GetRightEyeColor());
+
+        // Left eye color.
+        reply.WriteU8(character->GetLeftEyeColor());
 
         // Unknown values.
         reply.WriteU8(0);

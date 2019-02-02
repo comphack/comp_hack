@@ -5759,16 +5759,40 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
     if(enemiesKilled.size() > 0)
     {
         // Gather all enemy entity IDs and levels
-        std::list<int32_t> enemyIDs;
+        std::list<int32_t> removeIDs;
         std::list<int8_t> levels;
+        std::set<int32_t> canRevive;
         for(auto eState : enemiesKilled)
         {
             zone->RemoveEntity(eState->GetEntityID(), 1);
-            enemyIDs.push_back(eState->GetEntityID());
             levels.push_back(eState->GetLevel());
+
+            auto eBase = eState->GetEnemyBase();
+            if(eState->GetEntityType() == EntityType_t::ALLY &&
+                eBase && eBase->GetEncounterID() == 0)
+            {
+                // If entity is actually an ally and is not configured
+                // for respawning, leave it as reviveable
+                auto slg = zone->GetDefinition()->GetSpawnLocationGroups(
+                    eBase->GetSpawnLocationGroupID());
+                if(!slg || slg->GetRespawnTime() == 0)
+                {
+                    canRevive.insert(eState->GetEntityID());
+                }
+            }
+
+            if(canRevive.find(eState->GetEntityID()) == canRevive.end())
+            {
+                removeIDs.push_back(eState->GetEntityID());
+            }
         }
 
-        zoneManager->RemoveEntitiesFromZone(zone, enemyIDs, 4, true);
+        // Update status effects on last time for each entity so none stick
+        // on the bodies
+        zoneManager->UpdateStatusEffectStates(zone, (uint32_t)std::time(0),
+            enemiesKilled);
+
+        zoneManager->RemoveEntitiesFromZone(zone, removeIDs, 4, true);
 
         // Transform enemies into loot bodies and gather quest kills
         std::unordered_map<std::shared_ptr<LootBoxState>,
@@ -5803,17 +5827,9 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 }
             }
 
-            if(eState->GetEntityType() == EntityType_t::ALLY &&
-                eBase->GetEncounterID() == 0)
+            if(canRevive.find(eState->GetEntityID()) != canRevive.end())
             {
-                // If entity is actually an ally and is not configured
-                // for respawning, leave it as reviveable
-                auto slg = zone->GetDefinition()->GetSpawnLocationGroups(
-                    eBase->GetSpawnLocationGroupID());
-                if(!slg || slg->GetRespawnTime() == 0)
-                {
-                    continue;
-                }
+                continue;
             }
 
             auto lootBody = std::make_shared<objects::LootBox>();

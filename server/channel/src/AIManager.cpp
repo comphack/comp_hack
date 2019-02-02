@@ -1599,7 +1599,7 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
         // back to the spawn location
         bool wanderBack = aiState->GetDespawnTimeout() > 0;
 
-        // Use the destination as a direction to head, move for 2s max
+        // Move for 2s max
         float moveDistance = (float)((float)eState->GetMovementSpeed() *
             2.f);
 
@@ -1651,6 +1651,7 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
             wanderBack = false;
         }
 
+        // Use the destination as the direction to head
         Point finalDest = zoneManager->GetLinearPoint(source.x, source.y,
             dest.x, dest.y, moveDistance, false, zone);
 

@@ -5787,7 +5787,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             }
         }
 
-        // Update status effects on last time for each entity so none stick
+        // Update status effects one last time for each entity so none stick
         // on the bodies
         zoneManager->UpdateStatusEffectStates(zone, (uint32_t)std::time(0),
             enemiesKilled);

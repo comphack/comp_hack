@@ -10,6 +10,8 @@
         <member type="float" name="Awareness" default="1.0"/>
         <member type="s32" name="AggroLevelLimit" default="99"/>
         <member type="s32" name="ThinkSpeed" default="2000"/>
+        <member type="u16" name="WanderWaitMin" default="5"/>
+        <member type="u16" name="WanderWaitMax" default="12"/>
         <member type="u8" name="DeaggroScale" default="2"/>
         <member type="u8" name="AggroLimit" default="0x01"/>
         <member type="u16" name="SkillSettings" default="0x1F"/>

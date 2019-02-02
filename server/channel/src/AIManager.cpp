@@ -1585,7 +1585,7 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
     auto spawnLocation = eBase->GetSpawnLocation();
     uint32_t spotID = eBase->GetSpawnSpotID();
 
-    if((spawnLocation || spotID > 0) && eState->CanMove())
+    if(eState->CanMove())
     {
         auto zone = eState->GetZone();
         if(!zone)
@@ -1599,10 +1599,15 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
         // back to the spawn location
         bool wanderBack = aiState->GetDespawnTimeout() > 0;
 
+        // Use the destination as a direction to head, move for 2s max
+        float moveDistance = (float)((float)eState->GetMovementSpeed() *
+            2.f);
+
         Point dest;
         auto zoneManager = mServer.lock()->GetZoneManager();
         if(spawnLocation)
         {
+            // Wander using spawn location
             auto point = zoneManager->GetRandomPoint(spawnLocation
                 ->GetWidth(), spawnLocation->GetHeight());
 
@@ -1627,17 +1632,24 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
                 wanderBack = !zoneManager->PointInPolygon(source, vertices);
             }
         }
-        else
+        else if(spotID)
         {
+            // Wander using spot
             auto spot = zone->GetDynamicMap()->Spots[spotID];
             dest = zoneManager->GetRandomSpotPoint(spot->Definition);
 
             wanderBack &= !zoneManager->PointInPolygon(source, spot->Vertices);
         }
+        else
+        {
+            // Wander aimlessly by just picking a direction to go
+            dest = Point(source.x, source.y + moveDistance);
+            dest = zoneManager->RotatePoint(dest, source,
+                RNG_DEC(float, -3.14f, 3.14f, 2));
 
-        // Use the destination as a direction to head, move for 2s max
-        float moveDistance = (float)((float)eState->GetMovementSpeed() *
-            2.f);
+            // Nothing to wander back to
+            wanderBack = false;
+        }
 
         Point finalDest = zoneManager->GetLinearPoint(source.x, source.y,
             dest.x, dest.y, moveDistance, false, zone);
@@ -1675,8 +1687,11 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
         }
     }
 
-    // Wait between 5-12s
-    QueueWaitCommand(aiState, (uint32_t)(RNG(int32_t, 5, 12) * 1000));
+    // Wait between min/max times (check in case of custom AI errors)
+    uint16_t minWait = aiState->GetWanderWaitMin();
+    uint16_t maxWait = aiState->GetWanderWaitMax();
+    QueueWaitCommand(aiState, (uint32_t)(RNG(int32_t, (int32_t)minWait,
+        (int32_t)(maxWait > minWait ? maxWait : minWait)) * 1000));
 }
 
 uint8_t AIManager::SkillAdvance(

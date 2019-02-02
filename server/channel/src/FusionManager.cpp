@@ -1609,11 +1609,15 @@ int8_t FusionManager::ProcessFusion(
                 // Add inherited skills, double or triple if two or
                 // three sources learned it respectively
                 uint8_t affinity = iPair.second->GetCommon()->GetAffinity();
+
+                // Skip "none" and weapon affinity
+                if(affinity <= 1) continue;
+
                 uint8_t baseValue = INHERITENCE_SKILL_MAP
-                    [(size_t)(affinity - 1)][iType];
+                    [(size_t)(affinity - 2)][iType];
                 int32_t multiplier = inheritedSkillCounts[iPair.first] * 100;
 
-                int16_t progress = (int16_t)(baseValue * multiplier);
+                int32_t progress = (int32_t)baseValue * multiplier;
                 if(progress > MAX_INHERIT_SKILL)
                 {
                     progress = MAX_INHERIT_SKILL;
@@ -1622,7 +1626,7 @@ int8_t FusionManager::ProcessFusion(
                 auto iSkill = libcomp::PersistentObject::New<
                     objects::InheritedSkill>(true);
                 iSkill->SetSkill(iPair.first);
-                iSkill->SetProgress(progress);
+                iSkill->SetProgress((int16_t)progress);
                 iSkill->SetDemon(resultDemon->GetUUID());
                 resultDemon->AppendInheritedSkills(iSkill);
 

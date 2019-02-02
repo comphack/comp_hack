@@ -1129,29 +1129,13 @@ bool ApiHandler::WebGame_Start(const JsonBox::Object& request,
     Sqrat::Function f(Sqrat::RootTable(vm), "start");
     if(!f.IsNull())
     {
-        Sqrat::Table sqOutTable(vm);
-
-        auto result = !f.IsNull() ? f.Evaluate<int>(character,
-            progress->GetCoins(), sqOutTable) : 0;
+        auto result = !f.IsNull() ? f.Evaluate<int>(this, character,
+            progress->GetCoins(), &response) : 0;
         if(!result || (*result != 0))
         {
             response["error"] = "Unknown error encountered while starting"
                 " game";
             return true;
-        }
-
-        Sqrat::Table::iterator tableIter;
-        while(sqOutTable.Next(tableIter))
-        {
-            auto name = tableIter.getName();
-            if(name)
-            {
-                auto val = sqOutTable.GetValue<std::string>(name);
-                if(val)
-                {
-                    response[name] = val->c_str();
-                }
-            }
         }
 
         if(response.find("error") == response.end())

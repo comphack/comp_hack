@@ -581,6 +581,21 @@ public:
         const libcomp::String& defeatEventID);
 
     /**
+     * Move the supplied entity from its current position to the supplied
+     * x/y coordinates in their current zone. If any collision is hit, the
+     * entity will be placed at the collision point. No movement for this
+     * entity will be communicated to the client so this is primarily useful
+     * in repositioning entities not yet in the zone.
+     * @param eState Pointer to the entity to reposition
+     * @param x New X coordinate
+     * @param y New Y coordinate
+     * @return false if the entity hit a collision in the zone or could not
+     *  be moved at all
+     */
+    bool LinearReposition(
+        const std::shared_ptr<ActiveEntityState>& eState, float x, float y);
+
+    /**
      * Update the specified zone's spawns from SpawnLocationGroups or
      * SpawnGroups directly updated at specific spots
      * @param zone Pointer to the zone where the groups should be updated
@@ -627,6 +642,20 @@ public:
      * entities.
      */
     void UpdateActiveZoneStates();
+
+    /**
+     * Update the state of status effects in the supplied zone, adding
+     * and updating existing effects, expiring old effects and applying
+     * T-damage and regen to entities with applicable effects
+     * @param zone Pointer to the zone to update status effects for
+     * @param now System time representing the current server time to use
+     *  for event checking
+     * @param entities List of pointers to entities to have their status
+     *  effects updated
+     */
+    void UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
+        uint32_t now, const std::list<std::shared_ptr<
+        ActiveEntityState>>& entities);
 
     /**
      * Warp an entity to the specified location immediately.
@@ -1167,7 +1196,7 @@ private:
     /**
      * Update the state of status effects in the supplied zone, adding
      * and updating existing effects, expiring old effects and applying
-     * T-damage and regen to entities with applicable affects
+     * T-damage and regen to entities with applicable effects
      * @param zone Pointer to the zone to update status effects for
      * @param now System time representing the current server time to use
      *  for event checking

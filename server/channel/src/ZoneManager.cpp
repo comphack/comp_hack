@@ -142,6 +142,7 @@ namespace libcomp
                     std::list<std::shared_ptr<ActiveEntityState>>,
                     const std::shared_ptr<Zone>&, bool, bool, const libcomp::String&)>(
                     "AddEnemiesToZone", &ZoneManager::AddEnemiesToZone)
+                .Func("LinearReposition", &ZoneManager::LinearReposition)
                 .Func("StartZoneEvent", &ZoneManager::StartZoneEvent);
 
             Bind<ZoneManager>("ZoneManager", binding);
@@ -2544,12 +2545,17 @@ void ZoneManager::HandleDespawns(const std::shared_ptr<Zone>& zone)
 void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
     uint32_t now)
 {
-    auto effectEntities = zone->GetUpdatedStatusEffectEntities(now);
-    if(effectEntities.size() == 0)
+    auto entities = zone->GetUpdatedStatusEffectEntities(now);
+    if(entities.size() > 0)
     {
-        return;
+        UpdateStatusEffectStates(zone, now, entities);
     }
+}
 
+void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
+    uint32_t now, const std::list<std::shared_ptr<
+    ActiveEntityState>>& entities)
+{
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
     auto tokuseiManager = server->GetTokuseiManager();
@@ -2566,7 +2572,7 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
     std::set<std::shared_ptr<ActiveEntityState>> recalc;
 
     int32_t hpTDamage, mpTDamage, upkeepCost;
-    for(auto entity : effectEntities)
+    for(auto entity : entities)
     {
         uint8_t result = entity->PopEffectTicks(now, hpTDamage, mpTDamage,
             upkeepCost, added, updated, removed);
@@ -3154,6 +3160,31 @@ bool ZoneManager::AddEnemiesToZone(
 
     return AddEnemiesToZone(eStates, zone, staggerSpawn, asEncounter,
         defeatActions);
+}
+
+bool ZoneManager::LinearReposition(
+    const std::shared_ptr<ActiveEntityState>& eState, float x, float y)
+{
+    auto zone = eState ? eState->GetZone() : nullptr;
+    if(!zone)
+    {
+        return false;
+    }
+
+    Point src(eState->GetCurrentX(), eState->GetCurrentY());
+    Point dest(x, y);
+
+    Point newPoint = GetLinearPoint(src.x, src.y, dest.x, dest.y,
+        src.GetDistance(dest), false, zone);
+
+    eState->SetCurrentX(newPoint.x);
+    eState->SetCurrentY(newPoint.y);
+    eState->SetOriginX(newPoint.x);
+    eState->SetOriginY(newPoint.y);
+    eState->SetDestinationX(newPoint.x);
+    eState->SetDestinationY(newPoint.y);
+
+    return newPoint == dest;
 }
 
 bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
@@ -7925,6 +7956,19 @@ void ZoneManager::RemoveZone(const std::shared_ptr<Zone>& zone,
         mZones.erase(zone->GetID());
         zone->Cleanup();
         mTimeRestrictUpdatedZones.erase(zone->GetID());
+    }
+    else
+    {
+        // Remove any AI aggro in the zone
+        auto eBases = zone->GetEnemiesAndAllies();
+        if(eBases.size() > 0)
+        {
+            auto aiManager = mServer.lock()->GetAIManager();
+            for(auto eBase : eBases)
+            {
+                aiManager->UpdateAggro(eBase, -1);
+            }
+        }
     }
 
     mActiveZones.erase(zone->GetID());

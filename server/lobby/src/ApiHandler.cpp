@@ -139,15 +139,6 @@ bool ApiHandler::Auth_Token(const JsonBox::Object& request,
     libcomp::String username = it->second.getString();
     username = username.ToLower();
 
-    // Make sure the username did not change.
-    if(!session->username.IsEmpty() && session->username != username)
-    {
-        LOG_ERROR(libcomp::String("Session username has change from "
-            "'%1' to '%2'.\n").Arg(session->username).Arg(username));
-
-        session->Reset();
-    }
-
     // Grab a new database connection.
     auto db = GetDatabase();
 
@@ -1495,18 +1486,18 @@ bool ApiHandler::handlePost(CivetServer *pServer,
 
     bool webGame = method.Left(9) == "/webgame/";
 
-    bool unauthorized = false;
+    bool authorized = false;
+
+    auto usernameIterator = obj.find("username");
+
+    libcomp::String username = usernameIterator != obj.end()
+        ? libcomp::String(usernameIterator->second.getString()).ToLower() : "";
 
     std::shared_ptr<ApiSession> session;
     if(webGame)
     {
         // Username and session ID must be included in all web-game requests
-        auto it = obj.find("username");
-
-        libcomp::String username = it != obj.end()
-            ? it->second.getString() : "";
-
-        it = obj.find("sessionid");
+        auto it = obj.find("sessionid");
 
         libcomp::String sessionID = it != obj.end()
             ? it->second.getString() : "";
@@ -1514,40 +1505,51 @@ bool ApiHandler::handlePost(CivetServer *pServer,
         auto accountManager = mServer ? mServer->GetAccountManager() : nullptr;
         session = accountManager ? accountManager->GetWebGameApiSession(
             username, sessionID, clientAddress) : nullptr;
-        if(!session)
+        if(session)
         {
-            unauthorized = true;
+            authorized = true;
         }
     }
-    else
+    else if(!username.IsEmpty())
     {
-        // Normal API sessions are stored per address
-        auto it = mSessions.find(clientAddress);
+        // Normal API sessions are stored per username
+        auto sessionIterator = mSessions.find(username);
 
-        if(it != mSessions.end())
+        if(sessionIterator != mSessions.end())
         {
-            session = it->second;
+            session = sessionIterator->second;
         }
         else
         {
             session = std::make_shared<ApiSession>();
             session->clientAddress = clientAddress;
 
-            mSessions[clientAddress] = session;
+            mSessions[username] = session;
         }
 
-        if(("/auth/get_challenge" != method &&
-            "/account/register" != method &&
-            !Authenticate(obj, response, session)) ||
-            ("/admin/" == method.Left(strlen("/admin/")) &&
-            (!session->account || session->account->GetUserLevel() < 1000)))
+        if("/auth/get_challenge" == method || "/account/register" == method ||
+            (Authenticate(obj, response, session) && session->account))
         {
-            unauthorized = true;
+            if("/admin/" != method.Left(strlen("/admin/")) ||
+                session->account->GetUserLevel() >= 1000)
+            {
+                authorized = true;
+            }
         }
     }
 
-    if(unauthorized)
+    if(!authorized)
     {
+        if(session && session->account)
+        {
+            LOG_ERROR(libcomp::String("Account '%1' is not authorized.\n").Arg(
+                session->account->GetUsername()));
+        }
+        else
+        {
+            LOG_ERROR("Account is not authorized.\n");
+        }
+
         mg_printf(pConnection, "HTTP/1.1 401 Unauthorized\r\n"
             "Connection: close\r\n\r\n");
 

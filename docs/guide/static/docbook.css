@@ -1,242 +1,311 @@
 /*
- * Copyright (c) 2001, 2003, 2010 The FreeBSD Documentation Project
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * $FreeBSD: doc/share/misc/docbook.css,v 1.21 2012/01/25 22:16:36 wblock Exp $
- */
+  CSS stylesheet for XHTML produced by DocBook XSL stylesheets.
+  Tested with XSL stylesheets 1.61.2, 1.67.2
+*/
 
-BODY ADDRESS {
-	line-height: 1.3;
-	margin: .6em 0;
+* {
+  color: #c3c3c3;
 }
 
-BODY BLOCKQUOTE {
-	margin-top: .75em;
-	line-height: 1.3;
-	margin-bottom: .75em;
+span.strong {
+  font-weight: bold;
 }
 
-HTML BODY {
-	margin: 1em 8% 1em 10%;
-	line-height: 1.2;
+body blockquote {
+  margin-top: .75em;
+  line-height: 1.5;
+  margin-bottom: .75em;
 }
 
-.LEGALNOTICE {
-	font-size: small;
-	font-variant: small-caps;
+html body {
+  background-color: black;
+  margin: 1em 5% 1em 5%;
+  line-height: 1.2;
+  font-family: sans-serif;
 }
 
-BODY DIV {
-	margin: 0;
+body div {
+  margin: 0;
 }
 
-DL {
-	margin: .8em 0;
-	line-height: 1.2;
+h1, h2, h3, h4, h5, h6,
+div.toc p b,
+div.list-of-figures p b,
+div.list-of-tables p b,
+div.abstract p.title
+{
+  color: #527bbd;
+  font-family: tahoma, verdana, sans-serif;
 }
 
-DIV.CALLOUTLIST DT {
-	float: left;
-	width: 1em;
+div.toc p:first-child,
+div.list-of-figures p:first-child,
+div.list-of-tables p:first-child,
+div.example p.title
+{
+  margin-bottom: 0.2em;
 }
 
-DIV.CALLOUTLIST DD {
-	clear: right;
-	margin-bottom: 1ex;
+body h1 {
+  margin: .0em 0 0 -4%;
+  line-height: 1.3;
+  border-bottom: 2px solid #527bbd;
 }
 
-BODY FORM {
-	margin: .6em 0;
+body h2 {
+  margin: 0.5em 0 0 -4%;
+  line-height: 1.3;
+  border-bottom: 2px solid #527bbd;
 }
 
-H1, H2, H3, H4, H5, H6,
-DIV.EXAMPLE P B,
-.QUESTION,
-DIV.TABLE P B,
-DIV.PROCEDURE P B {
-	color: #990000;
+body h3 {
+  margin: .8em 0 0 -3%;
+  line-height: 1.3;
 }
 
-BODY H1, BODY H2, BODY H3, BODY H4, BODY H5, BODY H6 {
-	line-height: 1.3;
-	margin-left: 0;
+body h4 {
+  margin: .8em 0 0 -3%;
+  line-height: 1.3;
 }
 
-BODY H1, BODY H2 {
-	margin: .8em 0 0 -4%;
+body h5 {
+  margin: .8em 0 0 -2%;
+  line-height: 1.3;
 }
 
-BODY H3, BODY H4 {
-	margin: .8em 0 0 -3%;
+body h6 {
+  margin: .8em 0 0 -1%;
+  line-height: 1.3;
 }
 
-BODY H5 {
-	margin: .8em 0 0 -2%;
+body hr {
+  border: none; /* Broken on IE6 */
+}
+div.footnotes hr {
+  border: 1px solid #527bbd;
 }
 
-BODY H6 {
-	margin: .8em 0 0 -1%;
+div.navheader th, div.navheader td, div.navfooter td {
+  font-family: sans-serif;
+  font-size: 0.9em;
+  font-weight: bold;
+  color: #527bbd;
+}
+div.navheader img, div.navfooter img {
+  border-style: none;
+}
+div.navheader a, div.navfooter a {
+  font-weight: normal;
+}
+div.navfooter hr {
+  border: 1px solid #527bbd;
 }
 
-BODY HR {
-	margin: .6em;
-	border-width: 0 0 1px 0;
-	border-style: solid;
-	border-color: #cecece;
+body td {
+  line-height: 1.2
 }
 
-BODY IMG.NAVHEADER {
-	margin: 0 0 0 -4%;
+body th {
+  line-height: 1.2;
 }
 
-OL {
-	margin: 0 0 0 5%;
-	line-height: 1.2;
+ol {
+  line-height: 1.2;
 }
 
-BODY PRE {
-	margin: .75em 0;
-	line-height: 1.0;
-	font-family: monospace;
+ul, body dir, body menu {
+  line-height: 1.2;
 }
 
-BODY TD, BODY TH {
-	line-height: 1.2;
+html {
+  margin: 0;
+  padding: 0;
 }
 
-UL, BODY DIR, BODY MENU {
-	margin: 0 0 0 5%;
-	line-height: 1.2;
+body h1, body h2, body h3, body h4, body h5, body h6 {
+  margin-left: 0
 }
 
-HTML {
-	margin: 0;
-	padding: 0;
+body pre {
+  margin: 0.5em 10% 0.5em 1em;
+  line-height: 1.0;
+  color: black;
 }
 
-BODY P B.APPLICATION {
-	color: #000000;
+tt.literal, code.literal {
+  color: navy;
+  font-family: sans-serif;
 }
 
-.FILENAME {
-	color: #007a00;
+code.literal:before { content: "'"; }
+code.literal:after { content: "'"; }
+
+em {
+  font-style: italic;
+  /*color: #064;*/
 }
 
-SVNREF {
-	color: #007a00;
+div.literallayout p {
+  padding: 0em;
+  margin: 0em;
 }
 
-.GUIMENU, .GUIMENUITEM, .GUISUBMENU,
-.GUILABEL, .INTERFACE,
-.SHORTCUT, .SHORTCUT .KEYCAP {
-	font-weight: bold;
+div.literallayout {
+  font-family: monospace;
+  margin: 0em;
+  color: navy;
+  border: 1px solid #c3c3c3;
+  background: #555555;
+  padding: 0.5em;
 }
 
-.GUIBUTTON {
-	background-color: #CFCFCF;
-	padding: 2px;
+.programlisting, .screen {
+  border: 1px solid #c3c3c3;
+  background: #555555;
+  margin: 0.5em 10% 0.5em 0;
+  padding: 0.5em 1em;
 }
 
-.ACCEL {
-	background-color: #F0F0F0;
-	text-decoration: underline;
+div.sidebar {
+  background: #ffffee;
+  margin: 1.0em 10% 0.5em 0;
+  padding: 0.5em 1em;
+  border: 1px solid #527bbd;
+}
+div.sidebar * { padding: 0; }
+div.sidebar div { margin: 0; }
+div.sidebar p.title {
+  font-family: sans-serif;
+  margin-top: 0.5em;
+  margin-bottom: 0.2em;
 }
 
-.SCREEN {
-	padding: 1ex;
+div.bibliomixed {
+  margin: 0.5em 5% 0.5em 1em;
 }
 
-.PROGRAMLISTING {
-	padding: 1ex;
-	background-color: #eee;
-	border: 1px solid #ccc;
-	line-height: 1.1;
+div.glossary dt {
+  font-weight: bold;
+}
+div.glossary dd p {
+  margin-top: 0.2em;
 }
 
-@media screen {  /* hide from IE3 */
-	a[href]:hover { background: #ffa }
+dl {
+  margin: .8em 0;
+  line-height: 1.2;
 }
 
-.INFORMALTABLE, .TABLE TH {
-	padding-left: 02.em;
-	text-align: left;
+dt {
+  margin-top: 0.5em;
 }
 
-BLOCKQUOTE, .EXAMPLE, .PROGRAMLISTING {
-	-moz-border-radius: 6px;
-	-webkit-border-radius: 6px;
-	-khtml-border-radius: 6px;
-	border-radius: 6px;
+dt span.term {
+  font-style: normal;
+  color: navy;
 }
 
-BLOCKQUOTE {
-	padding: 0 2ex;
+div.variablelist dd p {
+  margin-top: 0;
 }
 
-BLOCKQUOTE.NOTE {
-	color: #222;
-	background: #eee;
-	border: 1px solid #ccc;
-	width: 85%;
+div.itemizedlist li, div.orderedlist li {
+  margin-left: -0.8em;
+  margin-top: 0.5em;
 }
 
-BLOCKQUOTE.TIP {
-	color: #004F00;
-	background: #d8ecd6;
-	border: 1px solid green;
-	width: 85%;
+ul, ol {
+    list-style-position: outside;
 }
 
-BLOCKQUOTE.IMPORTANT {
-	font-style:italic;
-	border: 1px solid #a00;
-	border-left: 12px solid #c00;
+div.sidebar ul, div.sidebar ol {
+    margin-left: 2.8em;
 }
 
-BLOCKQUOTE.WARNING {
-	color: #9F1313;
-	background: #f8e8e8;
-	border: 1px solid #e59595;
-	width: 85%;
+div.itemizedlist p.title,
+div.orderedlist p.title,
+div.variablelist p.title
+{
+  margin-bottom: -0.8em;
 }
 
-BLOCKQUOTE.CAUTION {
-	color: #3E3535;
-	background: #FFC;
-	border: 1px solid #e59595;
-	width: 85%;
+div.revhistory table {
+  border-collapse: collapse;
+  border: none;
+}
+div.revhistory th {
+  border: none;
+  color: #527bbd;
+  font-family: tahoma, verdana, sans-serif;
+}
+div.revhistory td {
+  border: 1px solid #527bbd;
 }
 
-.EXAMPLE {
-	background: #fefde6;
-	border: 1px solid #f1bb16;
-	margin: 1em 0;
-	padding: 0.2em 2em;
-	width: 90%;
+/* Keep TOC and index lines close together. */
+div.toc dl, div.toc dt,
+div.list-of-figures dl, div.list-of-figures dt,
+div.list-of-tables dl, div.list-of-tables dt,
+div.indexdiv dl, div.indexdiv dt
+{
+  line-height: normal;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
-.INFORMALTABLE TABLE.CALSTABLE TR TD {
-        padding-left: 1em;
-        padding-right: 1em;
+/*
+  Table styling does not work because of overriding attributes in
+  generated HTML.
+*/
+div.table table,
+div.informaltable table
+{
+    margin-left: 0;
+    margin-right: 5%;
+    margin-bottom: 0.8em;
+}
+div.informaltable table
+{
+    margin-top: 0.4em
+}
+div.table thead,
+div.table tfoot,
+div.table tbody,
+div.informaltable thead,
+div.informaltable tfoot,
+div.informaltable tbody
+{
+    /* No effect in IE6. */
+    border-top: 2px solid #527bbd;
+    border-bottom: 2px solid #527bbd;
+}
+div.table thead, div.table tfoot,
+div.informaltable thead, div.informaltable tfoot
+{
+    font-weight: bold;
+}
+
+div.mediaobject img {
+    border: 1px solid #527bbd;
+    margin-bottom: 0.8em;
+}
+div.figure p.title,
+div.table p.title
+{
+  margin-top: 1em;
+  margin-bottom: 0.4em;
+}
+
+@media print {
+  div.navheader, div.navfooter { display: none; }
+}
+
+div.section
+{
+  margin-left: 1em;
+}
+
+body > div.section
+{
+  margin-left: 0em;
 }

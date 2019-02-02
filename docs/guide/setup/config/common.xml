@@ -22,7 +22,7 @@
 <section>
 <title>Port</title>
 <para><emphasis role="strong">Type:</emphasis> integer</para>
-<para><emphasis role="strong">Default:</emphasis> 10666 (lobby), 18666 (channel) or 14666 (channel)</para>
+<para><emphasis role="strong">Default:</emphasis> 10666 (lobby), 18666 (world) or 14666 (channel)</para>
 <para>Main port for the server to listen for connections on. For the lobby and channel these should be open to the internet for clients. For the world server this port should be blocked by your firewall. For the lobby this is usually 10666. For the channel this is usually 14666, 15666, etc. For the world this is usually 18666.</para>
 
 <section>

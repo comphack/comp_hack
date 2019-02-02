@@ -6,6 +6,7 @@
 
 <para>This chapter describes how to create and modify game content to create a custom feel to your server.</para>
 
+<xi:include href="zone.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 <xi:include href="bgm.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
 </chapter>

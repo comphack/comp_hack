@@ -1,3 +1,16 @@
+comphack (4.0.1) xenial; urgency=low
+
+  * Cathedral of Content added to .msi installer
+  * Russian translation for the updater
+  * Collision handling fixes
+  * (Non-GM) Object interaction fix
+  * Levelup bonus points and packet fixes
+  * Corrected invalid skill effect sometimes showing
+  * Better API session handling
+  * Various other fixes
+
+ -- COMP Omega <compomega@tutanota.com>  Sat, 2 Feb 2019 10:21:00 -0700
+
 comphack (4.0.0) xenial; urgency=low
 
   * Cathedral of Content tool added

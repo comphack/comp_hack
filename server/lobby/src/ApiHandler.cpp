@@ -1472,16 +1472,16 @@ bool ApiHandler::handlePost(CivetServer *pServer,
 
     bool authorized = false;
 
-    auto usernameIterator = obj.find("username");
-
-    libcomp::String username = usernameIterator != obj.end()
-        ? libcomp::String(usernameIterator->second.getString()).ToLower() : "";
-
     std::shared_ptr<ApiSession> session;
     if(webGame)
     {
         // Username and session ID must be included in all web-game requests
-        auto it = obj.find("sessionid");
+        auto it = obj.find("username");
+
+        libcomp::String username = it != obj.end()
+            ? libcomp::String(it->second.getString()).ToLower() : "";
+
+        it = obj.find("sessionid");
 
         libcomp::String sessionID = it != obj.end()
             ? it->second.getString() : "";
@@ -1494,30 +1494,38 @@ bool ApiHandler::handlePost(CivetServer *pServer,
             authorized = true;
         }
     }
-    else if(!username.IsEmpty())
+    else
     {
-        // Normal API sessions are stored per username
-        auto sessionIterator = mSessions.find(username);
+        auto usernameIterator = obj.find("session_username");
 
-        if(sessionIterator != mSessions.end())
-        {
-            session = sessionIterator->second;
-        }
-        else
-        {
-            session = std::make_shared<ApiSession>();
-            session->clientAddress = clientAddress;
+        libcomp::String session_username = usernameIterator != obj.end()
+            ? libcomp::String(usernameIterator->second.getString()).ToLower() : "";
 
-            mSessions[username] = session;
-        }
-
-        if("/auth/get_challenge" == method || "/account/register" == method ||
-            (Authenticate(obj, response, session) && session->account))
+        if(!session_username.IsEmpty())
         {
-            if("/admin/" != method.Left(strlen("/admin/")) ||
-                session->account->GetUserLevel() >= 1000)
+            // Normal API sessions are stored per username
+            auto sessionIterator = mSessions.find(session_username);
+
+            if(sessionIterator != mSessions.end())
             {
-                authorized = true;
+                session = sessionIterator->second;
+            }
+            else
+            {
+                session = std::make_shared<ApiSession>();
+                session->clientAddress = clientAddress;
+
+                mSessions[session_username] = session;
+            }
+
+            if("/auth/get_challenge" == method || "/account/register" == method ||
+                (Authenticate(obj, response, session) && session->account))
+            {
+                if("/admin/" != method.Left(strlen("/admin/")) ||
+                    session->account->GetUserLevel() >= 1000)
+                {
+                    authorized = true;
+                }
             }
         }
     }

@@ -1,3 +1,9 @@
+comphack (4.0.2) xenial; urgency=low
+
+  * Fixed account API issues caused by session update
+
+ -- COMP Omega <compomega@tutanota.com>  Sun, 03 Feb 2019 13:11:00 -0700
+
 comphack (4.0.1) xenial; urgency=low
 
   * Cathedral of Content added to .msi installer

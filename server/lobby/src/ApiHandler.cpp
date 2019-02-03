@@ -1498,6 +1498,11 @@ bool ApiHandler::handlePost(CivetServer *pServer,
     {
         auto usernameIterator = obj.find("session_username");
 
+        if("/auth/get_challenge" == method || "/account/register" == method)
+        {
+            usernameIterator = obj.find("username");
+        }
+
         libcomp::String session_username = usernameIterator != obj.end()
             ? libcomp::String(usernameIterator->second.getString()).ToLower() : "";
 

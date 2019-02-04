@@ -62,9 +62,9 @@ before_install:
   - if [ ! -f clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz ]; then wget -q http://llvm.org/releases/3.8.0/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz; fi
   - if [ ! -f external-0.1.1-clang.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-25/external-0.1.1-clang.tar.bz2; fi
   - if [ ! -f external-0.1.1-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-25/external-0.1.1-gcc5.tar.bz2; fi
-  - rm libcomp-*-clang.tar.bz2
+  - rm -f libcomp-*-clang.tar.bz2
   - wget -q https://github.com/comphack/libcomp/releases/download/v4.0.2/libcomp-4.0.2-clang.tar.bz2
-  - rm libcomp-*-gcc5.tar.bz2
+  - rm -f libcomp-*-gcc5.tar.bz2
   - wget -q https://github.com/comphack/libcomp/releases/download/v4.0.2/libcomp-4.0.2-gcc5.tar.bz2
   - ls -lh
   - cd ${ROOT_DIR}

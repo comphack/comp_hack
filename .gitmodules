@@ -7,5 +7,5 @@
 	branch = comp_hack
 [submodule "libcomp"]
 	path = libcomp
-	url = git@github.com:comphack/libcomp.git
+	url = ../libcomp.git
 	branch = develop

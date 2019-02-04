@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<objgen>
-    <object name="EventDirection" baseobject="Event" persistent="false"
-        scriptenabled="true">
-        <member type="enum" name="eventType" inherited="true" default="DIRECTION"/>
-        <member type="s32" name="direction"/>
-    </object>
-</objgen>

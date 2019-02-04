@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<objgen>
-    <object name="PacketLoginReply" persistent="false">
-        <member type="u16" name="CommandCode"/>
-        <member type="s32" name="ResponseCode"/>
-        <member type="u32" name="Challenge"/>
-        <member type="string" name="Salt" lensz="2"/>
-    </object>
-</objgen>

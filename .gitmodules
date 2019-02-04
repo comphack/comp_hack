@@ -5,3 +5,7 @@
 	path = deps/sqrat
 	url = ../sqrat.git
 	branch = comp_hack
+[submodule "libcomp"]
+	path = libcomp
+	url = git@github.com:comphack/libcomp.git
+	branch = develop

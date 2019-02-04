@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<objgen>
-    <object name="ActionUpdateLNC" baseobject="Action" persistent="false"
-        scriptenabled="true">
-        <member type="enum" name="actionType" inherited="true" default="UPDATE_LNC"/>
-        <member type="s16" name="value"/>
-        <member type="bool" name="isSet"/>
-    </object>
-</objgen>

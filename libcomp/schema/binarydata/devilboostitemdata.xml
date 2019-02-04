@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<objgen>
-    <object name="MiDevilBoostItemData" persistent="false">
-        <member type="u32" name="itemID"/>
-        <member type="array" size="5" name="stackIDs">
-            <element type="u32"/>
-        </member>
-    </object>
-</objgen>

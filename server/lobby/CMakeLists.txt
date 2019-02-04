@@ -29,7 +29,7 @@ GENERATE_DOCS(doc/Doxyfile.in)
 FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SRCS
-    ${CMAKE_SOURCE_DIR}/libcomp/src/WindowsServiceMain.cpp
+    ${CMAKE_SOURCE_DIR}/libcomp/libcomp/src/WindowsServiceMain.cpp
 
     src/AccountManager.cpp
     src/ApiHandler.cpp
@@ -83,7 +83,7 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
 
     # Include paths
     schema
-    ../../libcomp/schema
+    ../../libcomp/libcomp/schema
 
     # Output files
     ClientStateObject.h
@@ -156,8 +156,8 @@ TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/res/login
 )
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} comp tinyxml2
-    civetweb-cxx civetweb jsonbox)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} config comp
+    tinyxml2 civetweb-cxx civetweb jsonbox)
 
 IF(USE_COTIRE)
     cotire(${PROJECT_NAME})

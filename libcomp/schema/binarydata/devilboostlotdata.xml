@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<objgen>
-    <object name="MiDevilBoostLotData" persistent="false">
-        <member type="u16" name="ID"/>
-        <member type="u16" name="stackID"/>
-    </object>
-</objgen>

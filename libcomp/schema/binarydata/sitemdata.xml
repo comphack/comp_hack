@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<objgen>
-    <object name="MiSItemData" persistent="false">
-        <member type="u32" name="ID"/>
-        <member type="array" size="4" name="tokusei">
-            <element type="s32"/>
-        </member>
-    </object>
-</objgen>

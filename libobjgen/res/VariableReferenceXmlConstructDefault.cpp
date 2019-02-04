@@ -1,1 +1,0 @@
-ref = @CONSTRUCT_VALUE@;

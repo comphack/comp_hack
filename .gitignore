@@ -3,8 +3,7 @@ build*
 cmake-build-*
 debian/*.log
 deps/*.zip
-deps/objgen/
-deps/libobjects/
+deps/libcomp/
 binaries/
 
 *.sublime-project

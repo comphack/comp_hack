@@ -232,8 +232,8 @@ OPTION(DISABLE_TESTING "Disable all tests." OFF)
 # Option for the static runtime on Windows.
 OPTION(USE_STATIC_RUNTIME "Use the static MSVC runtime." OFF)
 
-# Option to use pre-built objects & objgen.
-OPTION(USE_PREBUILT_OBJECTS "Use pre-built objects and objgen" OFF)
+# Option to use pre-built objgen & libcomp.
+OPTION(USE_PREBUILT_LIBCOMP "Use pre-built objgen and libcomp" OFF)
 
 IF(WIN32)
     OPTION(GENERATE_DOCUMENTATION "Generate documentation for the project." OFF)
@@ -418,79 +418,85 @@ ENDIF(COVERALLS)
 # Place all executables in the same directory.
 SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
+IF(NOT WIN32 AND NOT BSD)
+    FIND_PACKAGE(Systemd QUIET)
+
+    IF(SYSTEMD_FOUND)
+        ADD_COMPILER_FLAGS(AUTO ${SYSTEMD_DEFINITIONS} -DHAVE_SYSTEMD=1)
+    ENDIF(SYSTEMD_FOUND)
+ENDIF(NOT WIN32 AND NOT BSD)
+
 # Add in the build of libobjgen and comp_objgen.
-IF(USE_PREBUILT_OBJECTS)
+IF(USE_PREBUILT_LIBCOMP)
+    # We need this for apps that pull in libcomp.
+    FIND_PACKAGE(Threads REQUIRED)
+
+    IF(SYSTEMD_FOUND)
+        SET(SYSTEMD_INCLUDES ${SYSTEMD_INCLUDE_DIRS})
+    ENDIF(SYSTEMD_FOUND)
+
+    IF(SYSTEMD_FOUND)
+        SET(SYSTEMD_LIBS ${SYSTEMD_LIBRARIES})
+    ENDIF(SYSTEMD_FOUND)
+
     ADD_EXECUTABLE(comp_objgen IMPORTED)
 
     IF(WIN32)
         SET_TARGET_PROPERTIES(comp_objgen PROPERTIES IMPORTED_LOCATION
-            "${CMAKE_SOURCE_DIR}/deps/objgen/comp_objgen.exe")
+            "${CMAKE_SOURCE_DIR}/deps/libcomp/comp_objgen.exe")
     ELSE()
         SET_TARGET_PROPERTIES(comp_objgen PROPERTIES IMPORTED_LOCATION
-            "${CMAKE_SOURCE_DIR}/deps/objgen/bin/comp_objgen")
+            "${CMAKE_SOURCE_DIR}/deps/libcomp/bin/comp_objgen")
     ENDIF(WIN32)
 
     IF(WIN32)
         ADD_LIBRARY(objgen STATIC IMPORTED)
         SET_TARGET_PROPERTIES(objgen PROPERTIES
-            IMPORTED_LOCATION_RELEASE "${CMAKE_SOURCE_DIR}/deps/objgen/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objgen${CMAKE_STATIC_LIBRARY_SUFFIX}"
-            IMPORTED_LOCATION_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/deps/objgen/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objgen${CMAKE_STATIC_LIBRARY_SUFFIX}"
-            IMPORTED_LOCATION_DEBUG "${CMAKE_SOURCE_DIR}/deps/objgen/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objgen${CMAKE_STATIC_LIBRARY_SUFFIX}")
+            IMPORTED_LOCATION_RELEASE "${CMAKE_SOURCE_DIR}/deps/libcomp/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objgen${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            IMPORTED_LOCATION_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/deps/libcomp/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objgen${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            IMPORTED_LOCATION_DEBUG "${CMAKE_SOURCE_DIR}/deps/libcomp/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objgen${CMAKE_STATIC_LIBRARY_SUFFIX}")
     ELSE()
         ADD_LIBRARY(objgen STATIC IMPORTED)
         SET_TARGET_PROPERTIES(objgen PROPERTIES IMPORTED_LOCATION
-            "${CMAKE_SOURCE_DIR}/deps/objgen/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objgen${CMAKE_STATIC_LIBRARY_SUFFIX}")
+            "${CMAKE_SOURCE_DIR}/deps/libcomp/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objgen${CMAKE_STATIC_LIBRARY_SUFFIX}")
     ENDIF()
 
     SET_TARGET_PROPERTIES(objgen PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/deps/objgen/include")
+        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/deps/libcomp/include;${CMAKE_SOURCE_DIR}/libcomp/libobjgen/src")
 
     IF(WIN32)
-        ADD_LIBRARY(libobjects STATIC IMPORTED)
-        SET_TARGET_PROPERTIES(libobjects PROPERTIES
-            IMPORTED_LOCATION_RELEASE "${CMAKE_SOURCE_DIR}/deps/libobjects/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objects${CMAKE_STATIC_LIBRARY_SUFFIX}"
-            IMPORTED_LOCATION_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/deps/libobjects/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objects${CMAKE_STATIC_LIBRARY_SUFFIX}"
-            IMPORTED_LOCATION_DEBUG "${CMAKE_SOURCE_DIR}/deps/libobjects/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objects${CMAKE_STATIC_LIBRARY_SUFFIX}")
+        ADD_LIBRARY(comp STATIC IMPORTED)
+        SET_TARGET_PROPERTIES(comp PROPERTIES
+            IMPORTED_LOCATION_RELEASE "${CMAKE_SOURCE_DIR}/deps/libcomp/lib/${CMAKE_STATIC_LIBRARY_PREFIX}comp${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            IMPORTED_LOCATION_RELWITHDEBINFO "${CMAKE_SOURCE_DIR}/deps/libcomp/lib/${CMAKE_STATIC_LIBRARY_PREFIX}comp${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            IMPORTED_LOCATION_DEBUG "${CMAKE_SOURCE_DIR}/deps/libcomp/lib/${CMAKE_STATIC_LIBRARY_PREFIX}comp${CMAKE_STATIC_LIBRARY_SUFFIX}")
     ELSE()
-        ADD_LIBRARY(libobjects STATIC IMPORTED)
-        SET_TARGET_PROPERTIES(libobjects PROPERTIES IMPORTED_LOCATION
-            "${CMAKE_SOURCE_DIR}/deps/libobjects/lib/${CMAKE_STATIC_LIBRARY_PREFIX}objects${CMAKE_STATIC_LIBRARY_SUFFIX}")
+        ADD_LIBRARY(comp STATIC IMPORTED)
+        SET_TARGET_PROPERTIES(comp PROPERTIES IMPORTED_LOCATION
+            "${CMAKE_SOURCE_DIR}/deps/libcomp/lib/${CMAKE_STATIC_LIBRARY_PREFIX}comp${CMAKE_STATIC_LIBRARY_SUFFIX}")
     ENDIF()
 
-ENDIF(USE_PREBUILT_OBJECTS)
+    SET_TARGET_PROPERTIES(comp PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/deps/libcomp/include;${CMAKE_SOURCE_DIR}/libcomp/libcomp/src;${ASIO_INCLUDE_DIRS};${SYSTEMD_INCLUDES};${SQRAT_INCLUDE_DIRS};${OPENSSL_INCLUDE_DIR};${CMAKE_BINARY_DIR}/libconfig;${GSL_INCLUDE_DIRS}"
+        INTERFACE_LINK_LIBRARIES "mariadbclient;${OPENSSL_LIBRARIES};${ZLIB_LIBRARIES};${SYSTEM_LIBRARIES};${CMAKE_THREAD_LIBS_INIT};objgen;sqlite3;squirrel;sqstdlib;ttvfs;ttvfs_zip;tinyxml2;physfs;${SYSTEMD_LIBS}"
+        INTERFACE_COMPILE_DEFINITIONS "SCRAT_USE_CXX11_OPTIMIZATIONS=1")
+
+ENDIF(USE_PREBUILT_LIBCOMP)
 
 # List of common include paths for every project using libobjgen.
-IF(USE_PREBUILT_OBJECTS)
-    SET(LIBOBJGEN_INCLUDES
-        ${GSL_INCLUDE_DIRS}
-        ${CMAKE_SOURCE_DIR}/deps/objgen/include
-        # Needed for PushIgnore.h and PopIgnore.h.
-        ${CMAKE_SOURCE_DIR}/libcomp/src
-    )
-ELSE()
-    SET(LIBOBJGEN_INCLUDES
-        ${GSL_INCLUDE_DIRS}
-        ${CMAKE_SOURCE_DIR}/libobjgen/src
-        # Needed for PushIgnore.h and PopIgnore.h.
-        ${CMAKE_SOURCE_DIR}/libcomp/src
-    )
-ENDIF(USE_PREBUILT_OBJECTS)
+SET(LIBOBJGEN_INCLUDES
+    ${GSL_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/libcomp/libobjgen/src
+    # Needed for PushIgnore.h and PopIgnore.h.
+    ${CMAKE_SOURCE_DIR}/libcomp/libcomp/src
+)
 
 # List of common include paths for every project using libcomp.
-IF(USE_PREBUILT_OBJECTS)
-    SET(LIBCOMP_INCLUDES
-        ${LIBOBJGEN_INCLUDES}
-        ${OPENSSL_INCLUDE_DIR}
-        ${CMAKE_SOURCE_DIR}/libcomp/src
-        ${CMAKE_SOURCE_DIR}/deps/libobjects/include
-    )
-ELSE()
-    SET(LIBCOMP_INCLUDES
-        ${OPENSSL_INCLUDE_DIR}
-        ${CMAKE_SOURCE_DIR}/libcomp/src
-        ${CMAKE_BINARY_DIR}/libcomp/objgen
-    )
-ENDIF(USE_PREBUILT_OBJECTS)
+SET(LIBCOMP_INCLUDES
+    ${OPENSSL_INCLUDE_DIR}
+    ${CMAKE_SOURCE_DIR}/libcomp/libcomp/src
+    ${CMAKE_SOURCE_DIR}/deps/libcomp/include
+)
 
 SET(COVERALLS_SRCS "" CACHE INTERNAL "Coverage source files")
 
@@ -544,10 +550,17 @@ MACRO(GENERATE_DOCS doxyfile)
                 ${CMAKE_BINARY_DIR} COMMENT
                 "Generating ${PROJECT_NAME} API documentation" VERBATIM)
         ELSE(${PROJECT_NAME} MATCHES "libcomp")
-            ADD_CUSTOM_TARGET(doc-${PROJECT_NAME} ${DOXYGEN_EXECUTABLE}
-                ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY
-                ${CMAKE_BINARY_DIR} DEPENDS doc-libcomp COMMENT
-                "Generating ${PROJECT_NAME} API documentation" VERBATIM)
+            IF(USE_PREBUILT_LIBCOMP)
+                ADD_CUSTOM_TARGET(doc-${PROJECT_NAME} ${DOXYGEN_EXECUTABLE}
+                    ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY
+                    ${CMAKE_BINARY_DIR} COMMENT
+                    "Generating ${PROJECT_NAME} API documentation" VERBATIM)
+            ELSE(USE_PREBUILT_LIBCOMP)
+                ADD_CUSTOM_TARGET(doc-${PROJECT_NAME} ${DOXYGEN_EXECUTABLE}
+                    ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY
+                    ${CMAKE_BINARY_DIR} DEPENDS doc-libcomp COMMENT
+                    "Generating ${PROJECT_NAME} API documentation" VERBATIM)
+            ENDIF(USE_PREBUILT_LIBCOMP)
         ENDIF(${PROJECT_NAME} MATCHES "libcomp")
 
         # Add the target to a list of documentation targets.
@@ -734,10 +747,6 @@ IF(NOT UPDATER_ONLY)
     ADD_SUBDIRECTORY(deps)
 ENDIF(NOT UPDATER_ONLY)
 
-IF(NOT USE_PREBUILT_OBJECTS AND NOT UPDATER_ONLY)
-    ADD_SUBDIRECTORY(libobjgen)
-ENDIF(NOT USE_PREBUILT_OBJECTS AND NOT UPDATER_ONLY)
-
 ADD_SUBDIRECTORY(tools)
 
 # This macro generates code using objgen. The arguments must start with the
@@ -836,20 +845,20 @@ MACRO(RSPEC_TESTS)
     ENDFOREACH(test ${ARGN})
 ENDMACRO(RSPEC_TESTS)
 
-IF(NOT WIN32 AND NOT BSD)
-    FIND_PACKAGE(Systemd QUIET)
-
-    IF(SYSTEMD_FOUND)
-        ADD_COMPILER_FLAGS(AUTO ${SYSTEMD_DEFINITIONS} -DHAVE_SYSTEMD=1)
-    ENDIF(SYSTEMD_FOUND)
-ENDIF(NOT WIN32 AND NOT BSD)
-
-IF(NOT UPDATER_ONLY)
+IF(NOT UPDATER_ONLY AND NOT USE_PREBUILT_LIBCOMP)
     ADD_SUBDIRECTORY(libcomp)
     #ADD_SUBDIRECTORY(chanman)
-ENDIF(NOT UPDATER_ONLY)
+ENDIF(NOT UPDATER_ONLY AND NOT USE_PREBUILT_LIBCOMP)
+
+IF(USE_PREBUILT_LIBCOMP)
+    # Write the version information into the Constants.h file.
+    CONFIGURE_FILE(libcomp/libcomp/src/Constants.h.in
+        "${CMAKE_BINARY_DIR}/libconfig/Constants.h"
+        ESCAPE_QUOTES @ONLY NEWLINE_STYLE UNIX)
+ENDIF(USE_PREBUILT_LIBCOMP)
 
 IF(NOT UPDATER_ONLY)
+    ADD_SUBDIRECTORY(libconfig)
     #ADD_SUBDIRECTORY(console)
     ADD_SUBDIRECTORY(server)
 ENDIF(NOT UPDATER_ONLY)

@@ -120,11 +120,11 @@
 </section><!-- USE_STATIC_RUNTIME -->
 
 <section>
-<title>USE_PREBUILT_OBJECTS</title>
+<title>USE_PREBUILT_LIBCOMP</title>
 <para><emphasis role="strong">Type:</emphasis> boolean</para>
 <para><emphasis role="strong">Default:</emphasis> OFF</para>
-<para>This will use the pre-built objgen library and tools as well as a library of objects from libcomp to speed up the build process. This was added to prevent timeout of the automated builds.</para>
-</section><!-- USE_PREBUILT_OBJECTS -->
+<para>This will use the pre-built objgen and libcomp libraries and tools to speed up the build process. This was added to prevent timeout of the automated builds.</para>
+</section><!-- USE_PREBUILT_LIBCOMP -->
 
 <section>
 <title>GENERATE_DOCUMENTATION</title>

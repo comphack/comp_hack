@@ -500,7 +500,7 @@ SET(LIBOBJGEN_INCLUDES
 SET(LIBCOMP_INCLUDES
     ${OPENSSL_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/libcomp/libcomp/src
-    ${CMAKE_SOURCE_DIR}/deps/libcomp/include
+    ${CMAKE_BINARY_DIR}/libcomp/libcomp/objgen
 )
 
 SET(COVERALLS_SRCS "" CACHE INTERNAL "Coverage source files")

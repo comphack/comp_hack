@@ -458,6 +458,20 @@ bool MainWindow::Init()
         Msgbox.setText(err.c_str());
         Msgbox.exec();
 
+        auto reply = QMessageBox::question(this, "Load Failed",
+            "Loading BinaryData failed. Do you want to update the settings"
+            " path for the next restart?", QMessageBox::Yes | QMessageBox::No);
+        if(reply == QMessageBox::Yes)
+        {
+            SettingsWindow* settingWindow = new SettingsWindow(this, true,
+                this);
+            settingWindow->setWindowModality(Qt::ApplicationModal);
+
+            settingWindow->exec();
+
+            delete settingWindow;
+        }
+
         return false;
     }
 

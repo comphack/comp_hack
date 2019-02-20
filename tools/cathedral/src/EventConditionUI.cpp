@@ -221,7 +221,8 @@ void EventCondition::Load(const std::shared_ptr<objects::EventCondition>& e)
         ? (uint32_t)e->GetValue1() : 0);
     ui->value2->setValue(e->GetValue2());
 
-    ui->compareMode->setCurrentIndex((int)e->GetCompareMode());
+    int idx = ui->compareMode->findData((int)e->GetCompareMode());
+    ui->compareMode->setCurrentIndex(idx != -1 ? idx : 0);
     ui->negate->setChecked(e->GetNegate());
 
     ui->radNormal->setChecked(false);
@@ -234,7 +235,7 @@ void EventCondition::Load(const std::shared_ptr<objects::EventCondition>& e)
         objects::EventScriptCondition>(e);
     if(!flagCondition && !scriptCondition)
     {
-        int idx = ui->typeNormal->findData((int)e->GetType());
+        idx = ui->typeNormal->findData((int)e->GetType());
         ui->typeNormal->setCurrentIndex(idx != -1 ? idx : 0);
         ui->typeFlags->setCurrentIndex(0);
 
@@ -247,7 +248,7 @@ void EventCondition::Load(const std::shared_ptr<objects::EventCondition>& e)
 
         if(flagCondition)
         {
-            int idx = ui->typeFlags->findData((int)e->GetType());
+            idx = ui->typeFlags->findData((int)e->GetType());
             ui->typeFlags->setCurrentIndex(idx != -1 ? idx : 0);
 
             auto flags = flagCondition->GetFlagStates();

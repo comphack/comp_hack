@@ -4638,7 +4638,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
 
             for(auto iSkill : demon->GetInheritedSkills())
             {
-                demonSkills.insert(iSkill ? iSkill->GetSkill() : 0);
+                demonSkills.insert(!iSkill.IsNull() ? iSkill->GetSkill() : 0);
             }
 
             demonSkills.erase(0);
@@ -4648,7 +4648,8 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             for(auto acSkill : growth->GetAcquisitionSkills())
             {
                 uint32_t skillID = acSkill->GetID();
-                if(acSkill->GetLevel() <= (uint32_t)level &&
+                if(skillID && acSkill->GetLevel() <= (uint32_t)level &&
+                    acSkill->GetLevel() >= (uint32_t)startingLevel &&
                     demonSkills.find(skillID) == demonSkills.end())
                 {
                     demon->AppendAcquiredSkills(skillID);

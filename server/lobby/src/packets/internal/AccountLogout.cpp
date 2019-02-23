@@ -60,7 +60,9 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     auto login = accountManager->GetUserLogin(username);
     if(!login)
     {
-        return false;
+        LOG_ERROR(libcomp::String("World requested logout for an account that"
+            " is not currently logged in: '%1'\n").Arg(username));
+        return true;
     }
 
     auto cLogin = login->GetCharacterLogin();

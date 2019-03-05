@@ -105,6 +105,8 @@
 #include <MiSummonData.h>
 #include <MiTargetData.h>
 #include <MiUnionData.h>
+#include <MiZoneBasicData.h>
+#include <MiZoneData.h>
 #include <Party.h>
 #include <PvPInstanceStats.h>
 #include <PvPPlayerStats.h>
@@ -2714,7 +2716,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
                 // Half width on each side
                 float lineWidth = (float)(skillRange->GetAoeLineWidth() * 10) *
-                    5.f;
+                    0.5f;
 
                 // If not rushing, max length can go beyond the target
                 if(skill.Definition->GetBasic()->GetActionType() !=
@@ -3448,6 +3450,11 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         if(hpAdjustedSum != 0)
         {
             target.RecalcTriggers.insert(TokuseiConditionType::CURRENT_HP);
+
+            if(hpAdjustedSum < 0)
+            {
+                target.EffectCancellations |= EFFECT_CANCEL_DAMAGE;
+            }
         }
 
         // If we haven't already set hitstun, check if we can now
@@ -3457,9 +3464,6 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             if(hpAdjustedSum < 0)
             {
                 calcHitstun = true;
-
-                target.EffectCancellations |= EFFECT_CANCEL_HIT |
-                    EFFECT_CANCEL_DAMAGE;
             }
             else if(!target.IndirectTarget && battleDamage->GetFormula()
                 == objects::MiBattleDamageData::Formula_t::NONE &&
@@ -3480,6 +3484,11 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     (target.Flags1 & FLAG1_GUARDED) == 0 && !target.HitAbsorb &&
                     (hitstunNull < 0 || RNG(int32_t, 1, 10000) > hitstunNull);
             }
+        }
+
+        if(target.CanHitstun && !target.HitAvoided)
+        {
+            target.EffectCancellations |= EFFECT_CANCEL_HIT;
         }
 
         switch(target.EntityState->GetEntityType())
@@ -7895,6 +7904,17 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 targetModMultiplier);
         }
 
+        // Floor modifiers at 1
+        if(!mod1 && damageData->GetModifier1())
+        {
+            mod1 = 1;
+        }
+
+        if(!mod2 && damageData->GetModifier2())
+        {
+            mod2 = 1;
+        }
+
         bool effectiveHeal = isHeal || target.HitAbsorb;
 
         int8_t minDamageLevel = -1;
@@ -8004,8 +8024,6 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                     if(pursuitRate > 0 &&
                         (pursuitRate >= 100 || RNG(int32_t, 1, 100) <= pursuitRate))
                     {
-                        target.PursuitAffinity = skill.EffectiveAffinity;
-
                         // Take the lowest value applied tokusei affinity override if one exists
                         auto affinityOverrides = tokuseiManager->GetAspectValueList(source,
                             TokuseiAspectType::PURSUIT_AFFINITY_OVERRIDE);
@@ -8013,25 +8031,36 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                         {
                             affinityOverrides.sort();
                             target.PursuitAffinity = (uint8_t)affinityOverrides.front();
+
+                            // If the result is weapon affinity, match it
+                            if(target.PursuitAffinity == 1)
+                            {
+                                target.PursuitAffinity = skill.WeaponAffinity;
+                            }
                         }
 
-                        // If the result is weapon affinity, match it
-                        if(target.PursuitAffinity == 1)
+                        if(target.PursuitAffinity)
                         {
-                            target.PursuitAffinity = skill.WeaponAffinity;
+                            // Even if it matches the skill, check NRA for
+                            // pursuit affinity and stop if it is prevented
+                            if(!GetNRAResult(target, skill, target.PursuitAffinity))
+                            {
+                                // Calculate the new enemy resistence and determine damage
+                                float pResist = (float)(targetState->GetCorrectTbl(
+                                    (size_t)target.PursuitAffinity + RES_OFFSET) * 0.01);
+
+                                // Damage is always dealt at this point even with full
+                                // resistance, floor at 1
+                                float calc = (float)target.Damage1 * (1.f + pResist * -1.f);
+                                target.PursuitDamage = (int32_t)floor(calc < 1.f
+                                    ? 1.f : calc);
+                            }
                         }
-
-                        // Check NRA for pursuit affinity and stop if it is prevented
-                        if(!GetNRAResult(target, skill, target.PursuitAffinity))
+                        else
                         {
-                            // Calculate the new enemy resistence and determine damage
-                            float pResist = (float)(targetState->GetCorrectTbl(
-                                (size_t)target.PursuitAffinity + RES_OFFSET) * 0.01);
-
-                            float calc = (float)target.Damage1 *
-                                (1.f + pResist * -1.f);
-                            target.PursuitDamage = (int32_t)floor(calc < 1.f
-                                ? 1.f : calc);
+                            // Pursuit damage is a straight adjustment from normal damage
+                            // when there is no affinity (this is the default state)
+                            target.PursuitDamage = target.Damage1;
                         }
 
                         if(target.PursuitDamage > 0)
@@ -11075,21 +11104,13 @@ bool SkillManager::Spawn(
     }
 
     auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
     auto serverDataManager = server->GetServerDataManager();
 
-    // Zone independent spawns are restricted to fields
-    bool isField = false;
-    for(auto& pair : serverDataManager->GetFieldZoneIDs())
-    {
-        if(pair.first == zone->GetDefinitionID() &&
-           pair.second == zone->GetDynamicMapID())
-        {
-            isField = true;
-            break;
-        }
-    }
-
-    if(!isField)
+    // Zone independent spawns are restricted to fields and dungeons
+    auto zoneData = definitionManager->GetZoneData(zone->GetDefinitionID());
+    if(!zoneData || (zoneData->GetBasic()->GetType() != 2 &&
+        zoneData->GetBasic()->GetType() != 4))
     {
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::NOTHING_HAPPENED_HERE);
@@ -11162,8 +11183,13 @@ bool SkillManager::Spawn(
                 {
                     auto eBase = enemy->GetEnemyBase();
                     eBase->SetSpawnSource(spawn);
-                    eBase->SetSpawnGroupID(spawnGroup->GetID());
                     eBase->SetSpawnLocation(spawnLoc);
+
+                    // Unlike zone specific spawns, global spawns do not
+                    // have their group ID set on them as they should never
+                    // be considered part of that group for that zone.
+                    //eBase->SetSpawnGroupID(spawnGroup->GetID());
+
                     enemies.push_back(enemy);
                 }
                 else

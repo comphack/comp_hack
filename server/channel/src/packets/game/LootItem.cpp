@@ -79,7 +79,8 @@ bool Parsers::LootItem::Parse(libcomp::ManagerPacket *pPacketManager,
     uint32_t demonType = 0;
     std::list<int8_t> lootedSlots;
     std::unordered_map<uint32_t, uint32_t> lootedItems;
-    if(lBox && (lBox->ValidLooterIDsCount() == 0 ||
+    if(lBox && ((lBox->ValidLooterIDsCount() == 0 &&
+        lBox->GetType() != objects::LootBox::Type_t::BOSS_BOX) ||
         lBox->ValidLooterIDsContains(state->GetWorldCID())))
     {
         if(lBox->GetType() == objects::LootBox::Type_t::EGG)

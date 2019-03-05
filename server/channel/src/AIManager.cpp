@@ -91,6 +91,7 @@ namespace libcomp
                 .Func("QueueScriptCommand", &AIManager::QueueScriptCommand)
                 .Func("QueueUseSkillCommand", &AIManager::QueueUseSkillCommand)
                 .Func("QueueWaitCommand", &AIManager::QueueWaitCommand)
+                .Func("StartEvent", &AIManager::StartEvent)
                 .Func("UseDiasporaQuake", &AIManager::UseDiasporaQuake)
                 .Func("Chase", &AIManager::Chase)
                 .Func("Circle", &AIManager::Circle)

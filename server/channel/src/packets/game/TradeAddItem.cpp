@@ -98,14 +98,31 @@ bool Parsers::TradeAddItem::Parse(libcomp::ManagerPacket *pPacketManager,
         return true;
     }
 
+    bool error = false;
     if(slot > -1)
     {
-        // Adding
-        exchangeSession->SetItems((size_t)slot, item);
+        // Adding, make sure the item is not already there
+        auto items = exchangeSession->GetItems();
+        for(size_t i = 0; i < 30; i++)
+        {
+            if(items[i].Get() == item)
+            {
+                LOG_DEBUG(libcomp::String("Player attempted to add a trade"
+                    " item more than once: %1\n")
+                    .Arg(state->GetAccountUID().ToString()));
+                error = true;
+                break;
+            }
+        }
+
+        if(!error)
+        {
+            exchangeSession->SetItems((size_t)slot, item);
+        }
     }
     else
     {
-        // Removing
+        // Removing, drop all found instances
         auto items = exchangeSession->GetItems();
         for(size_t i = 0; i < 30; i++)
         {
@@ -118,33 +135,37 @@ bool Parsers::TradeAddItem::Parse(libcomp::ManagerPacket *pPacketManager,
         exchangeSession->SetItems(items);
     }
 
-    auto otherState = otherClient->GetClientState();
-    auto otherObjectID = otherState->GetObjectID(item->GetUUID());
-    if(otherObjectID <= 0)
-    {
-        otherObjectID = server->GetNextObjectID();
-        otherState->SetObjectID(item->GetUUID(), otherObjectID);
-    }
-
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_ADD_ITEM);
     reply.WriteS32Little(0);    //Unknown
-    reply.WriteS64Little(itemID);
+    reply.WriteS64Little(error ? -1 : itemID);
     reply.WriteS32Little(slot);
     reply.WriteS32Little(0);    //Unknown, seems to be the same as other packet
 
     client->SendPacket(reply);
 
-    libcomp::Packet notify;
-    notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_ADDED_ITEM);
-    notify.WriteS32Little(slot);
-    notify.WriteS64Little(otherObjectID);
+    if(!error)
+    {
+        auto otherState = otherClient->GetClientState();
+        auto otherObjectID = otherState->GetObjectID(item->GetUUID());
+        if(otherObjectID <= 0)
+        {
+            otherObjectID = server->GetNextObjectID();
+            otherState->SetObjectID(item->GetUUID(), otherObjectID);
+        }
 
-    characterManager->GetItemDetailPacketData(notify, item);
+        libcomp::Packet notify;
+        notify.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_TRADE_ADDED_ITEM);
+        notify.WriteS32Little(slot);
+        notify.WriteS64Little(otherObjectID);
 
-    notify.WriteS32Little(0);    //Unknown, seems to be the same as other packet
+        characterManager->GetItemDetailPacketData(notify, item);
 
-    otherClient->SendPacket(notify);
+        notify.WriteS32Little(0);    // Unknown
+
+        otherClient->SendPacket(notify);
+    }
 
     return true;
 }

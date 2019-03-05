@@ -330,7 +330,8 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
         for(uint8_t i = (size_t)CorrectTbl::RES_DEFAULT;
             i <= (uint8_t)CorrectTbl::NRA_MAGIC; i++)
         {
-            mDigitalizeState->SetCorrectValues(i, demonStats[(CorrectTbl)i]);
+            mDigitalizeState->SetCorrectValues(i,
+                (int16_t)demonStats[(CorrectTbl)i]);
         }
     }
 
@@ -935,7 +936,7 @@ uint8_t CharacterState::RecalculateStats(
     {
         // Combat run speed can change from unadjusted stats (nothing
         // natively does this)
-        SetCombatRunSpeed(stats[CorrectTbl::MOVE2]);
+        SetCombatRunSpeed((int16_t)stats[CorrectTbl::MOVE2]);
 
         if(!mInitialCalc)
         {
@@ -1023,7 +1024,8 @@ uint8_t CharacterState::RecalculateStats(
     {
         for(auto statPair : stats)
         {
-            calcState->SetCorrectTbl((size_t)statPair.first, statPair.second);
+            calcState->SetCorrectTbl((size_t)statPair.first,
+                (int16_t)statPair.second);
         }
 
         return result;

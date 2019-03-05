@@ -242,22 +242,25 @@ void ActionManager::PerformActions(
                 // Execute once per enemy in the zone or instance and quit
                 // afterwards if any fail
                 std::list<std::shared_ptr<Zone>> zones;
-                switch(action->GetLocation())
+                if(ctx.CurrentZone)
                 {
-                case objects::Action::Location_t::INSTANCE:
+                    switch(action->GetLocation())
                     {
-                        auto instance = ctx.CurrentZone->GetInstance();
-                        if(instance)
+                    case objects::Action::Location_t::INSTANCE:
                         {
-                            zones = instance->GetZones();
+                            auto instance = ctx.CurrentZone->GetInstance();
+                            if(instance)
+                            {
+                                zones = instance->GetZones();
+                            }
                         }
+                        break;
+                    case objects::Action::Location_t::ZONE:
+                    default:
+                        // All others should be treated like just the zone
+                        zones.push_back(ctx.CurrentZone);
+                        break;
                     }
-                    break;
-                case objects::Action::Location_t::ZONE:
-                default:
-                    // All others should be treated like just the zone
-                    zones.push_back(ctx.CurrentZone);
-                    break;
                 }
 
                 for(auto z : zones)
@@ -2375,7 +2378,7 @@ bool ActionManager::UpdateQuest(ActionContext& ctx)
         switch(act->GetFlagSetMode())
         {
         case objects::ActionUpdateQuest::FlagSetMode_t::INCREMENT:
-            for(auto pair : flagStates)
+            for(auto& pair : flagStates)
             {
                 auto it = existing.find(pair.first);
                 if(it != existing.end())
@@ -2385,7 +2388,7 @@ bool ActionManager::UpdateQuest(ActionContext& ctx)
             }
             break;
         case objects::ActionUpdateQuest::FlagSetMode_t::DECREMENT:
-            for(auto pair : flagStates)
+            for(auto& pair : flagStates)
             {
                 auto it = existing.find(pair.first);
                 if(it != existing.end())

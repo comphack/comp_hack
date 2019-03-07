@@ -7358,6 +7358,7 @@ void CharacterManager::AdjustMitamaStats(const std::shared_ptr<
     if(demon && demon->GetMitamaType() > 0)
     {
         libcomp::EnumMap<CorrectTbl, std::list<int32_t>> bonusStats;
+        libcomp::EnumMap<CorrectTbl, std::list<int32_t>> deltaStats;
 
         // Add rank bonus
         uint32_t bonusID = (uint32_t)(((demon->GetMitamaType() - 1) * 16) +
@@ -7435,6 +7436,18 @@ void CharacterManager::AdjustMitamaStats(const std::shared_ptr<
                             if(type >= 0 && val)
                             {
                                 bonusStats[(CorrectTbl)type].push_back(val);
+
+                                // For active summoned demons, base stat deltas
+                                // need to be added as bonuses if we are
+                                // gathering non-base stats
+                                if(exBonus && reunionMode == 2 &&
+                                    type <= (int32_t)CorrectTbl::LUCK)
+                                {
+                                    int32_t delta = val -
+                                        pair.second->GetBonus((size_t)(i + 1));
+                                    deltaStats[(CorrectTbl)type].push_back(
+                                        delta);
+                                }
                             }
 
                             i += 2;
@@ -7460,6 +7473,14 @@ void CharacterManager::AdjustMitamaStats(const std::shared_ptr<
             for(uint8_t remove : removes)
             {
                 bonusStats.erase((CorrectTbl)remove);
+            }
+
+            for(auto& pair : deltaStats)
+            {
+                for(int32_t val : pair.second)
+                {
+                    bonusStats[pair.first].push_back(val);
+                }
             }
         }
 

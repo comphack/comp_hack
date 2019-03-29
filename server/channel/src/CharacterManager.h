@@ -497,19 +497,28 @@ public:
      * @param luck Current luck value to use when calculating drop chances
      * @param minLast Optional param to specify if the box needs at least
      *  one item in which case the last item will be used
+     * @param maccaRate Optional param to scale macca dropped. Does not
+     *  affect notes.
+     * @param magRate Optional param to scale mag dropped. Does not
+     *  affect pressers.
      * @return true if one or more item was added, false if none were
      */
     bool CreateLootFromDrops(const std::shared_ptr<objects::LootBox>& box,
         const std::list<std::shared_ptr<objects::ItemDrop>>& drops, int16_t luck,
-        bool minLast = false);
+        bool minLast = false, float maccaRate = 1.f, float magRate = 1.f);
 
     /**
      * Create loot from pre-filtered drops
      * @param drops List of pointers to item drops
+     * @param maccaRate Optional param to scale macca dropped. Does not
+     *  affect notes.
+     * @param magRate Optional param to scale mag dropped. Does not
+     *  affect pressers.
      * @return List of pointers to converted Loot representations
      */
     std::list<std::shared_ptr<objects::Loot>> CreateLootFromDrops(
-        const std::list<std::shared_ptr<objects::ItemDrop>>& drops);
+        const std::list<std::shared_ptr<objects::ItemDrop>>& drops,
+        float maccaRate = 1.f, float magRate = 1.f);
 
     /**
      * Send the loot item data related to a loot box to one or more clients.

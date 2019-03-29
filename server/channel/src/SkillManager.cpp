@@ -5874,7 +5874,20 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         // After this schedule all of the bodies for cleanup after their
         // loot time passes
         uint64_t now = ChannelServer::GetServerTime();
-        int16_t luck = sourceState ? source->GetLUCK() : 0;
+        int16_t luck = 0;
+        float maccaRate = 1.f;
+        float magRate = 1.f;
+
+        if(sourceState)
+        {
+            auto cState = sourceState->GetCharacterState();
+
+            luck = source->GetLUCK();
+            maccaRate = (float)cState->GetCorrectValue(
+                CorrectTbl::RATE_MACCA) / 100.f;
+            magRate = (float)cState->GetCorrectValue(
+                CorrectTbl::RATE_MAG) / 100.f;
+        }
 
         auto firstClient = zConnections.size() > 0 ? zConnections.front() : nullptr;
         auto sourceParty = sourceState ? sourceState->GetParty() : nullptr;
@@ -6026,7 +6039,8 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             auto dDrops = drops[(uint8_t)objects::DropSet::Type_t::DESTINY];
 
             uint64_t lootTime = 0;
-            if(characterManager->CreateLootFromDrops(lootBody, nDrops, luck))
+            if(characterManager->CreateLootFromDrops(lootBody, nDrops, luck,
+                false, maccaRate, magRate))
             {
                 // Bodies remain lootable for 120 seconds with loot
                 lootTime = (uint64_t)(now + 120000000);

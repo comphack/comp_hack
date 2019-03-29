@@ -2836,10 +2836,11 @@ std::list<std::shared_ptr<objects::ItemDrop>> CharacterManager::DetermineDrops(
 }
 
 bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBox>& box,
-    const std::list<std::shared_ptr<objects::ItemDrop>>& drops, int16_t luck, bool minLast)
+    const std::list<std::shared_ptr<objects::ItemDrop>>& drops, int16_t luck,
+    bool minLast, float maccaRate, float magRate)
 {
     auto dSet = DetermineDrops(drops, luck, minLast);
-    auto lootItems = CreateLootFromDrops(dSet);
+    auto lootItems = CreateLootFromDrops(dSet, maccaRate, magRate);
 
     bool added = false;
     if(lootItems.size() > 0)
@@ -2864,7 +2865,8 @@ bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBo
 }
 
 std::list<std::shared_ptr<objects::Loot>> CharacterManager::CreateLootFromDrops(
-    const std::list<std::shared_ptr<objects::ItemDrop>>& drops)
+    const std::list<std::shared_ptr<objects::ItemDrop>>& drops,
+    float maccaRate, float magRate)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -2880,7 +2882,21 @@ std::list<std::shared_ptr<objects::Loot>> CharacterManager::CreateLootFromDrops(
         uint16_t maxStack = drop->GetMaxStack();
 
         // The drop rate is affected by luck but the stack size is not
-        uint16_t stackSize = RNG(uint16_t, minStack, maxStack);
+        int32_t stackSize = (int32_t)RNG(uint16_t, minStack, maxStack);
+        if(maccaRate != 1.f && drop->GetItemType() == SVR_CONST.ITEM_MACCA)
+        {
+            stackSize = (int32_t)floor((float)stackSize * maccaRate);
+        }
+        else if(magRate != 1.f &&
+            drop->GetItemType() == SVR_CONST.ITEM_MAGNETITE)
+        {
+            stackSize = (int32_t)floor((float)stackSize * magRate);
+        }
+
+        if(stackSize <= 0)
+        {
+            continue;
+        }
 
         int32_t rGroup = drop->GetCooldownRestrict();
 
@@ -2888,7 +2904,7 @@ std::list<std::shared_ptr<objects::Loot>> CharacterManager::CreateLootFromDrops(
         auto it = subset.find(rGroup);
         if(it != subset.end())
         {
-            it->second = (uint32_t)(it->second + stackSize);
+            it->second = it->second + (uint32_t)stackSize;
         }
         else
         {

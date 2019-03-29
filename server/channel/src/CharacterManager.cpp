@@ -6903,7 +6903,8 @@ bool CharacterManager::DigitalizeStart(const std::shared_ptr<
     if(!dgZone)
     {
         // Determine duration (in milliseconds)
-        time = (uint32_t)(dgAbility == 2 ? 360000 : 180000);
+        auto devilData = definitionManager->GetDevilData(demon->GetType());
+        time = (uint32_t)(IsMitamaDemon(devilData) ? 360000 : 180000);
         time += (uint32_t)(dgState->GetTimeExtension() * 1000);
 
         double adjust = 1.0 + (server->GetTokuseiManager()->GetAspectSum(

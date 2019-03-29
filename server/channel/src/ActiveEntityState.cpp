@@ -2533,6 +2533,7 @@ void ActiveEntityState::AdjustStats(
         // If a value is reduced to 0%, leave it
         if(removed.find(tblID) != removed.end()) continue;
 
+        bool calcAdjust = false;
         uint8_t effectiveType = ct->GetType();
         int32_t effectiveValue = (int32_t)ct->GetValue();
         if(effectiveType >= 100)
@@ -2547,6 +2548,8 @@ void ActiveEntityState::AdjustStats(
                 effectiveValue = (int32_t)TokuseiManager::CalculateAttributeValue(
                     this, tct->GetValue(), effectiveValue, tct->GetAttributes());
             }
+
+            calcAdjust = true;
         }
 
         if(effectiveType == 1 && FORCE_NUMERIC.find(tblID) != FORCE_NUMERIC.end())
@@ -2616,12 +2619,16 @@ void ActiveEntityState::AdjustStats(
                 // or an increase/decrease by a set amount
                 if(effectiveValue == 0)
                 {
-                    removed.insert(tblID);
-                    stats[tblID] = 0;
-                    numericSums.erase(tblID);
-                    percentSums[0].erase(tblID);
-                    percentSums[1].erase(tblID);
-                    maxPercents.erase(tblID);
+                    // Ignore calculated values that set to 0%
+                    if(!calcAdjust)
+                    {
+                        removed.insert(tblID);
+                        stats[tblID] = 0;
+                        numericSums.erase(tblID);
+                        percentSums[0].erase(tblID);
+                        percentSums[1].erase(tblID);
+                        maxPercents.erase(tblID);
+                    }
                 }
                 else
                 {

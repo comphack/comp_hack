@@ -1250,7 +1250,7 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
     if(effects.size() > 0)
     {
         std::list<std::shared_ptr<ActiveEntityState>> entities;
-        bool playerEntities = true;
+        bool playerEntities = state != nullptr;
         switch(act->GetTargetType())
         {
         case objects::ActionAddRemoveStatus::TargetType_t::CHARACTER:
@@ -1281,7 +1281,9 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
                     entities.push_back(eState);
                 }
 
-                playerEntities = false;
+                playerEntities = eState &&
+                    (eState->GetEntityType() == EntityType_t::CHARACTER ||
+                        eState->GetEntityType() == EntityType_t::PARTNER_DEMON);
             }
             break;
         }
@@ -3112,7 +3114,7 @@ bool ActionManager::Delay(ActionContext& ctx)
                 uint32_t pGroupID)
                 {
                     auto actionManager = pServer->GetActionManager();
-                    if(actionManager && !pZone->GetInvalid())
+                    if(actionManager && pZone && !pZone->GetInvalid())
                     {
                         // Only get the client if they're still in the zone
                         auto client = pWorldCID

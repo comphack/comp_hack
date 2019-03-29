@@ -110,9 +110,9 @@ bool Parsers::EquipmentSpiritDefuse::Parse(libcomp::ManagerPacket *pPacketManage
             }
         }
 
-        uint32_t fuseItemCost = (uint32_t)ceil(ceil((double)costSum / 3.0) /
+        uint32_t kzCost = (uint32_t)ceil((double)costSum /
             5000);
-        uint32_t kzCost = (uint32_t)(fuseItemCost * 10);
+        uint32_t fuseItemCost = (uint32_t)(kzCost * 10);
 
         if(characterManager->CalculateItemRemoval(client, fuseItemType,
             fuseItemCost, updateItems) > 0)

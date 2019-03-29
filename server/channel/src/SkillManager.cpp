@@ -8098,6 +8098,12 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                         target.TechnicalDamage = (int32_t)floor(
                             (double)target.Damage1 * techPow * 0.01);
 
+                        // Damage is supposed to hit, floor at 1
+                        if(!target.TechnicalDamage)
+                        {
+                            target.TechnicalDamage = 1;
+                        }
+
                         // Apply limits
                         if(critLevel == 2)
                         {

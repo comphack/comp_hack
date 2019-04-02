@@ -94,7 +94,7 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
                     // Ignore the names retrieved in case the character
                     // name was not even a real player
                     libcomp::String targetName = p.ReadString16Little(
-                        libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
+                        state->GetClientStringEncoding(), true);
 
                     // Tell failures are parsed client side as an empty tell
                     // message from the requested target

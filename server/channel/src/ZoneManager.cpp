@@ -4862,7 +4862,8 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
             std::lock_guard<std::mutex> lock(mLock);
             if(!instance->GetTimerStop())
             {
-                if(instance->GetTimerExpire() <= stopTime)
+                if(instance->GetTimerExpire() &&
+                    instance->GetTimerExpire() <= stopTime)
                 {
                     // Timer expired
                     instance->SetTimerStop(instance->GetTimerExpire());
@@ -4923,7 +4924,14 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
         auto eventManager = mServer.lock()->GetEventManager();
         for(auto client : instance->GetConnections())
         {
+            // Originally timer expiration events were not auto-only but the
+            // benefit of being able to pop up a prompt is not worth the
+            // copious amounts of issues that can occur if an event is active
+            // while the expiration occurs. If a non-auto-only event is needed
+            // at this point, zone flag triggers can be used instead to
+            // "reattach" to a delay enabled player context.
             EventOptions options;
+            options.AutoOnly = true;
             options.NoInterrupt = true;
 
             auto state = client->GetClientState();

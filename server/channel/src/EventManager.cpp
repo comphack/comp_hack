@@ -873,7 +873,13 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
 
             auto serverDataManager = mServer.lock()->GetServerDataManager();
             auto script = serverDataManager->GetScript(scriptCondition->GetScriptID());
-            if(script && script->Type.ToLower() == "eventcondition")
+            if(!ctx.CurrentZone)
+            {
+                LOG_ERROR(libcomp::String("Attempted to execute a condition"
+                    " script ID outside of a zone: %1\n")
+                    .Arg(scriptCondition->GetScriptID()));
+            }
+            else if(script && script->Type.ToLower() == "eventcondition")
             {
                 auto engine = std::make_shared<libcomp::ScriptEngine>();
                 engine->Using<CharacterState>();
@@ -3948,7 +3954,12 @@ void EventManager::HandleNext(EventContext& ctx)
             // the branch number to use
             auto serverDataManager = mServer.lock()->GetServerDataManager();
             auto script = serverDataManager->GetScript(branchScriptID);
-            if(script && script->Type.ToLower() == "eventbranchlogic")
+            if(!ctx.CurrentZone)
+            {
+                LOG_ERROR(libcomp::String("Attempted to execute a branch"
+                    " script ID outside of a zone: %1\n").Arg(branchScriptID));
+            }
+            else if(script && script->Type.ToLower() == "eventbranchlogic")
             {
                 auto engine = std::make_shared<libcomp::ScriptEngine>();
                 engine->Using<CharacterState>();

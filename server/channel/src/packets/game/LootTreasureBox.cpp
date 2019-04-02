@@ -68,7 +68,10 @@ bool Parsers::LootTreasureBox::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WriteS32Little(lootEntityID);
 
     auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
-    if(lState)
+    auto lBox = lState ? lState->GetEntity() : nullptr;
+    if(lBox && ((lBox->ValidLooterIDsCount() == 0 &&
+        lBox->GetType() != objects::LootBox::Type_t::BOSS_BOX) ||
+        lBox->ValidLooterIDsContains(state->GetWorldCID())))
     {
         reply.WriteS8(0);   // Success
 

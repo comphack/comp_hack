@@ -671,7 +671,7 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
     reply.WriteS64Little(cs->GetXP());
     reply.WriteS8(cs->GetLevel());
 
-    libcomp::EnumMap<CorrectTbl, int16_t> coreBoosts;
+    libcomp::EnumMap<CorrectTbl, int32_t> coreBoosts;
     if(!isSummoned)
     {
         // Familiarity boosts still show in the COMP
@@ -1875,13 +1875,17 @@ std::list<std::shared_ptr<objects::Item>> CharacterManager::GetExistingItems(
         box = character->GetItemBoxes(0).Get();
     }
 
+    // Gather the list of items ensuring nothing is somehow added twice
+    std::set<std::shared_ptr<objects::Item>> all;
     std::list<std::shared_ptr<objects::Item>> existing;
     for(size_t i = 0; i < 50; i++)
     {
         auto item = box->GetItems(i).Get();
-        if(item && item->GetType() == itemID)
+        if(item && item->GetType() == itemID &&
+            all.find(item) == all.end())
         {
             existing.push_back(item);
+            all.insert(item);
         }
     }
 
@@ -2256,10 +2260,29 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                     EquipItem(client, state->GetObjectID(item->GetUUID()));
                 }
 
-                auto slot = item->GetBoxSlot();
+                int8_t slot = item->GetBoxSlot();
+                if(slot == -1)
+                {
+                    LOG_ERROR(libcomp::String("Removal attempted on item"
+                        " not in a valid box slot: %1\n")
+                        .Arg(item->GetUUID().ToString()));
+                    return false;
+                }
+
                 if(item->GetStackSize() <= (quantity - removed))
                 {
+                    if(itemBox->GetItems((size_t)slot).Get() != item)
+                    {
+                        LOG_ERROR(libcomp::String("Removal attempted on item"
+                            " assigned to the wrong box slot: %1\n")
+                            .Arg(item->GetUUID().ToString()));
+                        return false;
+                    }
+
                     removed = (uint32_t)(removed + item->GetStackSize());
+
+                    // Zero out the stack even though we're removing it
+                    item->SetStackSize(0);
 
                     if(!itemBox->SetItems((size_t)slot, NULLUUID))
                     {
@@ -2476,12 +2499,28 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
     auto character = cState->GetEntity();
     auto inventory = character->GetItemBoxes(0).Get();
 
+    // Calculate free spots and check box for invalid data
+    std::set<std::shared_ptr<objects::Item>> allItems;
     std::list<int8_t> freeSlots;
     for(int8_t i = 0; i < 50; i++)
     {
-        if(inventory->GetItems((size_t)i).IsNull())
+        auto item = inventory->GetItems((size_t)i).Get();
+        if(!item)
         {
             freeSlots.push_back(i);
+        }
+        else if(allItems.find(item) != allItems.end())
+        {
+            // Duplicate item found, log and resend box
+            LOG_ERROR(libcomp::String("Inventory update failed for player due"
+                " to duplicate item entries: %1\n")
+                .Arg(state->GetAccountUID().ToString()));
+            SendItemBoxData(client, inventory);
+            return false;
+        }
+        else
+        {
+            allItems.insert(item);
         }
     }
 
@@ -2519,6 +2558,9 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
 
             auto slot = item->GetBoxSlot();
             inventory->SetItems((size_t)slot, NULLUUID);
+
+            // Zero out the stack size even though we're removing it
+            item->SetStackSize(0);
             changes->Delete(item);
             updatedSlots.push_back((uint16_t)slot);
         }
@@ -2794,10 +2836,11 @@ std::list<std::shared_ptr<objects::ItemDrop>> CharacterManager::DetermineDrops(
 }
 
 bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBox>& box,
-    const std::list<std::shared_ptr<objects::ItemDrop>>& drops, int16_t luck, bool minLast)
+    const std::list<std::shared_ptr<objects::ItemDrop>>& drops, int16_t luck,
+    bool minLast, float maccaRate, float magRate)
 {
     auto dSet = DetermineDrops(drops, luck, minLast);
-    auto lootItems = CreateLootFromDrops(dSet);
+    auto lootItems = CreateLootFromDrops(dSet, maccaRate, magRate);
 
     bool added = false;
     if(lootItems.size() > 0)
@@ -2822,7 +2865,8 @@ bool CharacterManager::CreateLootFromDrops(const std::shared_ptr<objects::LootBo
 }
 
 std::list<std::shared_ptr<objects::Loot>> CharacterManager::CreateLootFromDrops(
-    const std::list<std::shared_ptr<objects::ItemDrop>>& drops)
+    const std::list<std::shared_ptr<objects::ItemDrop>>& drops,
+    float maccaRate, float magRate)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -2838,7 +2882,21 @@ std::list<std::shared_ptr<objects::Loot>> CharacterManager::CreateLootFromDrops(
         uint16_t maxStack = drop->GetMaxStack();
 
         // The drop rate is affected by luck but the stack size is not
-        uint16_t stackSize = RNG(uint16_t, minStack, maxStack);
+        int32_t stackSize = (int32_t)RNG(uint16_t, minStack, maxStack);
+        if(maccaRate != 1.f && drop->GetItemType() == SVR_CONST.ITEM_MACCA)
+        {
+            stackSize = (int32_t)floor((float)stackSize * maccaRate);
+        }
+        else if(magRate != 1.f &&
+            drop->GetItemType() == SVR_CONST.ITEM_MAGNETITE)
+        {
+            stackSize = (int32_t)floor((float)stackSize * magRate);
+        }
+
+        if(stackSize <= 0)
+        {
+            continue;
+        }
 
         int32_t rGroup = drop->GetCooldownRestrict();
 
@@ -2846,7 +2904,7 @@ std::list<std::shared_ptr<objects::Loot>> CharacterManager::CreateLootFromDrops(
         auto it = subset.find(rGroup);
         if(it != subset.end())
         {
-            it->second = (uint32_t)(it->second + stackSize);
+            it->second = it->second + (uint32_t)stackSize;
         }
         else
         {
@@ -2865,10 +2923,20 @@ std::list<std::shared_ptr<objects::Loot>> CharacterManager::CreateLootFromDrops(
         auto it = subset.find(rGroup);
         if(it != subset.end())
         {
+            uint32_t stackSize = it->second;
+
+            // Remove it from the set so its not generated twice
+            subset.erase(it);
+
             auto itemDef = definitionManager->GetItemData(
                 drop->GetItemType());
+            if(!itemDef)
+            {
+                LOG_ERROR(libcomp::String("Attempted to create a drop from"
+                    " an invalid item type: %1\n").Arg(drop->GetItemType()));
+                continue;
+            }
 
-            uint32_t stackSize = it->second;
             uint16_t maxStackSize = itemDef->GetPossession()->GetStackSize();
             uint16_t stackCount = (uint8_t)ceill((double)stackSize /
                 (double)maxStackSize);
@@ -2885,9 +2953,6 @@ std::list<std::shared_ptr<objects::Loot>> CharacterManager::CreateLootFromDrops(
                 loot->SetCooldownRestrict(rGroup);
                 lootItems.push_back(loot);
             }
-
-            // Remove it from the set so its not generated twice
-            subset.erase(it);
         }
     }
 
@@ -4707,8 +4772,25 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
                 familiarityGain = familiarityGain +
                     (int32_t)(lvl * fTypeMultiplier[fType]);
 
-                ePoints = ePoints + (100 - (int32_t)(
-                    (cState->GetLevel() - lvl) / 10) * 20);
+                // Psychology raises by different amounts based on character
+                // and demon level difference
+                int8_t delta = (int8_t)((cState->GetLevel() - lvl) / 10);
+                if(delta < 0)
+                {
+                    delta = 0;
+                }
+
+                // Calculation based on difference uses two formulas based
+                // on data gathered from JP
+                if(delta < 5)
+                {
+                    ePoints = ePoints + (int32_t)(10000 - (delta * 2000));
+                }
+                else
+                {
+                    ePoints = ePoints + (int32_t)(floor(10.f -
+                        ((float)delta - 5.f) * 2.1f) * 100.f);
+                }
             }
 
             if(familiarityGain > 0)
@@ -6837,7 +6919,8 @@ bool CharacterManager::DigitalizeStart(const std::shared_ptr<
     if(!dgZone)
     {
         // Determine duration (in milliseconds)
-        time = (uint32_t)(dgAbility == 2 ? 360000 : 180000);
+        auto devilData = definitionManager->GetDevilData(demon->GetType());
+        time = (uint32_t)(IsMitamaDemon(devilData) ? 360000 : 180000);
         time += (uint32_t)(dgState->GetTimeExtension() * 1000);
 
         double adjust = 1.0 + (server->GetTokuseiManager()->GetAspectSum(
@@ -6988,12 +7071,12 @@ void CharacterManager::CalculateCharacterBaseStats(const std::shared_ptr<objects
 
     cs->SetMaxHP(stats[CorrectTbl::HP_MAX]);
     cs->SetMaxMP(stats[CorrectTbl::MP_MAX]);
-    cs->SetCLSR(stats[CorrectTbl::CLSR]);
-    cs->SetLNGR(stats[CorrectTbl::LNGR]);
-    cs->SetSPELL(stats[CorrectTbl::SPELL]);
-    cs->SetSUPPORT(stats[CorrectTbl::SUPPORT]);
-    cs->SetPDEF(stats[CorrectTbl::PDEF]);
-    cs->SetMDEF(stats[CorrectTbl::MDEF]);
+    cs->SetCLSR((int16_t)stats[CorrectTbl::CLSR]);
+    cs->SetLNGR((int16_t)stats[CorrectTbl::LNGR]);
+    cs->SetSPELL((int16_t)stats[CorrectTbl::SPELL]);
+    cs->SetSUPPORT((int16_t)stats[CorrectTbl::SUPPORT]);
+    cs->SetPDEF((int16_t)stats[CorrectTbl::PDEF]);
+    cs->SetMDEF((int16_t)stats[CorrectTbl::MDEF]);
 }
 
 void CharacterManager::CalculateDemonBaseStats(
@@ -7026,12 +7109,12 @@ void CharacterManager::CalculateDemonBaseStats(
     }
 
     // Apply core stats
-    ds->SetSTR(stats[CorrectTbl::STR]);
-    ds->SetMAGIC(stats[CorrectTbl::MAGIC]);
-    ds->SetVIT(stats[CorrectTbl::VIT]);
-    ds->SetINTEL(stats[CorrectTbl::INT]);
-    ds->SetSPEED(stats[CorrectTbl::SPEED]);
-    ds->SetLUCK(stats[CorrectTbl::LUCK]);
+    ds->SetSTR((int16_t)stats[CorrectTbl::STR]);
+    ds->SetMAGIC((int16_t)stats[CorrectTbl::MAGIC]);
+    ds->SetVIT((int16_t)stats[CorrectTbl::VIT]);
+    ds->SetINTEL((int16_t)stats[CorrectTbl::INT]);
+    ds->SetSPEED((int16_t)stats[CorrectTbl::SPEED]);
+    ds->SetLUCK((int16_t)stats[CorrectTbl::LUCK]);
 
     if(demon)
     {
@@ -7048,12 +7131,12 @@ void CharacterManager::CalculateDemonBaseStats(
 
     ds->SetMaxHP(stats[CorrectTbl::HP_MAX]);
     ds->SetMaxMP(stats[CorrectTbl::MP_MAX]);
-    ds->SetCLSR(stats[CorrectTbl::CLSR]);
-    ds->SetLNGR(stats[CorrectTbl::LNGR]);
-    ds->SetSPELL(stats[CorrectTbl::SPELL]);
-    ds->SetSUPPORT(stats[CorrectTbl::SUPPORT]);
-    ds->SetPDEF(stats[CorrectTbl::PDEF]);
-    ds->SetMDEF(stats[CorrectTbl::MDEF]);
+    ds->SetCLSR((int16_t)stats[CorrectTbl::CLSR]);
+    ds->SetLNGR((int16_t)stats[CorrectTbl::LNGR]);
+    ds->SetSPELL((int16_t)stats[CorrectTbl::SPELL]);
+    ds->SetSUPPORT((int16_t)stats[CorrectTbl::SUPPORT]);
+    ds->SetPDEF((int16_t)stats[CorrectTbl::PDEF]);
+    ds->SetMDEF((int16_t)stats[CorrectTbl::MDEF]);
 
     if(setHPMP)
     {
@@ -7062,10 +7145,10 @@ void CharacterManager::CalculateDemonBaseStats(
     }
 }
 
-libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetDemonBaseStats(
+libcomp::EnumMap<CorrectTbl, int32_t> CharacterManager::GetDemonBaseStats(
     const std::shared_ptr<objects::MiDevilData>& demonData)
 {
-    libcomp::EnumMap<CorrectTbl, int16_t> stats;
+    libcomp::EnumMap<CorrectTbl, int32_t> stats;
 
     auto battleData = demonData->GetBattleData();
     for(size_t i = 0; i < 126; i++)
@@ -7077,7 +7160,7 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetDemonBaseStats(
     return stats;
  }
 
-libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetDemonBaseStats(
+libcomp::EnumMap<CorrectTbl, int32_t> CharacterManager::GetDemonBaseStats(
     const std::shared_ptr<objects::MiDevilData>& demonData,
     libcomp::DefinitionManager* definitionManager, uint8_t growthType,
     int8_t level)
@@ -7134,7 +7217,7 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetDemonBaseStats(
 }
 
 void CharacterManager::FamiliarityBoostStats(uint16_t familiarity,
-    libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    libcomp::EnumMap<CorrectTbl, int32_t>& stats,
     std::shared_ptr<objects::MiDevilLVUpRateData> levelRate)
 {
     int8_t familiarityRank = GetFamiliarityRank(familiarity);
@@ -7159,7 +7242,7 @@ void CharacterManager::FamiliarityBoostStats(uint16_t familiarity,
 }
 
 void CharacterManager::AdjustDemonBaseStats(const std::shared_ptr<
-    objects::Demon>& demon, libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    objects::Demon>& demon, libcomp::EnumMap<CorrectTbl, int32_t>& stats,
     bool baseCalc, bool readOnly)
 {
     if(!demon)
@@ -7183,45 +7266,45 @@ void CharacterManager::AdjustDemonBaseStats(const std::shared_ptr<
             switch(i)
             {
             case 0:     // Tiwaz (テイワズ)
-                stats[CorrectTbl::CLSR] = (int16_t)(
+                stats[CorrectTbl::CLSR] = (int32_t)(
                     stats[CorrectTbl::CLSR] + 4 * rBoost);
                 break;
             case 1:     // Peorth (ペオース)
-                stats[CorrectTbl::SPELL] = (int16_t)(
+                stats[CorrectTbl::SPELL] = (int32_t)(
                     stats[CorrectTbl::SPELL] + 4 * rBoost);
                 break;
             case 2:     // Eoh (エオー)
-                stats[CorrectTbl::LNGR] = (int16_t)(
+                stats[CorrectTbl::LNGR] = (int32_t)(
                     stats[CorrectTbl::LNGR] + 4 * rBoost);
                 break;
             case 3:     // Eihwaz (エイワズ)
-                stats[CorrectTbl::SUPPORT] = (int16_t)(
+                stats[CorrectTbl::SUPPORT] = (int32_t)(
                     stats[CorrectTbl::SUPPORT] + 4 * rBoost);
                 break;
             case 4:     // Uruz (ウルズ)
-                stats[CorrectTbl::CLSR] = (int16_t)(
+                stats[CorrectTbl::CLSR] = (int32_t)(
                     stats[CorrectTbl::CLSR] + 2 * rBoost);
-                stats[CorrectTbl::LNGR] = (int16_t)(
+                stats[CorrectTbl::LNGR] = (int32_t)(
                     stats[CorrectTbl::LNGR] + 2 * rBoost);
                 break;
             case 5:     // Hagalaz (ハガラズ)
-                stats[CorrectTbl::CLSR] = (int16_t)(
+                stats[CorrectTbl::CLSR] = (int32_t)(
                     stats[CorrectTbl::CLSR] + 2 * rBoost);
-                stats[CorrectTbl::SPELL] = (int16_t)(
+                stats[CorrectTbl::SPELL] = (int32_t)(
                     stats[CorrectTbl::SPELL] + 2 * rBoost);
                 break;
             case 6:     // Laguz (ラグズ)
-                stats[CorrectTbl::LNGR] = (int16_t)(
+                stats[CorrectTbl::LNGR] = (int32_t)(
                     stats[CorrectTbl::LNGR] + 2 * rBoost);
-                stats[CorrectTbl::SPELL] = (int16_t)(
+                stats[CorrectTbl::SPELL] = (int32_t)(
                     stats[CorrectTbl::SPELL] + 2 * rBoost);
                 break;
             case 7:     // Ansuz (アンサズ)
-                stats[CorrectTbl::MDEF] = (int16_t)(
+                stats[CorrectTbl::MDEF] = (int32_t)(
                     stats[CorrectTbl::MDEF] + 5 * rBoost);
                 break;
             case 8:     // Nauthiz (ナウシズ)
-                stats[CorrectTbl::PDEF] = (int16_t)(
+                stats[CorrectTbl::PDEF] = (int32_t)(
                     stats[CorrectTbl::PDEF] + 5 * rBoost);
                 break;
             case 9:     // Ingwaz (イング)
@@ -7241,24 +7324,24 @@ void CharacterManager::AdjustDemonBaseStats(const std::shared_ptr<
             case 10:    // Sigel (シーグル)
                 if(baseCalc)
                 {
-                    stats[CorrectTbl::STR] = (int16_t)(
+                    stats[CorrectTbl::STR] = (int32_t)(
                         stats[CorrectTbl::STR] + 3 * rBoost);
-                    stats[CorrectTbl::MAGIC] = (int16_t)(
+                    stats[CorrectTbl::MAGIC] = (int32_t)(
                         stats[CorrectTbl::MAGIC] + 3 * rBoost);
-                    stats[CorrectTbl::VIT] = (int16_t)(
+                    stats[CorrectTbl::VIT] = (int32_t)(
                         stats[CorrectTbl::VIT] + 3 * rBoost);
-                    stats[CorrectTbl::INT] = (int16_t)(
+                    stats[CorrectTbl::INT] = (int32_t)(
                         stats[CorrectTbl::INT] + 3 * rBoost);
-                    stats[CorrectTbl::SPEED] = (int16_t)(
+                    stats[CorrectTbl::SPEED] = (int32_t)(
                         stats[CorrectTbl::SPEED] + 3 * rBoost);
-                    stats[CorrectTbl::LUCK] = (int16_t)(
+                    stats[CorrectTbl::LUCK] = (int32_t)(
                         stats[CorrectTbl::LUCK] + 3 * rBoost);
                 }
                 break;
             case 11:    // Wyrd (ウィアド)
-                stats[CorrectTbl::HP_MAX] = (int16_t)(
+                stats[CorrectTbl::HP_MAX] = (int32_t)(
                     stats[CorrectTbl::HP_MAX] + 40 * rBoost);
-                stats[CorrectTbl::MP_MAX] = (int16_t)(
+                stats[CorrectTbl::MP_MAX] = (int32_t)(
                     stats[CorrectTbl::MP_MAX] + 10 * rBoost);
                 break;
             default:
@@ -7278,20 +7361,21 @@ void CharacterManager::AdjustDemonBaseStats(const std::shared_ptr<
             if(fVal >= 100000)
             {
                 CorrectTbl tblID = (CorrectTbl)libcomp::DEMON_FORCE_CONVERSION[i];
-                stats[tblID] = (int16_t)(stats[tblID] + fVal / 100000);
+                stats[tblID] = (int32_t)(stats[tblID] + fVal / 100000);
             }
         }
     }
 }
 
 void CharacterManager::AdjustMitamaStats(const std::shared_ptr<
-    objects::Demon>& demon, libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    objects::Demon>& demon, libcomp::EnumMap<CorrectTbl, int32_t>& stats,
     libcomp::DefinitionManager* definitionManager, uint8_t reunionMode,
     int32_t entityID, bool includeSetBonuses)
 {
     if(demon && demon->GetMitamaType() > 0)
     {
         libcomp::EnumMap<CorrectTbl, std::list<int32_t>> bonusStats;
+        libcomp::EnumMap<CorrectTbl, std::list<int32_t>> deltaStats;
 
         // Add rank bonus
         uint32_t bonusID = (uint32_t)(((demon->GetMitamaType() - 1) * 16) +
@@ -7369,6 +7453,18 @@ void CharacterManager::AdjustMitamaStats(const std::shared_ptr<
                             if(type >= 0 && val)
                             {
                                 bonusStats[(CorrectTbl)type].push_back(val);
+
+                                // For active summoned demons, base stat deltas
+                                // need to be added as bonuses if we are
+                                // gathering non-base stats
+                                if(exBonus && reunionMode == 2 &&
+                                    type <= (int32_t)CorrectTbl::LUCK)
+                                {
+                                    int32_t delta = val -
+                                        pair.second->GetBonus((size_t)(i + 1));
+                                    deltaStats[(CorrectTbl)type].push_back(
+                                        delta);
+                                }
                             }
 
                             i += 2;
@@ -7395,6 +7491,14 @@ void CharacterManager::AdjustMitamaStats(const std::shared_ptr<
             {
                 bonusStats.erase((CorrectTbl)remove);
             }
+
+            for(auto& pair : deltaStats)
+            {
+                for(int32_t val : pair.second)
+                {
+                    bonusStats[pair.first].push_back(val);
+                }
+            }
         }
 
         for(auto& pair : bonusStats)
@@ -7406,7 +7510,7 @@ void CharacterManager::AdjustMitamaStats(const std::shared_ptr<
 
             for(int32_t val : pair.second)
             {
-                stats[pair.first] = (int16_t)(stats[pair.first] + val);
+                stats[pair.first] = stats[pair.first] + val;
             }
         }
     }
@@ -7465,7 +7569,7 @@ bool CharacterManager::GetMitamaBonuses(const std::shared_ptr<
                         set->GetMitamaRequirements(mIdx);
                 }
 
-                if(active && (excludeTokusei || set->GetBonus(0) >= 0))
+                if(active && (!excludeTokusei || set->GetBonus(0) >= 0))
                 {
                     setBonuses.insert(pair.first);
                 }
@@ -7508,10 +7612,10 @@ std::set<uint32_t> CharacterManager::GetTraitSkills(
     return skillIDs;
 }
 
-libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStats(
+libcomp::EnumMap<CorrectTbl, int32_t> CharacterManager::GetCharacterBaseStats(
     const std::shared_ptr<objects::EntityStats>& cs)
 {
-    libcomp::EnumMap<CorrectTbl, int16_t> stats;
+    libcomp::EnumMap<CorrectTbl, int32_t> stats;
     for(size_t i = 0; i < 126; i++)
     {
         CorrectTbl tblID = (CorrectTbl)i;
@@ -7528,7 +7632,7 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStats(
     stats[CorrectTbl::MP_MAX] = 10;
     stats[CorrectTbl::HP_REGEN] = 1;
     stats[CorrectTbl::MP_REGEN] = 1;
-    stats[CorrectTbl::MOVE1] = (int16_t)(STAT_DEFAULT_SPEED / 2);
+    stats[CorrectTbl::MOVE1] = (int32_t)(STAT_DEFAULT_SPEED / 2);
     stats[CorrectTbl::MOVE2] = STAT_DEFAULT_SPEED;
     stats[CorrectTbl::SUMMON_SPEED] = 0;
     stats[CorrectTbl::KNOCKBACK_RESIST] = 61;
@@ -7553,61 +7657,61 @@ libcomp::EnumMap<CorrectTbl, int16_t> CharacterManager::GetCharacterBaseStats(
 }
 
 void CharacterManager::CalculateDependentStats(
-    libcomp::EnumMap<CorrectTbl, int16_t>& stats, int8_t level, bool isDemon)
+    libcomp::EnumMap<CorrectTbl, int32_t>& stats, int8_t level, bool isDemon)
 {
     /// @todo: fix: close but not quite right
-    libcomp::EnumMap<CorrectTbl, int16_t> adjusted;
+    libcomp::EnumMap<CorrectTbl, int32_t> adjusted;
     if(isDemon)
     {
         // Round up each part
-        adjusted[CorrectTbl::HP_MAX] = (int16_t)(stats[CorrectTbl::HP_MAX] +
-            (int16_t)ceill(stats[CorrectTbl::HP_MAX] * 0.03 * level) +
-            (int16_t)ceill(stats[CorrectTbl::STR] * 0.3) +
-            (int16_t)ceill(((stats[CorrectTbl::HP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::VIT]));
-        adjusted[CorrectTbl::MP_MAX] = (int16_t)(stats[CorrectTbl::MP_MAX] +
-            (int16_t)ceill(stats[CorrectTbl::MP_MAX] * 0.03 * level) +
-            (int16_t)ceill(stats[CorrectTbl::MAGIC] * 0.3) +
-            (int16_t)ceill(((stats[CorrectTbl::MP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::INT]));
+        adjusted[CorrectTbl::HP_MAX] = (int32_t)(stats[CorrectTbl::HP_MAX] +
+            (int32_t)ceill(stats[CorrectTbl::HP_MAX] * 0.03 * level) +
+            (int32_t)ceill(stats[CorrectTbl::STR] * 0.3) +
+            (int32_t)ceill(((stats[CorrectTbl::HP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::VIT]));
+        adjusted[CorrectTbl::MP_MAX] = (int32_t)(stats[CorrectTbl::MP_MAX] +
+            (int32_t)ceill(stats[CorrectTbl::MP_MAX] * 0.03 * level) +
+            (int32_t)ceill(stats[CorrectTbl::MAGIC] * 0.3) +
+            (int32_t)ceill(((stats[CorrectTbl::MP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::INT]));
 
         // Round the result, adjusting by 0.5
-        adjusted[CorrectTbl::CLSR] = (int16_t)(stats[CorrectTbl::CLSR] +
-            (int16_t)roundl((stats[CorrectTbl::STR] * 0.5) + 0.5 + (level * 0.1)));
-        adjusted[CorrectTbl::LNGR] = (int16_t)(stats[CorrectTbl::LNGR] +
-            (int16_t)roundl((stats[CorrectTbl::SPEED] * 0.5) + 0.5 + (level * 0.1)));
-        adjusted[CorrectTbl::SPELL] = (int16_t)(stats[CorrectTbl::SPELL] +
-            (int16_t)roundl((stats[CorrectTbl::MAGIC] * 0.5) + 0.5 + (level * 0.1)));
-        adjusted[CorrectTbl::SUPPORT] = (int16_t)(stats[CorrectTbl::SUPPORT] +
-            (int16_t)roundl((stats[CorrectTbl::INT] * 0.5) + 0.5 + (level * 0.1)));
-        adjusted[CorrectTbl::PDEF] = (int16_t)(stats[CorrectTbl::PDEF] +
-            (int16_t)roundl((stats[CorrectTbl::VIT] * 0.1) + 0.5 + (level * 0.1)));
-        adjusted[CorrectTbl::MDEF] = (int16_t)(stats[CorrectTbl::MDEF] +
-            (int16_t)roundl((stats[CorrectTbl::INT] * 0.1) + 0.5 + (level * 0.1)));
+        adjusted[CorrectTbl::CLSR] = (int32_t)(stats[CorrectTbl::CLSR] +
+            (int32_t)roundl((stats[CorrectTbl::STR] * 0.5) + 0.5 + (level * 0.1)));
+        adjusted[CorrectTbl::LNGR] = (int32_t)(stats[CorrectTbl::LNGR] +
+            (int32_t)roundl((stats[CorrectTbl::SPEED] * 0.5) + 0.5 + (level * 0.1)));
+        adjusted[CorrectTbl::SPELL] = (int32_t)(stats[CorrectTbl::SPELL] +
+            (int32_t)roundl((stats[CorrectTbl::MAGIC] * 0.5) + 0.5 + (level * 0.1)));
+        adjusted[CorrectTbl::SUPPORT] = (int32_t)(stats[CorrectTbl::SUPPORT] +
+            (int32_t)roundl((stats[CorrectTbl::INT] * 0.5) + 0.5 + (level * 0.1)));
+        adjusted[CorrectTbl::PDEF] = (int32_t)(stats[CorrectTbl::PDEF] +
+            (int32_t)roundl((stats[CorrectTbl::VIT] * 0.1) + 0.5 + (level * 0.1)));
+        adjusted[CorrectTbl::MDEF] = (int32_t)(stats[CorrectTbl::MDEF] +
+            (int32_t)roundl((stats[CorrectTbl::INT] * 0.1) + 0.5 + (level * 0.1)));
     }
     else
     {
         // Round each part
-        adjusted[CorrectTbl::HP_MAX] = (int16_t)(stats[CorrectTbl::HP_MAX] +
-            (int16_t)roundl(stats[CorrectTbl::HP_MAX] * 0.03 * level) +
-            (int16_t)roundl(stats[CorrectTbl::STR] * 0.3) +
-            (int16_t)roundl(((stats[CorrectTbl::HP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::VIT]));
-        adjusted[CorrectTbl::MP_MAX] = (int16_t)(stats[CorrectTbl::MP_MAX] +
-            (int16_t)roundl(stats[CorrectTbl::MP_MAX] * 0.03 * level) +
-            (int16_t)roundl(stats[CorrectTbl::MAGIC] * 0.3) +
-            (int16_t)roundl(((stats[CorrectTbl::MP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::INT]));
+        adjusted[CorrectTbl::HP_MAX] = (int32_t)(stats[CorrectTbl::HP_MAX] +
+            (int32_t)roundl(stats[CorrectTbl::HP_MAX] * 0.03 * level) +
+            (int32_t)roundl(stats[CorrectTbl::STR] * 0.3) +
+            (int32_t)roundl(((stats[CorrectTbl::HP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::VIT]));
+        adjusted[CorrectTbl::MP_MAX] = (int32_t)(stats[CorrectTbl::MP_MAX] +
+            (int32_t)roundl(stats[CorrectTbl::MP_MAX] * 0.03 * level) +
+            (int32_t)roundl(stats[CorrectTbl::MAGIC] * 0.3) +
+            (int32_t)roundl(((stats[CorrectTbl::MP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::INT]));
 
         // Round the results down
-        adjusted[CorrectTbl::CLSR] = (int16_t)(stats[CorrectTbl::CLSR] +
-            (int16_t)floorl((stats[CorrectTbl::STR] * 0.5) + (level * 0.1)));
-        adjusted[CorrectTbl::LNGR] = (int16_t)(stats[CorrectTbl::LNGR] +
-            (int16_t)floorl((stats[CorrectTbl::SPEED] * 0.5) + (level * 0.1)));
-        adjusted[CorrectTbl::SPELL] = (int16_t)(stats[CorrectTbl::SPELL] +
-            (int16_t)floorl((stats[CorrectTbl::MAGIC] * 0.5) + (level * 0.1)));
-        adjusted[CorrectTbl::SUPPORT] = (int16_t)(stats[CorrectTbl::SUPPORT] +
-            (int16_t)floorl((stats[CorrectTbl::INT] * 0.5) + (level * 0.1)));
-        adjusted[CorrectTbl::PDEF] = (int16_t)(stats[CorrectTbl::PDEF] +
-            (int16_t)floorl((stats[CorrectTbl::VIT] * 0.1) + (level * 0.1)));
-        adjusted[CorrectTbl::MDEF] = (int16_t)(stats[CorrectTbl::MDEF] +
-            (int16_t)floorl((stats[CorrectTbl::INT] * 0.1) + (level * 0.1)));
+        adjusted[CorrectTbl::CLSR] = (int32_t)(stats[CorrectTbl::CLSR] +
+            (int32_t)floorl((stats[CorrectTbl::STR] * 0.5) + (level * 0.1)));
+        adjusted[CorrectTbl::LNGR] = (int32_t)(stats[CorrectTbl::LNGR] +
+            (int32_t)floorl((stats[CorrectTbl::SPEED] * 0.5) + (level * 0.1)));
+        adjusted[CorrectTbl::SPELL] = (int32_t)(stats[CorrectTbl::SPELL] +
+            (int32_t)floorl((stats[CorrectTbl::MAGIC] * 0.5) + (level * 0.1)));
+        adjusted[CorrectTbl::SUPPORT] = (int32_t)(stats[CorrectTbl::SUPPORT] +
+            (int32_t)floorl((stats[CorrectTbl::INT] * 0.5) + (level * 0.1)));
+        adjusted[CorrectTbl::PDEF] = (int32_t)(stats[CorrectTbl::PDEF] +
+            (int32_t)floorl((stats[CorrectTbl::VIT] * 0.1) + (level * 0.1)));
+        adjusted[CorrectTbl::MDEF] = (int32_t)(stats[CorrectTbl::MDEF] +
+            (int32_t)floorl((stats[CorrectTbl::INT] * 0.1) + (level * 0.1)));
     }
 
     for(auto pair : adjusted)
@@ -7616,7 +7720,7 @@ void CharacterManager::CalculateDependentStats(
         // in a negative value should be treated as an overflow and be set to max
         if(pair.second < 0)
         {
-            stats[pair.first] = std::numeric_limits<int16_t>::max();
+            stats[pair.first] = std::numeric_limits<int32_t>::max();
         }
         else
         {
@@ -7626,16 +7730,16 @@ void CharacterManager::CalculateDependentStats(
 
     // Calculate incant/cooldown time decrease adjustments
     int32_t chantAdjust = (int32_t)(stats[CorrectTbl::CHANT_TIME] -
-        (int16_t)floor(2.5 * floor(stats[CorrectTbl::INT] * 0.1) +
+        (int32_t)floor(2.5 * floor(stats[CorrectTbl::INT] * 0.1) +
             1.5 * floor(stats[CorrectTbl::SPEED] * 0.1)));
     int32_t coolAdjust = (int32_t)(stats[CorrectTbl::COOLDOWN_TIME] -
-        (int16_t)floor(2.5 * floor(stats[CorrectTbl::VIT] * 0.1) +
+        (int32_t)floor(2.5 * floor(stats[CorrectTbl::VIT] * 0.1) +
             1.5 * floor(stats[CorrectTbl::SPEED] * 0.1)));
-    stats[CorrectTbl::CHANT_TIME] = (int16_t)(chantAdjust < 0 ? 0 : chantAdjust);
-    stats[CorrectTbl::COOLDOWN_TIME] = (int16_t)(coolAdjust < 5 ? 5 : coolAdjust);
+    stats[CorrectTbl::CHANT_TIME] = (int32_t)(chantAdjust < 0 ? 0 : chantAdjust);
+    stats[CorrectTbl::COOLDOWN_TIME] = (int32_t)(coolAdjust < 5 ? 5 : coolAdjust);
 }
 
-void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
     bool limitMax)
 {
     static libcomp::EnumMap<CorrectTbl, int16_t> minStats =
@@ -7678,10 +7782,28 @@ void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& s
             { CorrectTbl::LUCK, 999 }
         };
 
+    // All non-HP/MP max stats are limited to 16-bit integer min/max
+    for(auto& pair : stats)
+    {
+        if(pair.second > (int32_t)std::numeric_limits<int16_t>::max())
+        {
+            if(pair.first != CorrectTbl::HP_MAX &&
+                pair.first != CorrectTbl::MP_MAX)
+            {
+                pair.second = std::numeric_limits<int16_t>::max();
+            }
+        }
+        else if(pair.second <
+            (int32_t)std::numeric_limits<int16_t>::min())
+        {
+            pair.second = std::numeric_limits<int16_t>::min();
+        }
+    }
+
     for(auto& pair : minStats)
     {
         auto it = stats.find(pair.first);
-        if(it != stats.end() && it->second < pair.second)
+        if(it != stats.end() && it->second < (int32_t)pair.second)
         {
             stats[pair.first] = pair.second;
         }
@@ -7692,7 +7814,7 @@ void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& s
         for(auto& pair : maxStats)
         {
             auto it = stats.find(pair.first);
-            if(it != stats.end() && it->second > pair.second)
+            if(it != stats.end() && it->second > (int32_t)pair.second)
             {
                 stats[pair.first] = pair.second;
             }
@@ -7931,7 +8053,7 @@ void CharacterManager::GetItemDetailPacketData(libcomp::Packet& p,
 void CharacterManager::GetEntityStatsPacketData(libcomp::Packet& p,
     const std::shared_ptr<objects::EntityStats>& coreStats,
     const std::shared_ptr<ActiveEntityState>& state, uint8_t format,
-    libcomp::EnumMap<CorrectTbl, int16_t> coreBoosts)
+    libcomp::EnumMap<CorrectTbl, int32_t> coreBoosts)
 {
     auto baseOnly = state == nullptr;
 
@@ -8117,19 +8239,19 @@ void CharacterManager::DeleteDemon(const std::shared_ptr<objects::Demon>& demon,
     }
 }
 
-void CharacterManager::BoostStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+void CharacterManager::BoostStats(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
     const std::shared_ptr<objects::MiDevilLVUpData>& data, int boostLevel)
 {
-    stats[CorrectTbl::STR] = (int16_t)(stats[CorrectTbl::STR] +
-        (int16_t)(data->GetSTR() * boostLevel));
-    stats[CorrectTbl::MAGIC] = (int16_t)(stats[CorrectTbl::MAGIC] +
-        (int16_t)(data->GetMAGIC() * boostLevel));
-    stats[CorrectTbl::VIT] = (int16_t)(stats[CorrectTbl::VIT] +
-        (int16_t)(data->GetVIT() * boostLevel));
-    stats[CorrectTbl::INT] = (int16_t)(stats[CorrectTbl::INT] +
-        (int16_t)(data->GetINTEL() * boostLevel));
-    stats[CorrectTbl::SPEED] = (int16_t)(stats[CorrectTbl::SPEED] +
-        (int16_t)(data->GetSPEED() * boostLevel));
-    stats[CorrectTbl::LUCK] = (int16_t)(stats[CorrectTbl::LUCK] +
-        (int16_t)(data->GetLUCK() * boostLevel));
+    stats[CorrectTbl::STR] = (int32_t)(stats[CorrectTbl::STR] +
+        (int32_t)(data->GetSTR() * boostLevel));
+    stats[CorrectTbl::MAGIC] = (int32_t)(stats[CorrectTbl::MAGIC] +
+        (int32_t)(data->GetMAGIC() * boostLevel));
+    stats[CorrectTbl::VIT] = (int32_t)(stats[CorrectTbl::VIT] +
+        (int32_t)(data->GetVIT() * boostLevel));
+    stats[CorrectTbl::INT] = (int32_t)(stats[CorrectTbl::INT] +
+        (int32_t)(data->GetINTEL() * boostLevel));
+    stats[CorrectTbl::SPEED] = (int32_t)(stats[CorrectTbl::SPEED] +
+        (int32_t)(data->GetSPEED() * boostLevel));
+    stats[CorrectTbl::LUCK] = (int32_t)(stats[CorrectTbl::LUCK] +
+        (int32_t)(data->GetLUCK() * boostLevel));
 }

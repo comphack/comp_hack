@@ -85,6 +85,9 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
     // Lookup the entity to gather actions.
     std::shared_ptr<objects::EntityStateObject> objState;
     std::shared_ptr<objects::ServerObject> objDef;
+
+    /// @todo: Implement proper hidden checks (per client) if distance
+    /// based entity showing is added
     bool isHidden = false;
 
     auto npc = zone->GetNPC(entityID);
@@ -92,9 +95,6 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         objState = npc;
         objDef = npc->GetEntity();
-
-        // Anything other than 1 hides NPCs
-        isHidden = objDef->GetState() != 1;
     }
     else
     {
@@ -104,9 +104,6 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             objState = obj;
             objDef = obj->GetEntity();
-
-            // 255 used for shared "hidden" state for objects
-            isHidden = objDef->GetState() == 255;
         }
     }
 

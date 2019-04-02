@@ -848,7 +848,7 @@ protected:
      *  values will be updated immediately.
      */
     void AdjustStats(const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
-        libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        libcomp::EnumMap<CorrectTbl, int32_t>& stats,
         std::shared_ptr<objects::CalculatedEntityState> calcState, bool baseMode);
 
     /**
@@ -861,7 +861,7 @@ protected:
      * @param adjustments List of adjustments to the correct table values supplied
      *  by equipment
      */
-    void UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    void UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
         std::shared_ptr<objects::CalculatedEntityState> calcState,
         const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments = {});
 
@@ -903,7 +903,7 @@ protected:
      *  the world (for party members etc), 0 otherwise
      */
     uint8_t RecalculateDemonStats(libcomp::DefinitionManager* definitionManager,
-        libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        libcomp::EnumMap<CorrectTbl, int32_t>& stats,
         std::shared_ptr<objects::CalculatedEntityState> calcState);
 
     /**
@@ -960,29 +960,25 @@ protected:
      *  entity
      * @param dependentBase If true, only dependent stat base values will be
      *  checked and set. If false, final stats will be checked and set.
-     * @param extraHP Extra HP amount to add to the base MaxHP. Only applies
-     *  when not applying dependent base stats. Used by enemies.
      * @return 1 if the calculation resulted in a change to the stats that should
      *  be sent to the client, 2 if one of the changes should be communicated to
      *  the world (for party members etc), 0 if no change resulted from the
      *  recalculation
      */
-    uint8_t CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
-        bool dependentBase, int32_t extraHP = 0);
+    uint8_t CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
+        bool dependentBase);
 
     /**
      * Compare and set the entity's current stats and also keep track of if
      * a change occurred.
      * @param stats Map of correct table IDs to calculated stats to set on the
      *  entity
-     * @param extraHP Extra HP amount to add to the base MaxHP. Used by enemies.
      * @return 1 if the calculation resulted in a change to the stats that should
      *  be sent to the client, 2 if one of the changes should be communicated to
      *  the world (for party members etc), 0 if no change resulted from the
      *  recalculation
      */
-    uint8_t CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
-        int32_t extraHP = 0);
+    uint8_t CompareAndResetStats(libcomp::EnumMap<CorrectTbl, int32_t>& stats);
 
     /// Map of active status effects by effect type ID
     std::unordered_map<uint32_t,

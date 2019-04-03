@@ -2659,6 +2659,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             effectiveTargets.push_back(effectiveSource);
             break;
         case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS:
+        case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS2:
+            // Difference between type 1 and 2 is unknown
             if(!initialHitReflect)
             {
                 effectiveTargets = zone->GetActiveEntitiesInRadius(
@@ -2800,7 +2802,6 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 }
             }
             break;
-        case objects::MiEffectiveRangeData::AreaType_t::UNKNOWN_9:
         default:
             LOG_ERROR(libcomp::String("Unsupported skill area type"
                 " encountered: %1\n").Arg((uint8_t)skillRange->GetAreaType()));

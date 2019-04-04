@@ -939,6 +939,27 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
         }
     }
 
+    if(newZoneID == 0)
+    {
+        // Trigger the zone-out actions before leaving if not going
+        // somewhere else
+        std::shared_ptr<Zone> zone;
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            auto iter = mEntityMap.find(worldCID);
+            if(iter != mEntityMap.end())
+            {
+                zone = mZones[iter->second];
+            }
+        }
+
+        if(zone)
+        {
+            TriggerZoneActions(zone, { cState, dState },
+                ZoneTrigger_t::ON_ZONE_OUT, client);
+        }
+    }
+
     std::shared_ptr<Zone> zone = nullptr;
     bool instanceLeft = false;
     bool instanceRemoved = false;
@@ -1126,8 +1147,6 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     {
         // Not entering another zone, recalculate tokusei for
         // remaining party member effects
-        TriggerZoneActions(zone, { cState, dState },
-            ZoneTrigger_t::ON_ZONE_OUT, client);
         server->GetTokuseiManager()->RecalculateParty(
             state->GetParty());
 
@@ -7933,10 +7952,9 @@ void ZoneManager::SendAccessMessage(
     {
         int32_t messageID = joined ? instDef->GetJoinMessageID()
             : instDef->GetCreateMessageID();
-        if(messageID)
+        auto createEventID = !joined ? instDef->GetCreateEventID() : "";
+        if(messageID || !createEventID.IsEmpty())
         {
-            auto actionManager = server->GetActionManager();
-
             std::list<std::shared_ptr<ChannelClientConnection>> clients;
             if(client)
             {
@@ -7948,9 +7966,29 @@ void ZoneManager::SendAccessMessage(
                     access->GetAccessCIDs(), true);
             }
 
-            for(auto c : clients)
+            if(messageID)
             {
-                actionManager->SendStageEffect(c, messageID, 0, true);
+                auto actionManager = server->GetActionManager();
+                for(auto c : clients)
+                {
+                    actionManager->SendStageEffect(c, messageID, 0, true);
+                }
+            }
+
+            if(!createEventID.IsEmpty())
+            {
+                auto eventManager = server->GetEventManager();
+                for(auto c : clients)
+                {
+                    EventOptions options;
+                    options.AutoOnly = true;
+                    options.NoInterrupt = true;
+
+                    auto state = client->GetClientState();
+                    auto entityID = state->GetCharacterState()->GetEntityID();
+                    eventManager->HandleEvent(client, createEventID, entityID,
+                        nullptr, options);
+                }
             }
         }
     }

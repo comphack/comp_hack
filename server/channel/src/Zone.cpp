@@ -392,20 +392,25 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
                     auto slg = GetDefinition()->GetSpawnLocationGroups(slgID);
                     if(slg->GetRespawnTime() > 0.f)
                     {
-                        // Update the respawn time for the group, exit if found
+                        // Update the respawn time for the group, skip if found
+                        bool queueRespawn = true;
                         for(auto rPair : mRespawnTimes)
                         {
                             if(rPair.second.find(slgID) != rPair.second.end())
                             {
-                                return;
+                                queueRespawn = false;
+                                break;
                             }
                         }
 
-                        uint64_t rTime = ChannelServer::GetServerTime()
-                            + (uint64_t)((double)slg->GetRespawnTime() *
-                                1000000.0 + (double)(spawnDelay * 1000));
+                        if(queueRespawn)
+                        {
+                            uint64_t rTime = ChannelServer::GetServerTime()
+                                + (uint64_t)((double)slg->GetRespawnTime() *
+                                    1000000.0 + (double)(spawnDelay * 1000));
 
-                        mRespawnTimes[rTime].insert(slgID);
+                            mRespawnTimes[rTime].insert(slgID);
+                        }
                     }
 
                     // Set the Diaspora mini-boss flag when applicable

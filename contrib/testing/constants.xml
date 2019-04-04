@@ -1384,11 +1384,11 @@
     <constant name="TEAM_STATUS_COOLDOWN">
         <!-- Format: team type => status effect ID -->
         <pair>
-            <key>2</key>
+            <key>3</key>
             <value>2034</value>
         </pair>
         <pair>
-            <key>3</key>
+            <key>4</key>
             <value>2038</value>
         </pair>
     </constant>

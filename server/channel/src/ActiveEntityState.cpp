@@ -89,6 +89,7 @@ namespace libcomp
                 objects::ActiveEntityStateObject,
                 Sqrat::NoConstructor<ActiveEntityState>> binding(mVM, "ActiveEntityState");
             binding
+                .Func("GetCoreStats", &ActiveEntityState::GetCoreStats)
                 .Func("GetZone", &ActiveEntityState::GetZone)
                 .Func("Rotate", &ActiveEntityState::Rotate)
                 .Func("Stop", &ActiveEntityState::Stop)

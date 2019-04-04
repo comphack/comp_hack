@@ -106,7 +106,8 @@ namespace libcomp
                 .Func("ActionCooldownActive",
                     &CharacterState::ActionCooldownActive)
                 .Func("RefreshActionCooldowns",
-                    &CharacterState::RefreshActionCooldowns);
+                    &CharacterState::RefreshActionCooldowns)
+                .StaticFunc("Cast", &CharacterState::Cast);
 
             Bind<CharacterState>("CharacterState", binding);
         }
@@ -1080,6 +1081,12 @@ int8_t CharacterState::GetGender()
 {
     auto entity = GetEntity();
     return entity ? (int8_t)entity->GetGender() : 2;
+}
+
+std::shared_ptr<CharacterState> CharacterState::Cast(
+    const std::shared_ptr<EntityStateObject>& obj)
+{
+    return std::dynamic_pointer_cast<CharacterState>(obj);
 }
 
 void CharacterState::AdjustFuseBonus(libcomp::DefinitionManager* definitionManager,

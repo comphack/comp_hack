@@ -83,6 +83,7 @@ namespace libcomp
         {
             Using<ActiveEntityState>();
             Using<Zone>();
+            Using<libcomp::Randomizer>();
 
             Sqrat::Class<AIManager,
                 Sqrat::NoConstructor<AIManager>> binding(mVM, "AIManager");
@@ -214,7 +215,10 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
                 return false;
             }
 
-            sPreparedScripts[finalAIType.C()] = aiEngine;
+            if(!script->Instantiated)
+            {
+                sPreparedScripts[finalAIType.C()] = aiEngine;
+            }
         }
         else
         {

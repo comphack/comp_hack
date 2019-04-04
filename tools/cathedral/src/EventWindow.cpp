@@ -802,7 +802,7 @@ void EventWindow::Refresh(bool reselectEvent)
 
     if(reselectEvent && current)
     {
-        GoToEvent(current->FileEventID);
+        GoToEvent(current->Event->GetID());
     }
 
     if(!ui->treeSearch->text().isEmpty())

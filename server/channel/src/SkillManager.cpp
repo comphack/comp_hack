@@ -3727,10 +3727,18 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         (skill.Definition->GetDamage()->GetHitStopTime() * 1000);
     uint64_t selfDelay = 0;
 
-    // Make sure the hit stop time isn't somehow before now
+    // Knockback time is a fixed 2s (hitstun can extend delay)
+    uint64_t kbTime = activated->GetExecutionTime() + 2000000;
+
+    // Make sure the hit stop times aren't somehow before now
     if(hitStopTime < now)
     {
         hitStopTime = now;
+    }
+
+    if(kbTime < now)
+    {
+        kbTime = now;
     }
 
     if(knockbackExists && !doRush && activated->GetLockOutTime() &&
@@ -3740,7 +3748,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         // the source entity but only if they would still be stopped by
         // the lockout time
         GetSelfTarget(source, skill.Targets, true);
-        selfDelay = hitStopTime;
+        selfDelay = kbTime;
     }
 
     auto zConnections = zone->GetConnectionList();
@@ -3829,7 +3837,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                         // Away from the effective target (ex: AOE explosion)
                         kbPoint = zoneManager->MoveRelative(target.EntityState,
                             effectiveTarget->GetCurrentX(), effectiveTarget->GetCurrentY(),
-                            kbDistance, true, now, hitStopTime);
+                            kbDistance, true, now, kbTime);
                     }
                     break;
                 case 4:
@@ -3842,7 +3850,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
                         target.EntityState->SetDestinationX(effectiveTarget->GetCurrentX());
                         target.EntityState->SetDestinationY(effectiveTarget->GetCurrentY());
-                        target.EntityState->SetDestinationTicks(hitStopTime);
+                        target.EntityState->SetDestinationTicks(kbTime);
                     }
                     break;
                 case 5:
@@ -3854,7 +3862,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
                         target.EntityState->SetDestinationX(source->GetCurrentX());
                         target.EntityState->SetDestinationY(source->GetCurrentY());
-                        target.EntityState->SetDestinationTicks(hitStopTime);
+                        target.EntityState->SetDestinationTicks(kbTime);
                     }
                     break;
                 case 0:
@@ -3863,11 +3871,11 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     // Default if not specified, directly away from source
                     kbPoint = zoneManager->MoveRelative(target.EntityState, effectiveSource
                         ->GetCurrentX(), effectiveSource->GetCurrentY(), kbDistance, true, now,
-                        hitStopTime);
+                        kbTime);
                     break;
                 }
 
-                target.EntityState->SetStatusTimes(STATUS_KNOCKBACK, hitStopTime);
+                target.EntityState->SetStatusTimes(STATUS_KNOCKBACK, kbTime);
 
                 p.WriteFloat(kbPoint.x);
                 p.WriteFloat(kbPoint.y);
@@ -3911,6 +3919,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
             else if(target.CanHitstun)
             {
+                uint64_t effectiveHitStop = knockedBack && kbTime > hitStopTime
+                    ? kbTime : hitStopTime;
                 if(target.Damage1 || defended)
                 {
                     // Damage dealt (or defended), determine stun time
@@ -3919,23 +3929,23 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     {
                         // Apply extended hit stop and determine what else may be needed
                         hitTimings[0] = knockedBack ? now : completeTime;
-                        hitTimings[1] = hitStopTime;
+                        hitTimings[1] = effectiveHitStop;
 
                         if(!target.AilmentDamageType)
                         {
                             // End after hit stop
-                            hitTimings[2] = hitStopTime;
+                            hitTimings[2] = effectiveHitStop;
                         }
                         else
                         {
                             // Apply ailment damage after hit stop
-                            hitTimings[2] = hitStopTime + target.AilmentDamageTime;
+                            hitTimings[2] = effectiveHitStop + target.AilmentDamageTime;
                         }
                     }
                     else
                     {
                         // Normal hit stop
-                        hitTimings[2] = hitStopTime;
+                        hitTimings[2] = effectiveHitStop;
                     }
 
                     target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
@@ -3945,7 +3955,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 {
                     // Normal hit stop time to finish knockback
                     hitTimings[0] = now;
-                    hitTimings[2] = hitTimings[1] = hitStopTime;
+                    hitTimings[2] = hitTimings[1] = effectiveHitStop;
 
                     target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
                         hitTimings[2]);
@@ -3953,7 +3963,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 else if(target.AilmentDamageType != 0)
                 {
                     // Only apply ailment stun time
-                    hitTimings[2] = hitStopTime + target.AilmentDamageTime;
+                    hitTimings[2] = effectiveHitStop + target.AilmentDamageTime;
 
                     target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
                         hitTimings[2]);

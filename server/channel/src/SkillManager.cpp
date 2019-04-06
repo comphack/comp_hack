@@ -404,11 +404,14 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     auto castBasic = cast->GetBasic();
     uint32_t defaultChargeTime = castBasic->GetChargeTime();
 
+    // Auto-use activation skills ALWAYS ignore charge time for AI
+    // despite this making them look weird from player entities when
+    // a charge time is still on the data. Having a charge time on
+    // these is incredibly rare and probably not intentional.
     bool autoUse = activationType == 6;
-    bool instantExecution = autoUse && !defaultChargeTime;
 
     auto activated = source->GetActivatedAbility();
-    if(activated && !instantExecution)
+    if(activated && !autoUse)
     {
         // Cancel existing first unless it's still pending execution
         if(activated->GetErrorCode() == -1 &&
@@ -422,18 +425,33 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         CancelSkill(source, activated->GetActivationID());
     }
 
-    if(autoUse && def->GetTarget()->GetType() ==
-        objects::MiTargetData::Type_t::PARTNER)
+    if(autoUse)
     {
-        // If the target type is the partner, reset it
-        targetObjectID = -1;
-        if(client)
+        // Reset default target types as they are typically not provided
+        switch(def->GetTarget()->GetType())
         {
-            auto dState = client->GetClientState()->GetDemonState();
-            if(dState->Ready())
+        case objects::MiTargetData::Type_t::ALLY:
+            if(targetObjectID <= 0)
             {
-                targetObjectID = (int64_t)dState->GetEntityID();
+                targetObjectID = source->GetEntityID();
             }
+            break;
+        case objects::MiTargetData::Type_t::PARTNER:
+            {
+                targetObjectID = -1;
+                if(client)
+                {
+                    auto dState = client->GetClientState()
+                        ->GetDemonState();
+                    if(dState->Ready())
+                    {
+                        targetObjectID = (int64_t)dState->GetEntityID();
+                    }
+                }
+            }
+            break;
+        default:
+            break;
         }
     }
 
@@ -445,7 +463,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     activated->SetActivationTargetType(targetType);
     activated->SetActivationTime(now);
 
-    if(instantExecution)
+    if(autoUse)
     {
         // Instant activations are technically not activated
         activated->SetActivationID(-1);
@@ -479,12 +497,12 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
     uint64_t chargedTime = 0;
 
-    bool executeNow = instantExecution || (defaultChargeTime == 0 &&
+    bool executeNow = autoUse || (defaultChargeTime == 0 &&
         (activationType == 3 || activationType == 4));
 
-    // If the skill is not an instantExecution, activate it and calculate
+    // If the skill is not an autoUse, activate it and calculate
     // movement speed
-    if(!instantExecution)
+    if(!autoUse)
     {
         // If the skill needs to charge, see if any time adjustments exist
         uint32_t chargeTime = defaultChargeTime;
@@ -3461,17 +3479,19 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         // If we haven't already set hitstun, check if we can now
         if(!target.CanHitstun)
         {
+            bool nonDamaging = battleDamage->GetFormula()
+                == objects::MiBattleDamageData::Formula_t::NONE ||
+                battleDamage->GetModifier1() == 0;
             bool calcHitstun = false;
             if(hpAdjustedSum < 0)
             {
                 calcHitstun = true;
             }
-            else if(!target.IndirectTarget && battleDamage->GetFormula()
-                == objects::MiBattleDamageData::Formula_t::NONE &&
+            else if(!target.IndirectTarget && nonDamaging &&
                 !target.HitAvoided && !target.HitAbsorb &&
                 skill.Definition->GetDamage()->GetHitStopTime())
             {
-                // If neither damage nor healing applies and the target is
+                // If the skill is non-damaging and the target is
                 // "hit", hitstun applies when set
                 calcHitstun = true;
             }

@@ -2979,16 +2979,21 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
     const std::shared_ptr<Zone>& zone, uint32_t demonID, uint32_t spawnID,
     uint32_t spotID, float x, float y, float rot)
 {
-    if(!zone || !demonID)
-    {
-        return nullptr;
-    }
-
     auto spawn = zone->GetDefinition()->GetSpawns(spawnID);
     if(!spawn && spawnID)
     {
         LOG_ERROR(libcomp::String("Failed to load spawn ID %1 in zone %2\n")
             .Arg(spawnID).Arg(zone->GetDefinitionID()));
+    }
+    else if(spawn)
+    {
+        // Ignore the demon ID if the spawn is found as these shouldn't differ
+        demonID = spawn->GetEnemyType();
+    }
+
+    if(!zone || !demonID)
+    {
+        return nullptr;
     }
 
     if(spotID)

@@ -41,6 +41,7 @@ IF(WIN32)
         src/LanguageSelection.cpp
         src/Options.cpp
         src/Updater.cpp
+        src/UpdaterWebEngineView.cpp
         src/main.cpp
     )
 
@@ -49,6 +50,7 @@ IF(WIN32)
         src/LanguageSelection.h
         src/Options.h
         src/Updater.h
+        src/UpdaterWebEngineView.h
     )
 
     SET(${PROJECT_NAME}_UIS

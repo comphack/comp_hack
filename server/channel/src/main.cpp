@@ -43,6 +43,8 @@ int ApplicationMain(int argc, const char *argv[])
 int main(int argc, const char *argv[])
 #endif // defined(_WIN32) && defined(WIN32_SERV)
 {
+    libcomp::Exception::RegisterSignalHandler();
+
     libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
     libcomp::Config::LogVersion("COMP_hack Channel Server");

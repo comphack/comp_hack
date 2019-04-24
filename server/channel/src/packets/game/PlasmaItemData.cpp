@@ -90,8 +90,13 @@ bool Parsers::PlasmaItemData::Parse(libcomp::ManagerPacket *pPacketManager,
                 loot = std::make_shared<objects::LootBox>();
                 loot->SetType(objects::LootBox::Type_t::PLASMA);
 
+                float maccaRate = (float)cState->GetCorrectValue(
+                    CorrectTbl::RATE_MACCA) / 100.f;
+                float magRate = (float)cState->GetCorrectValue(
+                    CorrectTbl::RATE_MAG) / 100.f;
+
                 characterManager->CreateLootFromDrops(loot, dropSet->GetDrops(),
-                    cState->GetLUCK(), true);
+                    cState->GetLUCK(), true, maccaRate, magRate);
 
                 success = pState->SetLoot((uint32_t)pointID, state->GetWorldCID(),
                     loot);

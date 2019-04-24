@@ -83,6 +83,7 @@ namespace libcomp
         {
             Using<ActiveEntityState>();
             Using<Zone>();
+            Using<libcomp::Randomizer>();
 
             Sqrat::Class<AIManager,
                 Sqrat::NoConstructor<AIManager>> binding(mVM, "AIManager");
@@ -91,6 +92,7 @@ namespace libcomp
                 .Func("QueueScriptCommand", &AIManager::QueueScriptCommand)
                 .Func("QueueUseSkillCommand", &AIManager::QueueUseSkillCommand)
                 .Func("QueueWaitCommand", &AIManager::QueueWaitCommand)
+                .Func("StartEvent", &AIManager::StartEvent)
                 .Func("UseDiasporaQuake", &AIManager::UseDiasporaQuake)
                 .Func("Chase", &AIManager::Chase)
                 .Func("Circle", &AIManager::Circle)
@@ -213,7 +215,10 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
                 return false;
             }
 
-            sPreparedScripts[finalAIType.C()] = aiEngine;
+            if(!script->Instantiated)
+            {
+                sPreparedScripts[finalAIType.C()] = aiEngine;
+            }
         }
         else
         {

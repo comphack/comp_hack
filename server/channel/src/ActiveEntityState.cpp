@@ -89,6 +89,7 @@ namespace libcomp
                 objects::ActiveEntityStateObject,
                 Sqrat::NoConstructor<ActiveEntityState>> binding(mVM, "ActiveEntityState");
             binding
+                .Func("GetCoreStats", &ActiveEntityState::GetCoreStats)
                 .Func("GetZone", &ActiveEntityState::GetZone)
                 .Func("Rotate", &ActiveEntityState::Rotate)
                 .Func("Stop", &ActiveEntityState::Stop)
@@ -2513,7 +2514,7 @@ const std::set<CorrectTbl> FORCE_NUMERIC =
 
 void ActiveEntityState::AdjustStats(
     const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
-    libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    libcomp::EnumMap<CorrectTbl, int32_t>& stats,
     std::shared_ptr<objects::CalculatedEntityState> calcState, bool baseMode)
 {
     std::set<CorrectTbl> removed;
@@ -2533,6 +2534,7 @@ void ActiveEntityState::AdjustStats(
         // If a value is reduced to 0%, leave it
         if(removed.find(tblID) != removed.end()) continue;
 
+        bool calcAdjust = false;
         uint8_t effectiveType = ct->GetType();
         int32_t effectiveValue = (int32_t)ct->GetValue();
         if(effectiveType >= 100)
@@ -2547,6 +2549,8 @@ void ActiveEntityState::AdjustStats(
                 effectiveValue = (int32_t)TokuseiManager::CalculateAttributeValue(
                     this, tct->GetValue(), effectiveValue, tct->GetAttributes());
             }
+
+            calcAdjust = true;
         }
 
         if(effectiveType == 1 && FORCE_NUMERIC.find(tblID) != FORCE_NUMERIC.end())
@@ -2616,12 +2620,16 @@ void ActiveEntityState::AdjustStats(
                 // or an increase/decrease by a set amount
                 if(effectiveValue == 0)
                 {
-                    removed.insert(tblID);
-                    stats[tblID] = 0;
-                    numericSums.erase(tblID);
-                    percentSums[0].erase(tblID);
-                    percentSums[1].erase(tblID);
-                    maxPercents.erase(tblID);
+                    // Ignore calculated values that set to 0%
+                    if(!calcAdjust)
+                    {
+                        removed.insert(tblID);
+                        stats[tblID] = 0;
+                        numericSums.erase(tblID);
+                        percentSums[0].erase(tblID);
+                        percentSums[1].erase(tblID);
+                        maxPercents.erase(tblID);
+                    }
                 }
                 else
                 {
@@ -2683,20 +2691,7 @@ void ActiveEntityState::AdjustStats(
                 auto it = numericSums.find(tblID);
                 if(it != numericSums.end())
                 {
-                    int32_t adjusted = (int32_t)(stats[tblID] + it->second);
-
-                    // Prevent overflow
-                    if(adjusted > (int32_t)std::numeric_limits<int16_t>::max())
-                    {
-                        adjusted = std::numeric_limits<int16_t>::max();
-                    }
-                    else if(adjusted <
-                        (int32_t)std::numeric_limits<int16_t>::min())
-                    {
-                        adjusted = std::numeric_limits<int16_t>::min();
-                    }
-
-                    stats[tblID] = (int16_t)adjusted;
+                    stats[tblID] = (int32_t)(stats[tblID] + it->second);
                 }
 
                 switch(tblID)
@@ -2705,22 +2700,30 @@ void ActiveEntityState::AdjustStats(
                     // Determine base HP regen (if not 0%)
                     if(removed.find(CorrectTbl::HP_REGEN) == removed.end())
                     {
-                        int16_t hpMax = stats[CorrectTbl::HP_MAX];
-                        int16_t vit = stats[CorrectTbl::VIT];
-                        stats[CorrectTbl::HP_REGEN] = (int16_t)(
+                        int32_t hpMax = stats[CorrectTbl::HP_MAX];
+                        int32_t vit = stats[CorrectTbl::VIT];
+                        stats[CorrectTbl::HP_REGEN] = (int32_t)(
                             stats[CorrectTbl::HP_REGEN] +
-                            (int16_t)floor(((vit * 3) + hpMax) * 0.01));
+                            (int32_t)floor(((vit * 3) + hpMax) * 0.01));
+                    }
+
+                    // Add enemy only HP if it exists (can be boosted by layer
+                    // 2 effects)
+                    if(GetEntityType() == EntityType_t::ENEMY)
+                    {
+                        stats[CorrectTbl::HP_MAX] = stats[CorrectTbl::HP_MAX] +
+                            GetDevilData()->GetBattleData()->GetEnemyHP(0);
                     }
                     break;
                 case CorrectTbl::MP_MAX:
                     // Determine base MP regen (if not 0%)
                     if(removed.find(CorrectTbl::MP_REGEN) == removed.end())
                     {
-                        int16_t mpMax = stats[CorrectTbl::MP_MAX];
-                        int16_t intel = stats[CorrectTbl::INT];
-                        stats[CorrectTbl::MP_REGEN] = (int16_t)(
+                        int32_t mpMax = stats[CorrectTbl::MP_MAX];
+                        int32_t intel = stats[CorrectTbl::INT];
+                        stats[CorrectTbl::MP_REGEN] = (int32_t)(
                             stats[CorrectTbl::MP_REGEN] +
-                            (int16_t)floor(((intel * 3) + mpMax) * 0.01));
+                            (int32_t)floor(((intel * 3) + mpMax) * 0.01));
                     }
                     break;
                 default:
@@ -2736,15 +2739,15 @@ void ActiveEntityState::AdjustStats(
                 {
                     int32_t sum = it->second;
 
-                    int16_t adjusted = stats[tblID];
+                    int32_t adjusted = stats[tblID];
                     if(sum <= -100)
                     {
                         adjusted = 0;
                     }
                     else
                     {
-                        adjusted = (int16_t)(adjusted +
-                            (int16_t)(adjusted * (sum * 0.01)));
+                        adjusted = (int32_t)(adjusted +
+                            (int32_t)(adjusted * (sum * 0.01)));
                     }
 
                     stats[tblID] = adjusted;
@@ -2781,7 +2784,7 @@ void ActiveEntityState::AdjustStats(
     }
 }
 
-void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
     const std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
 {
@@ -2794,7 +2797,7 @@ void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int16_t>& 
         x <= (uint8_t)CorrectTbl::NRA_MAGIC; x++)
     {
         CorrectTbl tblID = (CorrectTbl)x;
-        int16_t val = stats[tblID];
+        int16_t val = (int16_t)stats[tblID];
         if(val > 0)
         {
             // Natural NRA is stored as NRA index in the 1s place and
@@ -2939,14 +2942,14 @@ void ActiveEntityState::ApplySkillCorrectTbls(
 
 uint8_t ActiveEntityState::RecalculateDemonStats(
     libcomp::DefinitionManager* definitionManager,
-    libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    libcomp::EnumMap<CorrectTbl, int32_t>& stats,
     std::shared_ptr<objects::CalculatedEntityState> calcState)
 {
     bool selfState = calcState == GetCalculatedState();
     if(selfState)
     {
         // Combat run speed can change from unadjusted stats
-        SetCombatRunSpeed(stats[CorrectTbl::MOVE2]);
+        SetCombatRunSpeed((int16_t)stats[CorrectTbl::MOVE2]);
 
         if(!mInitialCalc)
         {
@@ -2972,21 +2975,16 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
 
     AdjustStats(correctTbls, stats, calcState, false);
 
-    int32_t extraHP = 0;
-    if(GetEntityType() == EntityType_t::ENEMY)
-    {
-        extraHP = GetDevilData()->GetBattleData()->GetEnemyHP(0);
-    }
-
     if(selfState)
     {
-        return result | CompareAndResetStats(stats, false, extraHP);
+        return result | CompareAndResetStats(stats, false);
     }
     else
     {
         for(auto statPair : stats)
         {
-            calcState->SetCorrectTbl((size_t)statPair.first, statPair.second);
+            calcState->SetCorrectTbl((size_t)statPair.first,
+                (int16_t)statPair.second);
         }
 
         return 0;
@@ -3044,7 +3042,7 @@ uint8_t ActiveEntityState::RecalculateEnemyStats(
 
     auto battleData = devilData->GetBattleData();
 
-    libcomp::EnumMap<CorrectTbl, int16_t> stats;
+    libcomp::EnumMap<CorrectTbl, int32_t> stats;
     for(size_t i = 0; i < 126; i++)
     {
         CorrectTbl tblID = (CorrectTbl)i;
@@ -3171,28 +3169,28 @@ const std::set<CorrectTbl> VISIBLE_STATS =
     };
 
 uint8_t ActiveEntityState::CompareAndResetStats(
-    libcomp::EnumMap<CorrectTbl, int16_t>& stats, bool dependentBase,
-    int32_t extraHP)
+    libcomp::EnumMap<CorrectTbl, int32_t>& stats, bool dependentBase)
 {
+    // Limits are assumed to have already been applied at this point
     uint8_t result = 0;
     if(dependentBase)
     {
-        if(GetCLSRBase() != stats[CorrectTbl::CLSR]
-            || GetLNGRBase() != stats[CorrectTbl::LNGR]
-            || GetSPELLBase() != stats[CorrectTbl::SPELL]
-            || GetSUPPORTBase() != stats[CorrectTbl::SUPPORT]
-            || GetPDEFBase() != stats[CorrectTbl::PDEF]
-            || GetMDEFBase() != stats[CorrectTbl::MDEF])
+        if(GetCLSRBase() != (int16_t)stats[CorrectTbl::CLSR]
+            || GetLNGRBase() != (int16_t)stats[CorrectTbl::LNGR]
+            || GetSPELLBase() != (int16_t)stats[CorrectTbl::SPELL]
+            || GetSUPPORTBase() != (int16_t)stats[CorrectTbl::SUPPORT]
+            || GetPDEFBase() != (int16_t)stats[CorrectTbl::PDEF]
+            || GetMDEFBase() != (int16_t)stats[CorrectTbl::MDEF])
         {
             result |= ENTITY_CALC_STAT_LOCAL;
         }
 
-        SetCLSRBase(stats[CorrectTbl::CLSR]);
-        SetLNGRBase(stats[CorrectTbl::LNGR]);
-        SetSPELLBase(stats[CorrectTbl::SPELL]);
-        SetSUPPORTBase(stats[CorrectTbl::SUPPORT]);
-        SetPDEFBase(stats[CorrectTbl::PDEF]);
-        SetMDEFBase(stats[CorrectTbl::MDEF]);
+        SetCLSRBase((int16_t)stats[CorrectTbl::CLSR]);
+        SetLNGRBase((int16_t)stats[CorrectTbl::LNGR]);
+        SetSPELLBase((int16_t)stats[CorrectTbl::SPELL]);
+        SetSUPPORTBase((int16_t)stats[CorrectTbl::SUPPORT]);
+        SetPDEFBase((int16_t)stats[CorrectTbl::PDEF]);
+        SetMDEFBase((int16_t)stats[CorrectTbl::MDEF]);
 
         return result;
     }
@@ -3201,9 +3199,8 @@ uint8_t ActiveEntityState::CompareAndResetStats(
         auto cs = GetCoreStats();
         int32_t hp = cs->GetHP();
         int32_t mp = cs->GetMP();
-        int32_t newMaxHP = (int32_t)(extraHP +
-            (int32_t)stats[CorrectTbl::HP_MAX]);
-        int32_t newMaxMP = (int32_t)stats[CorrectTbl::MP_MAX];
+        int32_t newMaxHP = stats[CorrectTbl::HP_MAX];
+        int32_t newMaxMP = stats[CorrectTbl::MP_MAX];
 
         if(hp > newMaxHP)
         {
@@ -3217,16 +3214,25 @@ uint8_t ActiveEntityState::CompareAndResetStats(
 
         auto calcState = GetCalculatedState();
         if(calcState->GetCorrectTbl((size_t)CorrectTbl::MOVE1) !=
-            stats[CorrectTbl::MOVE1] ||
+            (int16_t)stats[CorrectTbl::MOVE1] ||
             calcState->GetCorrectTbl((size_t)CorrectTbl::MOVE2) !=
-            stats[CorrectTbl::MOVE2])
+            (int16_t)stats[CorrectTbl::MOVE2])
         {
             result |= ENTITY_CALC_MOVE_SPEED;
         }
 
         for(auto statPair : stats)
         {
-            calcState->SetCorrectTbl((size_t)statPair.first, statPair.second);
+            if(statPair.second > (int32_t)std::numeric_limits<int16_t>::max())
+            {
+                calcState->SetCorrectTbl((size_t)statPair.first,
+                    (int16_t)std::numeric_limits<int16_t>::max());
+            }
+            else
+            {
+                calcState->SetCorrectTbl((size_t)statPair.first,
+                    (int16_t)statPair.second);
+            }
         }
 
         if(hp != cs->GetHP()
@@ -3237,18 +3243,18 @@ uint8_t ActiveEntityState::CompareAndResetStats(
             result |= ENTITY_CALC_STAT_WORLD |
                 ENTITY_CALC_STAT_LOCAL;
         }
-        else if(GetSTR() != stats[CorrectTbl::STR]
-            || GetMAGIC() != stats[CorrectTbl::MAGIC]
-            || GetVIT() != stats[CorrectTbl::VIT]
-            || GetINTEL() != stats[CorrectTbl::INT]
-            || GetSPEED() != stats[CorrectTbl::SPEED]
-            || GetLUCK() != stats[CorrectTbl::LUCK]
-            || GetCLSR() != stats[CorrectTbl::CLSR]
-            || GetLNGR() != stats[CorrectTbl::LNGR]
-            || GetSPELL() != stats[CorrectTbl::SPELL]
-            || GetSUPPORT() != stats[CorrectTbl::SUPPORT]
-            || GetPDEF() != stats[CorrectTbl::PDEF]
-            || GetMDEF() != stats[CorrectTbl::MDEF])
+        else if(GetSTR() != (int16_t)stats[CorrectTbl::STR]
+            || GetMAGIC() != (int16_t)stats[CorrectTbl::MAGIC]
+            || GetVIT() != (int16_t)stats[CorrectTbl::VIT]
+            || GetINTEL() != (int16_t)stats[CorrectTbl::INT]
+            || GetSPEED() != (int16_t)stats[CorrectTbl::SPEED]
+            || GetLUCK() != (int16_t)stats[CorrectTbl::LUCK]
+            || GetCLSR() != (int16_t)stats[CorrectTbl::CLSR]
+            || GetLNGR() != (int16_t)stats[CorrectTbl::LNGR]
+            || GetSPELL() != (int16_t)stats[CorrectTbl::SPELL]
+            || GetSUPPORT() != (int16_t)stats[CorrectTbl::SUPPORT]
+            || GetPDEF() != (int16_t)stats[CorrectTbl::PDEF]
+            || GetMDEF() != (int16_t)stats[CorrectTbl::MDEF])
         {
             result |= ENTITY_CALC_STAT_LOCAL;
         }
@@ -3257,18 +3263,18 @@ uint8_t ActiveEntityState::CompareAndResetStats(
         cs->SetMP(mp);
         SetMaxHP(newMaxHP);
         SetMaxMP(newMaxMP);
-        SetSTR(stats[CorrectTbl::STR]);
-        SetMAGIC(stats[CorrectTbl::MAGIC]);
-        SetVIT(stats[CorrectTbl::VIT]);
-        SetINTEL(stats[CorrectTbl::INT]);
-        SetSPEED(stats[CorrectTbl::SPEED]);
-        SetLUCK(stats[CorrectTbl::LUCK]);
-        SetCLSR(stats[CorrectTbl::CLSR]);
-        SetLNGR(stats[CorrectTbl::LNGR]);
-        SetSPELL(stats[CorrectTbl::SPELL]);
-        SetSUPPORT(stats[CorrectTbl::SUPPORT]);
-        SetPDEF(stats[CorrectTbl::PDEF]);
-        SetMDEF(stats[CorrectTbl::MDEF]);
+        SetSTR((int16_t)stats[CorrectTbl::STR]);
+        SetMAGIC((int16_t)stats[CorrectTbl::MAGIC]);
+        SetVIT((int16_t)stats[CorrectTbl::VIT]);
+        SetINTEL((int16_t)stats[CorrectTbl::INT]);
+        SetSPEED((int16_t)stats[CorrectTbl::SPEED]);
+        SetLUCK((int16_t)stats[CorrectTbl::LUCK]);
+        SetCLSR((int16_t)stats[CorrectTbl::CLSR]);
+        SetLNGR((int16_t)stats[CorrectTbl::LNGR]);
+        SetSPELL((int16_t)stats[CorrectTbl::SPELL]);
+        SetSUPPORT((int16_t)stats[CorrectTbl::SUPPORT]);
+        SetPDEF((int16_t)stats[CorrectTbl::PDEF]);
+        SetMDEF((int16_t)stats[CorrectTbl::MDEF]);
     }
 
     return result;

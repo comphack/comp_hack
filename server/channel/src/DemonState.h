@@ -142,6 +142,14 @@ public:
 
     virtual bool HasSpecialTDamage();
 
+    /**
+     * Cast an EntityStateObject into a DemonState. Useful for script
+     * bindings.
+     * @return Pointer to the casted DemonState
+     */
+    static std::shared_ptr<DemonState> Cast(
+        const std::shared_ptr<EntityStateObject>& obj);
+
 private:
     /// Map of inherited skills not yet maxed by affinity ID. This
     /// map is refreshed by calling RefreshLearningSkills

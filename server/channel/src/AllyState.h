@@ -62,6 +62,14 @@ public:
     virtual uint8_t GetLNCType();
 
     virtual int8_t GetGender();
+
+    /**
+     * Cast an EntityStateObject into an AllyState. Useful for script
+     * bindings.
+     * @return Pointer to the casted AllyState
+     */
+    static std::shared_ptr<AllyState> Cast(
+        const std::shared_ptr<EntityStateObject>& obj);
 };
 
 } // namespace channel

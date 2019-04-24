@@ -4,22 +4,22 @@
 <context>
     <name>Downloader</name>
     <message>
-        <location filename="../src/Downloader.cpp" line="169"/>
+        <location filename="../src/Downloader.cpp" line="170"/>
         <source>%1/hashlist.dat</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="173"/>
+        <location filename="../src/Downloader.cpp" line="174"/>
         <source>%1/hashlist.ver</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="190"/>
+        <location filename="../src/Downloader.cpp" line="198"/>
         <source>Download failed: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="204"/>
+        <location filename="../src/Downloader.cpp" line="212"/>
         <source>Download failed: Server returned status code %1 %2</source>
         <translation type="unfinished"></translation>
     </message>
@@ -27,12 +27,12 @@
 <context>
     <name>LanguageSelection</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_LanguageSelection.h" line="81"/>
+        <location filename="../../../build64/tools/updater/ui_LanguageSelection.h" line="81"/>
         <source>Language Selection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_LanguageSelection.h" line="82"/>
+        <location filename="../../../build64/tools/updater/ui_LanguageSelection.h" line="82"/>
         <source>Please select a language:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -61,87 +61,87 @@
 <context>
     <name>Options</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="213"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="213"/>
         <source>Shin Megami Tensei IMAGINE - Game Option Configuration</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="214"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="214"/>
         <source>Mode:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="215"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="215"/>
         <source>Window</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="216"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="216"/>
         <source>Full Screen</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="218"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="218"/>
         <source>Video Card:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="219"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="219"/>
         <source>Screen Size:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="220"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="220"/>
         <source>Chat Text Size:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="221"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="221"/>
         <source>Preset</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="222"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="222"/>
         <source>Custom</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="223"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="223"/>
         <source>x</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="224"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="224"/>
         <source>Small (12pt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="225"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="225"/>
         <source>Medium (14pt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="226"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="226"/>
         <source>Large (16pt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="227"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="227"/>
         <source>Small (12pt no antialiasing)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="228"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="228"/>
         <source>Medium (14pt no antialiasing)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="229"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="229"/>
         <source>Large (16pt no antialiasing)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="231"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="231"/>
         <source>Language:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -194,128 +194,133 @@
 <context>
     <name>Updater</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="155"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="168"/>
         <source>COMP_hack Updater v1.0</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="158"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="171"/>
         <source>Please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="159"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="172"/>
         <source>Screenshots</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="160"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="175"/>
+        <source>Retry</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="176"/>
         <source>Full Check</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="161"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="173"/>
         <source>Diagnostics</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="162"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="174"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="163"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="177"/>
         <source>PLAY GAME</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="162"/>
-        <location filename="../src/Updater.cpp" line="183"/>
-        <location filename="../src/Updater.cpp" line="196"/>
-        <location filename="../src/Updater.cpp" line="208"/>
-        <location filename="../src/Updater.cpp" line="222"/>
-        <location filename="../src/Updater.cpp" line="230"/>
-        <location filename="../src/Updater.cpp" line="240"/>
-        <location filename="../src/Updater.cpp" line="271"/>
-        <location filename="../src/Updater.cpp" line="300"/>
-        <location filename="../src/Updater.cpp" line="321"/>
-        <location filename="../src/Updater.cpp" line="335"/>
+        <location filename="../src/Updater.cpp" line="164"/>
+        <location filename="../src/Updater.cpp" line="185"/>
+        <location filename="../src/Updater.cpp" line="198"/>
+        <location filename="../src/Updater.cpp" line="210"/>
+        <location filename="../src/Updater.cpp" line="224"/>
+        <location filename="../src/Updater.cpp" line="232"/>
+        <location filename="../src/Updater.cpp" line="242"/>
+        <location filename="../src/Updater.cpp" line="273"/>
+        <location filename="../src/Updater.cpp" line="302"/>
+        <location filename="../src/Updater.cpp" line="323"/>
+        <location filename="../src/Updater.cpp" line="337"/>
         <source>VersionData.txt Error</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="163"/>
+        <location filename="../src/Updater.cpp" line="165"/>
         <source>The first line of the file was not: [versions]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="184"/>
+        <location filename="../src/Updater.cpp" line="186"/>
         <source>Invalid line found in versions section: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="197"/>
+        <location filename="../src/Updater.cpp" line="199"/>
         <source>Duplicate title value found</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="209"/>
+        <location filename="../src/Updater.cpp" line="211"/>
         <source>Duplicate server value found</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="223"/>
+        <location filename="../src/Updater.cpp" line="225"/>
         <source>Duplicate tag value found</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="231"/>
+        <location filename="../src/Updater.cpp" line="233"/>
         <source>Non-unique tag value found</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="241"/>
+        <location filename="../src/Updater.cpp" line="243"/>
         <source>Version contains invalid value</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="272"/>
+        <location filename="../src/Updater.cpp" line="274"/>
         <source>Version missing one or more of: title, server, tag</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="301"/>
+        <location filename="../src/Updater.cpp" line="303"/>
         <source>Section contains invalid tag name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="322"/>
+        <location filename="../src/Updater.cpp" line="324"/>
         <source>Invalid line found in file list section</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="336"/>
+        <location filename="../src/Updater.cpp" line="338"/>
         <source>Duplicate file &apos;%1&apos; found for tag &apos;%2&apos;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="401"/>
+        <location filename="../src/Updater.cpp" line="418"/>
         <source>%1/%2.%3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="403"/>
+        <location filename="../src/Updater.cpp" line="420"/>
         <source>%1/%2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="408"/>
-        <location filename="../src/Updater.cpp" line="522"/>
+        <location filename="../src/Updater.cpp" line="425"/>
+        <location filename="../src/Updater.cpp" line="543"/>
         <source>Updater Error</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="409"/>
+        <location filename="../src/Updater.cpp" line="426"/>
         <source>Failed to patch %1</source>
         <translation type="unfinished"></translation>
     </message>

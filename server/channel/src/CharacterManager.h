@@ -497,19 +497,28 @@ public:
      * @param luck Current luck value to use when calculating drop chances
      * @param minLast Optional param to specify if the box needs at least
      *  one item in which case the last item will be used
+     * @param maccaRate Optional param to scale macca dropped. Does not
+     *  affect notes.
+     * @param magRate Optional param to scale mag dropped. Does not
+     *  affect pressers.
      * @return true if one or more item was added, false if none were
      */
     bool CreateLootFromDrops(const std::shared_ptr<objects::LootBox>& box,
         const std::list<std::shared_ptr<objects::ItemDrop>>& drops, int16_t luck,
-        bool minLast = false);
+        bool minLast = false, float maccaRate = 1.f, float magRate = 1.f);
 
     /**
      * Create loot from pre-filtered drops
      * @param drops List of pointers to item drops
+     * @param maccaRate Optional param to scale macca dropped. Does not
+     *  affect notes.
+     * @param magRate Optional param to scale mag dropped. Does not
+     *  affect pressers.
      * @return List of pointers to converted Loot representations
      */
     std::list<std::shared_ptr<objects::Loot>> CreateLootFromDrops(
-        const std::list<std::shared_ptr<objects::ItemDrop>>& drops);
+        const std::list<std::shared_ptr<objects::ItemDrop>>& drops,
+        float maccaRate = 1.f, float magRate = 1.f);
 
     /**
      * Send the loot item data related to a loot box to one or more clients.
@@ -1269,7 +1278,7 @@ public:
      * @param demonData Pointer to the demon's definition
      * @return Map of correct table indexes to corresponding stat values
      */
-    static libcomp::EnumMap<CorrectTbl, int16_t> GetDemonBaseStats(
+    static libcomp::EnumMap<CorrectTbl, int32_t> GetDemonBaseStats(
         const std::shared_ptr<objects::MiDevilData>& demonData);
 
     /**
@@ -1283,7 +1292,7 @@ public:
      * @param level Current level to calculate stats for
      * @return Map of correct table indexes to corresponding stat values
      */
-    static libcomp::EnumMap<CorrectTbl, int16_t> GetDemonBaseStats(
+    static libcomp::EnumMap<CorrectTbl, int32_t> GetDemonBaseStats(
         const std::shared_ptr<objects::MiDevilData>& demonData,
         libcomp::DefinitionManager* definitionManager, uint8_t growthType,
         int8_t level);
@@ -1295,7 +1304,7 @@ public:
      * @param levelRate Level up rate to use for applying familiarity boosts
      */
     static void FamiliarityBoostStats(uint16_t familiarity,
-        libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        libcomp::EnumMap<CorrectTbl, int32_t>& stats,
         std::shared_ptr<objects::MiDevilLVUpRateData> levelRate);
 
     /**
@@ -1308,7 +1317,7 @@ public:
      * @param readOnly If true no values will be written directly to the demon
      */
     static void AdjustDemonBaseStats(const std::shared_ptr<
-        objects::Demon>& demon, libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        objects::Demon>& demon, libcomp::EnumMap<CorrectTbl, int32_t>& stats,
         bool baseCalc, bool readOnly = false);
 
     /**
@@ -1325,7 +1334,7 @@ public:
      *  calculation if true and ignored if false
      */
     static void AdjustMitamaStats(const std::shared_ptr<objects::Demon>& demon,
-        libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+        libcomp::EnumMap<CorrectTbl, int32_t>& stats,
         libcomp::DefinitionManager* definitionManager, uint8_t reunionMode,
         int32_t entityID = 0, bool includeSetBonuses = true);
 
@@ -1363,7 +1372,7 @@ public:
      * @param cs Pointer to the core stats of a character
      * @return Map of correct table indexes to corresponding stat values
      */
-    static libcomp::EnumMap<CorrectTbl, int16_t> GetCharacterBaseStats(
+    static libcomp::EnumMap<CorrectTbl, int32_t> GetCharacterBaseStats(
         const std::shared_ptr<objects::EntityStats>& cs);
 
     /**
@@ -1373,7 +1382,7 @@ public:
      * @param level Current level of the character or demon
      * @param isDemon true if the entity is a demon, false if it is character
      */
-    static void CalculateDependentStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    static void CalculateDependentStats(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
         int8_t level, bool isDemon);
 
     /**
@@ -1382,7 +1391,7 @@ public:
      * @param stats Reference to a correct table map
      * @param limitMax If true, maximum stat limits will be adjusted as well
      */
-    static void AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    static void AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
         bool limitMax);
 
     /**
@@ -1440,7 +1449,7 @@ public:
     void GetEntityStatsPacketData(libcomp::Packet& p,
         const std::shared_ptr<objects::EntityStats>& coreStats,
         const std::shared_ptr<ActiveEntityState>& state, uint8_t format,
-        libcomp::EnumMap<CorrectTbl, int16_t> coreBoosts = {});
+        libcomp::EnumMap<CorrectTbl, int32_t> coreBoosts = {});
 
     /**
      * Mark the supplied demon and its related data as deleted in the
@@ -1461,7 +1470,7 @@ private:
      * @param data Pointer to the level up definition of a demon
      * @param boostLevel Boost level to use when calculating the stat increases
      */
-    static void BoostStats(libcomp::EnumMap<CorrectTbl, int16_t>& stats,
+    static void BoostStats(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
         const std::shared_ptr<objects::MiDevilLVUpData>& data, int boostLevel);
 
     /// Pointer to the channel server

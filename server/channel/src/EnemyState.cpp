@@ -50,7 +50,8 @@ namespace libcomp
             binding
                 .Func<std::shared_ptr<objects::Enemy>
                 (EnemyState::*)() const>(
-                    "GetEntity", &EnemyState::GetEntity);
+                    "GetEntity", &EnemyState::GetEntity)
+                .StaticFunc("Cast", &EnemyState::Cast);
 
             Bind<EnemyState>("EnemyState", binding);
         }
@@ -131,4 +132,10 @@ int8_t EnemyState::GetGender()
     }
 
     return 2;   // None
+}
+
+std::shared_ptr<EnemyState> EnemyState::Cast(
+    const std::shared_ptr<EntityStateObject>& obj)
+{
+    return std::dynamic_pointer_cast<EnemyState>(obj);
 }

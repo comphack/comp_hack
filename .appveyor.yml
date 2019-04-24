@@ -36,7 +36,7 @@ build_script:
   - 7z x external.zip
   - del external.zip
   - mv external* ..\binaries
-  - if %platform%==x64 (appveyor DownloadFile https://github.com/comphack/libcomp/releases/download/v4.0.2/libcomp-4.0.2-win64.zip -FileName libcomp.zip)
+  - if %platform%==x64 (appveyor DownloadFile https://github.com/comphack/libcomp/releases/download/v4.1.0/libcomp-4.1.0-win64.zip -FileName libcomp.zip)
   - if %platform%==x64 (7z x libcomp.zip)
   - if %platform%==x64 (del libcomp.zip)
   - if %platform%==x64 (mv libcomp* ..\deps\libcomp)

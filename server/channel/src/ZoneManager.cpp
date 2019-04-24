@@ -939,6 +939,27 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
         }
     }
 
+    if(newZoneID == 0)
+    {
+        // Trigger the zone-out actions before leaving if not going
+        // somewhere else
+        std::shared_ptr<Zone> zone;
+        {
+            std::lock_guard<std::mutex> lock(mLock);
+            auto iter = mEntityMap.find(worldCID);
+            if(iter != mEntityMap.end())
+            {
+                zone = mZones[iter->second];
+            }
+        }
+
+        if(zone)
+        {
+            TriggerZoneActions(zone, { cState, dState },
+                ZoneTrigger_t::ON_ZONE_OUT, client);
+        }
+    }
+
     std::shared_ptr<Zone> zone = nullptr;
     bool instanceLeft = false;
     bool instanceRemoved = false;
@@ -1126,8 +1147,6 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     {
         // Not entering another zone, recalculate tokusei for
         // remaining party member effects
-        TriggerZoneActions(zone, { cState, dState },
-            ZoneTrigger_t::ON_ZONE_OUT, client);
         server->GetTokuseiManager()->RecalculateParty(
             state->GetParty());
 
@@ -2960,16 +2979,21 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
     const std::shared_ptr<Zone>& zone, uint32_t demonID, uint32_t spawnID,
     uint32_t spotID, float x, float y, float rot)
 {
-    if(!zone || !demonID)
-    {
-        return nullptr;
-    }
-
     auto spawn = zone->GetDefinition()->GetSpawns(spawnID);
     if(!spawn && spawnID)
     {
         LOG_ERROR(libcomp::String("Failed to load spawn ID %1 in zone %2\n")
             .Arg(spawnID).Arg(zone->GetDefinitionID()));
+    }
+    else if(spawn)
+    {
+        // Ignore the demon ID if the spawn is found as these shouldn't differ
+        demonID = spawn->GetEnemyType();
+    }
+
+    if(!zone || !demonID)
+    {
+        return nullptr;
     }
 
     if(spotID)
@@ -4862,7 +4886,8 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
             std::lock_guard<std::mutex> lock(mLock);
             if(!instance->GetTimerStop())
             {
-                if(instance->GetTimerExpire() <= stopTime)
+                if(instance->GetTimerExpire() &&
+                    instance->GetTimerExpire() <= stopTime)
                 {
                     // Timer expired
                     instance->SetTimerStop(instance->GetTimerExpire());
@@ -4923,7 +4948,14 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
         auto eventManager = mServer.lock()->GetEventManager();
         for(auto client : instance->GetConnections())
         {
+            // Originally timer expiration events were not auto-only but the
+            // benefit of being able to pop up a prompt is not worth the
+            // copious amounts of issues that can occur if an event is active
+            // while the expiration occurs. If a non-auto-only event is needed
+            // at this point, zone flag triggers can be used instead to
+            // "reattach" to a delay enabled player context.
             EventOptions options;
+            options.AutoOnly = true;
             options.NoInterrupt = true;
 
             auto state = client->GetClientState();
@@ -7925,10 +7957,9 @@ void ZoneManager::SendAccessMessage(
     {
         int32_t messageID = joined ? instDef->GetJoinMessageID()
             : instDef->GetCreateMessageID();
-        if(messageID)
+        auto createEventID = !joined ? instDef->GetCreateEventID() : "";
+        if(messageID || !createEventID.IsEmpty())
         {
-            auto actionManager = server->GetActionManager();
-
             std::list<std::shared_ptr<ChannelClientConnection>> clients;
             if(client)
             {
@@ -7940,9 +7971,29 @@ void ZoneManager::SendAccessMessage(
                     access->GetAccessCIDs(), true);
             }
 
-            for(auto c : clients)
+            if(messageID)
             {
-                actionManager->SendStageEffect(c, messageID, 0, true);
+                auto actionManager = server->GetActionManager();
+                for(auto c : clients)
+                {
+                    actionManager->SendStageEffect(c, messageID, 0, true);
+                }
+            }
+
+            if(!createEventID.IsEmpty())
+            {
+                auto eventManager = server->GetEventManager();
+                for(auto c : clients)
+                {
+                    EventOptions options;
+                    options.AutoOnly = true;
+                    options.NoInterrupt = true;
+
+                    auto state = client->GetClientState();
+                    auto entityID = state->GetCharacterState()->GetEntityID();
+                    eventManager->HandleEvent(client, createEventID, entityID,
+                        nullptr, options);
+                }
             }
         }
     }

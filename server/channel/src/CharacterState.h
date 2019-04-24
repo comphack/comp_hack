@@ -236,6 +236,14 @@ public:
 
     virtual int8_t GetGender();
 
+    /**
+     * Cast an EntityStateObject into a CharacterState. Useful for script
+     * bindings.
+     * @return Pointer to the casted CharacterState
+     */
+    static std::shared_ptr<CharacterState> Cast(
+        const std::shared_ptr<EntityStateObject>& obj);
+
 private:
     /**
      * Calculate and update item fuse bonuses for the supplied equipment

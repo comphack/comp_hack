@@ -82,6 +82,14 @@ public:
 
     virtual int8_t GetGender();
 
+    /**
+     * Cast an EntityStateObject into an EnemyState. Useful for script
+     * bindings.
+     * @return Pointer to the casted EnemyState
+     */
+    static std::shared_ptr<EnemyState> Cast(
+        const std::shared_ptr<EntityStateObject>& obj);
+
 private:
     /// Player local entity IDs mapped to the enemy's current talk skill
     /// related points: affability then fear. If either of these

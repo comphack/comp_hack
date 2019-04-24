@@ -1,7 +1,7 @@
 # COMP\_hack #
 
 [![AGPL License](http://img.shields.io/badge/license-AGPL-brightgreen.svg)](https://opensource.org/licenses/AGPL-3.0)
-[![Latest Release](https://img.shields.io/github/downloads/comphack/comp_hack/v3.9.1-hathor-rc1/total.svg)](https://github.com/comphack/comp_hack/releases/tag/v3.9.1-hathor-rc1)
+[![Latest Release](https://img.shields.io/github/downloads/comphack/comp_hack/v4.1.0-tiwaz/total.svg)](https://github.com/comphack/comp_hack/releases/tag/v4.1.0-tiwaz)
 [![Discord Chat](https://img.shields.io/discord/322024695266541579.svg)](http://discord.gg/9jXeKcJ)
 
 [![Build Status](https://travis-ci.org/comphack/comp_hack.svg?branch=develop)](https://travis-ci.org/comphack/comp_hack)
@@ -14,8 +14,8 @@
 ### Cerberus Rebirth Status ###
 | Type                                                                           | Rank            |
 | ------------------------------------------------------------------------------ | --------------- |
-| [Tiwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-tiwaz)     | ■ □ □ □ □ □ □ □ |
-| [Peorth](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-peorth)   | □ □ □ □ □ □ □ □ |
+| [Tiwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-tiwaz)     | ■ ■ ■ ■ ■ ■ ■ ■ |
+| [Peorth](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-peorth)   | ■ ■ □ □ □ □ □ □ |
 | [Eoh](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eoh)         | □ □ □ □ □ □ □ □ |
 | [Eihwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eihwaz)   | □ □ □ □ □ □ □ □ |
 | [Uruz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-uruz)       | □ □ □ □ □ □ □ □ |

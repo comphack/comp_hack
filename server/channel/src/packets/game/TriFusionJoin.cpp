@@ -98,7 +98,7 @@ bool Parsers::TriFusionJoin::Parse(libcomp::ManagerPacket *pPacketManager,
         std::list<std::shared_ptr<objects::Demon>> sourceDemons;
         for(auto d : cState->GetEntity()->GetCOMP()->GetDemons())
         {
-            if(!d.IsNull())
+            if(!d.IsNull() && !d->GetLocked())
             {
                 sourceDemons.push_back(d.Get());
             }

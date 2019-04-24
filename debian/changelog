@@ -1,3 +1,13 @@
+comphack (4.1.0) xenial; urgency=low
+
+  * Item (shadow) duplication fix
+  * AI script bindings for content
+  * Macca/mag rate implemented
+  * libcomp split into a separate repo
+  * Bug fixes from Hathor
+
+ -- COMP Omega <compomega@tutanota.com>  Sun, 07 Apr 2019 12:41:29 -0600
+
 comphack (4.0.2) xenial; urgency=low
 
   * Fixed account API issues caused by session update

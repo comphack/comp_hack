@@ -718,6 +718,11 @@ bool AccountManager::UpdateKillTime(const libcomp::String& username,
         server->GetConfig());
 
     auto login = GetUserLogin(username);
+    if(!login)
+    {
+        return false;
+    }
+
     auto account = login->GetAccount().Get();
     auto character = account->GetCharacters(cid).Get();
     if(character)

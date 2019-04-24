@@ -105,6 +105,8 @@
 #include <MiSummonData.h>
 #include <MiTargetData.h>
 #include <MiUnionData.h>
+#include <MiZoneBasicData.h>
+#include <MiZoneData.h>
 #include <Party.h>
 #include <PvPInstanceStats.h>
 #include <PvPPlayerStats.h>
@@ -402,11 +404,14 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     auto castBasic = cast->GetBasic();
     uint32_t defaultChargeTime = castBasic->GetChargeTime();
 
+    // Auto-use activation skills ALWAYS ignore charge time for AI
+    // despite this making them look weird from player entities when
+    // a charge time is still on the data. Having a charge time on
+    // these is incredibly rare and probably not intentional.
     bool autoUse = activationType == 6;
-    bool instantExecution = autoUse && !defaultChargeTime;
 
     auto activated = source->GetActivatedAbility();
-    if(activated && !instantExecution)
+    if(activated && !autoUse)
     {
         // Cancel existing first unless it's still pending execution
         if(activated->GetErrorCode() == -1 &&
@@ -420,18 +425,33 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         CancelSkill(source, activated->GetActivationID());
     }
 
-    if(autoUse && def->GetTarget()->GetType() ==
-        objects::MiTargetData::Type_t::PARTNER)
+    if(autoUse)
     {
-        // If the target type is the partner, reset it
-        targetObjectID = -1;
-        if(client)
+        // Reset default target types as they are typically not provided
+        switch(def->GetTarget()->GetType())
         {
-            auto dState = client->GetClientState()->GetDemonState();
-            if(dState->Ready())
+        case objects::MiTargetData::Type_t::ALLY:
+            if(targetObjectID <= 0)
             {
-                targetObjectID = (int64_t)dState->GetEntityID();
+                targetObjectID = source->GetEntityID();
             }
+            break;
+        case objects::MiTargetData::Type_t::PARTNER:
+            {
+                targetObjectID = -1;
+                if(client)
+                {
+                    auto dState = client->GetClientState()
+                        ->GetDemonState();
+                    if(dState->Ready())
+                    {
+                        targetObjectID = (int64_t)dState->GetEntityID();
+                    }
+                }
+            }
+            break;
+        default:
+            break;
         }
     }
 
@@ -443,7 +463,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     activated->SetActivationTargetType(targetType);
     activated->SetActivationTime(now);
 
-    if(instantExecution)
+    if(autoUse)
     {
         // Instant activations are technically not activated
         activated->SetActivationID(-1);
@@ -477,12 +497,12 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
     uint64_t chargedTime = 0;
 
-    bool executeNow = instantExecution || (defaultChargeTime == 0 &&
+    bool executeNow = autoUse || (defaultChargeTime == 0 &&
         (activationType == 3 || activationType == 4));
 
-    // If the skill is not an instantExecution, activate it and calculate
+    // If the skill is not an autoUse, activate it and calculate
     // movement speed
-    if(!instantExecution)
+    if(!autoUse)
     {
         // If the skill needs to charge, see if any time adjustments exist
         uint32_t chargeTime = defaultChargeTime;
@@ -2657,6 +2677,8 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             effectiveTargets.push_back(effectiveSource);
             break;
         case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS:
+        case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS2:
+            // Difference between type 1 and 2 is unknown
             if(!initialHitReflect)
             {
                 effectiveTargets = zone->GetActiveEntitiesInRadius(
@@ -2714,7 +2736,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
                 // Half width on each side
                 float lineWidth = (float)(skillRange->GetAoeLineWidth() * 10) *
-                    5.f;
+                    0.5f;
 
                 // If not rushing, max length can go beyond the target
                 if(skill.Definition->GetBasic()->GetActionType() !=
@@ -2798,7 +2820,6 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 }
             }
             break;
-        case objects::MiEffectiveRangeData::AreaType_t::UNKNOWN_9:
         default:
             LOG_ERROR(libcomp::String("Unsupported skill area type"
                 " encountered: %1\n").Arg((uint8_t)skillRange->GetAreaType()));
@@ -3448,25 +3469,29 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         if(hpAdjustedSum != 0)
         {
             target.RecalcTriggers.insert(TokuseiConditionType::CURRENT_HP);
+
+            if(hpAdjustedSum < 0)
+            {
+                target.EffectCancellations |= EFFECT_CANCEL_DAMAGE;
+            }
         }
 
         // If we haven't already set hitstun, check if we can now
         if(!target.CanHitstun)
         {
+            bool nonDamaging = battleDamage->GetFormula()
+                == objects::MiBattleDamageData::Formula_t::NONE ||
+                battleDamage->GetModifier1() == 0;
             bool calcHitstun = false;
             if(hpAdjustedSum < 0)
             {
                 calcHitstun = true;
-
-                target.EffectCancellations |= EFFECT_CANCEL_HIT |
-                    EFFECT_CANCEL_DAMAGE;
             }
-            else if(!target.IndirectTarget && battleDamage->GetFormula()
-                == objects::MiBattleDamageData::Formula_t::NONE &&
+            else if(!target.IndirectTarget && nonDamaging &&
                 !target.HitAvoided && !target.HitAbsorb &&
                 skill.Definition->GetDamage()->GetHitStopTime())
             {
-                // If neither damage nor healing applies and the target is
+                // If the skill is non-damaging and the target is
                 // "hit", hitstun applies when set
                 calcHitstun = true;
             }
@@ -3480,6 +3505,11 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     (target.Flags1 & FLAG1_GUARDED) == 0 && !target.HitAbsorb &&
                     (hitstunNull < 0 || RNG(int32_t, 1, 10000) > hitstunNull);
             }
+        }
+
+        if(target.CanHitstun && !target.HitAvoided)
+        {
+            target.EffectCancellations |= EFFECT_CANCEL_HIT;
         }
 
         switch(target.EntityState->GetEntityType())
@@ -3717,10 +3747,18 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         (skill.Definition->GetDamage()->GetHitStopTime() * 1000);
     uint64_t selfDelay = 0;
 
-    // Make sure the hit stop time isn't somehow before now
+    // Knockback time is a fixed 2s (hitstun can extend delay)
+    uint64_t kbTime = activated->GetExecutionTime() + 2000000;
+
+    // Make sure the hit stop times aren't somehow before now
     if(hitStopTime < now)
     {
         hitStopTime = now;
+    }
+
+    if(kbTime < now)
+    {
+        kbTime = now;
     }
 
     if(knockbackExists && !doRush && activated->GetLockOutTime() &&
@@ -3730,7 +3768,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         // the source entity but only if they would still be stopped by
         // the lockout time
         GetSelfTarget(source, skill.Targets, true);
-        selfDelay = hitStopTime;
+        selfDelay = kbTime;
     }
 
     auto zConnections = zone->GetConnectionList();
@@ -3819,7 +3857,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                         // Away from the effective target (ex: AOE explosion)
                         kbPoint = zoneManager->MoveRelative(target.EntityState,
                             effectiveTarget->GetCurrentX(), effectiveTarget->GetCurrentY(),
-                            kbDistance, true, now, hitStopTime);
+                            kbDistance, true, now, kbTime);
                     }
                     break;
                 case 4:
@@ -3832,7 +3870,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
                         target.EntityState->SetDestinationX(effectiveTarget->GetCurrentX());
                         target.EntityState->SetDestinationY(effectiveTarget->GetCurrentY());
-                        target.EntityState->SetDestinationTicks(hitStopTime);
+                        target.EntityState->SetDestinationTicks(kbTime);
                     }
                     break;
                 case 5:
@@ -3844,7 +3882,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
 
                         target.EntityState->SetDestinationX(source->GetCurrentX());
                         target.EntityState->SetDestinationY(source->GetCurrentY());
-                        target.EntityState->SetDestinationTicks(hitStopTime);
+                        target.EntityState->SetDestinationTicks(kbTime);
                     }
                     break;
                 case 0:
@@ -3853,11 +3891,11 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     // Default if not specified, directly away from source
                     kbPoint = zoneManager->MoveRelative(target.EntityState, effectiveSource
                         ->GetCurrentX(), effectiveSource->GetCurrentY(), kbDistance, true, now,
-                        hitStopTime);
+                        kbTime);
                     break;
                 }
 
-                target.EntityState->SetStatusTimes(STATUS_KNOCKBACK, hitStopTime);
+                target.EntityState->SetStatusTimes(STATUS_KNOCKBACK, kbTime);
 
                 p.WriteFloat(kbPoint.x);
                 p.WriteFloat(kbPoint.y);
@@ -3901,6 +3939,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
             else if(target.CanHitstun)
             {
+                uint64_t effectiveHitStop = knockedBack && kbTime > hitStopTime
+                    ? kbTime : hitStopTime;
                 if(target.Damage1 || defended)
                 {
                     // Damage dealt (or defended), determine stun time
@@ -3909,23 +3949,23 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     {
                         // Apply extended hit stop and determine what else may be needed
                         hitTimings[0] = knockedBack ? now : completeTime;
-                        hitTimings[1] = hitStopTime;
+                        hitTimings[1] = effectiveHitStop;
 
                         if(!target.AilmentDamageType)
                         {
                             // End after hit stop
-                            hitTimings[2] = hitStopTime;
+                            hitTimings[2] = effectiveHitStop;
                         }
                         else
                         {
                             // Apply ailment damage after hit stop
-                            hitTimings[2] = hitStopTime + target.AilmentDamageTime;
+                            hitTimings[2] = effectiveHitStop + target.AilmentDamageTime;
                         }
                     }
                     else
                     {
                         // Normal hit stop
-                        hitTimings[2] = hitStopTime;
+                        hitTimings[2] = effectiveHitStop;
                     }
 
                     target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
@@ -3935,7 +3975,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 {
                     // Normal hit stop time to finish knockback
                     hitTimings[0] = now;
-                    hitTimings[2] = hitTimings[1] = hitStopTime;
+                    hitTimings[2] = hitTimings[1] = effectiveHitStop;
 
                     target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
                         hitTimings[2]);
@@ -3943,7 +3983,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 else if(target.AilmentDamageType != 0)
                 {
                     // Only apply ailment stun time
-                    hitTimings[2] = hitStopTime + target.AilmentDamageTime;
+                    hitTimings[2] = effectiveHitStop + target.AilmentDamageTime;
 
                     target.EntityState->SetStatusTimes(STATUS_HIT_STUN,
                         hitTimings[2]);
@@ -5865,7 +5905,20 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         // After this schedule all of the bodies for cleanup after their
         // loot time passes
         uint64_t now = ChannelServer::GetServerTime();
-        int16_t luck = sourceState ? source->GetLUCK() : 0;
+        int16_t luck = 0;
+        float maccaRate = 1.f;
+        float magRate = 1.f;
+
+        if(sourceState)
+        {
+            auto cState = sourceState->GetCharacterState();
+
+            luck = source->GetLUCK();
+            maccaRate = (float)cState->GetCorrectValue(
+                CorrectTbl::RATE_MACCA) / 100.f;
+            magRate = (float)cState->GetCorrectValue(
+                CorrectTbl::RATE_MAG) / 100.f;
+        }
 
         auto firstClient = zConnections.size() > 0 ? zConnections.front() : nullptr;
         auto sourceParty = sourceState ? sourceState->GetParty() : nullptr;
@@ -6017,7 +6070,8 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             auto dDrops = drops[(uint8_t)objects::DropSet::Type_t::DESTINY];
 
             uint64_t lootTime = 0;
-            if(characterManager->CreateLootFromDrops(lootBody, nDrops, luck))
+            if(characterManager->CreateLootFromDrops(lootBody, nDrops, luck,
+                false, maccaRate, magRate))
             {
                 // Bodies remain lootable for 120 seconds with loot
                 lootTime = (uint64_t)(now + 120000000);
@@ -7895,6 +7949,17 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 targetModMultiplier);
         }
 
+        // Floor modifiers at 1
+        if(!mod1 && damageData->GetModifier1())
+        {
+            mod1 = 1;
+        }
+
+        if(!mod2 && damageData->GetModifier2())
+        {
+            mod2 = 1;
+        }
+
         bool effectiveHeal = isHeal || target.HitAbsorb;
 
         int8_t minDamageLevel = -1;
@@ -8004,8 +8069,6 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                     if(pursuitRate > 0 &&
                         (pursuitRate >= 100 || RNG(int32_t, 1, 100) <= pursuitRate))
                     {
-                        target.PursuitAffinity = skill.EffectiveAffinity;
-
                         // Take the lowest value applied tokusei affinity override if one exists
                         auto affinityOverrides = tokuseiManager->GetAspectValueList(source,
                             TokuseiAspectType::PURSUIT_AFFINITY_OVERRIDE);
@@ -8013,25 +8076,36 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                         {
                             affinityOverrides.sort();
                             target.PursuitAffinity = (uint8_t)affinityOverrides.front();
+
+                            // If the result is weapon affinity, match it
+                            if(target.PursuitAffinity == 1)
+                            {
+                                target.PursuitAffinity = skill.WeaponAffinity;
+                            }
                         }
 
-                        // If the result is weapon affinity, match it
-                        if(target.PursuitAffinity == 1)
+                        if(target.PursuitAffinity)
                         {
-                            target.PursuitAffinity = skill.WeaponAffinity;
+                            // Even if it matches the skill, check NRA for
+                            // pursuit affinity and stop if it is prevented
+                            if(!GetNRAResult(target, skill, target.PursuitAffinity))
+                            {
+                                // Calculate the new enemy resistence and determine damage
+                                float pResist = (float)(targetState->GetCorrectTbl(
+                                    (size_t)target.PursuitAffinity + RES_OFFSET) * 0.01);
+
+                                // Damage is always dealt at this point even with full
+                                // resistance, floor at 1
+                                float calc = (float)target.Damage1 * (1.f + pResist * -1.f);
+                                target.PursuitDamage = (int32_t)floor(calc < 1.f
+                                    ? 1.f : calc);
+                            }
                         }
-
-                        // Check NRA for pursuit affinity and stop if it is prevented
-                        if(!GetNRAResult(target, skill, target.PursuitAffinity))
+                        else
                         {
-                            // Calculate the new enemy resistence and determine damage
-                            float pResist = (float)(targetState->GetCorrectTbl(
-                                (size_t)target.PursuitAffinity + RES_OFFSET) * 0.01);
-
-                            float calc = (float)target.Damage1 *
-                                (1.f + pResist * -1.f);
-                            target.PursuitDamage = (int32_t)floor(calc < 1.f
-                                ? 1.f : calc);
+                            // Pursuit damage is a straight adjustment from normal damage
+                            // when there is no affinity (this is the default state)
+                            target.PursuitDamage = target.Damage1;
                         }
 
                         if(target.PursuitDamage > 0)
@@ -8068,6 +8142,12 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                         // Calculate relative damage
                         target.TechnicalDamage = (int32_t)floor(
                             (double)target.Damage1 * techPow * 0.01);
+
+                        // Damage is supposed to hit, floor at 1
+                        if(!target.TechnicalDamage)
+                        {
+                            target.TechnicalDamage = 1;
+                        }
 
                         // Apply limits
                         if(critLevel == 2)
@@ -11075,21 +11155,13 @@ bool SkillManager::Spawn(
     }
 
     auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
     auto serverDataManager = server->GetServerDataManager();
 
-    // Zone independent spawns are restricted to fields
-    bool isField = false;
-    for(auto& pair : serverDataManager->GetFieldZoneIDs())
-    {
-        if(pair.first == zone->GetDefinitionID() &&
-           pair.second == zone->GetDynamicMapID())
-        {
-            isField = true;
-            break;
-        }
-    }
-
-    if(!isField)
+    // Zone independent spawns are restricted to fields and dungeons
+    auto zoneData = definitionManager->GetZoneData(zone->GetDefinitionID());
+    if(!zoneData || (zoneData->GetBasic()->GetType() != 2 &&
+        zoneData->GetBasic()->GetType() != 4))
     {
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::NOTHING_HAPPENED_HERE);
@@ -11162,8 +11234,13 @@ bool SkillManager::Spawn(
                 {
                     auto eBase = enemy->GetEnemyBase();
                     eBase->SetSpawnSource(spawn);
-                    eBase->SetSpawnGroupID(spawnGroup->GetID());
                     eBase->SetSpawnLocation(spawnLoc);
+
+                    // Unlike zone specific spawns, global spawns do not
+                    // have their group ID set on them as they should never
+                    // be considered part of that group for that zone.
+                    //eBase->SetSpawnGroupID(spawnGroup->GetID());
+
                     enemies.push_back(enemy);
                 }
                 else

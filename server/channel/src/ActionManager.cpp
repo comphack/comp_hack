@@ -242,22 +242,25 @@ void ActionManager::PerformActions(
                 // Execute once per enemy in the zone or instance and quit
                 // afterwards if any fail
                 std::list<std::shared_ptr<Zone>> zones;
-                switch(action->GetLocation())
+                if(ctx.CurrentZone)
                 {
-                case objects::Action::Location_t::INSTANCE:
+                    switch(action->GetLocation())
                     {
-                        auto instance = ctx.CurrentZone->GetInstance();
-                        if(instance)
+                    case objects::Action::Location_t::INSTANCE:
                         {
-                            zones = instance->GetZones();
+                            auto instance = ctx.CurrentZone->GetInstance();
+                            if(instance)
+                            {
+                                zones = instance->GetZones();
+                            }
                         }
+                        break;
+                    case objects::Action::Location_t::ZONE:
+                    default:
+                        // All others should be treated like just the zone
+                        zones.push_back(ctx.CurrentZone);
+                        break;
                     }
-                    break;
-                case objects::Action::Location_t::ZONE:
-                default:
-                    // All others should be treated like just the zone
-                    zones.push_back(ctx.CurrentZone);
-                    break;
                 }
 
                 for(auto z : zones)
@@ -1247,7 +1250,7 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
     if(effects.size() > 0)
     {
         std::list<std::shared_ptr<ActiveEntityState>> entities;
-        bool playerEntities = true;
+        bool playerEntities = state != nullptr;
         switch(act->GetTargetType())
         {
         case objects::ActionAddRemoveStatus::TargetType_t::CHARACTER:
@@ -1278,7 +1281,9 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
                     entities.push_back(eState);
                 }
 
-                playerEntities = false;
+                playerEntities = eState &&
+                    (eState->GetEntityType() == EntityType_t::CHARACTER ||
+                        eState->GetEntityType() == EntityType_t::PARTNER_DEMON);
             }
             break;
         }
@@ -2375,7 +2380,7 @@ bool ActionManager::UpdateQuest(ActionContext& ctx)
         switch(act->GetFlagSetMode())
         {
         case objects::ActionUpdateQuest::FlagSetMode_t::INCREMENT:
-            for(auto pair : flagStates)
+            for(auto& pair : flagStates)
             {
                 auto it = existing.find(pair.first);
                 if(it != existing.end())
@@ -2385,7 +2390,7 @@ bool ActionManager::UpdateQuest(ActionContext& ctx)
             }
             break;
         case objects::ActionUpdateQuest::FlagSetMode_t::DECREMENT:
-            for(auto pair : flagStates)
+            for(auto& pair : flagStates)
             {
                 auto it = existing.find(pair.first);
                 if(it != existing.end())
@@ -3109,7 +3114,7 @@ bool ActionManager::Delay(ActionContext& ctx)
                 uint32_t pGroupID)
                 {
                     auto actionManager = pServer->GetActionManager();
-                    if(actionManager && !pZone->GetInvalid())
+                    if(actionManager && pZone && !pZone->GetInvalid())
                     {
                         // Only get the client if they're still in the zone
                         auto client = pWorldCID

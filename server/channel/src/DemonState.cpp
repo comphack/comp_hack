@@ -69,7 +69,8 @@ namespace libcomp
             binding
                 .Func<std::shared_ptr<objects::Demon>
                 (DemonState::*)() const>(
-                    "GetEntity", &DemonState::GetEntity);
+                    "GetEntity", &DemonState::GetEntity)
+                .StaticFunc("Cast", &DemonState::Cast);
 
             Bind<DemonState>("DemonState", binding);
         }
@@ -518,4 +519,10 @@ bool DemonState::HasSpecialTDamage()
     auto calcState = GetCalculatedState();
     return calcState->ExistingTokuseiAspectsContains((int8_t)
         objects::TokuseiAspect::Type_t::FAMILIARITY_REGEN);
+}
+
+std::shared_ptr<DemonState> DemonState::Cast(
+    const std::shared_ptr<EntityStateObject>& obj)
+{
+    return std::dynamic_pointer_cast<DemonState>(obj);
 }

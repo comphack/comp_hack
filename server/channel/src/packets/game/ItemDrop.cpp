@@ -54,13 +54,17 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
 {
     auto state = client->GetClientState();
     auto character = state->GetCharacterState()->GetEntity();
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(
-            state->GetObjectUUID(itemID)));
 
-    auto itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
-        libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
-    if(itemBox && item)
+    auto uuid = state->GetObjectUUID(itemID);
+
+    std::shared_ptr<objects::Item> item;
+    std::shared_ptr<objects::ItemBox> itemBox;
+
+    if(!uuid.IsNull() &&
+        (item = std::dynamic_pointer_cast<objects::Item>(
+            libcomp::PersistentObject::GetObjectByUUID(uuid))) &&
+        (itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
+            libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()))))
     {
         int8_t slot = item->GetBoxSlot();
 
@@ -105,13 +109,6 @@ bool Parsers::ItemDrop::Parse(libcomp::ManagerPacket *pPacketManager,
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
     int64_t itemID = p.ReadS64Little();
-    auto uuid = client->GetClientState()->GetObjectUUID(itemID);
-
-    if(uuid.IsNull() || nullptr == std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(uuid)))
-    {
-        return false;
-    }
 
     server->QueueWork(DropItem, server, client, itemID);
 

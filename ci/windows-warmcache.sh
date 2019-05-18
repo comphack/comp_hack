@@ -14,7 +14,7 @@ fi
 
 # For a re-download of the libcomp builds
 echo Removing cached libcomp
-if [ ! -f libcomp-4.1.2-${PLATFORM}.zip ]; then
+if [ -f libcomp-4.1.2-${PLATFORM}.zip ]; then
     rm libcomp-4.1.2-${PLATFORM}.zip
 fi
 echo Downloading the external dependencies

@@ -18,9 +18,9 @@ curl -vLo ~/qt-unified-windows-x86-online.exe http://download.qt.io/official_rel
 echo "Installing..."
 # Run installer and save the installer output. To avoid hitting the timeout,
 # periodically print some progress. On error, show the full log and abort.
-~/qt-unified-windows-x86-online.exe --verbose --script tools/qt-installer-windows.qs |
+~/qt-unified-windows-x86-online.exe --verbose --script ci/qt-installer-windows.qs |
     tee ~/qt-installer-output.txt |
-    tools/report-progress.sh ||
+    ci/report-progress.sh ||
     (cat ~/qt-installer-output.txt; exit 1)
 
 printf 'Installation size: '

@@ -24,12 +24,15 @@ echo "Generator     = $GENERATOR"
 #
 # Dependencies
 #
+echo Installing WiX
 cinst wixtoolset
+echo Installed WiX
 
 cd $ROOT_DIR
 mkdir build
 cd build
 
+echo Downloading external dependencies
 if [ "$PLATFORM" != "win32" ]; the
     curl -vLo external.zip https://github.com/comphack/external/releases/download/external-25/external-0.1.1-win64.zip
 else
@@ -39,23 +42,29 @@ fi
 unzip external.zip
 rm external.zip
 mv external* ../binaries
+echo Installed external dependencies
 
+echo Downloading libcomp
 curl -vLo libcomp.zip https://github.com/comphack/libcomp/releases/download/v4.1.2/libcomp-4.1.2-win64.zip
 zunip libcomp.zip
 rm libcomp.zip
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp
+echo Installed libcomp
 
 # Restore the cache
+echo Restoring cache
 ci/travis-cache-windows.sh restore
+echo Restored cache
 
 #
 # Build
 #
 
+echo Running cmake
 cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=ON \
     -DWINDOWS_SERVICE=ON \
     -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
     -DCMAKE_CUSTOM_CONFIGURATION_TYPES="$CONFIGURATION" -G"$GENERATOR" ..
+echo Running build
 cmake --build . --config $CONFIGURATION --target package
-# cmake --build . --config $CONFIGURATION --target doc

@@ -65,7 +65,8 @@ jobs:
       script: echo buildC os=$TRAVIS_OS_NAME compiler=$COMPILER_CXX generator=$CMAKE_GENERATOR
 
     - stage: "Build"
-      os: "Windows (VS2015)"
+      name: "Windows (VS2015)"
+      os: windows
       before_install: echo Before install
       before_script: echo Before script
       script: echo This is the windows build

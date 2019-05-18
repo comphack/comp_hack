@@ -48,7 +48,7 @@ echo Installed external dependencies
 
 echo Downloading libcomp
 curl -Lo libcomp.zip https://github.com/comphack/libcomp/releases/download/v4.1.2/libcomp-4.1.2-win64.zip
-zunip libcomp.zip
+unzip libcomp.zip
 rm libcomp.zip
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp

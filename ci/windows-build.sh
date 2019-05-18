@@ -41,14 +41,14 @@ else
     curl -Lo external.zip https://github.com/comphack/external/releases/download/external-25/external-0.1.1-win32.zip
 fi
 
-unzip external.zip
+unzip external.zip | ../ci/report-progress.sh
 rm external.zip
 mv external* ../binaries
 echo Installed external dependencies
 
 echo Downloading libcomp
 curl -Lo libcomp.zip https://github.com/comphack/libcomp/releases/download/v4.1.2/libcomp-4.1.2-win64.zip
-unzip libcomp.zip
+unzip libcomp.zip | ../ci/report-progress.sh
 rm libcomp.zip
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp
@@ -56,12 +56,15 @@ echo Installed libcomp
 
 # Restore the cache
 echo Restoring cache
+cd "${ROOT_DIR}"
 ci/travis-cache-windows.sh restore
 echo Restored cache
 
 #
 # Build
 #
+
+cd "${ROOT_DIR}/build"
 
 echo Running cmake
 cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=ON \

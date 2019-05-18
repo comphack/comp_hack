@@ -317,6 +317,9 @@ ENDIF()
 # PDB not found for library.
 ADD_LINKER_FLAGS(AUTO /ignore:4099)
 
+# Object file level parallelism for MSVC.
+ADD_COMPILER_FLAGS(AUTO /MP)
+
 # UTF-8 source encoding for MSVC.
 ADD_COMPILER_FLAGS(AUTO /utf-8 /bigobj)
 

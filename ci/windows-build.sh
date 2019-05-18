@@ -6,7 +6,7 @@ export CACHE_DIR=`pwd`/cache
 
 export CONFIGURATION="RelWithDebInfo"
 
-if [ "$PLATFORM" != "win32" ]; the
+if [ "$PLATFORM" != "win32" ]; then
     export CMAKE_PREFIX_PATH="C:/Qt/5.12.3/msvc2017_64"
     export GENERATOR="Visual Studio 15 2017 Win64"
     export MSPLATFORM="x64"
@@ -24,7 +24,7 @@ echo "Generator     = $GENERATOR"
 #
 # Dependencies
 #
-cinst graphviz.portable
+cinst wixtoolset
 
 cd $ROOT_DIR
 mkdir build
@@ -45,16 +45,9 @@ zunip libcomp.zip
 rm libcomp.zip
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp
-cp ../deps/libcomp/api/*.tags api/
 
-curl -vLo doxygen.zip https://github.com/comphack/external/releases/download/external-25/doxygen-1.8.14.windows.x64.bin.zip
-mkdir doxygen
-cd doxygen
-unzip ../doxygen.zip
-cd ..
-rm doxygen.zip
-
-export PATH="${ROOT_DIR}/build/doxygen;${PATH}"
+# Restore the cache
+ci/travis-cache-windows.sh restore
 
 #
 # Build
@@ -66,4 +59,3 @@ cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=ON \
     -DCMAKE_CUSTOM_CONFIGURATION_TYPES="$CONFIGURATION" -G"$GENERATOR" ..
 cmake --build . --config $CONFIGURATION --target package
 # cmake --build . --config $CONFIGURATION --target doc
-# 7z a comp_hack-api.zip api

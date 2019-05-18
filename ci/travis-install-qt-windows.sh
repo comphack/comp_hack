@@ -23,9 +23,6 @@ echo "Installing..."
     ci/report-progress.sh ||
     (cat ~/qt-installer-output.txt; exit 1)
 
-ls C:/Qt
-ls C:/Qt/5.12.3
-
 printf 'Installation size: '
 du -sm "$QT5_BASE_DIR" 2>&1 ||
     (cat ~/qt-installer-output.txt; exit 1)

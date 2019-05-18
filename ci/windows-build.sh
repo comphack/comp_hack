@@ -35,7 +35,7 @@ mkdir build
 cd build
 
 echo Downloading external dependencies
-if [ "$PLATFORM" != "win32" ]; the
+if [ "$PLATFORM" != "win32" ]; then
     curl -vLo external.zip https://github.com/comphack/external/releases/download/external-25/external-0.1.1-win64.zip
 else
     curl -vLo external.zip https://github.com/comphack/external/releases/download/external-25/external-0.1.1-win32.zip

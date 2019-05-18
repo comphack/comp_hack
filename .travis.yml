@@ -22,7 +22,7 @@ jobs:
       os: windows
       env:
         - PLATFORM: win32
-        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2015
+        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017
       script: ci/windows-warmcache.sh
 
     - stage: "Warm cache"
@@ -30,7 +30,7 @@ jobs:
       os: windows
       env:
         - PLATFORM: win64
-        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2015_64
+        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
       script: ci/windows-warmcache.sh
 
     # - stage: "Build"
@@ -78,13 +78,13 @@ jobs:
     #   before_install: ci/linux-before_install.sh
     #   script: ci/linux-build.sh
 
-    # - stage: "Build"
-    #   name: "Windows (VS2015)"
-    #   os: windows
-    #   env:
-    #     - PLATFORM: win64
-    #     - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2015_64
-    #   script: echo This is the windows build
+    - stage: "Build"
+      name: "Windows (VS2015)"
+      os: windows
+      env:
+        - PLATFORM: win64
+        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
+      script: ci/windows-build.sh
 
     # - stage: "Documentation"
     #   name: "Documentation"

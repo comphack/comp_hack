@@ -30,7 +30,7 @@ echo "Generator     = $GENERATOR"
 echo Installing WiX
 # cinst wixtoolset --ignore-dependencies | ci/report-progress.sh
 curl -Lo wix.exe https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
-exec wix.exe /install /quiet /norestart
+cmd wix.exe /install /quiet /norestart
 rm wix.exe
 echo Installed WiX
 

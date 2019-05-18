@@ -12,8 +12,8 @@ env:
 
 jobs:
   include:
-    - stage: "Warm Cache"
-      name: "Warm Cache"
+    - stage: "Warm cache"
+      name: "Warm cache"
       script: echo Warm the cache here
 
     - stage: "Build"
@@ -71,6 +71,6 @@ jobs:
       before_script: echo Before script
       script: echo This is the windows build
 
-    - stage: docs
+    - stage: "Documentation"
       name: "Documentation"
       script: echo Generate documentation here

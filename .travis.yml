@@ -14,7 +14,8 @@ jobs:
   include:
     - stage: "Warm cache"
       name: "Warm cache"
-      script: echo Warm the cache here
+      os: linux
+      script: ci/linux-warmcache.sh
 
     - stage: "Build"
       name: "Linux (Clang+Make)"
@@ -26,9 +27,8 @@ jobs:
         - COMPILER_CC=clang
         - COMPILER_CXX=clang++
         - CMAKE_GENERATOR='Unix Makefiles'
-      before_install: echo Before install
-      before_script: echo Before script
-      script: echo buildA os=$TRAVIS_OS_NAME compiler=$COMPILER_CXX generator=$CMAKE_GENERATOR
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-build.sh
 
     - stage: "Build"
       name: "Linux (Clang+Ninja)"
@@ -40,9 +40,8 @@ jobs:
         - COMPILER_CC=clang
         - COMPILER_CXX=clang++
         - CMAKE_GENERATOR=Ninja
-      before_install: echo Before install
-      before_script: echo Before script
-      script: echo buildB os=$TRAVIS_OS_NAME compiler=$COMPILER_CXX generator=$CMAKE_GENERATOR
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-build.sh
 
     - stage: "Build"
       name: "Linux (GCC5+Make)"
@@ -60,15 +59,12 @@ jobs:
         - COMPILER_CC=gcc-5
         - COMPILER_CXX=g++-5
         - CMAKE_GENERATOR='Unix Makefiles'
-      before_install: echo Before install
-      before_script: echo Before script
-      script: echo buildC os=$TRAVIS_OS_NAME compiler=$COMPILER_CXX generator=$CMAKE_GENERATOR
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-build.sh
 
     - stage: "Build"
       name: "Windows (VS2015)"
       os: windows
-      before_install: echo Before install
-      before_script: echo Before script
       script: echo This is the windows build
 
     - stage: "Documentation"

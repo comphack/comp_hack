@@ -12,12 +12,12 @@ env:
 
 jobs:
   include:
-    - stage: warmcache
+    - stage: "Warm Cache"
       name: "Warm Cache"
       script: echo Warm the cache here
 
-    - stage: build
-      name: "Build"
+    - stage: "Build"
+      name: "Linux - Clang+Make"
       os: linux
       dist: trusty
       sudo: required
@@ -28,8 +28,10 @@ jobs:
         - CMAKE_GENERATOR='Unix Makefiles'
       before_install: echo Before install
       before_script: echo Before script
-      script: echo buildA os=$TRAVIS_OS_NAM compiler=$COMPILER_CXX generator=$CMAKE_GENERATOR
-    - stage: build
+      script: echo buildA os=$TRAVIS_OS_NAME compiler=$COMPILER_CXX generator=$CMAKE_GENERATOR
+
+    - stage: "Build"
+    name: "Linux - Clang+Ninja"
       os: linux
       dist: trusty
       sudo: required
@@ -40,8 +42,10 @@ jobs:
         - CMAKE_GENERATOR=Ninja
       before_install: echo Before install
       before_script: echo Before script
-      script: echo buildB os=$TRAVIS_OS_NAM compiler=$COMPILER_CXX generator=$CMAKE_GENERATOR
-    - stage: build
+      script: echo buildB os=$TRAVIS_OS_NAME compiler=$COMPILER_CXX generator=$CMAKE_GENERATOR
+
+    - stage: "Build"
+      name: "Linux - GCC5+Make"
       os: linux
       dist: trusty
       sudo: required
@@ -58,9 +62,10 @@ jobs:
         - CMAKE_GENERATOR='Unix Makefiles'
       before_install: echo Before install
       before_script: echo Before script
-      script: echo buildC os=$TRAVIS_OS_NAM compiler=$COMPILER_CXX generator=$CMAKE_GENERATOR
-    - stage: build
-      os: windows
+      script: echo buildC os=$TRAVIS_OS_NAME compiler=$COMPILER_CXX generator=$CMAKE_GENERATOR
+
+    - stage: "Build"
+      os: "Windows VS2015"
       before_install: echo Before install
       before_script: echo Before script
       script: echo This is the windows build

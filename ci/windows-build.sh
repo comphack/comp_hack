@@ -24,9 +24,11 @@ echo "Generator     = $GENERATOR"
 #
 # Dependencies
 #
-echo Installing WiX
-cinst wixtoolset
-echo Installed WiX
+
+# WiX is broke because it tried to install .NET 3.5 and failed
+# echo Installing WiX
+# cinst wixtoolset
+# echo Installed WiX
 
 cd $ROOT_DIR
 mkdir build

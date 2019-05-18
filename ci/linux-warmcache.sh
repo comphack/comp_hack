@@ -4,6 +4,8 @@ set -e
 export ROOT_DIR=`pwd`
 export CACHE_DIR=`pwd`/cache
 
+cd $CACHE_DIR
+
 # Ninja 1.7.1
 if [ ! -f ninja-linux.zip ]; then
     wget -q https://github.com/ninja-build/ninja/releases/download/v1.7.1/ninja-linux.zip

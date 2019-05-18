@@ -13,60 +13,79 @@ env:
 jobs:
   include:
     - stage: "Warm cache"
-      name: "Warm cache"
+      name: "Warm cache (Linux)"
       os: linux
       script: ci/linux-warmcache.sh
 
-    - stage: "Build"
-      name: "Linux (Clang+Make)"
-      os: linux
-      dist: trusty
-      sudo: required
-      compiler: clang
-      env:
-        - COMPILER_CC=clang
-        - COMPILER_CXX=clang++
-        - CMAKE_GENERATOR='Unix Makefiles'
-      before_install: ci/linux-before_install.sh
-      script: ci/linux-build.sh
-
-    - stage: "Build"
-      name: "Linux (Clang+Ninja)"
-      os: linux
-      dist: trusty
-      sudo: required
-      compiler: clang
-      env:
-        - COMPILER_CC=clang
-        - COMPILER_CXX=clang++
-        - CMAKE_GENERATOR=Ninja
-      before_install: ci/linux-before_install.sh
-      script: ci/linux-build.sh
-
-    - stage: "Build"
-      name: "Linux (GCC5+Make)"
-      os: linux
-      dist: trusty
-      sudo: required
-      compiler: gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-5
-      env:
-        - COMPILER_CC=gcc-5
-        - COMPILER_CXX=g++-5
-        - CMAKE_GENERATOR='Unix Makefiles'
-      before_install: ci/linux-before_install.sh
-      script: ci/linux-build.sh
-
-    - stage: "Build"
-      name: "Windows (VS2015)"
+    - stage: "Warm cache"
+      name: "Warm cache (Windows 32-bit)"
       os: windows
-      script: echo This is the windows build
+      env:
+        - PLATFORM: win32
+        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2015
+      script: ci/windows-warmcache.sh
 
-    - stage: "Documentation"
-      name: "Documentation"
-      script: echo Generate documentation here
+    - stage: "Warm cache"
+      name: "Warm cache (Windows 64-bit)"
+      os: windows
+      env:
+        - PLATFORM: win64
+        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2015_64
+      script: ci/windows-warmcache.sh
+
+    # - stage: "Build"
+    #   name: "Linux (Clang+Make)"
+    #   os: linux
+    #   dist: trusty
+    #   sudo: required
+    #   compiler: clang
+    #   env:
+    #     - COMPILER_CC=clang
+    #     - COMPILER_CXX=clang++
+    #     - CMAKE_GENERATOR='Unix Makefiles'
+    #   before_install: ci/linux-before_install.sh
+    #   script: ci/linux-build.sh
+
+    # - stage: "Build"
+    #   name: "Linux (Clang+Ninja)"
+    #   os: linux
+    #   dist: trusty
+    #   sudo: required
+    #   compiler: clang
+    #   env:
+    #     - COMPILER_CC=clang
+    #     - COMPILER_CXX=clang++
+    #     - CMAKE_GENERATOR=Ninja
+    #   before_install: ci/linux-before_install.sh
+    #   script: ci/linux-build.sh
+
+    # - stage: "Build"
+    #   name: "Linux (GCC5+Make)"
+    #   os: linux
+    #   dist: trusty
+    #   sudo: required
+    #   compiler: gcc
+    #   addons:
+    #     apt:
+    #       sources:
+    #         - ubuntu-toolchain-r-test
+    #       packages:
+    #         - g++-5
+    #   env:
+    #     - COMPILER_CC=gcc-5
+    #     - COMPILER_CXX=g++-5
+    #     - CMAKE_GENERATOR='Unix Makefiles'
+    #   before_install: ci/linux-before_install.sh
+    #   script: ci/linux-build.sh
+
+    # - stage: "Build"
+    #   name: "Windows (VS2015)"
+    #   os: windows
+    #   env:
+    #     - PLATFORM: win64
+    #     - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2015_64
+    #   script: echo This is the windows build
+
+    # - stage: "Documentation"
+    #   name: "Documentation"
+    #   script: echo Generate documentation here

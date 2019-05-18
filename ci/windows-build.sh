@@ -30,7 +30,7 @@ echo "Generator     = $GENERATOR"
 echo Installing WiX
 # cinst wixtoolset --ignore-dependencies | ci/report-progress.sh
 curl -Lo wix.exe https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
-wix.exe /install /quiet /norestart
+exec wix.exe /install /quiet /norestart
 rm wix.exe
 echo Installed WiX
 
@@ -38,22 +38,13 @@ cd $ROOT_DIR
 mkdir build
 cd build
 
-echo Downloading external dependencies
-if [ "$PLATFORM" != "win32" ]; then
-    curl -Lo external.zip https://github.com/comphack/external/releases/download/external-25/external-0.1.1-win64.zip
-else
-    curl -Lo external.zip https://github.com/comphack/external/releases/download/external-25/external-0.1.1-win32.zip
-fi
-
-unzip external.zip | ../ci/report-progress.sh
-rm external.zip
+echo Installing external dependencies
+unzip ../cache/external-0.1.1-${PLATFORM}.zip | ../ci/report-progress.sh
 mv external* ../binaries
 echo Installed external dependencies
 
-echo Downloading libcomp
-curl -Lo libcomp.zip https://github.com/comphack/libcomp/releases/download/v4.1.2/libcomp-4.1.2-win64.zip
-unzip libcomp.zip | ../ci/report-progress.sh
-rm libcomp.zip
+echo Installing libcomp
+unzip ../cache/libcomp-4.1.2-${PLATFORM}.zip | ../ci/report-progress.sh
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp
 echo Installed libcomp

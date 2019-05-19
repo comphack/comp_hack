@@ -16,7 +16,6 @@ echo "Installed .NET 3.5"
 
 echo "Installing WiX"
 cinst -y wixtoolset | ci/report-progress.sh
-ls "C:/Program Files (x86)/WiX Toolset v3.11/bin"
 set PATH="C:/Program Files (x86)/WiX Toolset v3.11/bin:${PATH}"
 echo "Installed WiX"
 
@@ -49,8 +48,8 @@ cd "${ROOT_DIR}/build"
 
 echo "Running cmake"
 cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=ON \
-    -DWINDOWS_SERVICE=ON \
-    -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
+    -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
+    -DCPACK_WIX_ROOT="C:/Program Files (x86)/WiX Toolset v3.11" \
     -DCMAKE_CUSTOM_CONFIGURATION_TYPES="$CONFIGURATION" -G"$GENERATOR" ..
 
 echo "Running build"

@@ -30,6 +30,8 @@ mkdir build
 cd build
 
 echo Installing external dependencies
+echo "${ROOT_DIR}/cache/external-0.1.1-${PLATFORM}.zip"
+ls -lh "${ROOT_DIR}/cache/"
 unzip "${ROOT_DIR}/cache/external-0.1.1-${PLATFORM}.zip" | ../ci/report-progress.sh
 mv external* ../binaries
 echo Installed external dependencies

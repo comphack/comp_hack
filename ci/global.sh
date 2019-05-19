@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export ROOT_DIR="$(pwd)"
-export CACHE_DIR="$(pwd)/cache"
+export ROOT_DIR="${TRAVIS_BUILD_DIR}"
+export CACHE_DIR="${TRAVIS_BUILD_DIR}/cache"
 
 export DOXYGEN_VERSION=1.8.14
 export DOXYGEN_EXTERNAL_RELEASE=external-25
@@ -16,7 +16,7 @@ export LINUX_CLANG_VERSION=3.8.0
 
 export WINDOWS_QT_VERSION=5.12.3
 
-if ["$TRAVIS_OS_NAME" == "windows" ]; then
+if [ "$TRAVIS_OS_NAME" == "windows" ]; then
     export CONFIGURATION="RelWithDebInfo"
 
     if [ "$PLATFORM" != "win32" ]; then

@@ -16,6 +16,7 @@ echo "Installed .NET 3.5"
 
 echo "Installing WiX"
 cinst -y wixtoolset | ci/report-progress.sh
+set PATH="C:/Program Files (x86)/WiX Toolset v3.11/bin:${PATH}"
 echo "Installed WiX"
 
 cd "${ROOT_DIR}"
@@ -53,3 +54,5 @@ cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=ON \
 
 echo "Running build"
 cmake --build . --config "$CONFIGURATION" --target package
+
+ls -lh

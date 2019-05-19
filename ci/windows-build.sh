@@ -16,6 +16,10 @@ echo "Installed .NET 3.5"
 
 echo "Installing WiX"
 cinst -y wixtoolset | ci/report-progress.sh
+ls "C:/Program Files"
+ls "C:/Program Files (x86)"
+ls "C:/Program Files (x86)/WiX Toolset v3.11"
+ls "C:/Program Files (x86)/WiX Toolset v3.11/bin"
 set PATH="C:/Program Files (x86)/WiX Toolset v3.11/bin:${PATH}"
 echo "Installed WiX"
 

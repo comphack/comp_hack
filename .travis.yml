@@ -12,34 +12,34 @@ cache:
 
 jobs:
   include:
-    - stage: "Warm cache"
-      name: "Warm cache (Linux)"
-      os: linux
-      script: ci/linux-warmcache.sh
+    # - stage: "Warm cache"
+    #   name: "Warm cache (Linux)"
+    #   os: linux
+    #   script: ci/linux-warmcache.sh
 
-    - stage: "Warm cache"
-      name: "Warm cache (Windows 32-bit)"
-      os: windows
-      env:
-        - PLATFORM: win32
-        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017
-      script: ci/windows-warmcache.sh
+    # - stage: "Warm cache"
+    #   name: "Warm cache (Windows 32-bit)"
+    #   os: windows
+    #   env:
+    #     - PLATFORM: win32
+    #     - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017
+    #   script: ci/windows-warmcache.sh
 
-    - stage: "Warm cache"
-      name: "Warm cache (Windows 64-bit)"
-      os: windows
-      env:
-        - PLATFORM: win64
-        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
-      script: ci/windows-warmcache.sh
+    # - stage: "Warm cache"
+    #   name: "Warm cache (Windows 64-bit)"
+    #   os: windows
+    #   env:
+    #     - PLATFORM: win64
+    #     - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
+    #   script: ci/windows-warmcache.sh
 
-    - stage: "Libraries"
-      name: "Windows (VS2015)"
-      os: windows
-      env:
-        - PLATFORM: win64
-        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
-      script: ci/windows-libcomp.sh
+    # - stage: "Libraries"
+    #   name: "Windows (VS2017 64-bit)"
+    #   os: windows
+    #   env:
+    #     - PLATFORM: win64
+    #     - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
+    #   script: ci/windows-libcomp.sh
 
     # - stage: "Build"
     #   name: "Linux (Clang+Make)"
@@ -87,7 +87,7 @@ jobs:
     #   script: ci/linux-build.sh
 
     - stage: "Build"
-      name: "Windows (VS2015)"
+      name: "Windows (VS2017 64-bit)"
       os: windows
       env:
         - PLATFORM: win64

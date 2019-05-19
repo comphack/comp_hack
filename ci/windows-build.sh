@@ -25,14 +25,15 @@ echo "Generator     = $GENERATOR"
 # Dependencies
 #
 
-# WiX is broke because it tried to install .NET 3.5 and failed
-# After that it tries anyway and hangs...
-# echo Installing WiX
-# cinst wixtoolset --ignore-dependencies | ci/report-progress.sh
-# curl -Lo wix.exe https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
-# cmd wix.exe /install /quiet /norestart
-# rm wix.exe
-# echo Installed WiX
+# Install .NET 3.5 from PowerShell first...
+# https://travis-ci.community/t/unable-to-install-wix-toolset/1071/3
+echo Installing .NET 3.5
+powershell Install-WindowsFeature Net-Framework-Core
+echo Installed .NET 3.5
+
+echo Installing WiX
+cinst -y wixtoolset | ci/report-progress.sh
+echo Installed WiX
 
 cd $ROOT_DIR
 mkdir build

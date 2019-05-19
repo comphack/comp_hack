@@ -25,28 +25,28 @@ echo "Generator     = $GENERATOR"
 # Dependencies
 #
 
-cd $ROOT_DIR
+cd "${ROOT_DIR}/libcomp"
 mkdir build
 cd build
 
 echo Installing external dependencies
-unzip ../cache/external-0.1.1-${PLATFORM}.zip | ../ci/report-progress.sh
+unzip "${ROOT_DIR}/cache/external-0.1.1-${PLATFORM}.zip" | ../ci/report-progress.sh
 mv external* ../binaries
 echo Installed external dependencies
 
 echo Installing Doxygen
 mkdir doxygen
 cd doxygen
-unzip ../../cache/doxygen.zip | ../../ci/report-progress.sh
+unzip "${ROOT_DIR}/cache/doxygen.zip" | ../../ci/report-progress.sh
 cd ..
-export PATH="${ROOT_DIR}/build/doxygen;${PATH}"
+export PATH="${ROOT_DIR}/libcomp/build/doxygen;${PATH}"
 echo Installed Doxygen
 
 #
 # Build
 #
 
-cd "${ROOT_DIR}/build"
+cd "${ROOT_DIR}/libcomp/build"
 
 echo Running cmake
 cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
@@ -57,4 +57,4 @@ echo Running build
 cmake --build . --config $CONFIGURATION --target package
 
 echo Copying package to cache for next stage
-cp libcomp-*.zip ../cache/libcomp-${PLATFORM}.zip
+cp libcomp-*.zip "${ROOT_DIR}/cache/libcomp-${PLATFORM}.zip"

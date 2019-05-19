@@ -25,15 +25,6 @@ echo "Generator     = $GENERATOR"
 # Dependencies
 #
 
-# WiX is broke because it tried to install .NET 3.5 and failed
-# After that it tries anyway and hangs...
-# echo Installing WiX
-# cinst wixtoolset --ignore-dependencies | ci/report-progress.sh
-# curl -Lo wix.exe https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
-# cmd wix.exe /install /quiet /norestart
-# rm wix.exe
-# echo Installed WiX
-
 cd $ROOT_DIR
 mkdir build
 cd build
@@ -43,17 +34,14 @@ unzip ../cache/external-0.1.1-${PLATFORM}.zip | ../ci/report-progress.sh
 mv external* ../binaries
 echo Installed external dependencies
 
-echo Installing libcomp
-unzip ../cache/libcomp-${PLATFORM}.zip | ../ci/report-progress.sh
-mv libcomp* ../deps/libcomp
-ls ../deps/libcomp
-echo Installed libcomp
-
-# Restore the cache (this mostly just handles Qt)
-echo Restoring cache
-cd "${ROOT_DIR}"
-ci/travis-cache-windows.sh restore
-echo Restored cache
+echo Installing Doxygen
+mkdir doxygen
+cd doxygen
+unzip ../doxygen.zip | ../../ci/report-progress.sh
+cd ..
+rm doxygen.zip
+export PATH="${ROOT_DIR}/build/doxygen;${PATH}"
+echo Installed Doxygen
 
 #
 # Build
@@ -62,9 +50,12 @@ echo Restored cache
 cd "${ROOT_DIR}/build"
 
 echo Running cmake
-cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=ON \
-    -DWINDOWS_SERVICE=ON \
-    -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
+cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
+    -DGENERATE_DOCUMENTATION=ON -DWINDOWS_SERVICE=ON
     -DCMAKE_CUSTOM_CONFIGURATION_TYPES="$CONFIGURATION" -G"$GENERATOR" ..
+
 echo Running build
 cmake --build . --config $CONFIGURATION --target package
+
+echo Copying package to cache for next stage
+cp libcomp-*.zip ../cache/libcomp-${PLATFORM}.zip

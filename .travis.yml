@@ -33,6 +33,14 @@ jobs:
         - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
       script: ci/windows-warmcache.sh
 
+    - stage: "libcomp"
+      name: "Windows (VS2015)"
+      os: windows
+      env:
+        - PLATFORM: win64
+        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
+      script: ci/windows-libcomp.sh
+
     # - stage: "Build"
     #   name: "Linux (Clang+Make)"
     #   os: linux

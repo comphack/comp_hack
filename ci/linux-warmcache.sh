@@ -38,4 +38,5 @@ rm -f libcomp-*-gcc5.tar.bz2
 wget -q https://github.com/comphack/libcomp/releases/download/v4.1.2/libcomp-4.1.2-gcc5.tar.bz2
 
 # Just for debug to make sure the cache is setup right
+echo "State of cache:"
 ls -lh

@@ -6,6 +6,12 @@ export CACHE_DIR=`pwd`/cache
 
 cd $CACHE_DIR
 
+# Doxygen for Windows
+echo Downloading Doxygen
+if [ ! -f doxygen.zip ]; then
+    curl -Lo doxygen.zip https://github.com/comphack/external/releases/download/external-25/doxygen-1.8.14.windows.x64.bin.zip
+fi
+
 # External dependencies for Windows
 echo Downloading the external dependencies
 if [ ! -f external-0.1.1-${PLATFORM}.zip ]; then
@@ -17,8 +23,8 @@ echo Removing cached libcomp
 if [ -f libcomp-4.1.2-${PLATFORM}.zip ]; then
     rm libcomp-4.1.2-${PLATFORM}.zip
 fi
-echo Downloading the external dependencies
-curl -Lo libcomp-4.1.2-${PLATFORM}.zip https://github.com/comphack/libcomp/releases/download/v4.1.2/libcomp-4.1.2-${PLATFORM}.zip
+# echo Downloading the external dependencies
+# curl -Lo libcomp-4.1.2-${PLATFORM}.zip https://github.com/comphack/libcomp/releases/download/v4.1.2/libcomp-4.1.2-${PLATFORM}.zip
 
 # Qt 5.12.3
 echo Downloading Qt
@@ -28,3 +34,7 @@ if [ ! -f Qt-5.12.3-${PLATFORM}.tar ]; then
     ci/travis-install-qt-windows.sh
     ci/travis-cache-windows.sh save
 fi
+
+# Just for debug to make sure the cache is setup right
+echo "State of cache:"
+ls -lh

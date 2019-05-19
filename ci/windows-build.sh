@@ -55,4 +55,8 @@ cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=ON \
 echo "Running build"
 cmake --build . --config "$CONFIGURATION" --target package
 
-ls -lh
+echo "Copying build result to the cache"
+rm -rf "${CACHE_DIR}/build-${PLATFORM}/"
+mkdir "${CACHE_DIR}/build-${PLATFORM}"
+cp comp_hack-*.{zip,msi} "${CACHE_DIR}/build-${PLATFORM}/"
+ls -lh "${CACHE_DIR}/build-${PLATFORM}/"

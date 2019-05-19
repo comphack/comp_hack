@@ -37,9 +37,8 @@ echo Installed external dependencies
 echo Installing Doxygen
 mkdir doxygen
 cd doxygen
-unzip ../doxygen.zip | ../../ci/report-progress.sh
+unzip ../../cache/doxygen.zip | ../../ci/report-progress.sh
 cd ..
-rm doxygen.zip
 export PATH="${ROOT_DIR}/build/doxygen;${PATH}"
 echo Installed Doxygen
 

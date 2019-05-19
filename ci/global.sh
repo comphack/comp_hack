@@ -1,0 +1,9 @@
+#!/bin/bash
+
+export DOXYGEN_VERSION=1.8.14
+export DOXYGEN_EXTERNAL_RELEASE=external-25
+
+export EXTERNAL_RELEASE=external-25
+export EXTERNAL_VERSION=0.1.1
+
+export WINDOWS_QT_VERSION=5.12.3

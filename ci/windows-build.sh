@@ -53,7 +53,26 @@ cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=ON \
     -DCMAKE_CUSTOM_CONFIGURATION_TYPES="$CONFIGURATION" -G"$GENERATOR" ..
 
 echo "Running build"
-cmake --build . --config "$CONFIGURATION" --target package
+time cmake --build . --config "$CONFIGURATION" --target comp_bdpatch
+time cmake --build . --config "$CONFIGURATION" --target comp_bgmtool
+time cmake --build . --config "$CONFIGURATION" --target comp_capgrep
+time cmake --build . --config "$CONFIGURATION" --target comp_cathedral
+time cmake --build . --config "$CONFIGURATION" --target comp_client
+time cmake --build . --config "$CONFIGURATION" --target comp_decrypt
+time cmake --build . --config "$CONFIGURATION" --target comp_encrypt
+time cmake --build . --config "$CONFIGURATION" --target comp_logger
+time cmake --build . --config "$CONFIGURATION" --target comp_logger_headless
+time cmake --build . --config "$CONFIGURATION" --target comp_nifcrypt
+time cmake --build . --config "$CONFIGURATION" --target comp_objgen
+time cmake --build . --config "$CONFIGURATION" --target comp_patcher
+time cmake --build . --config "$CONFIGURATION" --target comp_rehash
+time cmake --build . --config "$CONFIGURATION" --target comp_updater
+time cmake --build . --config "$CONFIGURATION" --target comp_updater_headless
+time cmake --build . --config "$CONFIGURATION" --target comp_lobby
+time cmake --build . --config "$CONFIGURATION" --target comp_world
+time cmake --build . --config "$CONFIGURATION" --target comp_channel
+time cmake --build . --config "$CONFIGURATION" --target all
+time cmake --build . --config "$CONFIGURATION" --target package
 
 echo "Copying build result to the cache"
 rm -rf "${CACHE_DIR}/build-${PLATFORM}/"

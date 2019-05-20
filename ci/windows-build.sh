@@ -80,9 +80,6 @@ echo "BUILT TARGET comp_logger_headless"
 echo "BUILDING TARGET comp_nifcrypt"
 time cmake --build . --config "$CONFIGURATION" --target comp_nifcrypt
 echo "BUILT TARGET comp_nifcrypt"
-echo "BUILDING TARGET comp_objgen"
-time cmake --build . --config "$CONFIGURATION" --target comp_objgen
-echo "BUILT TARGET comp_objgen"
 echo "BUILDING TARGET comp_patcher"
 time cmake --build . --config "$CONFIGURATION" --target comp_patcher
 echo "BUILT TARGET comp_patcher"

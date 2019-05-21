@@ -75,6 +75,12 @@ OPTION(BUILD_DREAM "Build the dream." ON)
 # Option to build only the updater.
 OPTION(UPDATER_ONLY "Build only the updater." OFF)
 
+# Option to build only the channel.
+OPTION(CHANNEL_ONLY "Build only the channel." OFF)
+
+# Option to import the channel for install but not to build it.
+OPTION(IMPORT_CHANNEL "Import the channel without building." OFF)
+
 # Include our custom cmake modules.
 SET(CMAKE_MODULE_PATH
     ${COMP_MODULE_PATH}
@@ -128,7 +134,7 @@ SET(CPACK_COMPONENT_GROUP_SERVERS_EXPANDED TRUE)
 IF(WIN32)
     SET(COMP_INSTALL_DIR "/")
 
-    IF(UPDATER_ONLY)
+    IF(UPDATER_ONLY OR CHANNEL_ONLY)
         SET(CPACK_GENERATOR "ZIP")
     ELSE()
         SET(CPACK_GENERATOR "WIX;ZIP")
@@ -743,9 +749,9 @@ ENDMACRO(CREATE_GTESTS)
 
 # If the dream code exists in the "dream" directory and BUILD_DREAM is set,
 # build the dream application as well.
-IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY)
+IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
     ADD_SUBDIRECTORY(dream)
-ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY)
+ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
 
 # This must come first so that objgen is found for the macro bellow. As a
 # consequence, none of the tools can define their own structures to be
@@ -755,7 +761,9 @@ IF(NOT UPDATER_ONLY)
     ADD_SUBDIRECTORY(deps)
 ENDIF(NOT UPDATER_ONLY)
 
-ADD_SUBDIRECTORY(tools)
+IF(NOT CHANNEL_ONLY)
+    ADD_SUBDIRECTORY(tools)
+ENDIF(NOT CHANNEL_ONLY)
 
 # This macro generates code using objgen. The arguments must start with the
 # name of the output variable that will be passed to the ADD_EXECUTABLE command
@@ -872,10 +880,10 @@ IF(NOT UPDATER_ONLY)
 ENDIF(NOT UPDATER_ONLY)
 
 # Windows does not have the server spawning code.
-IF(NOT WIN32 AND NOT UPDATER_ONLY)
+IF(NOT WIN32 AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
     ADD_SUBDIRECTORY(libtester)
     ADD_SUBDIRECTORY(client)
-ENDIF(NOT WIN32 AND NOT UPDATER_ONLY)
+ENDIF(NOT WIN32 AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
 
 #ADD_SUBDIRECTORY(updater)
 
@@ -884,13 +892,13 @@ GET_PROPERTY(targets GLOBAL PROPERTY DOC_TARGETS)
 ADD_CUSTOM_TARGET(doc ALL DEPENDS ${targets})
 SET_TARGET_PROPERTIES(doc PROPERTIES FOLDER "SpecialTargets")
 
-IF(NOT UPDATER_ONLY)
+IF(NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
     ADD_SUBDIRECTORY(docs)
-ENDIF(NOT UPDATER_ONLY)
+ENDIF(NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
 
-IF(NOT BSD AND NOT UPDATER_ONLY)
+IF(NOT BSD AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
     #ADD_SUBDIRECTORY(features)
-ENDIF(NOT BSD AND NOT UPDATER_ONLY)
+ENDIF(NOT BSD AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
 
 # On Linux system, install the icons where they can be found. These are used
 # for the application menu launcher icons.

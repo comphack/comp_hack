@@ -155,49 +155,51 @@ IF(WIN32)
 
     SET(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
 
-    INCLUDE(InstallRequiredSystemLibraries)
+    IF(NOT CHANNEL_ONLY)
+        INCLUDE(InstallRequiredSystemLibraries)
 
-    INSTALL(
-        PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
-        DESTINATION /
-        COMPONENT runtime
-    )
+        INSTALL(
+            PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+            DESTINATION /
+            COMPONENT runtime
+        )
 
-    FIND_PACKAGE(Qt5Widgets REQUIRED)
+        FIND_PACKAGE(Qt5Widgets REQUIRED)
 
-    IF(Qt5Widgets_FOUND AND WIN32 AND TARGET Qt5::qmake AND NOT TARGET Qt5::windeployqt)
-        GET_TARGET_PROPERTY(_qt5_qmake_location Qt5::qmake IMPORTED_LOCATION)
+        IF(Qt5Widgets_FOUND AND WIN32 AND TARGET Qt5::qmake AND NOT TARGET Qt5::windeployqt)
+            GET_TARGET_PROPERTY(_qt5_qmake_location Qt5::qmake IMPORTED_LOCATION)
 
-        EXECUTE_PROCESS(
-            COMMAND "${_qt5_qmake_location}" -query QT_INSTALL_PREFIX
-            RESULT_VARIABLE return_code
-            OUTPUT_VARIABLE qt5_install_prefix
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
+            EXECUTE_PROCESS(
+                COMMAND "${_qt5_qmake_location}" -query QT_INSTALL_PREFIX
+                RESULT_VARIABLE return_code
+                OUTPUT_VARIABLE qt5_install_prefix
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-        SET(imported_location "${qt5_install_prefix}/bin/windeployqt.exe")
+            SET(imported_location "${qt5_install_prefix}/bin/windeployqt.exe")
 
-        IF(EXISTS ${imported_location})
-            ADD_EXECUTABLE(Qt5::windeployqt IMPORTED)
+            IF(EXISTS ${imported_location})
+                ADD_EXECUTABLE(Qt5::windeployqt IMPORTED)
 
-            SET_TARGET_PROPERTIES(Qt5::windeployqt PROPERTIES
-                IMPORTED_LOCATION ${imported_location})
+                SET_TARGET_PROPERTIES(Qt5::windeployqt PROPERTIES
+                    IMPORTED_LOCATION ${imported_location})
+            ENDIF()
         ENDIF()
-    ENDIF()
 
-    INSTALL(FILES
-        "${CMAKE_SOURCE_DIR}/contrib/winconfig/lobby.xml"
-        "${CMAKE_SOURCE_DIR}/contrib/winconfig/channel.xml"
-        "${CMAKE_SOURCE_DIR}/contrib/winconfig/world.xml"
-        "${CMAKE_SOURCE_DIR}/contrib/winconfig/setup.xml"
-        "${CMAKE_SOURCE_DIR}/contrib/winconfig/newcharacter.xml"
-        "${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml"
-        DESTINATION config
-        COMPONENT config)
+        INSTALL(FILES
+            "${CMAKE_SOURCE_DIR}/contrib/winconfig/lobby.xml"
+            "${CMAKE_SOURCE_DIR}/contrib/winconfig/channel.xml"
+            "${CMAKE_SOURCE_DIR}/contrib/winconfig/world.xml"
+            "${CMAKE_SOURCE_DIR}/contrib/winconfig/setup.xml"
+            "${CMAKE_SOURCE_DIR}/contrib/winconfig/newcharacter.xml"
+            "${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml"
+            DESTINATION config
+            COMPONENT config)
 
-    INSTALL(DIRECTORY
-        "${CMAKE_SOURCE_DIR}/contrib/webroot"
-        DESTINATION /
-        COMPONENT webroot)
+        INSTALL(DIRECTORY
+            "${CMAKE_SOURCE_DIR}/contrib/webroot"
+            DESTINATION /
+            COMPONENT webroot)
+    ENDIF(NOT CHANNEL_ONLY)
 ELSE()
     SET(COMP_INSTALL_DIR "bin")
     SET(CPACK_GENERATOR "TGZ;TBZ2;DEB")

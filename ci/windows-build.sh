@@ -37,6 +37,8 @@ echo "Installed libcomp"
 echo "Installing comp_channel"
 cd bin
 unzip "${CACHE_DIR}/channel-${PLATFORM}.zip" | ../ci/report-progress.sh
+mv comp_hack-*/comp_channel* ./
+rm -rf comp_hack-*/
 ls -lh
 cd ..
 echo "Installed comp_channel"

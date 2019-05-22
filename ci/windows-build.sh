@@ -35,16 +35,10 @@ ls ../deps/libcomp
 echo "Installed libcomp"
 
 echo "Installing comp_channel"
-echo mkdir
 mkdir bin
-echo cd
 cd bin
-ls -lh "${CACHE_DIR}"
-echo unzip
-unzip "${CACHE_DIR}/channel-${PLATFORM}.zip" #| ../ci/report-progress.sh
-echo mv
+unzip "${CACHE_DIR}/channel-${PLATFORM}.zip"
 mv comp_hack-*/comp_channel* ./
-echo rm
 rm -rf comp_hack-*/
 ls -lh
 cd ..
@@ -63,7 +57,7 @@ echo "Restored cache"
 cd "${ROOT_DIR}/build"
 
 echo "Running cmake"
-cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=OFF \
+cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=OFF -DIMPORT_CHANNEL=ON \
     -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
     -DCPACK_WIX_ROOT="C:/Program Files (x86)/WiX Toolset v3.11" \
     -DCMAKE_CUSTOM_CONFIGURATION_TYPES="$CONFIGURATION" -G"$GENERATOR" ..

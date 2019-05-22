@@ -35,10 +35,16 @@ ls ../deps/libcomp
 echo "Installed libcomp"
 
 echo "Installing comp_channel"
+echo mkdir
 mkdir bin
+echo cd
 cd bin
+ls -lh "${CACHE_DIR}"
+echo unzip
 unzip "${CACHE_DIR}/channel-${PLATFORM}.zip" | ../ci/report-progress.sh
+echo mv
 mv comp_hack-*/comp_channel* ./
+echo rm
 rm -rf comp_hack-*/
 ls -lh
 cd ..

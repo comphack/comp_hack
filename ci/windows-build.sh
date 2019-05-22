@@ -41,7 +41,7 @@ echo cd
 cd bin
 ls -lh "${CACHE_DIR}"
 echo unzip
-unzip "${CACHE_DIR}/channel-${PLATFORM}.zip" | ../ci/report-progress.sh
+unzip "${CACHE_DIR}/channel-${PLATFORM}.zip" #| ../ci/report-progress.sh
 echo mv
 mv comp_hack-*/comp_channel* ./
 echo rm

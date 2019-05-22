@@ -102,11 +102,12 @@ jobs:
         - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
       script: ci/windows-build.sh
 
-    - stage: "Documentation"
-      name: "Documentation & Deploy"
-      os: linux
-      dist: trusty
-      sudo: required
+    - stage: "Deploy"
+      name: "Windows (VS2017 64-bit)"
+      os: windows
+      env:
+        - PLATFORM: win64
+        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
       script: ci/linux-deploy.sh
       deploy:
         provider: bintray

@@ -102,6 +102,19 @@ jobs:
         - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
       script: ci/windows-build.sh
 
-    # - stage: "Documentation"
-    #   name: "Documentation"
-    #   script: echo Generate documentation here
+    - stage: "Documentation"
+      name: "Documentation & Deploy"
+      os: linux
+      dist: trusty
+      sudo: required
+      script: ci/linux-deploy.sh
+      deploy:
+        provider: bintray
+        file: "ci/bintray.json"
+        user: "compomega"
+        key:
+          secure: BbAZfWUpi46ygnUjtX9/9aAsgsM/rNy+YezmCwinkSNBYQAZY+pUivDngKmJYxyt4mxwNR1sgmlwNHeVUTs7XtK08NTpAIX+KhvVXzSctG9xoMjvLJzEPCQdCJGej/FUJsTEFqfolwZMco9EILurGZmx18t7b6+FqW1SZ79d4wJYIrdzuH7Ui15rrUhjVrfvtLFrsd00MOyLcufrOz7mDpsKCFPlKMNOvaQmcI2ziXiHUUZ/oNnqj7ztQ1BO0AUdWDmEBDBkkV+x0gr6fa26NEUITW/zvWjA24+H0SpdkmhMuYsbcw9MaTxjq2xbi737A7eW9hYyS1R4UiiLpGkB7pCtHTzqtox2MlqrYo0L4AWrjugrD2sRAxLepZxGYxb7K/ve1XkNRRdurHc1GCwZ6J/f8e80Be1UJ9CNpZ4gjZXw54bXqZVXH1u98GKKsANZbBqqmp8Hzfw7mliIlUGCEwjBF1bUvSlrhewnEE8XseQIL6UX5ieFNjazWagBmOoOPYQ+cvH8VUt2EWqEnzm4W+gZXzfB/ufycFORC5d5m0zDeeJIps3Omp+MUpUYS/qcllJ16/nHLKceG4ueSH9Hl9KCom3JfS0y9qF79n5LE2fC8VqoZToye3XSGRABtAkOGwLGfBA1umtbv3aipHaHeKWYH6JSPgMg8cLR9LlrhAs=
+        skip_cleanup: true
+        on:
+          all_branches: true
+          #repo: comhack/comp_hack

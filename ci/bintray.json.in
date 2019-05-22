@@ -1,0 +1,31 @@
+{
+    "package": {
+        "name": "comp_hack-unstable",
+        "repo": "unstable",
+        "subject": "comphack",
+        "desc": "Unstable development build",
+        "website_url": "https://comphack.github.io/",
+        "issue_tracker_url": "https://github.com/comphack/comp_hack/issues",
+        "vcs_url": "https://github.com/comphack/comp_hack.git",
+        "github_use_tag_release_notes": true,
+        "github_release_notes_file": "RELEASE.txt",
+        "licenses": ["AGPL-V3"],
+        "labels": ["cool", "awesome", "gorilla"],
+        "public_download_numbers": false,
+        "public_stats": false
+    },
+
+    "version": {
+        "name": "@TRAVIS_BUILD_NUMBER@",
+        "desc": "This version was created automatically from a GitHub commit",
+        "attributes": [{"name": "Branch", "values" : ["@TRAVIS_BRANCH@"], "type": "string"},
+                       {"name": "Commit", "values" : ["@TRAVIS_COMMIT@"], "type": "string"}],
+        "gpgSign": true
+    },
+
+    "files":
+        [
+        {"includePattern": "deploy/(.*)", "uploadPattern": "$1"}
+        ],
+    "publish": true
+}

@@ -40,4 +40,5 @@ cd ..
 mkdir deploy
 cp "${CACHE_DIR}/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar" deploy/
 #dropbox-deployment -d -u /comp_hack -a deploy
-dropbox-deployment -d -u comp_hack -a "deploy/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar"
+#dropbox-deployment -d -u comp_hack -a "deploy/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar"
+dropbox-deployment

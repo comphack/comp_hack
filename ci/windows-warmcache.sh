@@ -32,3 +32,11 @@ fi
 # Just for debug to make sure the cache is setup right
 echo "State of cache:"
 ls -lh
+
+cd ci
+gem install dropbox-deployment-1.0.0.gem
+cd ..
+
+mkdir deploy
+cp "${CACHE_DIR}/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar" deploy/
+dropbox-deployment -d -u /comp_hack -a deploy

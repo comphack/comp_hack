@@ -1,0 +1,4 @@
+deploy:
+  dropbox_path: /comp_hack
+  artifacts_path: deploy
+  debug: true

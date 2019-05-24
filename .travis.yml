@@ -110,7 +110,7 @@ jobs:
         - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
         - secure: "VfcdtDHRQTm6vqLyuqNY96GmXN465PONc5hA5X6xbfNRKGpzaRw6dYfuBLHPgwJncw9SYsOW7Ssf8kq6E8Uc3B6UoqRW7n04V1EypDRTYCd78oiCM/uN8mhPf1MnDpv1Zd5vxPrewPi7wAkX6wpbiVN/R3yuv2pnii1e3VTqE2Hdlbw+1bU0wuy8WbifZ8vyganS45r4hcrNrbtU2iaSHY4WGmQjMpyX//CXF2d7kCqW5ThfX+SpuFF/R8rBgV3H3tKeXlSoKc+fmr7kMtnyGki6wM3hKao7D0zSM+lDr3XNC4voXGfG6c6Bba4geAE4UdLCP+aouI9HtJLSMlwlYnbYHyPFNgEZnYORyJEMx3uQcoNTlgIlYKPd6Q1dpRWgBqeYUI/VZGix51pNy3lJFesI2Asd6/evZTllQiMSZdtx5aCvDtgT6H7QaI4RfspxxSAuvJ0HvqE4Q7IEze4kYzoldS96dzcVpQGlYAGihAOrJW1ZVc9OZr5UlsLUHQ7K9XOKRYAW76pdyJTOVM3wFnZfUMCfKdPmiiVQEfw8EPUX04uBJvJcozwlR3GaEl8VvDZ/Vmde1ncfOLtiybPBWtMD09ZEC9NNrNGrXI98NFTu6ZKMXKkcKLaQPrAQhr5A8HOky96KqZKNvTHDa4yUsV9CDkIsBFLE298sGj59fvw="
       before_install:
-        - cd ci && gem install dropbox-deployment-1.0.0.gem
+        - cd ci && gem install dropbox-deployment-1.0.0.gem && cd ..
       script: ci/linux-deploy.sh
       after_success:
         - dropbox-deployment -u /comp_hack -a deploy

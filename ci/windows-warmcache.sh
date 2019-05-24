@@ -33,7 +33,7 @@ fi
 echo "State of cache:"
 ls -lh
 
-cd ci
+cd "${ROOT_DIR}/ci"
 gem install dropbox-deployment-1.0.0.gem
 cd ..
 

@@ -8,6 +8,15 @@ source "ci/global.sh"
 # Dependencies
 #
 
+# Check for existing build.
+if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    dropbox_setup
+
+    if dropbox-deployment -d -e "$DROPBOX_ENV" -u build -s "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"; then
+        exit 0
+    fi
+fi
+
 cd "${ROOT_DIR}/libcomp"
 mkdir build
 cd build
@@ -44,7 +53,6 @@ echo "Copying package to cache for next stage"
 mv libcomp-*.zip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_setup
     dropbox_upload build "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 else
     cp "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "${CACHE_DIR}/"

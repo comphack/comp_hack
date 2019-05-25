@@ -8,6 +8,15 @@ source "ci/global.sh"
 # Dependencies
 #
 
+# Check for existing build.
+if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    dropbox_setup
+
+    if dropbox-deployment -d -e "$DROPBOX_ENV" -u build -s "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"; then
+        exit 0
+    fi
+fi
+
 cd "${ROOT_DIR}"
 mkdir build
 cd build
@@ -20,7 +29,6 @@ echo "Installed external dependencies"
 echo "Installing libcomp"
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_setup
     dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 else
     cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"

@@ -37,6 +37,7 @@ jobs:
     - stage: "Libraries"
       name: "Windows (VS2017 64-bit)"
       os: windows
+      filter_secrets: false
       env:
         - PLATFORM: win64
         - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
@@ -45,6 +46,7 @@ jobs:
     - stage: "Channel"
       name: "Windows (VS2017 64-bit)"
       os: windows
+      filter_secrets: false
       env:
         - PLATFORM: win64
         - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
@@ -98,6 +100,7 @@ jobs:
     - stage: "Build"
       name: "Windows (VS2017 64-bit)"
       os: windows
+      filter_secrets: false
       env:
         - PLATFORM: win64
         - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64

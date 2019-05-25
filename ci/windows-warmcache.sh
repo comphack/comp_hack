@@ -33,6 +33,7 @@ fi
 echo "State of cache:"
 ls -lh
 
+cd "${ROOT_DIR}"
 mkdir deploy
 cp "${CACHE_DIR}/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar" deploy/
 echo "Running deployment..."

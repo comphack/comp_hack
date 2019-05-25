@@ -12,7 +12,7 @@ source "ci/global.sh"
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     dropbox_setup
 
-    if dropbox-deployment -d -e "$DROPBOX_ENV" -u build -s "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"; then
+    if dropbox-deployment -d -e "$DROPBOX_ENV" -u build -a . -s "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"; then
         exit 0
     fi
 fi

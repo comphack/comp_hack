@@ -46,5 +46,5 @@ function dropbox_download {
 }
 
 function dropbox_upload {
-    dropbox-deployment -d -e "$DROPBOX_ENV" -u "$1" -a "$2"
+    dropbox-deployment -d -e "$DROPBOX_ENV" -u "$1" -a "$2" --max-files 6 --max-days 5
 }

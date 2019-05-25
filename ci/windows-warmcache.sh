@@ -42,5 +42,5 @@ cp "${CACHE_DIR}/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar" deploy/
 #dropbox-deployment -d -u /comp_hack -a deploy
 #dropbox-deployment -d -u comp_hack -a "deploy/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar"
 echo "Running deployment..."
-dropbox-deployment
+dropbox-deployment -d
 echo "Finished running deployment."

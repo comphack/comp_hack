@@ -27,6 +27,7 @@ else
 fi
 
 unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" | ../ci/report-progress.sh
+rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp
 
@@ -55,4 +56,3 @@ if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
 else
     cp "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "${CACHE_DIR}/"
 fi
-

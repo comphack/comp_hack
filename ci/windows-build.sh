@@ -29,15 +29,24 @@ mv external* ../binaries
 echo "Installed external dependencies"
 
 echo "Installing libcomp"
-unzip "${CACHE_DIR}/libcomp-${PLATFORM}.zip" | ../ci/report-progress.sh
+
+if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    dropbox_setup
+    dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+else
+    cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+fi
+
+unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" | ../ci/report-progress.sh
+rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp
+
 echo "Installed libcomp"
 
 echo "Installing comp_channel"
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_setup
     dropbox_download "build/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 else
     cp "${CACHE_DIR}/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
@@ -46,6 +55,7 @@ fi
 mkdir bin
 cd bin
 unzip "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+rm "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 mv comp_hack-*/comp_channel* ./
 rm -rf comp_hack-*/
 ls -lh
@@ -82,4 +92,3 @@ if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     dropbox_upload build "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
     dropbox_upload build "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
 fi
-

@@ -33,14 +33,9 @@ fi
 echo "State of cache:"
 ls -lh
 
-cd "${ROOT_DIR}/ci"
-gem install dropbox-deployment-1.0.0.gem
-cd ..
-
+gem install "${ROOT_DIR}/ci/dropbox-deployment-1.0.0.gem"
 mkdir deploy
 cp "${CACHE_DIR}/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar" deploy/
-#dropbox-deployment -d -u /comp_hack -a deploy
-#dropbox-deployment -d -u comp_hack -a "deploy/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar"
 echo "Running deployment..."
-dropbox-deployment -d
+dropbox-deployment -d -u comp_hack -a "deploy/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar"
 echo "Finished running deployment."

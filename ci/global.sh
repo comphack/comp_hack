@@ -16,6 +16,8 @@ export LINUX_CLANG_VERSION=3.8.0
 
 export WINDOWS_QT_VERSION=5.12.3
 
+export DROPBOX_ENV=DROPBOX_OAUTH_BEARER_$(echo $TRAVIS_REPO_SLUG | LC_ALL=C sed -e "s/\//_/" | awk '{ print toupper($0) }')
+
 if [ "$TRAVIS_OS_NAME" == "windows" ]; then
     export CONFIGURATION="RelWithDebInfo"
 
@@ -34,3 +36,15 @@ if [ "$TRAVIS_OS_NAME" == "windows" ]; then
     echo "Configuration = $CONFIGURATION"
     echo "Generator     = $GENERATOR"
 fi
+
+function dropbox_setup {
+    gem install "${ROOT_DIR}/ci/dropbox-deployment-1.0.0.gem"
+}
+
+function dropbox_download {
+    dropbox-deployment -d -e "$DROPBOX_ENV" -f "$1" -a "$2"
+}
+
+function dropbox_upload {
+    dropbox-deployment -d -e "$DROPBOX_ENV" -u "$1" -a "$2"
+}

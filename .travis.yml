@@ -4,11 +4,12 @@ cache:
   directories:
     - cache
 
-# env:
-#   global:
-#    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
-#    #   via the "travis encrypt" command using the project repo's public key
-#    - secure: "Ncn6/msd5oa9PiMYS5y3bpqbcqnB9Wwr7UIEtDS6fd1X01sk7aWF267kMNq8ijosJtk1P4vjKmZomfhTyQgILV6UkNkSDae5NOc39XM9yoysxc6LHTnF8/E5wXgbV1oDJR9kenrBzX49ZRJxwYa9WgXsGz4AiDyUB9eMy48eomnyNXG/SkZBbPmxaI0zSCACWH0VMHwvxHOHnaXHMOuQDVN+oxP4gEdQ/Cz2P0QJl1TvE5hpYB9fW/yItcdgL7sVkiFXbkZh5l3s52fGEN339e9CEEEEqnEUmFAzq0nsZNKZqh+ivh4Ga2qJa+btLGkEYyNQyKpOjy21Wx8UKY6uT5ZVxdSK943dbn0+v2nr0K++Hu2mRoq3btMfza5PZGQrK/XdOgathqxMoqSlKKXNo5qQoHfyjRLUscaZPsF/kWfnUoRGA90Eg6RLq59gsKkQjSJ0cWJ6Czt2txJZvmAZn51thBMJ3QW88+taDXkSVXsXkrdPjGPrwUt+okhvXJK5+PeSa+Fb4CJUiijOAg9Sew+WDJdsP9d0gVtEncXiVdAgdUFZ9wbyKCrjPisKxZWzzMDr+7tT3MQmg8FagPMkm5PW9Q+Ewof2VLjxffX+PhHcWvUrVqe8KBEVuJNs4SYG0ETsvp0+y8tyh5o+zAmc8fKsuYmEDNJ727rjrTfA56A="
+env:
+  global:
+    # Dropbox for comphack/comp_hack (DROPBOX_OAUTH_BEARER_COMPHACK_COMP_HACK)
+    - secure: "IUJVH79CrfF1QdV70ydGoKFnf6u7SeLD8Q1jjzKUecirS2gg/lU4ddlYJwjRFuj9E5eOOkjunPuSnm8OPWvPgriSZFUgUVnEX6yAV/91nabP3UqPcOC3wEvfEXcCyHBBEezgYpoaZII8cpAXOEzQyVmAoHFfKVYX7bPE9EL5yIibKScZ8co9M887ouYErhCcssLPvg+xCYTR/QgiX9ymacBaNy0cUvVX+0ne3PetBbEtC9AgWFD0eJEBz7mXo159sZcFFSeUvRz2ajArNvuQSogCiYI886RNIHFcFQhJG1W3PW0KiBubvoXEzaaNE6CdNtHY4ginskrXPNd1CXYrgBYO6luNAAigthW4+VYJvHHsMvB3lH9jofBK47I7qWxVt1cVSsLAuRQ/EpwxILjIhGPnh47oGhAmza6uKa9850zEAqjJ8uiwjI6SPCg+xvsxIgfesHtFMIOUaT7oo4ihCouBL3f5vBJGm+08EoJpwY1ET5cQUn0gv7t5/4YaMkxdz1QtwVDAPT/KvEc5SeMINrdQfWgue2J5GSeP6Eu+rDhOgrhGO99g+y55o0UgxzFNHn9ZO07J1kYDbWDuLFiANmTHttFvLFby1ryTSVaOmzKxl5y4bd9PO1VKK++Qemi9eX++JhjUq0GLh5V9PGGvI+1pxVHCjtzX11126Csqr8Q="
+    # Dropbox for compomega/comp_hack (DROPBOX_OAUTH_BEARER_COMPOMEGA_COMP_HACK)
+    - secure: "OZpG+eY2BZa6txGleVC8m5k9iFmW/GGRYmnR50QgFCuFCu4lDK9BIGnuChYQXisF0E+ZP2jBLXFepM5H/js5Z4z/XYbCNI7Gu1wBpJxxDhbhyzmnMj1Y/hWDnQ3o+4p8uI9WjLBEmPGUNMpaKYWbtG4hcLxcg+6kwnnMIIO1nuwZHetMuhWrCRA1EDsvaS3++PrScuA9Kli+Yd8KffjQZWLDj90kKazvymVmK14Tfm37hdV7pP1xTGMFK+zrkEmFqbTF/oOSZfUG+W4jbKnFGMAXIJHuLqaYkRASOGMSW/mfX+Wrc4HdDfuc3MrGy49bS4HjRaVeb3BxAWmGGNGK5c9lNNsTTn1uZ5r0FytGbCJ8Idq9XX+cmRzn9nsjGliMZ3U0qw9QAJLhAfFMyx23v3Cmb3iqkR3JLCakPv7ZmEQW9fRJoJvKhqGyRfizF07lKTRIH/3k4DMc140ESpVDmybDBoqI7ve1qZvVtjhQKlMuvbIxC8//Pf4Mov6MYGdriXmF1ZTL1Og0jSsThZJANqMckJoLyqaGO4Wt/7lAtqkepVLB2IsFwgBc21tqTVREQP/QEYK2Jnx7RccatxvKP6199uT9GczZ/bZv5k5yEg110lvjitlaNvO3Uz4QIMPmG+FRpwh5l2FV9mQaeOyI3McoFMAy3QloNHkFzYBQ0nU="
 
 jobs:
   include:
@@ -31,7 +32,6 @@ jobs:
       env:
         - PLATFORM: win64
         - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
-        - secure: "VfcdtDHRQTm6vqLyuqNY96GmXN465PONc5hA5X6xbfNRKGpzaRw6dYfuBLHPgwJncw9SYsOW7Ssf8kq6E8Uc3B6UoqRW7n04V1EypDRTYCd78oiCM/uN8mhPf1MnDpv1Zd5vxPrewPi7wAkX6wpbiVN/R3yuv2pnii1e3VTqE2Hdlbw+1bU0wuy8WbifZ8vyganS45r4hcrNrbtU2iaSHY4WGmQjMpyX//CXF2d7kCqW5ThfX+SpuFF/R8rBgV3H3tKeXlSoKc+fmr7kMtnyGki6wM3hKao7D0zSM+lDr3XNC4voXGfG6c6Bba4geAE4UdLCP+aouI9HtJLSMlwlYnbYHyPFNgEZnYORyJEMx3uQcoNTlgIlYKPd6Q1dpRWgBqeYUI/VZGix51pNy3lJFesI2Asd6/evZTllQiMSZdtx5aCvDtgT6H7QaI4RfspxxSAuvJ0HvqE4Q7IEze4kYzoldS96dzcVpQGlYAGihAOrJW1ZVc9OZr5UlsLUHQ7K9XOKRYAW76pdyJTOVM3wFnZfUMCfKdPmiiVQEfw8EPUX04uBJvJcozwlR3GaEl8VvDZ/Vmde1ncfOLtiybPBWtMD09ZEC9NNrNGrXI98NFTu6ZKMXKkcKLaQPrAQhr5A8HOky96KqZKNvTHDa4yUsV9CDkIsBFLE298sGj59fvw="
       script: ci/windows-warmcache.sh
 
     # - stage: "Libraries"
@@ -109,7 +109,6 @@ jobs:
     #   env:
     #     - PLATFORM: win64
     #     - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
-    #     - secure: "VfcdtDHRQTm6vqLyuqNY96GmXN465PONc5hA5X6xbfNRKGpzaRw6dYfuBLHPgwJncw9SYsOW7Ssf8kq6E8Uc3B6UoqRW7n04V1EypDRTYCd78oiCM/uN8mhPf1MnDpv1Zd5vxPrewPi7wAkX6wpbiVN/R3yuv2pnii1e3VTqE2Hdlbw+1bU0wuy8WbifZ8vyganS45r4hcrNrbtU2iaSHY4WGmQjMpyX//CXF2d7kCqW5ThfX+SpuFF/R8rBgV3H3tKeXlSoKc+fmr7kMtnyGki6wM3hKao7D0zSM+lDr3XNC4voXGfG6c6Bba4geAE4UdLCP+aouI9HtJLSMlwlYnbYHyPFNgEZnYORyJEMx3uQcoNTlgIlYKPd6Q1dpRWgBqeYUI/VZGix51pNy3lJFesI2Asd6/evZTllQiMSZdtx5aCvDtgT6H7QaI4RfspxxSAuvJ0HvqE4Q7IEze4kYzoldS96dzcVpQGlYAGihAOrJW1ZVc9OZr5UlsLUHQ7K9XOKRYAW76pdyJTOVM3wFnZfUMCfKdPmiiVQEfw8EPUX04uBJvJcozwlR3GaEl8VvDZ/Vmde1ncfOLtiybPBWtMD09ZEC9NNrNGrXI98NFTu6ZKMXKkcKLaQPrAQhr5A8HOky96KqZKNvTHDa4yUsV9CDkIsBFLE298sGj59fvw="
     #   before_install:
     #     - cd ci && gem install dropbox-deployment-1.0.0.gem && cd ..
     #   script: ci/linux-deploy.sh

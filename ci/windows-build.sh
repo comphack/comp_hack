@@ -35,13 +35,22 @@ ls ../deps/libcomp
 echo "Installed libcomp"
 
 echo "Installing comp_channel"
+
+if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    dropbox_setup
+    dropbox_download "build/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+else
+    cp "${CACHE_DIR}/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+fi
+
 mkdir bin
 cd bin
-unzip "${CACHE_DIR}/channel-${PLATFORM}.zip"
+unzip "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 mv comp_hack-*/comp_channel* ./
 rm -rf comp_hack-*/
 ls -lh
 cd ..
+
 echo "Installed comp_channel"
 
 # Restore the cache (this mostly just handles Qt)
@@ -66,5 +75,11 @@ echo "Running build"
 cmake --build . --config "$CONFIGURATION" --target package
 
 echo "Copying build result to the cache"
-cp comp_hack-*.{zip,msi} "${CACHE_DIR}/"
-ls -lh "${CACHE_DIR}"
+mv comp_hack-*.zip "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+mv comp_hack-*.msi "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
+
+if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    dropbox_upload build "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    dropbox_upload build "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
+fi
+

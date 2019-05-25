@@ -40,4 +40,12 @@ echo "Running build"
 cmake --build . --config "$CONFIGURATION" --target package
 
 echo "Copying package to cache for next stage"
-cp libcomp-*.zip "${CACHE_DIR}/libcomp-${PLATFORM}.zip"
+
+mv libcomp-*.zip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+
+if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    dropbox_setup
+    dropbox_upload build "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+else
+    cp "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "${CACHE_DIR}/"
+fi

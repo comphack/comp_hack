@@ -18,9 +18,18 @@ mv external* ../binaries
 echo "Installed external dependencies"
 
 echo "Installing libcomp"
-unzip "${CACHE_DIR}/libcomp-${PLATFORM}.zip" | ../ci/report-progress.sh
+
+if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    dropbox_setup
+    dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+else
+    cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+fi
+
+unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" | ../ci/report-progress.sh
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp
+
 echo "Installed libcomp"
 
 #
@@ -38,5 +47,12 @@ echo "Running build"
 cmake --build . --config "$CONFIGURATION" --target package
 
 echo "Copying build result to the cache"
-cp comp_hack-*.zip "${CACHE_DIR}/channel-${PLATFORM}.zip"
-ls -lh "${CACHE_DIR}"
+
+mv comp_hack-*.zip "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+
+if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    dropbox_upload build "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+else
+    cp "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "${CACHE_DIR}/"
+fi
+

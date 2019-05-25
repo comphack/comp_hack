@@ -32,15 +32,3 @@ fi
 # Just for debug to make sure the cache is setup right
 echo "State of cache:"
 ls -lh
-
-cd "${ROOT_DIR}"
-mkdir deploy
-cp "${CACHE_DIR}/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar" deploy/
-echo "Running deployment..."
-dropbox_setup
-echo "TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG"
-echo "DROPBOX_ENV=$DROPBOX_ENV"
-dropbox_upload comp_hack "deploy/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar"
-dropbox_download "comp_hack/Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar" bob.tar
-echo "Finished running deployment."
-ls -lh

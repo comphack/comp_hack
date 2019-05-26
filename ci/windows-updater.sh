@@ -43,5 +43,6 @@ cp comp_hack-*.zip "${ROOT_DIR}/deploy/"
 mv comp_hack-*.zip "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    dropbox_setup
     dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 fi

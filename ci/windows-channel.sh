@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 # Load the global settings.
 source "ci/global.sh"

@@ -38,6 +38,8 @@ if [ "$TRAVIS_OS_NAME" == "windows" ]; then
 fi
 
 if [ "$TRAVIS_OS_NAME" == "linux" ]; then
+    # If we turn it off the build may go faster but it will be a huge file.
+    export BUILD_OPTIMIZED=ON
     export COVERALLS_ENABLE=OFF
     export COVERALLS_SERVICE_NAME=travis-ci
 

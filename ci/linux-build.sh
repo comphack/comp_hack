@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 # Load the global settings.
 source "ci/global.sh"
@@ -46,7 +46,7 @@ mkdir bin
 cd bin
 tar xf "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 rm "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
-mv comp_hack-*/comp_channel* ./
+mv comp_hack-*/bin/comp_channel ./
 rm -rf comp_hack-*/
 ls -lh
 cd ..
@@ -61,7 +61,7 @@ cd "${ROOT_DIR}/build"
 
 echo "Running cmake"
 cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
-    -DCOVERALLS="$COVERALLS_ENABLE" -DBUILD_OPTIMIZED=OFF \
+    -DCOVERALLS="$COVERALLS_ENABLE" -DBUILD_OPTIMIZED="$BUILD_OPTIMIZED" \
     -DSINGLE_SOURCE_PACKETS=ON \ -DSINGLE_OBJGEN="${SINGLE_OBJGEN}" \
     -DUSE_COTIRE=ON -DGENERATE_DOCUMENTATION=ON \
     -DUSE_PREBUILT_LIBCOMP=ON -DIMPORT_CHANNEL=ON -G "${GENERATOR}" ..

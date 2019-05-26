@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 # Load the global settings.
 source "ci/global.sh"
@@ -35,7 +35,7 @@ cd "${ROOT_DIR}/libcomp/build"
 
 echo "Running cmake"
 cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
-    -DCOVERALLS="$COVERALLS_ENABLE" -DBUILD_OPTIMIZED=OFF \
+    -DCOVERALLS="$COVERALLS_ENABLE" -DBUILD_OPTIMIZED="$BUILD_OPTIMIZED" \
     -DSINGLE_SOURCE_PACKETS=ON \ -DSINGLE_OBJGEN="${SINGLE_OBJGEN}" \
     -DUSE_COTIRE=ON -DGENERATE_DOCUMENTATION=ON -G "${GENERATOR}" ..
 

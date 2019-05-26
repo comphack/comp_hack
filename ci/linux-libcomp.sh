@@ -46,8 +46,10 @@ echo "Copying package to cache for next stage"
 
 mv libcomp-*.tar.bz2 "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_upload build "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
-else
-    cp "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "${CACHE_DIR}/"
+if [ "$CMAKE_GENERATOR" != "Ninja" ]; then
+    if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+        dropbox_upload build "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
+    else
+        cp "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "${CACHE_DIR}/"
+    fi
 fi

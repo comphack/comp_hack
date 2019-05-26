@@ -17,8 +17,9 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.2.3)
 
-set_property(GLOBAL APPEND PROPERTY JOB_POOLS link_job_pool=1)
-set(CMAKE_JOB_POOL_LINK link_job_pool)
+# Do not build objects while linking to reduce memory usage.
+SET_PROPERTY(GLOBAL APPEND PROPERTY JOB_POOLS link_job_pool=1)
+SET(CMAKE_JOB_POOL_LINK link_job_pool)
 
 #
 # START OF VERSION CONSTANTS

@@ -62,8 +62,10 @@ echo "Copying build result to the cache"
 
 mv comp_hack-*.tar.bz2 "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_upload build "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
-else
-    cp "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "${CACHE_DIR}/"
+if [ "$CMAKE_GENERATOR" != "Ninja" ]; then
+    if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+        dropbox_upload build "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
+    else
+        cp "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "${CACHE_DIR}/"
+    fi
 fi

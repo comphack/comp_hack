@@ -85,4 +85,4 @@ cmake --build . --target guide
 echo "Publish the documentation on the GitHub page"
 cp -R ../contrib/pages ../pages
 cp -R api guide ../pages/
-find -type d "${ROOT_DIR}/pages"
+find "${ROOT_DIR}/pages" -type d

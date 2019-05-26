@@ -89,6 +89,6 @@ mv comp_hack-*.zip "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 mv comp_hack-*.msi "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_upload build "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
-    dropbox_upload build "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
+    dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
 fi

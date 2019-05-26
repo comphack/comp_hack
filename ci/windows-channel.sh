@@ -4,6 +4,9 @@ set -ex
 # Load the global settings.
 source "ci/global.sh"
 
+# Run the cache again just in case it was not warmed.
+source "ci/windows-warmcache.sh"
+
 #
 # Dependencies
 #

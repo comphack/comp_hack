@@ -13,7 +13,7 @@ mkdir build
 cd build
 
 echo "Installing external dependencies"
-unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip" | ../ci/report-progress.sh
+tar xf "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.tar.bz2" | ../ci/report-progress.sh
 mv external* ../binaries
 chmod +x ../binaries/ttvfs/bin/ttvfs_gen
 echo "Installed external dependencies"
@@ -22,13 +22,13 @@ echo "Installing libcomp"
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     dropbox_setup
-    dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 else
-    cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 fi
 
-unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" | ../ci/report-progress.sh
-rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+tar xf "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" | ../ci/report-progress.sh
+rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp
 
@@ -37,15 +37,15 @@ echo "Installed libcomp"
 echo "Installing comp_channel"
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_download "build/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    dropbox_download "build/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 else
-    cp "${CACHE_DIR}/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    cp "${CACHE_DIR}/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 fi
 
 mkdir bin
 cd bin
-unzip "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
-rm "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+tar xf "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
+rm "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 mv comp_hack-*/comp_channel* ./
 rm -rf comp_hack-*/
 ls -lh
@@ -76,7 +76,7 @@ cmake --build . --target guide
 # cmake --build . --target package
 
 # echo "Copying build result to the cache"
-# mv comp_hack-*.zip "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"
+# mv comp_hack-*.tar.bz2 "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"
 
 # if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
 #     dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"

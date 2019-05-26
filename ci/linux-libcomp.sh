@@ -12,7 +12,7 @@ source "ci/global.sh"
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     dropbox_setup
 
-    if dropbox-deployment -d -e "$DROPBOX_ENV" -u build -a . -s "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"; then
+    if dropbox-deployment -d -e "$DROPBOX_ENV" -u build -a . -s "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"; then
         exit 0
     fi
 fi
@@ -22,7 +22,7 @@ mkdir build
 cd build
 
 echo "Installing external dependencies"
-unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip" | "${ROOT_DIR}/ci/report-progress.sh"
+tar xf "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.tar.bz2" | "${ROOT_DIR}/ci/report-progress.sh"
 mv external* ../binaries
 chmod +x ../binaries/ttvfs/bin/ttvfs_gen
 echo "Installed external dependencies"
@@ -44,10 +44,10 @@ cmake --build . --target package
 
 echo "Copying package to cache for next stage"
 
-mv libcomp-*.zip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+mv libcomp-*.tar.bz2 "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_upload build "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    dropbox_upload build "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 else
-    cp "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "${CACHE_DIR}/"
+    cp "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "${CACHE_DIR}/"
 fi

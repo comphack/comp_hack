@@ -175,6 +175,15 @@ jobs:
         - CMAKE_GENERATOR='Unix Makefiles'
       before_install: ci/linux-before_install.sh
       script: ci/linux-build.sh
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        local_dir: pages
+        github_token:
+          secure: PYbit8NFq1XFxwuBE3vDyudKzZOh4rNLVSyd8WeW2UJ6jlE2lzn1z4oDbRuy4Bw/SeWgfCPtm2XZljACrY36+cqTpXUHnwNcVKXxXPgLJqe9C1mkCXqK1+pv3YVnxDhRD+K+/Kta7RaAO3veRA9SW0QYVvdtulW0zGwSQ67JF0Hs/W0OSvvyNIlMCwarQ2FA+NPjF1o2Nh9KzRy0VVO13jX15rKttaFziQMfKysssEyVqAwWfF6LjY8wvoZ+dadgTdyV+6l2EdL60nMeP7+dWbwYtqSwSFY5gnMzq8lW2FUcVtqJAa+TPNBi6r5tiBeWn/Sw3c41kupGBpTJeVSOT1Ca5oC2+BxOlJe4eTzoM+SQriaBenE+n5sE30ssWLlpvr3/HmVNFQqMmhTdk2dP3Ta3QB8K1UUjEzB6Kusl9o6+0M0bL+hWPqmvx8+ndv33eYa41Ymh1WlbgSW1f0NyC1M41Vfx4Bj4ICoOphtk1DBDo4RyUZaMpfBGXFOlHO/gfaP9xx+mhPB2L782ULtOgAKqKfVkz82zEgzgXHSrLduIwi7iKS+9XWP9QKhG8KCuF/dDx4SEFs5eG49F3yNKIHMnnJ6v7iQpNdeXVSwxH9LQfqx+yo0RtHE0w2Sjs3jlmdqbooGIUByO3b2K2TIDF3IROoq3vbNraOMlaAU0ExE=
+        on:
+          tags: true
+          repo: comphack/comp_hack
 
     - stage: "Build"
       name: "Linux (Clang+Ninja)"
@@ -218,6 +227,17 @@ jobs:
         - PLATFORM=win32
         - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017
       script: ci/windows-updater.sh
+      deploy:
+        provider: releases
+        api_key:
+          secure: PYbit8NFq1XFxwuBE3vDyudKzZOh4rNLVSyd8WeW2UJ6jlE2lzn1z4oDbRuy4Bw/SeWgfCPtm2XZljACrY36+cqTpXUHnwNcVKXxXPgLJqe9C1mkCXqK1+pv3YVnxDhRD+K+/Kta7RaAO3veRA9SW0QYVvdtulW0zGwSQ67JF0Hs/W0OSvvyNIlMCwarQ2FA+NPjF1o2Nh9KzRy0VVO13jX15rKttaFziQMfKysssEyVqAwWfF6LjY8wvoZ+dadgTdyV+6l2EdL60nMeP7+dWbwYtqSwSFY5gnMzq8lW2FUcVtqJAa+TPNBi6r5tiBeWn/Sw3c41kupGBpTJeVSOT1Ca5oC2+BxOlJe4eTzoM+SQriaBenE+n5sE30ssWLlpvr3/HmVNFQqMmhTdk2dP3Ta3QB8K1UUjEzB6Kusl9o6+0M0bL+hWPqmvx8+ndv33eYa41Ymh1WlbgSW1f0NyC1M41Vfx4Bj4ICoOphtk1DBDo4RyUZaMpfBGXFOlHO/gfaP9xx+mhPB2L782ULtOgAKqKfVkz82zEgzgXHSrLduIwi7iKS+9XWP9QKhG8KCuF/dDx4SEFs5eG49F3yNKIHMnnJ6v7iQpNdeXVSwxH9LQfqx+yo0RtHE0w2Sjs3jlmdqbooGIUByO3b2K2TIDF3IROoq3vbNraOMlaAU0ExE=
+        draft: true
+        skip_cleanup: true
+        file_glob: true
+        file: deploy/comp_hack-*
+        on:
+          tags: true
+          repo: comphack/comp_hack
 
     - stage: "Build"
       name: "Windows (VS2017 64-bit)"
@@ -227,3 +247,14 @@ jobs:
         - PLATFORM=win64
         - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017_64
       script: ci/windows-build.sh
+      deploy:
+        provider: releases
+        api_key:
+          secure: PYbit8NFq1XFxwuBE3vDyudKzZOh4rNLVSyd8WeW2UJ6jlE2lzn1z4oDbRuy4Bw/SeWgfCPtm2XZljACrY36+cqTpXUHnwNcVKXxXPgLJqe9C1mkCXqK1+pv3YVnxDhRD+K+/Kta7RaAO3veRA9SW0QYVvdtulW0zGwSQ67JF0Hs/W0OSvvyNIlMCwarQ2FA+NPjF1o2Nh9KzRy0VVO13jX15rKttaFziQMfKysssEyVqAwWfF6LjY8wvoZ+dadgTdyV+6l2EdL60nMeP7+dWbwYtqSwSFY5gnMzq8lW2FUcVtqJAa+TPNBi6r5tiBeWn/Sw3c41kupGBpTJeVSOT1Ca5oC2+BxOlJe4eTzoM+SQriaBenE+n5sE30ssWLlpvr3/HmVNFQqMmhTdk2dP3Ta3QB8K1UUjEzB6Kusl9o6+0M0bL+hWPqmvx8+ndv33eYa41Ymh1WlbgSW1f0NyC1M41Vfx4Bj4ICoOphtk1DBDo4RyUZaMpfBGXFOlHO/gfaP9xx+mhPB2L782ULtOgAKqKfVkz82zEgzgXHSrLduIwi7iKS+9XWP9QKhG8KCuF/dDx4SEFs5eG49F3yNKIHMnnJ6v7iQpNdeXVSwxH9LQfqx+yo0RtHE0w2Sjs3jlmdqbooGIUByO3b2K2TIDF3IROoq3vbNraOMlaAU0ExE=
+        draft: true
+        skip_cleanup: true
+        file_glob: true
+        file: deploy/comp_hack-*
+        on:
+          tags: true
+          repo: comphack/comp_hack

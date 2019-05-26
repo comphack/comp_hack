@@ -12,7 +12,7 @@ source "ci/global.sh"
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     dropbox_setup
 
-    if dropbox-deployment -d -e "$DROPBOX_ENV" -u build -a . -s "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"; then
+    if dropbox-deployment -d -e "$DROPBOX_ENV" -u build -a . -s "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"; then
         exit 0
     fi
 fi
@@ -22,7 +22,7 @@ mkdir build
 cd build
 
 echo "Installing external dependencies"
-unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip" | ../ci/report-progress.sh
+tar xf "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.tar.bz2" | ../ci/report-progress.sh
 mv external* ../binaries
 chmod +x ../binaries/ttvfs/bin/ttvfs_gen
 echo "Installed external dependencies"
@@ -30,13 +30,13 @@ echo "Installed external dependencies"
 echo "Installing libcomp"
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 else
-    cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 fi
 
-unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" | ../ci/report-progress.sh
-rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+tar xf "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" | ../ci/report-progress.sh
+rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp
 
@@ -60,10 +60,10 @@ cmake --build . --config "$CONFIGURATION" --target package
 
 echo "Copying build result to the cache"
 
-mv comp_hack-*.zip "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+mv comp_hack-*.tar.bz2 "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_upload build "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    dropbox_upload build "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 else
-    cp "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "${CACHE_DIR}/"
+    cp "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "${CACHE_DIR}/"
 fi

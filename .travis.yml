@@ -63,9 +63,9 @@ before_install:
   - if [ ! -f external-0.1.1-clang.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-25/external-0.1.1-clang.tar.bz2; fi
   - if [ ! -f external-0.1.1-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-25/external-0.1.1-gcc5.tar.bz2; fi
   - rm -f libcomp-*-clang.tar.bz2
-  - wget -q https://github.com/comphack/libcomp/releases/download/v4.1.3/libcomp-4.1.3-clang.tar.bz2
+  - wget -q https://github.com/comphack/libcomp/releases/download/v4.1.4/libcomp-4.1.4-clang.tar.bz2
   - rm -f libcomp-*-gcc5.tar.bz2
-  - wget -q https://github.com/comphack/libcomp/releases/download/v4.1.3/libcomp-4.1.3-gcc5.tar.bz2
+  - wget -q https://github.com/comphack/libcomp/releases/download/v4.1.4/libcomp-4.1.4-gcc5.tar.bz2
   - ls -lh
   - cd ${ROOT_DIR}
   - sudo apt-get update -q

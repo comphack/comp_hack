@@ -4,6 +4,9 @@ set -e
 # Load the global settings.
 source "ci/global.sh"
 
+# Run the cache again just in case it was not warmed.
+source "ci/linux-warmcache.sh"
+
 # Install packages
 sudo apt-get update -q
 sudo apt-get install libssl-dev docbook-xsl doxygen texlive-font-utils \

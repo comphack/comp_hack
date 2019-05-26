@@ -75,11 +75,14 @@ cmake --build . --target guide
 # cmake --build . --target coveralls
 # cmake --build . --target package
 
-# TODO: Publish the documentation on the GitHub page
-
 # echo "Copying build result to the cache"
 # mv comp_hack-*.zip "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"
 
 # if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
 #     dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"
 # fi
+
+echo "Publish the documentation on the GitHub page"
+cp -R ../contrib/pages ../pages
+cp -R api guide ../pages/
+find -type d "${ROOT_DIR}/pages"

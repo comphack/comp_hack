@@ -85,6 +85,8 @@ echo "Running build"
 cmake --build . --config "$CONFIGURATION" --target package
 
 echo "Copying build result to the cache"
+mkdir "${ROOT_DIR}/deploy"
+cp comp_hack-*.{zip.msi} "${ROOT_DIR}/deploy/"
 mv comp_hack-*.zip "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 mv comp_hack-*.msi "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
 

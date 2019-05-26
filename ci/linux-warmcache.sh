@@ -17,25 +17,25 @@ if [ ! -f "cmake-${LINUX_CMAKE_FULL_VERSION}-Linux-x86_64.tar.gz" ]; then
 fi
 
 # Clang
-if [ ! -f "clang+llvm-${LINUX_CLANG_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz" ]; then
-    wget -q "http://llvm.org/releases/${LINUX_CLANG_VERSION}/clang+llvm-${LINUX_CLANG_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz"
+if [ "$PLATFORM" == "clang" ]; then
+    if [ ! -f "clang+llvm-${LINUX_CLANG_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz" ]; then
+        wget -q "http://llvm.org/releases/${LINUX_CLANG_VERSION}/clang+llvm-${LINUX_CLANG_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz"
+    fi
 fi
 
 # External dependencies for Clang
-if [ ! -f "external-${EXTERNAL_VERSION}-clang.tar.bz2" ]; then
-    wget -q "https://github.com/comphack/external/releases/download/${EXTERNAL_RELEASE}/external-${EXTERNAL_VERSION}-clang.tar.bz2"
+if [ "$PLATFORM" == "clang" ]; then
+    if [ ! -f "external-${EXTERNAL_VERSION}-${PLATFORM}.tar.bz2" ]; then
+        wget -q "https://github.com/comphack/external/releases/download/${EXTERNAL_RELEASE}/external-${EXTERNAL_VERSION}-${PLATFORM}.tar.bz2"
+    fi
 fi
 
 # External dependencies for GCC
-if [ ! -f "external-${EXTERNAL_VERSION}-gcc5.tar.bz2" ]; then
-    wget -q "https://github.com/comphack/external/releases/download/${EXTERNAL_RELEASE}/external-${EXTERNAL_VERSION}-gcc5.tar.bz2"
+if [ "$PLATFORM" == "gcc5" ]; then
+    if [ ! -f "external-${EXTERNAL_VERSION}-${PLATFORM}.tar.bz2" ]; then
+        wget -q "https://github.com/comphack/external/releases/download/${EXTERNAL_RELEASE}/external-${EXTERNAL_VERSION}-${PLATFORM}.tar.bz2"
+    fi
 fi
-
-# For a re-download of the libcomp builds (for Clang and GCC)
-rm -f libcomp-*-clang.tar.bz2
-wget -q https://github.com/comphack/libcomp/releases/download/v4.1.2/libcomp-4.1.2-clang.tar.bz2
-rm -f libcomp-*-gcc5.tar.bz2
-wget -q https://github.com/comphack/libcomp/releases/download/v4.1.2/libcomp-4.1.2-gcc5.tar.bz2
 
 # Just for debug to make sure the cache is setup right
 echo "State of cache:"

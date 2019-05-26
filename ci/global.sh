@@ -37,6 +37,37 @@ if [ "$TRAVIS_OS_NAME" == "windows" ]; then
     echo "Generator     = $GENERATOR"
 fi
 
+if [ "$TRAVIS_OS_NAME" == "linux" ]; then
+    export COVERALLS_ENABLE=OFF
+    export COVERALLS_SERVICE_NAME=travis-ci
+
+    export PATH="/opt/ninja/bin:${PATH}"
+    export PATH="/opt/cmake-${LINUX_CMAKE_FULL_VERSION}-Linux-x86_64/bin:${PATH}"
+    export LD_LIBRARY_PATH="/opt/cmake-${LINUX_CMAKE_FULL_VERSION}-Linux-x86_64/lib"
+
+    if [ "$PLATFORM" == "clang" ]; then
+        export COVERALLS_ENABLE=OFF
+    else
+        export COVERALLS_ENABLE=ON
+    fi
+
+    if [ "$PLATFORM" == "clang" ]; then
+        export PATH="/opt/clang+llvm-${LINUX_CLANG_VERSION}-x86_64-linux-gnu-ubuntu-14.04/bin:${PATH}"
+        export LD_LIBRARY_PATH="/opt/clang+llvm-${LINUX_CLANG_VERSION}-x86_64-linux-gnu-ubuntu-14.04/lib:${LD_LIBRARY_PATH}"
+    fi
+
+    if [ "$PLATFORM" == "clang" ]; then
+        export SINGLE_OBJGEN=ON
+    else
+        export SINGLE_OBJGEN=OFF
+    fi
+
+    export CC="${COMPILER_CC}"
+    export CXX="${COMPILER_CXX}"
+    export GENERATOR="${CMAKE_GENERATOR}"
+    export CTEST_OUTPUT_ON_FAILURE=1
+fi
+
 function dropbox_setup {
     gem install "${ROOT_DIR}/ci/dropbox-deployment-1.0.0.gem"
 }

@@ -1,59 +1,85 @@
 #!/bin/bash
 set -e
 
-export ROOT_DIR=`pwd`
-export CACHE_DIR=`pwd`/cache
+# Load the global settings.
+source "ci/global.sh"
 
-export COVERALLS_ENABLE=OFF
-export COVERALLS_SERVICE_NAME=travis-ci
+#
+# Dependencies
+#
 
-export PATH="/opt/ninja/bin:${PATH}"
-export PATH="/opt/cmake-3.6.1-Linux-x86_64/bin:${PATH}"
-export LD_LIBRARY_PATH="/opt/cmake-3.6.1-Linux-x86_64/lib"
+cd "${ROOT_DIR}"
+mkdir build
+cd build
 
-if [ "$CXX" == "clang++" ]; then
-    export COVERALLS_ENABLE=OFF
+echo "Installing external dependencies"
+unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip" | ../ci/report-progress.sh
+mv external* ../binaries
+chmod +x ../binaries/ttvfs/bin/ttvfs_gen
+echo "Installed external dependencies"
+
+echo "Installing libcomp"
+
+if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    dropbox_setup
+    dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 else
-    export COVERALLS_ENABLE=ON
+    cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 fi
 
-if [ "$CXX" == "clang++" ]; then
-    export PATH="/opt/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04/bin:${PATH}"
-    export LD_LIBRARY_PATH="/opt/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04/lib:${LD_LIBRARY_PATH}"
-fi
+unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" | ../ci/report-progress.sh
+rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+mv libcomp* ../deps/libcomp
+ls ../deps/libcomp
 
-if [ "$CXX" == "clang++" ]; then
-    export SINGLE_OBJGEN=ON
+echo "Installed libcomp"
+
+echo "Installing comp_channel"
+
+if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    dropbox_download "build/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 else
-    export SINGLE_OBJGEN=OFF
+    cp "${CACHE_DIR}/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 fi
 
-export CC="${COMPILER_CC}"
-export CXX="${COMPILER_CXX}"
-export GENERATOR="${CMAKE_GENERATOR}"
-export CTEST_OUTPUT_ON_FAILURE=1
+mkdir bin
+cd bin
+unzip "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+rm "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+mv comp_hack-*/comp_channel* ./
+rm -rf comp_hack-*/
+ls -lh
+cd ..
 
-# Stop coverity here.
-if [ "${COVERITY_SCAN_BRANCH}" == 1 ]; then
-    exit 0
-fi
+echo "Installed comp_channel"
 
 #
 # Build
 #
-cd ${ROOT_DIR}
 
-mkdir -p build
-cd build
-cmake -DCOVERALLS=$COVERALLS_ENABLE -DUSE_PREBUILT_LIBCOMP=ON \
-    -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON \
-    -DSINGLE_OBJGEN=${SINGLE_OBJGEN} -DUSE_COTIRE=ON -G "${GENERATOR}" ..
+cd "${ROOT_DIR}/build"
+
+echo "Running cmake"
+cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
+    -DCOVERALLS="$COVERALLS_ENABLE" -DBUILD_OPTIMIZED=OFF \
+    -DSINGLE_SOURCE_PACKETS=ON \ -DSINGLE_OBJGEN="${SINGLE_OBJGEN}" \
+    -DUSE_COTIRE=ON -DGENERATE_DOCUMENTATION=ON \
+    -DUSE_PREBUILT_LIBCOMP=ON -DIMPORT_CHANNEL=ON -G "${GENERATOR}" ..
+
+echo "Running build"
 cmake --build . --target git-version
 cmake --build .
 cmake --build . --target doc
 cmake --build . --target guide
 # cmake --build . --target test
+# cmake --build . --target coveralls
+# cmake --build . --target package
 
-# if [ "$CXX" != "clang++" ]; the
-#     cmake --build . --target coveralls
+# TODO: Publish the documentation on the GitHub page
+
+# echo "Copying build result to the cache"
+# mv comp_hack-*.zip "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"
+
+# if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+#     dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"
 # fi

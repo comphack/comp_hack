@@ -6,6 +6,9 @@ cache:
 
 env:
   global:
+    # Encrypt using a similar command:
+    # travis encrypt -r compomega/comp_hack DROPBOX_OAUTH_BEARER_COMPOMEGA_COMP_HACK=<my_secret_oauth>
+    #
     # Dropbox for comphack/comp_hack (DROPBOX_OAUTH_BEARER_COMPHACK_COMP_HACK)
     - secure: "IUJVH79CrfF1QdV70ydGoKFnf6u7SeLD8Q1jjzKUecirS2gg/lU4ddlYJwjRFuj9E5eOOkjunPuSnm8OPWvPgriSZFUgUVnEX6yAV/91nabP3UqPcOC3wEvfEXcCyHBBEezgYpoaZII8cpAXOEzQyVmAoHFfKVYX7bPE9EL5yIibKScZ8co9M887ouYErhCcssLPvg+xCYTR/QgiX9ymacBaNy0cUvVX+0ne3PetBbEtC9AgWFD0eJEBz7mXo159sZcFFSeUvRz2ajArNvuQSogCiYI886RNIHFcFQhJG1W3PW0KiBubvoXEzaaNE6CdNtHY4ginskrXPNd1CXYrgBYO6luNAAigthW4+VYJvHHsMvB3lH9jofBK47I7qWxVt1cVSsLAuRQ/EpwxILjIhGPnh47oGhAmza6uKa9850zEAqjJ8uiwjI6SPCg+xvsxIgfesHtFMIOUaT7oo4ihCouBL3f5vBJGm+08EoJpwY1ET5cQUn0gv7t5/4YaMkxdz1QtwVDAPT/KvEc5SeMINrdQfWgue2J5GSeP6Eu+rDhOgrhGO99g+y55o0UgxzFNHn9ZO07J1kYDbWDuLFiANmTHttFvLFby1ryTSVaOmzKxl5y4bd9PO1VKK++Qemi9eX++JhjUq0GLh5V9PGGvI+1pxVHCjtzX11126Csqr8Q="
     # Dropbox for compomega/comp_hack (DROPBOX_OAUTH_BEARER_COMPOMEGA_COMP_HACK)
@@ -13,107 +16,214 @@ env:
 
 jobs:
   include:
-    # - stage: "Warm cache"
-    #   name: "Warm cache (Linux)"
-    #   os: linux
-    #   script: ci/linux-warmcache.sh
+    - stage: "Warm cache"
+      name: "Warm cache (Linux GCC)"
+      os: linux
+      compiler: gcc
+      env:
+        - PLATFORM=gcc5
+      script: ci/linux-warmcache.sh
 
-    # - stage: "Warm cache"
-    #   name: "Warm cache (Windows 32-bit)"
-    #   os: windows
-    #   env:
-    #     - PLATFORM: win32
-    #     - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017
-    #   script: ci/windows-warmcache.sh
+    - stage: "Warm cache"
+      name: "Warm cache (Linux Clang)"
+      os: linux
+      compiler: clang
+      env:
+        - PLATFORM=clang
+      script: ci/linux-warmcache.sh
+
+    - stage: "Warm cache"
+      name: "Warm cache (Windows 32-bit)"
+      os: windows
+      env:
+        - PLATFORM=win32
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017
+      script: ci/windows-warmcache.sh
 
     - stage: "Warm cache"
       name: "Warm cache (Windows 64-bit)"
       os: windows
       env:
-        - PLATFORM: win64
-        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
+        - PLATFORM=win64
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017_64
       script: ci/windows-warmcache.sh
+
+    - stage: "Libraries"
+      name: "Linux (Clang+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+      env:
+        - PLATFORM=clang
+        - COMPILER_CC=clang
+        - COMPILER_CXX=clang++
+        - CMAKE_GENERATOR='Unix Makefiles'
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-libcomp.sh
+
+    - stage: "Libraries"
+      name: "Linux (Clang+Ninja)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+      env:
+        - PLATFORM=clang
+        - COMPILER_CC=clang
+        - COMPILER_CXX=clang++
+        - CMAKE_GENERATOR=Ninja
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-libcomp.sh
+
+    - stage: "Libraries"
+      name: "Linux (GCC5+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env:
+        - PLATFORM=gcc5
+        - COMPILER_CC=gcc-5
+        - COMPILER_CXX=g++-5
+        - CMAKE_GENERATOR='Unix Makefiles'
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-libcomp.sh
 
     - stage: "Libraries"
       name: "Windows (VS2017 64-bit)"
       os: windows
       filter_secrets: false
       env:
-        - PLATFORM: win64
-        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
+        - PLATFORM=win64
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017_64
       script: ci/windows-libcomp.sh
+
+    - stage: "Channel"
+      name: "Linux (Clang+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+      env:
+        - PLATFORM=clang
+        - COMPILER_CC=clang
+        - COMPILER_CXX=clang++
+        - CMAKE_GENERATOR='Unix Makefiles'
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-channel.sh
+
+    - stage: "Channel"
+      name: "Linux (Clang+Ninja)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+      env:
+        - PLATFORM=clang
+        - COMPILER_CC=clang
+        - COMPILER_CXX=clang++
+        - CMAKE_GENERATOR=Ninja
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-channel.sh
+
+    - stage: "Channel"
+      name: "Linux (GCC5+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env:
+        - PLATFORM=gcc5
+        - COMPILER_CC=gcc-5
+        - COMPILER_CXX=g++-5
+        - CMAKE_GENERATOR='Unix Makefiles'
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-channel.sh
 
     - stage: "Channel"
       name: "Windows (VS2017 64-bit)"
       os: windows
       filter_secrets: false
       env:
-        - PLATFORM: win64
-        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
+        - PLATFORM=win64
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017_64
       script: ci/windows-channel.sh
 
-    # - stage: "Build"
-    #   name: "Linux (Clang+Make)"
-    #   os: linux
-    #   dist: trusty
-    #   sudo: required
-    #   compiler: clang
-    #   env:
-    #     - COMPILER_CC=clang
-    #     - COMPILER_CXX=clang++
-    #     - CMAKE_GENERATOR='Unix Makefiles'
-    #   before_install: ci/linux-before_install.sh
-    #   script: ci/linux-build.sh
+    - stage: "Build"
+      name: "Linux (Clang+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+      env:
+        - PLATFORM=clang
+        - COMPILER_CC=clang
+        - COMPILER_CXX=clang++
+        - CMAKE_GENERATOR='Unix Makefiles'
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-build.sh
 
-    # - stage: "Build"
-    #   name: "Linux (Clang+Ninja)"
-    #   os: linux
-    #   dist: trusty
-    #   sudo: required
-    #   compiler: clang
-    #   env:
-    #     - COMPILER_CC=clang
-    #     - COMPILER_CXX=clang++
-    #     - CMAKE_GENERATOR=Ninja
-    #   before_install: ci/linux-before_install.sh
-    #   script: ci/linux-build.sh
+    - stage: "Build"
+      name: "Linux (Clang+Ninja)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+      env:
+        - PLATFORM=clang
+        - COMPILER_CC=clang
+        - COMPILER_CXX=clang++
+        - CMAKE_GENERATOR=Ninja
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-build.sh
 
-    # - stage: "Build"
-    #   name: "Linux (GCC5+Make)"
-    #   os: linux
-    #   dist: trusty
-    #   sudo: required
-    #   compiler: gcc
-    #   addons:
-    #     apt:
-    #       sources:
-    #         - ubuntu-toolchain-r-test
-    #       packages:
-    #         - g++-5
-    #   env:
-    #     - COMPILER_CC=gcc-5
-    #     - COMPILER_CXX=g++-5
-    #     - CMAKE_GENERATOR='Unix Makefiles'
-    #   before_install: ci/linux-before_install.sh
-    #   script: ci/linux-build.sh
+    - stage: "Build"
+      name: "Linux (GCC5+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env:
+        - PLATFORM=gcc5
+        - COMPILER_CC=gcc-5
+        - COMPILER_CXX=g++-5
+        - CMAKE_GENERATOR='Unix Makefiles'
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-build.sh
+
+    - stage: "Build"
+      name: "Windows (VS2017 32-bit)"
+      os: windows
+      filter_secrets: false
+      env:
+        - PLATFORM=win32
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017
+      script: ci/windows-updater.sh
 
     - stage: "Build"
       name: "Windows (VS2017 64-bit)"
       os: windows
       filter_secrets: false
       env:
-        - PLATFORM: win64
-        - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
+        - PLATFORM=win64
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017_64
       script: ci/windows-build.sh
-
-    # - stage: "Deploy"
-    #   name: "Windows (VS2017 64-bit)"
-    #   os: windows
-    #   env:
-    #     - PLATFORM: win64
-    #     - QT5_BASE_DIR: C:/Qt/5.12.3/msvc2017_64
-    #   before_install:
-    #     - cd ci && gem install dropbox-deployment-1.0.0.gem && cd ..
-    #   script: ci/linux-deploy.sh
-    #   after_success:
-    #     - dropbox-deployment -u /comp_hack -a deploy

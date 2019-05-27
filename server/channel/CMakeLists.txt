@@ -17,6 +17,10 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
+# Add a target to generate API documentation.
+FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/api/server/channel)
+GENERATE_DOCS(doc/Doxyfile.in)
+
 IF(IMPORT_CHANNEL)
 
 INSTALL(FILES "${CMAKE_BINARY_DIR}/bin/comp_channel${CMAKE_EXECUTABLE_SUFFIX}"
@@ -33,10 +37,6 @@ ELSE(IMPORT_CHANNEL)
 PROJECT(comp_channel)
 
 MESSAGE("** Configuring ${PROJECT_NAME} **")
-
-# Add a target to generate API documentation.
-FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/api/server/channel)
-GENERATE_DOCS(doc/Doxyfile.in)
 
 # Add a directory to put the objgen output into.
 FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)

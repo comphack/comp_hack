@@ -32,13 +32,13 @@ SET(VERSION_YEAR  2019)
 SET(VERSION_MAJOR 4)
 
 # Minor release (1 = SP1).
-SET(VERSION_MINOR 1)
+SET(VERSION_MINOR 2)
 
 # Patch version (a hotfix).
 SET(VERSION_PATCH 0)
 
 # Codename for the version.
-SET(VERSION_CODENAME "Tiwaz")
+SET(VERSION_CODENAME "Peorth")
 
 #
 # END OF VERSION CONSTANTS
@@ -886,6 +886,10 @@ IF(USE_PREBUILT_LIBCOMP)
     CONFIGURE_FILE(libcomp/libcomp/src/Constants.h.in
         "${CMAKE_BINARY_DIR}/libconfig/Constants.h"
         ESCAPE_QUOTES @ONLY NEWLINE_STYLE UNIX)
+
+    # Add a target to generate API documentation.
+    FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/api/libcomp)
+    GENERATE_DOCS(libcomp/libcomp/doc/Doxyfile.in)
 ENDIF(USE_PREBUILT_LIBCOMP)
 
 IF(NOT UPDATER_ONLY)

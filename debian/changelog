@@ -1,3 +1,13 @@
+comphack (4.2.0) xenial; urgency=low
+
+  * Now built with Visual Studio 2017. A new redist may be needed.
+  * Now built with Qt 5.12.3. Please be aware if you update the updater.
+  * AoE range adjustments
+  * Demon skill inheritance rates implemented
+  * Various bug fixes
+
+ -- COMP Omega <compomega@tutanota.com>  Mon, 27 May 2019 15:44:26 -0600
+
 comphack (4.1.0) xenial; urgency=low
 
   * Item (shadow) duplication fix

@@ -15,8 +15,8 @@
 | Type                                                                           | Rank            |
 | ------------------------------------------------------------------------------ | --------------- |
 | [Tiwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-tiwaz)     | ■ ■ ■ ■ ■ ■ ■ ■ |
-| [Peorth](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-peorth)   | ■ ■ □ □ □ □ □ □ |
-| [Eoh](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eoh)         | □ □ □ □ □ □ □ □ |
+| [Peorth](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-peorth)   | ■ ■ ■ ■ ■ ■ ■ ■ |
+| [Eoh](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eoh)         | ■ ■ □ □ □ □ □ □ |
 | [Eihwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eihwaz)   | □ □ □ □ □ □ □ □ |
 | [Uruz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-uruz)       | □ □ □ □ □ □ □ □ |
 | [Hagalaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-hagalaz) | □ □ □ □ □ □ □ □ |

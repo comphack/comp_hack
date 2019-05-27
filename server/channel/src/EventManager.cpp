@@ -2428,9 +2428,24 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         else
         {
             // Active quest count compares to [value 1] (and [value 2])
-            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+            // Ignores act quests (type 2)
+            auto character = client->GetClientState()->GetCharacterState()
+                ->GetEntity();
+            auto questMap = character->GetQuests();
+            auto definitionManager = mServer.lock()->GetDefinitionManager();
 
-            return Compare((int32_t)character->QuestsCount(), condition->GetValue1(),
+            int32_t count = 0;
+            for(auto qPair : questMap)
+            {
+                auto quest = definitionManager->GetQuestData(
+                    (uint32_t)qPair.first);
+                if(quest && quest->GetType() != 2)
+                {
+                    count++;
+                }
+            }
+
+            return Compare(count, condition->GetValue1(),
                 condition->GetValue2(), compareMode, EventCompareMode::EQUAL,
                 EVENT_COMPARE_NUMERIC2);
         }

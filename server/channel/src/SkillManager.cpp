@@ -2681,6 +2681,10 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             // Difference between type 1 and 2 is unknown
             if(!initialHitReflect)
             {
+                // AoE range is extended by the hitbox size of the source
+                aoeRange = aoeRange + (double)(effectiveSource
+                    ->GetHitboxSize() * 10.0);
+
                 effectiveTargets = zone->GetActiveEntitiesInRadius(
                     srcPoint.x, srcPoint.y, aoeRange, true);
             }
@@ -2691,6 +2695,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             if(primaryTarget && !skill.Nulled && !skill.Reflected &&
                 !skill.Absorbed)
             {
+                // AoE range is not extended
                 effectiveTargets = zone->GetActiveEntitiesInRadius(
                     primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(),
                     aoeRange, true);
@@ -2705,6 +2710,10 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
                 double maxTargetRange = (double)(skillData->GetTarget()
                     ->GetRange() * 10);
+
+                // Max target range is extended by the hitbox size of the source
+                maxTargetRange = maxTargetRange + (double)(effectiveSource
+                    ->GetHitboxSize() * 10.0);
 
                 // Get entities in range using the target distance
                 auto potentialTargets = zone->GetActiveEntitiesInRadius(
@@ -2742,6 +2751,10 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 if(skill.Definition->GetBasic()->GetActionType() !=
                     objects::MiSkillBasicData::ActionType_t::RUSH)
                 {
+                    // AoE range is extended by the hitbox size of the source
+                    aoeRange = aoeRange + (double)(effectiveSource
+                        ->GetHitboxSize() * 10.0);
+
                     dest = server->GetZoneManager()->GetLinearPoint(srcPoint.x,
                         srcPoint.y, dest.x, dest.y, (float)aoeRange, false);
                 }

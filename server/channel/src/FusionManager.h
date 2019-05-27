@@ -32,6 +32,7 @@
 
 namespace objects
 {
+class Demon;
 class MiDevilData;
 }
 
@@ -113,6 +114,13 @@ public:
      * @return Mitama index for the supplied type
      */
     size_t GetMitamaIndex(uint32_t mitamaType, bool& found);
+
+    /**
+     * Determine if the supplied demon is valid to use for tri-fusion
+     * @param demon Pointer to the demon to check
+     * @return true if they can be used for tri-fusion, false if they cannot
+     */
+    bool IsTriFusionValid(const std::shared_ptr<objects::Demon>& demon);
 
 private:
     /**

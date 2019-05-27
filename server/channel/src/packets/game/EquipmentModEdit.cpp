@@ -165,7 +165,7 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
                     item->SetModSlots((size_t)subMode, MOD_SLOT_NULL_EFFECT);
                     break;
                 case MODE_ADD_SOUL_TAROT:
-                    if(subMode == 0)
+                    if(subMode == 1)
                     {
                         if(item->GetSoul() == 0)
                         {
@@ -184,7 +184,7 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
                     {
                         auto itemData = server->GetDefinitionManager()
                             ->GetItemData(item->GetType());
-                        if(subMode == 0)
+                        if(subMode == 1)
                         {
                             if((itemData->GetBasic()->GetFlags() & 0x0200) == 0)
                             {

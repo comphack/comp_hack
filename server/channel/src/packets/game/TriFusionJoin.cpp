@@ -38,6 +38,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "FusionManager.h"
 #include "ManagerConnection.h"
 
 using namespace channel;
@@ -58,7 +59,9 @@ bool Parsers::TriFusionJoin::Parse(libcomp::ManagerPacket *pPacketManager,
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
+    auto fusionManager = server->GetFusionManager();
 
     auto partyClients = server->GetManagerConnection()
         ->GetPartyConnections(client, false, true);
@@ -98,9 +101,10 @@ bool Parsers::TriFusionJoin::Parse(libcomp::ManagerPacket *pPacketManager,
         std::list<std::shared_ptr<objects::Demon>> sourceDemons;
         for(auto d : cState->GetEntity()->GetCOMP()->GetDemons())
         {
-            if(!d.IsNull() && !d->GetLocked())
+            auto demon = d.Get();
+            if(fusionManager->IsTriFusionValid(demon))
             {
-                sourceDemons.push_back(d.Get());
+                sourceDemons.push_back(demon);
             }
         }
 
@@ -116,9 +120,10 @@ bool Parsers::TriFusionJoin::Parse(libcomp::ManagerPacket *pPacketManager,
             std::list<std::shared_ptr<objects::Demon>> demons;
             for(auto d : pCState->GetEntity()->GetCOMP()->GetDemons())
             {
-                if(!d.IsNull() && !d->GetLocked())
+                auto demon = d.Get();
+                if(fusionManager->IsTriFusionValid(demon))
                 {
-                    demons.push_back(d.Get());
+                    demons.push_back(demon);
                 }
             }
 

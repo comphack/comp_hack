@@ -1506,13 +1506,17 @@ int8_t FusionManager::ProcessFusion(
     {
         // Perform mitama process on existing demon
         auto mitama = demon1;
+        auto mitamaDef = definitionManager->GetDevilData(mitama->GetType());
 
         bool found = false;
-        size_t mitamaIdx = GetMitamaIndex(mitama->GetType(), found);
+        size_t mitamaIdx = GetMitamaIndex(mitamaDef->GetUnionData()
+            ->GetBaseDemonID(), found);
         if(!found)
         {
             mitama = demon2;
-            mitamaIdx = GetMitamaIndex(mitama->GetType(), found);
+            mitamaDef = definitionManager->GetDevilData(mitama->GetType());
+            mitamaIdx = GetMitamaIndex(mitamaDef->GetUnionData()
+                ->GetBaseDemonID(), found);
             if(!found)
             {
                 // Shouldn't happen
@@ -1821,6 +1825,27 @@ size_t FusionManager::GetMitamaIndex(uint32_t mitamaType, bool& found)
     }
 
     return 0;
+}
+
+bool FusionManager::IsTriFusionValid(const std::shared_ptr<
+    objects::Demon>& demon)
+{
+    // Demon cannot be locked (or null obviously)
+    if(!demon || demon->GetLocked())
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto devilData = definitionManager->GetDevilData(demon->GetType());
+
+    // Demon cannot be mitama demon or a base mitama type
+    bool found = false;
+    GetMitamaIndex(devilData->GetUnionData()->GetBaseDemonID(), found);
+    return !found && !characterManager->IsMitamaDemon(devilData);
 }
 
 uint32_t FusionManager::RankUpDown(uint8_t raceID, uint32_t demonType,

@@ -20,7 +20,7 @@
         <member name="LogCritical">true</member>
         <member name="CapturePath">captures</member>
         <member name="ServerConstantsPath"/>
-        
+
         <!-- From ChannelConfig -->
         <member name="Name">Test Channel</member>
         <member name="WorldIP">127.0.0.1</member>

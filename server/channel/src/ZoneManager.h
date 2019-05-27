@@ -1405,7 +1405,7 @@ private:
     libcomp::Mutex mLock;
 
     /// Server lock for creating or getting existing zones in an instance
-    std::mutex mInstanceZoneLock;
+    libcomp::Mutex mInstanceZoneLock;
 
     /// Pointer to the channel server
     std::weak_ptr<ChannelServer> mServer;

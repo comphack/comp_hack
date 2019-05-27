@@ -604,7 +604,9 @@ std::set<int32_t> ActionManager::GetActionContextCIDs(
 
 bool ActionManager::StartEvent(ActionContext& ctx)
 {
-    auto act = GetAction<objects::ActionStartEvent>(ctx, false);
+    // Neither client nor zone are required so the validity of what
+    // the event does will be checked later
+    auto act = GetAction<objects::ActionStartEvent>(ctx, false, false);
     if(!act)
     {
         return false;
@@ -2552,6 +2554,13 @@ bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
         // change global zones
         {
             auto eState = ctx.CurrentZone->GetActiveEntity(ctx.SourceEntityID);
+
+            if(!eState && !ctx.SourceEntityID && ctx.Client)
+            {
+                // Default to client character
+                eState = ctx.Client->GetClientState()->GetCharacterState();
+            }
+
             if(eState && act->GetType() ==
                 objects::ActionUpdateZoneFlags::Type_t::PARTNER_TOKUSEI)
             {

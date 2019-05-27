@@ -1331,7 +1331,8 @@ bool EventManager::EvaluateEventConditions(
     EventContext ctx;
     ctx.Client = client;
     ctx.EventInstance = std::make_shared<objects::EventInstance>(); // No event
-    ctx.CurrentZone = client->GetClientState()->GetCharacterState()->GetZone();
+    ctx.CurrentZone = client
+        ? client->GetClientState()->GetCharacterState()->GetZone() : nullptr;
     ctx.AutoOnly = true;
 
     return EvaluateEventConditions(ctx, conditions);
@@ -3957,10 +3958,11 @@ void EventManager::HandleNext(EventContext& ctx)
             // the branch number to use
             auto serverDataManager = mServer.lock()->GetServerDataManager();
             auto script = serverDataManager->GetScript(branchScriptID);
-            if(!ctx.CurrentZone)
+            if(ctx.Client && !ctx.CurrentZone)
             {
-                LOG_ERROR(libcomp::String("Attempted to execute a branch"
-                    " script ID outside of a zone: %1\n").Arg(branchScriptID));
+                LOG_ERROR(libcomp::String("Attempted to execute a client"
+                    " targeted branch script ID outside of a zone: %1\n")
+                    .Arg(branchScriptID));
             }
             else if(script && script->Type.ToLower() == "eventbranchlogic")
             {
@@ -3984,7 +3986,8 @@ void EventManager::HandleNext(EventContext& ctx)
 
                     auto scriptResult = !f.IsNull()
                         ? f.Evaluate<size_t>(
-                            ctx.CurrentZone->GetActiveEntity(sourceEntityID),
+                            ctx.CurrentZone ? ctx.CurrentZone
+                                ->GetActiveEntity(sourceEntityID) : nullptr,
                             state ? state->GetCharacterState() : nullptr,
                             state ? state->GetDemonState() : nullptr,
                             ctx.CurrentZone,

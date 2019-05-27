@@ -302,6 +302,15 @@ public:
     void ShowEntityToZone(const std::shared_ptr<Zone>& zone, int32_t entityID);
 
     /**
+     * Send a request to all clients in a zone to show a demon entity
+     * and also relay any zone-in information to the source client.
+     * @param zone Pointer to the zone to show the demon to
+     * @param client Pointer to the source client connection
+     */
+    void ShowDemonToZone(const std::shared_ptr<Zone>& zone,
+        const std::shared_ptr<ChannelClientConnection>& client);
+
+    /**
      * Send a request to a list of client to show an entity.
      * @param clients List of pointers to client connections
      * @param entityID ID of the entity to show

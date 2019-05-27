@@ -1711,12 +1711,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
 
         if(dState->GetEntity())
         {
-            PopEntityForZoneProduction(zone, dState->GetEntityID(), 0);
-            ShowEntityToZone(zone, dState->GetEntityID());
-
-            server->GetTokuseiManager()->SendCostAdjustments(dState->GetEntityID(),
-                client);
-            characterManager->SendMovementSpeed(client, dState, true);
+            ShowDemonToZone(zone, client);
         }
     }
     else
@@ -1914,6 +1909,29 @@ void ZoneManager::ShowEntityToZone(const std::shared_ptr<Zone>& zone, int32_t en
     {
         activeState->SetDisplayState(ActiveDisplayState_t::ACTIVE);
     }
+}
+
+void ZoneManager::ShowDemonToZone(const std::shared_ptr<Zone>& zone,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto dState = client ? client->GetClientState()->GetDemonState() : nullptr;
+    if(!zone || !dState)
+    {
+        return;
+    }
+
+    auto server = mServer.lock();
+
+    bool summonWait = dState->GetDisplayState() ==
+        ActiveDisplayState_t::AWAITING_SUMMON;
+    PopEntityForZoneProduction(zone, dState->GetEntityID(),
+        summonWait ? 2 : 0);
+    ShowEntityToZone(zone, dState->GetEntityID());
+
+    // Relay starting state to source client
+    server->GetTokuseiManager()->SendCostAdjustments(dState->GetEntityID(),
+        client);
+    server->GetCharacterManager()->SendMovementSpeed(client, dState, true);
 }
 
 void ZoneManager::ShowEntity(const std::list<std::shared_ptr<

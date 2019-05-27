@@ -7444,6 +7444,26 @@ void SkillManager::HandleSkillLearning(const std::shared_ptr<ActiveEntityState> 
                 updateProgress = (uint16_t)floor(pow((iMod1 * 40.0)/iMod2, 2));
             }
 
+            // Apply rate from demon
+            int16_t learnRate = dState->GetCorrectValue(
+                CorrectTbl::RATE_EXPERTISE);
+            if(learnRate <= 0)
+            {
+                updateProgress = 0;
+            }
+            else if(updateProgress > 0 && learnRate != 100)
+            {
+                float calc = (float)updateProgress * (float)learnRate * 0.01f;
+                if(calc > (float)std::numeric_limits<uint16_t>::max())
+                {
+                    updateProgress = std::numeric_limits<uint16_t>::max();
+                }
+                else
+                {
+                    updateProgress = (uint16_t)calc;
+                }
+            }
+
             if(updateProgress > 0)
             {
                 int16_t progress = dState->UpdateLearningSkill(iSkill, updateProgress);

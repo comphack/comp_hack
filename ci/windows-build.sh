@@ -99,8 +99,8 @@ mv comp_hack-*.zip "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 mv comp_hack-*.msi "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
 
 if [ $USE_DROPBOX ]; then
-    dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
-    dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
+    dropbox_upload_rel "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    dropbox_upload_rel "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
 fi
 
 # Change back to the root.

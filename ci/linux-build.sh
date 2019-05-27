@@ -81,7 +81,7 @@ cmake --build . --target guide
 # mv comp_hack-*.tar.bz2 "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"
 
 # if [ $USE_DROPBOX ]; then
-#     dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"
+#     dropbox_upload_rel "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"
 # fi
 
 echo "Publish the documentation on the GitHub page"

@@ -51,3 +51,6 @@ fi
 # Just for debug to make sure the cache is setup right
 echo "State of cache:"
 ls -lh
+
+# Change back to the root.
+cd "${ROOT_DIR}"

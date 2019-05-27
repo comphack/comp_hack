@@ -100,3 +100,6 @@ if [ $USE_DROPBOX ]; then
     dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
     dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
 fi
+
+# Change back to the root.
+cd "${ROOT_DIR}"

@@ -88,3 +88,6 @@ echo "Publish the documentation on the GitHub page"
 cp -R ../contrib/pages ../pages
 cp -R api guide ../pages/
 find "${ROOT_DIR}/pages" -type d
+
+# Change back to the root.
+cd "${ROOT_DIR}"

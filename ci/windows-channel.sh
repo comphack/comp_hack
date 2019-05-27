@@ -39,6 +39,7 @@ fi
 
 unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" | ../ci/report-progress.sh
 rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+ls -lh
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp
 

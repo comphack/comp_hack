@@ -37,6 +37,7 @@ fi
 
 tar xf "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" | ../ci/report-progress.sh
 rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
+ls -lh
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp
 

@@ -8007,9 +8007,9 @@ void ZoneManager::SendAccessMessage(
                     options.AutoOnly = true;
                     options.NoInterrupt = true;
 
-                    auto state = client->GetClientState();
+                    auto state = c->GetClientState();
                     auto entityID = state->GetCharacterState()->GetEntityID();
-                    eventManager->HandleEvent(client, createEventID, entityID,
+                    eventManager->HandleEvent(c, createEventID, entityID,
                         nullptr, options);
                 }
             }

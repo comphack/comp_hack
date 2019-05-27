@@ -17,6 +17,10 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.2.3)
 
+# Do not build objects while linking to reduce memory usage.
+SET_PROPERTY(GLOBAL APPEND PROPERTY JOB_POOLS link_job_pool=1)
+SET(CMAKE_JOB_POOL_LINK link_job_pool)
+
 #
 # START OF VERSION CONSTANTS
 #
@@ -75,6 +79,12 @@ OPTION(BUILD_DREAM "Build the dream." ON)
 # Option to build only the updater.
 OPTION(UPDATER_ONLY "Build only the updater." OFF)
 
+# Option to build only the channel.
+OPTION(CHANNEL_ONLY "Build only the channel." OFF)
+
+# Option to import the channel for install but not to build it.
+OPTION(IMPORT_CHANNEL "Import the channel without building." OFF)
+
 # Include our custom cmake modules.
 SET(CMAKE_MODULE_PATH
     ${COMP_MODULE_PATH}
@@ -88,10 +98,19 @@ IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
     )
 ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
 
+IF(WIN32)
+    IF(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
+        SET(CPACK_PACKAGE_FILE_NAME "comp_hack-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_CODENAME_C}-win32")
+    ELSE()
+        SET(CPACK_PACKAGE_FILE_NAME "comp_hack-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_CODENAME_C}-win64")
+    ENDIF()
+ELSE(WIN32)
+    SET(CPACK_PACKAGE_FILE_NAME "comp_hack-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_CODENAME_C}")
+ENDIF(WIN32)
+
 SET(CPACK_PACKAGE_NAME "COMP_hack Server (${VERSION_CODENAME})")
 SET(CPACK_PACKAGE_VENDOR "COMP_hack Team")
 SET(CPACK_PACKAGE_CONTACT "compomega@tutanota.com")
-SET(CPACK_PACKAGE_FILE_NAME "comp_hack-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_CODENAME_C}")
 SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
 SET(CPACK_PACKAGE_VERSION_MAJOR ${VERSION_MAJOR})
 SET(CPACK_PACKAGE_VERSION_MINOR ${VERSION_MINOR})
@@ -128,7 +147,7 @@ SET(CPACK_COMPONENT_GROUP_SERVERS_EXPANDED TRUE)
 IF(WIN32)
     SET(COMP_INSTALL_DIR "/")
 
-    IF(UPDATER_ONLY)
+    IF(UPDATER_ONLY OR CHANNEL_ONLY)
         SET(CPACK_GENERATOR "ZIP")
     ELSE()
         SET(CPACK_GENERATOR "WIX;ZIP")
@@ -149,49 +168,51 @@ IF(WIN32)
 
     SET(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
 
-    INCLUDE(InstallRequiredSystemLibraries)
+    IF(NOT CHANNEL_ONLY)
+        INCLUDE(InstallRequiredSystemLibraries)
 
-    INSTALL(
-        PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
-        DESTINATION /
-        COMPONENT runtime
-    )
+        INSTALL(
+            PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+            DESTINATION /
+            COMPONENT runtime
+        )
 
-    FIND_PACKAGE(Qt5Widgets REQUIRED)
+        FIND_PACKAGE(Qt5Widgets REQUIRED)
 
-    IF(Qt5Widgets_FOUND AND WIN32 AND TARGET Qt5::qmake AND NOT TARGET Qt5::windeployqt)
-        GET_TARGET_PROPERTY(_qt5_qmake_location Qt5::qmake IMPORTED_LOCATION)
+        IF(Qt5Widgets_FOUND AND WIN32 AND TARGET Qt5::qmake AND NOT TARGET Qt5::windeployqt)
+            GET_TARGET_PROPERTY(_qt5_qmake_location Qt5::qmake IMPORTED_LOCATION)
 
-        EXECUTE_PROCESS(
-            COMMAND "${_qt5_qmake_location}" -query QT_INSTALL_PREFIX
-            RESULT_VARIABLE return_code
-            OUTPUT_VARIABLE qt5_install_prefix
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
+            EXECUTE_PROCESS(
+                COMMAND "${_qt5_qmake_location}" -query QT_INSTALL_PREFIX
+                RESULT_VARIABLE return_code
+                OUTPUT_VARIABLE qt5_install_prefix
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-        SET(imported_location "${qt5_install_prefix}/bin/windeployqt.exe")
+            SET(imported_location "${qt5_install_prefix}/bin/windeployqt.exe")
 
-        IF(EXISTS ${imported_location})
-            ADD_EXECUTABLE(Qt5::windeployqt IMPORTED)
+            IF(EXISTS ${imported_location})
+                ADD_EXECUTABLE(Qt5::windeployqt IMPORTED)
 
-            SET_TARGET_PROPERTIES(Qt5::windeployqt PROPERTIES
-                IMPORTED_LOCATION ${imported_location})
+                SET_TARGET_PROPERTIES(Qt5::windeployqt PROPERTIES
+                    IMPORTED_LOCATION ${imported_location})
+            ENDIF()
         ENDIF()
-    ENDIF()
 
-    INSTALL(FILES
-        "${CMAKE_SOURCE_DIR}/contrib/winconfig/lobby.xml"
-        "${CMAKE_SOURCE_DIR}/contrib/winconfig/channel.xml"
-        "${CMAKE_SOURCE_DIR}/contrib/winconfig/world.xml"
-        "${CMAKE_SOURCE_DIR}/contrib/winconfig/setup.xml"
-        "${CMAKE_SOURCE_DIR}/contrib/winconfig/newcharacter.xml"
-        "${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml"
-        DESTINATION config
-        COMPONENT config)
+        INSTALL(FILES
+            "${CMAKE_SOURCE_DIR}/contrib/winconfig/lobby.xml"
+            "${CMAKE_SOURCE_DIR}/contrib/winconfig/channel.xml"
+            "${CMAKE_SOURCE_DIR}/contrib/winconfig/world.xml"
+            "${CMAKE_SOURCE_DIR}/contrib/winconfig/setup.xml"
+            "${CMAKE_SOURCE_DIR}/contrib/winconfig/newcharacter.xml"
+            "${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml"
+            DESTINATION config
+            COMPONENT config)
 
-    INSTALL(DIRECTORY
-        "${CMAKE_SOURCE_DIR}/contrib/webroot"
-        DESTINATION /
-        COMPONENT webroot)
+        INSTALL(DIRECTORY
+            "${CMAKE_SOURCE_DIR}/contrib/webroot"
+            DESTINATION /
+            COMPONENT webroot)
+    ENDIF(NOT CHANNEL_ONLY)
 ELSE()
     SET(COMP_INSTALL_DIR "bin")
     SET(CPACK_GENERATOR "TGZ;TBZ2;DEB")
@@ -316,6 +337,9 @@ ENDIF()
 
 # PDB not found for library.
 ADD_LINKER_FLAGS(AUTO /ignore:4099)
+
+# Object file level parallelism for MSVC.
+ADD_COMPILER_FLAGS(AUTO /MP)
 
 # UTF-8 source encoding for MSVC.
 ADD_COMPILER_FLAGS(AUTO /utf-8 /bigobj)
@@ -740,9 +764,9 @@ ENDMACRO(CREATE_GTESTS)
 
 # If the dream code exists in the "dream" directory and BUILD_DREAM is set,
 # build the dream application as well.
-IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY)
+IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
     ADD_SUBDIRECTORY(dream)
-ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY)
+ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
 
 # This must come first so that objgen is found for the macro bellow. As a
 # consequence, none of the tools can define their own structures to be
@@ -752,7 +776,9 @@ IF(NOT UPDATER_ONLY)
     ADD_SUBDIRECTORY(deps)
 ENDIF(NOT UPDATER_ONLY)
 
-ADD_SUBDIRECTORY(tools)
+IF(NOT CHANNEL_ONLY)
+    ADD_SUBDIRECTORY(tools)
+ENDIF(NOT CHANNEL_ONLY)
 
 # This macro generates code using objgen. The arguments must start with the
 # name of the output variable that will be passed to the ADD_EXECUTABLE command
@@ -869,10 +895,10 @@ IF(NOT UPDATER_ONLY)
 ENDIF(NOT UPDATER_ONLY)
 
 # Windows does not have the server spawning code.
-IF(NOT WIN32 AND NOT UPDATER_ONLY)
+IF(NOT WIN32 AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
     ADD_SUBDIRECTORY(libtester)
     ADD_SUBDIRECTORY(client)
-ENDIF(NOT WIN32 AND NOT UPDATER_ONLY)
+ENDIF(NOT WIN32 AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
 
 #ADD_SUBDIRECTORY(updater)
 
@@ -881,13 +907,13 @@ GET_PROPERTY(targets GLOBAL PROPERTY DOC_TARGETS)
 ADD_CUSTOM_TARGET(doc ALL DEPENDS ${targets})
 SET_TARGET_PROPERTIES(doc PROPERTIES FOLDER "SpecialTargets")
 
-IF(NOT UPDATER_ONLY)
+IF(NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
     ADD_SUBDIRECTORY(docs)
-ENDIF(NOT UPDATER_ONLY)
+ENDIF(NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
 
-IF(NOT BSD AND NOT UPDATER_ONLY)
+IF(NOT BSD AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
     #ADD_SUBDIRECTORY(features)
-ENDIF(NOT BSD AND NOT UPDATER_ONLY)
+ENDIF(NOT BSD AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
 
 # On Linux system, install the icons where they can be found. These are used
 # for the application menu launcher icons.

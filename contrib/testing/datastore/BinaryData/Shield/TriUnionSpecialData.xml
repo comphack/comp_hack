@@ -1,0 +1,15 @@
+<objects>
+    <object name="MiTriUnionSpecialData">
+        <member name="ID">0</member>
+        <member name="isTriFusion">true</member>
+        <member name="triunion4">0</member>
+        <member name="resultID">26</member>
+        <member name="pluginID">1</member>
+        <member name="variant1Allowed">1</member>
+        <member name="sourceID1">182</member>
+        <member name="variant2Allowed">1</member>
+        <member name="sourceID2">183</member>
+        <member name="variant3Allowed">1</member>
+        <member name="sourceID3">184</member>
+    </object>
+</objects>

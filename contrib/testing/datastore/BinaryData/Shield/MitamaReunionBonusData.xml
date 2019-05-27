@@ -1,0 +1,7 @@
+<objects>
+    <object name="MiMitamaReunionBonusData">
+        <member name="ID">1</member>
+        <member name="type">0</member>
+        <member name="value">2</member>
+    </object>
+</objects>

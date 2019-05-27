@@ -1,0 +1,7 @@
+<objects>
+    <object name="MiTankData">
+        <member name="ID">0</member>
+        <member name="itemID">0</member>
+        <member name="maxStack">1</member>
+    </object>
+</objects>

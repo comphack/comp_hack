@@ -1,0 +1,18 @@
+<objects>
+    <object name="MiUraFieldTowerData">
+        <member name="dungeonID">1</member>
+        <member name="ID">1</member>
+        <member name="letter">1</member>
+        <member name="name"><![CDATA[シールピラーＡ]]></member>
+        <member name="captureItem">12143</member>
+        <member name="captureDuration">180</member>
+        <member name="phaseMiniBosses">
+            <element>0</element>
+            <element>0</element>
+            <element>10000</element>
+            <element>10006</element>
+        </member>
+        <member name="sealedActionType">-1</member>
+        <member name="unk3">0</member>
+    </object>
+</objects>

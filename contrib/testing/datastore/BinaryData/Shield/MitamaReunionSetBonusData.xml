@@ -1,0 +1,33 @@
+<objects>
+    <object name="MiMitamaReunionSetBonusData">
+        <member name="ID">0</member>
+        <member name="mitamaRequirements">
+            <element>4</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+        <member name="bonus">
+            <element>0</element>
+            <element>20</element>
+            <element>2</element>
+            <element>10</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+        <member name="bonusDescription"><![CDATA[—Í+20 ‘Ì—Í+10]]></member>
+        <member name="bonusEx">
+            <element>0</element>
+            <element>50</element>
+            <element>2</element>
+            <element>20</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+        <member name="bonusExDescription"><![CDATA[—Í+50 ‘Ì—Í+20]]></member>
+    </object>
+</objects>

@@ -1,0 +1,6 @@
+<objects>
+    <object name="MiDevilBoostLotData">
+        <member name="lot">10</member>
+        <member name="stackID">1</member>
+    </object>
+</objects>

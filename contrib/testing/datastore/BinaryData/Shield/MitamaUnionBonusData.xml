@@ -1,0 +1,14 @@
+<objects>
+    <object name="MiMitamaUnionBonusData">
+        <member name="ID">0</member>
+        <member name="bonus">
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+        <member name="description"><![CDATA[Description here.]]></member>
+    </object>
+</objects>

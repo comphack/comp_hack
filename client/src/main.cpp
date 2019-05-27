@@ -30,6 +30,7 @@
 
 // libcomp Includes
 #include <Decrypt.h>
+#include <Exception.h>
 #include <Log.h>
 #include <ScriptEngine.h>
 
@@ -147,6 +148,8 @@ int main(int argc, char *argv[])
 {
     (void)argc;
     (void)argv;
+
+    libcomp::Exception::RegisterSignalHandler();
 
     // Enable the log so it prints to the console.
     libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();

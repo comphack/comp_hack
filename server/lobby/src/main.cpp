@@ -153,10 +153,20 @@ int main(int argc, const char *argv[])
 
     auto pImportHandler = new lobby::ImportHandler(config, server);
 
-    CivetServer webServer(options);
-    webServer.addHandler("/", pLoginHandler);
-    webServer.addHandler("/api", pApiHandler);
-    webServer.addHandler("/import", pImportHandler);
+    try
+    {
+        CivetServer webServer(options);
+        webServer.addHandler("/", pLoginHandler);
+        webServer.addHandler("/api", pApiHandler);
+        webServer.addHandler("/import", pImportHandler);
+    }
+    catch(CivetException e)
+    {
+        LOG_CRITICAL(libcomp::String("The lobby API server failed to start "
+            "with the following message: %1\n").Arg(e.what()));
+
+        return EXIT_FAILURE;
+    }
 
     // Set this for the signal handler.
     libcomp::Shutdown::Configure(server.get());

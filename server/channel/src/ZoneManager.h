@@ -30,6 +30,9 @@
 // object Includes
 #include <ServerZoneTrigger.h>
 
+// libcomp Includes
+#include <Mutex.h>
+
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "Zone.h"
@@ -175,7 +178,7 @@ public:
      * Create a zone instance with access granted for the supplied CIDs
      * @param access Pointer to the access definition
      * @return 0 if it failed to create, 1 if it created local, 2 if a request
-     *  was sent to the world to create the instance 
+     *  was sent to the world to create the instance
      */
     uint8_t CreateInstance(
         const std::shared_ptr<objects::InstanceAccess>& access);
@@ -1390,7 +1393,7 @@ private:
     uint32_t mNextZoneInstanceID;
 
     /// Server lock for shared resources
-    std::mutex mLock;
+    libcomp::Mutex mLock;
 
     /// Server lock for creating or getting existing zones in an instance
     std::mutex mInstanceZoneLock;

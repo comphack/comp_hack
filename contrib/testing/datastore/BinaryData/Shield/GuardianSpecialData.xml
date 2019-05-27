@@ -1,0 +1,23 @@
+<objects>
+    <object name="MiGuardianSpecialData">
+        <member name="ID">24</member>
+        <member name="requirements">
+            <element>1</element>
+            <element>6</element>
+            <element>5</element>
+            <element>8</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+    </object>
+</objects>

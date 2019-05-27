@@ -1,0 +1,122 @@
+<objects>
+    <object name="MiDevilBoostData">
+        <member name="ID">490011</member>
+        <member name="minLevel">-1</member>
+        <member name="maxLevel">-1</member>
+        <member name="growthType">-1</member>
+        <member name="growthRank">-1</member>
+        <member name="unk1">-1</member>
+        <member name="requirements">
+            <element>
+                <object name="MiDevilBoostRequirementData">
+                    <member name="type">NONE</member>
+                    <member name="value1">-1</member>
+                    <member name="value2">-1</member>
+                    <member name="unk1">-1</member>
+                    <member name="unk2">-1</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilBoostRequirementData">
+                    <member name="type">NONE</member>
+                    <member name="value1">-1</member>
+                    <member name="value2">-1</member>
+                    <member name="unk1">-1</member>
+                    <member name="unk2">-1</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilBoostRequirementData">
+                    <member name="type">NONE</member>
+                    <member name="value1">-1</member>
+                    <member name="value2">-1</member>
+                    <member name="unk1">-1</member>
+                    <member name="unk2">-1</member>
+                </object>
+            </element>
+        </member>
+        <member name="results">
+            <element>
+                <object name="MiDevilBoostResultData">
+                    <member name="type">-1</member>
+                    <member name="minPoints">-1</member>
+                    <member name="maxPoints">-1</member>
+                    <member name="unk1">-1</member>
+                    <member name="unk2">-1</member>
+                    <member name="points">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilBoostResultData">
+                    <member name="type">-1</member>
+                    <member name="minPoints">-1</member>
+                    <member name="maxPoints">-1</member>
+                    <member name="unk1">-1</member>
+                    <member name="unk2">-1</member>
+                    <member name="points">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilBoostResultData">
+                    <member name="type">-1</member>
+                    <member name="minPoints">-1</member>
+                    <member name="maxPoints">-1</member>
+                    <member name="unk1">-1</member>
+                    <member name="unk2">-1</member>
+                    <member name="points">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilBoostResultData">
+                    <member name="type">-1</member>
+                    <member name="minPoints">-1</member>
+                    <member name="maxPoints">-1</member>
+                    <member name="unk1">-1</member>
+                    <member name="unk2">-1</member>
+                    <member name="points">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilBoostResultData">
+                    <member name="type">-1</member>
+                    <member name="minPoints">-1</member>
+                    <member name="maxPoints">-1</member>
+                    <member name="unk1">-1</member>
+                    <member name="unk2">-1</member>
+                    <member name="points">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilBoostResultData">
+                    <member name="type">-1</member>
+                    <member name="minPoints">-1</member>
+                    <member name="maxPoints">-1</member>
+                    <member name="unk1">-1</member>
+                    <member name="unk2">-1</member>
+                    <member name="points">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilBoostResultData">
+                    <member name="type">-1</member>
+                    <member name="minPoints">-1</member>
+                    <member name="maxPoints">-1</member>
+                    <member name="unk1">-1</member>
+                    <member name="unk2">-1</member>
+                    <member name="points">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilBoostResultData">
+                    <member name="type">-1</member>
+                    <member name="minPoints">-1</member>
+                    <member name="maxPoints">-1</member>
+                    <member name="unk1">-1</member>
+                    <member name="unk2">-1</member>
+                    <member name="points">0</member>
+                </object>
+            </element>
+        </member>
+        <member name="extraID">10001</member>
+    </object>
+</objects>

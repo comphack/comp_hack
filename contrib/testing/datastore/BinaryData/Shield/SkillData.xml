@@ -1,0 +1,175 @@
+<objects>
+    <object name="MiSkillData">
+        <member name="common">
+            <object name="MiSkillItemStatusCommonData">
+                <member name="id">2</member>
+                <member name="category">
+                    <object name="MiCategoryData">
+                        <member name="mainCategory">0</member>
+                        <member name="subCategory">1</member>
+                    </object>
+                </member>
+                <member name="affinity">21</member>
+                <member name="correctTbl">
+                    <element>
+                        <object name="MiCorrectTbl">
+                            <member name="ID">HP_MAX</member>
+                            <member name="Type">1</member>
+                            <member name="Value">10</member>
+                        </object>
+                    </element>
+                </member>
+            </object>
+        </member>
+        <member name="basic">
+            <object name="MiSkillBasicData">
+                <member name="dependencyType">5</member>
+                <member name="actionType">SUPPORT</member>
+                <member name="combatSkill">false</member>
+                <member name="defensible">0</member>
+                <member name="family">0</member>
+                <member name="activationType">0</member>
+                <member name="basic7">1</member>
+                <member name="cooldownID">2</member>
+            </object>
+        </member>
+        <member name="condition">
+            <object name="MiConditionData">
+                <member name="restriction">
+                    <object name="MiRestrictionData">
+                        <member name="restriction1">0</member>
+                        <member name="weaponType">NONE</member>
+                        <member name="LNC">ALL</member>
+                        <member name="digitizeRestricted">false</member>
+                        <member name="digitizeWeaponType">NONE</member>
+                    </object>
+                </member>
+                <member name="costs"/>
+                <member name="cooldownTime">0</member>
+                <member name="activeMPDrain">0</member>
+                <member name="condition3">0</member>
+            </object>
+        </member>
+        <member name="cast">
+            <object name="MiCastData">
+                <member name="basic">
+                    <object name="MiCastBasicData">
+                        <member name="chargeTime">0</member>
+                        <member name="useCount">0</member>
+                        <member name="adjustRestrictions">0</member>
+                    </object>
+                </member>
+                <member name="cancel">
+                    <object name="MiCastCancelData">
+                        <member name="damageCancel">false</member>
+                        <member name="knockbackCancel">false</member>
+                        <member name="autoCancelTime">0</member>
+                    </object>
+                </member>
+            </object>
+        </member>
+        <member name="target">
+            <object name="MiTargetData">
+                <member name="range">0</member>
+                <member name="type">NONE</member>
+            </object>
+        </member>
+        <member name="discharge">
+            <object name="MiDischargeData">
+                <member name="completeDelay">0</member>
+                <member name="projectileSpeed">0</member>
+                <member name="hitDelay">0</member>
+                <member name="stiffness">0</member>
+                <member name="shotInterruptible">false</member>
+            </object>
+        </member>
+        <member name="range">
+            <object name="MiEffectiveRangeData">
+                <member name="areaType">SOURCE</member>
+                <member name="validType">ALLY</member>
+                <member name="aoeRange">0</member>
+                <member name="aoeLineWidth">0</member>
+            </object>
+        </member>
+        <member name="damage">
+            <object name="MiDamageData">
+                <member name="battleDamage">
+                    <object name="MiBattleDamageData">
+                        <member name="formula">NONE</member>
+                        <member name="aoeReduce">false</member>
+                        <member name="aoeReduction">0</member>
+                        <member name="modifier1">0</member>
+                        <member name="modifier2">0</member>
+                        <member name="HPDrainPercent">0</member>
+                        <member name="MPDrainPercent">0</member>
+                    </object>
+                </member>
+                <member name="negotiationDamage">
+                    <object name="MiNegotiationDamageData">
+                        <member name="successAffability">0</member>
+                        <member name="failureAffability">0</member>
+                        <member name="successFear">0</member>
+                        <member name="failureFear">0</member>
+                    </object>
+                </member>
+                <member name="breakData">
+                    <object name="MiBreakData">
+                        <member name="weapon">0</member>
+                        <member name="armor">0</member>
+                    </object>
+                </member>
+                <member name="knockBack">
+                    <object name="MiKnockBackData">
+                        <member name="knockBackType">2</member>
+                        <member name="modifier">0</member>
+                        <member name="distance">0</member>
+                    </object>
+                </member>
+                <member name="hitStopTime">0</member>
+                <member name="addStatuses"/>
+                <member name="functionID">0</member>
+            </object>
+        </member>
+        <member name="acquisition">
+            <object name="MiAcquisitionData">
+                <member name="inheritanceRestriction">0</member>
+                <member name="inheritanceModifier">2</member>
+            </object>
+        </member>
+        <member name="expertGrowth">
+            <element>
+                <object name="MiExpertGrowthTbl">
+                    <member name="expertiseID">0</member>
+                    <member name="growthRate">1</member>
+                    <member name="expertGrowth3">0</member>
+                </object>
+            </element>
+        </member>
+        <member name="charastic">
+            <object name="MiSkillCharasticData">
+                <member name="charastic">
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                </member>
+            </object>
+        </member>
+        <member name="special">
+            <object name="MiSkillSpecialParams">
+                <member name="specialParams">
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                </member>
+            </object>
+        </member>
+        <member name="pvp">
+            <object name="MiSkillPvPData">
+                <member name="PVPRestriction">NONE</member>
+                <member name="pvp2">100</member>
+            </object>
+        </member>
+    </object>
+</objects>

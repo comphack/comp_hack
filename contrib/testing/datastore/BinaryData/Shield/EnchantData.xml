@@ -1,0 +1,95 @@
+<objects>
+    <object name="MiEnchantData">
+        <member name="ID">1</member>
+        <member name="devilCrystal">
+            <object name="MiDevilCrystalData">
+                <member name="demonID">1</member>
+                <member name="itemID">7001</member>
+                <member name="difficulty">150</member>
+                <member name="usage">0</member>
+                <member name="tarot">
+                    <object name="MiEnchantCharasticData">
+                        <member name="name"><![CDATA[サタンの]]></member>
+                        <member name="desc"><![CDATA[0]]></member>
+                        <member name="equipLevel">50</member>
+                        <member name="difficulty">70</member>
+                        <member name="equipTypes">16255</member>
+                        <member name="tokusei">
+                            <element>0</element>
+                            <element>0</element>
+                        </member>
+                        <member name="conditions">
+                            <element>
+                                <object name="MiSpecialConditionData">
+                                    <member name="type">0</member>
+                                    <member name="params">
+                                        <element>0</element>
+                                        <element>0</element>
+                                    </member>
+                                    <member name="tokusei">
+                                        <element>0</element>
+                                        <element>0</element>
+                                    </member>
+                                </object>
+                            </element>
+                            <element>
+                                <object name="MiSpecialConditionData">
+                                    <member name="type">0</member>
+                                    <member name="params">
+                                        <element>0</element>
+                                        <element>0</element>
+                                    </member>
+                                    <member name="tokusei">
+                                        <element>0</element>
+                                        <element>0</element>
+                                    </member>
+                                </object>
+                            </element>
+                        </member>
+                    </object>
+                </member>
+                <member name="soul">
+                    <object name="MiEnchantCharasticData">
+                        <member name="name"><![CDATA[@サタニック]]></member>
+                        <member name="desc"><![CDATA[]]></member>
+                        <member name="equipLevel">95</member>
+                        <member name="difficulty">105</member>
+                        <member name="equipTypes">0</member>
+                        <member name="tokusei">
+                            <element>0</element>
+                            <element>0</element>
+                        </member>
+                        <member name="conditions">
+                            <element>
+                                <object name="MiSpecialConditionData">
+                                    <member name="type">0</member>
+                                    <member name="params">
+                                        <element>0</element>
+                                        <element>0</element>
+                                    </member>
+                                    <member name="tokusei">
+                                        <element>0</element>
+                                        <element>0</element>
+                                    </member>
+                                </object>
+                            </element>
+                            <element>
+                                <object name="MiSpecialConditionData">
+                                    <member name="type">0</member>
+                                    <member name="params">
+                                        <element>0</element>
+                                        <element>0</element>
+                                    </member>
+                                    <member name="tokusei">
+                                        <element>0</element>
+                                        <element>0</element>
+                                    </member>
+                                </object>
+                            </element>
+                        </member>
+                    </object>
+                </member>
+            </object>
+        </member>
+    </object>
+</objects>

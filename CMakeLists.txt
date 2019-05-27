@@ -184,7 +184,7 @@ IF(WIN32)
         "${CMAKE_SOURCE_DIR}/contrib/winconfig/world.xml"
         "${CMAKE_SOURCE_DIR}/contrib/winconfig/setup.xml"
         "${CMAKE_SOURCE_DIR}/contrib/winconfig/newcharacter.xml"
-        "${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml"
+        "${CMAKE_SOURCE_DIR}/contrib/testing/config/constants.xml"
         DESTINATION config
         COMPONENT config)
 
@@ -912,7 +912,7 @@ IF(NOT WIN32)
         DESTINATION ${CMAKE_INSTALL_LOCALSTATEDIR}/lib/comp_hack)
     INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/contrib/nixconfig/
         DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/comp_hack)
-    INSTALL(FILES ${CMAKE_SOURCE_DIR}/contrib/testing/constants.xml
+    INSTALL(FILES ${CMAKE_SOURCE_DIR}/contrib/testing/config/constants.xml
         DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/comp_hack)
     INSTALL(FILES ${CMAKE_SOURCE_DIR}/contrib/winconfig/newcharacter.xml
         DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/comp_hack)
@@ -920,7 +920,7 @@ ENDIF(NOT WIN32)
 
 # Copy all contrib/testing to the bin directory.
 FILE(COPY "${CMAKE_SOURCE_DIR}/contrib/testing"
-    DESTINATION "${CMAKE_BINARY_DIR}/bin")
+    DESTINATION "${CMAKE_BINARY_DIR}")
 
 IF(COVERALLS)
     coveralls_setup("${COVERALLS_SRCS}" ON)
@@ -934,3 +934,158 @@ If(DOXYGEN_FOUND AND GENERATE_DOCUMENTATION AND NOT WIN32)
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/comp_hack
         COMPONENT docs)
 ENDIF(DOXYGEN_FOUND AND GENERATE_DOCUMENTATION AND NOT WIN32)
+
+FUNCTION(BINARY_DATA_COMMAND bdtype inpath encrypt)
+    GET_FILENAME_COMPONENT(pre_outdir "${inpath}" DIRECTORY)
+    GET_FILENAME_COMPONENT(outfn "${inpath}" NAME_WE)
+    SET(indir "${CMAKE_CURRENT_SOURCE_DIR}/contrib/testing")
+    SET(outdir "${CMAKE_BINARY_DIR}/testing/${pre_outdir}")
+    SET(outpath "${outdir}/${outfn}.bin")
+    SET(encpath "${outdir}/${outfn}.sbin")
+    SET(pre_encpath "${pre_outdir}/${outfn}.sbin")
+
+    IF(EXISTS "${inputdir}/${outdir}/${outfn}.xsd")
+        # Lint first, then generate the bin file.
+        ADD_CUSTOM_COMMAND(OUTPUT "${outpath}"
+            COMMAND "${XMLLINT}" "-schema"
+            "${outdir}/${outfn}.xsd"
+            "${indir}/${inpath}"
+            "--noout"
+            COMMAND comp_bdpatch save "${bdtype}"
+            "${indir}/${inpath}"
+            "${outpath}"
+            DEPENDS "${indir}/${inpath}"
+            DEPENDS comp_bdpatch
+            COMMENT "Generating ${outpath}")
+    ELSE()
+        ADD_CUSTOM_COMMAND(OUTPUT "${outpath}"
+            COMMAND comp_bdpatch save "${bdtype}"
+            "${indir}/${inpath}"
+            "${outpath}"
+            DEPENDS "${indir}/${inpath}"
+            DEPENDS comp_bdpatch
+            COMMENT "Generating ${pre_outpath}")
+    ENDIF()
+
+    IF(encrypt)
+        ADD_CUSTOM_COMMAND(OUTPUT "${encpath}"
+            COMMAND comp_encrypt
+            "${outpath}"
+            "${encpath}"
+            DEPENDS "${outpath}"
+            DEPENDS comp_encrypt
+            COMMENT "Generating ${pre_encpath}")
+    ELSE()
+    ENDIF()
+ENDFUNCTION(BINARY_DATA_COMMAND)
+
+FUNCTION(ENCRYPTED_BINARY_DATA)
+    SET(parse_state 0)
+    SET(depends "")
+
+    FOREACH(arg ${ARGN})
+        IF(0 EQUAL ${parse_state})
+            SET(bdtype "${arg}")
+            SET(parse_state 1)
+        ELSE()
+            BINARY_DATA_COMMAND("${bdtype}" "${arg}" True)
+
+            GET_FILENAME_COMPONENT(outdir "${arg}" DIRECTORY)
+            GET_FILENAME_COMPONENT(outfn "${arg}" NAME_WE)
+            SET(outpath "${outdir}/${outfn}.bin")
+            SET(encpath "${outdir}/${outfn}.sbin")
+
+            LIST(APPEND depends "${CMAKE_BINARY_DIR}/testing/${encpath}")
+
+            SET(parse_state 0)
+        ENDIF()
+    ENDFOREACH()
+
+    ADD_CUSTOM_TARGET(sbin ALL DEPENDS ${depends})
+ENDFUNCTION(ENCRYPTED_BINARY_DATA)
+
+FUNCTION(UNENCRYPTED_BINARY_DATA)
+    SET(parse_state 0)
+    SET(depends "")
+
+    FOREACH(arg ${ARGN})
+        IF(0 EQUAL ${parse_state})
+            SET(bdtype "${arg}")
+            SET(parse_state 1)
+        ELSE()
+            BINARY_DATA_COMMAND("${bdtype}" "${arg}" False)
+
+            GET_FILENAME_COMPONENT(outdir "${arg}" DIRECTORY)
+            GET_FILENAME_COMPONENT(outfn "${arg}" NAME_WE)
+            SET(outpath "${outdir}/${outfn}.bin")
+
+            LIST(APPEND depends "${CMAKE_BINARY_DIR}/testing/${outpath}")
+
+            SET(parse_state 0)
+        ENDIF()
+    ENDFOREACH()
+
+    ADD_CUSTOM_TARGET(bin ALL DEPENDS ${depends})
+ENDFUNCTION(UNENCRYPTED_BINARY_DATA)
+
+UNENCRYPTED_BINARY_DATA(
+    dynamicmap datastore/BinaryData/Client/DynamicMapData.xml
+)
+
+ENCRYPTED_BINARY_DATA(
+    ai datastore/BinaryData/Shield/AIData.xml
+    blend datastore/BinaryData/Shield/BlendData.xml
+    blendext datastore/BinaryData/Shield/BlendExtData.xml
+    chourai datastore/BinaryData/Shield/CHouraiData.xml
+    citem datastore/BinaryData/Shield/CItemData.xml
+    title datastore/BinaryData/Shield/CodeNameData.xml
+    cultureitem datastore/BinaryData/Shield/CultureItemData.xml
+    devilbook datastore/BinaryData/Shield/DevilBookData.xml
+    devilboost datastore/BinaryData/Shield/DevilBoostData.xml
+    devilboostextra datastore/BinaryData/Shield/DevilBoostExtraData.xml
+    devilboostitem datastore/BinaryData/Shield/DevilBoostItemData.xml
+    devilboostlot datastore/BinaryData/Shield/DevilBoostLotData.xml
+    devil datastore/BinaryData/Shield/DevilData.xml
+    devilequip datastore/BinaryData/Shield/DevilEquipmentData.xml
+    devilequipitem datastore/BinaryData/Shield/DevilEquipmentItemData.xml
+    devilfusion datastore/BinaryData/Shield/DevilFusionData.xml
+    devillvluprate datastore/BinaryData/Shield/DevilLVUpRateData.xml
+    disassembly datastore/BinaryData/Shield/DisassemblyData.xml
+    disassemblytrig datastore/BinaryData/Shield/DisassemblyTriggerData.xml
+    enchant datastore/BinaryData/Shield/EnchantData.xml
+    equipset datastore/BinaryData/Shield/EquipmentSetData.xml
+    exchange datastore/BinaryData/Shield/ExchangeData.xml
+    expert datastore/BinaryData/Shield/ExpertClassData.xml
+    guardianassist datastore/BinaryData/Shield/GuardianAssistData.xml
+    guardianlevel datastore/BinaryData/Shield/GuardianLevelData.xml
+    guardianspecial datastore/BinaryData/Shield/GuardianSpecialData.xml
+    guardianunlock datastore/BinaryData/Shield/GuardianUnlockData.xml
+    hnpc datastore/BinaryData/Shield/hNPCData.xml
+    item datastore/BinaryData/Shield/ItemData.xml
+    mission datastore/BinaryData/Shield/MissionData.xml
+    mitamabonus datastore/BinaryData/Shield/MitamaReunionBonusData.xml
+    mitamasetbonus datastore/BinaryData/Shield/MitamaReunionSetBonusData.xml
+    mitamaunion datastore/BinaryData/Shield/MitamaUnionBonusData.xml
+    mod datastore/BinaryData/Shield/ModificationData.xml
+    modexteffect datastore/BinaryData/Shield/ModificationExtEffectData.xml
+    modextrecipe datastore/BinaryData/Shield/ModificationExtRecipeData.xml
+    modtrigger datastore/BinaryData/Shield/ModificationTriggerData.xml
+    modeffect datastore/BinaryData/Shield/ModifiedEffectData.xml
+    npcbarter datastore/BinaryData/Shield/NPCBarterData.xml
+    onpc datastore/BinaryData/Shield/oNPCData.xml
+    questbonuscode datastore/BinaryData/Shield/QuestBonusCodeData.xml
+    quest datastore/BinaryData/Shield/QuestData.xml
+    shopproduct datastore/BinaryData/Shield/ShopProductData.xml
+    sitem datastore/BinaryData/Shield/SItemData.xml
+    skill datastore/BinaryData/Shield/SkillData.xml
+    status datastore/BinaryData/Shield/StatusData.xml
+    synthesis datastore/BinaryData/Shield/SynthesisData.xml
+    timelimit datastore/BinaryData/Shield/TankData.xml
+    timelimit datastore/BinaryData/Shield/TimeLimitData.xml
+    triunionspecial datastore/BinaryData/Shield/TriUnionSpecialData.xml
+    urafieldtower datastore/BinaryData/Shield/UraFieldTowerData.xml
+    warppoint datastore/BinaryData/Shield/WarpPointData.xml
+    zone datastore/BinaryData/Shield/ZoneData.xml
+)
+
+ADD_CUSTOM_TARGET(testing ALL DEPENDS bin sbin)

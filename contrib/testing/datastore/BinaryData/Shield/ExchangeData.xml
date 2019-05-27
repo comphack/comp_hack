@@ -1,0 +1,557 @@
+<objects>
+    <object name="MiExchangeData">
+        <member name="ID">666</member>
+        <member name="options">
+            <element>
+                <object name="MiExchangeOptionData">
+                    <member name="name"><![CDATA[Something]]></member>
+                    <member name="items">
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">3260</member>
+                                <member name="stackSize">1</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                    </member>
+                </object>
+            </element>
+            <element>
+                <object name="MiExchangeOptionData">
+                    <member name="name"><![CDATA[女/ハートキャンドルネックレス]]></member>
+                    <member name="items">
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">3261</member>
+                                <member name="stackSize">1</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                    </member>
+                </object>
+            </element>
+            <element>
+                <object name="MiExchangeOptionData">
+                    <member name="name"><![CDATA[]]></member>
+                    <member name="items">
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                    </member>
+                </object>
+            </element>
+            <element>
+                <object name="MiExchangeOptionData">
+                    <member name="name"><![CDATA[]]></member>
+                    <member name="items">
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                    </member>
+                </object>
+            </element>
+            <element>
+                <object name="MiExchangeOptionData">
+                    <member name="name"><![CDATA[]]></member>
+                    <member name="items">
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                    </member>
+                </object>
+            </element>
+            <element>
+                <object name="MiExchangeOptionData">
+                    <member name="name"><![CDATA[]]></member>
+                    <member name="items">
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                    </member>
+                </object>
+            </element>
+            <element>
+                <object name="MiExchangeOptionData">
+                    <member name="name"><![CDATA[]]></member>
+                    <member name="items">
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                    </member>
+                </object>
+            </element>
+            <element>
+                <object name="MiExchangeOptionData">
+                    <member name="name"><![CDATA[]]></member>
+                    <member name="items">
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                    </member>
+                </object>
+            </element>
+            <element>
+                <object name="MiExchangeOptionData">
+                    <member name="name"><![CDATA[]]></member>
+                    <member name="items">
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                    </member>
+                </object>
+            </element>
+            <element>
+                <object name="MiExchangeOptionData">
+                    <member name="name"><![CDATA[]]></member>
+                    <member name="items">
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                        <element>
+                            <object name="MiExchangeObjectData">
+                                <member name="ID">0</member>
+                                <member name="stackSize">0</member>
+                            </object>
+                        </element>
+                    </member>
+                </object>
+            </element>
+        </member>
+    </object>
+</objects>

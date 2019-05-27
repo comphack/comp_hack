@@ -1,0 +1,6 @@
+<objects>
+    <object name="MiDevilEquipmentItemData">
+        <member name="itemID">36020</member>
+        <member name="skillID">23058</member>
+    </object>
+</objects>

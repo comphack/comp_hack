@@ -1,0 +1,14 @@
+<objects>
+    <object name="MiModificationData">
+        <member name="ID">1</member>
+        <member name="effectID">1</member>
+        <member name="slot">0</member>
+        <member name="greatFailItemCount">4</member>
+        <member name="greatFailItemType">42101</member>
+        <member name="itemID">63</member>
+        <member name="successRate">8500</member>
+        <member name="failRate">1500</member>
+        <member name="greatSuccessRate">880</member>
+        <member name="greatFailRate">0</member>
+    </object>
+</objects>

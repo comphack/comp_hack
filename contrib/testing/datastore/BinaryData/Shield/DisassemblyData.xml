@@ -1,0 +1,64 @@
+<objects>
+    <object name="MiDisassemblyData">
+        <member name="ID">1</member>
+        <member name="itemID">40001</member>
+        <member name="materials">
+            <element>
+                <object name="MiDisassemblyMaterialData">
+                    <member name="type">42103</member>
+                    <member name="amount">6</member>
+                    <member name="successRate">10000</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDisassemblyMaterialData">
+                    <member name="type">42103</member>
+                    <member name="amount">3</member>
+                    <member name="successRate">6000</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDisassemblyMaterialData">
+                    <member name="type">42102</member>
+                    <member name="amount">4</member>
+                    <member name="successRate">4000</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDisassemblyMaterialData">
+                    <member name="type">0</member>
+                    <member name="amount">0</member>
+                    <member name="successRate">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDisassemblyMaterialData">
+                    <member name="type">0</member>
+                    <member name="amount">0</member>
+                    <member name="successRate">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDisassemblyMaterialData">
+                    <member name="type">0</member>
+                    <member name="amount">0</member>
+                    <member name="successRate">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDisassemblyMaterialData">
+                    <member name="type">0</member>
+                    <member name="amount">0</member>
+                    <member name="successRate">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDisassemblyMaterialData">
+                    <member name="type">0</member>
+                    <member name="amount">0</member>
+                    <member name="successRate">0</member>
+                </object>
+            </element>
+        </member>
+    </object>
+</objects>

@@ -1,0 +1,86 @@
+<objects>
+    <object name="MiSynthesisData">
+        <member name="ID">1</member>
+        <member name="baseSkillID">5789</member>
+        <member name="skillID">5748</member>
+        <member name="itemID">1201</member>
+        <member name="count">1</member>
+        <member name="unk2">8</member>
+        <member name="type">1</member>
+        <member name="unk3">1</member>
+        <member name="slotMin">0</member>
+        <member name="slotMax">5</member>
+        <member name="expertBoosts">
+            <element>8</element>
+            <element>30</element>
+        </member>
+        <member name="materials">
+            <element>
+                <object name="MiSynthesisItemData">
+                    <member name="itemID">42101</member>
+                    <member name="amount">12</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiSynthesisItemData">
+                    <member name="itemID">42102</member>
+                    <member name="amount">8</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiSynthesisItemData">
+                    <member name="itemID">42501</member>
+                    <member name="amount">8</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiSynthesisItemData">
+                    <member name="itemID">42701</member>
+                    <member name="amount">8</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiSynthesisItemData">
+                    <member name="itemID">0</member>
+                    <member name="amount">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiSynthesisItemData">
+                    <member name="itemID">0</member>
+                    <member name="amount">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiSynthesisItemData">
+                    <member name="itemID">0</member>
+                    <member name="amount">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiSynthesisItemData">
+                    <member name="itemID">0</member>
+                    <member name="amount">0</member>
+                </object>
+            </element>
+        </member>
+        <member name="rateScaling">
+            <element>3520</element>
+            <element>10000</element>
+            <element>5280</element>
+            <element>10000</element>
+            <element>10000</element>
+            <element>7040</element>
+            <element>4224</element>
+            <element>10000</element>
+            <element>10000</element>
+            <element>5280</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+    </object>
+</objects>

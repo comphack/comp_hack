@@ -1,0 +1,200 @@
+<objects>
+    <object name="MiZoneData">
+        <member name="basic">
+            <object name="MiZoneBasicData">
+                <member name="id">1</member>
+                <member name="name"><![CDATA[Test Zone]]></member>
+                <member name="type">5</member>
+                <member name="flags">0</member>
+                <member name="parentID">0</member>
+                <member name="startingSpot">0</member>
+            </object>
+        </member>
+        <member name="file">
+            <object name="MiZoneFileData">
+                <member name="modelFile"><![CDATA[ME01_001_01.nif]]></member>
+                <member name="nameFile"><![CDATA[]]></member>
+                <member name="qmpFile"><![CDATA[ME01_001_01.qmp]]></member>
+                <member name="spotFile"><![CDATA[ME01_001_01.bin]]></member>
+                <member name="enemyFile"><![CDATA[]]></member>
+                <member name="npcFile"><![CDATA[NPCPopData_10101_virtualR_4.bin]]></member>
+                <member name="eventFile"><![CDATA[10101_virtualr.bin]]></member>
+                <member name="unused1"><![CDATA[]]></member>
+                <member name="unused2"><![CDATA[]]></member>
+                <member name="groupFile"><![CDATA[]]></member>
+                <member name="unitFile"><![CDATA[]]></member>
+                <member name="unused3"><![CDATA[]]></member>
+                <member name="unused4"><![CDATA[]]></member>
+                <member name="unused5"><![CDATA[]]></member>
+                <member name="unused6"><![CDATA[]]></member>
+                <member name="unused7"><![CDATA[]]></member>
+                <member name="unused8"><![CDATA[]]></member>
+                <member name="unused9"><![CDATA[]]></member>
+                <member name="unused10"><![CDATA[]]></member>
+            </object>
+        </member>
+        <member name="fog">
+            <object name="MiZoneFogData">
+                <member name="fog1">1</member>
+                <member name="fog2">
+                    <element>25</element>
+                    <element>25</element>
+                    <element>40</element>
+                </member>
+                <member name="fog3">14</member>
+                <member name="fog4">140</member>
+                <member name="fog5">0</member>
+                <member name="fog6">
+                    <element>25</element>
+                    <element>25</element>
+                    <element>40</element>
+                </member>
+                <member name="fog7">14</member>
+                <member name="fog8">140</member>
+            </object>
+        </member>
+        <member name="camera">
+            <object name="MiZoneCameraData">
+                <member name="camera1">200</member>
+            </object>
+        </member>
+        <member name="sky">
+            <object name="MiZoneSkyData">
+                <member name="sky1">0</member>
+                <member name="sky2">0</member>
+                <member name="sky3">0</member>
+                <member name="sky4"><![CDATA[]]></member>
+                <member name="sky5"><![CDATA[]]></member>
+                <member name="sky6"><![CDATA[]]></member>
+                <member name="sky7"><![CDATA[]]></member>
+                <member name="sky8"><![CDATA[]]></member>
+                <member name="sky9"><![CDATA[]]></member>
+                <member name="sky10"><![CDATA[]]></member>
+                <member name="sky11"><![CDATA[]]></member>
+            </object>
+        </member>
+        <member name="gouraud">
+            <object name="MiZoneGouraudData">
+                <member name="gouraud1">1</member>
+                <member name="gouraud2">0</member>
+                <member name="gouraud3">0</member>
+                <member name="gouraud4">8</member>
+                <member name="gouraud5">0.8999999762</member>
+                <member name="gouraud6">1</member>
+                <member name="gouraud7">1</member>
+                <member name="gouraud8">1</member>
+                <member name="gouraud9">0</member>
+                <member name="gouraud10">0</member>
+                <member name="gouraud11">0.6999999881</member>
+            </object>
+        </member>
+        <member name="flare">
+            <object name="MiZoneLensFlareData">
+                <member name="flare1">0</member>
+                <member name="flare2">0</member>
+                <member name="flare3">0</member>
+                <member name="flare4">0</member>
+                <member name="flare5">
+                    <element>
+                        <object name="MiZoneLensFlareLayerData">
+                            <member name="unk1">0</member>
+                            <member name="unk2">0</member>
+                            <member name="unk3">0</member>
+                            <member name="unk4">0</member>
+                            <member name="unk5">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiZoneLensFlareLayerData">
+                            <member name="unk1">0</member>
+                            <member name="unk2">0</member>
+                            <member name="unk3">0</member>
+                            <member name="unk4">0</member>
+                            <member name="unk5">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiZoneLensFlareLayerData">
+                            <member name="unk1">0</member>
+                            <member name="unk2">0</member>
+                            <member name="unk3">0</member>
+                            <member name="unk4">0</member>
+                            <member name="unk5">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiZoneLensFlareLayerData">
+                            <member name="unk1">0</member>
+                            <member name="unk2">0</member>
+                            <member name="unk3">0</member>
+                            <member name="unk4">0</member>
+                            <member name="unk5">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiZoneLensFlareLayerData">
+                            <member name="unk1">0</member>
+                            <member name="unk2">0</member>
+                            <member name="unk3">0</member>
+                            <member name="unk4">0</member>
+                            <member name="unk5">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiZoneLensFlareLayerData">
+                            <member name="unk1">0</member>
+                            <member name="unk2">0</member>
+                            <member name="unk3">0</member>
+                            <member name="unk4">0</member>
+                            <member name="unk5">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiZoneLensFlareLayerData">
+                            <member name="unk1">0</member>
+                            <member name="unk2">0</member>
+                            <member name="unk3">0</member>
+                            <member name="unk4">0</member>
+                            <member name="unk5">0</member>
+                        </object>
+                    </element>
+                </member>
+            </object>
+        </member>
+        <member name="bgm">
+            <object name="MiZoneBGMData">
+                <member name="zoneSoundID">6</member>
+                <member name="battleSoundID">60</member>
+            </object>
+        </member>
+        <member name="other">
+            <object name="MiZoneOtherData">
+                <member name="other1">
+                    <element>0</element>
+                    <element>0</element>
+                </member>
+                <member name="other2">
+                    <element>0</element>
+                    <element>0</element>
+                </member>
+                <member name="other3">0</member>
+                <member name="other4">
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                </member>
+                <member name="other5">
+                    <element>1</element>
+                    <element>1</element>
+                    <element>1</element>
+                </member>
+                <member name="other6">0</member>
+                <member name="other7">0</member>
+                <member name="other8">0</member>
+                <member name="other9">0</member>
+                <member name="other10">0</member>
+                <member name="other11">0</member>
+            </object>
+        </member>
+    </object>
+</objects>

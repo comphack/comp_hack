@@ -1,0 +1,19 @@
+<objects>
+    <object name="MiWarpPointData">
+        <member name="ID">1</member>
+        <member name="spotID">0</member>
+        <member name="zoneID">0</member>
+        <member name="x">0</member>
+        <member name="y">0</member>
+        <member name="rotation">0</member>
+        <member name="name"><![CDATA[‘æŽOƒz[ƒ€]]></member>
+        <member name="warp3">0</member>
+        <member name="warp4">0</member>
+        <member name="warp5">0</member>
+        <member name="warp6">0</member>
+        <member name="warp7">0</member>
+        <member name="warp8">0</member>
+        <member name="warp9">1</member>
+        <member name="warp10">0</member>
+    </object>
+</objects>

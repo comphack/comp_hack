@@ -1,0 +1,53 @@
+<objects>
+    <object name="MiBlendData">
+        <member name="ID">1</member>
+        <member name="inputItems">
+            <element>
+                <object name="MiBlendData_Item">
+                    <member name="itemID">65</member>
+                    <member name="min">5</member>
+                    <member name="max">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiBlendData_Item">
+                    <member name="itemID">65</member>
+                    <member name="min">5</member>
+                    <member name="max">0</member>
+                </object>
+            </element>
+        </member>
+        <member name="resultItems">
+            <element>
+                <object name="MiBlendData_Item">
+                    <member name="itemID">21</member>
+                    <member name="min">3</member>
+                    <member name="max">6</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiBlendData_Item">
+                    <member name="itemID">4294967295</member>
+                    <member name="min">0</member>
+                    <member name="max">0</member>
+                </object>
+            </element>
+        </member>
+        <member name="probabilities">
+            <element>10000</element>
+            <element>0</element>
+        </member>
+        <member name="materialLossRate">1</member>
+        <member name="expertiseID">22</member>
+        <member name="requiredClass">0</member>
+        <member name="requiredRank">0</member>
+        <member name="failExpertUp">0</member>
+        <member name="successExpertUp">9</member>
+        <member name="greatSuccessExpertUp">0</member>
+        <member name="expertSuccessBoost">0</member>
+        <member name="expertGreatSuccessBoost">0</member>
+        <member name="hidden">0</member>
+        <member name="questID">-1</member>
+        <member name="extensionGroupID">0</member>
+    </object>
+</objects>

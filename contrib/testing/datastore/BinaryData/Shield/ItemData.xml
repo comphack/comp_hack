@@ -1,0 +1,433 @@
+<objects>
+    <object name="MiItemData">
+        <member name="common">
+            <object name="MiSkillItemStatusCommonData">
+                <member name="id">1</member>
+                <member name="category">
+                    <object name="MiCategoryData">
+                        <member name="mainCategory">1</member>
+                        <member name="subCategory">60</member>
+                    </object>
+                </member>
+                <member name="affinity">0</member>
+                <member name="correctTbl"/>
+            </object>
+        </member>
+        <member name="basic">
+            <object name="MiItemBasicData">
+                <member name="baseID">1</member>
+                <member name="buyPrice">10</member>
+                <member name="sellPrice">2</member>
+                <member name="repairPrice">999</member>
+                <member name="appearanceID">0</member>
+                <member name="weaponType">NONE</member>
+                <member name="equipType">EQUIP_TYPE_NONE</member>
+                <member name="flags">63</member>
+            </object>
+        </member>
+        <member name="possession">
+            <object name="MiPossessionData">
+                <member name="possess1">1</member>
+                <member name="durability">0</member>
+                <member name="stackSize">600</member>
+                <member name="useSkill">10001</member>
+            </object>
+        </member>
+        <member name="restriction">
+            <object name="MiUseRestrictionsData">
+                <member name="gender">2</member>
+                <member name="level">0</member>
+                <member name="alignment">ALL</member>
+                <member name="restriction1">0</member>
+                <member name="skillTbl">
+                    <element>
+                        <object name="MiSkillTbl">
+                            <member name="skill">0</member>
+                        </object>
+                    </element>
+                </member>
+                <member name="modSlots">0</member>
+                <member name="stock">0</member>
+                <member name="restriction2">0</member>
+            </object>
+        </member>
+        <member name="pvp">
+            <object name="MiItemPvPData">
+                <member name="GPRequirement">0</member>
+            </object>
+        </member>
+        <member name="rental">
+            <object name="MiRentalData">
+                <member name="rental">0</member>
+            </object>
+        </member>
+    </object>
+    <object name="MiItemData">
+        <member name="common">
+            <object name="MiSkillItemStatusCommonData">
+                <member name="id">1201</member>
+                <member name="category">
+                    <object name="MiCategoryData">
+                        <member name="mainCategory">0</member>
+                        <member name="subCategory">24</member>
+                    </object>
+                </member>
+                <member name="affinity">2</member>
+                <member name="correctTbl">
+                    <element>
+                        <object name="MiCorrectTbl">
+                            <member name="ID">CLSR</member>
+                            <member name="Type">0</member>
+                            <member name="Value">24</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiCorrectTbl">
+                            <member name="ID">SPELL</member>
+                            <member name="Type">0</member>
+                            <member name="Value">22</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiCorrectTbl">
+                            <member name="ID">SUPPORT</member>
+                            <member name="Type">0</member>
+                            <member name="Value">23</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiCorrectTbl">
+                            <member name="ID">CRITICAL</member>
+                            <member name="Type">0</member>
+                            <member name="Value">7</member>
+                        </object>
+                    </element>
+                </member>
+            </object>
+        </member>
+        <member name="basic">
+            <object name="MiItemBasicData">
+                <member name="baseID">1201</member>
+                <member name="buyPrice">20</member>
+                <member name="sellPrice">5</member>
+                <member name="repairPrice">3</member>
+                <member name="appearanceID">0</member>
+                <member name="weaponType">CLOSE_RANGE</member>
+                <member name="equipType">EQUIP_TYPE_WEAPON</member>
+                <member name="flags">959</member>
+            </object>
+        </member>
+        <member name="possession">
+            <object name="MiPossessionData">
+                <member name="possess1">2</member>
+                <member name="durability">20</member>
+                <member name="stackSize">1</member>
+                <member name="useSkill">0</member>
+            </object>
+        </member>
+        <member name="restriction">
+            <object name="MiUseRestrictionsData">
+                <member name="gender">2</member>
+                <member name="level">0</member>
+                <member name="alignment">ALL</member>
+                <member name="restriction1">0</member>
+                <member name="skillTbl">
+                    <element>
+                        <object name="MiSkillTbl">
+                            <member name="skill">0</member>
+                        </object>
+                    </element>
+                </member>
+                <member name="modSlots">0</member>
+                <member name="stock">0</member>
+                <member name="restriction2">0</member>
+            </object>
+        </member>
+        <member name="pvp">
+            <object name="MiItemPvPData">
+                <member name="GPRequirement">0</member>
+            </object>
+        </member>
+        <member name="rental">
+            <object name="MiRentalData">
+                <member name="rental">0</member>
+            </object>
+        </member>
+    </object>
+    <object name="MiItemData">
+        <member name="common">
+            <object name="MiSkillItemStatusCommonData">
+                <member name="id">3135</member>
+                <member name="category">
+                    <object name="MiCategoryData">
+                        <member name="mainCategory">0</member>
+                        <member name="subCategory">41</member>
+                    </object>
+                </member>
+                <member name="affinity">0</member>
+                <member name="correctTbl">
+                    <element>
+                        <object name="MiCorrectTbl">
+                            <member name="ID">PDEF</member>
+                            <member name="Type">0</member>
+                            <member name="Value">9</member>
+                        </object>
+                    </element>
+                </member>
+            </object>
+        </member>
+        <member name="basic">
+            <object name="MiItemBasicData">
+                <member name="baseID">3135</member>
+                <member name="buyPrice">20</member>
+                <member name="sellPrice">1</member>
+                <member name="repairPrice">8</member>
+                <member name="appearanceID">0</member>
+                <member name="weaponType">NONE</member>
+                <member name="equipType">EQUIP_TYPE_TOP</member>
+                <member name="flags">959</member>
+            </object>
+        </member>
+        <member name="possession">
+            <object name="MiPossessionData">
+                <member name="possess1">2</member>
+                <member name="durability">17</member>
+                <member name="stackSize">1</member>
+                <member name="useSkill">0</member>
+            </object>
+        </member>
+        <member name="restriction">
+            <object name="MiUseRestrictionsData">
+                <member name="gender">0</member>
+                <member name="level">0</member>
+                <member name="alignment">ALL</member>
+                <member name="restriction1">0</member>
+                <member name="skillTbl">
+                    <element>
+                        <object name="MiSkillTbl">
+                            <member name="skill">0</member>
+                        </object>
+                    </element>
+                </member>
+                <member name="modSlots">0</member>
+                <member name="stock">0</member>
+                <member name="restriction2">0</member>
+            </object>
+        </member>
+        <member name="pvp">
+            <object name="MiItemPvPData">
+                <member name="GPRequirement">0</member>
+            </object>
+        </member>
+        <member name="rental">
+            <object name="MiRentalData">
+                <member name="rental">0</member>
+            </object>
+        </member>
+    </object>
+    <object name="MiItemData">
+        <member name="common">
+            <object name="MiSkillItemStatusCommonData">
+                <member name="id">3428</member>
+                <member name="category">
+                    <object name="MiCategoryData">
+                        <member name="mainCategory">0</member>
+                        <member name="subCategory">44</member>
+                    </object>
+                </member>
+                <member name="affinity">0</member>
+                <member name="correctTbl">
+                    <element>
+                        <object name="MiCorrectTbl">
+                            <member name="ID">PDEF</member>
+                            <member name="Type">0</member>
+                            <member name="Value">7</member>
+                        </object>
+                    </element>
+                </member>
+            </object>
+        </member>
+        <member name="basic">
+            <object name="MiItemBasicData">
+                <member name="baseID">3428</member>
+                <member name="buyPrice">20</member>
+                <member name="sellPrice">1</member>
+                <member name="repairPrice">8</member>
+                <member name="appearanceID">0</member>
+                <member name="weaponType">NONE</member>
+                <member name="equipType">EQUIP_TYPE_BOTTOM</member>
+                <member name="flags">959</member>
+            </object>
+        </member>
+        <member name="possession">
+            <object name="MiPossessionData">
+                <member name="possess1">2</member>
+                <member name="durability">17</member>
+                <member name="stackSize">1</member>
+                <member name="useSkill">0</member>
+            </object>
+        </member>
+        <member name="restriction">
+            <object name="MiUseRestrictionsData">
+                <member name="gender">0</member>
+                <member name="level">0</member>
+                <member name="alignment">ALL</member>
+                <member name="restriction1">0</member>
+                <member name="skillTbl">
+                    <element>
+                        <object name="MiSkillTbl">
+                            <member name="skill">0</member>
+                        </object>
+                    </element>
+                </member>
+                <member name="modSlots">0</member>
+                <member name="stock">0</member>
+                <member name="restriction2">0</member>
+            </object>
+        </member>
+        <member name="pvp">
+            <object name="MiItemPvPData">
+                <member name="GPRequirement">0</member>
+            </object>
+        </member>
+        <member name="rental">
+            <object name="MiRentalData">
+                <member name="rental">0</member>
+            </object>
+        </member>
+    </object>
+    <object name="MiItemData">
+        <member name="common">
+            <object name="MiSkillItemStatusCommonData">
+                <member name="id">3508</member>
+                <member name="category">
+                    <object name="MiCategoryData">
+                        <member name="mainCategory">0</member>
+                        <member name="subCategory">45</member>
+                    </object>
+                </member>
+                <member name="affinity">0</member>
+                <member name="correctTbl">
+                    <element>
+                        <object name="MiCorrectTbl">
+                            <member name="ID">PDEF</member>
+                            <member name="Type">0</member>
+                            <member name="Value">3</member>
+                        </object>
+                    </element>
+                </member>
+            </object>
+        </member>
+        <member name="basic">
+            <object name="MiItemBasicData">
+                <member name="baseID">3508</member>
+                <member name="buyPrice">20</member>
+                <member name="sellPrice">1</member>
+                <member name="repairPrice">7</member>
+                <member name="appearanceID">0</member>
+                <member name="weaponType">NONE</member>
+                <member name="equipType">EQUIP_TYPE_FEET</member>
+                <member name="flags">959</member>
+            </object>
+        </member>
+        <member name="possession">
+            <object name="MiPossessionData">
+                <member name="possess1">2</member>
+                <member name="durability">17</member>
+                <member name="stackSize">1</member>
+                <member name="useSkill">0</member>
+            </object>
+        </member>
+        <member name="restriction">
+            <object name="MiUseRestrictionsData">
+                <member name="gender">0</member>
+                <member name="level">0</member>
+                <member name="alignment">ALL</member>
+                <member name="restriction1">0</member>
+                <member name="skillTbl">
+                    <element>
+                        <object name="MiSkillTbl">
+                            <member name="skill">0</member>
+                        </object>
+                    </element>
+                </member>
+                <member name="modSlots">0</member>
+                <member name="stock">0</member>
+                <member name="restriction2">0</member>
+            </object>
+        </member>
+        <member name="pvp">
+            <object name="MiItemPvPData">
+                <member name="GPRequirement">0</member>
+            </object>
+        </member>
+        <member name="rental">
+            <object name="MiRentalData">
+                <member name="rental">0</member>
+            </object>
+        </member>
+    </object>
+    <object name="MiItemData">
+        <member name="common">
+            <object name="MiSkillItemStatusCommonData">
+                <member name="id">4401</member>
+                <member name="category">
+                    <object name="MiCategoryData">
+                        <member name="mainCategory">0</member>
+                        <member name="subCategory">50</member>
+                    </object>
+                </member>
+                <member name="affinity">0</member>
+                <member name="correctTbl"/>
+            </object>
+        </member>
+        <member name="basic">
+            <object name="MiItemBasicData">
+                <member name="baseID">4401</member>
+                <member name="buyPrice">40</member>
+                <member name="sellPrice">1</member>
+                <member name="repairPrice">2</member>
+                <member name="appearanceID">0</member>
+                <member name="weaponType">NONE</member>
+                <member name="equipType">EQUIP_TYPE_COMP</member>
+                <member name="flags">191</member>
+            </object>
+        </member>
+        <member name="possession">
+            <object name="MiPossessionData">
+                <member name="possess1">2</member>
+                <member name="durability">24</member>
+                <member name="stackSize">1</member>
+                <member name="useSkill">0</member>
+            </object>
+        </member>
+        <member name="restriction">
+            <object name="MiUseRestrictionsData">
+                <member name="gender">0</member>
+                <member name="level">0</member>
+                <member name="alignment">ALL</member>
+                <member name="restriction1">0</member>
+                <member name="skillTbl">
+                    <element>
+                        <object name="MiSkillTbl">
+                            <member name="skill">0</member>
+                        </object>
+                    </element>
+                </member>
+                <member name="modSlots">0</member>
+                <member name="stock">1</member>
+                <member name="restriction2">0</member>
+            </object>
+        </member>
+        <member name="pvp">
+            <object name="MiItemPvPData">
+                <member name="GPRequirement">0</member>
+            </object>
+        </member>
+        <member name="rental">
+            <object name="MiRentalData">
+                <member name="rental">0</member>
+            </object>
+        </member>
+    </object>
+</objects>

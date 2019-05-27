@@ -1,0 +1,15 @@
+<objects>
+    <object name="MiModificationTriggerData">
+        <member name="ID">1</member>
+        <member name="rateScaling">
+            <element>80</element>
+            <element>100</element>
+            <element>120</element>
+            <element>200</element>
+            <element>150</element>
+            <element>200</element>
+            <element>300</element>
+            <element>0</element>
+        </member>
+    </object>
+</objects>

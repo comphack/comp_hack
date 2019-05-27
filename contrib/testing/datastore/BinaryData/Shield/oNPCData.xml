@@ -1,0 +1,10 @@
+<objects>
+    <object name="MiONPCData">
+        <member name="ID">100</member>
+        <member name="name"><![CDATA[]]></member>
+        <member name="barrierName"><![CDATA[]]></member>
+        <member name="objectName"><![CDATA[]]></member>
+        <member name="unk3">0</member>
+        <member name="unk4">0</member>
+    </object>
+</objects>

@@ -1,0 +1,311 @@
+<objects>
+    <object name="MiGuardianLevelData">
+        <member name="ID">1</member>
+        <member name="levels">
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">1</member>
+                    <member name="hasAssist">false</member>
+                    <member name="assists">
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">4294967295</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">379500</member>
+                    <member name="hasAssist">false</member>
+                    <member name="assists">
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>26</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">4294967295</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">1138400</member>
+                    <member name="hasAssist">true</member>
+                    <member name="assists">
+                        <element>1</element>
+                        <element>37</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">60136</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">2656200</member>
+                    <member name="hasAssist">true</member>
+                    <member name="assists">
+                        <element>73</element>
+                        <element>109</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">4294967295</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">5312400</member>
+                    <member name="hasAssist">true</member>
+                    <member name="assists">
+                        <element>145</element>
+                        <element>181</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>25</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">60137</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">9486500</member>
+                    <member name="hasAssist">true</member>
+                    <member name="assists">
+                        <element>217</element>
+                        <element>253</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">4294967295</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">28459500</member>
+                    <member name="hasAssist">true</member>
+                    <member name="assists">
+                        <element>289</element>
+                        <element>325</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">60138</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">56918900</member>
+                    <member name="hasAssist">true</member>
+                    <member name="assists">
+                        <element>361</element>
+                        <element>397</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">4294967295</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">94864900</member>
+                    <member name="hasAssist">true</member>
+                    <member name="assists">
+                        <element>433</element>
+                        <element>469</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">60139</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">151783800</member>
+                    <member name="hasAssist">true</member>
+                    <member name="assists">
+                        <element>505</element>
+                        <element>541</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">60140</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">0</member>
+                    <member name="hasAssist">true</member>
+                    <member name="assists">
+                        <element>577</element>
+                        <element>613</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>22</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">60141</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">0</member>
+                    <member name="hasAssist">false</member>
+                    <member name="assists">
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">4294967295</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">0</member>
+                    <member name="hasAssist">false</member>
+                    <member name="assists">
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">4294967295</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">0</member>
+                    <member name="hasAssist">false</member>
+                    <member name="assists">
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">4294967295</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">0</member>
+                    <member name="hasAssist">false</member>
+                    <member name="assists">
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">4294967295</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiGuardianLevelDataEntry">
+                    <member name="nextXP">0</member>
+                    <member name="hasAssist">false</member>
+                    <member name="assists">
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                        <element>0</element>
+                    </member>
+                    <member name="demonIDs">
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                        <element>4294967295</element>
+                    </member>
+                    <member name="extendSkillID">4294967295</member>
+                </object>
+            </element>
+        </member>
+    </object>
+</objects>

@@ -1,0 +1,7 @@
+<objects>
+    <object name="MiQuestBonusCodeData">
+        <member name="ID">1</member>
+        <member name="count">10</member>
+        <member name="titleID">933</member>
+    </object>
+</objects>

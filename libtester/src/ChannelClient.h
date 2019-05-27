@@ -30,6 +30,10 @@
 // libtester Includes
 #include "TestClient.h"
 
+// objects Includes
+#include <Character.h>
+#include <EntityStats.h>
+
 // Standard C++11 Includes
 #include <vector>
 
@@ -70,6 +74,7 @@ public:
 
     bool ContractDemon(uint32_t demonID);
     bool SummonDemon(int64_t demonID);
+    bool EventResponse(int32_t option);
 
     int32_t GetEntityID() const;
     int8_t GetActivationID() const;
@@ -111,6 +116,8 @@ private:
     libcomp::String mAccountDumpChecksum;
     libcomp::String mAccountDumpAccountName;
     std::vector<char> mAccountDumpData;
+
+    std::shared_ptr<objects::Character> mCharacter;
 };
 
 } // namespace libtester

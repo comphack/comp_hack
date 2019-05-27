@@ -1,0 +1,11 @@
+<objects>
+    <object name="MiModifiedEffectData">
+        <member name="ID">1</member>
+        <member name="unk1">2</member>
+        <member name="unk2">2</member>
+        <member name="type">1</member>
+        <member name="sequenceID">1</member>
+        <member name="sequenceID2">1</member>
+        <member name="tokusei">360175</member>
+    </object>
+</objects>

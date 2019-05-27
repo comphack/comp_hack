@@ -1,0 +1,78 @@
+<objects>
+    <object name="MiDevilEquipmentData">
+        <member name="skillID">20001</member>
+        <member name="fixed">1</member>
+        <member name="exclusionGroup">
+            <element>1</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+    </object>
+    <object name="MiDevilEquipmentData">
+        <member name="skillID">20002</member>
+        <member name="fixed">1</member>
+        <member name="exclusionGroup">
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+    </object>
+</objects>

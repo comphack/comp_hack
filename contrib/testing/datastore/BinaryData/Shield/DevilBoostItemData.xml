@@ -1,0 +1,12 @@
+<objects>
+    <object name="MiDevilBoostItemData">
+        <member name="itemID">49001</member>
+        <member name="boostIDs">
+            <element>490011</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+    </object>
+</objects>

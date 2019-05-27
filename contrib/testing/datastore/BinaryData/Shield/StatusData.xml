@@ -1,0 +1,68 @@
+<objects>
+    <object name="MiStatusData">
+        <member name="common">
+            <object name="MiSkillItemStatusCommonData">
+                <member name="id">1</member>
+                <member name="category">
+                    <object name="MiCategoryData">
+                        <member name="mainCategory">0</member>
+                        <member name="subCategory">2</member>
+                    </object>
+                </member>
+                <member name="affinity">14</member>
+                <member name="correctTbl">
+                    <element>
+                        <object name="MiCorrectTbl">
+                            <member name="ID">PDEF</member>
+                            <member name="Type">0</member>
+                            <member name="Value">5</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiCorrectTbl">
+                            <member name="ID">RES_FIRE</member>
+                            <member name="Type">0</member>
+                            <member name="Value">-30</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiCorrectTbl">
+                            <member name="ID">RES_STRIKE</member>
+                            <member name="Type">0</member>
+                            <member name="Value">-30</member>
+                        </object>
+                    </element>
+                </member>
+            </object>
+        </member>
+        <member name="basic">
+            <object name="MiStatusBasicData">
+                <member name="maxStack">100</member>
+                <member name="stackType">1</member>
+                <member name="applicationLogic">1</member>
+                <member name="unknown">0</member>
+                <member name="groupID">1</member>
+                <member name="groupRank">1</member>
+                <member name="functionID">0</member>
+            </object>
+        </member>
+        <member name="effect">
+            <object name="MiEffectData">
+                <member name="restrictions">31</member>
+                <member name="damage">
+                    <object name="MiDoTDamageData">
+                        <member name="HPDamage">0</member>
+                        <member name="MPDamage">0</member>
+                    </object>
+                </member>
+            </object>
+        </member>
+        <member name="cancel">
+            <object name="MiCancelData">
+                <member name="duration">5000</member>
+                <member name="durationType">MS</member>
+                <member name="cancelTypes">88</member>
+            </object>
+        </member>
+    </object>
+</objects>

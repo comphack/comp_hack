@@ -1,0 +1,344 @@
+<objects>
+    <object name="MiDevilData">
+        <member name="basic">
+            <object name="MiNPCBasicData">
+                <member name="ID">1</member>
+                <member name="name"><![CDATA[サタン]]></member>
+                <member name="title">0</member>
+                <member name="gender">MALE</member>
+                <member name="fusionModifier">3</member>
+                <member name="LNC">-10000</member>
+                <member name="modelID">1</member>
+            </object>
+        </member>
+        <member name="category">
+            <object name="MiDCategoryData">
+                <member name="family">GOD</member>
+                <member name="race">GOD_SPIRIT</member>
+            </object>
+        </member>
+        <member name="AI">
+            <object name="MiAIRelationData">
+                <member name="type">2</member>
+                <member name="ai2">1</member>
+                <member name="ai3">1</member>
+                <member name="ai4">1</member>
+            </object>
+        </member>
+        <member name="negotiation">
+            <object name="MiNegotiationData">
+                <member name="affabilityThreshold">0</member>
+                <member name="fearThreshold">0</member>
+                <member name="fusionIntro">0</member>
+            </object>
+        </member>
+        <member name="summonData">
+            <object name="MiSummonData">
+                <member name="summonSpeed">100</member>
+                <member name="magModifier">70</member>
+            </object>
+        </member>
+        <member name="unionData">
+            <object name="MiUnionData">
+                <member name="fusionDifficulty">100</member>
+                <member name="fusionOptions">0</member>
+                <member name="baseDemonID">1</member>
+                <member name="union5">
+                    <element>2</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>98</element>
+                    <element>0</element>
+                </member>
+                <member name="mitamaFusionID">0</member>
+            </object>
+        </member>
+        <member name="growth">
+            <object name="MiGrowthData">
+                <member name="growthType">8</member>
+                <member name="baseLevel">95</member>
+                <member name="inheritanceType">20</member>
+                <member name="inheritanceRestrictions">3181</member>
+                <member name="skills">
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                </member>
+                <member name="enemyOnlySkills">
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                </member>
+                <member name="traits">
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                </member>
+                <member name="acquisitionSkills">
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                    <element>
+                        <object name="MiAcquisitionSkillData">
+                            <member name="ID">0</member>
+                            <member name="level">0</member>
+                        </object>
+                    </element>
+                </member>
+                <member name="forceStack">8</member>
+                <member name="salesDialogue">
+                    <element><![CDATA[]]></element>
+                    <element><![CDATA[]]></element>
+                    <element><![CDATA[]]></element>
+                    <element><![CDATA[]]></element>
+                    <element><![CDATA[]]></element>
+                    <element><![CDATA[]]></element>
+                    <element><![CDATA[]]></element>
+                    <element><![CDATA[]]></element>
+                </member>
+            </object>
+        </member>
+        <member name="battleData">
+            <object name="MiDevilBattleData">
+                <member name="battle1">20</member>
+                <member name="digitalizeXP">0</member>
+                <member name="enemyLevel">0</member>
+                <member name="isFloating">false</member>
+                <member name="correct">
+                    <element>5</element>
+                    <element>5</element>
+                    <element>5</element>
+                    <element>5</element>
+                    <element>5</element>
+                    <element>5</element>
+                    <element>232</element>
+                    <element>30</element>
+                    <element>7</element>
+                    <element>5</element>
+                    <element>15</element>
+                    <element>30</element>
+                    <element>40</element>
+                    <element>10</element>
+                    <element>5</element>
+                    <element>5</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>61</element>
+                    <element>25</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>0</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>3</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>100</element>
+                    <element>0</element>
+                    <element>0</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                    <element>100</element>
+                </member>
+                <member name="enemyHP">
+                    <element>0</element>
+                </member>
+            </object>
+        </member>
+        <member name="familiarity">
+            <object name="MiDevilFamiliarityData">
+                <member name="familiarityType">0</member>
+            </object>
+        </member>
+    </object>
+</objects>

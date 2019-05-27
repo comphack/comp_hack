@@ -1,0 +1,29 @@
+<objects>
+    <object name="MiAIData">
+        <member name="ID">1</member>
+        <member name="aggroLevelLimit">10</member>
+        <member name="aggroNormal">
+            <object name="MiFindInfo">
+                <member name="distance">80</member>
+                <member name="FOV">180</member>
+            </object>
+        </member>
+        <member name="aggroNight">
+            <object name="MiFindInfo">
+                <member name="distance">65</member>
+                <member name="FOV">180</member>
+            </object>
+        </member>
+        <member name="aggroCast">
+            <object name="MiFindInfo">
+                <member name="distance">0</member>
+                <member name="FOV">180</member>
+            </object>
+        </member>
+        <member name="thinkSpeed">3000</member>
+        <member name="ai4">2</member>
+        <member name="ai5">0</member>
+        <member name="ai6">0</member>
+        <member name="ai7">1</member>
+    </object>
+</objects>

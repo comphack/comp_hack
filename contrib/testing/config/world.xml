@@ -7,10 +7,10 @@
         <member name="DatabaseType">MARIADB</member>    <!-- MARIADB/SQLITE3 -->
         <member name="MultithreadMode">true</member>
         <member name="DataStore">
-            <element>/var/lib/comp_hack</element>
+            <element>datastore</element>
         </member>
         <member name="DataStoreSync">true</member>
-        <member name="LogFile">/var/log/comp_hack/world.log</member>
+        <member name="LogFile">log/world.log</member>
         <member name="LogFileTimestamp">true</member>
         <member name="LogFileAppend">true</member>
         <member name="LogDebug">true</member>
@@ -27,7 +27,7 @@
         <member name="LobbyPort">10666</member>
         <member name="SQLite3Config">
             <object>
-                <member name="DatabaseName">world</member>
+                <member name="DatabaseName">comp_hack_test_world</member>
                 <member name="DatabaseType">world</member>
                 <member name="DefaultDatabaseType">comp_hack</member>
                 <!--<member name="FileDirectory"/>-->
@@ -38,7 +38,7 @@
             <object>
                 <member name="IP">127.0.0.1</member>
                 <!--<member name="Port"/>-->
-                <member name="DatabaseName">world</member>
+                <member name="DatabaseName">comp_hack_test_world</member>
                 <member name="DatabaseType">world</member>
                 <member name="DefaultDatabaseType">comp_hack</member>
                 <member name="Username">testuser</member>

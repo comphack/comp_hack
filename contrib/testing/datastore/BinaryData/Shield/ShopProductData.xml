@@ -1,0 +1,10 @@
+<objects>
+    <object name="MiShopProductData">
+        <member name="ID">1</member>
+        <member name="item">1</member>
+        <member name="stack">1</member>
+        <member name="CPCost">0</member>
+        <member name="unk">0</member>
+        <member name="unpurchasable">0</member>
+    </object>
+</objects>

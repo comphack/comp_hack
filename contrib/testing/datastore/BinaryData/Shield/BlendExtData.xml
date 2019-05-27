@@ -1,0 +1,52 @@
+<objects>
+    <object name="MiBlendExtData">
+        <member name="ID">45150</member>
+        <member name="unk1">4294967295</member>
+        <member name="groupID">0</member>
+        <member name="unk2">0</member>
+        <member name="srcItems">
+            <element>
+                <object name="MiBlendExtData_SrcItemChange">
+                    <member name="itemID">4294967295</member>
+                    <member name="minScale">0.5</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiBlendExtData_SrcItemChange">
+                    <member name="itemID">4294967295</member>
+                    <member name="minScale">0.6999999881</member>
+                </object>
+            </element>
+        </member>
+        <member name="dstItems">
+            <element>
+                <object name="MiBlendExtData_DstItemChange">
+                    <member name="itemID">4294967295</member>
+                    <member name="minScale">1</member>
+                    <member name="maxScale">1</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiBlendExtData_DstItemChange">
+                    <member name="itemID">4294967295</member>
+                    <member name="minScale">1</member>
+                    <member name="maxScale">1</member>
+                </object>
+            </element>
+        </member>
+        <member name="probabilities">
+            <element>1</element>
+            <element>1</element>
+        </member>
+        <member name="materialLoss">1</member>
+        <member name="expertiseID">-1</member>
+        <member name="requiredClass">1</member>
+        <member name="requiredRank">1</member>
+        <member name="failExpertUp">1</member>
+        <member name="successExpertUp">1</member>
+        <member name="greatSuccessExpertUp">1</member>
+        <member name="expertSuccessBoost">1</member>
+        <member name="expertGreatSuccessBoost">1</member>
+        <member name="questID">-1</member>
+    </object>
+</objects>

@@ -1,0 +1,36 @@
+<objects>
+    <object name="MiCItemData">
+        <member name="baseData">
+            <object name="MiCItemBaseData">
+                <member name="ID">1</member>
+                <member name="name"><![CDATA[傷薬]]></member>
+                <member name="name2"><![CDATA[傷薬]]></member>
+                <member name="desc"><![CDATA[自分のＨＰを３０回復する。]]></member>
+                <member name="icon">1</member>
+                <member name="unk1">1</member>
+                <member name="canTrade">1</member>
+                <member name="unk2">0</member>
+            </object>
+        </member>
+        <member name="motionData">
+            <object name="MiCItemMotionData">
+                <member name="motion1">0</member>
+                <member name="motion2">0</member>
+                <member name="motion3">0</member>
+                <member name="motion4">0</member>
+            </object>
+        </member>
+        <member name="specialEffectData">
+            <object name="MiCItemSPEffectData">
+                <member name="effect1"><![CDATA[]]></member>
+                <member name="effect2"><![CDATA[]]></member>
+                <member name="effect3">
+                    <element>0</element>
+                    <element>0</element>
+                    <element>0</element>
+                </member>
+                <member name="effect4">0</member>
+            </object>
+        </member>
+    </object>
+</objects>

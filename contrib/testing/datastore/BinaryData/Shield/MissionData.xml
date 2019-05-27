@@ -1,0 +1,60 @@
+<objects>
+    <object name="MiMissionData">
+        <member name="ID">1</member>
+        <member name="duration">720</member>
+        <member name="instanceIDs">
+            <element>9311</element>
+            <element>9312</element>
+            <element>9313</element>
+            <element>9321</element>
+            <element>9322</element>
+            <element>9323</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+        <member name="exits">
+            <element>
+                <object name="MiMissionExit">
+                    <member name="name"><![CDATA[Exit A]]></member>
+                    <member name="zoneGroup">801</member>
+                    <member name="zoneID">80101</member>
+                    <member name="x">-45631.35938</member>
+                    <member name="y">37508.10938</member>
+                    <member name="rotation">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiMissionExit">
+                    <member name="name"><![CDATA[Exit B]]></member>
+                    <member name="zoneGroup">1101</member>
+                    <member name="zoneID">110101</member>
+                    <member name="x">-25314.69922</member>
+                    <member name="y">20645</member>
+                    <member name="rotation">1.24000001</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiMissionExit">
+                    <member name="name"><![CDATA[]]></member>
+                    <member name="zoneGroup">0</member>
+                    <member name="zoneID">0</member>
+                    <member name="x">0</member>
+                    <member name="y">0</member>
+                    <member name="rotation">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiMissionExit">
+                    <member name="name"><![CDATA[]]></member>
+                    <member name="zoneGroup">0</member>
+                    <member name="zoneID">0</member>
+                    <member name="x">0</member>
+                    <member name="y">0</member>
+                    <member name="rotation">0</member>
+                </object>
+            </element>
+        </member>
+        <member name="description"><![CDATA[Try not to die.]]></member>
+        <member name="timerType">0</member>
+    </object>
+</objects>

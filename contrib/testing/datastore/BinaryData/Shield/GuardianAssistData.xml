@@ -1,0 +1,8 @@
+<objects>
+    <object name="MiGuardianAssistData">
+        <member name="ID">1</member>
+        <member name="raceID">1</member>
+        <member name="type">EXTEND_TIME</member>
+        <member name="value">60</member>
+    </object>
+</objects>

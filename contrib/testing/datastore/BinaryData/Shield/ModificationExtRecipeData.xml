@@ -1,0 +1,13 @@
+<objects>
+    <object name="MiModificationExtRecipeData">
+        <member name="ID">10001</member>
+        <member name="groupID">41</member>
+        <member name="slot">0</member>
+        <member name="effectSubID">1</member>
+        <member name="itemID">6157</member>
+        <member name="successRate">8500</member>
+        <member name="failRate">1500</member>
+        <member name="greatSuccessRate">880</member>
+        <member name="greatFailRate">0</member>
+    </object>
+</objects>

@@ -1,0 +1,15 @@
+<objects>
+    <object name="MiTimeLimitData">
+        <member name="ID">0</member>
+        <member name="duration">300</member>
+        <member name="warningTime">60</member>
+        <member name="startMessage"><![CDATA[]]></member>
+        <member name="warningMessage"><![CDATA[]]></member>
+        <member name="successMessage"><![CDATA[]]></member>
+        <member name="failureMessage"><![CDATA[]]></member>
+        <member name="timeLimit8">0</member>
+        <member name="timeLimit9">0</member>
+        <member name="timeLimit10">0</member>
+        <member name="timeLimit11">0</member>
+    </object>
+</objects>

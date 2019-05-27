@@ -1,0 +1,23 @@
+<objects>
+    <object name="MiModificationExtEffectData">
+        <member name="groupID">41</member>
+        <member name="slot">0</member>
+        <member name="subID">1</member>
+        <member name="rateScaling">
+            <element>100</element>
+            <element>200</element>
+            <element>200</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+        <member name="type">1</member>
+        <member name="sequenceID">1</member>
+        <member name="tokusei">360299</member>
+        <member name="sequenceID2">1</member>
+        <member name="shortDesc"><![CDATA[•¨–h‚P]]></member>
+        <member name="fullDesc"><![CDATA[•¨—–hŒä—Í{‚T]]></member>
+    </object>
+</objects>

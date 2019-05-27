@@ -50,6 +50,9 @@ ChannelClient::ChannelClient() : TestClient(), mEntityID(-1),
     mPartnerEntityID(-1), mZoneID(-1), mActivationID(-1), mAccountDumpParts(0),
     mLastAccountDumpPart(0)
 {
+    mCharacter = std::make_shared<objects::Character>();
+    mCharacter->SetCoreStats(std::make_shared<objects::EntityStats>());
+
     for(int i = 0; i < 10; ++i)
     {
         mDemonIDs[i] = -1;
@@ -342,6 +345,20 @@ bool ChannelClient::SummonDemon(int64_t demonID)
     return true;
 }
 
+bool ChannelClient::EventResponse(int32_t option)
+{
+    printf("EventResponse(%d)\n", option);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_EVENT_RESPONSE);
+    p.WriteS32Little(option);
+
+    ClearMessages();
+    GetConnection()->SendPacket(p);
+
+    return true;
+}
+
 void ChannelClient::HandlePacket(ChannelToClientPacketCode_t cmd,
     libcomp::ReadOnlyPacket& p)
 {
@@ -413,10 +430,14 @@ namespace libcomp
             binding.Func("AmalaRequestAccountDump",
                 &ChannelClient::AmalaRequestAccountDump);
             binding.Func("GetEntityID", &ChannelClient::GetEntityID);
+            binding.Func("GetActivationID", &ChannelClient::GetActivationID);
             binding.Func("GetDemonID", &ChannelClient::GetDemonID);
             binding.Func("ContractDemon", &ChannelClient::ContractDemon);
             binding.Func("SummonDemon", &ChannelClient::SummonDemon);
             binding.Func("Say", &ChannelClient::Say);
+            binding.Func("ActivateSkill", &ChannelClient::ActivateSkill);
+            binding.Func("ExecuteSkill", &ChannelClient::ExecuteSkill);
+            binding.Func("EventResponse", &ChannelClient::EventResponse);
 
             Bind<ChannelClient>("ChannelClient", binding);
         }

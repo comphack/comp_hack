@@ -1,0 +1,17 @@
+<objects>
+    <object name="MiDevilBoostExtraData">
+        <member name="stackID">10001</member>
+        <member name="itemID">49001</member>
+        <member name="groupID">0</member>
+        <member name="tokusei">
+            <element>421435</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+    </object>
+</objects>

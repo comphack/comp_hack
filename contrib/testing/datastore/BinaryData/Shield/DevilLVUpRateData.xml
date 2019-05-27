@@ -1,0 +1,76 @@
+<objects>
+    <object name="MiDevilLVUpRateData">
+        <member name="ID">0</member>
+        <member name="groupID">13</member>
+        <member name="subID">0</member>
+        <member name="levelUpData">
+            <element>
+                <object name="MiDevilLVUpData">
+                    <member name="STR">4</member>
+                    <member name="MAGIC">4</member>
+                    <member name="VIT">4</member>
+                    <member name="INTEL">4</member>
+                    <member name="SPEED">4</member>
+                    <member name="LUCK">4</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilLVUpData">
+                    <member name="STR">3</member>
+                    <member name="MAGIC">3</member>
+                    <member name="VIT">3</member>
+                    <member name="INTEL">3</member>
+                    <member name="SPEED">3</member>
+                    <member name="LUCK">3</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilLVUpData">
+                    <member name="STR">3</member>
+                    <member name="MAGIC">3</member>
+                    <member name="VIT">3</member>
+                    <member name="INTEL">3</member>
+                    <member name="SPEED">3</member>
+                    <member name="LUCK">3</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilLVUpData">
+                    <member name="STR">3</member>
+                    <member name="MAGIC">3</member>
+                    <member name="VIT">3</member>
+                    <member name="INTEL">3</member>
+                    <member name="SPEED">3</member>
+                    <member name="LUCK">3</member>
+                </object>
+            </element>
+        </member>
+        <member name="name"><![CDATA[‘S”\]]></member>
+        <member name="reunionConditions">
+            <element>
+                <object name="MiDevilReunionConditionData">
+                    <member name="itemID">0</member>
+                    <member name="amount">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilReunionConditionData">
+                    <member name="itemID">0</member>
+                    <member name="amount">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilReunionConditionData">
+                    <member name="itemID">0</member>
+                    <member name="amount">0</member>
+                </object>
+            </element>
+            <element>
+                <object name="MiDevilReunionConditionData">
+                    <member name="itemID">0</member>
+                    <member name="amount">0</member>
+                </object>
+            </element>
+        </member>
+    </object>
+</objects>

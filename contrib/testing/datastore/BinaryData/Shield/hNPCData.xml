@@ -1,0 +1,56 @@
+<objects>
+    <object name="MiHNPCData">
+        <member name="basic">
+            <object name="MiHNPCBasicData">
+                <member name="ID">1</member>
+                <member name="name"><![CDATA[袴田さん]]></member>
+                <member name="unk1">0</member>
+                <member name="unk2">0</member>
+                <member name="unk3">0</member>
+                <member name="unk4">0</member>
+                <member name="unk5">2</member>
+                <member name="unk6">0</member>
+                <member name="modelID">1001</member>
+            </object>
+        </member>
+        <member name="appearance">
+            <object name="MiHNPCAppearanceData">
+                <member name="appearance1">8</member>
+                <member name="appearance2">8</member>
+                <member name="appearance3">0</member>
+                <member name="appearance4">0</member>
+                <member name="appearance5">false</member>
+                <member name="appearance6">0</member>
+                <member name="appearance7">0</member>
+            </object>
+        </member>
+        <member name="equipment">
+            <element><![CDATA[M_01_Face_Skin_006.nif]]></element>
+            <element><![CDATA[M_01_Body_Hb_012.nif]]></element>
+            <element><![CDATA[M_01_GloveL_Skin_001.nif]]></element>
+            <element><![CDATA[M_01_GloveR_Skin_001.nif]]></element>
+            <element><![CDATA[M_01_Legs_Bt_005_B.nif]]></element>
+            <element><![CDATA[M_01_Feet_Bt_001.nif]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[M_01_Hair_Sh_007_A.nif]]></element>
+            <element><![CDATA[M_01_Eyes_Skin_005.nif]]></element>
+            <element><![CDATA[M_01_FaceAcce_Fa_012.nif]]></element>
+            <element><![CDATA[M_01_HairAcce_CaA_011.nif]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[C_01_R_RF002.nif]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+            <element><![CDATA[]]></element>
+        </member>
+    </object>
+</objects>

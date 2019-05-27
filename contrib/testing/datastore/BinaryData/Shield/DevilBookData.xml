@@ -1,0 +1,20 @@
+<objects>
+    <object name="MiDevilBookData">
+        <member name="ID">1</member>
+        <member name="shiftValue">1</member>
+        <member name="baseID1">1</member>
+        <member name="baseID2">1</member>
+        <member name="unk1">0</member>
+        <member name="entryID">10001</member>
+        <member name="unused2">
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+    </object>
+</objects>

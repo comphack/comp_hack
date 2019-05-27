@@ -1,0 +1,18 @@
+<objects>
+    <object name="MiDevilFusionData">
+        <member name="skillID">40001</member>
+        <member name="type">0</member>
+        <member name="requiredDemons">
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+            <element>0</element>
+        </member>
+        <member name="stockCost">1</member>
+        <member name="magCost">20</member>
+        <member name="secondarySkillID">40101</member>
+        <member name="fusionDemonID">0</member>
+    </object>
+</objects>

@@ -7,10 +7,10 @@
         <member name="DatabaseType">MARIADB</member>    <!-- MARIADB/SQLITE3 -->
         <member name="MultithreadMode">true</member>
         <member name="DataStore">
-            <element>bin/testing</element>
+            <element>datastore</element>
         </member>
         <member name="DataStoreSync">true</member>
-        <member name="LogFile">/var/log/comp_hack/lobby.log</member>
+        <member name="LogFile">log/lobby.log</member>
         <member name="LogFileTimestamp">true</member>
         <member name="LogFileAppend">true</member>
         <member name="LogDebug">true</member>
@@ -36,7 +36,7 @@
             <object>
                 <member name="IP">127.0.0.1</member>
                 <!--<member name="Port"/>-->
-                <member name="DatabaseName">comp_hack</member>
+                <member name="DatabaseName">comp_hack_test_lobby</member>
                 <member name="DatabaseType">comp_hack</member>
                 <member name="DefaultDatabaseType">comp_hack</member>
                 <member name="Username">testuser</member>
@@ -46,15 +46,16 @@
                 <member name="AutoSchemaUpdate">true</member>
             </object>
         </member>
-        <member name="CharacterDeletionDelay">1440</member>    <!-- In minutes, 24 hours by default -->
+        <member name="CharacterDeletionDelay">0</member>    <!-- In minutes, 24 hours by default -->
         <member name="CharacterTicketCost">0</member>
-        <member name="RegistrationCP">0"</member>
+	<!--        <member name="RegistrationCP">0"</member>
         <member name="RegistrationTicketCount">1</member>
         <member name="RegistrationUserLevel">1000</member>
-        <member name="RegistrationAccountEnabled">true</member>
+	<member name="RegistrationAccountEnabled">true</member> -->
         <member name="WebListeningPort">10999</member>
         <!-- <member name="WebCertificate">/etc/comp_hack/server.pem</member> -->
         <!-- <member name="WebRoot">/var/www</member> -->
+        <member name="WebRoot">/home/erikku/projects/comp_hack/contrib/webroot</member>
         <member name="ClientVersion">1.666</member>
     </object>
 </objgen>

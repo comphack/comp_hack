@@ -309,7 +309,7 @@ void ZoneManager::InstanceGlobalZones()
     // Gather all global zone definitions
     std::list<std::shared_ptr<objects::ServerZone>> zoneDefs;
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         for(auto zonePair : serverDataManager->GetAllZoneIDs())
         {
             uint32_t zoneID = zonePair.first;
@@ -343,7 +343,7 @@ void ZoneManager::InstanceGlobalZones()
 
         auto zone = CreateZone(zoneData);
 
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         mGlobalZoneMap[zoneID][dynamicMapID] = zone->GetID();
         if(zoneData->GetGlobalBossGroup())
         {
@@ -386,7 +386,7 @@ std::shared_ptr<Zone> ZoneManager::GetCurrentZone(const std::shared_ptr<
 
 std::shared_ptr<Zone> ZoneManager::GetCurrentZone(int32_t worldCID)
 {
-    std::lock_guard<std::mutex> lock(mLock);
+    std::lock_guard<libcomp::Mutex> lock(mLock);
     auto iter = mEntityMap.find(worldCID);
     if(iter != mEntityMap.end())
     {
@@ -412,7 +412,7 @@ std::shared_ptr<Zone> ZoneManager::GetExistingZone(uint32_t zoneID,
     }
     else
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         auto iter = mGlobalZoneMap.find(zoneID);
         if(iter != mGlobalZoneMap.end())
         {
@@ -574,7 +574,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     bool firstConnection = false;
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         mEntityMap[worldCID] = uniqueID;
 
         // When the player enters the instance they have access to
@@ -945,7 +945,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
         // somewhere else
         std::shared_ptr<Zone> zone;
         {
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             auto iter = mEntityMap.find(worldCID);
             if(iter != mEntityMap.end())
             {
@@ -965,7 +965,7 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     bool instanceRemoved = false;
     bool instanceDisconnect = false;
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         auto iter = mEntityMap.find(worldCID);
         if(iter != mEntityMap.end())
         {
@@ -1274,7 +1274,7 @@ uint8_t ZoneManager::CreateInstance(
     // will receive messages when the access is added)
     SendAccessMessage(access, false);
 
-    std::lock_guard<std::mutex> lock(mLock);
+    std::lock_guard<libcomp::Mutex> lock(mLock);
 
     std::set<std::shared_ptr<objects::InstanceAccess>> existing;
     for(int32_t cid : access->GetAccessCIDs())
@@ -1396,7 +1396,7 @@ void ZoneManager::ExpireInstance(uint32_t instanceID, uint64_t timeOut)
 
 std::shared_ptr<ZoneInstance> ZoneManager::GetInstance(uint32_t instanceID)
 {
-    std::lock_guard<std::mutex> lock(mLock);
+    std::lock_guard<libcomp::Mutex> lock(mLock);
     auto it = mZoneInstances.find(instanceID);
     return it != mZoneInstances.end() ? it->second : nullptr;
 }
@@ -1404,7 +1404,7 @@ std::shared_ptr<ZoneInstance> ZoneManager::GetInstance(uint32_t instanceID)
 std::shared_ptr<objects::InstanceAccess> ZoneManager::GetInstanceAccess(
     int32_t worldCID)
 {
-    std::lock_guard<std::mutex> lock(mLock);
+    std::lock_guard<libcomp::Mutex> lock(mLock);
     auto it = mZoneInstanceAccess.find(worldCID);
     return it != mZoneInstanceAccess.end() ? it->second : nullptr;
 }
@@ -2924,7 +2924,7 @@ std::list<std::shared_ptr<ChannelClientConnection>> ZoneManager::GetZoneConnecti
     auto worldCID = client->GetClientState()->GetWorldCID();
     std::shared_ptr<Zone> zone;
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         auto iter = mEntityMap.find(worldCID);
         if(iter != mEntityMap.end())
         {
@@ -3982,7 +3982,7 @@ void ZoneManager::SyncInstanceAccess(
 {
     std::list<std::shared_ptr<objects::InstanceAccess>> notify;
 
-    std::lock_guard<std::mutex> lock(mLock);
+    std::lock_guard<libcomp::Mutex> lock(mLock);
     for(auto update : updates)
     {
         // If we don't have an instance ID here, don't update yet
@@ -4180,7 +4180,7 @@ void ZoneManager::UpdateActiveZoneStates()
     bool refreshTracking = false;
     std::list<std::shared_ptr<Zone>> zones;
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         if(mTrackingRefresh && serverTime >= mTrackingRefresh)
         {
             // Refresh again 10 seconds from now
@@ -4263,7 +4263,7 @@ void ZoneManager::UpdateActiveZoneStates()
     {
         zones.clear();
 
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         if(mTimeRestrictUpdatedZones.size() > 0)
         {
             for(auto uniqueID : mTimeRestrictUpdatedZones)
@@ -4298,7 +4298,7 @@ void ZoneManager::UpdateActiveZoneStates()
         zones.clear();
         std::set<uint32_t> activeGroups;
         {
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             for(uint32_t uniqueID : mActiveTrackedZones)
             {
                 zones.push_back(mZones[uniqueID]);
@@ -4388,7 +4388,7 @@ void ZoneManager::HandleTimedActions(const WorldClock& clock,
 {
     std::list<std::shared_ptr<Zone>> timeRestrictZones;
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         for(uint32_t zoneID : mAllTimeRestrictZones)
         {
             auto zone = mZones[zoneID];
@@ -4507,7 +4507,7 @@ void ZoneManager::HandleTimedActions(const WorldClock& clock,
 
     if(updated.size() > 0)
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         for(uint32_t zoneID : updated)
         {
             mTimeRestrictUpdatedZones.insert(zoneID);
@@ -4533,7 +4533,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
     case InstanceType_t::TIME_TRIAL:
         {
             // Timer counts up, set start time only
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             if(instance->GetTimerStart() == 0)
             {
                 uint64_t now = ChannelServer::GetServerTime();
@@ -4551,7 +4551,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
         {
             // Expiration already set, setup expiration event and set
             // the start time
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             if(instance->GetTimerExpire() && !instance->GetTimerStart())
             {
                 uint64_t now = ChannelServer::GetServerTime();
@@ -4564,7 +4564,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
     case InstanceType_t::DEMON_ONLY:
         {
             // Timer counts down, set start and expire time
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             if(instance->GetTimerStart() == 0)
             {
                 uint64_t now = ChannelServer::GetServerTime();
@@ -4601,7 +4601,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
     case InstanceType_t::DIASPORA:
         {
             // Timer counts down, set start and expire time
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             if(instance->GetTimerStart() == 0)
             {
                 uint64_t now = ChannelServer::GetServerTime();
@@ -4619,7 +4619,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
     case InstanceType_t::MISSION:
         {
             // Timer counts down, set start and expire time
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             if(instance->GetTimerStart() == 0)
             {
                 uint64_t now = ChannelServer::GetServerTime();
@@ -4636,7 +4636,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
     case InstanceType_t::DIGITALIZE:
         {
             // Timer counts up, set start time only
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             if(instance->GetTimerStart() == 0)
             {
                 uint64_t now = ChannelServer::GetServerTime();
@@ -4654,7 +4654,7 @@ bool ZoneManager::StartInstanceTimer(const std::shared_ptr<ZoneInstance>& instan
             }
 
             // Timer counts down, set start and expire time from time limit
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             if(instance->GetTimerStart() == 0)
             {
                 uint64_t now = ChannelServer::GetServerTime();
@@ -4748,7 +4748,7 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
     {
     case InstanceType_t::TIME_TRIAL:
         {
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             if(!instance->GetTimerStop())
             {
                 instance->SetTimerStop(stopTime);
@@ -4775,7 +4775,7 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
         {
             bool end = false;
             {
-                std::lock_guard<std::mutex> lock(mLock);
+                std::lock_guard<libcomp::Mutex> lock(mLock);
                 if(!instance->GetTimerStop())
                 {
                     instance->SetTimerStop(stopTime);
@@ -4797,7 +4797,7 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
         break;
     case InstanceType_t::DEMON_ONLY:
         {
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             if(instance->GetTimerExpire() && !instance->GetTimerStop())
             {
                 instance->SetTimerStop(stopTime);
@@ -4843,7 +4843,7 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
         {
             bool nextPhase = false;
             {
-                std::lock_guard<std::mutex> lock(mLock);
+                std::lock_guard<libcomp::Mutex> lock(mLock);
                 if(!instance->GetTimerStop())
                 {
                     if(instance->GetTimerExpire() <= stopTime)
@@ -4883,22 +4883,32 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
     case InstanceType_t::MISSION:
     case InstanceType_t::DIGITALIZE:
         {
-            std::lock_guard<std::mutex> lock(mLock);
-            if(!instance->GetTimerStop())
-            {
-                if(instance->GetTimerExpire() &&
-                    instance->GetTimerExpire() <= stopTime)
-                {
-                    // Timer expired
-                    instance->SetTimerStop(instance->GetTimerExpire());
-                    expired = true;
-                }
-                else
-                {
-                    instance->SetTimerStop(stopTime);
-                }
+            bool endInstanceTimer = false;
 
-                // Complete timer
+            {
+                std::lock_guard<libcomp::Mutex> lock(mLock);
+
+                if(!instance->GetTimerStop())
+                {
+                    if(instance->GetTimerExpire() &&
+                        instance->GetTimerExpire() <= stopTime)
+                    {
+                        // Timer expired
+                        instance->SetTimerStop(instance->GetTimerExpire());
+                        expired = true;
+                    }
+                    else
+                    {
+                        instance->SetTimerStop(stopTime);
+                    }
+
+                    endInstanceTimer = true;
+                }
+            }
+
+            // Complete timer
+            if(endInstanceTimer)
+            {
                 for(auto client : instance->GetConnections())
                 {
                     EndInstanceTimer(instance, client, true);
@@ -4917,7 +4927,7 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
 
             bool stopped = false;
             {
-                std::lock_guard<std::mutex> lock(mLock);
+                std::lock_guard<libcomp::Mutex> lock(mLock);
                 if(!instance->GetTimerStop())
                 {
                     instance->SetTimerStop(stopTime);
@@ -5992,7 +6002,7 @@ void ZoneManager::MultiZoneBossKilled(const std::shared_ptr<Zone>& zone,
 
         std::list<std::shared_ptr<ChannelClientConnection>> clients;
         {
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             for(auto uniqueID : mGlobalBossZones[zoneGroupID])
             {
                 auto z = mZones[uniqueID];
@@ -6223,7 +6233,7 @@ Point ZoneManager::GetRandomSpotPoint(
         auto qmpFile = zoneData->GetFile()->GetQmpFile();
         if(!qmpFile.IsEmpty())
         {
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             auto geoIter = mZoneGeometry.find(qmpFile.C());
             if(geoIter != mZoneGeometry.end())
             {
@@ -6947,7 +6957,7 @@ bool ZoneManager::ValidateBossGroup(const std::shared_ptr<
 
         failed = false;
 
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         for(auto uniqueID : mGlobalBossZones[zoneGroupID])
         {
             for(auto boss : mZones[uniqueID]->GetBosses())
@@ -6983,7 +6993,7 @@ void ZoneManager::SendMultiZoneBossStatus(uint32_t groupID)
     std::array<std::shared_ptr<EnemyState>, 3> bosses;
     std::list<std::shared_ptr<Zone>> zones;
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         for(auto uniqueID : mGlobalBossZones[groupID])
         {
             zones.push_back(mZones[uniqueID]);
@@ -7043,7 +7053,7 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
     {
         if(zoneDefinition->GetGlobal())
         {
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             auto iter = mGlobalZoneMap.find(zoneID);
             if(iter != mGlobalZoneMap.end())
             {
@@ -7073,7 +7083,7 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
 
             std::shared_ptr<ZoneInstance> instance;
             {
-                std::lock_guard<std::mutex> lock(mLock);
+                std::lock_guard<libcomp::Mutex> lock(mLock);
                 uint32_t instanceID = currentInstanceID;
                 if(!instanceID)
                 {
@@ -7117,7 +7127,7 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
     const std::shared_ptr<ZoneInstance>& instance, uint32_t zoneID,
     uint32_t dynamicMapID)
 {
-    std::lock_guard<std::mutex> iLock(mInstanceZoneLock);
+    std::lock_guard<libcomp::Mutex> iLock(mInstanceZoneLock);
 
     auto zone = instance->GetZone(zoneID, dynamicMapID);
     if(zone)
@@ -7160,7 +7170,7 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
             LOG_ERROR(libcomp::String("Failed to add zone to"
                 " instance: %1 (%2)\n").Arg(zoneID).Arg(dynamicMapID));
 
-            std::lock_guard<std::mutex> lock(mLock);
+            std::lock_guard<libcomp::Mutex> lock(mLock);
             RemoveZone(zone, false);
             return nullptr;
         }
@@ -7310,7 +7320,7 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
 
     std::shared_ptr<Zone> zone;
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         uint32_t id = mNextZoneID++;
 
         zone = std::shared_ptr<Zone>(new Zone(id, definition));
@@ -7640,7 +7650,7 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
 
     // Zone successfully created, register with the manager
     {
-        std::lock_guard<std::mutex> lock(mLock);
+        std::lock_guard<libcomp::Mutex> lock(mLock);
         mZones[zone->GetID()] = zone;
     }
 

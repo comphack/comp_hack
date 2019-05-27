@@ -5660,7 +5660,8 @@ bool CharacterManager::AddRemoveValuable(const std::shared_ptr<
 
     auto oldValue = progress->GetValuables(index);
     uint8_t newValue = remove
-        ? static_cast<uint8_t>(oldValue ^ shiftVal) : static_cast<uint8_t>(oldValue | shiftVal);
+        ? ((oldValue & shiftVal) ? (uint8_t)(oldValue ^ shiftVal) : oldValue)
+        : (uint8_t)(oldValue | shiftVal);
 
     if(oldValue != newValue)
     {

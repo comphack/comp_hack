@@ -266,7 +266,7 @@ void ActionManager::PerformActions(
                 for(auto z : zones)
                 {
                     // Include all enemy base entities (so allies too)
-                    for(auto eBase : z->GetEnemiesAndAllies())
+                    for(auto eBase : z->GetEnemiesAndAllies(true))
                     {
                         ActionContext copyCtx = ctx;
                         copyCtx.Client = nullptr;

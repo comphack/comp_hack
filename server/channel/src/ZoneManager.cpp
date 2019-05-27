@@ -3265,7 +3265,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         {
             // Match enemies in zone on specified locations and
             // group/location pairs
-            for(auto eState : zone->GetEnemiesAndAllies())
+            for(auto eState : zone->GetEnemiesAndAllies(true))
             {
                 auto eBase = eState->GetEnemyBase();
                 if(eBase->GetSpawnGroupID() > 0 ||

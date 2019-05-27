@@ -10435,7 +10435,7 @@ bool SkillManager::MinionDespawn(
 
     if(ProcessSkillResult(activated, ctx))
     {
-        for(auto eState : zone->GetEnemiesAndAllies())
+        for(auto eState : zone->GetEnemiesAndAllies(true))
         {
             auto eBase = eState->GetEnemyBase();
             if(eBase->GetSummonerID() == source->GetEntityID() &&

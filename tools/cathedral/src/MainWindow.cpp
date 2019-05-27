@@ -34,6 +34,7 @@
 #include "ZoneWindow.h"
 
 // objects Includes
+#include <MiAIData.h>
 #include <MiCancelData.h>
 #include <MiCEventMessageData.h>
 #include <MiCHouraiData.h>
@@ -211,6 +212,22 @@ bool MainWindow::Init()
         }
     }
 
+    mBinaryDataSets["AIData"] = std::make_shared<
+        BinaryDataNamedSet>([]()
+        {
+            return std::make_shared<objects::MiAIData>();
+        },
+        [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
+        {
+            return std::dynamic_pointer_cast<
+                objects::MiAIData>(obj)->GetID();
+        },
+        [](const std::shared_ptr<libcomp::Object>& obj)->libcomp::String
+        {
+            return libcomp::String("AI %1").Arg(std::dynamic_pointer_cast<
+                objects::MiAIData>(obj)->GetID());
+        });
+
     mBinaryDataSets["CEventMessageData"] = std::make_shared<
         BinaryDataNamedSet>([]()
         {
@@ -281,6 +298,10 @@ bool MainWindow::Init()
     if(!mDatastore->AddSearchPath(settingVal.toStdString()))
     {
         err = "Failed to add datastore search path.";
+    }
+    else if(!LoadBinaryData("Shield/AIData.sbin", "AIData", true, false))
+    {
+        err = "Failed to load AI data.";
     }
     else if(!LoadBinaryData("Shield/CEventMessageData.sbin",
         "CEventMessageData", true, true, false) ||

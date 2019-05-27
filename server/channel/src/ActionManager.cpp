@@ -2351,6 +2351,35 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                 sZiotite, lZiotite, state->GetWorldCID());
         }
         break;
+    case objects::ActionUpdatePoints::PointType_t::REUNION_POINTS:
+        if(act->GetIsSet() || act->GetValue() < 0)
+        {
+            LOG_ERROR("Attempts to explicitly set or decrease reunion points"
+                " are not allowed!\n");
+            return false;
+        }
+        else
+        {
+            auto state = ctx.Client->GetClientState();
+            auto awd = state->GetAccountWorldData().Get();
+
+            if(act->GetModifier() == 0)
+            {
+                // Non-mitama
+                awd->SetReunionPoints(awd->GetReunionPoints() +
+                    (uint32_t)act->GetValue());
+            }
+            else
+            {
+                // Mitama
+                awd->SetMitamaReunionPoints(awd->GetMitamaReunionPoints() +
+                    (uint32_t)act->GetValue());
+            }
+
+            mServer.lock()->GetWorldDatabase()->QueueUpdate(awd,
+                state->GetAccountUID());
+        }
+        break;
     default:
         break;
     }

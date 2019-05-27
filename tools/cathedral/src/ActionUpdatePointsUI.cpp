@@ -151,6 +151,13 @@ void ActionUpdatePoints::PointTypeChanged()
     case objects::ActionUpdatePoints::PointType_t::DIGITALIZE_POINTS:
         prop->modifier->setEnabled(false);
         break;
+    case objects::ActionUpdatePoints::PointType_t::REUNION_POINTS:
+        prop->lblModifier->setText("Mitama?:");
+        prop->value->setMinimum(0);
+        prop->modifier->setMinimum(0);
+        prop->modifier->setMaximum(1);
+        prop->isSet->setEnabled(false);
+        break;
     default:
         break;
     }

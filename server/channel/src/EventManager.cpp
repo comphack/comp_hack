@@ -2849,12 +2849,15 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
                 {
                     // For non-kill quests, spawns must not be talk resistant
                     auto spawn = spawnPair.second;
-                    bool canJoin = spawn->GetTalkResist() < 100 &&
-                        (spawn->GetTalkResults() & 0x01) != 0 &&
-                        spawn->GetLevel() <= cLevel;
-                    if(spawn->GetLevel() && (isKill || canJoin))
+                    if(spawn->GetValidDemonQuestTarget())
                     {
-                        spawns[spawnPair.first] = spawn;
+                        bool canJoin = spawn->GetTalkResist() < 100 &&
+                            (spawn->GetTalkResults() & 0x01) != 0 &&
+                            spawn->GetLevel() <= cLevel;
+                        if(spawn->GetLevel() && (isKill || canJoin))
+                        {
+                            spawns[spawnPair.first] = spawn;
+                        }
                     }
                 }
 

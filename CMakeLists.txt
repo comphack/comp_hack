@@ -1054,64 +1054,66 @@ FUNCTION(UNENCRYPTED_BINARY_DATA)
     ADD_CUSTOM_TARGET(bin ALL DEPENDS ${depends})
 ENDFUNCTION(UNENCRYPTED_BINARY_DATA)
 
-UNENCRYPTED_BINARY_DATA(
-    dynamicmap datastore/BinaryData/Client/DynamicMapData.xml
-)
+IF(NOT CHANNEL_ONLY)
+    UNENCRYPTED_BINARY_DATA(
+        dynamicmap datastore/BinaryData/Client/DynamicMapData.xml
+    )
 
-ENCRYPTED_BINARY_DATA(
-    ai datastore/BinaryData/Shield/AIData.xml
-    blend datastore/BinaryData/Shield/BlendData.xml
-    blendext datastore/BinaryData/Shield/BlendExtData.xml
-    chourai datastore/BinaryData/Shield/CHouraiData.xml
-    citem datastore/BinaryData/Shield/CItemData.xml
-    title datastore/BinaryData/Shield/CodeNameData.xml
-    cultureitem datastore/BinaryData/Shield/CultureItemData.xml
-    devilbook datastore/BinaryData/Shield/DevilBookData.xml
-    devilboost datastore/BinaryData/Shield/DevilBoostData.xml
-    devilboostextra datastore/BinaryData/Shield/DevilBoostExtraData.xml
-    devilboostitem datastore/BinaryData/Shield/DevilBoostItemData.xml
-    devilboostlot datastore/BinaryData/Shield/DevilBoostLotData.xml
-    devil datastore/BinaryData/Shield/DevilData.xml
-    devilequip datastore/BinaryData/Shield/DevilEquipmentData.xml
-    devilequipitem datastore/BinaryData/Shield/DevilEquipmentItemData.xml
-    devilfusion datastore/BinaryData/Shield/DevilFusionData.xml
-    devillvluprate datastore/BinaryData/Shield/DevilLVUpRateData.xml
-    disassembly datastore/BinaryData/Shield/DisassemblyData.xml
-    disassemblytrig datastore/BinaryData/Shield/DisassemblyTriggerData.xml
-    enchant datastore/BinaryData/Shield/EnchantData.xml
-    equipset datastore/BinaryData/Shield/EquipmentSetData.xml
-    exchange datastore/BinaryData/Shield/ExchangeData.xml
-    expert datastore/BinaryData/Shield/ExpertClassData.xml
-    guardianassist datastore/BinaryData/Shield/GuardianAssistData.xml
-    guardianlevel datastore/BinaryData/Shield/GuardianLevelData.xml
-    guardianspecial datastore/BinaryData/Shield/GuardianSpecialData.xml
-    guardianunlock datastore/BinaryData/Shield/GuardianUnlockData.xml
-    hnpc datastore/BinaryData/Shield/hNPCData.xml
-    item datastore/BinaryData/Shield/ItemData.xml
-    mission datastore/BinaryData/Shield/MissionData.xml
-    mitamabonus datastore/BinaryData/Shield/MitamaReunionBonusData.xml
-    mitamasetbonus datastore/BinaryData/Shield/MitamaReunionSetBonusData.xml
-    mitamaunion datastore/BinaryData/Shield/MitamaUnionBonusData.xml
-    mod datastore/BinaryData/Shield/ModificationData.xml
-    modexteffect datastore/BinaryData/Shield/ModificationExtEffectData.xml
-    modextrecipe datastore/BinaryData/Shield/ModificationExtRecipeData.xml
-    modtrigger datastore/BinaryData/Shield/ModificationTriggerData.xml
-    modeffect datastore/BinaryData/Shield/ModifiedEffectData.xml
-    npcbarter datastore/BinaryData/Shield/NPCBarterData.xml
-    onpc datastore/BinaryData/Shield/oNPCData.xml
-    questbonuscode datastore/BinaryData/Shield/QuestBonusCodeData.xml
-    quest datastore/BinaryData/Shield/QuestData.xml
-    shopproduct datastore/BinaryData/Shield/ShopProductData.xml
-    sitem datastore/BinaryData/Shield/SItemData.xml
-    skill datastore/BinaryData/Shield/SkillData.xml
-    status datastore/BinaryData/Shield/StatusData.xml
-    synthesis datastore/BinaryData/Shield/SynthesisData.xml
-    timelimit datastore/BinaryData/Shield/TankData.xml
-    timelimit datastore/BinaryData/Shield/TimeLimitData.xml
-    triunionspecial datastore/BinaryData/Shield/TriUnionSpecialData.xml
-    urafieldtower datastore/BinaryData/Shield/UraFieldTowerData.xml
-    warppoint datastore/BinaryData/Shield/WarpPointData.xml
-    zone datastore/BinaryData/Shield/ZoneData.xml
-)
+    ENCRYPTED_BINARY_DATA(
+        ai datastore/BinaryData/Shield/AIData.xml
+        blend datastore/BinaryData/Shield/BlendData.xml
+        blendext datastore/BinaryData/Shield/BlendExtData.xml
+        chourai datastore/BinaryData/Shield/CHouraiData.xml
+        citem datastore/BinaryData/Shield/CItemData.xml
+        title datastore/BinaryData/Shield/CodeNameData.xml
+        cultureitem datastore/BinaryData/Shield/CultureItemData.xml
+        devilbook datastore/BinaryData/Shield/DevilBookData.xml
+        devilboost datastore/BinaryData/Shield/DevilBoostData.xml
+        devilboostextra datastore/BinaryData/Shield/DevilBoostExtraData.xml
+        devilboostitem datastore/BinaryData/Shield/DevilBoostItemData.xml
+        devilboostlot datastore/BinaryData/Shield/DevilBoostLotData.xml
+        devil datastore/BinaryData/Shield/DevilData.xml
+        devilequip datastore/BinaryData/Shield/DevilEquipmentData.xml
+        devilequipitem datastore/BinaryData/Shield/DevilEquipmentItemData.xml
+        devilfusion datastore/BinaryData/Shield/DevilFusionData.xml
+        devillvluprate datastore/BinaryData/Shield/DevilLVUpRateData.xml
+        disassembly datastore/BinaryData/Shield/DisassemblyData.xml
+        disassemblytrig datastore/BinaryData/Shield/DisassemblyTriggerData.xml
+        enchant datastore/BinaryData/Shield/EnchantData.xml
+        equipset datastore/BinaryData/Shield/EquipmentSetData.xml
+        exchange datastore/BinaryData/Shield/ExchangeData.xml
+        expert datastore/BinaryData/Shield/ExpertClassData.xml
+        guardianassist datastore/BinaryData/Shield/GuardianAssistData.xml
+        guardianlevel datastore/BinaryData/Shield/GuardianLevelData.xml
+        guardianspecial datastore/BinaryData/Shield/GuardianSpecialData.xml
+        guardianunlock datastore/BinaryData/Shield/GuardianUnlockData.xml
+        hnpc datastore/BinaryData/Shield/hNPCData.xml
+        item datastore/BinaryData/Shield/ItemData.xml
+        mission datastore/BinaryData/Shield/MissionData.xml
+        mitamabonus datastore/BinaryData/Shield/MitamaReunionBonusData.xml
+        mitamasetbonus datastore/BinaryData/Shield/MitamaReunionSetBonusData.xml
+        mitamaunion datastore/BinaryData/Shield/MitamaUnionBonusData.xml
+        mod datastore/BinaryData/Shield/ModificationData.xml
+        modexteffect datastore/BinaryData/Shield/ModificationExtEffectData.xml
+        modextrecipe datastore/BinaryData/Shield/ModificationExtRecipeData.xml
+        modtrigger datastore/BinaryData/Shield/ModificationTriggerData.xml
+        modeffect datastore/BinaryData/Shield/ModifiedEffectData.xml
+        npcbarter datastore/BinaryData/Shield/NPCBarterData.xml
+        onpc datastore/BinaryData/Shield/oNPCData.xml
+        questbonuscode datastore/BinaryData/Shield/QuestBonusCodeData.xml
+        quest datastore/BinaryData/Shield/QuestData.xml
+        shopproduct datastore/BinaryData/Shield/ShopProductData.xml
+        sitem datastore/BinaryData/Shield/SItemData.xml
+        skill datastore/BinaryData/Shield/SkillData.xml
+        status datastore/BinaryData/Shield/StatusData.xml
+        synthesis datastore/BinaryData/Shield/SynthesisData.xml
+        timelimit datastore/BinaryData/Shield/TankData.xml
+        timelimit datastore/BinaryData/Shield/TimeLimitData.xml
+        triunionspecial datastore/BinaryData/Shield/TriUnionSpecialData.xml
+        urafieldtower datastore/BinaryData/Shield/UraFieldTowerData.xml
+        warppoint datastore/BinaryData/Shield/WarpPointData.xml
+        zone datastore/BinaryData/Shield/ZoneData.xml
+    )
 
-ADD_CUSTOM_TARGET(testing ALL DEPENDS bin sbin)
+    ADD_CUSTOM_TARGET(testing ALL DEPENDS bin sbin)
+ENDIF(NOT CHANNEL_ONLY)

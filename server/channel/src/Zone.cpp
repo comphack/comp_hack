@@ -769,17 +769,43 @@ const std::list<std::shared_ptr<EnemyState>> Zone::GetBosses()
 }
 
 std::list<std::shared_ptr<ActiveEntityState>>
-    Zone::GetEnemiesAndAllies() const
+    Zone::GetEnemiesAndAllies(bool includeStaggered)
 {
     std::list<std::shared_ptr<ActiveEntityState>> all;
-    for(auto enemy : GetEnemies())
+    if(includeStaggered)
     {
-        all.push_back(enemy);
-    }
+        // When including staggered entities we have to lock the mutex as well
+        // so nothing is missed or added twice
+        std::lock_guard<std::mutex> lock(mLock);
+        for(auto enemy : mEnemies)
+        {
+            all.push_back(enemy);
+        }
 
-    for(auto ally : GetAllies())
+        for(auto ally : mAllies)
+        {
+            all.push_back(ally);
+        }
+
+        for(auto& pair : mStaggeredSpawns)
+        {
+            for(auto entity : pair.second)
+            {
+                all.push_back(entity);
+            }
+        }
+    }
+    else
     {
-        all.push_back(ally);
+        for(auto enemy : GetEnemies())
+        {
+            all.push_back(enemy);
+        }
+
+        for(auto ally : GetAllies())
+        {
+            all.push_back(ally);
+        }
     }
 
     return all;

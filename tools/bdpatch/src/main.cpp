@@ -44,6 +44,7 @@
 #include <MiCCultureData.h>
 #include <MiCDevilBookBonusData.h>
 #include <MiCDevilBookBonusMitamaData.h>
+#include <MiCDevilBoostIconData.h>
 #include <MiCDevilDungeonData.h>
 #include <MiCDevilEquipmentExclusiveData.h>
 #include <MiCEquipModelData.h>
@@ -63,6 +64,8 @@
 #include <MiCModelData.h>
 #include <MiCModifiedEffectData.h>
 #include <MiCMultiTalkData.h>
+#include <MiCMultiTalkDirectionData.h>
+#include <MiCMultiTalkPopData.h>
 #include <MiCPolygonMovieData.h>
 #include <MiCQuestData.h>
 #include <MiCSkillBase.h>
@@ -252,6 +255,7 @@ int main(int argc, char *argv[])
     ADD_TYPE    ("  cchanceitem           Format for CChanceItemData.sbin", "cchanceitem", MiCChanceItemData);
     ADD_TYPE    ("  cdevilbookbonus       Format for CDevilBookBonusData.sbin", "cdevilbookbonus", MiCDevilBookBonusData);
     ADD_TYPE    ("  cdevilbookbonusmitama Format for CDevilBookBonusMitamaData.sbin", "cdevilbookbonusmitama", MiCDevilBookBonusMitamaData);
+    ADD_TYPE    ("  cdevilboosticon       Format for CDevilBoostIconData.sbin", "cdevilboosticon", MiCDevilBoostIconData);
     ADD_TYPE    ("  cdevildungeon         Format for CDevilDungeonData.sbin", "cdevildungeon", MiCDevilDungeonData);
     ADD_TYPE    ("  cdevilequipexclusive  Format for CDevilEquipmentExclusiveData.sbin", "cdevilequipmentexclusive", MiCDevilEquipmentExclusiveData);
     ADD_TYPE    ("  cequipmodel           Format for CEquipModelData.sbin", "cequipmodel", MiCEquipModelData);
@@ -265,7 +269,9 @@ int main(int argc, char *argv[])
     ADD_TYPE    ("  cmap                  Format for CMapData.bin", "cmap", MiCMapData);
     ADD_TYPE    ("  cmessage              Format for CMessageData.sbin", "cmessage", MiCMessageData);
     ADD_TYPE    ("  cmodifiedeffect       Format for CModifiedEffectData.sbin", "cmodifiedeffect", MiCModifiedEffectData);
-    ADD_TYPE    ("  cmultitalk            Format for CMultiTalkData.sbin", "cmultitalk", MiCMultiTalkData);
+    ADD_TYPE    ("  cmultitalk            Format for CMultiTalkData.bin", "cmultitalk", MiCMultiTalkData);
+    ADD_TYPE    ("  cmultitalkdirection   Format for CMultiTalkDirectionData.bin", "cmultitalkdirection", MiCMultiTalkDirectionData);
+    ADD_TYPE    ("  cmultitalkpop         Format for CMultiTalkPopData.bin", "cmultitalkpop", MiCMultiTalkPopData);
     ADD_TYPE    ("  cquest                Format for CQuestData.sbin", "cquest", MiCQuestData);
     ADD_TYPE    ("  csound                Format for CSoundData.bin", "csound", MiCSoundData);
     ADD_TYPE    ("  cspskilleffect        Format for CSpecialSkillEffectData.sbin", "cspskilleffect", MiCSpecialSkillEffectData);

@@ -1,9 +1,4 @@
-sudo: required
-dist: trusty
 language: cpp
-
-jdk:
-  - oraclejdk8
 
 cache:
   directories:
@@ -11,106 +6,255 @@ cache:
 
 env:
   global:
-   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
-   #   via the "travis encrypt" command using the project repo's public key
-   - secure: "Ncn6/msd5oa9PiMYS5y3bpqbcqnB9Wwr7UIEtDS6fd1X01sk7aWF267kMNq8ijosJtk1P4vjKmZomfhTyQgILV6UkNkSDae5NOc39XM9yoysxc6LHTnF8/E5wXgbV1oDJR9kenrBzX49ZRJxwYa9WgXsGz4AiDyUB9eMy48eomnyNXG/SkZBbPmxaI0zSCACWH0VMHwvxHOHnaXHMOuQDVN+oxP4gEdQ/Cz2P0QJl1TvE5hpYB9fW/yItcdgL7sVkiFXbkZh5l3s52fGEN339e9CEEEEqnEUmFAzq0nsZNKZqh+ivh4Ga2qJa+btLGkEYyNQyKpOjy21Wx8UKY6uT5ZVxdSK943dbn0+v2nr0K++Hu2mRoq3btMfza5PZGQrK/XdOgathqxMoqSlKKXNo5qQoHfyjRLUscaZPsF/kWfnUoRGA90Eg6RLq59gsKkQjSJ0cWJ6Czt2txJZvmAZn51thBMJ3QW88+taDXkSVXsXkrdPjGPrwUt+okhvXJK5+PeSa+Fb4CJUiijOAg9Sew+WDJdsP9d0gVtEncXiVdAgdUFZ9wbyKCrjPisKxZWzzMDr+7tT3MQmg8FagPMkm5PW9Q+Ewof2VLjxffX+PhHcWvUrVqe8KBEVuJNs4SYG0ETsvp0+y8tyh5o+zAmc8fKsuYmEDNJ727rjrTfA56A="
+    # Encrypt using a similar command:
+    # travis encrypt -r compomega/comp_hack DROPBOX_OAUTH_BEARER_COMPOMEGA_COMP_HACK=<my_secret_oauth>
+    #
+    # Dropbox for comphack/comp_hack (DROPBOX_OAUTH_BEARER_COMPHACK_COMP_HACK)
+    - secure: "IUJVH79CrfF1QdV70ydGoKFnf6u7SeLD8Q1jjzKUecirS2gg/lU4ddlYJwjRFuj9E5eOOkjunPuSnm8OPWvPgriSZFUgUVnEX6yAV/91nabP3UqPcOC3wEvfEXcCyHBBEezgYpoaZII8cpAXOEzQyVmAoHFfKVYX7bPE9EL5yIibKScZ8co9M887ouYErhCcssLPvg+xCYTR/QgiX9ymacBaNy0cUvVX+0ne3PetBbEtC9AgWFD0eJEBz7mXo159sZcFFSeUvRz2ajArNvuQSogCiYI886RNIHFcFQhJG1W3PW0KiBubvoXEzaaNE6CdNtHY4ginskrXPNd1CXYrgBYO6luNAAigthW4+VYJvHHsMvB3lH9jofBK47I7qWxVt1cVSsLAuRQ/EpwxILjIhGPnh47oGhAmza6uKa9850zEAqjJ8uiwjI6SPCg+xvsxIgfesHtFMIOUaT7oo4ihCouBL3f5vBJGm+08EoJpwY1ET5cQUn0gv7t5/4YaMkxdz1QtwVDAPT/KvEc5SeMINrdQfWgue2J5GSeP6Eu+rDhOgrhGO99g+y55o0UgxzFNHn9ZO07J1kYDbWDuLFiANmTHttFvLFby1ryTSVaOmzKxl5y4bd9PO1VKK++Qemi9eX++JhjUq0GLh5V9PGGvI+1pxVHCjtzX11126Csqr8Q="
+    # Dropbox for compomega/comp_hack (DROPBOX_OAUTH_BEARER_COMPOMEGA_COMP_HACK)
+    - secure: "OZpG+eY2BZa6txGleVC8m5k9iFmW/GGRYmnR50QgFCuFCu4lDK9BIGnuChYQXisF0E+ZP2jBLXFepM5H/js5Z4z/XYbCNI7Gu1wBpJxxDhbhyzmnMj1Y/hWDnQ3o+4p8uI9WjLBEmPGUNMpaKYWbtG4hcLxcg+6kwnnMIIO1nuwZHetMuhWrCRA1EDsvaS3++PrScuA9Kli+Yd8KffjQZWLDj90kKazvymVmK14Tfm37hdV7pP1xTGMFK+zrkEmFqbTF/oOSZfUG+W4jbKnFGMAXIJHuLqaYkRASOGMSW/mfX+Wrc4HdDfuc3MrGy49bS4HjRaVeb3BxAWmGGNGK5c9lNNsTTn1uZ5r0FytGbCJ8Idq9XX+cmRzn9nsjGliMZ3U0qw9QAJLhAfFMyx23v3Cmb3iqkR3JLCakPv7ZmEQW9fRJoJvKhqGyRfizF07lKTRIH/3k4DMc140ESpVDmybDBoqI7ve1qZvVtjhQKlMuvbIxC8//Pf4Mov6MYGdriXmF1ZTL1Og0jSsThZJANqMckJoLyqaGO4Wt/7lAtqkepVLB2IsFwgBc21tqTVREQP/QEYK2Jnx7RccatxvKP6199uT9GczZ/bZv5k5yEg110lvjitlaNvO3Uz4QIMPmG+FRpwh5l2FV9mQaeOyI3McoFMAy3QloNHkFzYBQ0nU="
 
-addons:
-  # This doesn't actually work because of the matrix.
-  mariadb: '10.1'
-
-matrix:
+jobs:
   include:
-    - compiler: clang
+    - stage: "Warm cache"
+      name: "Warm cache (Linux GCC)"
+      os: linux
+      compiler: gcc
       env:
+        - PLATFORM=gcc5
+      script: ci/linux-warmcache.sh
+
+    - stage: "Warm cache"
+      name: "Warm cache (Linux Clang)"
+      os: linux
+      compiler: clang
+      env:
+        - PLATFORM=clang
+      script: ci/linux-warmcache.sh
+
+    - stage: "Warm cache"
+      name: "Warm cache (Windows 32-bit)"
+      os: windows
+      env:
+        - PLATFORM=win32
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017
+      script: ci/windows-warmcache.sh
+
+    - stage: "Warm cache"
+      name: "Warm cache (Windows 64-bit)"
+      os: windows
+      env:
+        - PLATFORM=win64
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017_64
+      script: ci/windows-warmcache.sh
+
+    - stage: "Libraries"
+      name: "Linux (Clang+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+      env:
+        - PLATFORM=clang
         - COMPILER_CC=clang
         - COMPILER_CXX=clang++
         - CMAKE_GENERATOR='Unix Makefiles'
-    - compiler: clang
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-libcomp.sh
+
+    - stage: "Libraries"
+      name: "Linux (Clang+Ninja)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
       env:
+        - PLATFORM=clang
         - COMPILER_CC=clang
         - COMPILER_CXX=clang++
         - CMAKE_GENERATOR=Ninja
-    - compiler: gcc
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-libcomp.sh
+
+    - stage: "Libraries"
+      name: "Linux (GCC5+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: gcc
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
           packages:
             - g++-5
-        coverity_scan:
-          project:
-            name: "comphack/comp_hack"
-            description: "Build submitted via Travis CI"
-          notification_email: compomega@tutanota.com
-          build_command_prepend: "mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DUSE_PREBUILT_LIBCOMP=ON -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=ON -DUSE_COTIRE=ON .. && cov-configure --comptype gcc --compiler gcc-5 --template"
-          build_command: "cmake --build ."
-          branch_pattern: coverity_scan
       env:
+        - PLATFORM=gcc5
         - COMPILER_CC=gcc-5
         - COMPILER_CXX=g++-5
         - CMAKE_GENERATOR='Unix Makefiles'
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-libcomp.sh
 
-before_install:
-  - export ROOT_DIR=`pwd`
-  - export CACHE_DIR=`pwd`/cache
-  - export COVERALLS_ENABLE=OFF
-  - export COVERALLS_SERVICE_NAME=travis-ci
-  - cd ${CACHE_DIR}
-  - if [ ! -f ninja-linux.zip ]; then wget https://github.com/ninja-build/ninja/releases/download/v1.7.1/ninja-linux.zip; fi
-  - if [ ! -f cmake-3.6.1-Linux-x86_64.tar.gz ]; then wget -q https://cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.tar.gz; fi
-  - if [ ! -f clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz ]; then wget -q http://llvm.org/releases/3.8.0/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz; fi
-  - if [ ! -f external-0.1.1-clang.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-25/external-0.1.1-clang.tar.bz2; fi
-  - if [ ! -f external-0.1.1-gcc5.tar.bz2 ]; then wget -q https://github.com/comphack/external/releases/download/external-25/external-0.1.1-gcc5.tar.bz2; fi
-  - rm -f libcomp-*-clang.tar.bz2
-  - wget -q https://github.com/comphack/libcomp/releases/download/v4.1.2/libcomp-4.1.2-clang.tar.bz2
-  - rm -f libcomp-*-gcc5.tar.bz2
-  - wget -q https://github.com/comphack/libcomp/releases/download/v4.1.2/libcomp-4.1.2-gcc5.tar.bz2
-  - ls -lh
-  - cd ${ROOT_DIR}
-  - sudo apt-get update -q
-  - sudo apt-get install libssl-dev docbook-xsl doxygen texlive-font-utils xmlto libsqlite3-dev sqlite3 libuv-dev libqt5webkit5-dev unzip ruby ruby-rspec-core ruby-mechanize ruby-json -y
-  - sudo mkdir -p /opt/ninja/bin
-  - cd /opt/ninja/bin
-  - sudo unzip $CACHE_DIR/ninja-linux.zip
-  - sudo chmod 755 ninja
-  - sudo mkdir -p /var/log/comp_hack
-  - sudo chown `whoami`:`whoami` /var/log/comp_hack
-  - export PATH="/opt/ninja/bin:${PATH}"
-  - cd /opt
-  - sudo tar xf $CACHE_DIR/cmake-3.6.1-Linux-x86_64.tar.gz
-  - export PATH="/opt/cmake-3.6.1-Linux-x86_64/bin:${PATH}"
-  - export LD_LIBRARY_PATH="/opt/cmake-3.6.1-Linux-x86_64/lib"
-  - cd ${ROOT_DIR}
-  - if [ "$CXX" == "clang++" ]; then tar xf $CACHE_DIR/external-0.1.1-clang.tar.bz2; fi
-  - if [ "$CXX" != "clang++" ]; then tar xf $CACHE_DIR/external-0.1.1-gcc5.tar.bz2; fi
-  - mv external-* binaries
-  - if [ "$CXX" == "clang++" ]; then tar xf $CACHE_DIR/libcomp-*-clang.tar.bz2; fi
-  - if [ "$CXX" != "clang++" ]; then tar xf $CACHE_DIR/libcomp-*-gcc5.tar.bz2; fi
-  - mv libcomp-* deps/libcomp
-  - chmod +x binaries/ttvfs/bin/ttvfs_gen
-  - if [ "$CXX" != "clang++" ]; then export COVERALLS_ENABLE=ON; fi
-  - if [ "$CXX" == "clang++" ]; then cd /opt; fi
-  - if [ "$CXX" == "clang++" ]; then sudo tar xf $CACHE_DIR/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz; fi
-  - if [ "$CXX" == "clang++" ]; then export PATH="/opt/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04/bin:${PATH}"; fi
-  - if [ "$CXX" == "clang++" ]; then export LD_LIBRARY_PATH="/opt/clang+llvm-3.8.0-x86_64-linux-gnu-ubuntu-14.04/lib:${LD_LIBRARY_PATH}"; fi
-  - if [ "$CXX" == "clang++" ]; then cd ${ROOT_DIR}; fi
-  - if [ "$CXX" == "clang++" ]; then export SINGLE_OBJGEN=ON; fi
-  - if [ "$CXX" != "clang++" ]; then export SINGLE_OBJGEN=OFF; fi
-  - export CC="${COMPILER_CC}"
-  - export CXX="${COMPILER_CXX}"
-  - export GENERATOR="${CMAKE_GENERATOR}"
-  - export CTEST_OUTPUT_ON_FAILURE=1
+    - stage: "Libraries"
+      name: "Windows (VS2017 64-bit)"
+      os: windows
+      filter_secrets: false
+      env:
+        - PLATFORM=win64
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017_64
+      script: ci/windows-libcomp.sh
 
-before_script:
-  - mysql -u root < contrib/testing/MariaDBTestSetup.sql
-  - rm -rf ~/.rvm* ~/.gem* # Do this to prevent issues with rspec.
+    - stage: "Channel"
+      name: "Linux (Clang+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+      env:
+        - PLATFORM=clang
+        - COMPILER_CC=clang
+        - COMPILER_CXX=clang++
+        - CMAKE_GENERATOR='Unix Makefiles'
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-channel.sh
 
-script:
-  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then jdk_switcher use oraclejdk8 ; fi
-  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then java -version ; fi
-  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then mkdir -p build && cd build && cmake -DCOVERALLS=$COVERALLS_ENABLE -DUSE_PREBUILT_LIBCOMP=ON -DBUILD_OPTIMIZED=OFF -DSINGLE_SOURCE_PACKETS=ON -DSINGLE_OBJGEN=${SINGLE_OBJGEN} -DUSE_COTIRE=ON -G "${GENERATOR}" .. && cmake --build . --target git-version && cmake --build . ; fi
-  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target doc ; fi
-  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target guide ; fi
-#  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cmake --build . --target test ; fi
-#  - if [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then if [ "$CXX" != "clang++" ]; then cmake --build . --target coveralls; fi ; fi
+    - stage: "Channel"
+      name: "Linux (Clang+Ninja)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+      env:
+        - PLATFORM=clang
+        - COMPILER_CC=clang
+        - COMPILER_CXX=clang++
+        - CMAKE_GENERATOR=Ninja
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-channel.sh
+
+    - stage: "Channel"
+      name: "Linux (GCC5+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env:
+        - PLATFORM=gcc5
+        - COMPILER_CC=gcc-5
+        - COMPILER_CXX=g++-5
+        - CMAKE_GENERATOR='Unix Makefiles'
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-channel.sh
+
+    - stage: "Channel"
+      name: "Windows (VS2017 64-bit)"
+      os: windows
+      filter_secrets: false
+      env:
+        - PLATFORM=win64
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017_64
+      script: ci/windows-channel.sh
+
+    - stage: "Build"
+      name: "Linux (Clang+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+      env:
+        - PLATFORM=clang
+        - COMPILER_CC=clang
+        - COMPILER_CXX=clang++
+        - CMAKE_GENERATOR='Unix Makefiles'
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-build.sh
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        local_dir: pages
+        github_token:
+          secure: PYbit8NFq1XFxwuBE3vDyudKzZOh4rNLVSyd8WeW2UJ6jlE2lzn1z4oDbRuy4Bw/SeWgfCPtm2XZljACrY36+cqTpXUHnwNcVKXxXPgLJqe9C1mkCXqK1+pv3YVnxDhRD+K+/Kta7RaAO3veRA9SW0QYVvdtulW0zGwSQ67JF0Hs/W0OSvvyNIlMCwarQ2FA+NPjF1o2Nh9KzRy0VVO13jX15rKttaFziQMfKysssEyVqAwWfF6LjY8wvoZ+dadgTdyV+6l2EdL60nMeP7+dWbwYtqSwSFY5gnMzq8lW2FUcVtqJAa+TPNBi6r5tiBeWn/Sw3c41kupGBpTJeVSOT1Ca5oC2+BxOlJe4eTzoM+SQriaBenE+n5sE30ssWLlpvr3/HmVNFQqMmhTdk2dP3Ta3QB8K1UUjEzB6Kusl9o6+0M0bL+hWPqmvx8+ndv33eYa41Ymh1WlbgSW1f0NyC1M41Vfx4Bj4ICoOphtk1DBDo4RyUZaMpfBGXFOlHO/gfaP9xx+mhPB2L782ULtOgAKqKfVkz82zEgzgXHSrLduIwi7iKS+9XWP9QKhG8KCuF/dDx4SEFs5eG49F3yNKIHMnnJ6v7iQpNdeXVSwxH9LQfqx+yo0RtHE0w2Sjs3jlmdqbooGIUByO3b2K2TIDF3IROoq3vbNraOMlaAU0ExE=
+        on:
+          tags: true
+          repo: comphack/comp_hack
+
+    - stage: "Build"
+      name: "Linux (Clang+Ninja)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: clang
+      env:
+        - PLATFORM=clang
+        - COMPILER_CC=clang
+        - COMPILER_CXX=clang++
+        - CMAKE_GENERATOR=Ninja
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-build.sh
+
+    - stage: "Build"
+      name: "Linux (GCC5+Make)"
+      os: linux
+      dist: trusty
+      sudo: required
+      compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env:
+        - PLATFORM=gcc5
+        - COMPILER_CC=gcc-5
+        - COMPILER_CXX=g++-5
+        - CMAKE_GENERATOR='Unix Makefiles'
+      before_install: ci/linux-before_install.sh
+      script: ci/linux-build.sh
+
+    - stage: "Build"
+      name: "Windows (VS2017 32-bit)"
+      os: windows
+      filter_secrets: false
+      env:
+        - PLATFORM=win32
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017
+      script: ci/windows-updater.sh
+      deploy:
+        provider: releases
+        api_key:
+          secure: PYbit8NFq1XFxwuBE3vDyudKzZOh4rNLVSyd8WeW2UJ6jlE2lzn1z4oDbRuy4Bw/SeWgfCPtm2XZljACrY36+cqTpXUHnwNcVKXxXPgLJqe9C1mkCXqK1+pv3YVnxDhRD+K+/Kta7RaAO3veRA9SW0QYVvdtulW0zGwSQ67JF0Hs/W0OSvvyNIlMCwarQ2FA+NPjF1o2Nh9KzRy0VVO13jX15rKttaFziQMfKysssEyVqAwWfF6LjY8wvoZ+dadgTdyV+6l2EdL60nMeP7+dWbwYtqSwSFY5gnMzq8lW2FUcVtqJAa+TPNBi6r5tiBeWn/Sw3c41kupGBpTJeVSOT1Ca5oC2+BxOlJe4eTzoM+SQriaBenE+n5sE30ssWLlpvr3/HmVNFQqMmhTdk2dP3Ta3QB8K1UUjEzB6Kusl9o6+0M0bL+hWPqmvx8+ndv33eYa41Ymh1WlbgSW1f0NyC1M41Vfx4Bj4ICoOphtk1DBDo4RyUZaMpfBGXFOlHO/gfaP9xx+mhPB2L782ULtOgAKqKfVkz82zEgzgXHSrLduIwi7iKS+9XWP9QKhG8KCuF/dDx4SEFs5eG49F3yNKIHMnnJ6v7iQpNdeXVSwxH9LQfqx+yo0RtHE0w2Sjs3jlmdqbooGIUByO3b2K2TIDF3IROoq3vbNraOMlaAU0ExE=
+        draft: true
+        skip_cleanup: true
+        file_glob: true
+        file: deploy/comp_hack-*
+        on:
+          tags: true
+          repo: comphack/comp_hack
+
+    - stage: "Build"
+      name: "Windows (VS2017 64-bit)"
+      os: windows
+      filter_secrets: false
+      env:
+        - PLATFORM=win64
+        - QT5_BASE_DIR=C:/Qt/5.12.3/msvc2017_64
+      script: ci/windows-build.sh
+      deploy:
+        provider: releases
+        api_key:
+          secure: PYbit8NFq1XFxwuBE3vDyudKzZOh4rNLVSyd8WeW2UJ6jlE2lzn1z4oDbRuy4Bw/SeWgfCPtm2XZljACrY36+cqTpXUHnwNcVKXxXPgLJqe9C1mkCXqK1+pv3YVnxDhRD+K+/Kta7RaAO3veRA9SW0QYVvdtulW0zGwSQ67JF0Hs/W0OSvvyNIlMCwarQ2FA+NPjF1o2Nh9KzRy0VVO13jX15rKttaFziQMfKysssEyVqAwWfF6LjY8wvoZ+dadgTdyV+6l2EdL60nMeP7+dWbwYtqSwSFY5gnMzq8lW2FUcVtqJAa+TPNBi6r5tiBeWn/Sw3c41kupGBpTJeVSOT1Ca5oC2+BxOlJe4eTzoM+SQriaBenE+n5sE30ssWLlpvr3/HmVNFQqMmhTdk2dP3Ta3QB8K1UUjEzB6Kusl9o6+0M0bL+hWPqmvx8+ndv33eYa41Ymh1WlbgSW1f0NyC1M41Vfx4Bj4ICoOphtk1DBDo4RyUZaMpfBGXFOlHO/gfaP9xx+mhPB2L782ULtOgAKqKfVkz82zEgzgXHSrLduIwi7iKS+9XWP9QKhG8KCuF/dDx4SEFs5eG49F3yNKIHMnnJ6v7iQpNdeXVSwxH9LQfqx+yo0RtHE0w2Sjs3jlmdqbooGIUByO3b2K2TIDF3IROoq3vbNraOMlaAU0ExE=
+        draft: true
+        skip_cleanup: true
+        file_glob: true
+        file: deploy/comp_hack-*
+        on:
+          tags: true
+          repo: comphack/comp_hack

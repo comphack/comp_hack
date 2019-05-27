@@ -873,10 +873,10 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
 
             auto serverDataManager = mServer.lock()->GetServerDataManager();
             auto script = serverDataManager->GetScript(scriptCondition->GetScriptID());
-            if(!ctx.CurrentZone)
+            if(ctx.Client && !ctx.CurrentZone)
             {
-                LOG_ERROR(libcomp::String("Attempted to execute a condition"
-                    " script ID outside of a zone: %1\n")
+                LOG_ERROR(libcomp::String("Attempted to execute a client"
+                    " targeted condition script ID outside of a zone: %1\n")
                     .Arg(scriptCondition->GetScriptID()));
             }
             else if(script && script->Type.ToLower() == "eventcondition")
@@ -902,7 +902,8 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
                     auto state = client ? client->GetClientState() : nullptr;
                     auto scriptResult = !f.IsNull()
                         ? f.Evaluate<int32_t>(
-                            ctx.CurrentZone->GetActiveEntity(sourceEntityID),
+                            ctx.CurrentZone ? ctx.CurrentZone
+                                ->GetActiveEntity(sourceEntityID) : nullptr,
                             state ? state->GetCharacterState() : nullptr,
                             state ? state->GetDemonState() : nullptr,
                             ctx.CurrentZone,
@@ -1331,7 +1332,8 @@ bool EventManager::EvaluateEventConditions(
     EventContext ctx;
     ctx.Client = client;
     ctx.EventInstance = std::make_shared<objects::EventInstance>(); // No event
-    ctx.CurrentZone = client->GetClientState()->GetCharacterState()->GetZone();
+    ctx.CurrentZone = client
+        ? client->GetClientState()->GetCharacterState()->GetZone() : nullptr;
     ctx.AutoOnly = true;
 
     return EvaluateEventConditions(ctx, conditions);
@@ -2114,14 +2116,16 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                     // Current zone is part of the instance they have access to
                     {
                         auto zone = client->GetClientState()->GetZone();
-                        auto currentInstance = zone->GetInstance();
+                        auto currentInstance = zone
+                            ? zone->GetInstance() : nullptr;
 
                         auto def = access ? server->GetServerDataManager()
                             ->GetZoneInstanceData(access->GetDefinitionID())
                             : nullptr;
                         auto currentDef = currentInstance
                             ? currentInstance->GetDefinition() : nullptr;
-                        auto currentZoneDef = zone->GetDefinition();
+                        auto currentZoneDef = zone
+                            ? zone->GetDefinition() : nullptr;
 
                         // true if the instance is the same, the lobby is the
                         // same or they are in the lobby
@@ -2849,12 +2853,15 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
                 {
                     // For non-kill quests, spawns must not be talk resistant
                     auto spawn = spawnPair.second;
-                    bool canJoin = spawn->GetTalkResist() < 100 &&
-                        (spawn->GetTalkResults() & 0x01) != 0 &&
-                        spawn->GetLevel() <= cLevel;
-                    if(spawn->GetLevel() && (isKill || canJoin))
+                    if(spawn->GetValidDemonQuestTarget())
                     {
-                        spawns[spawnPair.first] = spawn;
+                        bool canJoin = spawn->GetTalkResist() < 100 &&
+                            (spawn->GetTalkResults() & 0x01) != 0 &&
+                            spawn->GetLevel() <= cLevel;
+                        if(spawn->GetLevel() && (isKill || canJoin))
+                        {
+                            spawns[spawnPair.first] = spawn;
+                        }
                     }
                 }
 
@@ -3954,10 +3961,11 @@ void EventManager::HandleNext(EventContext& ctx)
             // the branch number to use
             auto serverDataManager = mServer.lock()->GetServerDataManager();
             auto script = serverDataManager->GetScript(branchScriptID);
-            if(!ctx.CurrentZone)
+            if(ctx.Client && !ctx.CurrentZone)
             {
-                LOG_ERROR(libcomp::String("Attempted to execute a branch"
-                    " script ID outside of a zone: %1\n").Arg(branchScriptID));
+                LOG_ERROR(libcomp::String("Attempted to execute a client"
+                    " targeted branch script ID outside of a zone: %1\n")
+                    .Arg(branchScriptID));
             }
             else if(script && script->Type.ToLower() == "eventbranchlogic")
             {
@@ -3981,7 +3989,8 @@ void EventManager::HandleNext(EventContext& ctx)
 
                     auto scriptResult = !f.IsNull()
                         ? f.Evaluate<size_t>(
-                            ctx.CurrentZone->GetActiveEntity(sourceEntityID),
+                            ctx.CurrentZone ? ctx.CurrentZone
+                                ->GetActiveEntity(sourceEntityID) : nullptr,
                             state ? state->GetCharacterState() : nullptr,
                             state ? state->GetDemonState() : nullptr,
                             ctx.CurrentZone,

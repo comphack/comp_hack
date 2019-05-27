@@ -36,6 +36,10 @@
 #include <PopIgnore.h>
 
 // objects Includes
+#include <MiAIData.h>
+#include <MiAIRelationData.h>
+#include <MiDevilData.h>
+#include <MiFindInfo.h>
 #include <Spawn.h>
 
 // libcomp Includes
@@ -49,6 +53,11 @@ SpawnList::SpawnList(QWidget *pParent) : ObjectList(pParent)
     prop->setupUi(pWidget);
 
     ui->splitter->addWidget(pWidget);
+
+    connect(prop->grpBaseAIType, SIGNAL(toggled(bool)), this,
+        SLOT(BaseAITypeToggled(bool)));
+    connect(prop->baseAIType, SIGNAL(valueChanged(int)), this,
+        SLOT(UpdateAIDisplay()));
 }
 
 SpawnList::~SpawnList()
@@ -171,16 +180,22 @@ void SpawnList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
         prop->aiScript->setText(qs(spawn->GetAIScriptID()));
         prop->logicGroupID->setValue((int32_t)spawn->GetLogicGroupID());
 
+        prop->grpBaseAIType->setChecked(spawn->GetBaseAIType() != 0);
+
         prop->killValue->setValue(spawn->GetKillValue());
         prop->killValueType->setCurrentIndex(to_underlying(spawn
             ->GetKillValueType()));
         prop->bossGroup->setValue((int32_t)spawn->GetBossGroup());
         prop->factionGroup->setValue(spawn->GetFactionGroup());
+        prop->chkValidDQuestTarget->setChecked(spawn
+            ->GetValidDemonQuestTarget());
     }
     else
     {
         prop->spawnID->setText("");
     }
+
+    UpdateAIDisplay();
 }
 
 void SpawnList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
@@ -215,7 +230,15 @@ void SpawnList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
         auto giftSetIDs = prop->giftSetIDs->GetUnsignedIntegerList();
         spawn->SetGiftSetIDs(giftSetIDs);
 
-        spawn->SetBaseAIType((uint16_t)prop->baseAIType->value());
+        if(prop->grpBaseAIType->isChecked())
+        {
+            spawn->SetBaseAIType((uint16_t)prop->baseAIType->value());
+        }
+        else
+        {
+            spawn->SetBaseAIType(0);
+        }
+
         spawn->SetAIScriptID(cs(prop->aiScript->text()));
         spawn->SetLogicGroupID((uint16_t)prop->logicGroupID->value());
 
@@ -224,5 +247,119 @@ void SpawnList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
             prop->killValueType->currentIndex());
         spawn->SetBossGroup((uint8_t)prop->bossGroup->value());
         spawn->SetFactionGroup(prop->factionGroup->value());
+        spawn->SetValidDemonQuestTarget(prop->chkValidDQuestTarget
+            ->isChecked());
     }
+}
+
+void SpawnList::BaseAITypeToggled(bool checked)
+{
+    if(!checked)
+    {
+        // Reset to zero
+        prop->baseAIType->setValue(0);
+    }
+    else
+    {
+        // These should never be enabled
+        prop->chkAINormalSkillUse->setEnabled(false);
+        prop->chkAIStrikeFirst->setEnabled(false);
+    }
+}
+
+void SpawnList::UpdateAIDisplay()
+{
+    prop->baseAIType->blockSignals(true);
+
+    bool reset = false;
+
+    uint32_t demonType = prop->type->GetValue();
+    if(demonType && mMainWindow)
+    {
+        auto devilData = std::dynamic_pointer_cast<objects::MiDevilData>(
+            mMainWindow->GetBinaryDataSet("DevilData")
+            ->GetObjectByID(demonType));
+        if(devilData && prop->baseAIType->value() == 0)
+        {
+            prop->baseAIType->setValue(devilData->GetAI()->GetType());
+        }
+
+        auto aiData = std::dynamic_pointer_cast<objects::MiAIData>(
+            mMainWindow->GetBinaryDataSet("AIData")->GetObjectByID(
+                (uint32_t)prop->baseAIType->value()));
+        if(!aiData && devilData)
+        {
+            // Reset to default and try to retrieve again
+            prop->baseAIType->setValue(devilData->GetAI()->GetType());
+            aiData = std::dynamic_pointer_cast<objects::MiAIData>(
+                mMainWindow->GetBinaryDataSet("AIData")->GetObjectByID(
+                    (uint32_t)prop->baseAIType->value()));
+        }
+
+        if(aiData)
+        {
+            if(aiData->GetAggroLimit())
+            {
+                size_t aggroMax = 0;
+                for(uint8_t i = 0; i < 8; i++)
+                {
+                    if((aiData->GetAggroLimit() >> i) & 0x01)
+                    {
+                        aggroMax = (size_t)(aggroMax + i + 1);
+                    }
+                }
+
+                prop->aiAggroLimit->setText(qs(libcomp::String("%1 (Rank %2)")
+                    .Arg(aggroMax).Arg(aiData->GetAggroLimit())));
+            }
+            else
+            {
+                prop->aiAggroLimit->setText("1 (Rank 0)");
+            }
+
+            prop->aiLevelLimit->setText(qs(libcomp::String("+%1")
+                .Arg(aiData->GetAggroLevelLimit())));
+            prop->aiAggroDay->setText(qs(libcomp::String("%1 (%2)")
+                .Arg(aiData->GetAggroNormal()->GetDistance())
+                .Arg(aiData->GetAggroNormal()->GetFOV())));
+            prop->aiAggroNight->setText(qs(libcomp::String("%1 (%2)")
+                .Arg(aiData->GetAggroNight()->GetDistance())
+                .Arg(aiData->GetAggroNight()->GetFOV())));
+            prop->aiAggroCast->setText(qs(libcomp::String("%1 (%2)")
+                .Arg(aiData->GetAggroCast()->GetDistance())
+                .Arg(aiData->GetAggroCast()->GetFOV())));
+            prop->aiDeaggroScale->setText(qs(libcomp::String("x%1")
+                .Arg(aiData->GetDeaggroScale())));
+            prop->aiThinkSpeed->setText(qs(libcomp::String("%1 ms")
+                .Arg(aiData->GetThinkSpeed())));
+            prop->chkAINormalSkillUse->setChecked(
+                aiData->GetNormalSkillUse());
+            prop->chkAIStrikeFirst->setChecked(
+                aiData->GetStrikeFirst());
+        }
+        else
+        {
+            reset = true;
+        }
+    }
+    else
+    {
+        reset = true;
+    }
+
+    if(reset)
+    {
+        prop->baseAIType->setValue(0);
+        prop->aiAggroLimit->setText("");
+        prop->aiLevelLimit->setText("");
+        prop->aiAggroDay->setText("");
+        prop->aiAggroNight->setText("");
+        prop->aiAggroCast->setText("");
+        prop->aiDeaggroScale->setText("");
+        prop->aiThinkSpeed->setText("");
+        prop->chkAINormalSkillUse->setChecked(false);
+        prop->chkAIStrikeFirst->setChecked(false);
+    }
+
+    prop->baseAIType->blockSignals(false);
 }

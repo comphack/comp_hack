@@ -383,9 +383,12 @@ public:
 
     /**
      * Get all enemy and ally instances in the zone
+     * @param includeStaggered Includes all entities pending spawn from
+     *  being spawn staggered. Defaults to false.
      * @return List of all enemy and ally instances in the zone
      */
-    std::list<std::shared_ptr<ActiveEntityState>> GetEnemiesAndAllies() const;
+    std::list<std::shared_ptr<ActiveEntityState>> GetEnemiesAndAllies(
+        bool includeStaggered = false);
 
     /**
      * Get a loot box instance by it's ID.

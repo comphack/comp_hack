@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>375</width>
-    <height>600</height>
+    <height>730</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="layoutMain">
@@ -34,7 +34,7 @@
         <x>0</x>
         <y>0</y>
         <width>373</width>
-        <height>598</height>
+        <height>728</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="layoutScrollArea">
@@ -141,6 +141,199 @@
           <widget class="ObjectSelector" name="variant" native="true"/>
          </item>
         </layout>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="grpAI">
+         <property name="title">
+          <string>AI</string>
+         </property>
+         <layout class="QVBoxLayout" name="grpAILayout">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QGroupBox" name="grpBaseAIType">
+            <property name="title">
+             <string/>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+            <layout class="QGridLayout" name="grpBaseAITypeLayout">
+             <item row="0" column="0">
+              <widget class="QLabel" name="lblBaseAITypeID">
+               <property name="text">
+                <string>Base Type:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLineEdit" name="aiAggroDay">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="3">
+              <widget class="QLineEdit" name="aiAggroCast">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="2">
+              <widget class="QLineEdit" name="aiAggroNight">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QSpinBox" name="baseAIType">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="maximum">
+                <number>65535</number>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="lblAggro">
+               <property name="text">
+                <string>Aggro (Day/Night/Cast):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLabel" name="lblAILevelLimit">
+               <property name="text">
+                <string>Aggro Lvl Limit:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="lblAggroLimit">
+               <property name="text">
+                <string>Aggro Limit:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3">
+              <widget class="QLineEdit" name="aiLevelLimit">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="aiAggroLimit"/>
+             </item>
+             <item row="3" column="3">
+              <widget class="QLineEdit" name="aiThinkSpeed">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="2">
+              <widget class="QLabel" name="lblAIThinkSpeed">
+               <property name="text">
+                <string>Think Speed:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="lblDeaggroScale">
+               <property name="text">
+                <string>Deaggro Scale:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QLineEdit" name="aiDeaggroScale">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QCheckBox" name="chkAINormalSkillUse">
+               <property name="text">
+                <string>Normal Skill Use</string>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="2">
+              <widget class="QCheckBox" name="chkAIStrikeFirst">
+               <property name="text">
+                <string>Strike First</string>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <layout class="QFormLayout" name="grpAILayoutDetails">
+            <property name="leftMargin">
+             <number>9</number>
+            </property>
+            <property name="topMargin">
+             <number>9</number>
+            </property>
+            <property name="rightMargin">
+             <number>9</number>
+            </property>
+            <property name="bottomMargin">
+             <number>9</number>
+            </property>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="aiScript"/>
+            </item>
+            <item row="1" column="1">
+             <widget class="QSpinBox" name="logicGroupID">
+              <property name="maximum">
+               <number>65535</number>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="lblAIScript">
+              <property name="text">
+               <string>Script:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="lblLogicGroupID">
+              <property name="text">
+               <string>Logic Group ID:</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
        </item>
        <item>
         <widget class="QGroupBox" name="grpDrops">
@@ -260,53 +453,6 @@
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="grpAI">
-         <property name="title">
-          <string>AI</string>
-         </property>
-         <layout class="QFormLayout" name="grpAILayout">
-          <item row="0" column="0">
-           <widget class="QLabel" name="lblBaseAIType">
-            <property name="text">
-             <string>Base Type:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="lblAIScript">
-            <property name="text">
-             <string>Script:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="lblLogicGroupID">
-            <property name="text">
-             <string>Logic Group ID:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="baseAIType">
-            <property name="maximum">
-             <number>65535</number>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="aiScript"/>
-          </item>
-          <item row="2" column="1">
-           <widget class="QSpinBox" name="logicGroupID">
-            <property name="maximum">
-             <number>65535</number>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
         <layout class="QGridLayout" name="gridLayout">
          <property name="topMargin">
           <number>5</number>
@@ -386,6 +532,20 @@
           <widget class="QSpinBox" name="factionGroup">
            <property name="maximum">
             <number>2147483647</number>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="lblValidDQuestTarget">
+           <property name="text">
+            <string>D. Quest Target?:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QCheckBox" name="chkValidDQuestTarget">
+           <property name="text">
+            <string/>
            </property>
           </widget>
          </item>

@@ -1711,12 +1711,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
 
         if(dState->GetEntity())
         {
-            PopEntityForZoneProduction(zone, dState->GetEntityID(), 0);
-            ShowEntityToZone(zone, dState->GetEntityID());
-
-            server->GetTokuseiManager()->SendCostAdjustments(dState->GetEntityID(),
-                client);
-            characterManager->SendMovementSpeed(client, dState, true);
+            ShowDemonToZone(zone, client);
         }
     }
     else
@@ -1914,6 +1909,29 @@ void ZoneManager::ShowEntityToZone(const std::shared_ptr<Zone>& zone, int32_t en
     {
         activeState->SetDisplayState(ActiveDisplayState_t::ACTIVE);
     }
+}
+
+void ZoneManager::ShowDemonToZone(const std::shared_ptr<Zone>& zone,
+    const std::shared_ptr<ChannelClientConnection>& client)
+{
+    auto dState = client ? client->GetClientState()->GetDemonState() : nullptr;
+    if(!zone || !dState)
+    {
+        return;
+    }
+
+    auto server = mServer.lock();
+
+    bool summonWait = dState->GetDisplayState() ==
+        ActiveDisplayState_t::AWAITING_SUMMON;
+    PopEntityForZoneProduction(zone, dState->GetEntityID(),
+        summonWait ? 2 : 0);
+    ShowEntityToZone(zone, dState->GetEntityID());
+
+    // Relay starting state to source client
+    server->GetTokuseiManager()->SendCostAdjustments(dState->GetEntityID(),
+        client);
+    server->GetCharacterManager()->SendMovementSpeed(client, dState, true);
 }
 
 void ZoneManager::ShowEntity(const std::list<std::shared_ptr<
@@ -3247,7 +3265,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         {
             // Match enemies in zone on specified locations and
             // group/location pairs
-            for(auto eState : zone->GetEnemiesAndAllies())
+            for(auto eState : zone->GetEnemiesAndAllies(true))
             {
                 auto eBase = eState->GetEnemyBase();
                 if(eBase->GetSpawnGroupID() > 0 ||
@@ -7999,9 +8017,9 @@ void ZoneManager::SendAccessMessage(
                     options.AutoOnly = true;
                     options.NoInterrupt = true;
 
-                    auto state = client->GetClientState();
+                    auto state = c->GetClientState();
                     auto entityID = state->GetCharacterState()->GetEntityID();
-                    eventManager->HandleEvent(client, createEventID, entityID,
+                    eventManager->HandleEvent(c, createEventID, entityID,
                         nullptr, options);
                 }
             }

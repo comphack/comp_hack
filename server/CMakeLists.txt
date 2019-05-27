@@ -16,5 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ADD_SUBDIRECTORY(channel)
-ADD_SUBDIRECTORY(lobby)
-ADD_SUBDIRECTORY(world)
+
+IF(NOT CHANNEL_ONLY)
+    ADD_SUBDIRECTORY(lobby)
+    ADD_SUBDIRECTORY(world)
+ENDIF(NOT CHANNEL_ONLY)

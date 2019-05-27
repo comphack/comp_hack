@@ -266,7 +266,7 @@ void ActionManager::PerformActions(
                 for(auto z : zones)
                 {
                     // Include all enemy base entities (so allies too)
-                    for(auto eBase : z->GetEnemiesAndAllies())
+                    for(auto eBase : z->GetEnemiesAndAllies(true))
                     {
                         ActionContext copyCtx = ctx;
                         copyCtx.Client = nullptr;
@@ -604,7 +604,9 @@ std::set<int32_t> ActionManager::GetActionContextCIDs(
 
 bool ActionManager::StartEvent(ActionContext& ctx)
 {
-    auto act = GetAction<objects::ActionStartEvent>(ctx, false);
+    // Neither client nor zone are required so the validity of what
+    // the event does will be checked later
+    auto act = GetAction<objects::ActionStartEvent>(ctx, false, false);
     if(!act)
     {
         return false;
@@ -2066,20 +2068,6 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                 return false;
             }
 
-            if(act->GetIsSet())
-            {
-                int32_t existing = progress->GetDigitalizePoints(
-                    dgState->GetRaceID());
-                if(existing > points)
-                {
-                    LOG_ERROR("Attempted to lower digitalize points with"
-                        " direct set action\n");
-                    return false;
-                }
-
-                points = points - existing;
-            }
-
             std::unordered_map<uint8_t, int32_t> pointMap;
             pointMap[dgState->GetRaceID()] = points;
 
@@ -2351,6 +2339,35 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                 sZiotite, lZiotite, state->GetWorldCID());
         }
         break;
+    case objects::ActionUpdatePoints::PointType_t::REUNION_POINTS:
+        if(act->GetIsSet() || act->GetValue() < 0)
+        {
+            LOG_ERROR("Attempts to explicitly set or decrease reunion points"
+                " are not allowed!\n");
+            return false;
+        }
+        else
+        {
+            auto state = ctx.Client->GetClientState();
+            auto awd = state->GetAccountWorldData().Get();
+
+            if(act->GetModifier() == 0)
+            {
+                // Non-mitama
+                awd->SetReunionPoints(awd->GetReunionPoints() +
+                    (uint32_t)act->GetValue());
+            }
+            else
+            {
+                // Mitama
+                awd->SetMitamaReunionPoints(awd->GetMitamaReunionPoints() +
+                    (uint32_t)act->GetValue());
+            }
+
+            mServer.lock()->GetWorldDatabase()->QueueUpdate(awd,
+                state->GetAccountUID());
+        }
+        break;
     default:
         break;
     }
@@ -2523,6 +2540,13 @@ bool ActionManager::UpdateZoneFlags(ActionContext& ctx)
         // change global zones
         {
             auto eState = ctx.CurrentZone->GetActiveEntity(ctx.SourceEntityID);
+
+            if(!eState && !ctx.SourceEntityID && ctx.Client)
+            {
+                // Default to client character
+                eState = ctx.Client->GetClientState()->GetCharacterState();
+            }
+
             if(eState && act->GetType() ==
                 objects::ActionUpdateZoneFlags::Type_t::PARTNER_TOKUSEI)
             {

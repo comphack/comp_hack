@@ -52,6 +52,10 @@ public:
     void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
     void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
 
+private slots:
+    void BaseAITypeToggled(bool checked);
+    void UpdateAIDisplay();
+
 protected:
     Ui::Spawn *prop;
 };

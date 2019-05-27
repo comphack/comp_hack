@@ -45,7 +45,7 @@
                 </object>
             </element>
         </member>
-        <member name="name"><![CDATA[‘S”\]]></member>
+        <member name="name"><![CDATA[level up]]></member>
         <member name="reunionConditions">
             <element>
                 <object name="MiDevilReunionConditionData">

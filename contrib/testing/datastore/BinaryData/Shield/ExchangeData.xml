@@ -59,7 +59,7 @@
             </element>
             <element>
                 <object name="MiExchangeOptionData">
-                    <member name="name"><![CDATA[女/ハートキャンドルネックレス]]></member>
+                    <member name="name"><![CDATA[name]]></member>
                     <member name="items">
                         <element>
                             <object name="MiExchangeObjectData">

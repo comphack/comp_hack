@@ -3,7 +3,7 @@
         <member name="basic">
             <object name="MiNPCBasicData">
                 <member name="ID">1</member>
-                <member name="name"><![CDATA[サタン]]></member>
+                <member name="name"><![CDATA[Demon]]></member>
                 <member name="title">0</member>
                 <member name="gender">MALE</member>
                 <member name="fusionModifier">3</member>

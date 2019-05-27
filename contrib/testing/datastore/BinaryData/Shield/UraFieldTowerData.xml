@@ -3,7 +3,7 @@
         <member name="dungeonID">1</member>
         <member name="ID">1</member>
         <member name="letter">1</member>
-        <member name="name"><![CDATA[シールピラーＡ]]></member>
+        <member name="name"><![CDATA[field]]></member>
         <member name="captureItem">12143</member>
         <member name="captureDuration">180</member>
         <member name="phaseMiniBosses">

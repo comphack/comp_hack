@@ -9,7 +9,7 @@
                 <member name="usage">0</member>
                 <member name="tarot">
                     <object name="MiEnchantCharasticData">
-                        <member name="name"><![CDATA[サタンの]]></member>
+                        <member name="name"><![CDATA[tarot]]></member>
                         <member name="desc"><![CDATA[0]]></member>
                         <member name="equipLevel">50</member>
                         <member name="difficulty">70</member>
@@ -50,7 +50,7 @@
                 </member>
                 <member name="soul">
                     <object name="MiEnchantCharasticData">
-                        <member name="name"><![CDATA[@サタニック]]></member>
+                        <member name="name"><![CDATA[soul]]></member>
                         <member name="desc"><![CDATA[]]></member>
                         <member name="equipLevel">95</member>
                         <member name="difficulty">105</member>

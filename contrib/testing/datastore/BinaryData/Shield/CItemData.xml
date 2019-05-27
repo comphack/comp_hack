@@ -3,9 +3,9 @@
         <member name="baseData">
             <object name="MiCItemBaseData">
                 <member name="ID">1</member>
-                <member name="name"><![CDATA[傷薬]]></member>
-                <member name="name2"><![CDATA[傷薬]]></member>
-                <member name="desc"><![CDATA[自分のＨＰを３０回復する。]]></member>
+                <member name="name"><![CDATA[item]]></member>
+                <member name="name2"><![CDATA[item]]></member>
+                <member name="desc"><![CDATA[description here]]></member>
                 <member name="icon">1</member>
                 <member name="unk1">1</member>
                 <member name="canTrade">1</member>

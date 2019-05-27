@@ -2068,20 +2068,6 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
                 return false;
             }
 
-            if(act->GetIsSet())
-            {
-                int32_t existing = progress->GetDigitalizePoints(
-                    dgState->GetRaceID());
-                if(existing > points)
-                {
-                    LOG_ERROR("Attempted to lower digitalize points with"
-                        " direct set action\n");
-                    return false;
-                }
-
-                points = points - existing;
-            }
-
             std::unordered_map<uint8_t, int32_t> pointMap;
             pointMap[dgState->GetRaceID()] = points;
 

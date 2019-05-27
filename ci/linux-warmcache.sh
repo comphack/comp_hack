@@ -39,7 +39,13 @@ fi
 
 # Grab the build of libcomp if Dropbox isn't being used.
 if [ ! $USE_DROPBOX ]; then
-    wget -q "https://www.dropbox.com/sh/pjl8gpjtk8oah5s/AACb1VAuIykQ31JP7RevlOYva?preview=libcomp-${PLATFORM}.tar.bz2&dl=1" -O "libcomp-${PLATFORM}.tar.bz2"
+    if [ ! -f "libcomp-${PLATFORM}.tar.bz2" ]; then
+        if [ "$PLATFORM" == "clang" ]; then
+            wget -q "https://www.dropbox.com/s/y5edp8x6se75p4b/libcomp-${PLATFORM}.tar.bz2?dl=1" -O "libcomp-${PLATFORM}.tar.bz2"
+        else
+            wget -q "https://www.dropbox.com/s/inysaqxdzs7o8nx/libcomp-${PLATFORM}.tar.bz2?dl=1" -O "libcomp-${PLATFORM}.tar.bz2"
+        fi
+    fi
 fi
 
 # Just for debug to make sure the cache is setup right

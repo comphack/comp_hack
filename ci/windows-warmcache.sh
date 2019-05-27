@@ -31,7 +31,9 @@ fi
 
 # Grab the build of libcomp if Dropbox isn't being used.
 if [ ! $USE_DROPBOX ]; then
-    curl -Lo "libcomp-${PLATFORM}.zip" "https://www.dropbox.com/sh/pjl8gpjtk8oah5s/AACb1VAuIykQ31JP7RevlOYva?preview=libcomp-${PLATFORM}.zip&dl=1"
+    if [ ! -f "libcomp-${PLATFORM}.zip" ]; then
+        curl -Lo "libcomp-${PLATFORM}.zip" "https://www.dropbox.com/s/z8t1lkumu9zz9fn/libcomp-${PLATFORM}.zip?dl=1"
+    fi
 fi
 
 # Just for debug to make sure the cache is setup right

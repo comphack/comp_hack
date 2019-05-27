@@ -286,14 +286,14 @@ void SpawnList::UpdateAIDisplay()
 
         auto aiData = std::dynamic_pointer_cast<objects::MiAIData>(
             mMainWindow->GetBinaryDataSet("AIData")->GetObjectByID(
-                prop->baseAIType->value()));
+                (uint32_t)prop->baseAIType->value()));
         if(!aiData && devilData)
         {
             // Reset to default and try to retrieve again
             prop->baseAIType->setValue(devilData->GetAI()->GetType());
             aiData = std::dynamic_pointer_cast<objects::MiAIData>(
                 mMainWindow->GetBinaryDataSet("AIData")->GetObjectByID(
-                    prop->baseAIType->value()));
+                    (uint32_t)prop->baseAIType->value()));
         }
 
         if(aiData)

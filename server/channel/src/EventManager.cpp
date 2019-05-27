@@ -873,10 +873,10 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
 
             auto serverDataManager = mServer.lock()->GetServerDataManager();
             auto script = serverDataManager->GetScript(scriptCondition->GetScriptID());
-            if(!ctx.CurrentZone)
+            if(ctx.Client && !ctx.CurrentZone)
             {
-                LOG_ERROR(libcomp::String("Attempted to execute a condition"
-                    " script ID outside of a zone: %1\n")
+                LOG_ERROR(libcomp::String("Attempted to execute a client"
+                    " targeted condition script ID outside of a zone: %1\n")
                     .Arg(scriptCondition->GetScriptID()));
             }
             else if(script && script->Type.ToLower() == "eventcondition")
@@ -902,7 +902,8 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
                     auto state = client ? client->GetClientState() : nullptr;
                     auto scriptResult = !f.IsNull()
                         ? f.Evaluate<int32_t>(
-                            ctx.CurrentZone->GetActiveEntity(sourceEntityID),
+                            ctx.CurrentZone ? ctx.CurrentZone
+                                ->GetActiveEntity(sourceEntityID) : nullptr,
                             state ? state->GetCharacterState() : nullptr,
                             state ? state->GetDemonState() : nullptr,
                             ctx.CurrentZone,
@@ -2115,14 +2116,16 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                     // Current zone is part of the instance they have access to
                     {
                         auto zone = client->GetClientState()->GetZone();
-                        auto currentInstance = zone->GetInstance();
+                        auto currentInstance = zone
+                            ? zone->GetInstance() : nullptr;
 
                         auto def = access ? server->GetServerDataManager()
                             ->GetZoneInstanceData(access->GetDefinitionID())
                             : nullptr;
                         auto currentDef = currentInstance
                             ? currentInstance->GetDefinition() : nullptr;
-                        auto currentZoneDef = zone->GetDefinition();
+                        auto currentZoneDef = zone
+                            ? zone->GetDefinition() : nullptr;
 
                         // true if the instance is the same, the lobby is the
                         // same or they are in the lobby

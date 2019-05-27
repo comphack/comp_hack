@@ -37,6 +37,11 @@ if [ "$PLATFORM" == "gcc5" ]; then
     fi
 fi
 
+# Grab the build of libcomp if Dropbox isn't being used.
+if [ ! $USE_DROPBOX ]; then
+    wget -q "https://www.dropbox.com/sh/pjl8gpjtk8oah5s/AACb1VAuIykQ31JP7RevlOYva?preview=libcomp-${PLATFORM}.tar.bz2&dl=1" -O "libcomp-${PLATFORM}.tar.bz2"
+fi
+
 # Just for debug to make sure the cache is setup right
 echo "State of cache:"
 ls -lh

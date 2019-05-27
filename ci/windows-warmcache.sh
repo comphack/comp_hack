@@ -29,6 +29,11 @@ if [ ! -f "Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar" ]; then
     ci/travis-cache-windows.sh save
 fi
 
+# Grab the build of libcomp if Dropbox isn't being used.
+if [ ! $USE_DROPBOX ]; then
+    curl -Lo "libcomp-${PLATFORM}.zip" "https://www.dropbox.com/sh/pjl8gpjtk8oah5s/AACb1VAuIykQ31JP7RevlOYva?preview=libcomp-${PLATFORM}.zip&dl=1"
+fi
+
 # Just for debug to make sure the cache is setup right
 echo "State of cache:"
 ls -lh

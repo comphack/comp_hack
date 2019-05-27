@@ -20,11 +20,11 @@ echo "Installed external dependencies"
 
 echo "Installing libcomp"
 
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+if [ $USE_DROPBOX ]; then
     dropbox_setup
     dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 else
-    cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
+    cp "${CACHE_DIR}/libcomp-${PLATFORM}.tar.bz2" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 fi
 
 tar xf "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" | ../ci/report-progress.sh
@@ -36,18 +36,20 @@ echo "Installed libcomp"
 
 echo "Installing comp_channel"
 
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_download "build/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
-else
-    cp "${CACHE_DIR}/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
-fi
-
 mkdir bin
 cd bin
-tar xf "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
-rm "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
-mv comp_hack-*/bin/comp_channel ./
-rm -rf comp_hack-*/
+
+if [ $USE_DROPBOX ]; then
+    dropbox_download "build/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
+    tar xf "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
+    rm "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
+    mv comp_hack-*/bin/comp_channel ./
+    rm -rf comp_hack-*/
+else
+    # Create a blank file to add to the installer.
+    echo "blank" > comp_channel
+fi
+
 ls -lh
 cd ..
 
@@ -78,7 +80,7 @@ cmake --build . --target guide
 # echo "Copying build result to the cache"
 # mv comp_hack-*.tar.bz2 "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"
 
-# if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+# if [ $USE_DROPBOX ]; then
 #     dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.tar.gz"
 # fi
 

@@ -33,11 +33,11 @@ echo "Installed external dependencies"
 
 echo "Installing libcomp"
 
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+if [ $USE_DROPBOX ]; then
     dropbox_setup
     dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 else
-    cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    cp "${CACHE_DIR}/libcomp-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 fi
 
 unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" | ../ci/report-progress.sh
@@ -49,18 +49,21 @@ echo "Installed libcomp"
 
 echo "Installing comp_channel"
 
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-    dropbox_download "build/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
-else
-    cp "${CACHE_DIR}/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
-fi
-
 mkdir bin
 cd bin
-unzip "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
-rm "../comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
-mv comp_hack-*/comp_channel* ./
-rm -rf comp_hack-*/
+
+if [ $USE_DROPBOX ]; then
+    dropbox_download "build/comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    unzip "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    rm "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    mv comp_hack-*/comp_channel* ./
+    rm -rf comp_hack-*/
+else
+    # Create a blank file to add to the installer.
+    echo "blank" > comp_channel.exe
+    echo "blank" > comp_channel.pdb
+fi
+
 ls -lh
 cd ..
 
@@ -93,7 +96,7 @@ cp comp_hack-*.{zip,msi} "${ROOT_DIR}/deploy/"
 mv comp_hack-*.zip "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 mv comp_hack-*.msi "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
 
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+if [ $USE_DROPBOX ]; then
     dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
     dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
 fi

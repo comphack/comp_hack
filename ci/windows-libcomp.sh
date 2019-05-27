@@ -4,6 +4,12 @@ set -ex
 # Load the global settings.
 source "ci/global.sh"
 
+# Skip if not using Dropbox (we assume the build uses the release libcomp).
+if [ ! $USE_DROPBOX ]; then
+    echo "Not building libcomp because Dropbox is not setup for this build."
+    exit 0
+fi
+
 # Run the cache again just in case it was not warmed.
 source "ci/windows-warmcache.sh"
 
@@ -12,7 +18,7 @@ source "ci/windows-warmcache.sh"
 #
 
 # Check for existing build.
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+if [ $USE_DROPBOX ]; then
     dropbox_setup
 
     if dropbox-deployment -d -e "$DROPBOX_ENV" -u build -a . -s "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"; then
@@ -51,12 +57,8 @@ cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
 echo "Running build"
 cmake --build . --config "$CONFIGURATION" --target package
 
-echo "Copying package to cache for next stage"
-
-mv libcomp-*.zip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
-
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+if [ $USE_DROPBOX ]; then
+    echo "Copying package to cache for next stage"
+    mv libcomp-*.zip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
     dropbox_upload build "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
-else
-    cp "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "${CACHE_DIR}/"
 fi

@@ -12,7 +12,7 @@ source "ci/windows-warmcache.sh"
 #
 
 # Check for existing build.
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+if [ $USE_DROPBOX ]; then
     dropbox_setup
 
     if dropbox-deployment -d -e "$DROPBOX_ENV" -u build -a . -s "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"; then
@@ -31,10 +31,10 @@ echo "Installed external dependencies"
 
 echo "Installing libcomp"
 
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+if [ $USE_DROPBOX ]; then
     dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 else
-    cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    cp "${CACHE_DIR}/libcomp-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 fi
 
 unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" | ../ci/report-progress.sh
@@ -58,12 +58,8 @@ cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=OFF -DCHANNEL_ONLY=ON \
 echo "Running build"
 cmake --build . --config "$CONFIGURATION" --target package
 
-echo "Copying build result to the cache"
-
-mv comp_hack-*.zip "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
-
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+if [ $USE_DROPBOX ]; then
+    echo "Copying build result to the cache"
+    mv comp_hack-*.zip "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
     dropbox_upload build "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip"
-else
-    cp "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.zip" "${CACHE_DIR}/"
 fi

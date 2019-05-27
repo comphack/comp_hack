@@ -17,6 +17,22 @@ export LINUX_CLANG_VERSION=3.8.0
 export WINDOWS_QT_VERSION=5.12.3
 
 export DROPBOX_ENV=DROPBOX_OAUTH_BEARER_$(echo $TRAVIS_REPO_SLUG | LC_ALL=C sed -e "s/\//_/" | awk '{ print toupper($0) }')
+export USE_DROPBOX=
+
+set +x
+
+if [[ ! -z "${!DROPBOX_ENV}" ]];then
+    export USE_DROPBOX=1
+fi
+
+set -x
+
+if [ $USE_DROPBOX ]; then
+    echo "Dropbox will be used for a full branch build."
+else
+    echo "Dropbox will NOT be used for this build."
+    echo "Nothing will be saved and the release libcomp will be used."
+fi
 
 if [ "$TRAVIS_OS_NAME" == "windows" ]; then
     export CONFIGURATION="RelWithDebInfo"

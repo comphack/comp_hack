@@ -9,7 +9,7 @@ source "ci/global.sh"
 #
 
 # Check for existing build.
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+if [ $USE_DROPBOX ]; then
     dropbox_setup
 
     if dropbox-deployment -d -e "$DROPBOX_ENV" -u build -a . -s "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"; then
@@ -29,10 +29,10 @@ echo "Installed external dependencies"
 
 echo "Installing libcomp"
 
-if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+if [ $USE_DROPBOX ]; then
     dropbox_download "build/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 else
-    cp "${CACHE_DIR}/libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
+    cp "${CACHE_DIR}/libcomp-${PLATFORM}.tar.bz2" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 fi
 
 tar xf "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" | ../ci/report-progress.sh
@@ -58,14 +58,10 @@ cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
 echo "Running build"
 cmake --build . --config "$CONFIGURATION" --target package
 
-echo "Copying build result to the cache"
-
-mv comp_hack-*.tar.bz2 "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
-
 if [ "$CMAKE_GENERATOR" != "Ninja" ]; then
-    if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
+    if [ $USE_DROPBOX ]; then
+        echo "Copying build result to the cache"
+        mv comp_hack-*.tar.bz2 "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
         dropbox_upload build "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
-    else
-        cp "comp_channel-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" "${CACHE_DIR}/"
     fi
 fi

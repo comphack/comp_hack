@@ -101,11 +101,7 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         // If a demon is being placed, it will have already been described to the
         // the client by this point so create and show it now.
-        bool summonWait = dState->GetDisplayState() ==
-            ActiveDisplayState_t::AWAITING_SUMMON;
-        zoneManager->PopEntityForZoneProduction(zone, dState->GetEntityID(),
-            summonWait ? 2 : 0);
-        zoneManager->ShowEntityToZone(zone, dState->GetEntityID());
+        zoneManager->ShowDemonToZone(zone, client);
     }
 
     return true;

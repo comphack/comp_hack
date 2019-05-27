@@ -11,6 +11,8 @@ source "ci/windows-warmcache.sh"
 # Dependencies
 #
 
+cd "${ROOT_DIR}"
+
 # Install .NET 3.5 from PowerShell first...
 # https://travis-ci.community/t/unable-to-install-wix-toolset/1071/3
 echo "Installing .NET 3.5"

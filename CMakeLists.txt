@@ -35,7 +35,7 @@ SET(VERSION_MAJOR 4)
 SET(VERSION_MINOR 2)
 
 # Patch version (a hotfix).
-SET(VERSION_PATCH 0)
+SET(VERSION_PATCH 1)
 
 # Codename for the version.
 SET(VERSION_CODENAME "Peorth")
@@ -527,6 +527,9 @@ SET(LIBCOMP_INCLUDES
     ${CMAKE_BINARY_DIR}/libcomp/libcomp/objgen
 )
 
+SET(CHANNEL_DIR ${CMAKE_SOURCE_DIR}/server/channel)
+SET(LIBCOMP_DIR ${CMAKE_SOURCE_DIR}/libcomp/libcomp)
+
 SET(COVERALLS_SRCS "" CACHE INTERNAL "Coverage source files")
 
 # Add sources to the coverage source list.
@@ -561,7 +564,7 @@ ENDMACRO()
 
 # This macro will create a target to generate the documentation using the
 # specified Doxyfile.in file.
-MACRO(GENERATE_DOCS doxyfile)
+MACRO(GENERATE_DOCS_EX doxyfile targetname)
     # Make sure we have Doxygen.
     FIND_PACKAGE(Doxygen)
 
@@ -573,30 +576,29 @@ MACRO(GENERATE_DOCS doxyfile)
         # Create the target that will run Doxygen. The working directory is
         # the build directory so all the documentation ends up in the same
         # directory structure.
-        IF(${PROJECT_NAME} MATCHES "libcomp")
-            ADD_CUSTOM_TARGET(doc-${PROJECT_NAME} ${DOXYGEN_EXECUTABLE}
+        IF(${targetname} MATCHES "libcomp")
+            ADD_CUSTOM_TARGET(doc-${targetname} ${DOXYGEN_EXECUTABLE}
                 ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY
                 ${CMAKE_BINARY_DIR} COMMENT
                 "Generating ${PROJECT_NAME} API documentation" VERBATIM)
-        ELSE(${PROJECT_NAME} MATCHES "libcomp")
-            IF(USE_PREBUILT_LIBCOMP)
-                ADD_CUSTOM_TARGET(doc-${PROJECT_NAME} ${DOXYGEN_EXECUTABLE}
-                    ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY
-                    ${CMAKE_BINARY_DIR} COMMENT
-                    "Generating ${PROJECT_NAME} API documentation" VERBATIM)
-            ELSE(USE_PREBUILT_LIBCOMP)
-                ADD_CUSTOM_TARGET(doc-${PROJECT_NAME} ${DOXYGEN_EXECUTABLE}
-                    ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY
-                    ${CMAKE_BINARY_DIR} DEPENDS doc-libcomp COMMENT
-                    "Generating ${PROJECT_NAME} API documentation" VERBATIM)
-            ENDIF(USE_PREBUILT_LIBCOMP)
-        ENDIF(${PROJECT_NAME} MATCHES "libcomp")
+        ELSE(${targetname} MATCHES "libcomp")
+            ADD_CUSTOM_TARGET(doc-${targetname} ${DOXYGEN_EXECUTABLE}
+                ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY
+                ${CMAKE_BINARY_DIR} DEPENDS doc-libcomp COMMENT
+                "Generating ${targetname} API documentation" VERBATIM)
+        ENDIF(${targetname} MATCHES "libcomp")
 
         # Add the target to a list of documentation targets.
         GET_PROPERTY(targets GLOBAL PROPERTY DOC_TARGETS)
         SET_PROPERTY(GLOBAL PROPERTY DOC_TARGETS
-            doc-${PROJECT_NAME} ${targets})
+            doc-${targetname} ${targets})
     ENDIF(DOXYGEN_FOUND AND GENERATE_DOCUMENTATION)
+ENDMACRO(GENERATE_DOCS_EX doxyfile)
+
+# This macro will create a target to generate the documentation using the
+# specified Doxyfile.in file.
+MACRO(GENERATE_DOCS doxyfile)
+    GENERATE_DOCS_EX("${doxyfile}" ${PROJECT_NAME})
 ENDMACRO(GENERATE_DOCS doxyfile)
 
 # When building Windows executables, this macro packs the executable. This
@@ -889,7 +891,7 @@ IF(USE_PREBUILT_LIBCOMP)
 
     # Add a target to generate API documentation.
     FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/api/libcomp)
-    GENERATE_DOCS(libcomp/libcomp/doc/Doxyfile.in)
+    GENERATE_DOCS_EX(libcomp/libcomp/doc/Doxyfile.in libcomp)
 ENDIF(USE_PREBUILT_LIBCOMP)
 
 IF(NOT UPDATER_ONLY)

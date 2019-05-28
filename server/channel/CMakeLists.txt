@@ -19,7 +19,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 # Add a target to generate API documentation.
 FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/api/server/channel)
-GENERATE_DOCS(doc/Doxyfile.in)
+GENERATE_DOCS_EX(doc/Doxyfile.in comp_channel)
 
 IF(IMPORT_CHANNEL)
 

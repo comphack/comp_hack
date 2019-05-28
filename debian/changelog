@@ -1,3 +1,9 @@
+comphack (4.2.1) xenial; urgency=low
+
+  * Corrected an issue where the web API would shutdown.
+
+ -- COMP Omega <compomega@tutanota.com>  Tue, 28 May 2019 06:33:59 -0600
+
 comphack (4.2.0) xenial; urgency=low
 
   * Now built with Visual Studio 2017. A new redist may be needed.

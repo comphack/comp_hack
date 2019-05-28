@@ -153,12 +153,14 @@ int main(int argc, const char *argv[])
 
     auto pImportHandler = new lobby::ImportHandler(config, server);
 
+    CivetServer *pWebServer = nullptr;
+
     try
     {
-        CivetServer webServer(options);
-        webServer.addHandler("/", pLoginHandler);
-        webServer.addHandler("/api", pApiHandler);
-        webServer.addHandler("/import", pImportHandler);
+        pWebServer = new CivetServer(options);
+        pWebServer->addHandler("/", pLoginHandler);
+        pWebServer->addHandler("/api", pApiHandler);
+        pWebServer->addHandler("/import", pImportHandler);
     }
     catch(CivetException e)
     {
@@ -173,6 +175,10 @@ int main(int argc, const char *argv[])
 
     // Start the main server loop (blocks until done).
     int returnCode = server->Start();
+
+    // Shut down the web server.
+    delete pWebServer;
+    pWebServer = nullptr;
 
     // Complete the shutdown process.
     libcomp::Shutdown::Complete();

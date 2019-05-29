@@ -69,13 +69,6 @@ cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
     -DUSE_PREBUILT_LIBCOMP=ON -DIMPORT_CHANNEL=ON -G "${GENERATOR}" ..
 
 echo "Running build"
-
-# debug
-cat Doxyfile
-doxygen -v
-cmake --build . --target dox-libcomp
-exit 0
-
 cmake --build . --target git-version
 cmake --build .
 cmake --build . --target doc

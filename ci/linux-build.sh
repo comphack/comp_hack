@@ -71,6 +71,7 @@ cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
 echo "Running build"
 cmake --build . --target git-version
 cmake --build .
+grep -n "INPUT  " `find -name Doxyfile`
 cmake --build . --target doc
 cmake --build . --target guide
 # cmake --build . --target test

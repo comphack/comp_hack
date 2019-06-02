@@ -6115,7 +6115,19 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 
                 if(filtered.size() > 0)
                 {
-                    auto loot = characterManager->CreateLootFromDrops(filtered);
+                    // Create loot one drop at a time so we don't combine
+                    // two non-max stacks into one
+                    std::list<std::shared_ptr<objects::Loot>> loot;
+                    for(auto f : filtered)
+                    {
+                        auto dList = { f };
+                        for(auto l : characterManager->CreateLootFromDrops(
+                            dList))
+                        {
+                            loot.push_back(l);
+                        }
+                    }
+
                     zoneManager->UpdateDestinyBox(instance, sourceState
                         ->GetWorldCID(), loot);
                 }

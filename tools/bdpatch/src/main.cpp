@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
     ADD_TYPE    ("  cdevilbookbonusmitama Format for CDevilBookBonusMitamaData.sbin", "cdevilbookbonusmitama", MiCDevilBookBonusMitamaData);
     ADD_TYPE    ("  cdevilboosticon       Format for CDevilBoostIconData.sbin", "cdevilboosticon", MiCDevilBoostIconData);
     ADD_TYPE    ("  cdevildungeon         Format for CDevilDungeonData.sbin", "cdevildungeon", MiCDevilDungeonData);
-    ADD_TYPE    ("  cdevilequipexclusive  Format for CDevilEquipmentExclusiveData.sbin", "cdevilequipmentexclusive", MiCDevilEquipmentExclusiveData);
+    ADD_TYPE    ("  cdevilequipexclusive  Format for CDevilEquipmentExclusiveData.sbin", "cdevilequipexclusive", MiCDevilEquipmentExclusiveData);
     ADD_TYPE    ("  cequipmodel           Format for CEquipModelData.sbin", "cequipmodel", MiCEquipModelData);
     ADD_TYPE    ("  ceventmessage         Format for CEventMessageData.sbin", "ceventmessage", MiCEventMessageData);
     ADD_TYPE    ("  cguardianassist       Format for CGuardianAssistData.sbin", "cguardianassist", MiCGuardianAssistData);

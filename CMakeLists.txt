@@ -35,10 +35,10 @@ SET(VERSION_MAJOR 4)
 SET(VERSION_MINOR 2)
 
 # Patch version (a hotfix).
-SET(VERSION_PATCH 1)
+SET(VERSION_PATCH 99)
 
 # Codename for the version.
-SET(VERSION_CODENAME "Peorth")
+SET(VERSION_CODENAME "Eoh (Unstable)")
 
 #
 # END OF VERSION CONSTANTS

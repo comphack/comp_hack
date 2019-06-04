@@ -702,7 +702,7 @@ EXCLUDE_SYMLINKS       = NO
 # for example use the pattern */test/*
 
 EXCLUDE_PATTERNS       = */.git/* \
-                         */build*/* \
+                         @CMAKE_SOURCE_DIR@/build*/* \
                          */mobile/jni/openssl/* \
                          */eigen2/* \
                          */crap/* \

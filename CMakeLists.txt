@@ -318,22 +318,18 @@ ENDIF()
 
 # Include all build code for external projects.
 IF(EXISTS "${CMAKE_SOURCE_DIR}/binaries")
-    MESSAGE("-- Using pre-built binaries.")
-
-    INCLUDE(${COMP_MODULE_PATH}/binaries.cmake)
-
-    IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
-        INCLUDE(${CMAKE_SOURCE_DIR}/dream/cmake/binaries.cmake)
-    ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
+    MESSAGE("-- Using pre-built binaries")
+    SET(USE_EXTERNAL_BINARIES TRUE)
 ELSE()
-    MESSAGE("-- Building external binaries.")
-
-    INCLUDE(${COMP_MODULE_PATH}/external.cmake)
-
-    IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
-        INCLUDE(${CMAKE_SOURCE_DIR}/dream/cmake/external.cmake)
-    ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
+    MESSAGE("-- Building external binaries")
+    SET(USE_EXTERNAL_BINARIES FALSE)
 ENDIF()
+
+INCLUDE(${COMP_MODULE_PATH}/external.cmake)
+
+IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
+    INCLUDE(${CMAKE_SOURCE_DIR}/dream/cmake/external.cmake)
+ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
 
 # PDB not found for library.
 ADD_LINKER_FLAGS(AUTO /ignore:4099)

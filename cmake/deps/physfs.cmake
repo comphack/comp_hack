@@ -1,0 +1,118 @@
+# This file is part of COMP_hack.
+#
+# Copyright (C) 2010-2019 COMP_hack Team <compomega@tutanota.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+OPTION(USE_SYSTEM_PHYSFS "Build with the system PhysFS library." OFF)
+
+IF(USE_SYSTEM_PHYSFS)
+    FIND_PACKAGE(PhysFS)
+ENDIF(USE_SYSTEM_PHYSFS)
+
+IF(PHYSFS_FOUND)
+    MESSAGE("-- Using system PhysFS")
+
+    ADD_CUSTOM_TARGET(physfs-lib)
+
+    ADD_LIBRARY(physfs STATIC IMPORTED)
+    SET_TARGET_PROPERTIES(physfs PROPERTIES IMPORTED_LOCATION
+        "${PHYSFS_LIBRARY}")
+    SET_TARGET_PROPERTIES(physfs PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${PHYSFS_INCLUDE_DIR}")
+ELSEIF(USE_EXTERNAL_BINARIES)
+    MESSAGE("-- Using external binaries PhysFS")
+
+    ADD_CUSTOM_TARGET(physfs-lib)
+
+    SET(INSTALL_DIR "${CMAKE_SOURCE_DIR}/binaries/physfs")
+
+    SET(PHYSFS_INCLUDE_DIRS "${INSTALL_DIR}/include")
+
+    ADD_LIBRARY(physfs STATIC IMPORTED)
+
+    IF(WIN32)
+        SET_TARGET_PROPERTIES(physfs PROPERTIES
+            IMPORTED_LOCATION_RELEASE "${INSTALL_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}physfs${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            IMPORTED_LOCATION_RELWITHDEBINFO "${INSTALL_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}physfs_reldeb${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            IMPORTED_LOCATION_DEBUG "${INSTALL_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}physfsd${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    ELSE()
+        SET_TARGET_PROPERTIES(physfs PROPERTIES IMPORTED_LOCATION
+            "${INSTALL_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}physfs${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    ENDIF()
+
+    SET_TARGET_PROPERTIES(physfs PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${PHYSFS_INCLUDE_DIRS}")
+ELSE(PHYSFS_FOUND)
+    MESSAGE("-- Building external PhysFS")
+
+    IF(EXISTS "${CMAKE_SOURCE_DIR}/deps/physfs.zip")
+        SET(PHYSFS_URL
+            URL "${CMAKE_SOURCE_DIR}/deps/physfs.zip"
+        )
+    ELSEIF(GIT_DEPENDENCIES)
+        SET(PHYSFS_URL
+            GIT_REPOSITORY https://github.com/comphack/physfs.git
+            GIT_TAG comp_hack
+        )
+    ELSE()
+        SET(PHYSFS_URL
+            URL https://github.com/comphack/physfs/archive/comp_hack-20180424.zip
+            URL_HASH SHA1=46de8609129749fccd8bbed02b68d6966ebb5e9b
+        )
+    ENDIF()
+
+    ExternalProject_Add(
+        physfs-lib
+
+        ${PHYSFS_URL}
+
+        PREFIX ${CMAKE_CURRENT_BINARY_DIR}/physfs
+        CMAKE_ARGS ${CMAKE_RELWITHDEBINFO_OPTIONS} -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> "-DCMAKE_CXX_FLAGS=-std=c++11 ${SPECIAL_COMPILER_FLAGS}" -DUSE_STATIC_RUNTIME=${USE_STATIC_RUNTIME} -DCMAKE_DEBUG_POSTFIX=d -DPHYSFS_ARCHIVE_ZIP=FALSE -DPHYSFS_ARCHIVE_7Z=FALSE -DPHYSFS_ARCHIVE_GRP=FALSE -DPHYSFS_ARCHIVE_WAD=FALSE -DPHYSFS_ARCHIVE_HOG=FALSE -DPHYSFS_ARCHIVE_MVL=FALSE -DPHYSFS_ARCHIVE_QPAK=FALSE -DPHYSFS_BUILD_STATIC=TRUE -DPHYSFS_BUILD_SHARED=FALSE -DPHYSFS_BUILD_TEST=FALSE -DPHYSFS_BUILD_WX_TEST=FALSE -DPHYSFS_INTERNAL_ZLIB=TRUE
+
+        # Dump output to a log instead of the screen.
+        LOG_DOWNLOAD ON
+        LOG_CONFIGURE ON
+        LOG_BUILD ON
+        LOG_INSTALL ON
+
+        BUILD_BYPRODUCTS <INSTALL_DIR>/lib/${CMAKE_STATIC_LIBRARY_PREFIX}physfs${CMAKE_STATIC_LIBRARY_SUFFIX}
+        BUILD_BYPRODUCTS <INSTALL_DIR>/lib/${CMAKE_STATIC_LIBRARY_PREFIX}physfsd${CMAKE_STATIC_LIBRARY_SUFFIX}
+        BUILD_BYPRODUCTS <INSTALL_DIR>/lib/${CMAKE_STATIC_LIBRARY_PREFIX}physfs_reldeb${CMAKE_STATIC_LIBRARY_SUFFIX}
+    )
+
+    ExternalProject_Get_Property(physfs-lib INSTALL_DIR)
+
+    SET_TARGET_PROPERTIES(physfs-lib PROPERTIES FOLDER "Dependencies")
+
+    SET(PHYSFS_INCLUDE_DIRS "${INSTALL_DIR}/include")
+
+    FILE(MAKE_DIRECTORY "${PHYSFS_INCLUDE_DIRS}")
+
+    ADD_LIBRARY(physfs STATIC IMPORTED)
+    ADD_DEPENDENCIES(physfs physfs-lib)
+
+    IF(WIN32)
+        SET_TARGET_PROPERTIES(physfs PROPERTIES
+            IMPORTED_LOCATION_RELEASE "${INSTALL_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}physfs${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            IMPORTED_LOCATION_RELWITHDEBINFO "${INSTALL_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}physfs_reldeb${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            IMPORTED_LOCATION_DEBUG "${INSTALL_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}physfsd${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    ELSE()
+        SET_TARGET_PROPERTIES(physfs PROPERTIES IMPORTED_LOCATION
+            "${INSTALL_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}physfs${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    ENDIF()
+
+    SET_TARGET_PROPERTIES(physfs PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${PHYSFS_INCLUDE_DIRS}")
+ENDIF(PHYSFS_FOUND)

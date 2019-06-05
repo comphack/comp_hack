@@ -6,7 +6,7 @@ export CACHE_DIR="${TRAVIS_BUILD_DIR}/cache"
 export DOXYGEN_VERSION=1.8.14
 export DOXYGEN_EXTERNAL_RELEASE=external-25
 
-export EXTERNAL_RELEASE=external-31
+export EXTERNAL_RELEASE=external-32
 export EXTERNAL_VERSION=0.1.1
 
 export LINUX_NINJA_VERSION=1.7.1

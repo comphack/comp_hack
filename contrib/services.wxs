@@ -1,4 +1,17 @@
 <CPackWiXPatch>
+    <CPackWiXFragment Id="#PRODUCT">
+        <InstallExecuteSequence>
+            <Custom Action="set_servdep_world" Before="InstallServices"><![CDATA[&CM_C_lobby=3]]></Custom>
+            <Custom Action="set_servdep_channel" Before="InstallServices"><![CDATA[&CM_C_world=3]]></Custom>
+        </InstallExecuteSequence>
+
+        <Property Id="SERVDEP_LOBBY" Value="LmHosts"/>
+        <Property Id="SERVDEP_WORLD" Value="LmHosts"/>
+        <Property Id="SERVDEP_CHANNEL" Value="LmHosts"/>
+
+        <CustomAction Id="set_servdep_world" Property="SERVDEP_WORLD" Value="comp_lobby"/>
+        <CustomAction Id="set_servdep_channel" Property="SERVDEP_CHANNEL" Value="comp_world"/>
+    </CPackWiXFragment>
     <CPackWiXFragment Id="CM_CP_lobby.comp_lobby.exe">
         <ServiceInstall
             Id="comp_lobby"
@@ -10,8 +23,9 @@
             Account="[SERVICEACCOUNT]"
             Password="[SERVICEPASSWORD]"
             ErrorControl="normal">
-             <ServiceDependency Id="LmHosts"/>
+             <ServiceDependency Id="[SERVDEP_LOBBY]"/>
         </ServiceInstall>
+        <ServiceControl Id="comp_lobby" Stop="both" Remove="uninstall" Name="comp_lobby" Wait="yes"/>
     </CPackWiXFragment>
     <CPackWiXFragment Id="CM_FP_lobby.comp_lobby.exe">
         <FirewallException xmlns="http://schemas.microsoft.com/wix/FirewallExtension"
@@ -32,8 +46,9 @@
             Account="[SERVICEACCOUNT]"
             Password="[SERVICEPASSWORD]"
             ErrorControl="normal">
-             <ServiceDependency Id="comp_lobby"/>
+             <ServiceDependency Id="[SERVDEP_WORLD]"/>
         </ServiceInstall>
+        <ServiceControl Id="comp_world" Stop="both" Remove="uninstall" Name="comp_world" Wait="yes"/>
     </CPackWiXFragment>
     <CPackWiXFragment Id="CM_FP_world.comp_world.exe">
         <FirewallException xmlns="http://schemas.microsoft.com/wix/FirewallExtension"
@@ -54,9 +69,9 @@
             Account="[SERVICEACCOUNT]"
             Password="[SERVICEPASSWORD]"
             ErrorControl="normal">
-             <ServiceDependency Id="comp_world"/>
+             <ServiceDependency Id="[SERVDEP_CHANNEL]"/>
         </ServiceInstall>
-        <!-- <ServiceControl Id="comp_channel" Start="install" Stop="both" Remove="uninstall" Name="comp_channel" Wait="yes"/> -->
+        <ServiceControl Id="comp_channel" Stop="both" Remove="uninstall" Name="comp_channel" Wait="yes"/>
     </CPackWiXFragment>
     <CPackWiXFragment Id="CM_FP_channel.comp_channel.exe">
         <FirewallException xmlns="http://schemas.microsoft.com/wix/FirewallExtension"

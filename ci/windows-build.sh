@@ -33,6 +33,12 @@ unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip" | ../ci/report
 mv external* ../binaries
 echo "Installed external dependencies"
 
+echo "Installing OpenSSL"
+cp "${CACHE_DIR}/OpenSSL-${OPENSSL_VERSION}-${PLATFORM}.msi" OpenSSL.msi
+powershell -Command "Start-Process msiexec.exe -Wait -ArgumentList '/i OpenSSL.msi /l OpenSSL-install.log /qn'"
+rm -f OpenSSL.msi OpenSSL-install.log
+echo "Installed OpenSSL"
+
 echo "Installing libcomp"
 
 if [ $USE_DROPBOX ]; then
@@ -87,7 +93,8 @@ echo "Running cmake"
 cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=OFF -DIMPORT_CHANNEL=ON \
     -DWINDOWS_SERVICE=ON -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
     -DCPACK_WIX_ROOT="C:/Program Files (x86)/WiX Toolset v3.11" \
-    -DCMAKE_CUSTOM_CONFIGURATION_TYPES="$CONFIGURATION" -G"$GENERATOR" ..
+    -DCMAKE_CUSTOM_CONFIGURATION_TYPES="$CONFIGURATION" \
+    -DUSE_SYSTEM_OPENSSL=ON -G"$GENERATOR" ..
 
 echo "Running build"
 cmake --build . --config "$CONFIGURATION" --target package

@@ -14,6 +14,14 @@ if [ "$PLATFORM" != "win32" ]; then
     fi
 fi
 
+# OpenSSL for Windows (only needed for the full build)
+if [ "$PLATFORM" != "win32" ]; then
+    echo "Downloading OpenSSL"
+    if [ ! -f "OpenSSL-${OPENSSL_VERSION}-${PLATFORM}.msi" ]; then
+        curl -Lo "OpenSSL-${OPENSSL_VERSION}-${PLATFORM}.msi" "https://github.com/comphack/external/releases/download/${DOXYGEN_EXTERNAL_RELEASE}/Win64OpenSSL-${OPENSSL_VERSION}.msi"
+    fi
+fi
+
 # External dependencies for Windows
 echo "Downloading the external dependencies"
 if [ ! -f "external-0.1.1-${PLATFORM}.zip" ]; then

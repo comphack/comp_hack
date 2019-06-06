@@ -65,13 +65,13 @@ ELSE(ZLIB_FOUND)
             URL "${CMAKE_SOURCE_DIR}/deps/zlib.zip"
         )
     ELSEIF(GIT_DEPENDENCIES)
-        SET(ZLIB_LIBRARY "${INSTALL_DIR}/lib/zlibstatic_reldeb.lib" PARENT_SCOPE)
+        SET(ZLIB_LIBRARY "${INSTALL_DIR}/lib/zlibstatic_reldeb.lib")
         SET(ZLIB_URL
             GIT_REPOSITORY https://github.com/comphack/zlib.git
             GIT_TAG comp_hack
         )
     ELSE()
-        SET(ZLIB_LIBRARY "${INSTALL_DIR}/lib/libz.a" PARENT_SCOPE)
+        SET(ZLIB_LIBRARY "${INSTALL_DIR}/lib/libz.a")
         SET(ZLIB_URL
             URL https://github.com/comphack/zlib/archive/comp_hack-20180425.zip
             URL_HASH SHA1=41ef62fec86b9a4408d99c2e7ee1968a5e246e3b

@@ -29,8 +29,33 @@ IF(USE_SYSTEM_OPENSSL)
     FIND_PACKAGE(OpenSSL)
 ENDIF(USE_SYSTEM_OPENSSL)
 
+FUNCTION(FILTER_LINK_TYPE_KEYWORDS varname)
+    SET(last_type "general")
+    SET(out_libs "")
+
+    FOREACH(lib IN LISTS ${varname})
+        IF("${lib}" STREQUAL "general")
+            SET(last_type "${lib}")
+        ELSEIF("${lib}" STREQUAL "optimized")
+            SET(last_type "${lib}")
+        ELSEIF("${lib}" STREQUAL "debug")
+            SET(last_type "${lib}")
+        ELSEIF(NOT "${last_type}" STREQUAL "debug")
+            LIST(APPEND out_libs "${lib}")
+        ENDIF()
+
+        SET(last_type "general")
+    ENDFOREACH()
+
+    SET(${varname} "${out_libs}" PARENT_SCOPE)
+ENDFUNCTION(FILTER_LINK_TYPE_KEYWORDS)
+
 IF(OPENSSL_FOUND)
     MESSAGE("-- Using system OpenSSL")
+
+    FILTER_LINK_TYPE_KEYWORDS(OPENSSL_LIBRARIES)
+    FILTER_LINK_TYPE_KEYWORDS(OPENSSL_SSL_LIBRARY)
+    FILTER_LINK_TYPE_KEYWORDS(OPENSSL_CRYPTO_LIBRARY)
 
     ADD_CUSTOM_TARGET(openssl)
 

@@ -42,9 +42,13 @@ FUNCTION(FILTER_LINK_TYPE_KEYWORDS varname)
             SET(last_type "${lib}")
         ELSEIF(NOT "${last_type}" STREQUAL "debug")
             LIST(APPEND out_libs "${lib}")
-        ENDIF()
 
-        SET(last_type "general")
+            # Reset the type for the next library
+            SET(last_type "general")
+        ELSE() # debug
+            # Reset the type for the next library
+            SET(last_type "general")
+        ENDIF()
     ENDFOREACH()
 
     SET(${varname} "${out_libs}" PARENT_SCOPE)

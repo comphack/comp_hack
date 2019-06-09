@@ -6,9 +6,9 @@
  *
  * @brief Main client source file.
  *
- * This file is part of the Client (client).
+ * This file is part of the COMP_hack Test Client (client).
  *
- * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2019 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -24,9 +24,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// libtester Includes
-#include <ChannelClient.h>
-#include <LobbyClient.h>
+// Qt Includes
+#include <QApplication>
+
+// client Includes
+#include "GameWorker.h"
+
+// libclient Includes
+#include <LogicWorker.h>
+#include <MessageConnectionInfo.h>
 
 // libcomp Includes
 #include <Decrypt.h>
@@ -144,6 +150,46 @@ void RunInteractive(libcomp::ScriptEngine& engine)
     std::cout << "Final script: " << std::endl << script.C();
 }
 
+int RunUI(int argc, char *argv[])
+{
+    QApplication app(argc, argv);
+
+    // These settings are used to specify how the settings are stored. On
+    // Windows, there settings are stored in the registry at
+    // HKEY_CURRENT_USER\Software\COMP_hack\COMP_hack Test Client
+    // On Linux, these settings will be stored in the file
+    // $HOME/.config/COMP_hack/COMP_hack Test Client.conf
+    // Consult the QSettings documentation in the Qt API reference for more
+    // information on how the settings work (and where they are on Mac OS X).
+    app.setOrganizationName("COMP_hack");
+    app.setOrganizationDomain("comp.hack");
+    app.setApplicationName("COMP_hack Test Client");
+
+    // Create the worker threads.
+    game::GameWorker gameWorker;
+    logic::LogicWorker logicWorker;
+
+    // Setup the message queues.
+    logicWorker.SetGameQueue(gameWorker.GetMessageQueue());
+    gameWorker.SetLogicQueue(logicWorker.GetMessageQueue());
+
+    // Start the worker threads.
+    logicWorker.Start("logic");
+    gameWorker.Start("game");
+
+    // Run the Qt event loop.
+    int result = app.exec();
+
+    // Shutdown all the threads.
+    gameWorker.Shutdown();
+    gameWorker.Join();
+
+    logicWorker.Shutdown();
+    logicWorker.Join();
+
+    return result;
+}
+
 int main(int argc, char *argv[])
 {
     (void)argc;
@@ -167,10 +213,25 @@ int main(int argc, char *argv[])
     gEngine = &engine;
 
     // Register the client testing classes.
-    engine.Using<libtester::LobbyClient>();
-    engine.Using<libtester::ChannelClient>();
+    /// @todo Add the logic worker here?
 
-    if(1 >= argc)
+    //////////////////////////////////////////////////////////////////////////
+    if(2 <= argc && std::string("--gui") == argv[1])
+    {
+        return RunUI(argc, argv);
+    }
+
+    logic::LogicWorker worker;
+    worker.Start("logic");
+
+    worker.GetMessageQueue()->Enqueue(new logic::MessageConnectToLobby("lobby@1"));
+
+    ScriptSleep(3);
+    worker.Shutdown();
+    worker.Join();
+    //////////////////////////////////////////////////////////////////////////
+
+    /*if(1 >= argc)
     {
         RunInteractive(engine);
     }
@@ -198,7 +259,7 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
             }
         }
-    }
+    }*/
 
     return gReturnCode;
 }

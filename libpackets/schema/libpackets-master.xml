@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <!-- Lobby Packets -->
+    <include path="packet_login.xml"/>
+    <!-- <include path="packet_login_reply.xml"/>
+    <include path="packet_response_code.xml"/> -->
+</objgen>

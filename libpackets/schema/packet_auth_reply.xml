@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="PacketLobbyAuthReply" persistent="false" namespace="packets">
+        <member type="s32" name="ResponseCode"/>
+        <member type="string" name="SID" lensz="2"/>
+    </object>
+</objgen>

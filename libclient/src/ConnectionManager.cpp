@@ -29,12 +29,22 @@
 // libcomp Includes
 #include <ChannelConnection.h>
 #include <ConnectionMessage.h>
+#include <Decrypt.h>
 #include <EnumUtils.h>
+#include <ErrorCodes.h>
 #include <LobbyConnection.h>
+#include <Log.h>
 #include <LogicWorker.h>
 #include <MessageClient.h>
 #include <MessageConnectionClosed.h>
 #include <MessageEncrypted.h>
+#include <PacketCodes.h>
+
+// packets Includes
+#include <PacketLobbyAuth.h>
+#include <PacketLobbyAuthReply.h>
+#include <PacketLobbyLogin.h>
+#include <PacketLobbyLoginReply.h>
 
 // logic Messages
 #include "MessageConnected.h"
@@ -49,7 +59,8 @@ using libcomp::Message::MessageClientType;
 ConnectionManager::ConnectionManager(LogicWorker *pLogicWorker,
     const std::weak_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>>& messageQueue) :
-    libcomp::Manager(), mLogicWorker(pLogicWorker), mMessageQueue(messageQueue)
+    libcomp::Manager(), mLogicWorker(pLogicWorker), mMessageQueue(messageQueue),
+    mClientVersion(1666)
 {
 }
 
@@ -78,12 +89,33 @@ bool ConnectionManager::ProcessMessage(
 {
     switch(to_underlying(pMessage->GetType()))
     {
+        case to_underlying(MessageType::MESSAGE_TYPE_PACKET):
+            return ProcessPacketMessage(
+                (const libcomp::Message::Packet*)pMessage);
         case to_underlying(MessageType::MESSAGE_TYPE_CONNECTION):
             return ProcessConnectionMessage(
                 (const libcomp::Message::ConnectionMessage*)pMessage);
         case to_underlying(MessageType::MESSAGE_TYPE_CLIENT):
             return ProcessClientMessage(
                 (const libcomp::Message::MessageClient*)pMessage);
+        default:
+            break;
+    }
+
+    return false;
+}
+
+bool ConnectionManager::ProcessPacketMessage(
+        const libcomp::Message::Packet *pMessage)
+{
+    libcomp::ReadOnlyPacket p(pMessage->GetPacket());
+
+    switch(pMessage->GetCommandCode())
+    {
+        case to_underlying(LobbyToClientPacketCode_t::PACKET_LOGIN):
+            return HandlePacketLobbyLogin(p);
+        case to_underlying(LobbyToClientPacketCode_t::PACKET_AUTH):
+            return HandlePacketLobbyAuth(p);
         default:
             break;
     }
@@ -105,13 +137,11 @@ bool ConnectionManager::ProcessConnectionMessage(
             {
                 if(IsLobbyConnection())
                 {
-                    mLogicWorker->SendToGame(new MessageConnectedToLobby(
-                        mActiveConnection->GetName()));
+                    AuthenticateLobby();
                 }
                 else
                 {
-                    mLogicWorker->SendToGame(new MessageConnectedToChannel(
-                        mActiveConnection->GetName()));
+                    AuthenticateChannel();
                 }
             }
 
@@ -143,19 +173,32 @@ bool ConnectionManager::ProcessClientMessage(
     {
         case to_underlying(MessageClientType::CONNECT_TO_LOBBY):
         {
-            const MessageConnectionInfo *pInfo = reinterpret_cast<
-                const MessageConnectionInfo*>(pMessage);
-            ConnectLobby(pInfo->GetConnectionID(), pInfo->GetHost(),
-                pInfo->GetPort());
+            const MessageConnectToLobby *pInfo = reinterpret_cast<
+                const MessageConnectToLobby*>(pMessage);
+            mUsername = pInfo->GetUsername();
+            mPassword = pInfo->GetPassword();
+            mClientVersion = pInfo->GetClientVersion();
+
+            /// @todo Handle if this fails.
+            if(!ConnectLobby(pInfo->GetConnectionID(), pInfo->GetHost(),
+                pInfo->GetPort()))
+            {
+                LOG_ERROR("Failed to connect to lobby server!\n");
+            }
 
             return true;
         }
         case to_underlying(MessageClientType::CONNECT_TO_CHANNEL):
         {
-            const MessageConnectionInfo *pInfo = reinterpret_cast<
-                const MessageConnectionInfo*>(pMessage);
-            ConnectChannel(pInfo->GetConnectionID(), pInfo->GetHost(),
-                pInfo->GetPort());
+            const MessageConnectToChannel *pInfo = reinterpret_cast<
+                const MessageConnectToChannel*>(pMessage);
+
+            /// @todo Handle if this fails.
+            if(!ConnectChannel(pInfo->GetConnectionID(), pInfo->GetHost(),
+                pInfo->GetPort()))
+            {
+                LOG_ERROR("Failed to connect to channel server!\n");
+            }
 
             return true;
         }
@@ -201,6 +244,9 @@ bool ConnectionManager::CloseConnection()
         {
             mServiceThread.join();
         }
+
+        // Restart so the service may be used again.
+        mService.restart();
     }
 
     return true;
@@ -218,6 +264,8 @@ bool ConnectionManager::SetupConnection(const std::shared_ptr<
     mActiveConnection = conn;
     mActiveConnection->SetMessageQueue(mMessageQueue);
     mActiveConnection->SetName(connectionID);
+
+    LOG_DEBUG(libcomp::String("Connecting to %1:%2\n").Arg(host).Arg(port));
 
     bool result = mActiveConnection->Connect(host, port);
 
@@ -330,4 +378,111 @@ std::shared_ptr<libcomp::EncryptedConnection>
     ConnectionManager::GetConnection() const
 {
     return mActiveConnection;
+}
+
+void ConnectionManager::AuthenticateLobby()
+{
+    // Send the login packet and await the response.
+    packets::PacketLobbyLogin p;
+    p.SetPacketCode(to_underlying(ClientToLobbyPacketCode_t::PACKET_LOGIN));
+    p.SetUsername(mUsername);
+    p.SetClientVersion(mClientVersion);
+    p.SetUnknown(0);
+
+    mActiveConnection->SendObject(p);
+}
+
+void ConnectionManager::AuthenticateChannel()
+{
+    // mLogicWorker->SendToGame(new MessageConnectedToChannel(
+    //     mActiveConnection->GetName()));
+}
+
+bool ConnectionManager::HandlePacketLobbyLogin(libcomp::ReadOnlyPacket& p)
+{
+    packets::PacketLobbyLoginReply obj;
+
+    ErrorCodes_t errorCode = ErrorCodes_t::SUCCESS;
+
+    if(sizeof(errorCode) == p.Size())
+    {
+        errorCode = (ErrorCodes_t)p.ReadS32Little();
+
+        // If this happens the packet is wrong.
+        if(ErrorCodes_t::SUCCESS == errorCode)
+        {
+            return false;
+        }
+    }
+    else if(!obj.LoadPacket(p) || p.Left())
+    {
+        return false;
+    }
+
+    if(ErrorCodes_t::SUCCESS == errorCode)
+    {
+        auto hash = libcomp::Decrypt::HashPassword(
+            libcomp::Decrypt::HashPassword(mPassword, obj.GetSalt()),
+            libcomp::String("%1").Arg(obj.GetChallenge()));
+
+        // Send the auth packet and await the response.
+        packets::PacketLobbyAuth reply;
+        reply.SetPacketCode(to_underlying(
+            ClientToLobbyPacketCode_t::PACKET_AUTH));
+        reply.SetHash(hash);
+
+        mActiveConnection->SendObject(reply);
+    }
+    else
+    {
+        // Save this before closing the connection.
+        auto connectionID = mActiveConnection->GetName();
+
+        // An error occurred so close the connection and pass it along.
+        CloseConnection();
+        mLogicWorker->SendToGame(new MessageConnectedToLobby(
+            connectionID, errorCode));
+    }
+
+    return true;
+}
+
+bool ConnectionManager::HandlePacketLobbyAuth(libcomp::ReadOnlyPacket& p)
+{
+    packets::PacketLobbyAuthReply obj;
+
+    ErrorCodes_t errorCode = ErrorCodes_t::SUCCESS;
+
+    if(sizeof(errorCode) == p.Size())
+    {
+        errorCode = (ErrorCodes_t)p.ReadS32Little();
+
+        // If this happens the packet is wrong.
+        if(ErrorCodes_t::SUCCESS == errorCode)
+        {
+            return false;
+        }
+    }
+    else if(!obj.LoadPacket(p) || p.Left())
+    {
+        return false;
+    }
+
+    if(ErrorCodes_t::SUCCESS == errorCode)
+    {
+        mLogicWorker->SendToGame(new MessageConnectedToLobby(
+            mActiveConnection->GetName(), errorCode, obj.GetSID()));
+    }
+    else
+    {
+        // Save this before closing the connection.
+        auto connectionID = mActiveConnection->GetName();
+
+        // An error occurred so close the connection and pass it along.
+        CloseConnection();
+        mLogicWorker->SendToGame(new MessageConnectedToLobby(
+            connectionID, errorCode));
+    }
+
+    return true;
 }

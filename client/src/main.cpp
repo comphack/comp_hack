@@ -166,26 +166,29 @@ int RunUI(int argc, char *argv[])
     app.setApplicationName("COMP_hack Test Client");
 
     // Create the worker threads.
-    game::GameWorker gameWorker;
-    logic::LogicWorker logicWorker;
+    auto gameWorker = std::make_shared<game::GameWorker>();
+    auto logicWorker = std::make_shared<logic::LogicWorker>();
 
     // Setup the message queues.
-    logicWorker.SetGameQueue(gameWorker.GetMessageQueue());
-    gameWorker.SetLogicQueue(logicWorker.GetMessageQueue());
+    logicWorker->SetGameQueue(gameWorker->GetMessageQueue());
+    gameWorker->SetLogicQueue(logicWorker->GetMessageQueue());
 
     // Start the worker threads.
-    logicWorker.Start("logic");
-    gameWorker.Start("game");
+    logicWorker->Start("logic");
+    gameWorker->Start("game");
 
     // Run the Qt event loop.
     int result = app.exec();
 
     // Shutdown all the threads.
-    gameWorker.Shutdown();
-    gameWorker.Join();
+    gameWorker->Shutdown();
+    gameWorker->Join();
 
-    logicWorker.Shutdown();
-    logicWorker.Join();
+    logicWorker->Shutdown();
+    logicWorker->Join();
+
+    gameWorker.reset();
+    logicWorker.reset();
 
     return result;
 }
@@ -224,7 +227,8 @@ int main(int argc, char *argv[])
     logic::LogicWorker worker;
     worker.Start("logic");
 
-    worker.GetMessageQueue()->Enqueue(new logic::MessageConnectToLobby("lobby@1"));
+    worker.GetMessageQueue()->Enqueue(new logic::MessageConnectToLobby(
+        "testbob", "password", 1666, "lobby@1"));
 
     ScriptSleep(3);
     worker.Shutdown();

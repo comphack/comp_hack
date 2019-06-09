@@ -30,6 +30,12 @@
 // Qt Includes
 #include "ui_LoginDialog.h"
 
+// libclient Includes
+#include <ClientManager.h>
+
+// Qt Forward Declarations
+class QDnsLookup;
+
 namespace game
 {
 
@@ -38,7 +44,7 @@ class GameWorker;
 /**
  * Dialog to login the client (to the lobby).
  */
-class LoginDialog : public QDialog
+class LoginDialog : public QDialog, public logic::ClientManager
 {
     Q_OBJECT
 
@@ -55,15 +61,48 @@ public:
      */
     ~LoginDialog() override;
 
+    /**
+     * Process a client message.
+     * @param pMessage Client message to process.
+     */
+    bool ProcessClientMessage(
+        const libcomp::Message::MessageClient *pMessage);
+
 private slots:
     /**
      * Called when the login button is clicked.
      */
     void Login();
 
+    /**
+     * Validate the form when it changes.
+     */
+    void Validate();
+
+    /**
+     * Called after a DNS record has been resolved (or on error).
+     */
+    void HaveDNS();
+
 private:
+    /**
+     * Handle the authentication reply.
+     * @param pMessage Client message to process.
+     */
+    bool HandleConnectedToLobby(
+        const libcomp::Message::MessageClient *pMessage);
+
     /// Pointer to the GameWorker.
     GameWorker *mGameWorker;
+
+    /// Handles DNS record lookups.
+    QDnsLookup *mDnsLookup;
+
+    /// Original status message.
+    QString mOriginalStatus;
+
+    /// Session ID for this connection.
+    libcomp::String mSID;
 
     /// UI for this dialog.
     Ui::LoginDialog ui;

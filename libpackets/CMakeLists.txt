@@ -26,6 +26,9 @@ FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/objgen)
 
 SET(${PROJECT_NAME}_SCHEMA
     schema/packet_login.xml
+    schema/packet_login_reply.xml
+    schema/packet_auth.xml
+    schema/packet_auth_reply.xml
 )
 
 SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
@@ -41,8 +44,14 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     schema
 
     # Output files
-    PacketLogin.cpp
-    PacketLogin.h
+    PacketLobbyLogin.cpp
+    PacketLobbyLogin.h
+    PacketLobbyLoginReply.cpp
+    PacketLobbyLoginReply.h
+    PacketLobbyAuth.cpp
+    PacketLobbyAuth.h
+    PacketLobbyAuthReply.cpp
+    PacketLobbyAuthReply.h
 )
 
 ADD_LIBRARY(packets STATIC ${${PROJECT_NAME}_STRUCTS})

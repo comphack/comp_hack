@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="PacketLobbyAuth" persistent="false" namespace="packets">
+        <member type="u16" name="PacketCode"/>
+        <!-- Encoding was set to ensure the string is zero padded. -->
+        <member type="string" name="Hash" lensz="2" encoding="cp932"/>
+    </object>
+</objgen>

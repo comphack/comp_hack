@@ -29,6 +29,7 @@ SET(${PROJECT_NAME}_SRCS
 )
 
 SET(${PROJECT_NAME}_HDRS
+    src/ClientManager.h
     src/LogicWorker.h
 
     # Managers

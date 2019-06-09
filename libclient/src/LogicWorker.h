@@ -36,7 +36,7 @@ namespace logic
 {
 
 //
-// Forward declarations of managers.
+// Forward declaration of managers.
 //
 class ConnectionManager;
 

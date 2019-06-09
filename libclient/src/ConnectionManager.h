@@ -32,7 +32,9 @@
 #include <EncryptedConnection.h>
 #include <Manager.h>
 #include <MessageClient.h>
+#include <MessagePacket.h>
 #include <MessageQueue.h>
+#include <ReadOnlyPacket.h>
 
 // Standard C++11 Includes
 #include <thread>
@@ -180,6 +182,28 @@ public:
 
 private:
     /**
+     * Start authentication with the lobby server.
+     */
+    void AuthenticateLobby();
+
+    /**
+     * Start authentication with the channel server.
+     */
+    void AuthenticateChannel();
+
+    /**
+     * Handle the incoming login reply.
+     * @returns true if the packet was parsed correctly; false otherwise.
+     */
+    bool HandlePacketLobbyLogin(libcomp::ReadOnlyPacket& p);
+
+    /**
+     * Handle the incoming auth reply.
+     * @returns true if the packet was parsed correctly; false otherwise.
+     */
+    bool HandlePacketLobbyAuth(libcomp::ReadOnlyPacket& p);
+
+    /**
      * Setup a new connection.
      * @param conn Connection to setup.
      * @param connectionID ID for the connection.
@@ -191,6 +215,13 @@ private:
         libcomp::EncryptedConnection>& conn,
         const libcomp::String& connectionID, const libcomp::String& host,
         uint16_t port);
+
+    /**
+     * Process a packet message.
+     * @param pMessage Packet message to process.
+     */
+    bool ProcessPacketMessage(
+        const libcomp::Message::Packet *pMessage);
 
     /**
      * Process a connection message.
@@ -221,6 +252,15 @@ private:
     /// Message queue for the LogicWorker.
     std::weak_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>> mMessageQueue;
+
+    /// Username for authentication.
+    libcomp::String mUsername;
+
+    /// Password for authentication.
+    libcomp::String mPassword;
+
+    /// Client version for authentication.
+    uint32_t mClientVersion;
 };
 
 } // namespace logic

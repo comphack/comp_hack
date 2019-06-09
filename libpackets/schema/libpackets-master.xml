@@ -2,6 +2,7 @@
 <objgen>
     <!-- Lobby Packets -->
     <include path="packet_login.xml"/>
-    <!-- <include path="packet_login_reply.xml"/>
-    <include path="packet_response_code.xml"/> -->
+    <include path="packet_login_reply.xml"/>
+    <include path="packet_auth.xml"/>
+    <include path="packet_auth_reply.xml"/>
 </objgen>

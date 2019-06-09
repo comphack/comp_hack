@@ -31,15 +31,28 @@
 #include <QObject>
 
 // libcomp Includes
+#include <MessageClient.h>
 #include <Worker.h>
+
+// libclient Includes
+#include <ClientManager.h>
+
+// Standard C++11 Includes
+#include <set>
 
 namespace game
 {
 
+//
+// Forward declaration of managers / game components.
+//
+class LoginDialog;
+
 /**
  * Worker for client<==>server interaction.
  */
-class GameWorker : public QObject, public libcomp::Worker
+class GameWorker : public QObject, public libcomp::Worker,
+    public libcomp::Manager, public std::enable_shared_from_this<GameWorker>
 {
     Q_OBJECT
 
@@ -53,6 +66,12 @@ public:
      * Cleanup the worker.
      */
     ~GameWorker() override;
+
+    /**
+     * Add a client manager to process client messages.
+     * @param pManager A client message manager
+     */
+    void AddClientManager(logic::ClientManager *pManager);
 
     /**
      * Sent a message to the LogicWorker message queue.
@@ -69,6 +88,34 @@ public:
      */
     void SetLogicQueue(const std::shared_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>>& messageQueue);
+
+    /**
+     * Get the different types of messages handled by the manager.
+     * @return List of message types handled by the manager
+     */
+    std::list<libcomp::Message::MessageType> GetSupportedTypes() const override;
+
+    /**
+     * Process a message from the queue.
+     * @param pMessage Message to be processed
+     * @return true on success, false on failure
+     */
+    bool ProcessMessage(const libcomp::Message::Message *pMessage) override;
+
+    /**
+     * Wait for a message to enter the queue then handle it
+     * with the appropriate @ref Manager configured for the
+     * worker.
+     * @param pMessageQueue Queue to check for messages
+     */
+    void Run(libcomp::MessageQueue<
+        libcomp::Message::Message*> *pMessageQueue) override;
+
+    /**
+     * Get the login dialog.
+     * @returns Pointer to the login dialog.
+     */
+    LoginDialog* GetLoginDialog() const;
 
 signals:
     /**
@@ -92,9 +139,29 @@ protected:
     void HandleMessage(libcomp::Message::Message *pMessage) override;
 
 private:
+    /**
+     * Process a connection message.
+     * @param pMessage Connection message to process.
+     */
+    // bool ProcessConnectionMessage(
+    //     const libcomp::Message::ConnectionMessage *pMessage);
+
+    /**
+     * Process a client message.
+     * @param pMessage Client message to process.
+     */
+    bool ProcessClientMessage(
+        const libcomp::Message::MessageClient *pMessage);
+
     /// Message queue for the LogicWorker. Events are sent here.
     std::shared_ptr<libcomp::MessageQueue<
         libcomp::Message::Message*>> mLogicMessageQueue;
+
+    /// List of pointers to client message handlers.
+    std::set<logic::ClientManager*> mClientManagers;
+
+    /// Login dialog.
+    LoginDialog *mLoginDialog;
 };
 
 } // namespace game

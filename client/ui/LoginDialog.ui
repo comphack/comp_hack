@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>392</width>
-    <height>238</height>
+    <height>271</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -94,12 +94,41 @@
          </property>
         </widget>
        </item>
+       <item row="5" column="1">
+        <widget class="QDoubleSpinBox" name="clientVersion">
+         <property name="decimals">
+          <number>3</number>
+         </property>
+         <property name="minimum">
+          <double>1.000000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>5.000000000000000</double>
+         </property>
+         <property name="singleStep">
+          <double>0.001000000000000</double>
+         </property>
+         <property name="value">
+          <double>1.666000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="clientVersionLabel">
+         <property name="text">
+          <string>Client Version:</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
      <item>
       <widget class="QCheckBox" name="rememberUsername">
        <property name="text">
         <string>Remember username</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </item>

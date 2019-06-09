@@ -29,6 +29,8 @@
 
 // libcomp Includes
 #include <CString.h>
+#include <EnumUtils.h>
+#include <ErrorCodes.h>
 #include <MessageClient.h>
 
 namespace logic
@@ -43,9 +45,11 @@ public:
     /**
      * Create the message.
      * @param connectionID ID for the connection.
+     * @param errorCode Error code from authentication.
      */
-    MessageConnected(const libcomp::String& connectionID) :
-        mConnectionID(connectionID) { }
+    MessageConnected(const libcomp::String& connectionID,
+        ErrorCodes_t errorCode) : mConnectionID(connectionID),
+        mErrorCode(errorCode) { }
 
     /**
      * Cleanup the message.
@@ -58,9 +62,18 @@ public:
      */
     libcomp::String GetConnectionID() const { return mConnectionID; }
 
+    /**
+     * Get the error code from authentication.
+     * @returns Error code from authentication.
+     */
+    ErrorCodes_t GetErrorCode() const { return mErrorCode; }
+
 protected:
     /// Connection ID.
     libcomp::String mConnectionID;
+
+    /// Error code from authentication.
+    ErrorCodes_t mErrorCode;
 };
 
 /**
@@ -72,14 +85,23 @@ public:
     /**
      * Create the message.
      * @param connectionID ID for the connection.
+     * @param errorCode Error code from authentication.
+     * @param sid Session ID for this connection.
      */
-    MessageConnectedToLobby(const libcomp::String& connectionID) :
-        MessageConnected(connectionID) { }
+    MessageConnectedToLobby(const libcomp::String& connectionID,
+        ErrorCodes_t errorCode, const libcomp::String& sid = {}) :
+        MessageConnected(connectionID, errorCode), mSID(sid) { }
 
     /**
      * Cleanup the message.
      */
     ~MessageConnectedToLobby() override { }
+
+    /**
+     * Get the session ID for this connection.
+     * @returns Session ID for this connection.
+     */
+    libcomp::String GetSID() const { return mSID; }
 
     /**
      * Get the specific client message type.
@@ -96,8 +118,13 @@ public:
     libcomp::String Dump() const override
     {
         return libcomp::String("Message: Connected to lobby server\n"
-            "ID: %1").Arg(mConnectionID);
+            "ID: %1\nError: %2").Arg(mConnectionID).Arg(
+            to_underlying(mErrorCode));
     }
+
+private:
+    /// Session ID for this connection.
+    libcomp::String mSID;
 };
 
 /**
@@ -109,9 +136,10 @@ public:
     /**
      * Create the message.
      * @param connectionID ID for the connection.
+     * @param errorCode Error code from authentication.
      */
-    MessageConnectedToChannel(const libcomp::String& connectionID) :
-        MessageConnected(connectionID) { }
+    MessageConnectedToChannel(const libcomp::String& connectionID,
+        ErrorCodes_t errorCode) : MessageConnected(connectionID, errorCode) { }
 
     /**
      * Cleanup the message.
@@ -133,7 +161,8 @@ public:
     libcomp::String Dump() const override
     {
         return libcomp::String("Message: Connected to channel server\n"
-            "ID: %1").Arg(mConnectionID);
+            "ID: %1\nError: %2").Arg(mConnectionID).Arg(
+            to_underlying(mErrorCode));
     }
 };
 

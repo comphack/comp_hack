@@ -27,6 +27,9 @@
 #include "GameWorker.h"
 
 // libcomp Includes
+#include <EnumUtils.h>
+#include <Log.h>
+#include <MessageClient.h>
 #include <MessageShutdown.h>
 
 // client Includes
@@ -34,7 +37,10 @@
 
 using namespace game;
 
-GameWorker::GameWorker(QObject *pParent) : QObject(pParent), libcomp::Worker()
+using libcomp::Message::MessageType;
+
+GameWorker::GameWorker(QObject *pParent) : QObject(pParent),
+    libcomp::Worker(), libcomp::Manager()
 {
     // Connect the message queue to the Qt message system.
     connect(this, SIGNAL(SendMessageSignal(libcomp::Message::Message*)),
@@ -42,11 +48,25 @@ GameWorker::GameWorker(QObject *pParent) : QObject(pParent), libcomp::Worker()
         Qt::QueuedConnection);
 
     // Setup the UI windows.
-    (new LoginDialog(this))->show();
+    mLoginDialog = new LoginDialog(this);
+
+    // Register the client message managers.
+    AddClientManager(mLoginDialog);
+
+    // Show the login dialog.
+    mLoginDialog->show();
 }
 
 GameWorker::~GameWorker()
 {
+}
+
+void GameWorker::AddClientManager(logic::ClientManager *pManager)
+{
+    if(pManager)
+    {
+        mClientManagers.insert(pManager);
+    }
 }
 
 bool GameWorker::SendToLogic(libcomp::Message::Message *pMessage)
@@ -69,6 +89,45 @@ void GameWorker::SetLogicQueue(const std::shared_ptr<libcomp::MessageQueue<
     mLogicMessageQueue = messageQueue;
 }
 
+std::list<libcomp::Message::MessageType> GameWorker::GetSupportedTypes() const
+{
+    return {
+        // MessageType::MESSAGE_TYPE_CONNECTION,
+        MessageType::MESSAGE_TYPE_CLIENT,
+    };
+}
+
+bool GameWorker::ProcessMessage(const libcomp::Message::Message *pMessage)
+{
+    switch(to_underlying(pMessage->GetType()))
+    {
+        // case to_underlying(MessageType::MESSAGE_TYPE_CONNECTION):
+        //     return ProcessConnectionMessage(
+        //         (const libcomp::Message::ConnectionMessage*)pMessage);
+        case to_underlying(MessageType::MESSAGE_TYPE_CLIENT):
+            return ProcessClientMessage(
+                (const libcomp::Message::MessageClient*)pMessage);
+        default:
+            break;
+    }
+
+    return false;
+}
+
+void GameWorker::Run(libcomp::MessageQueue<
+    libcomp::Message::Message*> *pMessageQueue)
+{
+    // Add the manager after construction to avoid problems.
+    AddManager(shared_from_this());
+
+    libcomp::Worker::Run(pMessageQueue);
+}
+
+LoginDialog* GameWorker::GetLoginDialog() const
+{
+    return mLoginDialog;
+}
+
 void GameWorker::HandleMessageSignal(libcomp::Message::Message *pMessage)
 {
     libcomp::Worker::HandleMessage(pMessage);
@@ -87,4 +146,26 @@ void GameWorker::HandleMessage(libcomp::Message::Message *pMessage)
     {
         emit SendMessageSignal(pMessage);
     }
+}
+
+bool GameWorker::ProcessClientMessage(
+    const libcomp::Message::MessageClient *pMessage)
+{
+    bool didProcess = false;
+
+    for(auto pManager : mClientManagers)
+    {
+        if(pManager->ProcessClientMessage(pMessage))
+        {
+            didProcess = true;
+        }
+    }
+
+    if(!didProcess)
+    {
+        LOG_ERROR(libcomp::String("Failed to process client message:\n%1\n").Arg(
+            pMessage->Dump()));
+    }
+
+    return true;
 }

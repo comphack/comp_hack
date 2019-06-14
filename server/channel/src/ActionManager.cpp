@@ -617,7 +617,7 @@ bool ActionManager::StartEvent(ActionContext& ctx)
 
     EventOptions options;
     options.ActionGroupID = ctx.Options.GroupID;
-    options.AutoOnly = ctx.Options.AutoEventsOnly;
+    options.AutoOnly = ctx.Options.AutoEventsOnly || act->GetAutoOnly();
     options.NoInterrupt = ctx.Options.NoEventInterrupt;
 
     switch(act->GetAllowInterrupt())

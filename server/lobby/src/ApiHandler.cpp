@@ -1263,7 +1263,7 @@ int64_t ApiHandler::WebGameScript_GetCoins(const std::shared_ptr<
 }
 
 std::shared_ptr<libcomp::Database> ApiHandler::WebGameScript_GetDatabase(
-    const std::shared_ptr<ApiSession>& session, bool world)
+    const std::shared_ptr<ApiSession>& session, bool worldDB)
 {
     auto wgSession = std::dynamic_pointer_cast<WebGameApiSession>(session);
     auto gameSession = wgSession ? wgSession->webGameSession : nullptr;
@@ -1272,7 +1272,7 @@ std::shared_ptr<libcomp::Database> ApiHandler::WebGameScript_GetDatabase(
         return nullptr;
     }
 
-    if(world)
+    if(worldDB)
     {
         auto world = mServer->GetManagerConnection()->GetWorldByID(
             gameSession->GetWorldID());
@@ -1292,18 +1292,18 @@ std::shared_ptr<libcomp::Database> ApiHandler::WebGameScript_GetDatabase(
 int64_t ApiHandler::WebGameScript_GetSystemTime()
 {
     // Less performant version of ChannelServer::GetServerTime
-    std::chrono::time_point<std::chrono::steady_clock> now;
     if(std::chrono::high_resolution_clock::is_steady)
     {
-        now = std::chrono::high_resolution_clock::now();
+        auto now = std::chrono::high_resolution_clock::now();
+        return (int64_t)std::chrono::time_point_cast<
+            std::chrono::microseconds>(now).time_since_epoch().count();
     }
     else
     {
-        now = std::chrono::steady_clock::now();
+        auto now = std::chrono::steady_clock::now();
+        return (int64_t)std::chrono::time_point_cast<
+            std::chrono::microseconds>(now).time_since_epoch().count();
     }
-
-    return (int64_t)std::chrono::time_point_cast<
-        std::chrono::microseconds>(now).time_since_epoch().count();
 }
 
 void ApiHandler::WebGameScript_SetResponse(JsonBox::Object* response,

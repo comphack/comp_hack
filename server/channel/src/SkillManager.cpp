@@ -2328,7 +2328,8 @@ bool SkillManager::DetermineNormalCosts(
             }
             break;
         case objects::MiCostTbl::Type_t::ITEM:
-            if(!noItem)
+            // Ignore explicit zero item costs
+            if(!noItem && num)
             {
                 if(percentCost)
                 {
@@ -8599,6 +8600,16 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
                 tokuseiReduction -= tokuseiManager->GetAspectSum(
                     target.EntityState, TokuseiAspectType::DAMAGE_TAKEN,
                     targetState) * 0.01;
+
+                if(tokuseiBoost < 0.0)
+                {
+                    tokuseiBoost = 0.0;
+                }
+
+                if(tokuseiReduction < 0.0)
+                {
+                    tokuseiReduction = 0.0;
+                }
             }
 
             // Scale the current value by the critical, limit break or min to

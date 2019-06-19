@@ -444,14 +444,19 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
                     slots.insert(libcomp::Randomizer::GetEntry(bonusSlots));
 
                     // Randomly add other slots, chances decrease as bonus
-                    // increases
+                    // increases but are affected by great success boosts
                     for(size_t slot : bonusSlots)
                     {
-                        if(slots.find(slot) == slots.end() &&
-                            1 == RNG(int16_t, 1, (int16_t)(5 +
-                                (int16_t)mainItem->GetFuseBonuses(slot))))
+                        if(slots.find(slot) == slots.end())
                         {
-                            slots.insert(slot);
+                            int32_t slotChance = (int32_t)(100.0 /
+                                (double)(5 + mainItem->GetFuseBonuses(slot)) +
+                                gSuccessBoost);
+                            if(slotChance >= 100 ||
+                                RNG(int32_t, 1, 100) <= slotChance)
+                            {
+                                slots.insert(slot);
+                            }
                         }
                     }
 

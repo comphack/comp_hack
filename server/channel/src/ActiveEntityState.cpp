@@ -2520,6 +2520,22 @@ void ActiveEntityState::AdjustStats(
     std::set<CorrectTbl> removed;
     libcomp::EnumMap<CorrectTbl, int32_t> maxPercents;
 
+    if(!baseMode)
+    {
+        // If regen starts negative, lock at 0%
+        if(stats[CorrectTbl::HP_REGEN] < 0)
+        {
+            stats[CorrectTbl::HP_REGEN] = 0;
+            removed.insert(CorrectTbl::HP_REGEN);
+        }
+
+        if(stats[CorrectTbl::MP_REGEN] < 0)
+        {
+            stats[CorrectTbl::MP_REGEN] = 0;
+            removed.insert(CorrectTbl::MP_REGEN);
+        }
+    }
+
     // Keep track of each increase to sum up and boost at the end. Percentages
     // are applied in 2 layers though most are typically in the first group.
     libcomp::EnumMap<CorrectTbl, int32_t> numericSums;

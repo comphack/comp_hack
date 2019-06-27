@@ -6298,8 +6298,10 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 break;
             case objects::Spawn::KillValueType_t::BETHEL:
                 // If in an active Pentalpha instance, bethel is "held" until
-                // the timer expires. Otherwise it is given right away. Both
-                // require active Pentalpha entries to actually do anything.
+                // the timer expires and is also divided amongst everyone who
+                // has access to the instance. Otherwise it is given right
+                // away. Both require active Pentalpha entries to actually do
+                // anything.
                 {
                     float globalBonus = server->GetWorldSharedConfig()
                         ->GetBethelBonus();
@@ -6312,8 +6314,18 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                     if(zone->GetInstanceType() == InstanceType_t::PENTALPHA &&
                         instance->GetTimerStart() && !instance->GetTimerStop())
                     {
-                        sourceState->SetInstanceBethel(valSum +
-                            sourceState->GetInstanceBethel());
+                        // Distribute bethel by access CID, currently connected
+                        // or not and divide evenly so being in a group is not
+                        // the clear better way to run these instances
+                        valSum = (int32_t)ceil((double)valSum /
+                            (double)instance->OriginalAccessCIDsCount());
+                        for(auto c : managerConnection->GetEntityClients(
+                            instance->GetOriginalAccessCIDs(), true))
+                        {
+                            auto s = c->GetClientState();
+                            s->SetInstanceBethel(valSum +
+                                s->GetInstanceBethel());
+                        }
                     }
                     else
                     {

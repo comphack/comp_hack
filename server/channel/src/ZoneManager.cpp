@@ -833,7 +833,13 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         server->GetWorldDatabase()->QueueUpdate(character);
     }
 
-    // Fire pre-zone in just for the character
+    // Fire login and pre-zone in just for the character
+    if(!currentZone)
+    {
+        TriggerZoneActions(nextZone, { cState }, ZoneTrigger_t::ON_LOGIN,
+            client);
+    }
+
     TriggerZoneActions(nextZone, { cState }, ZoneTrigger_t::PRE_ZONE_IN,
         client);
 

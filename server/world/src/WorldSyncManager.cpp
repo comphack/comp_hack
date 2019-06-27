@@ -48,6 +48,7 @@
 #include <PentalphaEntry.h>
 #include <PentalphaMatch.h>
 #include <PvPMatch.h>
+#include <StatusEffect.h>
 #include <UBResult.h>
 #include <UBTournament.h>
 #include <WorldConfig.h>
@@ -162,6 +163,12 @@ bool WorldSyncManager::Initialize()
         WorldSyncManager, objects::PvPMatch>;
 
     mRegisteredTypes["PvPMatch"] = cfg;
+
+    cfg = std::make_shared<ObjectConfig>("StatusEffect", false, worldDB);
+    cfg->UpdateHandler = &DataSyncManager::Update<WorldSyncManager,
+        objects::StatusEffect>;
+
+    mRegisteredTypes["StatusEffect"] = cfg;
 
     cfg = std::make_shared<ObjectConfig>("UBResult", true, worldDB);
     cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
@@ -810,6 +817,39 @@ int8_t WorldSyncManager::Update<objects::PentalphaMatch>(
 
     // Let all changes through
     return SYNC_UPDATED;
+}
+
+template<>
+int8_t WorldSyncManager::Update<objects::StatusEffect>(const libcomp::String& type,
+    const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+    const libcomp::String& source)
+{
+    (void)type;
+    (void)isRemove;
+    (void)source;
+
+    auto entry = std::dynamic_pointer_cast<objects::StatusEffect>(obj);
+
+    // Send to the channel where the character is logged in, channel init
+    // is responsible for connecting if they are not logged in
+    auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
+
+    auto cLogin = characterManager->GetCharacterLogin(entry->GetEntity());
+    int8_t channelID = cLogin ? cLogin->GetChannelID() : -1;
+
+    if(channelID >= 0)
+    {
+        auto channel = server->GetChannelConnectionByID(channelID);
+        if (channel)
+        {
+            libcomp::Packet p;
+            WriteOutgoingRecord(p, true, "StatusEffect", entry);
+            channel->SendPacket(p);
+        }
+    }
+
+    return SYNC_HANDLED;
 }
 
 template<>

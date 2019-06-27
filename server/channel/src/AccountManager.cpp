@@ -950,7 +950,31 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
-    // Character status effects
+    // Character status effects (recover first)
+    auto allStatusEffects = objects::StatusEffect::
+        LoadStatusEffectListByEntity(db, character->GetUUID());
+    for(auto effect : allStatusEffects)
+    {
+        bool exists = false;
+        for(auto effect2 : character->GetStatusEffects())
+        {
+            if(effect2.GetUUID() == effect->GetUUID())
+            {
+                exists = true;
+                break;
+            }
+        }
+
+        if(!exists)
+        {
+            LOG_WARNING(libcomp::String("Recovered orphaned"
+                " StatusEffect %1 on character: %2\n")
+                .Arg(effect->GetUUID().ToString())
+                .Arg(character->GetUUID().ToString()));
+            character->AppendStatusEffects(effect);
+        }
+    }
+
     if(character->StatusEffectsCount() > 0)
     {
         int32_t seCount = (int32_t)character->StatusEffectsCount();
@@ -1033,7 +1057,31 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             state->SetObjectID(demon->GetUUID(),
                 server->GetNextObjectID());
 
-            // Demon status effects
+            // Demon status effects (recover first)
+            allStatusEffects = objects::StatusEffect::
+                LoadStatusEffectListByEntity(db, demon->GetUUID());
+            for(auto effect : allStatusEffects)
+            {
+                bool exists = false;
+                for(auto effect2 : demon->GetStatusEffects())
+                {
+                    if(effect2.GetUUID() == effect->GetUUID())
+                    {
+                        exists = true;
+                        break;
+                    }
+                }
+
+                if(!exists)
+                {
+                    LOG_WARNING(libcomp::String("Recovered orphaned"
+                        " StatusEffect %1 on demon: %2\n")
+                        .Arg(effect->GetUUID().ToString())
+                        .Arg(demon->GetUUID().ToString()));
+                    demon->AppendStatusEffects(effect);
+                }
+            }
+
             if(demon->StatusEffectsCount() > 0)
             {
                 int32_t seCount = (int32_t)demon->StatusEffectsCount();

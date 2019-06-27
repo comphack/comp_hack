@@ -335,7 +335,8 @@ void MatchManager::ConfirmMatch(const std::shared_ptr<
                 bool success = false;
                 {
                     std::lock_guard<std::mutex> lock(mLock);
-                    success = zone && ubMatch->MemberIDsCount() < 5 && 
+                    size_t memberLimit = (size_t)ubMatch->GetMemberLimit();
+                    success = zone && ubMatch->MemberIDsCount() < memberLimit && 
                         (!ubMatch->GetID() || ubMatch->GetID() == matchID) &&
                         ubMatch->GetState() == objects::UBMatch::State_t::READY;
                     if(success)
@@ -739,40 +740,74 @@ bool MatchManager::JoinUltimateBattleQueue(int32_t worldCID,
     }
 
     auto ubMatch = zone->GetUBMatch();
-    if(!ubMatch || ubMatch->GetState() != objects::UBMatch::State_t::PREMATCH)
+    if(!ubMatch)
     {
         return false;
     }
 
-    auto client = mServer.lock()->GetManagerConnection()->GetEntityClient(
-        worldCID, true);
-    if(client)
+    if(ubMatch->GetCategory() == objects::UBMatch::Category_t::UA)
     {
-        auto entry = GetMatchEntry(worldCID);
-        if(entry)
+        // UA participants can join directly
+
+        // Must be in ready state
+        if(ubMatch->GetState() != objects::UBMatch::State_t::READY)
         {
             return false;
         }
 
+        // Limit must not be exceeded (already joined is fine)
         std::lock_guard<std::mutex> lock(mLock);
+        if(!ubMatch->MemberIDsContains(worldCID) &&
+            ubMatch->MemberIDsCount() >= (size_t)ubMatch->GetMemberLimit())
+        {
+            return false;
+        }
 
-        entry = std::make_shared<objects::MatchEntry>();
-        entry->SetWorldCID(worldCID);
-        entry->SetOwnerCID(worldCID);
-        entry->SetMatchType(
-            objects::MatchEntry::MatchType_t::ULTIMATE_BATTLE);
-
-        ubMatch->SetPendingEntries(worldCID, entry);
-        client->GetClientState()->SetPendingMatch(ubMatch);
-
-        libcomp::Packet notify;
-        notify.WritePacketCode(
-            ChannelToClientPacketCode_t::PACKET_UB_LOTTO_STATUS);
-        notify.WriteS32Little((int32_t)ubMatch->PendingEntriesCount());
-
-        client->SendPacket(notify);
+        ubMatch->InsertMemberIDs(worldCID);
 
         return true;
+    }
+    else
+    {
+        // UB participants need to join the queue and wait to be selected
+
+        // Must be in pre-match state
+        if(ubMatch->GetState() != objects::UBMatch::State_t::PREMATCH)
+        {
+            return false;
+        }
+
+        auto client = mServer.lock()->GetManagerConnection()->GetEntityClient(
+            worldCID, true);
+        if(client)
+        {
+            // Can't have already joined the queue
+            auto entry = GetMatchEntry(worldCID);
+            if(entry)
+            {
+                return false;
+            }
+
+            std::lock_guard<std::mutex> lock(mLock);
+
+            entry = std::make_shared<objects::MatchEntry>();
+            entry->SetWorldCID(worldCID);
+            entry->SetOwnerCID(worldCID);
+            entry->SetMatchType(
+                objects::MatchEntry::MatchType_t::ULTIMATE_BATTLE);
+
+            ubMatch->SetPendingEntries(worldCID, entry);
+            client->GetClientState()->SetPendingMatch(ubMatch);
+
+            libcomp::Packet notify;
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_UB_LOTTO_STATUS);
+            notify.WriteS32Little((int32_t)ubMatch->PendingEntriesCount());
+
+            client->SendPacket(notify);
+
+            return true;
+        }
     }
 
     return false;
@@ -2337,9 +2372,17 @@ bool MatchManager::StartStopMatch(const std::shared_ptr<Zone>& zone,
                 }
             }
 
-            // Start the queue
-            UltimateBattleQueue(zone->GetDefinitionID(),
-                zone->GetDynamicMapID(), zone->GetInstanceID());
+            if(ubMatch->GetCategory() == objects::UBMatch::Category_t::UA)
+            {
+                // Start match right away
+                StartUltimateBattle(zone);
+            }
+            else
+            {
+                // Start the queue
+                UltimateBattleQueue(zone->GetDefinitionID(),
+                    zone->GetDynamicMapID(), zone->GetInstanceID());
+            }
         }
         else if(!match)
         {
@@ -2379,68 +2422,98 @@ bool MatchManager::StartUltimateBattle(const std::shared_ptr<Zone>& zone)
         ubMatch->SetTimerStart(0);
         ubMatch->SetTimerExpire(0);
 
-        std::set<int32_t> pending;
-        for(auto& pair : ubMatch->GetPendingEntries())
+        if(ubMatch->GetCategory() == objects::UBMatch::Category_t::UB)
         {
-            pending.insert(pair.first);
+            std::set<int32_t> pending;
+            for(auto& pair : ubMatch->GetPendingEntries())
+            {
+                pending.insert(pair.first);
+            }
+
+            auto memberLimit = (size_t)ubMatch->GetMemberLimit();
+            for(size_t i = 0; i < memberLimit && pending.size() > 0; i++)
+            {
+                int32_t worldCID = libcomp::Randomizer::GetEntry(pending);
+                pending.erase(worldCID);
+
+                ubMatch->RemovePendingEntries(worldCID);
+                accepted.insert(worldCID);
+            }
+
+            rejected = pending;
         }
-
-        for(size_t i = 0; i < 5 && pending.size() > 0; i++)
-        {
-            int32_t worldCID = libcomp::Randomizer::GetEntry(pending);
-            pending.erase(worldCID);
-
-            ubMatch->RemovePendingEntries(worldCID);
-            accepted.insert(worldCID);
-        }
-
-        rejected = pending;
     }
 
-    bool stopMatch = true;
-
-    auto server = mServer.lock();
-    auto clients = server->GetManagerConnection()->GetEntityClients(
-        accepted, true);
-    if(clients.size() > 0)
+    if(ubMatch->GetCategory() == objects::UBMatch::Category_t::UA)
     {
-        libcomp::Packet notify;
-        notify.WritePacketCode(
-            ChannelToClientPacketCode_t::PACKET_UB_LOTTO_RESULT);
-        notify.WriteS32Little(1);
+        // Ultimate attack has no queue or pending entries so start
+        // the ready timer now and let it expire if no one joins
+        uint64_t now = ChannelServer::GetServerTime();
+        ubMatch->SetTimerStart(now);
+        ubMatch->SetTimerExpire(now + (uint64_t)(
+            (uint64_t)ubMatch->GetReadyDuration() * 1000000ULL));
 
-        ChannelClientConnection::BroadcastPacket(clients, notify);
-        stopMatch = false;
-    }
+        // Start the pre-match timer now
+        UltimateBattleTick(zone->GetDefinitionID(),
+            zone->GetDynamicMapID(), zone->GetInstanceID());
 
-    clients = server->GetManagerConnection()->GetEntityClients(
-        rejected, true);
-    if(clients.size() > 0)
-    {
-        libcomp::Packet notify;
-        notify.WritePacketCode(
-            ChannelToClientPacketCode_t::PACKET_UB_LOTTO_RESULT);
-        notify.WriteS32Little(0);   // Not selected
-
-        ChannelClientConnection::BroadcastPacket(clients, notify);
-        stopMatch = false;
-
-        // Schedule recruiting for when the timers expire (10s + countdown)
-        server->GetTimerManager()->ScheduleEventIn((int)40, []
+        mServer.lock()->GetTimerManager()->ScheduleEventIn(
+            (int)ubMatch->GetReadyDuration(), []
             (MatchManager* pMatchManager, uint32_t pZoneID,
             uint32_t pDynamicMapID, uint32_t pInstanceID)
             {
-                pMatchManager->UltimateBattleRecruit(pZoneID, pDynamicMapID,
+                pMatchManager->UltimateBattleBegin(pZoneID, pDynamicMapID,
                     pInstanceID);
             }, this, zone->GetDefinitionID(), zone->GetDynamicMapID(),
                 zone->GetInstanceID());
     }
-
-    if(stopMatch)
+    else
     {
-        LOG_DEBUG("Skipping no entry Ultimate Battle match\n");
-        StartStopMatch(zone, nullptr);
-        return false;
+        bool stopMatch = true;
+
+        auto server = mServer.lock();
+        auto clients = server->GetManagerConnection()->GetEntityClients(
+            accepted, true);
+        if(clients.size() > 0)
+        {
+            libcomp::Packet notify;
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_UB_LOTTO_RESULT);
+            notify.WriteS32Little(1);
+
+            ChannelClientConnection::BroadcastPacket(clients, notify);
+            stopMatch = false;
+        }
+
+        clients = server->GetManagerConnection()->GetEntityClients(
+            rejected, true);
+        if(clients.size() > 0)
+        {
+            libcomp::Packet notify;
+            notify.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_UB_LOTTO_RESULT);
+            notify.WriteS32Little(0);   // Not selected
+
+            ChannelClientConnection::BroadcastPacket(clients, notify);
+            stopMatch = false;
+
+            // Schedule recruiting for when the timers expire (10s + countdown)
+            server->GetTimerManager()->ScheduleEventIn((int)40, []
+                (MatchManager* pMatchManager, uint32_t pZoneID,
+                uint32_t pDynamicMapID, uint32_t pInstanceID)
+                {
+                    pMatchManager->UltimateBattleRecruit(pZoneID,
+                        pDynamicMapID, pInstanceID);
+                }, this, zone->GetDefinitionID(), zone->GetDynamicMapID(),
+                    zone->GetInstanceID());
+        }
+
+        if(stopMatch)
+        {
+            LOG_DEBUG("Skipping no entry Ultimate Battle match\n");
+            StartStopMatch(zone, nullptr);
+            return false;
+        }
     }
 
     LOG_DEBUG("Starting Ultimate Battle\n");
@@ -2457,7 +2530,8 @@ void MatchManager::UltimateBattleRecruit(uint32_t zoneID,
     auto ubMatch = zone ? zone->GetUBMatch() : nullptr;
     {
         std::lock_guard<std::mutex> lock(mLock);
-        if(!ubMatch || ubMatch->MemberIDsCount() >= 5)
+        if(!ubMatch ||
+            ubMatch->MemberIDsCount() >= (size_t)ubMatch->GetMemberLimit())
         {
             // No recruiting
             return;
@@ -2548,19 +2622,22 @@ void MatchManager::UltimateBattleBegin(uint32_t zoneID, uint32_t dynamicMapID,
         pendingCIDs.insert(pair.first);
     }
 
-    auto clients = server->GetManagerConnection()->GetEntityClients(
-        pendingCIDs, true);
-    for(auto client : clients)
+    if(pendingCIDs.size() > 0)
     {
-        CleanupPendingMatch(client);
+        auto clients = server->GetManagerConnection()->GetEntityClients(
+            pendingCIDs, true);
+        for(auto client : clients)
+        {
+            CleanupPendingMatch(client);
+        }
+
+        libcomp::Packet p;
+        p.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_UB_RECRUIT);
+        p.WriteS8(0);
+
+        ChannelClientConnection::BroadcastPacket(clients, p);
     }
-
-    libcomp::Packet p;
-    p.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_UB_RECRUIT);
-    p.WriteS8(0);
-
-    ChannelClientConnection::BroadcastPacket(clients, p);
 
     if(!end)
     {
@@ -2598,7 +2675,8 @@ bool MatchManager::UltimateBattleSpectate(int32_t worldCID,
             // Already spectating
             return true;
         }
-        else if(ubMatch->SpectatorIDsCount() >= 50)
+        else if(ubMatch->SpectatorIDsCount() >=
+            (size_t)ubMatch->GetSpectatorLimit())
         {
             return false;
         }
@@ -2653,6 +2731,7 @@ bool MatchManager::AdvancePhase(const std::shared_ptr<Zone>& zone, int8_t to,
     auto match = zone ? zone->GetMatch() : nullptr;
 
     int8_t oldPhase = 0;
+    bool explicitTo = to != -1;
     if(!match)
     {
         return false;
@@ -2738,6 +2817,14 @@ bool MatchManager::AdvancePhase(const std::shared_ptr<Zone>& zone, int8_t to,
         {
             // Do not actually advance, just end the match
             match->SetPhase(oldPhase);
+
+            auto ubMatch = std::dynamic_pointer_cast<objects::UBMatch>(match);
+            if(explicitTo && ubMatch)
+            {
+                // Explicitly setting outside of the bounds of the limit
+                // is a failure signifier
+                ubMatch->SetResult(1);  // Generic failure
+            }
 
             EndUltimateBattle(zone);
 

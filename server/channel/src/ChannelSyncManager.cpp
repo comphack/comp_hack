@@ -43,12 +43,14 @@
 #include <PentalphaEntry.h>
 #include <PentalphaMatch.h>
 #include <PvPMatch.h>
+#include <StatusEffect.h>
 #include <UBResult.h>
 #include <UBTournament.h>
 
 // channel Includes
 #include "AccountManager.h"
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 #include "ManagerConnection.h"
 #include "MatchManager.h"
 #include "ZoneManager.h"
@@ -70,6 +72,7 @@ namespace libcomp
             Using<objects::PentalphaEntry>();
             Using<objects::PentalphaMatch>();
             Using<objects::PvPMatch>();
+            Using<objects::StatusEffect>();
             Using<objects::UBResult>();
             Using<objects::UBTournament>();
 
@@ -165,6 +168,12 @@ bool ChannelSyncManager::Initialize()
 
     mRegisteredTypes["PvPMatch"] = cfg;
 
+    cfg = std::make_shared<ObjectConfig>("StatusEffect", false, worldDB);
+    cfg->UpdateHandler = &DataSyncManager::Update<ChannelSyncManager,
+        objects::StatusEffect>;
+
+    mRegisteredTypes["StatusEffect"] = cfg;
+
     cfg = std::make_shared<ObjectConfig>("UBResult", false, worldDB);
     cfg->SyncCompleteHandler = &DataSyncManager::SyncComplete<
         ChannelSyncManager, objects::UBResult>;
@@ -198,6 +207,7 @@ bool ChannelSyncManager::Initialize()
             "PentalphaMatch",
             "PvPMatch",
             "SearchEntry",
+            "StatusEffect",
             "UBResult",
             "UBTournament"
         };
@@ -629,6 +639,68 @@ void ChannelSyncManager::SyncComplete<objects::PvPMatch>(
     }
 
     mServer.lock()->GetMatchManager()->UpdatePvPMatches(matches);
+}
+
+template<>
+int8_t ChannelSyncManager::Update<objects::StatusEffect>(
+    const libcomp::String& type, const std::shared_ptr<libcomp::Object>& obj,
+    bool isRemove, const libcomp::String& source)
+{
+    (void)type;
+    (void)source;
+
+    auto effect = std::dynamic_pointer_cast<objects::StatusEffect>(obj);
+    if(isRemove)
+    {
+        LOG_ERROR(libcomp::String("Attempted to sync a status effect"
+            " removal: %1\n").Arg(effect->GetUUID().ToString()));
+    }
+    else
+    {
+        bool synched = false;
+
+        auto character = std::dynamic_pointer_cast<objects::Character>(
+            libcomp::PersistentObject::GetObjectByUUID(effect
+                ->GetEntity()));
+        auto account = character ? std::dynamic_pointer_cast<objects::Account>(
+            libcomp::PersistentObject::GetObjectByUUID(character
+                ->GetAccount())) : nullptr;
+        if(account)
+        {
+            character->AppendStatusEffects(effect);
+
+            auto server = mServer.lock();
+            auto client = server->GetManagerConnection()->GetClientConnection(
+                account->GetUsername());
+            if(client)
+            {
+                auto state = client->GetClientState();
+                auto cState = state->GetCharacterState();
+
+                StatusEffectChange eff(effect->GetEffect(), effect->GetStack(),
+                    true);
+
+                // Ignored by non-MS status effects
+                eff.Duration = effect->GetExpiration();
+
+                StatusEffectChanges changes;
+                changes[effect->GetEffect()] = eff;
+
+                server->GetCharacterManager()->AddStatusEffectImmediate(client,
+                    cState, changes);
+
+                synched = true;
+            }
+        }
+
+        if(!synched)
+        {
+            LOG_ERROR(libcomp::String("Failed to sync status effect: %1\n")
+                .Arg(effect->GetUUID().ToString()));
+        }
+    }
+
+    return SYNC_UPDATED;
 }
 
 template<>

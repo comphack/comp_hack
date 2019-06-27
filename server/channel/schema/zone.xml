@@ -146,6 +146,8 @@
         <member type="set" name="SpectatorIDs">
             <element type="s32"/>
         </member>
+        <member type="s32" name="MemberLimit" default="5" min="1"/>
+        <member type="s32" name="SpectatorLimit" default="50" min="0"/>
         <member type="u8" name="QueueDuration"/>
         <member type="u8" name="AnnounceDuration"/>
         <member type="u16" name="ReadyDuration"/>

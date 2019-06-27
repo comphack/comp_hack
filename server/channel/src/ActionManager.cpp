@@ -3274,6 +3274,7 @@ bool ActionManager::RunScript(ActionContext& ctx)
         engine->Using<DemonState>();
         engine->Using<EnemyState>();
         engine->Using<Zone>();
+        engine->Using<objects::PostItem>();
         engine->Using<libcomp::Randomizer>();
 
         // Bind the results enum

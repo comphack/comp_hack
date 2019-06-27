@@ -677,8 +677,8 @@ int8_t ChannelSyncManager::Update<objects::StatusEffect>(
                 auto state = client->GetClientState();
                 auto cState = state->GetCharacterState();
 
-                StatusEffectChange eff(effect->GetEffect(), effect->GetStack(),
-                    true);
+                StatusEffectChange eff(effect->GetEffect(),
+                    (int8_t)effect->GetStack(), true);
 
                 // Ignored by non-MS status effects
                 eff.Duration = effect->GetExpiration();

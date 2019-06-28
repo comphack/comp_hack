@@ -156,6 +156,9 @@ protected:
         const std::shared_ptr<ApiSession>& session);
 
     int64_t WebGameScript_GetCoins(const std::shared_ptr<ApiSession>& session);
+    std::shared_ptr<libcomp::Database> WebGameScript_GetDatabase(
+        const std::shared_ptr<ApiSession>& session, bool worldDB);
+    int64_t WebGameScript_GetSystemTime();
     void WebGameScript_SetResponse(JsonBox::Object* response,
         const libcomp::String& key, const libcomp::String& value);
     bool WebGameScript_UpdateCoins(const std::shared_ptr<ApiSession>& session,

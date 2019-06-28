@@ -72,6 +72,7 @@ void ActionStartEvent::Load(const std::shared_ptr<objects::Action>& act)
     prop->event->SetEvent(mAction->GetEventID());
     prop->allowInterrupt->setCurrentIndex(to_underlying(
         mAction->GetAllowInterrupt()));
+    prop->autoOnly->setChecked(mAction->GetAutoOnly());
 }
 
 std::shared_ptr<objects::Action> ActionStartEvent::Save() const
@@ -86,6 +87,7 @@ std::shared_ptr<objects::Action> ActionStartEvent::Save() const
     mAction->SetEventID(prop->event->GetEvent());
     mAction->SetAllowInterrupt((objects::ActionStartEvent::AllowInterrupt_t)
         prop->allowInterrupt->currentIndex());
+    mAction->SetAutoOnly(prop->autoOnly->isChecked());
 
     return mAction;
 }

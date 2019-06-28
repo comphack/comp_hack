@@ -61,6 +61,20 @@
      <item row="0" column="1">
       <widget class="EventRef" name="event" native="true"/>
      </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="lblAutoOnly">
+       <property name="text">
+        <string>Auto Only:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QCheckBox" name="autoOnly">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
   </layout>

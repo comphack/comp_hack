@@ -107,7 +107,7 @@ namespace libcomp
                 .Func("GetDynamicMapID", &Zone::GetDynamicMapID)
                 .Func("GetInstanceID", &Zone::GetInstanceID)
                 .Func("GetFlagState", &Zone::GetFlagStateValue)
-                .Func("SetFlagState", &ZoneInstance::SetFlagState)
+                .Func("SetFlagState", &Zone::SetFlagState)
                 .Func("GetDiasporaBases", &Zone::GetDiasporaBases)
                 .Func("GetUBMatch", &Zone::GetUBMatch)
                 .Func("GetZoneInstance", &Zone::GetInstance)

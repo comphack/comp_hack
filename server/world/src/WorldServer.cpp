@@ -290,6 +290,7 @@ void WorldServer::RegisterChannel(
             "PentalphaMatch",
             "PvPMatch",
             "SearchEntry",
+            "StatusEffect",
             "UBResult",
             "UBTournament"
         };

@@ -36,11 +36,13 @@
 #include <ErrorCodes.h>
 #include <Log.h>
 #include <PacketCodes.h>
+#include <Randomizer.h>
 #include <ScriptEngine.h>
 
 // object Includes
 #include <Character.h>
 #include <CharacterProgress.h>
+#include <PostItem.h>
 #include <Promo.h>
 #include <WebGameSession.h>
 
@@ -1082,7 +1084,9 @@ bool ApiHandler::WebGame_Start(const JsonBox::Object& request,
     }
 
     webGameSession->gameState = std::make_shared<libcomp::ScriptEngine>();
+    webGameSession->gameState->Using<libcomp::Randomizer>();
     webGameSession->gameState->Using<objects::Character>();
+    webGameSession->gameState->Using<objects::PostItem>();
 
     // Bind the handler and the JSON response structure and session as well
     // but nothing on them since we only need to pass through to the API
@@ -1102,6 +1106,8 @@ bool ApiHandler::WebGame_Start(const JsonBox::Object& request,
             Sqrat::NoConstructor<ApiHandler>> apiBinding(vm, "ApiHandler");
         apiBinding
             .Func("GetCoins", &ApiHandler::WebGameScript_GetCoins)
+            .Func("GetDatabase", &ApiHandler::WebGameScript_GetDatabase)
+            .Func("GetSystemTime", &ApiHandler::WebGameScript_GetSystemTime)
             .Func("SetResponse", &ApiHandler::WebGameScript_SetResponse)
             .Func("UpdateCoins", &ApiHandler::WebGameScript_UpdateCoins);
         Sqrat::RootTable(vm).Bind("ApiHandler", apiBinding);
@@ -1239,14 +1245,11 @@ int64_t ApiHandler::WebGameScript_GetCoins(const std::shared_ptr<
         return -1;
     }
 
-    auto world = mServer->GetManagerConnection()->GetWorldByID(
-        gameSession->GetWorldID());
-    if(!world)
+    auto worldDB = WebGameScript_GetDatabase(session, true);
+    if(!worldDB)
     {
         return -1;
     }
-
-    auto worldDB = world->GetWorldDatabase();
 
     auto character = gameSession->GetCharacter().Get(worldDB);
     auto progress = character
@@ -1257,6 +1260,50 @@ int64_t ApiHandler::WebGameScript_GetCoins(const std::shared_ptr<
     }
 
     return -1;
+}
+
+std::shared_ptr<libcomp::Database> ApiHandler::WebGameScript_GetDatabase(
+    const std::shared_ptr<ApiSession>& session, bool worldDB)
+{
+    auto wgSession = std::dynamic_pointer_cast<WebGameApiSession>(session);
+    auto gameSession = wgSession ? wgSession->webGameSession : nullptr;
+    if(!gameSession)
+    {
+        return nullptr;
+    }
+
+    if(worldDB)
+    {
+        auto world = mServer->GetManagerConnection()->GetWorldByID(
+            gameSession->GetWorldID());
+        if(!world)
+        {
+            return nullptr;
+        }
+
+        return world->GetWorldDatabase();
+    }
+    else
+    {
+        return mServer->GetMainDatabase();
+    }
+}
+
+int64_t ApiHandler::WebGameScript_GetSystemTime()
+{
+    // Less performant version of ChannelServer::GetServerTime
+    if(std::chrono::high_resolution_clock::is_steady)
+    {
+        auto now = std::chrono::high_resolution_clock::now();
+        return (int64_t)std::chrono::time_point_cast<
+            std::chrono::microseconds>(now).time_since_epoch().count();
+    }
+    else
+    {
+        auto now = std::chrono::steady_clock::now();
+        return (int64_t)std::chrono::time_point_cast<
+            std::chrono::microseconds>(now).time_since_epoch().count();
+    }
 }
 
 void ApiHandler::WebGameScript_SetResponse(JsonBox::Object* response,
@@ -1278,14 +1325,11 @@ bool ApiHandler::WebGameScript_UpdateCoins(
         return false;
     }
 
-    auto world = mServer->GetManagerConnection()->GetWorldByID(
-        gameSession->GetWorldID());
-    if(!world)
+    auto worldDB = WebGameScript_GetDatabase(session, true);
+    if(!worldDB)
     {
         return false;
     }
-
-    auto worldDB = world->GetWorldDatabase();
 
     auto character = gameSession->GetCharacter().Get(worldDB);
     auto progress = character

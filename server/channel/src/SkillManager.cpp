@@ -147,6 +147,7 @@ const uint8_t DAMAGE_TYPE_DRAIN = 5;
 const uint8_t DAMAGE_EXPLICIT_SET = 6;
 
 const uint16_t FLAG1_LETHAL = 1;
+const uint16_t FLAG1_CLENCH = 1 << 2;
 const uint16_t FLAG1_GUARDED = 1 << 3;
 const uint16_t FLAG1_COUNTERED = 1 << 4;
 const uint16_t FLAG1_DODGED = 1 << 5;
@@ -167,6 +168,7 @@ const uint16_t FLAG1_REFLECT_MAGIC = 1 << 11;
 const uint16_t FLAG1_BLOCK_MAGIC = 1 << 12;
 //const uint16_t FLAG1_REFLECT_UNUSED = 1 << 13;
 
+const uint16_t FLAG2_CLENCH = 1 << 4;
 const uint16_t FLAG2_LIMIT_BREAK = 1 << 5;
 const uint16_t FLAG2_IMPOSSIBLE = 1 << 6;
 const uint16_t FLAG2_BARRIER = 1 << 7;
@@ -265,6 +267,7 @@ public:
     bool CanHitstun = false;
     bool CanKnockback = false;
     bool AutoProtect = false;
+    bool ClenchOverflow = false;
     uint16_t GuardModifier = 0;
 
     uint8_t EffectCancellations = 0;
@@ -2328,7 +2331,8 @@ bool SkillManager::DetermineNormalCosts(
             }
             break;
         case objects::MiCostTbl::Type_t::ITEM:
-            if(!noItem)
+            // Ignore explicit zero item costs
+            if(!noItem && num)
             {
                 if(percentCost)
                 {
@@ -3402,14 +3406,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         if(hpMpSet || hpDamage != 0 || mpDamage != 0)
         {
             bool targetAlive = target.EntityState->IsAlive();
-            bool secondaryDamage = (target.TechnicalDamage +
-                target.PursuitDamage + target.AilmentDamage) > 0;
 
             // If the target can be killed by the hit, get clench chance
-            // but only if secondary damage has not occurred and the skill
+            // but only if ailment damage has not occurred and the skill
             // is not a suicide skill
             int32_t clenchChance = 0;
-            if(hpDamage > 0 && targetAlive && !secondaryDamage &&
+            if(hpDamage > 0 && targetAlive && !target.AilmentDamage &&
                 (skill.FunctionID != SVR_CONST.SKILL_SUICIDE ||
                     target.EntityState != source))
             {
@@ -3463,14 +3465,29 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 target.Damage1 = -hpAdjusted;
                 target.Damage2 = -mpAdjusted;
             }
-            else
+            else if(hpAdjusted != hpDamage)
             {
-                // If the HP damage was changed and there are no secondary
-                // damage sources update the target damage
-                if(hpAdjusted != hpDamage && !secondaryDamage)
+                // HP damage can only change when clench occurs (HP update
+                // prevented from being lethal when it should have been).
+                if(!target.TechnicalDamage &&
+                    !target.PursuitDamage)
                 {
+                    // If no technical or pursuit damage occurs, the number
+                    // just reduces to the actual damage dealt.
                     target.Damage1 = -hpAdjusted;
                 }
+                else
+                {
+                    // Otherwise the overflow numbers display and the entity
+                    // is left with 1 HP if they're still alive (see followup
+                    // packet for how we force this).
+                    target.ClenchOverflow = !targetKilled;
+                }
+
+                // I'm going to assume the second flag was SUPPOSED to leave
+                // you with 1 HP but the client doesn't do this :(
+                target.Flags1 |= FLAG1_CLENCH;
+                target.Flags2 |= FLAG2_CLENCH;
             }
 
             if(mpAdjusted != 0)
@@ -4079,6 +4096,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     std::set<std::shared_ptr<ActiveEntityState>> inheritSkill;
     std::set<std::shared_ptr<ActiveEntityState>> revived;
     std::set<std::shared_ptr<ActiveEntityState>> killed;
+    std::set<std::shared_ptr<ActiveEntityState>> cOverflow;
     std::list<std::shared_ptr<ActiveEntityState>> aiHit;
     std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
     std::set<int32_t> interruptEvent;
@@ -4127,6 +4145,11 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             break;
         default:
             break;
+        }
+
+        if(target.ClenchOverflow)
+        {
+            cOverflow.insert(eState);
         }
 
         bool targetRevived = false;
@@ -4197,6 +4220,25 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
     }
 
     // Process all additional effects
+    for(auto entity : cOverflow)
+    {
+        // Entities can survive a lethal blow via clench without damage
+        // reduction (when pursuit or technical damage occurs) but will
+        // sit at 0 HP. The problem arises when the entity regens back to
+        // max HP - 1 which is easily noticeable on player entities. The
+        // sitting at 0 HP behavior has been observed but to more properly
+        // correct this, increase each entity's HP back to 1 via regen
+        // client side since it still is server side. Only send this to
+        // the same connections sent the skill packets.
+        libcomp::Packet p;
+        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DO_TDAMAGE);
+        p.WriteS32Little(entity->GetEntityID());
+        p.WriteS32Little(1); // HP
+        p.WriteS32Little(0); // No MP
+
+        ChannelClientConnection::BroadcastPacket(zConnections, p);
+    }
+
     if(interruptEvent.size() > 0)
     {
         InterruptEvents(interruptEvent);
@@ -6256,8 +6298,10 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 break;
             case objects::Spawn::KillValueType_t::BETHEL:
                 // If in an active Pentalpha instance, bethel is "held" until
-                // the timer expires. Otherwise it is given right away. Both
-                // require active Pentalpha entries to actually do anything.
+                // the timer expires and is also divided amongst everyone who
+                // has access to the instance. Otherwise it is given right
+                // away. Both require active Pentalpha entries to actually do
+                // anything.
                 {
                     float globalBonus = server->GetWorldSharedConfig()
                         ->GetBethelBonus();
@@ -6270,8 +6314,18 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                     if(zone->GetInstanceType() == InstanceType_t::PENTALPHA &&
                         instance->GetTimerStart() && !instance->GetTimerStop())
                     {
-                        sourceState->SetInstanceBethel(valSum +
-                            sourceState->GetInstanceBethel());
+                        // Distribute bethel by access CID, currently connected
+                        // or not and divide evenly so being in a group is not
+                        // the clear better way to run these instances
+                        valSum = (int32_t)ceil((double)valSum /
+                            (double)instance->OriginalAccessCIDsCount());
+                        for(auto c : managerConnection->GetEntityClients(
+                            instance->GetOriginalAccessCIDs(), true))
+                        {
+                            auto s = c->GetClientState();
+                            s->SetInstanceBethel(valSum +
+                                s->GetInstanceBethel());
+                        }
                     }
                     else
                     {
@@ -8599,6 +8653,16 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
                 tokuseiReduction -= tokuseiManager->GetAspectSum(
                     target.EntityState, TokuseiAspectType::DAMAGE_TAKEN,
                     targetState) * 0.01;
+
+                if(tokuseiBoost < 0.0)
+                {
+                    tokuseiBoost = 0.0;
+                }
+
+                if(tokuseiReduction < 0.0)
+                {
+                    tokuseiReduction = 0.0;
+                }
             }
 
             // Scale the current value by the critical, limit break or min to

@@ -18,8 +18,14 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.2.3)
 
 # Do not build objects while linking to reduce memory usage.
-SET_PROPERTY(GLOBAL APPEND PROPERTY JOB_POOLS link_job_pool=1)
-SET(CMAKE_JOB_POOL_LINK link_job_pool)
+OPTION(LIMIT_LINK_JOBS "Limit number of parallel link jobs." OFF)
+SET(MAX_LINK_JOBS "1" CACHE STRING "Maximum number of parallel link jobs.")
+
+IF(LIMIT_LINK_JOBS)
+    SET_PROPERTY(GLOBAL APPEND PROPERTY JOB_POOLS
+        link_job_pool=${MAX_LINK_JOBS})
+    SET(CMAKE_JOB_POOL_LINK link_job_pool)
+ENDIF(LIMIT_LINK_JOBS)
 
 #
 # START OF VERSION CONSTANTS

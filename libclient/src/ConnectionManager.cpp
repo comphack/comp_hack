@@ -26,6 +26,9 @@
 
 #include "ConnectionManager.h"
 
+// libclient Includes
+#include "LogicWorker.h"
+
 // libcomp Includes
 #include <ChannelConnection.h>
 #include <ConnectionMessage.h>
@@ -34,7 +37,6 @@
 #include <ErrorCodes.h>
 #include <LobbyConnection.h>
 #include <Log.h>
-#include <LogicWorker.h>
 #include <MessageClient.h>
 #include <MessageConnectionClosed.h>
 #include <MessageEncrypted.h>
@@ -52,14 +54,15 @@
 
 using namespace logic;
 
-using libcomp::Message::MessageType;
 using libcomp::Message::ConnectionMessageType;
 using libcomp::Message::MessageClientType;
+using libcomp::Message::MessageType;
 
 ConnectionManager::ConnectionManager(LogicWorker *pLogicWorker,
-    const std::weak_ptr<libcomp::MessageQueue<
-        libcomp::Message::Message*>>& messageQueue) :
-    libcomp::Manager(), mLogicWorker(pLogicWorker), mMessageQueue(messageQueue),
+    const std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
+        &messageQueue) :
+    libcomp::Manager(),
+    mLogicWorker(pLogicWorker), mMessageQueue(messageQueue),
     mClientVersion(1666)
 {
 }
@@ -91,13 +94,13 @@ bool ConnectionManager::ProcessMessage(
     {
         case to_underlying(MessageType::MESSAGE_TYPE_PACKET):
             return ProcessPacketMessage(
-                (const libcomp::Message::Packet*)pMessage);
+                (const libcomp::Message::Packet *)pMessage);
         case to_underlying(MessageType::MESSAGE_TYPE_CONNECTION):
             return ProcessConnectionMessage(
-                (const libcomp::Message::ConnectionMessage*)pMessage);
+                (const libcomp::Message::ConnectionMessage *)pMessage);
         case to_underlying(MessageType::MESSAGE_TYPE_CLIENT):
             return ProcessClientMessage(
-                (const libcomp::Message::MessageClient*)pMessage);
+                (const libcomp::Message::MessageClient *)pMessage);
         default:
             break;
     }
@@ -106,7 +109,7 @@ bool ConnectionManager::ProcessMessage(
 }
 
 bool ConnectionManager::ProcessPacketMessage(
-        const libcomp::Message::Packet *pMessage)
+    const libcomp::Message::Packet *pMessage)
 {
     libcomp::ReadOnlyPacket p(pMessage->GetPacket());
 
@@ -130,8 +133,8 @@ bool ConnectionManager::ProcessConnectionMessage(
     {
         case to_underlying(ConnectionMessageType::CONNECTION_MESSAGE_ENCRYPTED):
         {
-            const libcomp::Message::Encrypted *pMsg = reinterpret_cast<
-                const libcomp::Message::Encrypted*>(pMessage);
+            const libcomp::Message::Encrypted *pMsg =
+                reinterpret_cast<const libcomp::Message::Encrypted *>(pMessage);
 
             if(pMsg->GetConnection() == mActiveConnection)
             {
@@ -147,10 +150,12 @@ bool ConnectionManager::ProcessConnectionMessage(
 
             return true;
         }
-        case to_underlying(ConnectionMessageType::CONNECTION_MESSAGE_CONNECTION_CLOSED):
+        case to_underlying(
+            ConnectionMessageType::CONNECTION_MESSAGE_CONNECTION_CLOSED):
         {
-            const libcomp::Message::ConnectionClosed *pMsg = reinterpret_cast<
-                const libcomp::Message::ConnectionClosed*>(pMessage);
+            const libcomp::Message::ConnectionClosed *pMsg =
+                reinterpret_cast<const libcomp::Message::ConnectionClosed *>(
+                    pMessage);
 
             if(pMsg->GetConnection() == mActiveConnection)
             {
@@ -173,15 +178,15 @@ bool ConnectionManager::ProcessClientMessage(
     {
         case to_underlying(MessageClientType::CONNECT_TO_LOBBY):
         {
-            const MessageConnectToLobby *pInfo = reinterpret_cast<
-                const MessageConnectToLobby*>(pMessage);
+            const MessageConnectToLobby *pInfo =
+                reinterpret_cast<const MessageConnectToLobby *>(pMessage);
             mUsername = pInfo->GetUsername();
             mPassword = pInfo->GetPassword();
             mClientVersion = pInfo->GetClientVersion();
 
             /// @todo Handle if this fails.
             if(!ConnectLobby(pInfo->GetConnectionID(), pInfo->GetHost(),
-                pInfo->GetPort()))
+                   pInfo->GetPort()))
             {
                 LOG_ERROR("Failed to connect to lobby server!\n");
             }
@@ -190,14 +195,23 @@ bool ConnectionManager::ProcessClientMessage(
         }
         case to_underlying(MessageClientType::CONNECT_TO_CHANNEL):
         {
-            const MessageConnectToChannel *pInfo = reinterpret_cast<
-                const MessageConnectToChannel*>(pMessage);
+            const MessageConnectToChannel *pInfo =
+                reinterpret_cast<const MessageConnectToChannel *>(pMessage);
 
             /// @todo Handle if this fails.
             if(!ConnectChannel(pInfo->GetConnectionID(), pInfo->GetHost(),
-                pInfo->GetPort()))
+                   pInfo->GetPort()))
             {
                 LOG_ERROR("Failed to connect to channel server!\n");
+            }
+
+            return true;
+        }
+        case to_underlying(MessageClientType::CONNECTION_CLOSE):
+        {
+            if(!CloseConnection())
+            {
+                LOG_ERROR("Failed to close connection!\n");
             }
 
             return true;
@@ -209,18 +223,19 @@ bool ConnectionManager::ProcessClientMessage(
     return false;
 }
 
-bool ConnectionManager::ConnectLobby(const libcomp::String& connectionID,
-    const libcomp::String& host, uint16_t port)
+bool ConnectionManager::ConnectLobby(const libcomp::String &connectionID,
+    const libcomp::String &host, uint16_t port)
 {
-    return SetupConnection(std::make_shared<libcomp::LobbyConnection>(
-        mService), connectionID, host, port);
+    return SetupConnection(std::make_shared<libcomp::LobbyConnection>(mService),
+        connectionID, host, port);
 }
 
-bool ConnectionManager::ConnectChannel(const libcomp::String& connectionID,
-    const libcomp::String& host, uint16_t port)
+bool ConnectionManager::ConnectChannel(const libcomp::String &connectionID,
+    const libcomp::String &host, uint16_t port)
 {
-    return SetupConnection(std::make_shared<libcomp::ChannelConnection>(
-        mService), connectionID, host, port);
+    return SetupConnection(
+        std::make_shared<libcomp::ChannelConnection>(mService), connectionID,
+        host, port);
 }
 
 bool ConnectionManager::CloseConnection()
@@ -252,9 +267,10 @@ bool ConnectionManager::CloseConnection()
     return true;
 }
 
-bool ConnectionManager::SetupConnection(const std::shared_ptr<
-    libcomp::EncryptedConnection>& conn, const libcomp::String& connectionID,
-    const libcomp::String& host, uint16_t port)
+bool ConnectionManager::SetupConnection(
+    const std::shared_ptr<libcomp::EncryptedConnection> &conn,
+    const libcomp::String &connectionID, const libcomp::String &host,
+    uint16_t port)
 {
     if(!CloseConnection())
     {
@@ -270,15 +286,12 @@ bool ConnectionManager::SetupConnection(const std::shared_ptr<
     bool result = mActiveConnection->Connect(host, port);
 
     // Start the service thread for the new connection.
-    mServiceThread = std::thread([&]()
-    {
-        mService.run();
-    });
+    mServiceThread = std::thread([&]() { mService.run(); });
 
     return result;
 }
 
-void ConnectionManager::SendPacket(libcomp::Packet& packet)
+void ConnectionManager::SendPacket(libcomp::Packet &packet)
 {
     if(mActiveConnection)
     {
@@ -286,7 +299,7 @@ void ConnectionManager::SendPacket(libcomp::Packet& packet)
     }
 }
 
-void ConnectionManager::SendPacket(libcomp::ReadOnlyPacket& packet)
+void ConnectionManager::SendPacket(libcomp::ReadOnlyPacket &packet)
 {
     if(mActiveConnection)
     {
@@ -294,8 +307,7 @@ void ConnectionManager::SendPacket(libcomp::ReadOnlyPacket& packet)
     }
 }
 
-void ConnectionManager::SendPackets(
-    const std::list<libcomp::Packet*>& packets)
+void ConnectionManager::SendPackets(const std::list<libcomp::Packet *> &packets)
 {
     if(mActiveConnection)
     {
@@ -309,7 +321,7 @@ void ConnectionManager::SendPackets(
 }
 
 void ConnectionManager::SendPackets(
-    const std::list<libcomp::ReadOnlyPacket*>& packets)
+    const std::list<libcomp::ReadOnlyPacket *> &packets)
 {
     if(mActiveConnection)
     {
@@ -322,7 +334,7 @@ void ConnectionManager::SendPackets(
     }
 }
 
-bool ConnectionManager::SendObject(std::shared_ptr<libcomp::Object>& obj)
+bool ConnectionManager::SendObject(std::shared_ptr<libcomp::Object> &obj)
 {
     if(mActiveConnection)
     {
@@ -332,8 +344,8 @@ bool ConnectionManager::SendObject(std::shared_ptr<libcomp::Object>& obj)
     return false;
 }
 
-bool ConnectionManager::SendObjects(const std::list<
-    std::shared_ptr<libcomp::Object>>& objs)
+bool ConnectionManager::SendObjects(
+    const std::list<std::shared_ptr<libcomp::Object>> &objs)
 {
     if(mActiveConnection)
     {
@@ -356,7 +368,7 @@ bool ConnectionManager::IsConnected() const
     if(mActiveConnection)
     {
         return libcomp::TcpConnection::STATUS_ENCRYPTED ==
-            mActiveConnection->GetStatus();
+               mActiveConnection->GetStatus();
     }
 
     return false;
@@ -365,13 +377,15 @@ bool ConnectionManager::IsConnected() const
 bool ConnectionManager::IsLobbyConnection() const
 {
     return nullptr != std::dynamic_pointer_cast<libcomp::LobbyConnection>(
-        mActiveConnection).get();
+                          mActiveConnection)
+                          .get();
 }
 
 bool ConnectionManager::IsChannelConnection() const
 {
     return nullptr != std::dynamic_pointer_cast<libcomp::ChannelConnection>(
-        mActiveConnection).get();
+                          mActiveConnection)
+                          .get();
 }
 
 std::shared_ptr<libcomp::EncryptedConnection>
@@ -398,7 +412,7 @@ void ConnectionManager::AuthenticateChannel()
     //     mActiveConnection->GetName()));
 }
 
-bool ConnectionManager::HandlePacketLobbyLogin(libcomp::ReadOnlyPacket& p)
+bool ConnectionManager::HandlePacketLobbyLogin(libcomp::ReadOnlyPacket &p)
 {
     packets::PacketLobbyLoginReply obj;
 
@@ -427,8 +441,8 @@ bool ConnectionManager::HandlePacketLobbyLogin(libcomp::ReadOnlyPacket& p)
 
         // Send the auth packet and await the response.
         packets::PacketLobbyAuth reply;
-        reply.SetPacketCode(to_underlying(
-            ClientToLobbyPacketCode_t::PACKET_AUTH));
+        reply.SetPacketCode(
+            to_underlying(ClientToLobbyPacketCode_t::PACKET_AUTH));
         reply.SetHash(hash);
 
         mActiveConnection->SendObject(reply);
@@ -440,14 +454,14 @@ bool ConnectionManager::HandlePacketLobbyLogin(libcomp::ReadOnlyPacket& p)
 
         // An error occurred so close the connection and pass it along.
         CloseConnection();
-        mLogicWorker->SendToGame(new MessageConnectedToLobby(
-            connectionID, errorCode));
+        mLogicWorker->SendToGame(
+            new MessageConnectedToLobby(connectionID, errorCode));
     }
 
     return true;
 }
 
-bool ConnectionManager::HandlePacketLobbyAuth(libcomp::ReadOnlyPacket& p)
+bool ConnectionManager::HandlePacketLobbyAuth(libcomp::ReadOnlyPacket &p)
 {
     packets::PacketLobbyAuthReply obj;
 
@@ -470,8 +484,21 @@ bool ConnectionManager::HandlePacketLobbyAuth(libcomp::ReadOnlyPacket& p)
 
     if(ErrorCodes_t::SUCCESS == errorCode)
     {
+        // Notify the game we are connected and authenticated.
         mLogicWorker->SendToGame(new MessageConnectedToLobby(
             mActiveConnection->GetName(), errorCode, obj.GetSID()));
+
+        // Request the world list and the character list.
+        libcomp::Packet reply;
+        reply.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_WORLD_LIST);
+
+        mActiveConnection->QueuePacket(reply);
+
+        reply.Clear();
+        reply.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_CHARACTER_LIST);
+
+        mActiveConnection->QueuePacket(reply);
+        mActiveConnection->FlushOutgoing();
     }
     else
     {
@@ -480,8 +507,8 @@ bool ConnectionManager::HandlePacketLobbyAuth(libcomp::ReadOnlyPacket& p)
 
         // An error occurred so close the connection and pass it along.
         CloseConnection();
-        mLogicWorker->SendToGame(new MessageConnectedToLobby(
-            connectionID, errorCode));
+        mLogicWorker->SendToGame(
+            new MessageConnectedToLobby(connectionID, errorCode));
     }
 
     return true;

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="PacketLobbyWorldListChannelEntry" persistent="false" namespace="packets">
+        <!-- Encoding was set to ensure the string is zero padded. -->
+        <member type="string" name="Name" lensz="2" encoding="cp932"/>
+        <member type="u16" name="Latency"/>
+        <member type="u8" name="Visibility"/>
+    </object>
+    <object name="PacketLobbyWorldListEntry" persistent="false" namespace="packets">
+        <member type="u8" name="ID"/>
+        <!-- Encoding was set to ensure the string is zero padded. -->
+        <member type="string" name="Name" lensz="2" encoding="cp932"/>
+
+        <member type="list" name="Channels" lensz="1">
+            <element type="PacketLobbyWorldListChannelEntry*" namespace="packets"/>
+        </member>
+    </object>
+    <object name="PacketLobbyWorldList" persistent="false" namespace="packets">
+        <member type="list" name="Worlds" lensz="1">
+            <element type="PacketLobbyWorldListEntry*" namespace="packets"/>
+        </member>
+    </object>
+</objgen>

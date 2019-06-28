@@ -35,136 +35,167 @@
 
 namespace logic
 {
-
-/**
- * Message signifying that a connection has been established.
- */
-class MessageConnected : public libcomp::Message::MessageClient
-{
-public:
     /**
-     * Create the message.
-     * @param connectionID ID for the connection.
-     * @param errorCode Error code from authentication.
+     * Message signifying that a connection has been established.
      */
-    MessageConnected(const libcomp::String& connectionID,
-        ErrorCodes_t errorCode) : mConnectionID(connectionID),
-        mErrorCode(errorCode) { }
-
-    /**
-     * Cleanup the message.
-     */
-    ~MessageConnected() override { }
-
-    /**
-     * Get the connection ID.
-     * @returns Connection ID.
-     */
-    libcomp::String GetConnectionID() const { return mConnectionID; }
-
-    /**
-     * Get the error code from authentication.
-     * @returns Error code from authentication.
-     */
-    ErrorCodes_t GetErrorCode() const { return mErrorCode; }
-
-protected:
-    /// Connection ID.
-    libcomp::String mConnectionID;
-
-    /// Error code from authentication.
-    ErrorCodes_t mErrorCode;
-};
-
-/**
- * Message signifying that a connection has been established to the lobby.
- */
-class MessageConnectedToLobby : public MessageConnected
-{
-public:
-    /**
-     * Create the message.
-     * @param connectionID ID for the connection.
-     * @param errorCode Error code from authentication.
-     * @param sid Session ID for this connection.
-     */
-    MessageConnectedToLobby(const libcomp::String& connectionID,
-        ErrorCodes_t errorCode, const libcomp::String& sid = {}) :
-        MessageConnected(connectionID, errorCode), mSID(sid) { }
-
-    /**
-     * Cleanup the message.
-     */
-    ~MessageConnectedToLobby() override { }
-
-    /**
-     * Get the session ID for this connection.
-     * @returns Session ID for this connection.
-     */
-    libcomp::String GetSID() const { return mSID; }
-
-    /**
-     * Get the specific client message type.
-     * @return The message's client message type
-     */
-    libcomp::Message::MessageClientType GetMessageClientType() const override {
-        return libcomp::Message::MessageClientType::CONNECTED_TO_LOBBY;
-    }
-
-    /**
-     * Dump the message for logging.
-     * @return String representation of the message.
-     */
-    libcomp::String Dump() const override
+    class MessageConnected : public libcomp::Message::MessageClient
     {
-        return libcomp::String("Message: Connected to lobby server\n"
-            "ID: %1\nError: %2").Arg(mConnectionID).Arg(
-            to_underlying(mErrorCode));
-    }
+    public:
+        /**
+         * Create the message.
+         * @param connectionID ID for the connection.
+         * @param errorCode Error code from authentication.
+         */
+        MessageConnected(
+            const libcomp::String &connectionID, ErrorCodes_t errorCode) :
+            libcomp::Message::MessageClient(),
+            mConnectionID(connectionID), mErrorCode(errorCode)
+        {
+        }
 
-private:
-    /// Session ID for this connection.
-    libcomp::String mSID;
-};
+        /**
+         * Cleanup the message.
+         */
+        ~MessageConnected() override
+        {
+        }
 
-/**
- * Message signifying that a connection has been established to the channel.
- */
-class MessageConnectedToChannel : public MessageConnected
-{
-public:
+        /**
+         * Get the connection ID.
+         * @returns Connection ID.
+         */
+        libcomp::String GetConnectionID() const
+        {
+            return mConnectionID;
+        }
+
+        /**
+         * Get the error code from authentication.
+         * @returns Error code from authentication.
+         */
+        ErrorCodes_t GetErrorCode() const
+        {
+            return mErrorCode;
+        }
+
+    protected:
+        /// Connection ID.
+        libcomp::String mConnectionID;
+
+        /// Error code from authentication.
+        ErrorCodes_t mErrorCode;
+    };
+
     /**
-     * Create the message.
-     * @param connectionID ID for the connection.
-     * @param errorCode Error code from authentication.
+     * Message signifying that a connection has been established to the lobby.
      */
-    MessageConnectedToChannel(const libcomp::String& connectionID,
-        ErrorCodes_t errorCode) : MessageConnected(connectionID, errorCode) { }
-
-    /**
-     * Cleanup the message.
-     */
-    ~MessageConnectedToChannel() override { }
-
-    /**
-     * Get the specific client message type.
-     * @return The message's client message type
-     */
-    libcomp::Message::MessageClientType GetMessageClientType() const override {
-        return libcomp::Message::MessageClientType::CONNECTED_TO_CHANNEL;
-    }
-
-    /**
-     * Dump the message for logging.
-     * @return String representation of the message.
-     */
-    libcomp::String Dump() const override
+    class MessageConnectedToLobby : public MessageConnected
     {
-        return libcomp::String("Message: Connected to channel server\n"
-            "ID: %1\nError: %2").Arg(mConnectionID).Arg(
-            to_underlying(mErrorCode));
-    }
-};
+    public:
+        /**
+         * Create the message.
+         * @param connectionID ID for the connection.
+         * @param errorCode Error code from authentication.
+         * @param sid Session ID for this connection.
+         */
+        MessageConnectedToLobby(const libcomp::String &connectionID,
+            ErrorCodes_t errorCode, const libcomp::String &sid = {}) :
+            MessageConnected(connectionID, errorCode),
+            mSID(sid)
+        {
+        }
+
+        /**
+         * Cleanup the message.
+         */
+        ~MessageConnectedToLobby() override
+        {
+        }
+
+        /**
+         * Get the session ID for this connection.
+         * @returns Session ID for this connection.
+         */
+        libcomp::String GetSID() const
+        {
+            return mSID;
+        }
+
+        /**
+         * Get the specific client message type.
+         * @return The message's client message type
+         */
+        libcomp::Message::MessageClientType
+            GetMessageClientType() const override
+        {
+            return libcomp::Message::MessageClientType::CONNECTED_TO_LOBBY;
+        }
+
+        /**
+         * Dump the message for logging.
+         * @return String representation of the message.
+         */
+        libcomp::String Dump() const override
+        {
+            return libcomp::String(
+                "Message: Connected to lobby server\n"
+                "ID: %1\nError: %2")
+                .Arg(mConnectionID)
+                .Arg(to_underlying(mErrorCode));
+        }
+
+    private:
+        /// Session ID for this connection.
+        libcomp::String mSID;
+    };
+
+    /**
+     * Message signifying that a connection has been established to the channel.
+     */
+    class MessageConnectedToChannel : public MessageConnected
+    {
+    public:
+        /**
+         * Create the message.
+         * @param connectionID ID for the connection.
+         * @param errorCode Error code from authentication.
+         */
+        MessageConnectedToChannel(
+            const libcomp::String &connectionID, ErrorCodes_t errorCode) :
+            MessageConnected(connectionID, errorCode)
+        {
+        }
+
+        /**
+         * Cleanup the message.
+         */
+        ~MessageConnectedToChannel() override
+        {
+        }
+
+        /**
+         * Get the specific client message type.
+         * @return The message's client message type
+         */
+        libcomp::Message::MessageClientType
+            GetMessageClientType() const override
+        {
+            return libcomp::Message::MessageClientType::CONNECTED_TO_CHANNEL;
+        }
+
+        /**
+         * Dump the message for logging.
+         * @return String representation of the message.
+         */
+        libcomp::String Dump() const override
+        {
+            return libcomp::String(
+                "Message: Connected to channel server\n"
+                "ID: %1\nError: %2")
+                .Arg(mConnectionID)
+                .Arg(to_underlying(mErrorCode));
+        }
+    };
 
 } // namespace logic
 

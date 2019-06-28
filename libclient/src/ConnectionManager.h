@@ -41,227 +41,228 @@
 
 namespace logic
 {
-
-class LogicWorker;
-
-/**
- * Worker for client<==>server interaction.
- */
-class ConnectionManager : public libcomp::Manager
-{
-public:
-    /**
-     * Create a new worker.
-     * @param messageQueue Message queue of the LogicWorker.
-     */
-    explicit ConnectionManager(LogicWorker *pLogicWorker,
-        const std::weak_ptr<libcomp::MessageQueue<
-            libcomp::Message::Message*>>& messageQueue);
+    class LogicWorker;
 
     /**
-     * Cleanup the worker.
+     * Worker for client<==>server interaction.
      */
-    virtual ~ConnectionManager();
+    class ConnectionManager : public libcomp::Manager
+    {
+    public:
+        /**
+         * Create a new worker.
+         * @param messageQueue Message queue of the LogicWorker.
+         */
+        explicit ConnectionManager(LogicWorker *pLogicWorker,
+            const std::weak_ptr<
+                libcomp::MessageQueue<libcomp::Message::Message *>>
+                &messageQueue);
 
-    /**
-     * Get the different types of messages handled by the manager.
-     * @return List of message types handled by the manager
-     */
-    std::list<libcomp::Message::MessageType> GetSupportedTypes() const override;
+        /**
+         * Cleanup the worker.
+         */
+        virtual ~ConnectionManager();
 
-    /**
-     * Process a message from the queue.
-     * @param pMessage Message to be processed
-     * @return true on success, false on failure
-     */
-    bool ProcessMessage(const libcomp::Message::Message *pMessage) override;
+        /**
+         * Get the different types of messages handled by the manager.
+         * @return List of message types handled by the manager
+         */
+        std::list<libcomp::Message::MessageType>
+            GetSupportedTypes() const override;
 
-    /**
-     * Close any active connection and initiate a new lobby connection.
-     * @param connectionID ID for the connection.
-     * @param host Hostname to connect to.
-     * @param port TCP port to connect to on the host.
-     * @returns true if the connection has started; false otherwise.
-     *
-     * @note This function should only be called from the logic thread.
-     */
-    bool ConnectLobby(const libcomp::String& connectionID = "lobby",
-        const libcomp::String& host = "127.0.0.1", uint16_t port = 10666);
+        /**
+         * Process a message from the queue.
+         * @param pMessage Message to be processed
+         * @return true on success, false on failure
+         */
+        bool ProcessMessage(const libcomp::Message::Message *pMessage) override;
 
-    /**
-     * Close any active connection and initiate a new channel connection.
-     * @param connectionID ID for the connection.
-     * @param host Hostname to connect to.
-     * @param port TCP port to connect to on the host.
-     * @returns true if the connection has started; false otherwise.
-     *
-     * @note This function should only be called from the logic thread.
-     */
-    bool ConnectChannel(const libcomp::String& connectionID = "channel",
-        const libcomp::String& host = "127.0.0.1", uint16_t port = 14666);
+        /**
+         * Close any active connection and initiate a new lobby connection.
+         * @param connectionID ID for the connection.
+         * @param host Hostname to connect to.
+         * @param port TCP port to connect to on the host.
+         * @returns true if the connection has started; false otherwise.
+         *
+         * @note This function should only be called from the logic thread.
+         */
+        bool ConnectLobby(const libcomp::String &connectionID = "lobby",
+            const libcomp::String &host = "127.0.0.1", uint16_t port = 10666);
 
-    /**
-     * Close the active connection.
-     * @returns true if the connection was closed; false otherwise.
-     *
-     * @note This function should only be called from the logic thread.
-     */
-    bool CloseConnection();
+        /**
+         * Close any active connection and initiate a new channel connection.
+         * @param connectionID ID for the connection.
+         * @param host Hostname to connect to.
+         * @param port TCP port to connect to on the host.
+         * @returns true if the connection has started; false otherwise.
+         *
+         * @note This function should only be called from the logic thread.
+         */
+        bool ConnectChannel(const libcomp::String &connectionID = "channel",
+            const libcomp::String &host = "127.0.0.1", uint16_t port = 14666);
 
-    /**
-     * Queue a packet and then send all queued packets to the remote host.
-     * @param packet Packet to send to the remote host.
-     */
-    void SendPacket(libcomp::Packet& packet);
+        /**
+         * Close the active connection.
+         * @returns true if the connection was closed; false otherwise.
+         *
+         * @note This function should only be called from the logic thread.
+         */
+        bool CloseConnection();
 
-    /**
-     * Queue a packet and then send all queued packets to the remote host.
-     * @param packet Packet to send to the remote host.
-     */
-    void SendPacket(libcomp::ReadOnlyPacket& packet);
+        /**
+         * Queue a packet and then send all queued packets to the remote host.
+         * @param packet Packet to send to the remote host.
+         */
+        void SendPacket(libcomp::Packet &packet);
 
-    /**
-     * Queue packets and then send all queued packets to the remote host.
-     * @param packets Packets to send to the remote host.
-     */
-    void SendPackets(const std::list<libcomp::Packet*>& packets);
+        /**
+         * Queue a packet and then send all queued packets to the remote host.
+         * @param packet Packet to send to the remote host.
+         */
+        void SendPacket(libcomp::ReadOnlyPacket &packet);
 
-    /**
-     * Queue packets and then send all queued packets to the remote host.
-     * @param packets Packets to send to the remote host.
-     */
-    void SendPackets(const std::list<libcomp::ReadOnlyPacket*>& packets);
+        /**
+         * Queue packets and then send all queued packets to the remote host.
+         * @param packets Packets to send to the remote host.
+         */
+        void SendPackets(const std::list<libcomp::Packet *> &packets);
 
-    /**
-     * Packetize and queue an object and then send all queued packets to the
-     *   remote host.
-     * @param obj Object to be packetized.
-     * @return true if the object could be packetized; false otherwise.
-     */
-    bool SendObject(std::shared_ptr<libcomp::Object>& obj);
+        /**
+         * Queue packets and then send all queued packets to the remote host.
+         * @param packets Packets to send to the remote host.
+         */
+        void SendPackets(const std::list<libcomp::ReadOnlyPacket *> &packets);
 
-    /**
-     * Packetize and queue objects and then send all queued packets to the
-     *   remote host.
-     * @param objs Objects to be packetized.
-     * @return true if the objects could be packetized; false otherwise.
-     */
-    bool SendObjects(const std::list<std::shared_ptr<libcomp::Object>>& objs);
+        /**
+         * Packetize and queue an object and then send all queued packets to the
+         *   remote host.
+         * @param obj Object to be packetized.
+         * @return true if the object could be packetized; false otherwise.
+         */
+        bool SendObject(std::shared_ptr<libcomp::Object> &obj);
 
-    /**
-     * Determine if there is an active encrypted connection.
-     * @returns true if connected; false otherwise.
-     *
-     * @note This function should only be called from the logic thread.
-     */
-    bool IsConnected() const;
+        /**
+         * Packetize and queue objects and then send all queued packets to the
+         *   remote host.
+         * @param objs Objects to be packetized.
+         * @return true if the objects could be packetized; false otherwise.
+         */
+        bool SendObjects(
+            const std::list<std::shared_ptr<libcomp::Object>> &objs);
 
-    /**
-     * Determine if the active connection is connected to the lobby.
-     * @returns true if connected to the lobby; false otherwise.
-     *
-     * @note This function should only be called from the logic thread.
-     */
-    bool IsLobbyConnection() const;
+        /**
+         * Determine if there is an active encrypted connection.
+         * @returns true if connected; false otherwise.
+         *
+         * @note This function should only be called from the logic thread.
+         */
+        bool IsConnected() const;
 
-    /**
-     * Determine if the active connection is connected to the lobby.
-     * @returns true if connected to the lobby; false otherwise.
-     *
-     * @note This function should only be called from the logic thread.
-     */
-    bool IsChannelConnection() const;
+        /**
+         * Determine if the active connection is connected to the lobby.
+         * @returns true if connected to the lobby; false otherwise.
+         *
+         * @note This function should only be called from the logic thread.
+         */
+        bool IsLobbyConnection() const;
 
-    /**
-     * Get the active connection.
-     * @returns The active connection.
-     *
-     * @note This function should only be called from the logic thread.
-     */
-    std::shared_ptr<libcomp::EncryptedConnection> GetConnection() const;
+        /**
+         * Determine if the active connection is connected to the lobby.
+         * @returns true if connected to the lobby; false otherwise.
+         *
+         * @note This function should only be called from the logic thread.
+         */
+        bool IsChannelConnection() const;
 
-private:
-    /**
-     * Start authentication with the lobby server.
-     */
-    void AuthenticateLobby();
+        /**
+         * Get the active connection.
+         * @returns The active connection.
+         *
+         * @note This function should only be called from the logic thread.
+         */
+        std::shared_ptr<libcomp::EncryptedConnection> GetConnection() const;
 
-    /**
-     * Start authentication with the channel server.
-     */
-    void AuthenticateChannel();
+    private:
+        /**
+         * Start authentication with the lobby server.
+         */
+        void AuthenticateLobby();
 
-    /**
-     * Handle the incoming login reply.
-     * @returns true if the packet was parsed correctly; false otherwise.
-     */
-    bool HandlePacketLobbyLogin(libcomp::ReadOnlyPacket& p);
+        /**
+         * Start authentication with the channel server.
+         */
+        void AuthenticateChannel();
 
-    /**
-     * Handle the incoming auth reply.
-     * @returns true if the packet was parsed correctly; false otherwise.
-     */
-    bool HandlePacketLobbyAuth(libcomp::ReadOnlyPacket& p);
+        /**
+         * Handle the incoming login reply.
+         * @returns true if the packet was parsed correctly; false otherwise.
+         */
+        bool HandlePacketLobbyLogin(libcomp::ReadOnlyPacket &p);
 
-    /**
-     * Setup a new connection.
-     * @param conn Connection to setup.
-     * @param connectionID ID for the connection.
-     * @param host Hostname to connect to.
-     * @param port TCP port to connect to on the host.
-     * @returns true if the connection has started; false otherwise.
-     */
-    bool SetupConnection(const std::shared_ptr<
-        libcomp::EncryptedConnection>& conn,
-        const libcomp::String& connectionID, const libcomp::String& host,
-        uint16_t port);
+        /**
+         * Handle the incoming auth reply.
+         * @returns true if the packet was parsed correctly; false otherwise.
+         */
+        bool HandlePacketLobbyAuth(libcomp::ReadOnlyPacket &p);
 
-    /**
-     * Process a packet message.
-     * @param pMessage Packet message to process.
-     */
-    bool ProcessPacketMessage(
-        const libcomp::Message::Packet *pMessage);
+        /**
+         * Setup a new connection.
+         * @param conn Connection to setup.
+         * @param connectionID ID for the connection.
+         * @param host Hostname to connect to.
+         * @param port TCP port to connect to on the host.
+         * @returns true if the connection has started; false otherwise.
+         */
+        bool SetupConnection(
+            const std::shared_ptr<libcomp::EncryptedConnection> &conn,
+            const libcomp::String &connectionID, const libcomp::String &host,
+            uint16_t port);
 
-    /**
-     * Process a connection message.
-     * @param pMessage Connection message to process.
-     */
-    bool ProcessConnectionMessage(
-        const libcomp::Message::ConnectionMessage *pMessage);
+        /**
+         * Process a packet message.
+         * @param pMessage Packet message to process.
+         */
+        bool ProcessPacketMessage(const libcomp::Message::Packet *pMessage);
 
-    /**
-     * Process a client message.
-     * @param pMessage Client message to process.
-     */
-    bool ProcessClientMessage(
-        const libcomp::Message::MessageClient *pMessage);
+        /**
+         * Process a connection message.
+         * @param pMessage Connection message to process.
+         */
+        bool ProcessConnectionMessage(
+            const libcomp::Message::ConnectionMessage *pMessage);
 
-    /// Pointer to the LogicWorker.
-    LogicWorker *mLogicWorker;
+        /**
+         * Process a client message.
+         * @param pMessage Client message to process.
+         */
+        bool ProcessClientMessage(
+            const libcomp::Message::MessageClient *pMessage);
 
-    /// ASIO service.
-    asio::io_service mService;
+        /// Pointer to the LogicWorker.
+        LogicWorker *mLogicWorker;
 
-    /// ASIO service thread.
-    std::thread mServiceThread;
+        /// ASIO service.
+        asio::io_service mService;
 
-    /// Active connection to the lobby or channel server.
-    std::shared_ptr<libcomp::EncryptedConnection> mActiveConnection;
+        /// ASIO service thread.
+        std::thread mServiceThread;
 
-    /// Message queue for the LogicWorker.
-    std::weak_ptr<libcomp::MessageQueue<
-        libcomp::Message::Message*>> mMessageQueue;
+        /// Active connection to the lobby or channel server.
+        std::shared_ptr<libcomp::EncryptedConnection> mActiveConnection;
 
-    /// Username for authentication.
-    libcomp::String mUsername;
+        /// Message queue for the LogicWorker.
+        std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
+            mMessageQueue;
 
-    /// Password for authentication.
-    libcomp::String mPassword;
+        /// Username for authentication.
+        libcomp::String mUsername;
 
-    /// Client version for authentication.
-    uint32_t mClientVersion;
-};
+        /// Password for authentication.
+        libcomp::String mPassword;
+
+        /// Client version for authentication.
+        uint32_t mClientVersion;
+    };
 
 } // namespace logic
 

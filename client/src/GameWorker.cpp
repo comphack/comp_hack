@@ -33,6 +33,7 @@
 #include <MessageShutdown.h>
 
 // client Includes
+#include "LobbyScene.h"
 #include "LoginDialog.h"
 
 using namespace game;
@@ -48,9 +49,11 @@ GameWorker::GameWorker(QObject *pParent) : QObject(pParent),
         Qt::QueuedConnection);
 
     // Setup the UI windows.
+    mLobbyScene = new LobbyScene(this);
     mLoginDialog = new LoginDialog(this);
 
     // Register the client message managers.
+    AddClientManager(mLobbyScene);
     AddClientManager(mLoginDialog);
 
     // Show the login dialog.
@@ -126,6 +129,11 @@ void GameWorker::Run(libcomp::MessageQueue<
 LoginDialog* GameWorker::GetLoginDialog() const
 {
     return mLoginDialog;
+}
+
+LobbyScene* GameWorker::GetLobbyScene() const
+{
+    return mLobbyScene;
 }
 
 void GameWorker::HandleMessageSignal(libcomp::Message::Message *pMessage)

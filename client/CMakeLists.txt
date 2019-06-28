@@ -36,11 +36,13 @@ SET(${PROJECT_NAME}_SRCS
     src/main.cpp
 
     src/GameWorker.cpp
+    src/LobbyScene.cpp
     src/LoginDialog.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
     src/GameWorker.h
+    src/LobbyScene.h
     src/LoginDialog.h
 )
 
@@ -50,6 +52,7 @@ SET(${PROJECT_NAME}_RCC
 qt5_add_resources(${PROJECT_NAME}_RCC_SRCS ${${PROJECT_NAME}_RCC})
 
 SET(${PROJECT_NAME}_UIS
+    ui/LobbyScene.ui
     ui/LoginDialog.ui
 )
 qt5_wrap_ui(${PROJECT_NAME}_UI_SRCS ${${PROJECT_NAME}_UIS})

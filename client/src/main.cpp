@@ -44,8 +44,8 @@
 #include <iostream>
 
 // Standard C Includes
-#include <cstdlib>
 #include <cstdio>
+#include <cstdlib>
 
 static bool gRunning = true;
 static int gReturnCode = EXIT_SUCCESS;
@@ -63,8 +63,7 @@ static void ScriptInclude(const char *szPath)
 
     if(file.empty())
     {
-        std::cerr << "Failed to include script file: "
-            << szPath << std::endl;
+        std::cerr << "Failed to include script file: " << szPath << std::endl;
 
         return;
     }
@@ -73,8 +72,7 @@ static void ScriptInclude(const char *szPath)
 
     if(!gEngine->Eval(&file[0], szPath))
     {
-        std::cerr << "Failed to run script file: "
-            << szPath << std::endl;
+        std::cerr << "Failed to run script file: " << szPath << std::endl;
     }
 }
 
@@ -93,16 +91,22 @@ int8_t SystemHour, SystemMin, Min, Hour, MoonPhase;
 size_t Hash()
 {
     // System time carries the most weight, then moon phase, then game time
-    return (size_t)((SystemHour < 0 || SystemMin < 0 ||
-        (((int)SystemHour * 100 + (int)SystemMin) > 2400)) ? 0ULL
-        : ((size_t)(10000 + (int)SystemHour * 100 + (int)SystemMin) * (size_t)100000000ULL)) +
-        (size_t)((MoonPhase < 0 || MoonPhase >= 16)
-            ? (size_t)0ULL : ((size_t)(100 + (int)MoonPhase) * (size_t)100000ULL)) +
-        (size_t)((Hour < 0 || Min < 0 || (((int)Hour * 100 + (int)Min) > 2400))
-            ? (size_t)0ULL : (size_t)(10000 + (int)Hour * 100 + (int)Min));
+    return (size_t)(
+               (SystemHour < 0 || SystemMin < 0 ||
+                   (((int)SystemHour * 100 + (int)SystemMin) > 2400)) ?
+                   0ULL :
+                   ((size_t)(10000 + (int)SystemHour * 100 + (int)SystemMin) *
+                       (size_t)100000000ULL)) +
+           (size_t)((MoonPhase < 0 || MoonPhase >= 16) ?
+                        (size_t)0ULL :
+                        ((size_t)(100 + (int)MoonPhase) * (size_t)100000ULL)) +
+           (size_t)(
+               (Hour < 0 || Min < 0 || (((int)Hour * 100 + (int)Min) > 2400)) ?
+                   (size_t)0ULL :
+                   (size_t)(10000 + (int)Hour * 100 + (int)Min));
 }
 
-void RunInteractive(libcomp::ScriptEngine& engine)
+void RunInteractive(libcomp::ScriptEngine &engine)
 {
     libcomp::String code, script;
 
@@ -228,7 +232,7 @@ int main(int argc, char *argv[])
     worker.Start("logic");
 
     worker.GetMessageQueue()->Enqueue(new logic::MessageConnectToLobby(
-        "testbob", "password", 1666, "lobby@1"));
+        "testbob", "password", 10666, "lobby@1"));
 
     ScriptSleep(3);
     worker.Shutdown();

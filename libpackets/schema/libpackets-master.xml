@@ -5,4 +5,5 @@
     <include path="packet_login_reply.xml"/>
     <include path="packet_auth.xml"/>
     <include path="packet_auth_reply.xml"/>
+    <include path="packet_worldlist.xml"/>
 </objgen>

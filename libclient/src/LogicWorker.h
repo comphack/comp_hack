@@ -34,92 +34,96 @@
 
 namespace logic
 {
-
-//
-// Forward declaration of managers.
-//
-class ConnectionManager;
-
-/**
- * Worker for client<==>server interaction.
- */
-class LogicWorker : public libcomp::Worker
-{
-public:
-    /**
-     * Create a new worker.
-     */
-    LogicWorker();
+    //
+    // Forward declaration of managers.
+    //
+    class ConnectionManager;
+    class LobbyManager;
 
     /**
-     * Cleanup the worker.
+     * Worker for client<==>server interaction.
      */
-    virtual ~LogicWorker();
+    class LogicWorker : public libcomp::Worker
+    {
+    public:
+        /**
+         * Create a new worker.
+         */
+        LogicWorker();
 
-    /**
-     * Sent a message to the GameWorker message queue.
-     * @param pMessage Message to send to the GameWorker.
-     * @returns true if the message was sent; false otherwise.
-     */
-    bool SendToGame(libcomp::Message::Message *pMessage);
+        /**
+         * Cleanup the worker.
+         */
+        virtual ~LogicWorker();
 
-    /**
-     * Set the message queue for the GameWorker. This message queue is used
-     * to send events to the game thread. Get the worker by calling
-     * @ref Worker::GetMessageQueue on the GameWorker.
-     * @param messageQueue Reference to the message queue of the GameWorker.
-     */
-    void SetGameQueue(const std::shared_ptr<libcomp::MessageQueue<
-        libcomp::Message::Message*>>& messageQueue);
+        /**
+         * Sent a message to the GameWorker message queue.
+         * @param pMessage Message to send to the GameWorker.
+         * @returns true if the message was sent; false otherwise.
+         */
+        bool SendToGame(libcomp::Message::Message *pMessage);
 
-    /**
-     * Queue a packet and then send all queued packets to the remote host.
-     * @param packet Packet to send to the remote host.
-     */
-    void SendPacket(libcomp::Packet& packet);
+        /**
+         * Set the message queue for the GameWorker. This message queue is used
+         * to send events to the game thread. Get the worker by calling
+         * @ref Worker::GetMessageQueue on the GameWorker.
+         * @param messageQueue Reference to the message queue of the GameWorker.
+         */
+        void SetGameQueue(const std::shared_ptr<
+            libcomp::MessageQueue<libcomp::Message::Message *>> &messageQueue);
 
-    /**
-     * Queue a packet and then send all queued packets to the remote host.
-     * @param packet Packet to send to the remote host.
-     */
-    void SendPacket(libcomp::ReadOnlyPacket& packet);
+        /**
+         * Queue a packet and then send all queued packets to the remote host.
+         * @param packet Packet to send to the remote host.
+         */
+        void SendPacket(libcomp::Packet &packet);
 
-    /**
-     * Queue packets and then send all queued packets to the remote host.
-     * @param packets Packets to send to the remote host.
-     */
-    void SendPackets(const std::list<libcomp::Packet*>& packets);
+        /**
+         * Queue a packet and then send all queued packets to the remote host.
+         * @param packet Packet to send to the remote host.
+         */
+        void SendPacket(libcomp::ReadOnlyPacket &packet);
 
-    /**
-     * Queue packets and then send all queued packets to the remote host.
-     * @param packets Packets to send to the remote host.
-     */
-    void SendPackets(const std::list<libcomp::ReadOnlyPacket*>& packets);
+        /**
+         * Queue packets and then send all queued packets to the remote host.
+         * @param packets Packets to send to the remote host.
+         */
+        void SendPackets(const std::list<libcomp::Packet *> &packets);
 
-    /**
-     * Packetize and queue an object and then send all queued packets to the
-     *   remote host.
-     * @param obj Object to be packetized.
-     * @return true if the object could be packetized; false otherwise.
-     */
-    bool SendObject(std::shared_ptr<libcomp::Object>& obj);
+        /**
+         * Queue packets and then send all queued packets to the remote host.
+         * @param packets Packets to send to the remote host.
+         */
+        void SendPackets(const std::list<libcomp::ReadOnlyPacket *> &packets);
 
-    /**
-     * Packetize and queue objects and then send all queued packets to the
-     *   remote host.
-     * @param objs Objects to be packetized.
-     * @return true if the objects could be packetized; false otherwise.
-     */
-    bool SendObjects(const std::list<std::shared_ptr<libcomp::Object>>& objs);
+        /**
+         * Packetize and queue an object and then send all queued packets to the
+         *   remote host.
+         * @param obj Object to be packetized.
+         * @return true if the object could be packetized; false otherwise.
+         */
+        bool SendObject(std::shared_ptr<libcomp::Object> &obj);
 
-private:
-    /// Manager for the client connection.
-    ConnectionManager *mConnectionManager;
+        /**
+         * Packetize and queue objects and then send all queued packets to the
+         *   remote host.
+         * @param objs Objects to be packetized.
+         * @return true if the objects could be packetized; false otherwise.
+         */
+        bool SendObjects(
+            const std::list<std::shared_ptr<libcomp::Object>> &objs);
 
-    /// Message queue for the GameWorker. Events are sent here.
-    std::shared_ptr<libcomp::MessageQueue<
-        libcomp::Message::Message*>> mGameMessageQueue;
-};
+    private:
+        /// Manager for the client connection.
+        ConnectionManager *mConnectionManager;
+
+        /// Manager for the lobby.
+        LobbyManager *mLobbyManager;
+
+        /// Message queue for the GameWorker. Events are sent here.
+        std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
+            mGameMessageQueue;
+    };
 
 } // namespace logic
 

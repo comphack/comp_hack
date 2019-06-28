@@ -46,6 +46,7 @@ namespace game
 //
 // Forward declaration of managers / game components.
 //
+class LobbyScene;
 class LoginDialog;
 
 /**
@@ -117,6 +118,12 @@ public:
      */
     LoginDialog* GetLoginDialog() const;
 
+    /**
+     * Get the lobby scene.
+     * @returns Pointer to the lobby scene.
+     */
+    LobbyScene* GetLobbyScene() const;
+
 signals:
     /**
      * Emit a message signal to be caught by this object in the Qt thread.
@@ -162,6 +169,9 @@ private:
 
     /// Login dialog.
     LoginDialog *mLoginDialog;
+
+    /// Lobby scene.
+    LobbyScene *mLobbyScene;
 };
 
 } // namespace game

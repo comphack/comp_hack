@@ -36,6 +36,7 @@
 
 // client Includes
 #include "GameWorker.h"
+#include "LobbyScene.h"
 
 // logic Messages
 #include <MessageConnected.h>
@@ -240,7 +241,8 @@ bool LoginDialog::HandleConnectedToLobby(
         // Save the SID for later.
         mSID = pMsg->GetSID();
 
-        /// @todo Show the lobby dialog.
+        // Show the lobby.
+        mGameWorker->GetLobbyScene()->show();
         close();
     }
     else

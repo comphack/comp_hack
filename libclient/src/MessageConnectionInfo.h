@@ -48,7 +48,8 @@ public:
      */
     MessageConnectionInfo(const libcomp::String& connectionID,
         const libcomp::String& host, uint16_t port) :
-        mHost(host), mPort(port), mConnectionID(connectionID) { }
+        libcomp::Message::MessageClient(), mHost(host), mPort(port),
+        mConnectionID(connectionID) { }
 
     /**
      * Cleanup the message.
@@ -196,6 +197,40 @@ public:
     {
         return libcomp::String("Message: Connect to channel server\n"
             "ID: %1\nServer: %2:%3").Arg(mConnectionID).Arg(mHost).Arg(mPort);
+    }
+};
+
+/**
+ * Message signifying that a connection should be closed.
+ */
+class MessageConnectionClose : public libcomp::Message::MessageClient
+{
+public:
+    /**
+     * Create the message.
+     */
+    MessageConnectionClose() : libcomp::Message::MessageClient() { }
+
+    /**
+     * Cleanup the message.
+     */
+    ~MessageConnectionClose() override { }
+
+    /**
+     * Get the specific client message type.
+     * @return The message's client message type
+     */
+    libcomp::Message::MessageClientType GetMessageClientType() const override {
+        return libcomp::Message::MessageClientType::CONNECTION_CLOSE;
+    }
+
+    /**
+     * Dump the message for logging.
+     * @return String representation of the message.
+     */
+    libcomp::String Dump() const override
+    {
+        return "Message: Close connection";
     }
 };
 

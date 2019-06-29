@@ -89,7 +89,7 @@ namespace logic
         bool ProcessPacketMessage(const libcomp::Message::Packet *pMessage);
 
         /// Pointer to the LogicWorker.
-        LogicWorker *mLogicWorker;
+        /// LogicWorker *mLogicWorker;
 
         /// Message queue for the LogicWorker.
         std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>

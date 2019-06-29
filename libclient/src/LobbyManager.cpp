@@ -47,8 +47,9 @@ LobbyManager::LobbyManager(LogicWorker *pLogicWorker,
     const std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
         &messageQueue) :
     libcomp::Manager(),
-    mLogicWorker(pLogicWorker), mMessageQueue(messageQueue)
+    /*mLogicWorker(pLogicWorker),*/ mMessageQueue(messageQueue)
 {
+    (void*)pLogicWorker;
 }
 
 LobbyManager::~LobbyManager()

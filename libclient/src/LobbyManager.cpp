@@ -49,7 +49,7 @@ LobbyManager::LobbyManager(LogicWorker *pLogicWorker,
     libcomp::Manager(),
     /*mLogicWorker(pLogicWorker),*/ mMessageQueue(messageQueue)
 {
-    (void*)pLogicWorker;
+    (void)pLogicWorker;
 }
 
 LobbyManager::~LobbyManager()

@@ -47,6 +47,10 @@ EventBase::EventBase(MainWindow *pMainWindow, QWidget *pParent) :
 
     ui->layoutBaseBody->setVisible(false);
 
+    // Hide skip invalid by default
+    ui->lblSkipInvalid->setVisible(false);
+    ui->skipInvalid->setVisible(false);
+
     ui->next->SetMainWindow(pMainWindow);
     ui->queueNext->SetMainWindow(pMainWindow);
 
@@ -79,10 +83,12 @@ void EventBase::Load(const std::shared_ptr<objects::EventBase>& e)
     }
 
     // If any non-base values are set, display the base values section
+    // (skip invalid is assumed to have already been set)
     if(!ui->layoutBaseBody->isVisible() &&
         (!e->GetQueueNext().IsEmpty() ||
             e->GetPop() ||
-            e->GetPopNext()))
+            e->GetPopNext() ||
+            ui->skipInvalid->isChecked()))
     {
         ToggleBaseDisplay();
     }
@@ -118,4 +124,18 @@ void EventBase::ToggleBaseDisplay()
         ui->layoutBaseBody->setVisible(true);
         ui->toggleBaseDisplay->setText(u8"▼");
     }
+}
+
+bool EventBase::GetSkipInvalid() const
+{
+    return ui->skipInvalid->isChecked();
+}
+
+void EventBase::SetSkipInvalid(bool skip)
+{
+    // Since we are using the property, show it
+    ui->lblSkipInvalid->setVisible(true);
+    ui->skipInvalid->setVisible(true);
+
+    ui->skipInvalid->setChecked(skip);
 }

@@ -68,6 +68,11 @@
          </item>
          <item>
           <property name="text">
+           <string>Append</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>DESTINY</string>
           </property>
          </item>

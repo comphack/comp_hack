@@ -53,6 +53,9 @@ public:
     void Load(const std::shared_ptr<objects::EventBase>& e);
     std::shared_ptr<objects::EventBase> Save() const;
 
+    bool GetSkipInvalid() const;
+    void SetSkipInvalid(bool skip);
+
 public slots:
     virtual void ToggleBaseDisplay();
 

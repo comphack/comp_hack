@@ -1024,11 +1024,60 @@ void EventWindow::Reorganize()
 
     auto file = fIter->second;
 
-    std::list<libcomp::String> eventOrder;
-    std::set<libcomp::String> seen;
+    // Add all events in current order to the sort list
+    std::list<libcomp::String> sortList;
     for(auto fEvent : file->Events)
     {
-        auto e = fEvent->Event;
+        sortList.push_back(fEvent->Event->GetID());
+    }
+
+    std::list<libcomp::String> eventOrder;
+    std::set<libcomp::String> seen;
+    std::list<libcomp::String> currentSet;
+    if(sortList.size() > 0)
+    {
+        currentSet.push_back(sortList.front());
+    }
+
+    while(currentSet.size() > 0 || sortList.size() > 0)
+    {
+        libcomp::String current;
+
+        if(currentSet.size() > 0)
+        {
+            // Pull from the current set first
+            current = currentSet.front();
+            currentSet.pop_front();
+        }
+        else
+        {
+            // Otherwise grab the next one in the file order
+            current = sortList.front();
+            sortList.pop_front();
+        }
+
+        if(seen.find(current) != seen.end())
+        {
+            // Already handled, dupes and events associated to dupes will
+            // dump at the bottom of the file in no standardized order
+            continue;
+        }
+
+        std::shared_ptr<objects::Event> e;
+        for(auto fEvent : file->Events)
+        {
+            if(fEvent->Event->GetID() == current)
+            {
+                e = fEvent->Event;
+                break;
+            }
+        }
+
+        if(!e)
+        {
+            // External/invalid reference, skip
+            continue;
+        }
 
         std::list<libcomp::String> eventSet;
         eventSet.push_back(e->GetID());
@@ -1061,8 +1110,16 @@ void EventWindow::Reorganize()
         {
             if(!eventID.IsEmpty() && seen.find(eventID) == seen.end())
             {
-                eventOrder.push_back(eventID);
-                seen.insert(eventID);
+                // All all new seen to the current set
+                if(current != eventID)
+                {
+                    currentSet.push_back(eventID);
+                }
+                else
+                {
+                    eventOrder.push_back(eventID);
+                    seen.insert(eventID);
+                }
             }
         }
     }
@@ -1247,6 +1304,8 @@ void EventWindow::ChangeTreeBranchIDs()
         }
     }
 
+    bool secondaryRefs = false;
+
     std::list<std::shared_ptr<FileEvent>> renames;
     std::unordered_map<libcomp::String, libcomp::String> eventIDMap;
     for(auto node : branchNodes)
@@ -1262,20 +1321,29 @@ void EventWindow::ChangeTreeBranchIDs()
             auto eIter = file->Events.begin();
             std::advance(eIter, fileIdx);
 
+            // Add it in order unless we've encountered
             auto fEvent = *eIter;
-            renames.push_back(fEvent);
-            eventIDMap[fEvent->Event->GetID()] = "";
+            if(eventIDMap.find(fEvent->Event->GetID()) == eventIDMap.end())
+            {
+                renames.push_back(fEvent);
+                eventIDMap[fEvent->Event->GetID()] = "";
+            }
         }
-        else if(!node->ExtensionNode)
+        else if(eventIDMap.find(node->EventID) == eventIDMap.end() &&
+            !node->ExtensionNode)
         {
-            QMessageBox err;
-            err.setText("The selected tree branch contains at least one event"
-                " that is not eligible for branch renaming. Ensure that all"
-                " nodes below the current selection are not referenced by"
-                " earlier events and are not references to external files.");
-            err.exec();
-            return;
+            secondaryRefs = true;
         }
+    }
+
+    if(secondaryRefs)
+    {
+        QMessageBox warn;
+        warn.setText("The selected tree branch contains at least one event"
+            " that is either not part of this file or is referenced before"
+            " the selected node within this file. These events will not be"
+            " renamed.");
+        warn.exec();
     }
 
     if(renames.size() == 0)

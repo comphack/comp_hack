@@ -98,7 +98,10 @@ void DropSetWindow::RebuildNamedDataSet()
     {
         for(auto ds : fPair.second->DropSets)
         {
-            sort[ds->GetID()] = ds;
+            if(ds->GetType() != objects::DropSet::Type_t::APPEND)
+            {
+                sort[ds->GetID()] = ds;
+            }
         }
     }
 

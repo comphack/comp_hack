@@ -85,6 +85,7 @@ void Event::Load(const std::shared_ptr<objects::Event>& e)
     ui->queueNext->SetEvent(e->GetQueueNext());
     ui->pop->setChecked(e->GetPop());
     ui->popNext->setChecked(e->GetPopNext());
+    ui->skipInvalid->setChecked(e->GetSkipInvalid());
     ui->branchScript->SetScriptID(e->GetBranchScriptID());
     ui->transformScript->SetScriptID(e->GetTransformScriptID());
 
@@ -109,6 +110,7 @@ void Event::Load(const std::shared_ptr<objects::Event>& e)
         (!e->GetQueueNext().IsEmpty() ||
             e->GetPop() ||
             e->GetPopNext() ||
+            e->GetSkipInvalid() ||
             !e->GetTransformScriptID().IsEmpty()))
     {
         ToggleBaseDisplay();
@@ -127,6 +129,7 @@ std::shared_ptr<objects::Event> Event::Save() const
     mEventBase->SetQueueNext(ui->queueNext->GetEvent());
     mEventBase->SetPop(ui->pop->isChecked());
     mEventBase->SetPopNext(ui->popNext->isChecked());
+    mEventBase->SetSkipInvalid(ui->skipInvalid->isChecked());
 
     mEventBase->SetBranchScriptID(ui->branchScript->GetScriptID());
     mEventBase->SetTransformScriptID(ui->transformScript->GetScriptID());

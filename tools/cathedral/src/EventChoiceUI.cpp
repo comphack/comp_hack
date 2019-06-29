@@ -78,6 +78,8 @@ EventChoice::~EventChoice()
 
 void EventChoice::Load(const std::shared_ptr<objects::EventChoice>& e)
 {
+    SetSkipInvalid(e->GetSkipInvalid());
+
     EventBase::Load(e);
 
     if(!mEventBase)
@@ -121,6 +123,8 @@ std::shared_ptr<objects::EventChoice> EventChoice::Save() const
         auto params = mBranchScript->GetParams();
         choice->SetBranchScriptParams(params);
     }
+
+    choice->SetSkipInvalid(GetSkipInvalid());
 
     return choice;
 }

@@ -3964,8 +3964,29 @@ void EventManager::HandleNext(EventContext& ctx)
 
     auto event = ctx.EventInstance->GetEvent();
     auto iState = ctx.EventInstance->GetState();
+    auto branches = iState->GetBranches();
     libcomp::String nextEventID = iState->GetNext();
     libcomp::String queueEventID = iState->GetQueueNext();
+
+    bool skipInvalid = event->GetSkipInvalid() || iState->GetSkipInvalid();
+    if(skipInvalid)
+    {
+        // Filter out invalid next and branch results
+        auto serverDataManager = mServer.lock()
+            ->GetServerDataManager();
+        if(serverDataManager->GetEventData(nextEventID) == nullptr)
+        {
+            nextEventID = "";
+        }
+
+        branches.remove_if([serverDataManager](
+            const std::shared_ptr<objects::EventBase>& b)
+            {
+                // Leave empty next event branches
+                return !b->GetNext().IsEmpty() && serverDataManager
+                    ->GetEventData(b->GetNext()) == nullptr;
+            });
+    }
 
     if(iState->BranchesCount() > 0)
     {
@@ -3981,9 +4002,17 @@ void EventManager::HandleNext(EventContext& ctx)
                 LOG_ERROR(libcomp::String("Attempted to execute a client"
                     " targeted branch script ID outside of a zone: %1\n")
                     .Arg(branchScriptID));
+                nextEventID = "";
             }
             else if(script && script->Type.ToLower() == "eventbranchlogic")
             {
+                if(skipInvalid)
+                {
+                    LOG_ERROR(libcomp::String("Ignoring skip invalid setting"
+                        " on branch script event: %1\n").Arg(event->GetID()));
+                    nextEventID = iState->GetNext();
+                }
+
                 auto engine = std::make_shared<libcomp::ScriptEngine>();
                 engine->Using<CharacterState>();
                 engine->Using<DemonState>();
@@ -4026,12 +4055,13 @@ void EventManager::HandleNext(EventContext& ctx)
             {
                 LOG_ERROR(libcomp::String("Invalid event branch script ID: %1\n")
                     .Arg(branchScriptID));
+                nextEventID = "";
             }
         }
         else
         {
             // Branch based on conditions
-            for(auto branch : iState->GetBranches())
+            for(auto branch : branches)
             {
                 auto conditions = branch->GetConditions();
                 if(conditions.size() > 0 && EvaluateEventConditions(
@@ -4081,8 +4111,10 @@ void EventManager::HandleNext(EventContext& ctx)
                     ctx.EventInstance = previous;
                     eState->SetCurrent(previous);
 
-                    HandleEvent(ctx);
-                    return;
+                    if(HandleEvent(ctx))
+                    {
+                        return;
+                    }
                 }
                 else if(eState->QueuedCount() > 0)
                 {
@@ -4117,8 +4149,11 @@ void EventManager::HandleNext(EventContext& ctx)
         options.AutoOnly = ctx.AutoOnly;
         options.NoInterrupt = ctx.EventInstance->GetNoInterrupt();
 
-        HandleEvent(ctx.Client, nextEventID,
-            ctx.EventInstance->GetSourceEntityID(), ctx.CurrentZone, options);
+        if(!HandleEvent(ctx.Client, nextEventID,
+            ctx.EventInstance->GetSourceEntityID(), ctx.CurrentZone, options))
+        {
+            EndEvent(ctx.Client);
+        }
     }
 }
 
@@ -4207,8 +4242,34 @@ bool EventManager::Prompt(EventContext& ctx)
     {
         auto choice = e->GetChoices(i);
 
+        bool skip = choice->GetMessageID() == 0;
+        if(!skip && (e->GetSkipInvalid() || choice->GetSkipInvalid()))
+        {
+            // If all sub-next IDs are invalid, don't show the choice
+            auto serverDataManager = mServer.lock()->GetServerDataManager();
+
+            bool valid = !choice->GetNext().IsEmpty() &&
+                serverDataManager->GetEventData(choice->GetNext()) != nullptr;
+            if(!choice->GetBranchScriptID().IsEmpty())
+            {
+                // Branch scripts cannot skip invalid branch events
+                valid = true;
+            }
+            else
+            {
+                for(auto branch : choice->GetBranches())
+                {
+                    // Empty branch next events are valid
+                    valid |= branch->GetNext().IsEmpty() || serverDataManager
+                        ->GetEventData(branch->GetNext()) != nullptr;
+                }
+            }
+
+            skip = !valid;
+        }
+
         auto conditions = choice->GetConditions();
-        if(choice->GetMessageID() != 0 &&
+        if(!skip &&
             (conditions.size() == 0 || EvaluateEventConditions(ctx, conditions)))
         {
             choices.push_back(choice);

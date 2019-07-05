@@ -44,6 +44,7 @@
 #include <Expertise.h>
 #include <Item.h>
 #include <MiCategoryData.h>
+#include <MiConditionData.h>
 #include <MiDCategoryData.h>
 #include <MiDevilBoostExtraData.h>
 #include <MiDevilCrystalData.h>
@@ -65,6 +66,7 @@
 #include <MiModificationExtEffectData.h>
 #include <MiModifiedEffectData.h>
 #include <MiQuestData.h>
+#include <MiRestrictionData.h>
 #include <MiSItemData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
@@ -756,10 +758,25 @@ bool CharacterState::ActionCooldownActive(int32_t cooldownID,
 }
 
 std::shared_ptr<objects::EventCounter> CharacterState::GetEventCounter(
-    int32_t type)
+    int32_t type, bool createIfMissing)
 {
     auto state = ClientState::GetEntityClientState(GetEntityID());
-    return state ? state->GetEventCounters(type).Get() : nullptr;
+
+    auto eCounter = state ? state->GetEventCounters(type).Get() : nullptr;
+    if(!eCounter && createIfMissing)
+    {
+        eCounter = std::make_shared<objects::EventCounter>();
+        eCounter->SetType(type);
+        eCounter->SetCharacter(GetEntityUUID());
+        eCounter->SetTimestamp((uint32_t)std::time(0));
+
+        if(state)
+        {
+            state->SetEventCounters(type, eCounter);
+        }
+    }
+
+    return eCounter;
 }
 
 void CharacterState::RefreshActionCooldowns(bool accountLevel, uint32_t time)

@@ -3944,7 +3944,7 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
         }
 
         if(!zoneManager->EnterZone(client, zoneID, dynamicMapID,
-            xCoord, yCoord, rotation))
+            xCoord, yCoord, rotation, true))
         {
             return SendChatMessage(client, ChatType_t::CHAT_SELF,
                 libcomp::String("Failed to enter zone: %1 (%2)")

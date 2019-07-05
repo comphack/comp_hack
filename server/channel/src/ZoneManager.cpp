@@ -64,6 +64,7 @@
 #include <MiSpotData.h>
 #include <MiTimeLimitData.h>
 #include <MiUraFieldTowerData.h>
+#include <MiZoneBasicData.h>
 #include <MiZoneData.h>
 #include <MiZoneFileData.h>
 #include <MiONPCData.h>
@@ -7249,11 +7250,22 @@ bool ZoneManager::GetLoginZone(
             auto publicData = serverDataManager->GetZoneData(publicID, 0);
             if(publicData && publicData->GetGlobal())
             {
+                // See if the zone definition has a starting spot for a parent
+                // connection, otherwise go to the server starting position
+                auto def = server->GetDefinitionManager()->GetZoneData(zoneID);
+                auto basic = def ? def->GetBasic() : nullptr;
+
                 zoneID = publicData->GetID();
-                x = publicData->GetStartingX();
-                y = publicData->GetStartingY();
-                rot = publicData->GetStartingRotation();
                 dynamicMapID = publicData->GetDynamicMapID();
+
+                if(!basic || basic->GetParentID() != zoneID ||
+                    !GetSpotPosition(dynamicMapID, basic->GetStartingSpot(),
+                        x, y, rot))
+                {
+                    x = publicData->GetStartingX();
+                    y = publicData->GetStartingY();
+                    rot = publicData->GetStartingRotation();
+                }
             }
             else
             {

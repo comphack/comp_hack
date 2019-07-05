@@ -285,7 +285,7 @@ void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& clie
 
     // If this zone is not part of an instance, clear the character
     // specific flags
-    if(mZoneInstance)
+    if(!mZoneInstance)
     {
         mFlagStates.erase(worldCID);
     }

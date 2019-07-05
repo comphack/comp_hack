@@ -85,6 +85,7 @@
 #include <MiSpotData.h>
 #include <MiStatusData.h>
 #include <MiTimeLimitData.h>
+#include <MiZoneBasicData.h>
 #include <MiZoneData.h>
 #include <ObjectPosition.h>
 #include <Party.h>
@@ -697,6 +698,19 @@ bool ActionManager::ZoneChange(ActionContext& ctx)
             // If we request a move before the character is even active,
             // just move the character and demon
             moveAndQuit = true;
+        }
+    }
+
+    if(zoneID && !spotID && !x && !y && !rotation)
+    {
+        // If no direct location specified, check to see if a from/to zone
+        // spot exists
+        auto currentDef = server->GetDefinitionManager()->GetZoneData(
+            ctx.CurrentZone->GetDefinitionID());
+        auto basic = currentDef ? currentDef->GetBasic() : nullptr;
+        if(basic && basic->GetParentID() == zoneID)
+        {
+            spotID = basic->GetStartingSpot();
         }
     }
 

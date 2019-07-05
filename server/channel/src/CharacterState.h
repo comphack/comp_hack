@@ -200,9 +200,14 @@ public:
     /**
      * Get the event counter assigned to the character with a specified type
      * @param type Event type to retrieve
+     * @param createIfMissing Create a new pointer to an event counter if
+     *  one does not already exist and associate it to the character's state.
+     *  The newly created counter does not save automatically since the caller
+     *  may need to set non-default values.
      * @return Pointer to the event counter associated to the type
      */
-    std::shared_ptr<objects::EventCounter> GetEventCounter(int32_t type);
+    std::shared_ptr<objects::EventCounter> GetEventCounter(int32_t type,
+        bool createIfMissing = false);
 
     /**
      * Refresh the action cooldowns for the character or associated account.

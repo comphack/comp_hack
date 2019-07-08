@@ -71,7 +71,7 @@ bool Parsers::Pivot::Parse(libcomp::ManagerPacket *pPacketManager,
         // Nothing to do, the entity is not currently active
         return true;
     }
-    else if(state->GetLockMovement())
+    else if(state->IsMovementLocked(entityID))
     {
         // Movement locked, ignore request
         return true;

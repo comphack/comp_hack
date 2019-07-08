@@ -1320,6 +1320,15 @@ bool CharacterManager::GetEntityRevivalPacket(libcomp::Packet& p,
     return false;
 }
 
+void CharacterManager::GetTDamagePacket(libcomp::Packet& p, int32_t entityID,
+    int32_t hpGain, int32_t mpGain)
+{
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DO_TDAMAGE);
+    p.WriteS32Little(entityID);
+    p.WriteS32Little(hpGain);
+    p.WriteS32Little(mpGain);
+}
+
 void CharacterManager::SetStatusIcon(const std::shared_ptr<ChannelClientConnection>& client, int8_t icon)
 {
     auto state = client->GetClientState();

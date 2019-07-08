@@ -194,7 +194,7 @@ public:
     /**
      * Write a revival action notification packet.
      * @param p Packet to write the data to
-     * @param entity Entity that has had a revival action performed
+     * @param eState Entity that has had a revival action performed
      *  on them
      * @param action Revival action that has taken place. The valid
      *  values are:
@@ -210,9 +210,22 @@ public:
      *      revival from other players
      * @return false if the entity is not valid
      */
-    bool GetEntityRevivalPacket(libcomp::Packet& p,
+    static bool GetEntityRevivalPacket(libcomp::Packet& p,
         const std::shared_ptr<ActiveEntityState>& eState,
         int8_t action);
+
+    /**
+     * Write a t-damage notification packet, typically for regen. If for
+     * whatever reason an entity's HP or MP needs to be "corrected", this
+     * seems to be the only way of communicating such to the client.
+     * @param p Packet to write the data to
+     * @param entityID ID of the entity that has already had their HP or
+     *  MP adjusted
+     * @param hpGain HP value gained (can be negative)
+     * @param mpGain MP value gained (can be negative)
+     */
+    static void GetTDamagePacket(libcomp::Packet& p, int32_t entityID,
+        int32_t hpGain,int32_t mpGain);
 
     /**
      * Set the character's status icon and send to the game clients

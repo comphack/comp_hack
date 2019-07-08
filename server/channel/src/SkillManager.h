@@ -767,7 +767,7 @@ private:
      *  1) Critical hit
      *  2) Limit break
      * @param isHeal true if healing "damage" should be applied instead
-     * @return Calculated damage or healing
+     * @return Raw calculated damage or healing (no cap applied)
      */
     int32_t CalculateDamage_Normal(const std::shared_ptr<ActiveEntityState>& source,
         SkillTargetResult& target, const std::shared_ptr<
@@ -778,7 +778,7 @@ private:
      * Calculate skill damage or healing based on a static value
      * @param mod Base modifier damage value
      * @param damageType Type of damage being dealt
-     * @return Calculated damage or healing
+     * @return Raw calculated damage or healing (no cap applied)
      */
     int32_t CalculateDamage_Static(uint16_t mod, uint8_t& damageType);
 
@@ -786,7 +786,7 @@ private:
      * Calculate skill damage or healing based on a percent value
      * @param mod Base modifier damage value
      * @param damageType Type of damage being dealt
-     * @return Calculated damage or healing
+     * @return Raw calculated damage or healing (no cap applied)
      */
     int32_t CalculateDamage_Percent(uint16_t mod, uint8_t& damageType,
         int32_t current);
@@ -796,7 +796,7 @@ private:
      * @param mod Base modifier damage value
      * @param damageType Type of damage being dealt
      * @param max Maximum value to calculate relative damage to
-     * @return Calculated damage or healing
+     * @return Raw calculated damage or healing (no cap applied)
      */
     int32_t CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageType,
         int32_t max);

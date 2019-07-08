@@ -27,6 +27,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <ErrorCodes.h>
 #include <Log.h>
 #include <ManagerPacket.h>
@@ -34,6 +35,8 @@
 // object Includes
 #include <Demon.h>
 #include <Item.h>
+#include <MiItemData.h>
+#include <MiUseRestrictionsData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -92,9 +95,38 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
                     libcomp::PersistentObject::GetObjectByUUID(
                         state->GetObjectUUID(activationObjectID)));
 
-                // If the item is invalid or it is an expired rental, fail the skill
+                bool valid = true;
                 if(!item || (item->GetRentalExpiration() > 0 &&
                     item->GetRentalExpiration() < (uint32_t)std::time(0)))
+                {
+                    // If the item is invalid or it is an expired rental,
+                    // fail the skill
+                    valid = false;
+                }
+                else
+                {
+                    // If its level restricted, also fail the skill (applies
+                    // to equipping too)
+                    auto definitionManager = server->GetDefinitionManager();
+                    auto itemDef = definitionManager->GetItemData(item->GetType());
+                    uint8_t lvlLimit = itemDef
+                        ? itemDef->GetRestriction()->GetLevel() : 0;
+                    if(lvlLimit)
+                    {
+                        if(lvlLimit > 100)
+                        {
+                            // Level must be less than limit - 100
+                            valid = source->GetLevel() < (int8_t)(lvlLimit - 100);
+                        }
+                        else
+                        {
+                            // Level must be greater than or equal to limit
+                            valid = source->GetLevel() >= (int8_t)lvlLimit;
+                        }
+                    }
+                }
+
+                if(!valid)
                 {
                     skillManager->SendFailure(source, skillID, client,
                         (uint8_t)SkillErrorCodes_t::ITEM_USE);

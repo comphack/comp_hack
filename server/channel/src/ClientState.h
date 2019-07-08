@@ -115,6 +115,14 @@ public:
     std::shared_ptr<BazaarState> GetBazaarState();
 
     /**
+     * Determine if the entity associated to the client has its movements
+     * locked based upon system processes or events being active
+     * @param entityID Entity ID associated to this client to check
+     * @return true if movement is locked, false if it is not
+     */
+    bool IsMovementLocked(int32_t entityID);
+
+    /**
      * Check if the state has a current event associated to it. Auto-only
      * events do not apply here
      * @return true if an event exists, false if one does not

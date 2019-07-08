@@ -130,6 +130,31 @@ std::shared_ptr<BazaarState> ClientState::GetBazaarState()
     return nullptr;
 }
 
+bool ClientState::IsMovementLocked(int32_t entityID)
+{
+    auto eState = GetEntityState(entityID, false);
+    if(!eState)
+    {
+        return false;
+    }
+
+    // Lock set directly on the state stops movement of either entity
+    if(GetLockMovement())
+    {
+        return true;
+    }
+
+    // Player characters can also be locked by their current event status
+    if(eState->GetEntityType() != EntityType_t::CHARACTER)
+    {
+        return false;
+    }
+
+    // Active event and active trade stop the player character too
+    int8_t status = GetStatusIcon();
+    return status == 4 || status == 8;
+}
+
 bool ClientState::HasActiveEvent() const
 {
     auto eState = GetEventState();

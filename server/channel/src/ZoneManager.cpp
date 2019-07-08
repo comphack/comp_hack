@@ -725,6 +725,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
         nextInstance->SetAccessTimeOut(0);
         nextInstance->RefreshPlayerState();
+        nextInstance->SetAccessed(true);
     }
 
     // Lock movement and move the entities to the new location
@@ -841,8 +842,58 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
             client);
     }
 
-    TriggerZoneActions(nextZone, { cState }, ZoneTrigger_t::PRE_ZONE_IN,
-        client);
+    auto triggers = GetZoneTriggers(nextZone, ZoneTrigger_t::PRE_ZONE_IN);
+    if(triggers.size() > 0)
+    {
+        // If max HP or MP raises from pre-zone in, retain percent for
+        // new value
+        std::array<int32_t, 2> maxHPs = { { cState->GetMaxHP(),
+            dState->GetMaxHP() } };
+        std::array<int32_t, 2> maxMPs = { { cState->GetMaxMP(),
+            dState->GetMaxMP() } };
+        std::array<std::shared_ptr<ActiveEntityState>, 2> entitites =
+            { { std::dynamic_pointer_cast<ActiveEntityState>(cState),
+            std::dynamic_pointer_cast<ActiveEntityState>(dState) } };
+
+        if(HandleZoneTriggers(nextZone, triggers, cState, client))
+        {
+            for(size_t i = 0; i < 2; i++)
+            {
+                auto eState = entitites[i];
+                auto cs = eState->GetCoreStats();
+                if(!cs)
+                {
+                    continue;
+                }
+
+                int32_t hp = cs->GetHP();
+                int32_t mp = cs->GetMP();
+
+                bool updated = false;
+                if(eState->GetMaxHP() > maxHPs[i] && hp < eState->GetMaxHP())
+                {
+                    cs->SetHP((int32_t)ceil((double)eState->GetMaxHP() *
+                        (double)hp / (double)maxHPs[i]));
+                    updated = true;
+                }
+
+                if(eState->GetMaxMP() > maxMPs[i] && mp < eState->GetMaxMP())
+                {
+                    cs->SetMP((int32_t)ceil((double)eState->GetMaxMP() *
+                        (double)mp / (double)maxMPs[i]));
+                    updated = true;
+                }
+
+                if(updated)
+                {
+                    libcomp::Packet p;
+                    CharacterManager::GetTDamagePacket(p, eState->GetEntityID(),
+                        cs->GetHP() - hp, cs->GetMP() - mp);
+                    client->QueuePacket(p);
+                }
+            }
+        }
+    }
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ZONE_CHANGE);
@@ -1620,7 +1671,8 @@ bool ZoneManager::MoveToInstance(
                     " spot. Using the starting coordinates instead.\n");
             }
 
-            if(instance->GetAccessTimeOut())
+            // No need to print the recovery message if no one has entered yet
+            if(instance->GetAccessTimeOut() && instance->GetAccessed())
             {
                 LOG_DEBUG(libcomp::String("Zone instance %1 recovered"
                     " before access expired.\n").Arg(instance->GetID()));
@@ -2672,11 +2724,8 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
                 displayStateModified.insert(entity);
 
                 libcomp::Packet p;
-                p.WritePacketCode(
-                    ChannelToClientPacketCode_t::PACKET_DO_TDAMAGE);
-                p.WriteS32Little(entity->GetEntityID());
-                p.WriteS32Little(hpAdjusted);
-                p.WriteS32Little(mpAdjusted);
+                CharacterManager::GetTDamagePacket(p, entity->GetEntityID(),
+                    hpAdjusted, mpAdjusted);
                 zonePackets.push_back(p);
 
                 hpMpRecalc = true;
@@ -2793,13 +2842,15 @@ void ZoneManager::HandleSpecialInstancePopulate(
             }
             break;
         case InstanceType_t::PVP:
-            if(state->GetLastZoneID() != zone->GetID())
             {
-                // Ready character now and notify the match manager
-                /// @todo: determine why initial zone in VS chat is busted
-                /// (along with other things if this is sent earlier)
-                mServer.lock()->GetMatchManager()->EnterPvP(client,
-                    instance->GetID());
+                if(state->GetLastZoneID() != zone->GetID())
+                {
+                    // Ready character now and notify the match manager
+                    /// @todo: determine why initial zone in VS chat is busted
+                    /// (along with other things if this is sent earlier)
+                    mServer.lock()->GetMatchManager()->EnterPvP(client,
+                        instance->GetID());
+                }
 
                 for(auto bState : zone->GetPvPBases())
                 {
@@ -5412,7 +5463,7 @@ void ZoneManager::EndInstanceTimer(
         {
             // Quit the trial if the timer has not stopped yet
             bool quit = !instance->GetTimerStop();
-            if(isSuccess == quit)
+            if(quit && isSuccess)
             {
                 return;
             }
@@ -6091,6 +6142,8 @@ std::list<std::shared_ptr<objects::ServerZoneTrigger>>
     {
     case objects::ServerZoneTrigger::Trigger_t::ON_ZONE_IN:
     case objects::ServerZoneTrigger::Trigger_t::ON_ZONE_OUT:
+    case objects::ServerZoneTrigger::Trigger_t::PRE_ZONE_IN:
+    case objects::ServerZoneTrigger::Trigger_t::ON_LOGIN:
         triggers = zone->GetZoneChangeTriggers();
         break;
     case objects::ServerZoneTrigger::Trigger_t::ON_SPAWN:
@@ -7645,6 +7698,8 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             break;
         case objects::ServerZoneTrigger::Trigger_t::ON_ZONE_IN:
         case objects::ServerZoneTrigger::Trigger_t::ON_ZONE_OUT:
+        case objects::ServerZoneTrigger::Trigger_t::PRE_ZONE_IN:
+        case objects::ServerZoneTrigger::Trigger_t::ON_LOGIN:
             zone->AppendZoneChangeTriggers(trigger);
             break;
         case objects::ServerZoneTrigger::Trigger_t::ON_SPAWN:

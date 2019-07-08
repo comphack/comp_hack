@@ -299,11 +299,11 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
             switch(exchangeSession->GetType())
             {
             case objects::PlayerExchangeSession::Type_t::ENCHANT_TAROT:
-                characterManager->UpdateDurability(client, inputItem,
+                characterManager->UpdateDurability(targetClient, inputItem,
                     -5000);
                 break;
             case objects::PlayerExchangeSession::Type_t::ENCHANT_SOUL:
-                characterManager->UpdateDurability(client, inputItem,
+                characterManager->UpdateDurability(targetClient, inputItem,
                     -10000);
                 break;
             default:

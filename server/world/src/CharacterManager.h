@@ -497,12 +497,9 @@ public:
      * @param cLogin CharacterLogin of the character who sent the request
      * @param targetCID CID of the character being kicked
      * @param teamID ID of the team to update
-     * @param requestConnection Optional parameter for the connection
-     *  that sent the request
      */
     void TeamKick(std::shared_ptr<objects::CharacterLogin> cLogin,
-        int32_t targetCID, int32_t teamID, std::shared_ptr<
-        libcomp::TcpConnection> requestConnection);
+        int32_t targetCID, int32_t teamID);
 
     /**
      * Update the small and large ziotite values and refresh the related

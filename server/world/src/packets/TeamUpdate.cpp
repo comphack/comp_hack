@@ -376,7 +376,7 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             }
 
             int32_t targetCID = p.ReadS32Little();
-            characterManager->TeamKick(cLogin, targetCID, teamID, connection);
+            characterManager->TeamKick(cLogin, targetCID, teamID);
         }
         break;
     case InternalPacketAction_t::PACKET_ACTION_TEAM_ZIOTITE:

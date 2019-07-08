@@ -897,31 +897,29 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
             race2 = (uint8_t)def2.second->GetCategory()->GetRace();
             race3 = (uint8_t)def3.second->GetCategory()->GetRace();
 
-            // Apply special logic if the top 2 races or families match
-            if(race1 == race2 || f1 == f2)
+            // Apply special logic if the top 2 races match
+            if(race1 == race2)
             {
-                bool found1, found2, found3;
+                bool found1, found2;
                 size_t race1Idx = GetRaceIndex(race1, found1);
                 size_t race2Idx = GetRaceIndex(race2, found2);
-                size_t race3Idx = GetRaceIndex(race3, found3);
 
-                if(!found1 || !found2 || !found3)
+                if(!found1 || !found2)
                 {
                     LOG_ERROR("Invalid dual fusion race"
                         " encountered for trifusion\n");
                     return 0;
                 }
 
-                // Perform "nested" fusion with high priority fused
-                // first, then result fused to low priority
-                uint8_t resultRace = FUSION_RACE_MAP[race1Idx + 1][race2Idx];
-                if(resultRace == eRace)
+                // Perform "nested" fusion with high priority fused first, then
+                // result fused to low priority (midway should be elemental)
+                uint8_t elemIdx = FUSION_RACE_MAP[race1Idx + 1][race2Idx];
+                if(elemIdx)
                 {
-                    // Elemental mid-point fusion overrides normal race fusion result
-                    auto elemType = GetElementalType((size_t)(resultRace - 1));
+                    auto elemType = GetElementalType((size_t)(elemIdx - 1));
 
                     uint32_t result = GetElementalFuseResult(elemType,
-                        race3, def3.second->GetBasic()->GetID(), true);
+                        race3, def3.second->GetBasic()->GetID());
                     if(result == 0)
                     {
                         LOG_ERROR(libcomp::String("Invalid elemental fusion request"
@@ -929,19 +927,18 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
                             .Arg(demonType1).Arg(demonType2).Arg(demonType3));
                     }
 
-                    return result;
-                }
+                    // Rank is always boosted by one at this point (can result
+                    // in same low priority demon if decreased by elemental)
+                    result = RankUpDown(race3, result, true);
 
-                race1Idx = GetRaceIndex(resultRace, found1);
-                if(found1)
-                {
-                    resultRace = FUSION_RACE_MAP[race1Idx + 1][race3Idx];
-                    resultDef = GetResultDemon(resultRace, adjustedLevelSum);
+                    return result;
                 }
                 else
                 {
-                    LOG_ERROR("Invalid nested dual fusion race"
-                        " encountered for trifusion\n");
+                    LOG_ERROR(libcomp::String("Attempted TriFusion on same"
+                        " race highest level demons that did not result in"
+                        " an elemental midpoint result: %1, %2, %3\n")
+                        .Arg(demonType1).Arg(demonType2).Arg(demonType3));
                     return 0;
                 }
             }
@@ -1751,7 +1748,7 @@ uint32_t FusionManager::GetMitamaType(size_t mitamaIndex) const
 }
 
 uint32_t FusionManager::GetElementalFuseResult(uint32_t elementalType,
-    uint8_t otherRace, uint32_t otherType, bool adjustMinRank)
+    uint8_t otherRace, uint32_t otherType)
 {
     bool raceFound = false;
     size_t raceIdx = GetRaceIndex(otherRace, raceFound);
@@ -1765,18 +1762,7 @@ uint32_t FusionManager::GetElementalFuseResult(uint32_t elementalType,
     }
 
     bool up = FUSION_ELEMENTAL_ADJUST[raceIdx][elementalIdx] == 1;
-    uint32_t result = RankUpDown(otherRace, otherType, up);
-    if(!up && adjustMinRank)
-    {
-        uint32_t rankDown = RankUpDown(otherRace, result, false);
-        if(rankDown == result)
-        {
-            // Min rank must be one below lowest
-            result = RankUpDown(otherRace, result, true);
-        }
-    }
-
-    return result;
+    return RankUpDown(otherRace, otherType, up);
 }
 
 size_t FusionManager::GetRaceIndex(uint8_t raceID, bool& found)

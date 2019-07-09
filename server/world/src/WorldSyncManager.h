@@ -180,7 +180,8 @@ public:
 private:
     /**
      * Update the number of search entries associated to a specific character
-     * for quick access operations later.
+     * for quick access operations later. This function is NOT thread safe
+     * and requires the caller to lock mutex access before calling.
      * @param sourceCID CID of the character to update
      * @param type Type of search entry counts to update
      * @param increment true if the count should be increased, false if it
@@ -191,7 +192,7 @@ private:
 
     /**
      * Determine if a solo PvP match of the specified type can be started and
-     * queue it to start if it is.
+     * queue it to start if it is. This function is thread safe.
      * @param type Type ID of the PvP match
      * @param updated Set of world CIDs that have just entered the queue to
      *  determine if the queue countdown needs to restart
@@ -201,7 +202,7 @@ private:
 
     /**
      * Determine if a team PvP match of the specified type can be started and
-     * queue it to start if it is.
+     * queue it to start if it is. This function is thread safe.
      * @param type Type ID of the PvP match
      * @param updated Set of world CIDs that have just entered the queue to
      *  determine if the queue countdown needs to restart
@@ -210,14 +211,17 @@ private:
     bool DetermineTeamPvPMatch(uint8_t type, std::set<int32_t> updated = {});
 
     /**
-     * Ready a supplied PvP match to send to the channels
+     * Ready a supplied PvP match to send to the channels. This function is
+     * thread safe.
      * @param match Pointer to an existing match that has not been started
      * @return true if the update succeeded, false if it did not
      */
     bool PreparePvPMatch(std::shared_ptr<objects::PvPMatch> match);
 
     /**
-     * Get all match entries by their team ID (including no team)
+     * Get all match entries by their team ID (including no team). This
+     * function is NOT thread safe and requires the caller to lock mutex
+     * access before calling.
      * @param type Type ID of the PvP match
      * @return Map of team IDs to entries in that team
      */
@@ -233,14 +237,16 @@ private:
     bool EndMatch(const std::shared_ptr<objects::PentalphaMatch>& match);
 
     /**
-     * Recalculate all rankings for a spectific UBTournament
+     * Recalculate all rankings for a spectific UBTournament. This function is
+     * thread safe.
      * @param tournamentUID UID of the tournament to recalculate
      * @return true if the rankings were updated, false if an error occurred
      */
     bool RecalculateTournamentRankings(const libobjgen::UUID& tournamentUID);
 
     /**
-     * Recalculate all tournament independent UBResult rankings
+     * Recalculate all tournament independent UBResult rankings. This function
+     * is thread safe.
      * @return true if the rankings were updated, false if an error occurred
      */
     bool RecalculateUBRankings();

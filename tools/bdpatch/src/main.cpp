@@ -48,6 +48,7 @@
 #include <MiCDevilDungeonData.h>
 #include <MiCDevilEquipmentExclusiveData.h>
 #include <MiCEquipModelData.h>
+#include <MiCEventData.h>
 #include <MiCEventMessageData.h>
 #include <MiCGuardianAssistData.h>
 #include <MiCHelpData.h>
@@ -259,6 +260,7 @@ int main(int argc, char *argv[])
     ADD_TYPE    ("  cdevildungeon         Format for CDevilDungeonData.sbin", "cdevildungeon", MiCDevilDungeonData);
     ADD_TYPE    ("  cdevilequipexclusive  Format for CDevilEquipmentExclusiveData.sbin", "cdevilequipexclusive", MiCDevilEquipmentExclusiveData);
     ADD_TYPE    ("  cequipmodel           Format for CEquipModelData.sbin", "cequipmodel", MiCEquipModelData);
+    ADD_TYPE    ("  cevent                Format for CEventData.bin", "cevent", MiCEventData);
     ADD_TYPE    ("  ceventmessage         Format for CEventMessageData.sbin", "ceventmessage", MiCEventMessageData);
     ADD_TYPE    ("  cguardianassist       Format for CGuardianAssistData.sbin", "cguardianassist", MiCGuardianAssistData);
     ADD_TYPE    ("  chelp                 Format for CHelpData.sbin", "chelp", MiCHelpData);

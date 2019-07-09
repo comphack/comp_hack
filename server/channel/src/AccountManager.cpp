@@ -1158,16 +1158,41 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
-    // Quests
-    for(auto qPair : character->GetQuests())
+    // Quests (recover first)
+    auto quests = objects::Quest::
+        LoadQuestListByCharacter(db, character->GetUUID());
+    for(auto quest : quests)
     {
-        if(!qPair.second.IsNull() && !qPair.second.Get(db))
+        bool exists = false;
+        for(auto qPair : character->GetQuests())
         {
-            LOG_ERROR(libcomp::String("Quest %1 could"
-                " not be initialized for account: %2\n")
-                .Arg(qPair.second.GetUUID().ToString())
-                .Arg(state->GetAccountUID().ToString()));
-            return false;
+            if(qPair.second->GetUUID() == quest->GetUUID())
+            {
+                exists = true;
+                break;
+            }
+        }
+
+        if(!exists && quest->GetQuestID())
+        {
+            LOG_WARNING(libcomp::String("Recovered orphaned"
+                " Quest %1 on character: %2\n")
+                .Arg(quest->GetUUID().ToString())
+                .Arg(character->GetUUID().ToString()));
+            character->SetQuests(quest->GetQuestID(), quest);
+        }
+    }
+
+    for(int16_t questID : character->GetQuestsKeys())
+    {
+        auto qRef = character->GetQuests(questID);
+        if(!qRef.IsNull() && !qRef.Get(db))
+        {
+            LOG_WARNING(libcomp::String("Removing invalid"
+                " quest %1 saved for character: %2\n")
+                .Arg(qRef.GetUUID().ToString())
+                .Arg(character->GetUUID().ToString()));
+            character->RemoveQuests(questID);
         }
     }
 

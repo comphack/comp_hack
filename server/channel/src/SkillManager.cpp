@@ -887,8 +887,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         }
     }
 
-    // Only execute special function skills if the source was a player
-    bool success = client && fIter->second(*this, activated, ctx, client);
+    bool success = fIter->second(*this, activated, ctx, client);
     if(success)
     {
         FinalizeSkillExecution(client, ctx, activated);
@@ -1000,10 +999,14 @@ void SkillManager::SendFailure(const std::shared_ptr<ActiveEntityState> source,
     {
         client->SendPacket(p);
     }
-    else if(source && source->GetZone())
+    else if(source)
     {
-        auto zConnections = source->GetZone()->GetConnectionList();
-        ChannelClientConnection::BroadcastPacket(zConnections, p);
+        auto zone = source->GetZone();
+        if(zone)
+        {
+            auto zConnections = zone->GetConnectionList();
+            ChannelClientConnection::BroadcastPacket(zConnections, p);
+        }
     }
 }
 
@@ -2418,6 +2421,12 @@ bool SkillManager::DetermineNormalCosts(
     }
 
     return true;
+}
+
+bool SkillManager::FunctionIDMapped(uint16_t functionID)
+{
+    return mSkillFunctions.find(functionID) != mSkillFunctions.end() ||
+        mSkillEffectFunctions.find(functionID) != mSkillEffectFunctions.end();
 }
 
 bool SkillManager::ExecuteNormalSkill(

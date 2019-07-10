@@ -1307,7 +1307,7 @@ uint32_t ChannelServer::GetTimeUntilMidnight()
     int systemSeconds = clock.SystemSec;
 
     return (uint32_t)(((23 - systemHour) * 3600) +
-        ((59 - systemMinutes) * 60) + systemSeconds);
+        ((59 - systemMinutes) * 60) + (60 - systemSeconds));
 }
 
 ChannelServer::PersistentObjectMap
@@ -1330,7 +1330,8 @@ void ChannelServer::ScheduleRecurringActions()
         }, this);
 
     // Schedule the demon quest reset for next midnight
-    mTimerManager.ScheduleEventIn((int)GetTimeUntilMidnight(), []
+    uint32_t next = GetTimeUntilMidnight();
+    mTimerManager.ScheduleEventIn((int)(next ? next : 86400), []
         (ChannelServer* pServer)
         {
             pServer->HandleDemonQuestReset();
@@ -1421,20 +1422,27 @@ void ChannelServer::HandleClockEvents()
 
 void ChannelServer::HandleDemonQuestReset()
 {
+    uint32_t now = (uint32_t)time(0);
+    auto dbChanges = libcomp::DatabaseChangeSet::Create();
+    bool updated = false;
+
     // Get all currently logged in characters and reset their demon quests
     for(auto& client : mManagerConnection->GetAllConnections())
     {
         auto state = client->GetClientState();
-        if(mEventManager->ResetDemonQuests(client))
+        if(mEventManager->ResetDemonQuests(client, now, dbChanges))
         {
-            LOG_DEBUG(libcomp::String("Demon quests reset for account: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
-        }
-        else
-        {
-            LOG_ERROR(libcomp::String("Failed to reset demon quests for"
+            LOG_DEBUG(libcomp::String("Resetting demon quests for"
                 " account: %1\n").Arg(state->GetAccountUID().ToString()));
         }
+
+        updated = true;
+    }
+
+    if(updated && !GetWorldDatabase()->ProcessChangeSet(dbChanges))
+    {
+        LOG_ERROR("Failed to save daily demon quest resets on one or"
+            " more character(s)\n");
     }
 
     // Reset timer to run again (24 hours from now if still midnight)

@@ -60,8 +60,8 @@ bool Parsers::PlasmaStart::Parse(libcomp::ManagerPacket *pPacketManager,
         ->GetServer());
     auto eventManager = server->GetEventManager();
 
-    auto pState = std::dynamic_pointer_cast<PlasmaState>(zone
-        ->GetEntity(plasmaID));
+    auto pState = zone ? std::dynamic_pointer_cast<PlasmaState>(zone
+        ->GetEntity(plasmaID)) : nullptr;
 
     bool success = false;
     if(pState && pointID && eventManager->StartSystemEvent(client, plasmaID))

@@ -265,12 +265,19 @@ public:
         int32_t increment = 0);
 
     /**
-     * Reset the quests available in from the demons in the COMP and set
-     * the demon quest daily count back to zero
+     * Reset the quests available in from the demons in the COMP and set the
+     * demon quest daily count back to zero. The caller is responsible for
+     * actually saving the changes that are written to the supplied changeset.
      * @param client Pointer to the client
-     * @return true if any update was performed
+     * @param now Current system time to be set on the CharacterProgress
+     *  records when reseting the quests
+     * @param changes Pointer to the changeset to apply the changes to
+     * @return true if one or more demon had quests reset, false if only
+     *  the time reset occurred
      */
-    bool ResetDemonQuests(const std::shared_ptr<ChannelClientConnection>& client);
+    bool ResetDemonQuests(const std::shared_ptr<
+        ChannelClientConnection>& client, uint32_t now,
+        const std::shared_ptr<libcomp::DatabaseChangeSet>& changes);
 
     /**
      * End the client's demon quest in success or failure. If any costs are

@@ -1565,7 +1565,15 @@ void MatchManager::EnterPvP(const std::shared_ptr<
         }
     }
 
-    auto bases = state->GetZone()->GetPvPBases();
+    std::list<std::shared_ptr<PvPBaseState>> bases;
+
+    // Should only be one zone in these instances but support multiple
+    // if someone decides to make one
+    auto zone = state->GetZone();
+    if(zone)
+    {
+        bases = zone->GetPvPBases();
+    }
 
     p.WriteS8((int8_t)bases.size());
     for(auto bState : bases)
@@ -2146,6 +2154,11 @@ void MatchManager::PlayerKilled(const std::shared_ptr<ActiveEntityState>& entity
 bool MatchManager::ToggleDiasporaBase(const std::shared_ptr<Zone>& zone,
     int32_t baseID, int32_t sourceEntityID, bool capture)
 {
+    if(!zone)
+    {
+        return false;
+    }
+
     auto instance = zone->GetInstance();
     auto variant = instance ? instance->GetVariant() : nullptr;
 

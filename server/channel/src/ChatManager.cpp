@@ -3885,9 +3885,9 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
     if(args.empty())
     {
         auto zone = cState->GetZone();
-        auto zoneData = zone->GetDefinition();
-        auto zoneDef = server->GetDefinitionManager()->GetZoneData(
-            zoneData->GetID());
+        auto zoneData = zone ? zone->GetDefinition() : nullptr;
+        auto zoneDef = zoneData ? server->GetDefinitionManager()->GetZoneData(
+            zoneData->GetID()) : nullptr;
 
         if(zoneDef)
         {
@@ -3895,10 +3895,15 @@ bool ChatManager::GMCommand_Zone(const std::shared_ptr<
                 libcomp::String("You are in zone %1 (%2)").Arg(
                     zoneData->GetID()).Arg(zoneDef->GetBasic()->GetName()));
         }
-        else
+        else if(zoneData)
         {
             return SendChatMessage(client, ChatType_t::CHAT_SELF,
                 libcomp::String("You are in zone %1").Arg(zoneData->GetID()));
+        }
+        else
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                "You are (somehow) in the twilight zone");
         }
     }
     else if(4 >= args.size())

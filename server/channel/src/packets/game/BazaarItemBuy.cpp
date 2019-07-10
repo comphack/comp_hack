@@ -69,7 +69,7 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto currentEvent = state->GetEventState()->GetCurrent();
     uint32_t marketID = (uint32_t)state->GetCurrentMenuShopID();
-    auto bState = currentEvent
+    auto bState = currentEvent && zone
         ? zone->GetBazaar(currentEvent->GetSourceEntityID()) : nullptr;
 
     // Load from the DB as the seller may not be on the channel so caching

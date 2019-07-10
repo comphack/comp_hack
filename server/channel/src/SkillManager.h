@@ -322,6 +322,15 @@ public:
         std::unordered_map<uint32_t, uint32_t>& itemCosts,
         std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
+    /**
+     * Check if the supplied function ID is mapped to a special function within
+     * the skill manager. Skill function IDs that are not mapped will react like
+     * no function ID skills when processed.
+     * @param functionID Function ID to check
+     * @return true if it is mapped, false if it is not
+     */
+    bool FunctionIDMapped(uint16_t functionID);
+
 private:
     /**
      * Notify the client that a skill failed activation or execution.

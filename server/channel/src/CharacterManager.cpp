@@ -946,6 +946,11 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
     auto zone = state->GetZone();
+    if(!zone)
+    {
+        // Ignore requesting characters no longer in a zone
+        return;
+    }
 
     auto character = cState->GetEntity();
     auto characterLevel = cState->GetCoreStats()->GetLevel();
@@ -6984,9 +6989,9 @@ bool CharacterManager::DigitalizeEnd(const std::shared_ptr<
     auto cState = state->GetCharacterState();
     auto dgState = cState->GetDigitalizeState();
     auto zone = cState->GetZone();
-    if(!dgState)
+    if(!dgState || !zone)
     {
-        // Not digitalized
+        // Not digitalized or invalid
         return false;
     }
 

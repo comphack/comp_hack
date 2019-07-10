@@ -5797,7 +5797,11 @@ void ZoneManager::EndInstanceTimer(
 bool ZoneManager::UpdateTrackedZone(const std::shared_ptr<Zone>& zone,
     const std::shared_ptr<objects::Team>& team)
 {
-    if(zone->GetInstanceType() == InstanceType_t::DIASPORA)
+    if(!zone)
+    {
+        return false;
+    }
+    else if(zone->GetInstanceType() == InstanceType_t::DIASPORA)
     {
         // Uses a special packet for tracking players which act as team members
         auto clients = zone->GetConnectionList();
@@ -6138,6 +6142,11 @@ std::list<std::shared_ptr<objects::ServerZoneTrigger>>
     ZoneTrigger_t trigger)
 {
     std::list<std::shared_ptr<objects::ServerZoneTrigger>> triggers;
+    if(!zone)
+    {
+        return triggers;
+    }
+
     switch(trigger)
     {
     case objects::ServerZoneTrigger::Trigger_t::ON_ZONE_IN:

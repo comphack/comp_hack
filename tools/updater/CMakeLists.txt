@@ -36,6 +36,9 @@ IF(WIN32)
 
     MESSAGE("** Configuring ${PROJECT_NAME} **")
 
+    CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/src/Version.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/Version.h @ONLY)
+
     SET(${PROJECT_NAME}_SRCS
         src/Downloader.cpp
         src/LanguageSelection.cpp

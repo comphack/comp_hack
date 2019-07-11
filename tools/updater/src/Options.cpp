@@ -314,9 +314,27 @@ void Options::Save()
     fileLang.write(locale.toLocal8Bit());
     fileLang.close();
 
-    if(!QFile::remove("ImagineUpdate.dat") ||
-        !QFile::copy(tr("translations/ImagineUpdate_en_US.dat"),
-            "ImagineUpdate.dat"))
+    if(!QFileInfo(tr("translations/ImagineUpdate_%1.dat").arg(
+        locale)).isReadable())
+    {
+        QMessageBox::critical(this, tr("Save Error"),
+            tr("ImagineUpdate_%1.dat does not exist in the "
+                "translations directory!").arg(locale));
+
+        return;
+    }
+
+    if(QFileInfo("ImagineUpdate.dat").exists() &&
+        !QFile::remove("ImagineUpdate.dat"))
+    {
+        QMessageBox::critical(this, tr("Save Error"),
+            tr("Failed to delete existing ImagineUpdate.dat!"));
+
+        return;
+    }
+
+    if(!QFile::copy(tr("translations/ImagineUpdate_%1.dat").arg(
+        locale), "ImagineUpdate.dat"))
     {
         QMessageBox::critical(this, tr("Save Error"),
             tr("Failed to save the updater URL!"));

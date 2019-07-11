@@ -27,6 +27,7 @@
 #include "Updater.h"
 #include "Downloader.h"
 #include "Options.h"
+#include "Version.h"
 
 #include <PushIgnore.h>
 #include <QMenu>
@@ -57,6 +58,11 @@ Updater::Updater(QWidget *p) : QWidget(p), mDone(false)
     mWebsite = settings.value("Setting/Information").toString();
 
     ui.setupUi(this);
+
+    setWindowTitle(tr("COMP_hack Updater v%1.%2.%3 (%4)").arg(
+        VERSION_MAJOR).arg(VERSION_MINOR).arg(VERSION_PATCH).arg(
+        VERSION_CODENAME));
+
     ui.playButton->setEnabled(false);
     ui.website->load(mWebsite);
 

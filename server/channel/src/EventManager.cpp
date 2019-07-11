@@ -3532,57 +3532,55 @@ bool EventManager::UpdateDemonQuestCount(
 }
 
 bool EventManager::ResetDemonQuests(const std::shared_ptr<
-    ChannelClientConnection>& client)
+    ChannelClientConnection>& client, uint32_t now,
+    const std::shared_ptr<libcomp::DatabaseChangeSet>& changes)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     auto progress = character->GetProgress().Get();
 
-    auto server = mServer.lock();
-    auto characterManager = server->GetCharacterManager();
-
-    std::list<std::shared_ptr<objects::Demon>> demons;
+    std::set<std::shared_ptr<objects::Demon>> demons;
     for(auto& d : character->GetCOMP()->GetDemons())
     {
         if(!d.IsNull() && !d->GetHasQuest() &&
-            characterManager->GetFamiliarityRank(d->GetFamiliarity()) >= 1)
+            CharacterManager::GetFamiliarityRank(d->GetFamiliarity()) >= 1)
         {
-            demons.push_back(d.Get());
+            demons.insert(d.Get());
         }
     }
 
-    if(demons.size() == 0 && progress->GetDemonQuestDaily() == 0)
-    {
-        // Not an error
-        return true;
-    }
-
-    auto dbChanges = libcomp::DatabaseChangeSet::Create();
-
     progress->SetDemonQuestDaily(0);
-    dbChanges->Update(progress);
+    progress->SetDemonQuestResetTime(now);
+
+    changes->Update(progress);
 
     // Notify the player if any demons have new quests
     libcomp::Packet request;
     if(demons.size() > 0)
     {
+        // Packet includes all demons with a quest, not just new ones
+        std::list<std::shared_ptr<objects::Demon>> all;
+        for(auto& d : character->GetCOMP()->GetDemons())
+        {
+            if(!d.IsNull() && (d->GetHasQuest() ||
+                demons.find(d.Get()) != demons.end()))
+            {
+                all.push_back(d.Get());
+            }
+        }
+
         request.WritePacketCode(
             ChannelToClientPacketCode_t::PACKET_DEMON_QUEST_LIST_UPDATED);
 
-        request.WriteS8((int8_t)demons.size());
-        for(auto& d : demons)
+        request.WriteS8((int8_t)all.size());
+        for(auto& d : all)
         {
             d->SetHasQuest(true);
             request.WriteS64Little(state->GetObjectID(d->GetUUID()));
 
-            dbChanges->Update(d);
+            changes->Update(d);
         }
-    }
-
-    if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
-    {
-        return false;
     }
 
     if(demons.size() > 0)
@@ -3590,7 +3588,7 @@ bool EventManager::ResetDemonQuests(const std::shared_ptr<
         client->SendPacket(request);
     }
 
-    return true;
+    return demons.size() > 0;
 }
 
 int8_t EventManager::EndDemonQuest(

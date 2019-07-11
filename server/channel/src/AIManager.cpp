@@ -2183,6 +2183,7 @@ bool AIManager::SkillIsValid(
         // Only certain function IDs are supported for general use
         const static std::set<uint16_t> supportedFIDs = {
                 SVR_CONST.SKILL_ABS_DAMAGE,
+                SVR_CONST.SKILL_DESPAWN,
                 SVR_CONST.SKILL_DIGITALIZE_BREAK,
                 SVR_CONST.SKILL_HP_DEPENDENT,
                 SVR_CONST.SKILL_HP_MP_MIN,
@@ -2197,9 +2198,10 @@ bool AIManager::SkillIsValid(
                 SVR_CONST.SKILL_SUICIDE,
             };
 
-        if(supportedFIDs.find(functionID) == supportedFIDs.end())
+        if(supportedFIDs.find(functionID) == supportedFIDs.end() &&
+            mServer.lock()->GetSkillManager()->FunctionIDMapped(functionID))
         {
-            // Not supported
+            // Mapped and not whitelisted, therefore not supported
             return false;
         }
     }

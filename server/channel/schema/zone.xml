@@ -51,6 +51,7 @@
         <member type="set" name="OriginalAccessCIDs">
             <element type="s32"/>
         </member>
+        <member type="bool" name="Accessed"/>
         <member type="Match*" name="Match" nulldefault="true"/>
         <member type="u32" name="TimerID"/>
         <member type="MiTimeLimitData*" name="TimeLimitData"

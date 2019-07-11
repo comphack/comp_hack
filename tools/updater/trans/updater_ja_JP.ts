@@ -38,7 +38,9 @@
     </message>
     <message>
         <location filename="../src/LanguageSelection.cpp" line="109"/>
-        <location filename="../src/LanguageSelection.cpp" line="122"/>
+        <location filename="../src/LanguageSelection.cpp" line="121"/>
+        <location filename="../src/LanguageSelection.cpp" line="131"/>
+        <location filename="../src/LanguageSelection.cpp" line="140"/>
         <source>Save Error</source>
         <translation type="unfinished"></translation>
     </message>
@@ -48,12 +50,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/LanguageSelection.cpp" line="119"/>
-        <source>translations/ImagineUpdate_en_US.dat</source>
+        <location filename="../src/LanguageSelection.cpp" line="118"/>
+        <location filename="../src/LanguageSelection.cpp" line="137"/>
+        <source>translations/ImagineUpdate_%1.dat</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/LanguageSelection.cpp" line="123"/>
+        <location filename="../src/LanguageSelection.cpp" line="122"/>
+        <source>ImagineUpdate_%1.dat does not exist in the translations directory!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/LanguageSelection.cpp" line="132"/>
+        <source>Failed to delete existing ImagineUpdate.dat!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/LanguageSelection.cpp" line="141"/>
         <source>Failed to save the updater URL!</source>
         <translation type="unfinished"></translation>
     </message>
@@ -155,7 +168,9 @@
     <message>
         <location filename="../src/Options.cpp" line="273"/>
         <location filename="../src/Options.cpp" line="308"/>
-        <location filename="../src/Options.cpp" line="321"/>
+        <location filename="../src/Options.cpp" line="320"/>
+        <location filename="../src/Options.cpp" line="330"/>
+        <location filename="../src/Options.cpp" line="339"/>
         <source>Save Error</source>
         <translation type="unfinished"></translation>
     </message>
@@ -181,12 +196,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Options.cpp" line="318"/>
-        <source>translations/ImagineUpdate_en_US.dat</source>
+        <location filename="../src/Options.cpp" line="317"/>
+        <location filename="../src/Options.cpp" line="336"/>
+        <source>translations/ImagineUpdate_%1.dat</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Options.cpp" line="322"/>
+        <location filename="../src/Options.cpp" line="321"/>
+        <source>ImagineUpdate_%1.dat does not exist in the translations directory!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/Options.cpp" line="331"/>
+        <source>Failed to delete existing ImagineUpdate.dat!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/Options.cpp" line="340"/>
         <source>Failed to save the updater URL!</source>
         <translation type="unfinished"></translation>
     </message>
@@ -234,93 +260,98 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="164"/>
-        <location filename="../src/Updater.cpp" line="185"/>
-        <location filename="../src/Updater.cpp" line="198"/>
-        <location filename="../src/Updater.cpp" line="210"/>
-        <location filename="../src/Updater.cpp" line="224"/>
-        <location filename="../src/Updater.cpp" line="232"/>
-        <location filename="../src/Updater.cpp" line="242"/>
-        <location filename="../src/Updater.cpp" line="273"/>
-        <location filename="../src/Updater.cpp" line="302"/>
-        <location filename="../src/Updater.cpp" line="323"/>
-        <location filename="../src/Updater.cpp" line="337"/>
+        <location filename="../src/Updater.cpp" line="62"/>
+        <source>COMP_hack Updater v%1.%2.%3 (%4)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/Updater.cpp" line="170"/>
+        <location filename="../src/Updater.cpp" line="191"/>
+        <location filename="../src/Updater.cpp" line="204"/>
+        <location filename="../src/Updater.cpp" line="216"/>
+        <location filename="../src/Updater.cpp" line="230"/>
+        <location filename="../src/Updater.cpp" line="238"/>
+        <location filename="../src/Updater.cpp" line="248"/>
+        <location filename="../src/Updater.cpp" line="279"/>
+        <location filename="../src/Updater.cpp" line="308"/>
+        <location filename="../src/Updater.cpp" line="329"/>
+        <location filename="../src/Updater.cpp" line="343"/>
         <source>VersionData.txt Error</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="165"/>
+        <location filename="../src/Updater.cpp" line="171"/>
         <source>The first line of the file was not: [versions]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="186"/>
+        <location filename="../src/Updater.cpp" line="192"/>
         <source>Invalid line found in versions section: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="199"/>
+        <location filename="../src/Updater.cpp" line="205"/>
         <source>Duplicate title value found</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="211"/>
+        <location filename="../src/Updater.cpp" line="217"/>
         <source>Duplicate server value found</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="225"/>
+        <location filename="../src/Updater.cpp" line="231"/>
         <source>Duplicate tag value found</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="233"/>
+        <location filename="../src/Updater.cpp" line="239"/>
         <source>Non-unique tag value found</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="243"/>
+        <location filename="../src/Updater.cpp" line="249"/>
         <source>Version contains invalid value</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="274"/>
+        <location filename="../src/Updater.cpp" line="280"/>
         <source>Version missing one or more of: title, server, tag</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="303"/>
+        <location filename="../src/Updater.cpp" line="309"/>
         <source>Section contains invalid tag name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="324"/>
+        <location filename="../src/Updater.cpp" line="330"/>
         <source>Invalid line found in file list section</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="338"/>
+        <location filename="../src/Updater.cpp" line="344"/>
         <source>Duplicate file &apos;%1&apos; found for tag &apos;%2&apos;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="418"/>
+        <location filename="../src/Updater.cpp" line="424"/>
         <source>%1/%2.%3</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="420"/>
+        <location filename="../src/Updater.cpp" line="426"/>
         <source>%1/%2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="425"/>
-        <location filename="../src/Updater.cpp" line="543"/>
+        <location filename="../src/Updater.cpp" line="431"/>
+        <location filename="../src/Updater.cpp" line="549"/>
         <source>Updater Error</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="426"/>
+        <location filename="../src/Updater.cpp" line="432"/>
         <source>Failed to patch %1</source>
         <translation type="unfinished"></translation>
     </message>

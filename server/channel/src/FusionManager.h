@@ -186,12 +186,10 @@ private:
      * @param elementalType Elemental demon type
      * @param otherRace Race of the non-elemental demon
      * @param otherType Type of the non-elemental demon
-     * @param adjustMinRank true if the second to lowest rank should be used
-     *  should a rank down occur and reach the lowest rank
      * @return Type ID of the result demon
      */
     uint32_t GetElementalFuseResult(uint32_t elementalType, uint8_t otherRace,
-        uint32_t otherType, bool adjustMinRank = false);
+        uint32_t otherType);
 
     /**
      * Get the race index of the supplied race that matches the FusionTables

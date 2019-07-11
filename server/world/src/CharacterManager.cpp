@@ -1880,11 +1880,9 @@ void CharacterManager::TeamLeaderUpdate(int32_t teamID, int32_t sourceCID,
 }
 
 void CharacterManager::TeamKick(std::shared_ptr<objects::CharacterLogin> cLogin,
-    int32_t targetCID, int32_t teamID,
-    std::shared_ptr<libcomp::TcpConnection> requestConnection)
+    int32_t targetCID, int32_t teamID)
 {
     auto team = GetTeam(cLogin->GetTeamID());
-    auto teamLogins = GetRelatedCharacterLogins(cLogin, RELATED_TEAM);
 
     int8_t errorCode = (int8_t)TeamErrorCodes_t::GENERIC_ERROR;
     if(team)
@@ -1907,37 +1905,44 @@ void CharacterManager::TeamKick(std::shared_ptr<objects::CharacterLogin> cLogin,
             if(targetLogin && RemoveFromTeam(targetLogin, teamID))
             {
                 targetLogin->SetTeamID(0);
+
+                libcomp::Packet relay;
+                auto cidOffset = WorldServer::GetRelayPacket(relay);
+                relay.WritePacketCode(
+                    ChannelToClientPacketCode_t::PACKET_TEAM_KICKED);
+                relay.WriteS32Little(teamID);
+                relay.WriteS32Little(targetCID);
+
+                SendToCharacters(relay, { targetLogin }, cidOffset);
+
                 errorCode = (int8_t)TeamErrorCodes_t::SUCCESS;
             }
         }
     }
 
-    if(requestConnection)
-    {
-        libcomp::Packet relay;
-        WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
-        relay.WritePacketCode(
-            ChannelToClientPacketCode_t::PACKET_TEAM_KICK);
-        relay.WriteS32Little(teamID);
-        relay.WriteS8(errorCode);
-        relay.WriteS32Little(targetCID);
+    // Notify remaining members (or source only if not success)
+    libcomp::Packet relay;
+    auto cidOffset = WorldServer::GetRelayPacket(relay);
+    relay.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_TEAM_KICK);
+    relay.WriteS32Little(teamID);
+    relay.WriteS8(errorCode);
+    relay.WriteS32Little(targetCID);
 
-        requestConnection->QueuePacket(relay);
+    std::list<std::shared_ptr<objects::CharacterLogin>> teamLogins;
+    if(errorCode == (int8_t)TeamErrorCodes_t::SUCCESS)
+    {
+        teamLogins = GetRelatedCharacterLogins(cLogin, RELATED_TEAM);
     }
+
+    teamLogins.push_back(cLogin);
+
+    SendToCharacters(relay, teamLogins, cidOffset);
 
     if(errorCode == (int8_t)TeamErrorCodes_t::SUCCESS)
     {
         std::list<int32_t> includeCIDs = { targetCID };
         SendTeamInfo(team->GetID(), includeCIDs);
-
-        libcomp::Packet relay;
-        auto cidOffset = WorldServer::GetRelayPacket(relay);
-        relay.WritePacketCode(
-            ChannelToClientPacketCode_t::PACKET_TEAM_KICKED);
-        relay.WriteS32Little(teamID);
-        relay.WriteS32Little(targetCID);
-
-        SendToCharacters(relay, teamLogins, cidOffset);
 
         // Send the new ziotite count
         TeamZiotiteUpdate(team->GetID());

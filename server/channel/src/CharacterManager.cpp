@@ -946,6 +946,11 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
     auto zone = state->GetZone();
+    if(!zone)
+    {
+        // Ignore requesting characters no longer in a zone
+        return;
+    }
 
     auto character = cState->GetEntity();
     auto characterLevel = cState->GetCoreStats()->GetLevel();
@@ -1318,6 +1323,15 @@ bool CharacterManager::GetEntityRevivalPacket(libcomp::Packet& p,
     }
 
     return false;
+}
+
+void CharacterManager::GetTDamagePacket(libcomp::Packet& p, int32_t entityID,
+    int32_t hpGain, int32_t mpGain)
+{
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DO_TDAMAGE);
+    p.WriteS32Little(entityID);
+    p.WriteS32Little(hpGain);
+    p.WriteS32Little(mpGain);
 }
 
 void CharacterManager::SetStatusIcon(const std::shared_ptr<ChannelClientConnection>& client, int8_t icon)
@@ -6975,9 +6989,9 @@ bool CharacterManager::DigitalizeEnd(const std::shared_ptr<
     auto cState = state->GetCharacterState();
     auto dgState = cState->GetDigitalizeState();
     auto zone = cState->GetZone();
-    if(!dgState)
+    if(!dgState || !zone)
     {
-        // Not digitalized
+        // Not digitalized or invalid
         return false;
     }
 

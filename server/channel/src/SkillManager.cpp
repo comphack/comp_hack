@@ -887,8 +887,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         }
     }
 
-    // Only execute special function skills if the source was a player
-    bool success = client && fIter->second(*this, activated, ctx, client);
+    bool success = fIter->second(*this, activated, ctx, client);
     if(success)
     {
         FinalizeSkillExecution(client, ctx, activated);
@@ -1000,10 +999,14 @@ void SkillManager::SendFailure(const std::shared_ptr<ActiveEntityState> source,
     {
         client->SendPacket(p);
     }
-    else if(source && source->GetZone())
+    else if(source)
     {
-        auto zConnections = source->GetZone()->GetConnectionList();
-        ChannelClientConnection::BroadcastPacket(zConnections, p);
+        auto zone = source->GetZone();
+        if(zone)
+        {
+            auto zConnections = zone->GetConnectionList();
+            ChannelClientConnection::BroadcastPacket(zConnections, p);
+        }
     }
 }
 
@@ -2418,6 +2421,12 @@ bool SkillManager::DetermineNormalCosts(
     }
 
     return true;
+}
+
+bool SkillManager::FunctionIDMapped(uint16_t functionID)
+{
+    return mSkillFunctions.find(functionID) != mSkillFunctions.end() ||
+        mSkillEffectFunctions.find(functionID) != mSkillEffectFunctions.end();
 }
 
 bool SkillManager::ExecuteNormalSkill(
@@ -4231,11 +4240,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         // client side since it still is server side. Only send this to
         // the same connections sent the skill packets.
         libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DO_TDAMAGE);
-        p.WriteS32Little(entity->GetEntityID());
-        p.WriteS32Little(1); // HP
-        p.WriteS32Little(0); // No MP
-
+        CharacterManager::GetTDamagePacket(p, entity->GetEntityID(), 1, 0);
         ChannelClientConnection::BroadcastPacket(zConnections, p);
     }
 
@@ -4487,6 +4492,23 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
     {
         skill->ExecutionContext = ctx.get();
         ctx->Skill = skill;
+    }
+
+    // Lastly set skill definition overrides
+    auto sourceState = GetCalculatedState(source, skill, false, nullptr);
+
+    auto affinityOverride = server->GetTokuseiManager()->GetAspectValueList(source,
+        TokuseiAspectType::AFFINITY_OVERRIDE, sourceState);
+    for(double ovr : affinityOverride)
+    {
+        // Skip weapon affinity overrides (includes base affinity because the
+        // skill is being redefined, not added to)
+        if(ovr > (double)((uint8_t)CorrectTbl::RES_WEAPON - RES_OFFSET) &&
+            ovr <= (double)((uint8_t)CorrectTbl::RES_SUICIDE - RES_OFFSET))
+        {
+            skill->BaseAffinity = skill->EffectiveAffinity = (uint8_t)ovr;
+            break;
+        }
     }
 
     return skill;
@@ -8076,6 +8098,8 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
             }
         }
 
+        uint8_t critLevel = 0;
+        bool calcTechPursuit = false;
         bool minAdjust = minDamageLevel > -1;
         switch(formula)
         {
@@ -8089,7 +8113,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
             {
                 auto calcState = GetCalculatedState(source, pSkill, false, target.EntityState);
 
-                uint8_t critLevel = !effectiveHeal ? GetCritLevel(source, target, pSkill) : 0;
+                critLevel = !effectiveHeal ? GetCritLevel(source, target, pSkill) : 0;
 
                 CorrectTbl resistCorrectType = (CorrectTbl)(skill.EffectiveAffinity + RES_OFFSET);
 
@@ -8124,27 +8148,6 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                     target.Damage2 = target.Damage2 ? 1 : 0;
                 }
 
-                // Set crit-level adjustment flags
-                switch(critLevel)
-                {
-                    case 1:
-                        target.Flags1 |= FLAG1_CRITICAL;
-                        break;
-                    case 2:
-                        if(target.Damage1 > 30000 ||
-                            target.Damage2 > 30000)
-                        {
-                            target.Flags2 |= FLAG2_INTENSIVE_BREAK;
-                        }
-                        else
-                        {
-                            target.Flags2 |= FLAG2_LIMIT_BREAK;
-                        }
-                        break;
-                    default:
-                        break;
-                }
-
                 // Set resistence flags, if not healing
                 if(!effectiveHeal)
                 {
@@ -8158,115 +8161,8 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                     }
                 }
 
-                // Determine pursuit/tech damage
-                if(!effectiveHeal && !isSimpleDamage && target.Damage1 > 0)
-                {
-                    int32_t pursuitRate = (int32_t)floor(tokuseiManager->GetAspectSum(
-                        source, TokuseiAspectType::PURSUIT_RATE, calcState));
-                    int32_t pursuitPow = (int32_t)floor(tokuseiManager->GetAspectSum(
-                        source, TokuseiAspectType::PURSUIT_POWER, calcState));
-                    if(pursuitRate > 0 &&
-                        (pursuitRate >= 100 || RNG(int32_t, 1, 100) <= pursuitRate))
-                    {
-                        // Take the lowest value applied tokusei affinity override if one exists
-                        auto affinityOverrides = tokuseiManager->GetAspectValueList(source,
-                            TokuseiAspectType::PURSUIT_AFFINITY_OVERRIDE);
-                        if(affinityOverrides.size() > 0)
-                        {
-                            affinityOverrides.sort();
-                            target.PursuitAffinity = (uint8_t)affinityOverrides.front();
-
-                            // If the result is weapon affinity, match it
-                            if(target.PursuitAffinity == 1)
-                            {
-                                target.PursuitAffinity = skill.WeaponAffinity;
-                            }
-                        }
-
-                        if(target.PursuitAffinity)
-                        {
-                            // Even if it matches the skill, check NRA for
-                            // pursuit affinity and stop if it is prevented
-                            if(!GetNRAResult(target, skill, target.PursuitAffinity))
-                            {
-                                // Calculate the new enemy resistence and determine damage
-                                float pResist = (float)(targetState->GetCorrectTbl(
-                                    (size_t)target.PursuitAffinity + RES_OFFSET) * 0.01);
-
-                                // Damage is always dealt at this point even with full
-                                // resistance, floor at 1
-                                float calc = (float)target.Damage1 * (1.f + pResist * -1.f);
-                                target.PursuitDamage = (int32_t)floor(calc < 1.f
-                                    ? 1.f : calc);
-                            }
-                        }
-                        else
-                        {
-                            // Pursuit damage is a straight adjustment from normal damage
-                            // when there is no affinity (this is the default state)
-                            target.PursuitDamage = target.Damage1;
-                        }
-
-                        if(target.PursuitDamage > 0)
-                        {
-                            // Pursuit power floors at 1% if it hits
-                            if(pursuitPow < 1)
-                            {
-                                pursuitPow = 1;
-                            }
-
-                            // Apply the rate adjustment
-                            target.PursuitDamage = (int32_t)floor(
-                                (double)target.PursuitDamage * pursuitPow * 0.01);
-
-                            // Adjust for 100% limit
-                            if(target.PursuitDamage > target.Damage1)
-                            {
-                                target.PursuitDamage = target.Damage1;
-                            }
-                            else if(!target.PursuitDamage)
-                            {
-                                target.PursuitDamage = 1;
-                            }
-                        }
-                    }
-
-                    int32_t techRate = (int32_t)floor(tokuseiManager->GetAspectSum(
-                        source, TokuseiAspectType::TECH_ATTACK_RATE, calcState));
-                    double techPow = floor(tokuseiManager->GetAspectSum(
-                        source, TokuseiAspectType::TECH_ATTACK_POWER, calcState));
-                    if(techPow > 0.0 && techRate > 0 &&
-                        (techRate >= 100 || RNG(int32_t, 1, 100) <= techRate))
-                    {
-                        // Calculate relative damage
-                        target.TechnicalDamage = (int32_t)floor(
-                            (double)target.Damage1 * techPow * 0.01);
-
-                        // Damage is supposed to hit, floor at 1
-                        if(!target.TechnicalDamage)
-                        {
-                            target.TechnicalDamage = 1;
-                        }
-
-                        // Apply limits
-                        if(critLevel == 2)
-                        {
-                            // Cap at LB limit
-                            int32_t maxLB = (int32_t)(30000 + floor(
-                                tokuseiManager->GetAspectSum(source,
-                                TokuseiAspectType::LIMIT_BREAK_MAX, calcState)));
-
-                            if(target.TechnicalDamage > maxLB)
-                            {
-                                target.TechnicalDamage = maxLB;
-                            }
-                        }
-                        else if(target.TechnicalDamage > 9999)
-                        {
-                            target.TechnicalDamage = 9999;
-                        }
-                    }
-                }
+                calcTechPursuit = !effectiveHeal && !isSimpleDamage &&
+                    target.Damage1 > 0;
             }
             break;
         case objects::MiBattleDamageData::Formula_t::DMG_STATIC:
@@ -8321,7 +8217,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
             }
 
             // Reduce for AOE and make sure at least 1 damage was dealt to each
-            // specified type
+            // specified type (uses raw, uncapped damage as base)
             float aoeReduction = (float)damageData->GetAoeReduction();
             if(mod1)
             {
@@ -8350,6 +8246,168 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 if(target.Damage2 == 0)
                 {
                     target.Damage2 = 1;
+                }
+            }
+
+            // Apply limits and set crit flags
+            if(critLevel == 2)
+            {
+                // Apply LB upper limit
+                auto calcState = GetCalculatedState(source, pSkill, false,
+                    target.EntityState);
+
+                int32_t maxLB = (int32_t)(30000 + floor(tokuseiManager
+                    ->GetAspectSum(source, TokuseiAspectType::LIMIT_BREAK_MAX,
+                        calcState)));
+
+                if(target.Damage1 > maxLB)
+                {
+                    target.Damage1 = maxLB;
+                }
+
+                if(target.Damage2 > maxLB)
+                {
+                    target.Damage2 = maxLB;
+                }
+
+                if(target.Damage1 > 30000 ||
+                    target.Damage2 > 30000)
+                {
+                    target.Flags2 |= FLAG2_INTENSIVE_BREAK;
+                }
+                else
+                {
+                    target.Flags2 |= FLAG2_LIMIT_BREAK;
+                }
+            }
+            else
+            {
+                if(target.Damage1 > 9999)
+                {
+                    target.Damage1 = 9999;
+                }
+
+                if(target.Damage2 > 9999)
+                {
+                    target.Damage2 = 9999;
+                }
+
+                if(critLevel == 1)
+                {
+                    target.Flags1 |= FLAG1_CRITICAL;
+                }
+            }
+
+            // Determine pursuit/tech damage
+            if(calcTechPursuit)
+            {
+                auto calcState = GetCalculatedState(source, pSkill, false,
+                    target.EntityState);
+
+                int32_t pursuitRate = (int32_t)floor(tokuseiManager->GetAspectSum(
+                    source, TokuseiAspectType::PURSUIT_RATE, calcState));
+                int32_t pursuitPow = (int32_t)floor(tokuseiManager->GetAspectSum(
+                    source, TokuseiAspectType::PURSUIT_POWER, calcState));
+                if(pursuitRate > 0 &&
+                    (pursuitRate >= 100 || RNG(int32_t, 1, 100) <= pursuitRate))
+                {
+                    // Take the lowest value applied tokusei affinity override if one exists
+                    auto affinityOverrides = tokuseiManager->GetAspectValueList(source,
+                        TokuseiAspectType::PURSUIT_AFFINITY_OVERRIDE);
+                    if(affinityOverrides.size() > 0)
+                    {
+                        affinityOverrides.sort();
+                        target.PursuitAffinity = (uint8_t)affinityOverrides.front();
+
+                        // If the result is weapon affinity, match it
+                        if(target.PursuitAffinity == 1)
+                        {
+                            target.PursuitAffinity = skill.WeaponAffinity;
+                        }
+                    }
+
+                    if(target.PursuitAffinity)
+                    {
+                        // Even if it matches the skill, check NRA for
+                        // pursuit affinity and stop if it is prevented
+                        if(!GetNRAResult(target, skill, target.PursuitAffinity))
+                        {
+                            // Calculate the new enemy resistence and determine damage
+                            float pResist = (float)(targetState->GetCorrectTbl(
+                                (size_t)target.PursuitAffinity + RES_OFFSET) * 0.01);
+
+                            // Damage is always dealt at this point even with full
+                            // resistance, floor at 1
+                            float calc = (float)target.Damage1 * (1.f + pResist * -1.f);
+                            target.PursuitDamage = (int32_t)floor(calc < 1.f
+                                ? 1.f : calc);
+                        }
+                    }
+                    else
+                    {
+                        // Pursuit damage is a straight adjustment from normal damage
+                        // when there is no affinity (this is the default state)
+                        target.PursuitDamage = target.Damage1;
+                    }
+
+                    if(target.PursuitDamage > 0)
+                    {
+                        // Pursuit power floors at 1% if it hits
+                        if(pursuitPow < 1)
+                        {
+                            pursuitPow = 1;
+                        }
+
+                        // Apply the rate adjustment
+                        target.PursuitDamage = (int32_t)floor(
+                            (double)target.PursuitDamage * pursuitPow * 0.01);
+
+                        // Adjust for 100% limit
+                        if(target.PursuitDamage > target.Damage1)
+                        {
+                            target.PursuitDamage = target.Damage1;
+                        }
+                        else if(!target.PursuitDamage)
+                        {
+                            target.PursuitDamage = 1;
+                        }
+                    }
+                }
+
+                int32_t techRate = (int32_t)floor(tokuseiManager->GetAspectSum(
+                    source, TokuseiAspectType::TECH_ATTACK_RATE, calcState));
+                double techPow = floor(tokuseiManager->GetAspectSum(
+                    source, TokuseiAspectType::TECH_ATTACK_POWER, calcState));
+                if(techPow > 0.0 && techRate > 0 &&
+                    (techRate >= 100 || RNG(int32_t, 1, 100) <= techRate))
+                {
+                    // Calculate relative damage
+                    target.TechnicalDamage = (int32_t)floor(
+                        (double)target.Damage1 * techPow * 0.01);
+
+                    // Damage is supposed to hit, floor at 1
+                    if(!target.TechnicalDamage)
+                    {
+                        target.TechnicalDamage = 1;
+                    }
+
+                    // Apply limits
+                    if(critLevel == 2)
+                    {
+                        // Cap at LB limit
+                        int32_t maxLB = (int32_t)(30000 + floor(
+                            tokuseiManager->GetAspectSum(source,
+                            TokuseiAspectType::LIMIT_BREAK_MAX, calcState)));
+
+                        if(target.TechnicalDamage > maxLB)
+                        {
+                            target.TechnicalDamage = maxLB;
+                        }
+                    }
+                    else if(target.TechnicalDamage > 9999)
+                    {
+                        target.TechnicalDamage = 9999;
+                    }
                 }
             }
         }
@@ -8720,22 +8778,6 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         }
 
         damageType = DAMAGE_TYPE_GENERIC;
-
-        if(critLevel == 2)
-        {
-            // Apply LB upper limit
-            int32_t maxLB = (int32_t)(30000 + floor(tokuseiManager->GetAspectSum(source,
-                TokuseiAspectType::LIMIT_BREAK_MAX, calcState)));
-
-            if(amount > maxLB)
-            {
-                amount = maxLB;
-            }
-        }
-        else if(amount > 9999)
-        {
-            amount = 9999;
-        }
     }
 
     return amount;
@@ -8765,11 +8807,6 @@ int32_t SkillManager::CalculateDamage_Percent(uint16_t mod, uint8_t& damageType,
         damageType = DAMAGE_TYPE_GENERIC;
     }
 
-    if(amount > 9999)
-    {
-        amount = 9999;
-    }
-
     return amount;
 }
 
@@ -8782,11 +8819,6 @@ int32_t SkillManager::CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageTy
     {
         amount = (int32_t)ceil((float)max * ((float)mod * 0.01f));
         damageType = DAMAGE_TYPE_GENERIC;
-    }
-
-    if(amount > 9999)
-    {
-        amount = 9999;
     }
 
     return amount;

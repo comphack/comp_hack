@@ -276,7 +276,8 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
         {
             auto skillData = skillID
                 ? definitionManager->GetSkillData(skillID) : nullptr;
-            if(skillData)
+            if(skillData && !skillData->GetCondition()
+                ->GetRestriction()->GetDigitizeRestricted())
             {
                 switch(skillData->GetCommon()->GetCategory()
                     ->GetMainCategory())

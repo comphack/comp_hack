@@ -73,7 +73,8 @@ bool Parsers::PlasmaItem::Parse(libcomp::ManagerPacket *pPacketManager,
     auto definitionManager = server->GetDefinitionManager();
 
     auto zone = cState->GetZone();
-    auto pState = std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID));
+    auto pState = zone ? std::dynamic_pointer_cast<PlasmaState>(
+        zone->GetEntity(plasmaID)) : nullptr;
     auto point = pState ? pState->GetPoint((uint32_t)pointID) : nullptr;
     auto lBox = point ? point->GetLoot() : nullptr;
 

@@ -142,11 +142,23 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
 
     // Get the relative beginning of today
     time_t now = std::time(0);
-    uint32_t today = (uint32_t)((now / 86400 * 86400) - timeAdjust);
-    if(today > now)
+    uint32_t today = (uint32_t)(now / 86400 * 86400);
+    if(timeAdjust)
     {
-        // Adjusted time is still a day behind GMT
-        today = (uint32_t)(today - 86400);
+        // If the actual day differs, adjust accordingly
+        uint32_t adjustToday = (uint32_t)((now + timeAdjust) / 86400 * 86400);
+        if(adjustToday > today)
+        {
+            // Add a day (so we don't check midnight for "yesterday")
+            today = (uint32_t)(today + 86400);
+        }
+        else if(adjustToday < today)
+        {
+            // Subtract a day (so we don't check midnight for "tomorrow")
+            today = (uint32_t)(today - 86400);
+        }
+
+        today = (uint32_t)((int32_t)today - timeAdjust);
     }
 
     if(lastLogin && today > lastLogin)
@@ -160,7 +172,11 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
         // Count any time before today as one day
         uint32_t daysSinceLogin = ((today - lastLogin) / (24 * 60 * 60)) + 1;
 
-        if(!character->GetCOMP().IsNull())
+        // Only reset the demon quests if they were not reset since the
+        // previous login (since the channel sets them while playing too)
+        auto progress = character->LoadProgress(worldDB);
+        if(!character->GetCOMP().IsNull() && progress &&
+            progress->GetDemonQuestResetTime() < lastLogin)
         {
             if(character->LoadCOMP(worldDB))
             {
@@ -187,13 +203,10 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
                     .Arg(account->GetUsername()));
                 return false;
             }
-        }
 
-        // Reset the demon quest daily count
-        auto progress = character->LoadProgress(worldDB);
-        if(progress)
-        {
+            // Reset the demon quest daily count
             progress->SetDemonQuestDaily(0);
+            progress->SetDemonQuestResetTime((uint32_t)now);
             worldChanges->Update(progress);
         }
 

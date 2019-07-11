@@ -101,7 +101,7 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
         ->GetMoveCorrection();
 
     eState->ExpireStatusTimes(ChannelServer::GetServerTime());
-    if(!eState->CanMove() || state->GetLockMovement())
+    if(!eState->CanMove() || state->IsMovementLocked(entityID))
     {
         // Don't trust anything the client sent, just stop them at the previous
         // destination and let them take the hit for start/stop time

@@ -1195,8 +1195,6 @@ bool WorldSyncManager::RemoveRecord(const std::shared_ptr<libcomp::Object>& reco
         {
             auto entry = std::dynamic_pointer_cast<objects::MatchEntry>(
                 record);
-
-            std::lock_guard<std::mutex> lock(mLock);
             DetermineTeamPvPMatch((uint8_t)entry->GetMatchType());
         }
 
@@ -1441,6 +1439,7 @@ void WorldSyncManager::StartPvPMatch(uint32_t time, uint8_t type)
     bool start = false;
     uint32_t queuedTime = 0;
     std::shared_ptr<objects::PvPMatch> match;
+    std::list<std::shared_ptr<objects::MatchEntry>> entries;
     {
         std::lock_guard<std::mutex> lock(mLock);
         if(type < 2)
@@ -1451,7 +1450,11 @@ void WorldSyncManager::StartPvPMatch(uint32_t time, uint8_t type)
             {
                 mPvPReadyTimes[0][type] = 0;
                 mPvPPendingMatches[0][type] = nullptr;
-                start = match != nullptr;
+                if(match != nullptr)
+                {
+                    entries = GetMatchEntryTeams(type)[0];
+                    start = true;
+                }
             }
         }
     }
@@ -1465,8 +1468,6 @@ void WorldSyncManager::StartPvPMatch(uint32_t time, uint8_t type)
             : PVP_VALHALLA_PLAYER_MIN;
         size_t maxCount = type == 0 ? PVP_FATE_PLAYER_MAX
             : PVP_VALHALLA_PLAYER_MAX;
-
-        auto entries = GetMatchEntryTeams(type)[0];
 
         uint8_t ghost = std::dynamic_pointer_cast<objects::WorldConfig>(
             mServer.lock()->GetConfig())->GetWorldSharedConfig()
@@ -1551,6 +1552,8 @@ void WorldSyncManager::StartTeamPvPMatch(uint32_t time, uint8_t type)
     bool start = false;
     uint32_t queuedTime = 0;
     std::shared_ptr<objects::PvPMatch> match;
+    std::unordered_map<int32_t,
+        std::list<std::shared_ptr<objects::MatchEntry>>> teamEntries;
     {
         std::lock_guard<std::mutex> lock(mLock);
         if(type < 2)
@@ -1561,7 +1564,11 @@ void WorldSyncManager::StartTeamPvPMatch(uint32_t time, uint8_t type)
             {
                 mPvPReadyTimes[1][type] = 0;
                 mPvPPendingMatches[1][type] = nullptr;
-                start = match != nullptr;
+                if(match != nullptr)
+                {
+                    teamEntries = GetMatchEntryTeams(type);
+                    start = true;
+                }
             }
         }
     }
@@ -1579,7 +1586,6 @@ void WorldSyncManager::StartTeamPvPMatch(uint32_t time, uint8_t type)
             ->GetPvPGhosts((size_t)type);
         uint8_t gAdjust = (uint8_t)((ghost + 1) / 2);
 
-        auto teamEntries = GetMatchEntryTeams(type);
         teamEntries.erase(0);   // Drop solo entries
 
         std::list<std::list<std::shared_ptr<objects::MatchEntry>>> readyTeams;
@@ -1706,55 +1712,61 @@ bool WorldSyncManager::DeterminePvPMatch(uint8_t type,
         return false;
     }
 
-    uint32_t time = mPvPReadyTimes[0][type];
-
-    bool checkStop = time != 0;
-    bool checkStart = time == 0;
-
-    size_t minCount = type == 0 ? PVP_FATE_PLAYER_MIN
-        : PVP_VALHALLA_PLAYER_MIN;
-
-    auto soloEntries = GetMatchEntryTeams(type)[0];
-
-    std::list<std::shared_ptr<objects::MatchEntry>> readyPrevious;
-    for(auto entry : soloEntries)
+    uint32_t time = 0;
+    std::list<std::shared_ptr<objects::MatchEntry>> soloEntries;
     {
-        if(entry->GetReadyTime() &&
-            updated.find(entry->GetWorldCID()) == updated.end())
+        std::lock_guard<std::mutex> lock(mLock);
+
+        time = mPvPReadyTimes[0][type];
+
+        bool checkStop = time != 0;
+        bool checkStart = time == 0;
+
+        size_t minCount = type == 0 ? PVP_FATE_PLAYER_MIN
+            : PVP_VALHALLA_PLAYER_MIN;
+
+        soloEntries = GetMatchEntryTeams(type)[0];
+
+        std::list<std::shared_ptr<objects::MatchEntry>> readyPrevious;
+        for(auto entry : soloEntries)
         {
-            readyPrevious.push_back(entry);
-        }
-    }
-
-    auto server = mServer.lock();
-    auto config = std::dynamic_pointer_cast<objects::WorldConfig>(
-        server->GetConfig())->GetWorldSharedConfig();
-
-    int32_t qWait = (int32_t)config->GetPvPQueueWait();
-
-    uint8_t ghost = config->GetPvPGhosts((size_t)type);
-    if(checkStop && (readyPrevious.size() < 2 ||
-        (size_t)(readyPrevious.size() + ghost) < minCount))
-    {
-        // Ready count dropped below min amount, reset the ready time
-        mPvPReadyTimes[0][type] = time = 0;
-        mPvPPendingMatches[0][type] = nullptr;
-
-        // Allow restart if new entry count meets minimum
-        checkStart = true;
-    }
-
-    if(checkStart && (size_t)(soloEntries.size() + ghost) >= minCount)
-    {
-        // Entry count raised above min amount, queue match start
-        mPvPReadyTimes[0][type] = time = (uint32_t)((int32_t)
-            std::time(0) + qWait);
-
-        server->GetTimerManager()->ScheduleEventIn((int)qWait, []
-            (WorldSyncManager* pSyncManager, uint32_t pTime, uint8_t pType)
+            if(entry->GetReadyTime() &&
+                updated.find(entry->GetWorldCID()) == updated.end())
             {
-                pSyncManager->StartPvPMatch(pTime, pType);
-            }, this, time, type);
+                readyPrevious.push_back(entry);
+            }
+        }
+
+        auto server = mServer.lock();
+        auto config = std::dynamic_pointer_cast<objects::WorldConfig>(
+            server->GetConfig())->GetWorldSharedConfig();
+
+        int32_t qWait = (int32_t)config->GetPvPQueueWait();
+
+        uint8_t ghost = config->GetPvPGhosts((size_t)type);
+        if(checkStop && (readyPrevious.size() < 2 ||
+            (size_t)(readyPrevious.size() + ghost) < minCount))
+        {
+            // Ready count dropped below min amount, reset the ready time
+            mPvPReadyTimes[0][type] = time = 0;
+            mPvPPendingMatches[0][type] = nullptr;
+
+            // Allow restart if new entry count meets minimum
+            checkStart = true;
+        }
+
+        if(checkStart && (size_t)(soloEntries.size() + ghost) >= minCount)
+        {
+            // Entry count raised above min amount, queue match start
+            mPvPReadyTimes[0][type] = time = (uint32_t)((int32_t)
+                std::time(0) + qWait);
+
+            server->GetTimerManager()->ScheduleEventIn((int)qWait, []
+                (WorldSyncManager* pSyncManager, uint32_t pTime, uint8_t pType)
+                {
+                    pSyncManager->StartPvPMatch(pTime, pType);
+                }, this, time, type);
+        }
     }
 
     // Sync all current ready times
@@ -1780,83 +1792,95 @@ bool WorldSyncManager::DetermineTeamPvPMatch(uint8_t type,
         return false;
     }
 
-    uint32_t time = mPvPReadyTimes[1][type];
-
-    bool checkStop = time != 0;
-    bool checkStart = time == 0;
-
-    size_t minCount = (size_t)((type == 0 ? PVP_FATE_PLAYER_MIN
-        : PVP_VALHALLA_PLAYER_MIN) / 2);
-    size_t maxCount = (size_t)((type == 0 ? PVP_FATE_PLAYER_MAX
-        : PVP_VALHALLA_PLAYER_MAX) / 2);
-
-    auto server = mServer.lock();
-    auto config = std::dynamic_pointer_cast<objects::WorldConfig>(
-        server->GetConfig())->GetWorldSharedConfig();
-
-    int32_t qWait = (int32_t)config->GetPvPQueueWait();
-
-    uint8_t ghost = config->GetPvPGhosts((size_t)type);
-    uint8_t gAdjust = (uint8_t)((ghost + 1) / 2);
-
-    auto teamEntries = GetMatchEntryTeams(type);
-    teamEntries.erase(0);   // Drop solo entries
-
-    bool queued = false;
-
-    std::set<int32_t> readyTeams;
-    std::set<int32_t> previousReadyTeams;
-    for(auto& pair : teamEntries)
+    uint32_t time = 0;
+    std::unordered_map<int32_t, std::list<std::shared_ptr<
+        objects::MatchEntry>>> teamEntries;
+    std::list<std::shared_ptr<objects::MatchEntry>> drop;
     {
-        if((size_t)(pair.second.size() + gAdjust) >= minCount &&
-            pair.second.size() <= maxCount)
-        {
-            readyTeams.insert(pair.first);
-            previousReadyTeams.insert(pair.first);
+        std::lock_guard<std::mutex> lock(mLock);
 
-            // If any entry was updated, remove the team from the ready set
-            for(auto entry : pair.second)
+        time = mPvPReadyTimes[1][type];
+
+        bool checkStop = time != 0;
+        bool checkStart = time == 0;
+
+        size_t minCount = (size_t)((type == 0 ? PVP_FATE_PLAYER_MIN
+            : PVP_VALHALLA_PLAYER_MIN) / 2);
+        size_t maxCount = (size_t)((type == 0 ? PVP_FATE_PLAYER_MAX
+            : PVP_VALHALLA_PLAYER_MAX) / 2);
+
+        auto server = mServer.lock();
+        auto config = std::dynamic_pointer_cast<objects::WorldConfig>(
+            server->GetConfig())->GetWorldSharedConfig();
+
+        int32_t qWait = (int32_t)config->GetPvPQueueWait();
+
+        uint8_t ghost = config->GetPvPGhosts((size_t)type);
+        uint8_t gAdjust = (uint8_t)((ghost + 1) / 2);
+
+        teamEntries = GetMatchEntryTeams(type);
+        teamEntries.erase(0);   // Drop solo entries
+
+        std::set<int32_t> readyTeams;
+        std::set<int32_t> previousReadyTeams;
+        for(auto& pair : teamEntries)
+        {
+            if((size_t)(pair.second.size() + gAdjust) >= minCount &&
+                pair.second.size() <= maxCount)
             {
-                if(updated.find(entry->GetWorldCID()) == updated.end())
+                readyTeams.insert(pair.first);
+                previousReadyTeams.insert(pair.first);
+
+                // If any entry was updated, remove the team from the ready set
+                for(auto entry : pair.second)
                 {
-                    previousReadyTeams.erase(pair.first);
-                    break;
+                    if(updated.find(entry->GetWorldCID()) == updated.end())
+                    {
+                        previousReadyTeams.erase(pair.first);
+                        break;
+                    }
                 }
             }
-        }
-        else
-        {
-            // Drop all entries as the team is not a valid size
-            for(auto entry : pair.second)
+            else
             {
-                queued |= RemoveRecord(entry, "MatchEntry");
+                // Drop all entries as the team is not a valid size
+                for(auto entry : pair.second)
+                {
+                    drop.push_back(entry);
+                }
+
+                pair.second.clear();
             }
+        }
 
-            pair.second.clear();
+        if(checkStop && previousReadyTeams.size() < 2)
+        {
+            // Ready team count dropped below min amount, reset the ready time
+            mPvPReadyTimes[1][type] = time = 0;
+            mPvPPendingMatches[1][type] = nullptr;
+
+            // Allow restart if new entry count meets minimum
+            checkStart = true;
+        }
+
+        if(checkStart && readyTeams.size() >= 2)
+        {
+            // Ready team count raised above min amount, queue match start
+            mPvPReadyTimes[1][type] = time = (uint32_t)((int32_t)
+                std::time(0) + qWait);
+
+            server->GetTimerManager()->ScheduleEventIn((int)qWait, []
+                (WorldSyncManager* pSyncManager, uint32_t pTime, uint8_t pType)
+                {
+                    pSyncManager->StartTeamPvPMatch(pTime, pType);
+                }, this, time, type);
         }
     }
 
-    if(checkStop && previousReadyTeams.size() < 2)
+    bool queued = false;
+    for(auto entry : drop)
     {
-        // Ready team count dropped below min amount, reset the ready time
-        mPvPReadyTimes[1][type] = time = 0;
-        mPvPPendingMatches[1][type] = nullptr;
-
-        // Allow restart if new entry count meets minimum
-        checkStart = true;
-    }
-
-    if(checkStart && readyTeams.size() >= 2)
-    {
-        // Ready team count raised above min amount, queue match start
-        mPvPReadyTimes[1][type] = time = (uint32_t)((int32_t)
-            std::time(0) + qWait);
-
-        server->GetTimerManager()->ScheduleEventIn((int)qWait, []
-            (WorldSyncManager* pSyncManager, uint32_t pTime, uint8_t pType)
-            {
-                pSyncManager->StartTeamPvPMatch(pTime, pType);
-            }, this, time, type);
+        queued |= RemoveRecord(entry, "MatchEntry");
     }
 
     // Sync all current ready times

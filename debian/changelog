@@ -1,3 +1,21 @@
+comphack (4.3.0) xenial; urgency=low
+
+  * TriFusion same race logic fixed
+  * Better thread safey in WorldSyncManager
+  * Pentalpha Bethel shared with party
+  * Several PvP/UB corrections
+  * Fixed random status effect client error
+  * Optional event support
+  * More webgame options
+
+ -- COMP Omega <compomega@tutanota.com>  Thu, 11 Jul 2019 13:18:19 -0600
+
+comphack (4.2.2) xenial; urgency=low
+
+  * Test the latest package with system libaries
+
+ -- COMP Omega <compomega@tutanota.com>  Thu, 11 Jul 2019 09:57:58 -0600
+
 comphack (4.2.1) xenial; urgency=low
 
   * Corrected an issue where the web API would shutdown.

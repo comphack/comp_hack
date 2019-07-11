@@ -1,7 +1,7 @@
 # COMP\_hack #
 
 [![AGPL License](http://img.shields.io/badge/license-AGPL-brightgreen.svg)](https://opensource.org/licenses/AGPL-3.0)
-[![Latest Release](https://img.shields.io/github/downloads/comphack/comp_hack/v4.2.1-peorth-hotfix1/total.svg)](https://github.com/comphack/comp_hack/releases/tag/v4.2.1-peorth-hotfix1)
+[![Latest Release](https://img.shields.io/github/downloads/comphack/comp_hack/v4.3.0-eoh/total.svg)](https://github.com/comphack/comp_hack/releases/tag/v4.3.0-eoh)
 [![Discord Chat](https://img.shields.io/discord/322024695266541579.svg)](http://discord.gg/9jXeKcJ)
 
 [![Build Status](https://travis-ci.org/comphack/comp_hack.svg?branch=develop)](https://travis-ci.org/comphack/comp_hack)
@@ -15,8 +15,8 @@
 | ------------------------------------------------------------------------------ | --------------- |
 | [Tiwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-tiwaz)     | ■ ■ ■ ■ ■ ■ ■ ■ |
 | [Peorth](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-peorth)   | ■ ■ ■ ■ ■ ■ ■ ■ |
-| [Eoh](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eoh)         | ■ ■ □ □ □ □ □ □ |
-| [Eihwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eihwaz)   | □ □ □ □ □ □ □ □ |
+| [Eoh](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eoh)         | ■ ■ ■ ■ ■ ■ ■ ■ |
+| [Eihwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eihwaz)   | ■ ■ □ □ □ □ □ □ |
 | [Uruz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-uruz)       | □ □ □ □ □ □ □ □ |
 | [Hagalaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-hagalaz) | □ □ □ □ □ □ □ □ |
 | [Laguz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-laguz)     | □ □ □ □ □ □ □ □ |

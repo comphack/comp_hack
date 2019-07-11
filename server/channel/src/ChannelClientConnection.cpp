@@ -31,8 +31,9 @@
 using namespace channel;
 
 ChannelClientConnection::ChannelClientConnection(asio::ip::tcp::socket& socket,
-    DH *pDiffieHellman) : ChannelConnection(socket, pDiffieHellman),
-    mClientState(std::shared_ptr<ClientState>(new ClientState)), mTimeout(0)
+    const std::shared_ptr<libcomp::Crypto::DiffieHellman>& diffieHellman) :
+    ChannelConnection(socket, diffieHellman), mClientState(
+        std::shared_ptr<ClientState>(new ClientState)), mTimeout(0)
 {
 }
 

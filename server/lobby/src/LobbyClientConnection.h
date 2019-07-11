@@ -43,7 +43,8 @@ namespace lobby
 class LobbyClientConnection : public libcomp::LobbyConnection
 {
 public:
-    LobbyClientConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
+    LobbyClientConnection(asio::ip::tcp::socket& socket,
+        const std::shared_ptr<libcomp::Crypto::DiffieHellman>& diffieHellman);
     virtual ~LobbyClientConnection();
 
     ClientState* GetClientState() const;

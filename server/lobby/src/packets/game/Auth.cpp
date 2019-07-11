@@ -27,7 +27,7 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <ErrorCodes.h>
 #include <Log.h>
 #include <Packet.h>
@@ -130,7 +130,7 @@ static bool NoWebAuthParse(const std::shared_ptr<LobbyServer>& server,
     }
 
     // Calculate the password hash with the challenge given.
-    libcomp::String challenge = libcomp::Decrypt::HashPassword(
+    libcomp::String challenge = libcomp::Crypto::HashPassword(
         account->GetPassword(), libcomp::String("%1").Arg(
             state(connection)->GetChallenge()));
 

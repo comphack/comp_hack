@@ -31,7 +31,7 @@
 #include "LobbyServer.h"
 
 // libcomp Includes
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <ErrorCodes.h>
 #include <Log.h>
 #include <Packet.h>
@@ -88,7 +88,7 @@ bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
     state(connection)->SetUsername(obj.GetUsername());
 
     // Generate a challenge for the client.
-    uint32_t challenge = libcomp::Decrypt::GenerateSessionKey();
+    uint32_t challenge = libcomp::Crypto::GenerateSessionKey();
 
     // Get a reference to the server.
     auto server = std::dynamic_pointer_cast<LobbyServer>(

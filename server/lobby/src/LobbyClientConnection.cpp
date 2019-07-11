@@ -29,7 +29,8 @@
 using namespace lobby;
 
 LobbyClientConnection::LobbyClientConnection(asio::ip::tcp::socket& socket,
-    DH *pDiffieHellman) : LobbyConnection(socket, pDiffieHellman)
+    const std::shared_ptr<libcomp::Crypto::DiffieHellman>& diffieHellman) :
+    LobbyConnection(socket, diffieHellman)
 {
 }
 

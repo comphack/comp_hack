@@ -31,7 +31,6 @@
 #include "ResourceLogin.h"
 
 // libcomp Includes
-#include <Decrypt.h>
 #include <Log.h>
 #include <PacketCodes.h>
 

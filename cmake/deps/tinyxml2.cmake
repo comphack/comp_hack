@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-OPTION(USE_SYSTEM_PHYSFS "Build with the system PhysFS library." ON)
+OPTION(USE_SYSTEM_TINYXML2 "Build with the system TinyXML2 library." ON)
 
-IF(USE_SYSTEM_PHYSFS)
+IF(USE_SYSTEM_TINYXML2)
     FIND_PACKAGE(TinyXML2)
-ENDIF(USE_SYSTEM_PHYSFS)
+ENDIF(USE_SYSTEM_TINYXML2)
 
 IF(TINYXML2_FOUND)
     MESSAGE("-- Using system TinyXML2")

@@ -26,7 +26,7 @@
 #include "ChannelConnection.h"
 #include "LoggerServer.h"
 
-#include <Decrypt.h>
+#include <Crypto.h>
 
 #include <PushIgnore.h>
 #include <QDateTime>
@@ -102,8 +102,8 @@ void ChannelConnection::run()
         "b85d38d334fd7c175743a31d186cde33212cb52aff3ce1b1294018118"
         "d7c84a70a72d686c40319c807297aca950cd9969fabd00a509b0246d3"
         "083d66a45d419f9c7cbd894b221926baaba25ec355e92f78c7";
-    mClientCryptData.secret = libcomp::Decrypt::GenerateRandom();
-    mClientCryptData.serverPublic = libcomp::Decrypt::GenDiffieHellman(
+    mClientCryptData.secret = libcomp::Crypto::GenerateRandom();
+    mClientCryptData.serverPublic = libcomp::Crypto::GenDiffieHellman(
         mClientCryptData.base, mClientCryptData.prime, mClientCryptData.secret
     ).RightJustified(256, '0');
 
@@ -322,7 +322,7 @@ void ChannelConnection::clientReady()
         mClientState = Encrypted;
 
         // Calculate the final shared encryption key.
-        mClientCryptData.sharedKey = libcomp::Decrypt::GenDiffieHellman(
+        mClientCryptData.sharedKey = libcomp::Crypto::GenDiffieHellman(
             mClientCryptData.clientPublic, mClientCryptData.prime,
             mClientCryptData.secret);
         mClientCryptData.keys = QByteArray::fromHex(
@@ -947,13 +947,13 @@ void ChannelConnection::exchangeKeys()
         return serverLost();
 
     // Generate the client public to send to the server.
-    mServerCryptData.secret = libcomp::Decrypt::GenerateRandom();
-    mServerCryptData.clientPublic = libcomp::Decrypt::GenDiffieHellman(
+    mServerCryptData.secret = libcomp::Crypto::GenerateRandom();
+    mServerCryptData.clientPublic = libcomp::Crypto::GenDiffieHellman(
         mServerCryptData.base, mServerCryptData.prime,
         mServerCryptData.secret);
 
     // Generate the shared secret based on the data from the server.
-    mServerCryptData.sharedKey = libcomp::Decrypt::GenDiffieHellman(
+    mServerCryptData.sharedKey = libcomp::Crypto::GenDiffieHellman(
         mServerCryptData.serverPublic, mServerCryptData.prime,
         mServerCryptData.secret);
     mServerCryptData.keys = QByteArray::fromHex(

@@ -31,7 +31,6 @@
 #include <PopIgnore.h>
 
 // libcomp Includes
-#include <Decrypt.h>
 #include <Log.h>
 #include <MessageConnectionClosed.h>
 #include <MessageEncrypted.h>

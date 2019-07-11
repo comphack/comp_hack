@@ -27,7 +27,6 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <Decrypt.h>
 #include <Log.h>
 #include <Packet.h>
 #include <PacketCodes.h>

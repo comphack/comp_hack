@@ -27,7 +27,7 @@
 #include "AccountManager.h"
 
 // libcomp Includes
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <Log.h>
 #include <PacketCodes.h>
 #include <Randomizer.h>
@@ -1161,7 +1161,7 @@ bool AccountManager::StartWebGameSession(const std::shared_ptr<
     }
 
     // Session is valid, generate the session ID and register it
-    auto sessionID = libcomp::Decrypt::GenerateRandom(20).ToLower();
+    auto sessionID = libcomp::Crypto::GenerateRandom(20).ToLower();
     gameSession->SetSessionID(sessionID);
 
     mWebGameSessions[lookup] = gameSession;

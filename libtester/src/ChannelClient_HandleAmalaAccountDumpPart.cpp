@@ -1,7 +1,7 @@
 #include "ChannelClient.h"
 
 // libcomp Includes
-#include "Decrypt.h"
+#include "Crypto.h"
 #include "Log.h"
 
 using namespace libtester;
@@ -21,7 +21,7 @@ void ChannelClient::HandleAmalaAccountDumpPart(libcomp::ReadOnlyPacket& p)
 
     if(partNumber == mAccountDumpParts)
     {
-        libcomp::String checksum = libcomp::Decrypt::SHA1(mAccountDumpData);
+        libcomp::String checksum = libcomp::Crypto::SHA1(mAccountDumpData);
 
         if(checksum == mAccountDumpChecksum)
         {

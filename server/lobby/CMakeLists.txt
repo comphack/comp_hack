@@ -157,7 +157,7 @@ TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE
 )
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} config comp
-    tinyxml2 civetweb-cxx civetweb jsonbox)
+    tinyxml2 civetweb-cxx civetweb jsonbox ${OPENSSL_LIBRARIES})
 
 IF(USE_COTIRE)
     cotire(${PROJECT_NAME})

@@ -1452,7 +1452,7 @@ std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
     static int connectionID = 0;
 
     auto connection = std::make_shared<channel::ChannelClientConnection>(
-        socket, CopyDiffieHellman(GetDiffieHellman()));
+        socket, LoadDiffieHellman(GetDiffieHellman()->GetPrime()));
     connection->SetServerConfig(mConfig);
     connection->SetName(libcomp::String("client:%1").Arg(connectionID++));
 

@@ -24,7 +24,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <Decrypt.h>
+#include <Crypto.h>
 
 #include <fstream>
 #include <iostream>
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    std::vector<char> data = libcomp::Decrypt::LoadFile(argv[1]);
+    std::vector<char> data = libcomp::Crypto::LoadFile(argv[1]);
 
     if(data.empty())
     {
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    if(!libcomp::Decrypt::DecryptFile(data))
+    if(!libcomp::Crypto::DecryptFile(data))
     {
         std::cerr << "Failed to decrypt file." << std::endl;
 

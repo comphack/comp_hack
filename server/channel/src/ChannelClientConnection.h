@@ -47,9 +47,10 @@ public:
     /**
      * Create a new connection.
      * @param socket Socket provided by the server for the new client.
-     * @param pDiffieHellman Asymmetric encryption information.
+     * @param diffieHellman Asymmetric encryption information.
      */
-    ChannelClientConnection(asio::ip::tcp::socket& socket, DH *pDiffieHellman);
+    ChannelClientConnection(asio::ip::tcp::socket& socket,
+        const std::shared_ptr<libcomp::Crypto::DiffieHellman>& diffieHellman);
 
     /**
      * Clean up the connection.

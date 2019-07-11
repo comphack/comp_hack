@@ -29,7 +29,7 @@
 // libcomp Includes
 #include <Account.h>
 #include <AccountLogin.h>
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
@@ -67,7 +67,7 @@ void DumpAccount(AccountManager* accountManager,
                 PART_SIZE);
             reply.WriteString16Little(
                 libcomp::Convert::Encoding_t::ENCODING_UTF8,
-                libcomp::Decrypt::SHA1(dumpData), true);
+                libcomp::Crypto::SHA1(dumpData), true);
             reply.WriteString16Little(
                 libcomp::Convert::Encoding_t::ENCODING_UTF8,
                 accountName, true);

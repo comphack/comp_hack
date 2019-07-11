@@ -441,7 +441,7 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
     static int connectionID = 0;
 
     auto connection = std::make_shared<libcomp::InternalConnection>(
-        socket, CopyDiffieHellman(GetDiffieHellman()));
+        socket, LoadDiffieHellman(GetDiffieHellman()->GetPrime()));
 
     if(!mManagerConnection->LobbyConnected())
     {

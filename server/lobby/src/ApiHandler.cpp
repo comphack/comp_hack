@@ -32,7 +32,7 @@
 #include <CString.h>
 #include <DatabaseConfigMariaDB.h>
 #include <DatabaseConfigSQLite3.h>
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <ErrorCodes.h>
 #include <Log.h>
 #include <PacketCodes.h>
@@ -167,7 +167,7 @@ bool ApiHandler::Auth_Token(const JsonBox::Object& request,
         return false;
     }
 
-    libcomp::String challenge = libcomp::Decrypt::GenerateRandom(10);
+    libcomp::String challenge = libcomp::Crypto::GenerateRandom(10);
 
     // Save the challenge.
     session->username = username;
@@ -269,10 +269,10 @@ bool ApiHandler::Account_ChangePassword(const JsonBox::Object& request,
         }
         else
         {
-            libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
+            libcomp::String salt = libcomp::Crypto::GenerateRandom(10);
 
             // Hash the password for database storage.
-            password = libcomp::Decrypt::HashPassword(password, salt);
+            password = libcomp::Crypto::HashPassword(password, salt);
 
             account->SetPassword(password);
             account->SetSalt(salt);
@@ -452,14 +452,14 @@ bool ApiHandler::Account_Register(const JsonBox::Object& request,
     std::shared_ptr<objects::Account> account(new objects::Account);
 
     libcomp::String displayName = username;
-    libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
+    libcomp::String salt = libcomp::Crypto::GenerateRandom(10);
     uint32_t cp = mConfig->GetRegistrationCP();
     uint8_t ticketCount = mConfig->GetRegistrationTicketCount();
     int32_t userLevel = mConfig->GetRegistrationUserLevel();
     bool enabled = mConfig->GetRegistrationAccountEnabled();
 
     // Hash the password for database storage.
-    password = libcomp::Decrypt::HashPassword(password, salt);
+    password = libcomp::Crypto::HashPassword(password, salt);
 
     account->SetUsername(username);
     account->SetDisplayName(displayName);
@@ -669,10 +669,10 @@ bool ApiHandler::Admin_UpdateAccount(const JsonBox::Object& request,
         }
         else
         {
-            libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
+            libcomp::String salt = libcomp::Crypto::GenerateRandom(10);
 
             // Hash the password for database storage.
-            password = libcomp::Decrypt::HashPassword(password, salt);
+            password = libcomp::Crypto::HashPassword(password, salt);
 
             account->SetPassword(password);
             account->SetSalt(salt);
@@ -1399,7 +1399,7 @@ bool ApiHandler::Authenticate(const JsonBox::Object& request,
     libcomp::String challenge = it->second.getString();
 
     // Calculate the correct response.
-    libcomp::String validChallenge = libcomp::Decrypt::HashPassword(
+    libcomp::String validChallenge = libcomp::Crypto::HashPassword(
         session->account->GetPassword(), session->challenge);
 
     // Check the challenge.
@@ -1411,7 +1411,7 @@ bool ApiHandler::Authenticate(const JsonBox::Object& request,
     }
 
     // Generate a new challenge.
-    challenge = libcomp::Decrypt::GenerateRandom(10);
+    challenge = libcomp::Crypto::GenerateRandom(10);
     session->challenge = challenge;
 
     response["challenge"] = JsonBox::Value(challenge.ToUtf8());

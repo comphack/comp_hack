@@ -29,7 +29,7 @@
 // libcomp Includes
 #include <DatabaseConfigMariaDB.h>
 #include <DatabaseConfigSQLite3.h>
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <Log.h>
 #include <PacketCodes.h>
 
@@ -269,7 +269,7 @@ std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
     static int connectionID = 0;
 
     auto connection = std::make_shared<LobbyClientConnection>(
-        socket, CopyDiffieHellman(GetDiffieHellman()));
+        socket, LoadDiffieHellman(GetDiffieHellman()->GetPrime()));
 
     // Set a unique connection ID for the name of the connection.
     connection->SetName(libcomp::String("client:%1").Arg(connectionID++));
@@ -315,7 +315,7 @@ void LobbyServer::PromptCreateAccount()
     libcomp::String password;
     libcomp::String email = "no.thanks@bother_me_not.net";
     libcomp::String displayName = "AnonymousCoward";
-    libcomp::String salt = libcomp::Decrypt::GenerateRandom(10);
+    libcomp::String salt = libcomp::Crypto::GenerateRandom(10);
 
     auto conf = std::dynamic_pointer_cast<objects::LobbyConfig>(mConfig);
 
@@ -382,7 +382,7 @@ void LobbyServer::PromptCreateAccount()
 
         if(password1 == password2)
         {
-            password = libcomp::Decrypt::HashPassword(password1, salt);
+            password = libcomp::Crypto::HashPassword(password1, salt);
             break;
         }
 
@@ -578,7 +578,7 @@ libcomp::String LobbyServer::GetFakeAccountSalt(
 
     if(mFakeSalts.end() == it)
     {
-        auto salt = libcomp::Decrypt::GenerateRandom(10);
+        auto salt = libcomp::Crypto::GenerateRandom(10);
 
         mFakeSalts[username] = salt;
 

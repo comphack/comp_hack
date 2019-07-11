@@ -34,7 +34,7 @@
 #include <Login.h>
 
 // libcomp Includes
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <LobbyConnection.h>
 #include <Log.h>
 #include <ScriptEngine.h>
@@ -145,7 +145,7 @@ bool LobbyClient::Login(const libcomp::String& username,
         p.Clear();
         p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_AUTH);
         p.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-            libcomp::Decrypt::HashPassword(libcomp::Decrypt::HashPassword(
+            libcomp::Crypto::HashPassword(libcomp::Crypto::HashPassword(
                 password, salt), libcomp::String("%1").Arg(challenge)), true);
 
         ClearMessages();

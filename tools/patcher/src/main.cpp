@@ -29,7 +29,7 @@
 
 // libcomp Includes
 #include <Config.h>
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <Endian.h>
 
 // SHA-1 of the original unmodified client (1.666).
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     const char *szOutPath = argv[2];
 
     // Load the original client.
-    std::vector<char> data = libcomp::Decrypt::LoadFile(szInPath);
+    std::vector<char> data = libcomp::Crypto::LoadFile(szInPath);
 
     if(data.empty())
     {
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
     }
 
     // Make sure the client was not modified.
-    libcomp::String hash = libcomp::Decrypt::SHA1(data);
+    libcomp::String hash = libcomp::Crypto::SHA1(data);
 
     if(CLIENT_SHA1 != hash)
     {

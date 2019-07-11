@@ -27,7 +27,7 @@
 #include "AccountManager.h"
 
 // libcomp Includes
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <Log.h>
 #include <ServerConstants.h>
 
@@ -141,7 +141,7 @@ ErrorCodes_t AccountManager::WebAuthLogin(const libcomp::String& username,
     if(checkPassword)
     {
         // Tell them nothing about the account until they authenticate.
-        if(account->GetPassword() != libcomp::Decrypt::HashPassword(password,
+        if(account->GetPassword() != libcomp::Crypto::HashPassword(password,
             account->GetSalt()))
         {
             LOG_DEBUG(libcomp::String("Web auth login for account '%1' failed "
@@ -184,7 +184,7 @@ ErrorCodes_t AccountManager::WebAuthLogin(const libcomp::String& username,
     }
 
     // We are now ready. Generate the session ID and transition login state.
-    sid = libcomp::Decrypt::GenerateRandom(300).ToLower();
+    sid = libcomp::Crypto::GenerateRandom(300).ToLower();
     login->SetState(objects::AccountLogin::State_t::LOBBY_WAIT);
     login->SetSessionID(sid);
 
@@ -252,7 +252,7 @@ ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
     }
 
     // We are now ready. Generate the session ID and transition to logged in.
-    sid2 = libcomp::Decrypt::GenerateRandom(300).ToLower();
+    sid2 = libcomp::Crypto::GenerateRandom(300).ToLower();
     login->SetState(objects::AccountLogin::State_t::LOBBY);
     login->SetSessionID(sid2);
 
@@ -326,7 +326,7 @@ ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
     }
 
     // We are now ready. Generate the session ID and transition to logged in.
-    sid2 = libcomp::Decrypt::GenerateRandom(300).ToLower();
+    sid2 = libcomp::Crypto::GenerateRandom(300).ToLower();
     login->SetState(objects::AccountLogin::State_t::LOBBY);
     login->SetSessionID(sid2);
 
@@ -772,7 +772,7 @@ bool AccountManager::SetCharacterOnAccount(
     std::lock_guard<std::mutex> lock(mAccountLock);
 
     auto characters = account->GetCharacters();
-    
+
     uint8_t nextCID = 0;
     for(; nextCID < MAX_CHARACTER; nextCID++)
     {

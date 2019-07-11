@@ -29,7 +29,6 @@
 // libcomp Includes
 #include <DatabaseConfigMariaDB.h>
 #include <DatabaseConfigSQLite3.h>
-#include <Decrypt.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
@@ -161,7 +160,7 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
             bool otherChannelsExist = server->GetChannels().size() > 0;
             reply.WriteU8(otherChannelsExist ? 1 : 0);
         }
-    
+
         switch(databaseType)
         {
             case objects::ServerConfig::DatabaseType_t::MARIADB:

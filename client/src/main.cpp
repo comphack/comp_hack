@@ -35,7 +35,7 @@
 #include <MessageConnectionInfo.h>
 
 // libcomp Includes
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <Exception.h>
 #include <Log.h>
 #include <ScriptEngine.h>
@@ -59,7 +59,7 @@ static void ScriptExit(int returnCode)
 
 static void ScriptInclude(const char *szPath)
 {
-    std::vector<char> file = libcomp::Decrypt::LoadFile(szPath);
+    std::vector<char> file = libcomp::Crypto::LoadFile(szPath);
 
     if(file.empty())
     {
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
     {
         for(int i = 1; i < argc; ++i)
         {
-            std::vector<char> file = libcomp::Decrypt::LoadFile(argv[i]);
+            std::vector<char> file = libcomp::Crypto::LoadFile(argv[i]);
 
             if(file.empty())
             {

@@ -32,7 +32,7 @@
 // libcomp Includes
 #include <ChannelConnection.h>
 #include <ConnectionMessage.h>
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <EnumUtils.h>
 #include <ErrorCodes.h>
 #include <LobbyConnection.h>
@@ -435,8 +435,8 @@ bool ConnectionManager::HandlePacketLobbyLogin(libcomp::ReadOnlyPacket &p)
 
     if(ErrorCodes_t::SUCCESS == errorCode)
     {
-        auto hash = libcomp::Decrypt::HashPassword(
-            libcomp::Decrypt::HashPassword(mPassword, obj.GetSalt()),
+        auto hash = libcomp::Crypto::HashPassword(
+            libcomp::Crypto::HashPassword(mPassword, obj.GetSalt()),
             libcomp::String("%1").Arg(obj.GetChallenge()));
 
         // Send the auth packet and await the response.

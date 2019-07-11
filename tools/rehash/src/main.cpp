@@ -28,7 +28,7 @@
 #include <Compress.h>
 #include <CString.h>
 #include <DataStore.h>
-#include <Decrypt.h>
+#include <Crypto.h>
 
 // Standard C++11 Includes
 #include <fstream>
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 
     {
         // Open and read the hashlist.dat file.
-        auto hashlist = libcomp::Decrypt::LoadFile(
+        auto hashlist = libcomp::Crypto::LoadFile(
             libcomp::String("%1/hashlist.dat").Arg(base).ToUtf8());
 
         if(hashlist.empty())
@@ -194,17 +194,17 @@ int main(int argc, char *argv[])
         d->path = shortComp;
 
         // Get the original file contents.
-        std::vector<char> uncomp_data = libcomp::Decrypt::LoadFile(
+        std::vector<char> uncomp_data = libcomp::Crypto::LoadFile(
             file.ToUtf8());
 
         // Ignore empty files
-        if (uncomp_data.empty()) 
+        if (uncomp_data.empty())
         {
             continue;
         }
 
         // Hash the original file.
-        d->uncompressed_hash = libcomp::Decrypt::MD5(uncomp_data).ToUpper();
+        d->uncompressed_hash = libcomp::Crypto::MD5(uncomp_data).ToUpper();
         d->uncompressed_size = (int)uncomp_data.size();
 
         //
@@ -231,7 +231,7 @@ int main(int argc, char *argv[])
         }
 
         // Get the hash for the compressed copy.
-        d->compressed_hash = libcomp::Decrypt::MD5(std::vector<char>(
+        d->compressed_hash = libcomp::Crypto::MD5(std::vector<char>(
             out_buffer, out_buffer + sz)).ToUpper();
         d->compressed_size = sz;
 
@@ -296,7 +296,7 @@ int main(int argc, char *argv[])
     //
     {
         // Read in the hashlist.dat file.
-        auto uncomp_data = libcomp::Decrypt::LoadFile(
+        auto uncomp_data = libcomp::Crypto::LoadFile(
             libcomp::String("%1/hashlist.dat").Arg(overlay).ToUtf8());
 
         // Close the hashlist.dat file.

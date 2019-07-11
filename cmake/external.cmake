@@ -31,6 +31,7 @@ ENDIF(NOT UPDATER_ONLY)
 INCLUDE("${CMAKE_SOURCE_DIR}/cmake/deps/zlib.cmake")
 
 IF(NOT UPDATER_ONLY)
+
 INCLUDE("${CMAKE_SOURCE_DIR}/cmake/deps/openssl.cmake")
 INCLUDE("${CMAKE_SOURCE_DIR}/cmake/deps/mariadb.cmake")
 INCLUDE("${CMAKE_SOURCE_DIR}/cmake/deps/ttvfs.cmake")
@@ -41,4 +42,9 @@ INCLUDE("${CMAKE_SOURCE_DIR}/cmake/deps/asio.cmake")
 INCLUDE("${CMAKE_SOURCE_DIR}/cmake/deps/tinyxml2.cmake")
 INCLUDE("${CMAKE_SOURCE_DIR}/cmake/deps/googletest.cmake")
 INCLUDE("${CMAKE_SOURCE_DIR}/cmake/deps/jsonbox.cmake")
+
+IF(USE_MBED_TLS)
+    INCLUDE("${CMAKE_SOURCE_DIR}/cmake/deps/mbedtls.cmake")
+ENDIF(USE_MBED_TLS)
+
 ENDIF(NOT UPDATER_ONLY)

@@ -41,7 +41,7 @@
 #include <QTcpSocket>
 #include <PopIgnore.h>
 
-#include <Decrypt.h>
+#include <Crypto.h>
 #include <PEFile.h>
 
 MainWindow::MainWindow(const QString& capturePath,
@@ -258,7 +258,7 @@ void MainWindow::patchWebAccess(const QString& path)
     QString webAccessPath = tr("%1/webaccess.sdat").arg(path);
 
     // Decrypt and load the file into a buffer.
-    std::vector<char> webAccessData = libcomp::Decrypt::DecryptFile(
+    std::vector<char> webAccessData = libcomp::Crypto::DecryptFile(
         webAccessPath.toUtf8().constData());
     if(webAccessData.empty())
         return;
@@ -275,7 +275,7 @@ void MainWindow::patchWebAccess(const QString& path)
     QByteArray out = xml.toUtf8();
 
     // Encrypt the data into a buffer.
-    libcomp::Decrypt::EncryptFile(webAccessPath.toUtf8().constData(),
+    libcomp::Crypto::EncryptFile(webAccessPath.toUtf8().constData(),
         std::vector<char>(out.data(), out.data() + out.size()));
 }
 

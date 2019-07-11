@@ -29,7 +29,6 @@
 // libcomp Includes
 #include <DatabaseConfigMariaDB.h>
 #include <DatabaseConfigSQLite3.h>
-#include <Decrypt.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>

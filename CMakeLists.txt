@@ -92,7 +92,7 @@ OPTION(CHANNEL_ONLY "Build only the channel." OFF)
 OPTION(IMPORT_CHANNEL "Import the channel without building." OFF)
 
 # Option to use mbedtls instead of OpenSSL for the main applications.
-OPTION(USE_MBED_TLS "Use mbedtls instead of OpenSSL for the main apps." ON)
+OPTION(USE_MBED_TLS "Use mbedtls instead of OpenSSL for the main apps." OFF)
 
 # Include our custom cmake modules.
 SET(CMAKE_MODULE_PATH

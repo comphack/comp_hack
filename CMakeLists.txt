@@ -1,6 +1,6 @@
 # This file is part of COMP_hack.
 #
-# Copyright (C) 2010-2016 COMP_hack Team <compomega@tutanota.com>
+# Copyright (C) 2010-2019 COMP_hack Team <compomega@tutanota.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -38,13 +38,13 @@ SET(VERSION_YEAR  2019)
 SET(VERSION_MAJOR 4)
 
 # Minor release (1 = SP1).
-SET(VERSION_MINOR 2)
+SET(VERSION_MINOR 3)
 
 # Patch version (a hotfix).
-SET(VERSION_PATCH 99)
+SET(VERSION_PATCH 0)
 
 # Codename for the version.
-SET(VERSION_CODENAME "Eoh (Unstable)")
+SET(VERSION_CODENAME "Eoh")
 
 #
 # END OF VERSION CONSTANTS

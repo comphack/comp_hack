@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
         int out_size = (int)((float)uncomp_data.size() * 0.001f + 0.5f);
         out_size += (int32_t)uncomp_data.size() + 12;
 
-        char *out_buffer = new char[out_size];
+        char *out_buffer = new char[(size_t)out_size];
 
         // Compress the file.
         int32_t sz = libcomp::Compress::Compress(&uncomp_data[0], out_buffer,
@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
         int32_t out_size = (int32_t)((float)uncomp_data.size() * 0.001f + 0.5f);
         out_size += (int32_t)uncomp_data.size() + 12;
 
-        char *out_buffer = new char[out_size];
+        char *out_buffer = new char[(size_t)out_size];
 
         // Compress the file.
         int32_t sz = libcomp::Compress::Compress(&uncomp_data[0],

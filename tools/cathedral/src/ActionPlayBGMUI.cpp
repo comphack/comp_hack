@@ -49,6 +49,9 @@ ActionPlayBGM::ActionPlayBGM(ActionList *pList,
 
     prop->music->BindSelector(pMainWindow, "CSoundData");
 
+    // -1 does the same thing as the stop action
+    prop->music->SetMinimum(-1);
+
     ui->actionTitle->setText(tr("<b>Play BGM</b>"));
     ui->layoutMain->addWidget(pWidget);
 }
@@ -70,7 +73,7 @@ void ActionPlayBGM::Load(const std::shared_ptr<objects::Action>& act)
     LoadBaseProperties(mAction);
 
     prop->isStop->setChecked(mAction->GetIsStop());
-    prop->music->SetValue((uint32_t)mAction->GetMusicID());
+    prop->music->SetValueSigned(mAction->GetMusicID());
     prop->fadeInDelay->setValue(mAction->GetFadeInDelay());
     prop->unknown->setValue(mAction->GetUnknown());
 }
@@ -85,7 +88,7 @@ std::shared_ptr<objects::Action> ActionPlayBGM::Save() const
     SaveBaseProperties(mAction);
 
     mAction->SetIsStop(prop->isStop->isChecked());
-    mAction->SetMusicID((int32_t)prop->music->GetValue());
+    mAction->SetMusicID(prop->music->GetValueSigned());
     mAction->SetFadeInDelay(prop->fadeInDelay->value());
     mAction->SetUnknown(prop->unknown->value());
 

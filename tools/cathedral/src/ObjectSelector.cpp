@@ -81,6 +81,21 @@ uint32_t ObjectSelector::GetValue() const
     return (uint32_t)ui->value->value();
 }
 
+void ObjectSelector::SetValueSigned(int32_t value)
+{
+    ui->value->setValue(value);
+}
+
+int32_t ObjectSelector::GetValueSigned() const
+{
+    return ui->value->value();
+}
+
+void ObjectSelector::SetMinimum(int32_t min)
+{
+    ui->value->setMinimum(min);
+}
+
 void ObjectSelector::ValueChanged()
 {
     uint32_t value = GetValue();

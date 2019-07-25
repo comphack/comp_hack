@@ -67,6 +67,9 @@ void DropSetList::SetMainWindow(MainWindow *pMainWindow)
 
     prop->drops->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
     prop->drops->SetAddText("Add Drop");
+
+    prop->conditions->Setup(DynamicItemType_t::OBJ_EVENT_CONDITION, pMainWindow);
+    prop->conditions->SetAddText("Add Condition");
 }
 
 QString DropSetList::GetObjectID(const std::shared_ptr<
@@ -123,6 +126,12 @@ void DropSetList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
         {
             prop->drops->AddObject(drop);
         }
+
+        prop->conditions->Clear();
+        for(auto condition : ds->GetConditions())
+        {
+            prop->conditions->AddObject(condition);
+        }
     }
 }
 
@@ -138,5 +147,9 @@ void DropSetList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
 
         auto drops = prop->drops->GetObjectList<objects::ItemDrop>();
         ds->SetDrops(drops);
+
+        auto conditions = prop->conditions->GetObjectList<
+            objects::EventCondition>();
+        ds->SetConditions(conditions);
     }
 }

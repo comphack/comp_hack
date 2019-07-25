@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>360</width>
-    <height>130</height>
+    <height>150</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="layoutMain">
@@ -34,7 +34,7 @@
         <x>0</x>
         <y>0</y>
         <width>358</width>
-        <height>128</height>
+        <height>148</height>
        </rect>
       </property>
       <layout class="QFormLayout" name="layoutScrollArea">
@@ -98,6 +98,20 @@
        </item>
        <item row="4" column="1">
         <widget class="ActionList" name="actions" native="true"/>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="lblDisplayFlag">
+         <property name="text">
+          <string>Display Flag:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QSpinBox" name="displayFlag">
+         <property name="maximum">
+          <number>32767</number>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>

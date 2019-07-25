@@ -51,6 +51,7 @@
 #include <DemonBox.h>
 #include <DemonPresent.h>
 #include <DemonQuest.h>
+#include <DropSet.h>
 #include <DigitalizeState.h>
 #include <EnchantSpecialData.h>
 #include <EventCounter.h>
@@ -2808,6 +2809,79 @@ bool CharacterManager::CultureItemPickup(const std::shared_ptr<
     }
 
     return true;
+}
+
+std::list<std::shared_ptr<objects::DropSet>>
+    CharacterManager::DetermineDropSets(const std::list<uint32_t>& dropSetIDs,
+        const std::shared_ptr<channel::ChannelClientConnection>& client,
+        bool filter)
+{
+    std::list<std::shared_ptr<objects::DropSet>> dropSets;
+
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
+
+    std::unordered_map<uint32_t, std::shared_ptr<objects::DropSet>> defs;
+    std::unordered_map<uint32_t, std::set<uint32_t>> mutexIDs;
+    for(uint32_t dropSetID : dropSetIDs)
+    {
+        auto dropSet = serverDataManager->GetDropSetData(dropSetID);
+        if(dropSet)
+        {
+            defs[dropSetID] = dropSet;
+            if(dropSet->GetMutexID())
+            {
+                mutexIDs[dropSet->GetMutexID()].insert(dropSetID);
+            }
+        }
+    }
+
+    if(mutexIDs.size() > 0)
+    {
+        for(auto& pair : mutexIDs)
+        {
+            if(pair.second.size() > 1)
+            {
+                // There can only be one at a time
+                uint32_t dropSetID = libcomp::Randomizer::GetEntry(
+                    pair.second);
+                pair.second.clear();
+                pair.second.insert(dropSetID);
+            }
+        }
+    }
+
+    for(uint32_t dropSetID : dropSetIDs)
+    {
+        auto dropSet = defs[dropSetID];
+        if(dropSet)
+        {
+            bool valid = true;
+            if(filter)
+            {
+                if(dropSet->GetMutexID() &&
+                    *mutexIDs[dropSet->GetMutexID()].begin() != dropSetID)
+                {
+                    valid = false;
+                }
+                else if(dropSet->ConditionsCount() > 0)
+                {
+                    if(!server->GetEventManager()->EvaluateEventConditions(
+                        client, dropSet->GetConditions()))
+                    {
+                        valid = false;
+                    }
+                }
+            }
+
+            if(valid)
+            {
+                dropSets.push_back(dropSet);
+            }
+        }
+    }
+
+    return dropSets;
 }
 
 std::list<std::shared_ptr<objects::ItemDrop>> CharacterManager::DetermineDrops(

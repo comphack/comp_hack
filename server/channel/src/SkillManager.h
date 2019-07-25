@@ -879,6 +879,8 @@ private:
      * @param source Pointer to the entity that activated the skill
      * @param eState Pointer to enemy which may or may not have spawn
      *  information (ex: GM created enemy)
+     * @param client Pointer to the client connection related to the source,
+     *  can be null for non-player entity sources
      * @param zone Pointer to the zone the entities belong to
      * @param giftMode true if the enemy's negotation gifts should be gathered
      *  instead of their normal drops
@@ -888,6 +890,7 @@ private:
     std::unordered_map<uint8_t, std::list<std::shared_ptr<objects::ItemDrop>>>
         GetItemDrops(const std::shared_ptr<ActiveEntityState>& source,
             const std::shared_ptr<ActiveEntityState>& eState,
+            const std::shared_ptr<ChannelClientConnection>& client,
             const std::shared_ptr<Zone>& zone, bool giftMode = false);
 
     /**

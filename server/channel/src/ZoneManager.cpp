@@ -2079,7 +2079,10 @@ void ZoneManager::ShowNPC(const std::shared_ptr<Zone>& zone,
     p.WriteFloat(npcState->GetCurrentX());
     p.WriteFloat(npcState->GetCurrentY());
     p.WriteFloat(npcState->GetCurrentRotation());
-    p.WriteS16Little(0);    //Unknown
+
+    // Client side display value, mostly replaced with event conditions
+    // but still useful for "modal" NPCs that change with game time
+    p.WriteS16Little(npc->GetDisplayFlag());
 
     ChannelClientConnection::BroadcastPacket(clients, p, true);
 
@@ -7457,8 +7460,8 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             x, y, rot))
         {
             LOG_WARNING(libcomp::String("NPC %1 in zone %2 is placed in"
-                " an invalid spot and will be ignored.\n").Arg(npc->GetID())
-                .Arg(zoneStr));
+                " an invalid spot and will be ignored: %3\n")
+                .Arg(npc->GetID()).Arg(zoneStr).Arg(npc->GetSpotID()));
             continue;
         }
 
@@ -7530,8 +7533,8 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             x, y, rot))
         {
             LOG_WARNING(libcomp::String("Object %1 in zone %2 is placed in"
-                " an invalid spot and will be ignored.\n").Arg(obj->GetID())
-                .Arg(zoneStr));
+                " an invalid spot and will be ignored: %3\n")
+                .Arg(obj->GetID()).Arg(zoneStr).Arg(obj->GetSpotID()));
             continue;
         }
 

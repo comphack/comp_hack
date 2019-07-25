@@ -57,6 +57,7 @@
 #include <MiSkillItemStatusCommonData.h>
 #include <MiShopProductData.h>
 #include <MiStatusData.h>
+#include <MiTitleData.h>
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
 #include <ServerNPC.h>
@@ -264,6 +265,7 @@ bool MainWindow::Init()
     mBinaryDataSets["hNPCData"] = BDSET(MiHNPCData, GetBasic()->GetID(),
         GetBasic()->GetName());
     mBinaryDataSets["oNPCData"] = BDSET(MiONPCData, GetID(), GetName());
+    mBinaryDataSets["TitleData"] = BDSET(MiTitleData, GetID(), GetTitle());
     mBinaryDataSets["ZoneData"] = BDSET(MiZoneData, GetBasic()->GetID(),
         GetBasic()->GetName());
 
@@ -381,6 +383,10 @@ bool MainWindow::Init()
         true))
     {
         err = "Failed to load status data.";
+    }
+    else if(!LoadBinaryData("Shield/CodenameData.sbin", "TitleData", true, true))
+    {
+        err = "Failed to load title data.";
     }
     else if(!LoadBinaryData("Shield/ZoneData.sbin", "ZoneData", true, true))
     {

@@ -57,6 +57,11 @@
          <string>Time Trial</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>Title</string>
+        </property>
+       </item>
       </widget>
      </item>
      <item row="1" column="0">

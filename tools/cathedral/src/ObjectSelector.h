@@ -49,6 +49,11 @@ public:
     void SetValue(uint32_t value) override;
     uint32_t GetValue() const override;
 
+    void SetValueSigned(int32_t value);
+    int32_t GetValueSigned() const;
+
+    void SetMinimum(int32_t min);
+
 private slots:
     void ValueChanged();
 

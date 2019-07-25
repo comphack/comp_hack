@@ -1446,7 +1446,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         }
         else
         {
-            // Server time between [value 1] and [value 2] (format: HHmm)
+            // Game time between [value 1] and [value 2] (format: HHmm)
             auto clock = mServer.lock()->GetWorldClockTime();
 
             int8_t minHours = (int8_t)floorl((float)condition->GetValue1() * 0.01);
@@ -1489,12 +1489,12 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             int8_t minDays = (int8_t)floorl((float)val1 * 0.0001);
             int8_t minHours = (int8_t)floorl((float)(val1 - (minDays * 10000)) * 0.01);
             int8_t minMinutes = (int8_t)floorl((float)(val1 - (minDays * 10000)
-                - (minHours * 100)) * 0.01);
+                - (minHours * 100)));
 
             int8_t maxDays = (int8_t)floorl((float)val2 * 0.0001);
             int8_t maxHours = (int8_t)floorl((float)(val2 - (maxDays * 10000)) * 0.01);
             int8_t maxMinutes = (int8_t)floorl((float)(val2 - (maxDays * 10000)
-                - (maxHours * 100)) * 0.01);
+                - (maxHours * 100)));
 
             bool skipDay = minDays == 7 && maxDays == 7;
 
@@ -2418,6 +2418,50 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             {
                 // Compare normally
                 return minVal <= systemSum && systemSum <= maxVal;
+            }
+        }
+    case objects::EventCondition::Type_t::TITLE_AVAILABLE:
+        if(!client || (compareMode != EventCompareMode::EQUAL &&
+            compareMode != EventCompareMode::DEFAULT_COMPARE))
+        {
+            return false;
+        }
+        else
+        {
+            // Title ID [value 1] available
+            auto character = client->GetClientState()->GetCharacterState()
+                ->GetEntity();
+            auto progress = character ? character->GetProgress().Get()
+                : nullptr;
+            if(!progress)
+            {
+                return false;
+            }
+
+            int16_t titleID = (int16_t)condition->GetValue1();
+            if(titleID < (int16_t)(progress->SpecialTitlesCount() * 8))
+            {
+                // Special title
+                size_t index;
+                uint8_t shiftVal;
+                CharacterManager::ConvertIDToMaskValues((uint16_t)titleID,
+                    index, shiftVal);
+
+                auto val = progress->GetSpecialTitles(index);
+                return (val & shiftVal) != 0;
+            }
+            else
+            {
+                // Normal title
+                for(int16_t title : progress->GetTitles())
+                {
+                    if(titleID == title)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
         }
     case objects::EventCondition::Type_t::QUESTS_ACTIVE:

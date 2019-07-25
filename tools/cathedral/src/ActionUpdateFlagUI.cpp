@@ -124,6 +124,9 @@ void ActionUpdateFlag::FlagTypeChanged()
     case objects::ActionUpdateFlag::FlagType_t::VALUABLE:
         selectorType = "CValuablesData";
         break;
+    case objects::ActionUpdateFlag::FlagType_t::TITLE:
+        selectorType = "TitleData";
+        break;
     case objects::ActionUpdateFlag::FlagType_t::MAP:
     case objects::ActionUpdateFlag::FlagType_t::TIME_TRIAL:
     default:

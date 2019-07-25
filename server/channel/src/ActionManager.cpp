@@ -1981,14 +1981,44 @@ bool ActionManager::UpdateFlag(ActionContext& ctx)
         characterManager->AddMap(ctx.Client, act->GetID());
         break;
     case objects::ActionUpdateFlag::FlagType_t::PLUGIN:
-        characterManager->AddPlugin(ctx.Client, act->GetID());
+        if(act->GetRemove())
+        {
+            LOG_ERROR(libcomp::String("UpdateFlag attempted to remove a"
+                " plugin: %1\n").Arg(act->GetID()));
+            return false;
+        }
+        else
+        {
+            characterManager->AddPlugin(ctx.Client, act->GetID());
+        }
         break;
     case objects::ActionUpdateFlag::FlagType_t::VALUABLE:
         characterManager->AddRemoveValuable(ctx.Client, act->GetID(),
             act->GetRemove());
         break;
     case objects::ActionUpdateFlag::FlagType_t::TIME_TRIAL:
-        return RecordTimeTrial(ctx, 0, 0);
+        if(act->GetRemove())
+        {
+            LOG_ERROR(libcomp::String("UpdateFlag attempted to remove a"
+                " time trial record: %1\n").Arg(act->GetID()));
+            return false;
+        }
+        else
+        {
+            return RecordTimeTrial(ctx, 0, 0);
+        }
+        break;
+    case objects::ActionUpdateFlag::FlagType_t::TITLE:
+        if(act->GetRemove())
+        {
+            LOG_ERROR(libcomp::String("UpdateFlag attempted to remove a"
+                " title: %1\n").Arg(act->GetID()));
+            return false;
+        }
+        else
+        {
+            characterManager->AddTitle(ctx.Client, (int16_t)act->GetID());
+        }
         break;
     default:
         return false;
@@ -3001,7 +3031,6 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
 
     auto server = mServer.lock();
     auto characterManager = server->GetCharacterManager();
-    auto serverDataManager = server->GetServerDataManager();
     auto zoneManager = server->GetZoneManager();
 
     auto zone = ctx.CurrentZone;
@@ -3068,15 +3097,12 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
         lBox->SetLootTime(lootTime);
 
         auto drops = act->GetDrops();
-        for(uint32_t dropSetID : act->GetDropSetIDs())
+        for(auto dropSet : characterManager->DetermineDropSets(act
+            ->GetDropSetIDs(), ctx.Client))
         {
-            auto dropSet = serverDataManager->GetDropSetData(dropSetID);
-            if(dropSet)
+            for(auto drop : dropSet->GetDrops())
             {
-                for(auto drop : dropSet->GetDrops())
-                {
-                    drops.push_back(drop);
-                }
+                drops.push_back(drop);
             }
         }
 

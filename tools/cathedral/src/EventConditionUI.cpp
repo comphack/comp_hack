@@ -164,6 +164,8 @@ EventCondition::EventCondition(MainWindow *pMainWindow, QWidget *pParent)
         (int)objects::EventCondition::Type_t::TIMESPAN_DATETIME);
     ui->typeNormal->addItem("Timespan (Week)",
         (int)objects::EventCondition::Type_t::TIMESPAN_WEEK);
+    ui->typeNormal->addItem("Title Available",
+        (int)objects::EventCondition::Type_t::TITLE_AVAILABLE);
     ui->typeNormal->addItem("Valuable",
         (int)objects::EventCondition::Type_t::VALUABLE);
     ui->typeNormal->addItem("Ziotite (Large)",
@@ -220,6 +222,9 @@ void EventCondition::Load(const std::shared_ptr<objects::EventCondition>& e)
     ui->value1Selector->SetValue(e->GetValue1() >= 0
         ? (uint32_t)e->GetValue1() : 0);
     ui->value2->setValue(e->GetValue2());
+
+    // By default enable all compare modes
+    ResetCompareMode("Placeholder");
 
     int idx = ui->compareMode->findData((int)e->GetCompareMode());
     ui->compareMode->setCurrentIndex(idx != -1 ? idx : 0);
@@ -425,8 +430,6 @@ void EventCondition::RefreshTypeContext()
 
     // Rebuild valid compare modes
     QVariant currentData = ui->compareMode->currentData();
-
-    ui->compareMode->clear();
 
     bool cmpNumeric = true;
     bool cmpBetween = true;
@@ -893,6 +896,14 @@ void EventCondition::RefreshTypeContext()
         minValues[0] = minValues[1] = 0;
         cmpNumeric = cmpEqual = cmpExists = false;
         break;
+    case objects::EventCondition::Type_t::TITLE_AVAILABLE:
+        ui->lblValue1->setText("Title ID:");
+        value2Ignored = true;
+        defaultCompareTxt = "Equal";
+        selectorObjectType = "TitleData";
+        minValues[0] = 0;
+        cmpNumeric = cmpBetween = cmpExists = false;
+        break;
     case objects::EventCondition::Type_t::VALUABLE:
         ui->lblValue1->setText("Valuable ID:");
         ui->lblValue2->setText("Obtained?:");
@@ -926,21 +937,7 @@ void EventCondition::RefreshTypeContext()
         break;
     }
 
-    ui->compareMode->addItem(qs(defaultCompareTxt.IsEmpty()
-        ? "Default" : libcomp::String("Default (%1)").Arg(defaultCompareTxt)),
-        (int)objects::EventCondition::CompareMode_t::DEFAULT_COMPARE);
-    ui->compareMode->addItem("Equal",
-        (int)objects::EventCondition::CompareMode_t::EQUAL);
-    ui->compareMode->addItem("Exists",
-        (int)objects::EventCondition::CompareMode_t::EXISTS);
-    ui->compareMode->addItem("LT (or NaN)",
-        (int)objects::EventCondition::CompareMode_t::LT_OR_NAN);
-    ui->compareMode->addItem("LT",
-        (int)objects::EventCondition::CompareMode_t::LT);
-    ui->compareMode->addItem("GTE",
-        (int)objects::EventCondition::CompareMode_t::GTE);
-    ui->compareMode->addItem("Between",
-        (int)objects::EventCondition::CompareMode_t::BETWEEN);
+    ResetCompareMode(defaultCompareTxt);
 
     if(!cmpNumeric)
     {
@@ -1038,4 +1035,26 @@ void EventCondition::RefreshTypeContext()
     ui->compareMode->blockSignals(false);
     ui->typeNormal->blockSignals(false);
     ui->typeFlags->blockSignals(false);
+}
+
+void EventCondition::ResetCompareMode(
+    const libcomp::String& defaultCompareTxt)
+{
+    ui->compareMode->clear();
+
+    ui->compareMode->addItem(qs(defaultCompareTxt.IsEmpty()
+        ? "Default" : libcomp::String("Default (%1)").Arg(defaultCompareTxt)),
+        (int)objects::EventCondition::CompareMode_t::DEFAULT_COMPARE);
+    ui->compareMode->addItem("Equal",
+        (int)objects::EventCondition::CompareMode_t::EQUAL);
+    ui->compareMode->addItem("Exists",
+        (int)objects::EventCondition::CompareMode_t::EXISTS);
+    ui->compareMode->addItem("LT (or NaN)",
+        (int)objects::EventCondition::CompareMode_t::LT_OR_NAN);
+    ui->compareMode->addItem("LT",
+        (int)objects::EventCondition::CompareMode_t::LT);
+    ui->compareMode->addItem("GTE",
+        (int)objects::EventCondition::CompareMode_t::GTE);
+    ui->compareMode->addItem("Between",
+        (int)objects::EventCondition::CompareMode_t::BETWEEN);
 }

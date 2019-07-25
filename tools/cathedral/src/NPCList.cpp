@@ -145,6 +145,17 @@ void NPCList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
         prop->state->setValue((uint8_t)sObj->GetState());
         prop->actorID->setValue(sObj->GetActorID());
 
+        auto nObj = std::dynamic_pointer_cast<objects::ServerNPC>(obj);
+        if(nObj)
+        {
+            prop->displayFlag->setValue(nObj->GetDisplayFlag());
+        }
+        else
+        {
+            prop->displayFlag->hide();
+            prop->lblDisplayFlag->hide();
+        }
+
         auto actions = sObj->GetActions();
         prop->actions->Load(actions);
     }
@@ -168,5 +179,11 @@ void NPCList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
 
         auto actions = prop->actions->Save();
         sObj->SetActions(actions);
+
+        auto nObj = std::dynamic_pointer_cast<objects::ServerNPC>(obj);
+        if(nObj)
+        {
+            nObj->SetDisplayFlag((int16_t)prop->displayFlag->value());
+        }
     }
 }

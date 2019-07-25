@@ -62,6 +62,7 @@ private:
     objects::EventCondition::Type_t GetCurrentType() const;
     void RefreshAvailableOptions();
     void RefreshTypeContext();
+    void ResetCompareMode(const libcomp::String& defaultCompareTxt);
 
     Ui::EventCondition *ui;
     MainWindow *mMainWindow;

@@ -6105,7 +6105,7 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 }
             }
 
-            auto drops = GetItemDrops(source, eState, zone);
+            auto drops = GetItemDrops(source, eState, sourceClient, zone);
 
             // Remove cooldown restricted drops
             std::set<int32_t> invalid;
@@ -7375,7 +7375,8 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
                     lBox->SetType(objects::LootBox::Type_t::GIFT_BOX);
                     lBox->SetEnemy(enemy);
 
-                    auto drops = GetItemDrops(source, eState, zone, true);
+                    auto drops = GetItemDrops(source, eState, sourceClient,
+                        zone, true);
                     auto gifts = drops[(uint8_t)objects::DropSet::Type_t::NORMAL];
                     characterManager->CreateLootFromDrops(lBox, gifts,
                         source->GetLUCK(), true);
@@ -9017,6 +9018,7 @@ std::unordered_map<uint8_t, std::list<
     std::shared_ptr<objects::ItemDrop>>> SkillManager::GetItemDrops(
     const std::shared_ptr<ActiveEntityState>& source,
     const std::shared_ptr<ActiveEntityState>& eState,
+    const std::shared_ptr<ChannelClientConnection>& client,
     const std::shared_ptr<Zone>& zone, bool giftMode)
 {
     std::unordered_map<uint8_t,
@@ -9030,15 +9032,18 @@ std::unordered_map<uint8_t, std::list<
     }
 
     auto server = mServer.lock();
+    auto characterManager = server->GetCharacterManager();
     auto serverDataManager = server->GetServerDataManager();
 
     // Add specific spawn drops, then drop sets
     std::list<uint32_t> dropSetIDs;
+    std::unordered_map<uint8_t,
+        std::list<std::shared_ptr<objects::ItemDrop>>> dropsTemp;
     if(giftMode)
     {
         for(auto drop : spawn->GetGifts())
         {
-            drops[(uint8_t)objects::DropSet::Type_t::NORMAL].push_back(drop);
+            dropsTemp[(uint8_t)objects::DropSet::Type_t::NORMAL].push_back(drop);
         }
 
         for(uint32_t dropSetID : spawn->GetGiftSetIDs())
@@ -9050,7 +9055,7 @@ std::unordered_map<uint8_t, std::list<
     {
         for(auto drop : spawn->GetDrops())
         {
-            drops[(uint8_t)objects::DropSet::Type_t::NORMAL].push_back(drop);
+            dropsTemp[(uint8_t)objects::DropSet::Type_t::NORMAL].push_back(drop);
         }
 
         for(uint32_t dropSetID : spawn->GetDropSetIDs())
@@ -9079,85 +9084,51 @@ std::unordered_map<uint8_t, std::list<
     }
 
     // Get drops from drop sets
-    std::unordered_map<uint32_t, std::shared_ptr<objects::DropSet>> defs;
-    std::unordered_map<uint32_t, std::set<uint32_t>> mutexIDs;
-    for(uint32_t dropSetID : dropSetIDs)
+    for(auto dropSet : characterManager->DetermineDropSets(dropSetIDs, client))
     {
-        auto dropSet = serverDataManager->GetDropSetData(dropSetID);
-        if(dropSet)
+        uint8_t type = (uint8_t)dropSet->GetType();
+        for(auto drop : dropSet->GetDrops())
         {
-            defs[dropSetID] = dropSet;
-            if(dropSet->GetMutexID())
-            {
-                mutexIDs[dropSet->GetMutexID()].insert(dropSetID);
-            }
+            dropsTemp[type].push_back(drop);
         }
     }
 
-    if(mutexIDs.size() > 0)
+    // Now apply special drop definitions
+    for(auto& pair : dropsTemp)
     {
-        for(auto& pair : mutexIDs)
+        auto type = pair.first;
+        for(auto drop : pair.second)
         {
-            if(pair.second.size() > 1)
+            switch(drop->GetType())
             {
-                // There can only be one at a time
-                uint32_t dropSetID = libcomp::Randomizer::GetEntry(
-                    pair.second);
-                pair.second.clear();
-                pair.second.insert(dropSetID);
-            }
-        }
-    }
-    
-    for(uint32_t dropSetID : dropSetIDs)
-    {
-        auto dropSet = defs[dropSetID];
-        if(dropSet)
-        {
-            if(dropSet->GetMutexID())
-            {
-                auto it = mutexIDs[dropSet->GetMutexID()].find(dropSetID);
-                if(it == mutexIDs[dropSet->GetMutexID()].end())
+            case objects::ItemDrop::Type_t::LEVEL_MULTIPLY:
                 {
-                    // Not randomly selected mutex set
-                    continue;
+                    // Copy the drop and scale stacks
+                    auto copy = std::make_shared<objects::ItemDrop>(*drop);
+
+                    uint16_t min = copy->GetMinStack();
+                    uint16_t max = copy->GetMaxStack();
+                    float multiplier = (float)eState->GetLevel() *
+                        copy->GetModifier();
+
+                    copy->SetMinStack((uint16_t)((float)min * multiplier));
+                    copy->SetMaxStack((uint16_t)((float)max * multiplier));
+
+                    drops[type].push_back(copy);
                 }
-            }
-
-            uint8_t type = (uint8_t)dropSet->GetType();
-            for(auto drop : dropSet->GetDrops())
-            {
-                switch(drop->GetType())
+                break;
+            case objects::ItemDrop::Type_t::RELATIVE_LEVEL_MIN:
+                // Only add if the (non-source) relative entity's level is
+                // at least the same as the source's level + the modifier
+                if(eState != source && (int32_t)eState->GetLevel() >=
+                    (int32_t)(source->GetLevel() + drop->GetModifier()))
                 {
-                case objects::ItemDrop::Type_t::LEVEL_MULTIPLY:
-                    {
-                        // Copy the drop and scale stacks
-                        auto copy = std::make_shared<objects::ItemDrop>(*drop);
-
-                        uint16_t min = copy->GetMinStack();
-                        uint16_t max = copy->GetMaxStack();
-                        float multiplier = (float)eState->GetLevel() *
-                            copy->GetModifier();
-
-                        copy->SetMinStack((uint16_t)((float)min * multiplier));
-                        copy->SetMaxStack((uint16_t)((float)max * multiplier));
-
-                        drops[type].push_back(copy);
-                    }
-                    break;
-                case objects::ItemDrop::Type_t::RELATIVE_LEVEL_MIN:
-                    // Only add if the (non-source) relative entity's level is
-                    // at least the same as the source's level + the modifier
-                    if(eState != source && (int32_t)eState->GetLevel() >=
-                        (int32_t)(source->GetLevel() + drop->GetModifier()))
-                    {
-                        drops[type].push_back(drop);
-                    }
-                    break;
-                case objects::ItemDrop::Type_t::NORMAL:
                     drops[type].push_back(drop);
-                    break;
                 }
+                break;
+            case objects::ItemDrop::Type_t::NORMAL:
+                drops[type].push_back(drop);
+                break;
             }
         }
     }

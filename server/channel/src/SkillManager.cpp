@@ -47,6 +47,7 @@
 #include <CalculatedEntityState.h>
 #include <ChannelConfig.h>
 #include <CharacterProgress.h>
+#include <DemonFamiliarityType.h>
 #include <DigitalizeState.h>
 #include <DropSet.h>
 #include <Expertise.h>
@@ -3417,10 +3418,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             bool targetAlive = target.EntityState->IsAlive();
 
             // If the target can be killed by the hit, get clench chance
-            // but only if ailment damage has not occurred and the skill
-            // is not a suicide skill
+            // but only if ailment damage has not occurred. Suicide skills
+            // cannot allow the source to clench and zone target all skills
+            // cannot be clenched by anyone.
             int32_t clenchChance = 0;
             if(hpDamage > 0 && targetAlive && !target.AilmentDamage &&
+                skill.FunctionID != SVR_CONST.SKILL_ZONE_TARGET_ALL &&
                 (skill.FunctionID != SVR_CONST.SKILL_SUICIDE ||
                     target.EntityState != source))
             {
@@ -5647,34 +5650,15 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 
     auto zConnections = zone->GetConnectionList();
 
-    // Familiarity is reduced from death (0) or same demon kills (1)
-    // and is dependent upon familiarity type
-    const int16_t fTypeMap[17][2] =
-        {
-            { -100, -5 },   // Type 0
-            { -20, -50 },   // Type 1
-            { -20, -20 },   // Type 2
-            { -50, -50 },   // Type 3
-            { -100, -100 }, // Type 4
-            { -100, -100 }, // Type 5
-            { -20, -20 },   // Type 6
-            { -50, -50 },   // Type 7
-            { -100, -100 }, // Type 8
-            { -100, -100 }, // Type 9
-            { -50, -100 },  // Type 10
-            { -50, 0 },     // Type 11
-            { -100, -100 }, // Type 12
-            { -120, -120 }, // Type 13
-            { 0, 0 },       // Type 14 (invalid)
-            { 0, 0 },       // Type 15 (invalid)
-            { -100, -100 }  // Type 16
-        };
-
     auto sourceDevilData = source->GetDevilData();
     uint32_t sourceDemonType = sourceDevilData
         ? sourceDevilData->GetBasic()->GetID() : 0;
-    int32_t sourceDemonFType = sourceDevilData
-        ? sourceDevilData->GetFamiliarity()->GetFamiliarityType() : 0;
+
+    // Familiarity is reduced from death or same demon kills and is dependent
+    // upon familiarity type
+    auto sourceDemonFType = sourceDevilData ? server->GetServerDataManager()
+        ->GetDemonFamiliarityTypeData(sourceDevilData->GetFamiliarity()
+            ->GetFamiliarityType()) : nullptr;
 
     bool playerSource = source->GetEntityType() == EntityType_t::CHARACTER ||
         source->GetEntityType() == EntityType_t::PARTNER_DEMON;
@@ -5769,22 +5753,24 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 client);
         }
 
-        if(demonData)
+        if(demonData && sourceDemonFType)
         {
             std::list<std::pair<int32_t, int32_t>> adjusts;
             if(partnerDeath)
             {
                 // Partner demon has died
+                int32_t adjust = (int32_t)sourceDemonFType->GetDeath();
                 adjusts.push_back(std::pair<int32_t, int32_t>(
-                    entity->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][0]));
+                    entity->GetEntityID(), adjust));
             }
 
             if(entity != source && sourceDemonType == demonData->GetBasic()
                 ->GetID())
             {
                 // Same demon type killed
+                int32_t adjust = (int32_t)sourceDemonFType->GetKillTypeMatch();
                 adjusts.push_back(std::pair<int32_t, int32_t>(
-                    source->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][1]));
+                    source->GetEntityID(), adjust));
             }
 
             for(auto aPair : adjusts)
@@ -6365,10 +6351,13 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                     // Ziotite can only be granted to a team and is increased
                     // by 15% per team member over 1
                     auto team = sourceState->GetTeam();
-                    valSum = (int32_t)((float)valSum * (1.f +
-                        (float)(team->MemberIDsCount() - 1) * 0.15f));
-                    server->GetMatchManager()->UpdateZiotite(team, valSum, 0,
-                        sourceState->GetWorldCID());
+                    if(team)
+                    {
+                        valSum = (int32_t)((float)valSum * (1.f +
+                            (float)(team->MemberIDsCount() - 1) * 0.15f));
+                        server->GetMatchManager()->UpdateZiotite(team, valSum, 0,
+                            sourceState->GetWorldCID());
+                    }
                 }
                 break;
             case objects::Spawn::KillValueType_t::INHERITED:
@@ -7330,6 +7319,13 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
         return;
     }
 
+    // Partner demon can gain familiarity from successful negotiations
+    int32_t fGain = 0;
+    auto partnerDef = sourceState->GetDemonState()->GetDevilData();
+    auto fType = partnerDef ? server->GetServerDataManager()
+        ->GetDemonFamiliarityTypeData(partnerDef->GetFamiliarity()
+            ->GetFamiliarityType()) : nullptr;
+
     // Keep track of demons that have "joined" for demon quests
     std::unordered_map<uint32_t, int32_t> joined;
 
@@ -7397,6 +7393,11 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
 
                 zone->AddLootBox(lState);
             }
+        }
+
+        if(fType && pair.second != TALK_REJECT)
+        {
+            fGain = fGain + (int32_t)fType->GetTalkSuccess();
         }
     }
 
@@ -7502,6 +7503,12 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
     }
 
     ChannelClientConnection::FlushAllOutgoing(zConnections);
+
+    // Lastly update familiarity
+    if(fGain)
+    {
+        characterManager->UpdateFamiliarity(sourceClient, fGain, true, true);
+    }
 }
 
 void SkillManager::HandleSkillLearning(const std::shared_ptr<ActiveEntityState> entity,
@@ -10256,9 +10263,9 @@ bool SkillManager::FamiliarityUp(
         }
     }
 
-    int32_t fType = demonData->GetFamiliarity()->GetFamiliarityType();
-
-    if(fType > 16)
+    auto fType = server->GetServerDataManager()->GetDemonFamiliarityTypeData(
+        demonData->GetFamiliarity()->GetFamiliarityType());
+    if(!fType)
     {
         SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
@@ -10275,30 +10282,10 @@ bool SkillManager::FamiliarityUp(
 
     // Familiarity is adjusted based on the demon's familiarity type
     // and if it shares the same alignment with the character
-    const uint16_t fTypeMap[17][2] =
-        {
-            { 50, 25 },     // Type 0
-            { 4000, 2000 }, // Type 1
-            { 2000, 1000 }, // Type 2
-            { 550, 225 },   // Type 3
-            { 250, 125 },   // Type 4
-            { 75, 40 },     // Type 5
-            { 2000, 1500 }, // Type 6
-            { 500, 375 },   // Type 7
-            { 250, 180 },   // Type 8
-            { 100, 75 },    // Type 9
-            { 50, 38 },     // Type 10
-            { 10, 10 },     // Type 11
-            { 2000, 200 },  // Type 12
-            { 650, 65 },    // Type 13
-            { 0, 0 },       // Type 14 (invalid)
-            { 0, 0 },       // Type 15 (invalid)
-            { 5000, 5000 } // Type 16
-        };
-
     bool sameLNC = cState->GetLNCType() == dState->GetLNCType();
 
-    int32_t fPoints = (int32_t)fTypeMap[(size_t)fType][sameLNC ? 0 : 1];
+    int32_t fPoints = (int32_t)(sameLNC
+        ? fType->GetBoostSkillLNCMatch() : fType->GetBoostSkill());
     characterManager->UpdateFamiliarity(client, fPoints, true);
 
     // Apply the status effects

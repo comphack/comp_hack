@@ -35,7 +35,11 @@
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
+// objgen Includes
+#include <LobbyConfig.h>
+
 // lobby Includes
+#include "AccountManager.h"
 #include "LobbyServer.h"
 
 using namespace lobby;
@@ -105,7 +109,7 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     connection->SetName(libcomp::String("world:%1:%2").Arg(svr->GetID()).Arg(
         svr->GetName()));
 
-    LOG_DEBUG(libcomp::String("Updating World Server: (%1) %2\n")
+    LOG_DEBUG(libcomp::String("Updating world server: (%1) %2\n")
         .Arg(svr->GetID()).Arg(svr->GetName()));
 
     auto world = server->GetWorldByConnection(iConnection);
@@ -116,6 +120,16 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
 
     // Now update the world list for all connections
     server->SendWorldList(nullptr);
+
+    if(std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig())
+        ->GetStartupCharacterDelete())
+    {
+        // Load all characters on the world and clean up expired ones. If an
+        // account in this set logs in before we get to it, kill time will
+        // be handled on the character list instead.
+        server->GetAccountManager()->DeleteKillTimeExceededCharacters(
+            svr->GetID());
+    }
 
     return true;
 }

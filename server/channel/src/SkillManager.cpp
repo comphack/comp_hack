@@ -3549,7 +3549,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
         }
 
-        if(target.CanHitstun && !target.HitAvoided)
+        // Hitstun or damage counts as a hit cancellation
+        if((target.CanHitstun || hpAdjustedSum < 0) && !target.HitAvoided)
         {
             target.EffectCancellations |= EFFECT_CANCEL_HIT;
         }
@@ -5381,6 +5382,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
     std::unordered_map<uint32_t, double> addStatusMap;
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiAddStatusTbl>> addStatusDefs;
+    std::set<uint32_t> maxRates;
     for(auto addStatus : directStatuses)
     {
         uint32_t effectID = addStatus->GetStatusID();
@@ -5388,6 +5390,10 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         {
             addStatusMap[effectID] = (double)addStatus->GetSuccessRate();
             addStatusDefs[effectID] = addStatus;
+            if(addStatus->GetSuccessRate() >= 100)
+            {
+                maxRates.insert(effectID);
+            }
         }
     }
 
@@ -5400,13 +5406,19 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         for(auto addStatus : mServer.lock()->GetTokuseiManager()->GetAspectMap(source,
             TokuseiAspectType::KNOCKBACK_STATUS_ADD, sourceCalc))
         {
-            if(addStatusMap.find((uint32_t)addStatus.first) != addStatusMap.end())
+            uint32_t effectID = (uint32_t)addStatus.first;
+            if(addStatus.second >= 100)
             {
-                addStatusMap[(uint32_t)addStatus.first] += addStatus.second;
+                maxRates.insert(effectID);
+            }
+
+            if(addStatusMap.find(effectID) != addStatusMap.end())
+            {
+                addStatusMap[effectID] += addStatus.second;
             }
             else
             {
-                addStatusMap[(uint32_t)addStatus.first] = addStatus.second;
+                addStatusMap[effectID] = addStatus.second;
             }
         }
     }
@@ -5443,6 +5455,11 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         if(!statusDef) continue;
 
         uint8_t affinity = statusDef->GetCommon()->GetAffinity();
+        uint8_t statusCategory = statusDef->GetCommon()->GetCategory()
+            ->GetMainCategory();
+
+        // Adjusted category (-category - 1) can be used to null or alter rate
+        int32_t adjustCategory = (int32_t)(statusCategory * -1) - 1;
 
         // Determine if the effect can be added
         if(!isRemove)
@@ -5455,8 +5472,13 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
                 continue;
             }
 
-            // Determine if the effect should be nullified
+            // Determine if the effect should be nullified by direct ID,
+            // then adjusted category
             if(statusNulls.find((int32_t)effectID) != statusNulls.end())
+            {
+                continue;
+            }
+            else if(statusNulls.find(adjustCategory) != statusNulls.end())
             {
                 continue;
             }
@@ -5476,9 +5498,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
                 }
             }
         }
-        
-        uint8_t statusCategory = statusDef->GetCommon()->GetCategory()
-            ->GetMainCategory();
+
         uint8_t statusSubCategory = statusDef->GetCommon()->GetCategory()
             ->GetSubCategory();
 
@@ -5490,7 +5510,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         double successRate = statusPair.second;
 
         // Hard 100% success rates cannot be adjusted, only avoided entirely
-        if(successRate < 100.f)
+        if(maxRates.find(effectID) == maxRates.end())
         {
             // Add affinity boost/2
             successRate += (double)GetAffinityBoost(source, sourceCalc,
@@ -5532,8 +5552,8 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
                     rateBoost += it->second;
                 }
 
-                // Boost success by category inflict adjust (-category - 1)
-                it = statusAdjusts.find((int32_t)(statusCategory * -1) - 1);
+                // Boost success by adjusted category inflict adjust
+                it = statusAdjusts.find(adjustCategory);
                 if(it != statusAdjusts.end())
                 {
                     rateBoost += it->second;
@@ -8181,19 +8201,23 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 mod2, target.Damage2Type);
             break;
         case objects::MiBattleDamageData::Formula_t::DMG_PERCENT:
-            target.Damage1 = CalculateDamage_Percent(
-                mod1, target.Damage1Type,
-                target.EntityState->GetCoreStats()->GetHP());
-            target.Damage2 = CalculateDamage_Percent(
-                mod2, target.Damage2Type,
-                target.EntityState->GetCoreStats()->GetMP());
+            {
+                auto cs = target.EntityState->GetCoreStats();
+                target.Damage1 = CalculateDamage_Percent(
+                    mod1, target.Damage1Type, cs ? cs->GetHP() : 0);
+                target.Damage2 = CalculateDamage_Percent(
+                    mod2, target.Damage2Type, cs ? cs->GetMP() : 0);
+            }
             break;
         case objects::MiBattleDamageData::Formula_t::DMG_MAX_PERCENT:
         case objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT:
-            target.Damage1 = CalculateDamage_MaxPercent(
-                mod1, target.Damage1Type, target.EntityState->GetMaxHP());
-            target.Damage2 = CalculateDamage_MaxPercent(
-                mod2, target.Damage2Type, target.EntityState->GetMaxMP());
+            {
+                auto cs = target.EntityState->GetCoreStats();
+                target.Damage1 = CalculateDamage_MaxPercent(
+                    mod1, target.Damage1Type, cs ? cs->GetMaxHP() : 0);
+                target.Damage2 = CalculateDamage_MaxPercent(
+                    mod2, target.Damage2Type, cs ? cs->GetMaxMP() : 0);
+            }
             break;
         default:
             LOG_ERROR(libcomp::String("Unknown damage formula type encountered: %1\n")

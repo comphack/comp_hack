@@ -139,13 +139,20 @@ bool Parsers::DepoRent::Parse(libcomp::ManagerPacket *pPacketManager,
         if(success)
         {
             // Set the expiration timestamp to the specified offset past the current time
-            auto timestamp = (uint32_t)time(0);
+            uint32_t timestamp = (uint32_t)time(0);
             delta = (int32_t)(dayCount * 24 * 60 * 60);
-            uint32_t expirationTime = (uint32_t)(timestamp + (uint32_t)delta);
 
             if(isItemDepo)
             {
-                itemDepo->SetRentalExpiration(expirationTime);
+                if(itemDepo->GetRentalExpiration() > timestamp)
+                {
+                    // Extend current time
+                    delta = delta +
+                        (int32_t)(itemDepo->GetRentalExpiration() - timestamp);
+                }
+
+                itemDepo->SetRentalExpiration((uint32_t)(timestamp +
+                    (uint32_t)delta));
 
                 if(!isNew)
                 {
@@ -154,7 +161,15 @@ bool Parsers::DepoRent::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             else
             {
-                demonDepo->SetRentalExpiration(expirationTime);
+                if(demonDepo->GetRentalExpiration() > timestamp)
+                {
+                    // Extend current time
+                    delta = delta +
+                        (int32_t)(demonDepo->GetRentalExpiration() - timestamp);
+                }
+
+                demonDepo->SetRentalExpiration((uint32_t)(timestamp +
+                    (uint32_t)delta));
 
                 if(!isNew)
                 {

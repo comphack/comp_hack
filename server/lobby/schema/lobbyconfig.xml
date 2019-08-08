@@ -11,6 +11,7 @@
         <member type="u32" name="WebAuthTimeOut" default="15"/>
         <member type="u16" name="CharacterDeletionDelay" default="1440"/>
         <member type="u32" name="CharacterTicketCost"/>
+        <member type="bool" name="StartupCharacterDelete" default="true"/>
         <member type="u32" name="RegistrationCP" default="0"/>
         <member type="u8" name="RegistrationTicketCount" default="1"/>
         <member type="s32" name="RegistrationUserLevel" default="0"/>

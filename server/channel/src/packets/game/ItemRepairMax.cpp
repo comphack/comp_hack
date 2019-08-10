@@ -84,6 +84,7 @@ bool Parsers::ItemRepairMax::Parse(libcomp::ManagerPacket *pPacketManager,
     auto activatedAbility = sourceState->GetSpecialActivations(activationID);
 
     bool success = false;
+    int32_t adjust = 0;
     if(!item)
     {
         LOG_ERROR("Invalid item ID encountered for ItemRepairMax request\n");
@@ -97,8 +98,6 @@ bool Parsers::ItemRepairMax::Parse(libcomp::ManagerPacket *pPacketManager,
         auto skillData = activatedAbility->GetSkillData();
         if(skillData)
         {
-            int32_t adjust = 0;
-
             uint16_t functionID = skillData->GetDamage()->GetFunctionID();
             if(functionID == SVR_CONST.SKILL_MAX_DURABILITY_FIXED)
             {
@@ -115,13 +114,28 @@ bool Parsers::ItemRepairMax::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 success = true;
             }
+        }
+    }
 
+    if(success)
+    {
+        if(server->GetSkillManager()->ExecuteSkill(sourceState,
+            activationID, itemID))
+        {
             if(adjust)
             {
                 characterManager->UpdateDurability(client, item, adjust, true,
                     true);
             }
         }
+        else
+        {
+            success = false;
+        }
+    }
+    else
+    {
+        server->GetSkillManager()->CancelSkill(sourceState, activationID);
     }
 
     if(success)
@@ -134,15 +148,7 @@ bool Parsers::ItemRepairMax::Parse(libcomp::ManagerPacket *pPacketManager,
         reply.WriteU8((uint8_t)preDurability);
         reply.WriteU8(item ? (uint8_t)item->GetMaxDurability() : 0);
 
-        client->QueuePacket(reply);
-
-        server->GetSkillManager()->ExecuteSkill(sourceState, activationID, itemID);
-
-        client->FlushOutgoing();
-    }
-    else
-    {
-        server->GetSkillManager()->CancelSkill(sourceState, activationID);
+        client->SendPacket(reply);
     }
 
     return true;

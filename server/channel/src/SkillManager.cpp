@@ -4127,7 +4127,16 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         playerSkill = true;
         break;
     case EntityType_t::PARTNER_DEMON:
-        inheritSkill.insert(source);
+        // If any (direct) target didn't auto avoid, raise inheritance
+        for(SkillTargetResult& target : skill.Targets)
+        {
+            if(!target.IndirectTarget &&
+                (!target.HitAvoided || !target.HitNull || !target.HitReflect))
+            {
+                inheritSkill.insert(source);
+                break;
+            }
+        }
         playerSkill = true;
         break;
     default:
@@ -4143,14 +4152,17 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         switch(eState->GetEntityType())
         {
         case EntityType_t::CHARACTER:
-            if(!target.HitAvoided && !target.HitAbsorb)
+            if(!target.IndirectTarget && !target.HitAvoided &&
+                !target.HitAbsorb)
             {
                 durabilityHit.insert(eState);
             }
             playerEntity = true;
             break;
         case EntityType_t::PARTNER_DEMON:
-            if(!target.HitAvoided)
+            // Manual avoids do not raise inheritance, auto avoids do
+            if(!target.IndirectTarget &&
+                (!target.HitAvoided || target.HitNull || target.HitReflect))
             {
                 inheritSkill.insert(eState);
             }
@@ -5000,9 +5012,18 @@ uint16_t SkillManager::CalculateOffenseValue(
     if(skill.ExecutionContext->CounteredSkill)
     {
         // If countering, modify the offensive value with the offense value
-        // of the original skill used
-        uint16_t counterOff = CalculateOffenseValue(target, source,
-            skill.ExecutionContext->CounteredSkill);
+        // of the original skill used, min for invalid dependency type
+        uint16_t counterOff = 0;
+        if(skill.ExecutionContext->CounteredSkill
+            ->EffectiveDependencyType == 5)
+        {
+            counterOff = 1;
+        }
+        else
+        {
+            counterOff = CalculateOffenseValue(target, source,
+                skill.ExecutionContext->CounteredSkill);
+        }
 
         off = (uint16_t)(off + (counterOff * 2));
     }
@@ -5084,11 +5105,16 @@ bool SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
         {
         case objects::MiSkillBasicData::ActionType_t::ATTACK:
         case objects::MiSkillBasicData::ActionType_t::SPIN:
+        case objects::MiSkillBasicData::ActionType_t::TAUNT:
             guardValid = true;
             break;
         case objects::MiSkillBasicData::ActionType_t::RUSH:
+        case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
             cancelType = 3; // Display guard break animation
             break;
+        case objects::MiSkillBasicData::ActionType_t::TALK:
+            // Nothing happens, skill stays active
+            return true;
         default:
             break;
         }
@@ -5155,6 +5181,7 @@ bool SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
         {
         case objects::MiSkillBasicData::ActionType_t::ATTACK:
         case objects::MiSkillBasicData::ActionType_t::RUSH:
+        case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
             if(tActivated->GetChargedTime() <= pSkill->Activated->GetHitTime())
             {
                 target.Flags1 |= FLAG1_GUARDED;
@@ -5174,8 +5201,12 @@ bool SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
             }
             break;
         case objects::MiSkillBasicData::ActionType_t::SPIN:
+        case objects::MiSkillBasicData::ActionType_t::TAUNT:
             cancelType = 3; // Display counter break animation
             break;
+        case objects::MiSkillBasicData::ActionType_t::TALK:
+            // Nothing happens, skill stays active
+            return true;
         default:
             break;
         }
@@ -5202,6 +5233,7 @@ bool SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
         {
         case objects::MiSkillBasicData::ActionType_t::SHOT:
         case objects::MiSkillBasicData::ActionType_t::RAPID:
+        case objects::MiSkillBasicData::ActionType_t::TALK:
             if(tActivated->GetChargedTime() <= pSkill->Activated->GetHitTime())
             {
                 target.Flags1 |= FLAG1_DODGED;
@@ -5222,6 +5254,10 @@ bool SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
                 }
             }
             break;
+        case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
+        case objects::MiSkillBasicData::ActionType_t::TAUNT:
+            // Nothing happens, skill stays active
+            return true;
         default:
             break;
         }
@@ -7086,7 +7122,9 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
     // No points in anything but still primary talk skill means
     // the skill will always result in a join
     bool isTalkAction = IsTalkSkill(pSkill->Definition, true);
-    bool autoJoin = isTalkAction && !talkAffSuccess &&
+    bool avoided = (target.Flags1 & FLAG1_GUARDED) != 0 ||
+        (target.Flags1 & FLAG1_DODGED);
+    bool autoJoin = isTalkAction && !talkAffSuccess && !avoided &&
         !talkAffFailure && !talkFearSuccess && !talkFearFailure;
 
     int32_t talkType = 0;
@@ -7118,7 +7156,7 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
     }
     else
     {
-        double talkSuccess = spawn
+        double talkSuccess = spawn && !avoided
             ? (double)(100 - spawn->GetTalkResist()) : 0.0;
 
         auto calcState = GetCalculatedState(source, pSkill, false, eState);

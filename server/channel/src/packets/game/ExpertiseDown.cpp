@@ -121,11 +121,9 @@ bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
                 remove = 0;
             }
 
-            if(remove > 0)
+            if(remove > 0 && skillManager->ExecuteSkill(sourceState,
+                activationID, activatedAbility->GetTargetObjectID()))
             {
-                skillManager->ExecuteSkill(sourceState, activationID,
-                    activatedAbility->GetTargetObjectID());
-
                 std::list<std::pair<uint8_t, int32_t>> pointMap;
                 pointMap.push_back(std::make_pair((uint8_t)expertiseID, -remove));
 

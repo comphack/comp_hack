@@ -60,9 +60,11 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t type = p.ReadS32Little();
     
     // Find any existing conflicting records (skip check if odd type signifying
-    // an application)
+    // an application as well as buying/selling which can have multiple)
     std::shared_ptr<objects::SearchEntry> existing;
-    if(type % 2 != 1)
+    if(type % 2 != 1 &&
+        type != (int32_t)objects::SearchEntry::Type_t::TRADE_BUYING &&
+        type != (int32_t)objects::SearchEntry::Type_t::TRADE_SELLING)
     {
         for(auto ePair : syncManager->GetSearchEntries())
         {

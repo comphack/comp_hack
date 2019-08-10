@@ -56,6 +56,7 @@ bool Parsers::SearchEntryInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t worldCID = client->GetClientState()->GetWorldCID();
 
     std::set<int8_t> types;
+    std::set<int32_t> ids;
 
     auto entries = syncManager->GetSearchEntries();
     for(auto ePair : entries)
@@ -63,6 +64,21 @@ bool Parsers::SearchEntryInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         for(auto entry : ePair.second)
         {
             if(entry->GetSourceCID() == worldCID)
+            {
+                // Owned entry exists
+                types.insert((int8_t)ePair.first);
+                ids.insert(entry->GetEntryID());
+            }
+        }
+    }
+
+    // Loop through again and get applications to owned entries
+    for(auto ePair : entries)
+    {
+        for(auto entry : ePair.second)
+        {
+            if(entry->GetParentEntryID() &&
+                ids.find(entry->GetParentEntryID()) != ids.end())
             {
                 types.insert((int8_t)ePair.first);
                 break;

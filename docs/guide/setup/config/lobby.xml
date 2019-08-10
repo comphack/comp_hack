@@ -98,6 +98,19 @@
 </section><!-- CharacterTicketCost -->
 
 <section>
+<title>StartupCharacterDelete</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Automatically deletes characters from a connecting world server that have a KillTime that has passed. If not enabled, these characters will be deleted the next time their associated account is sent the character list.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="StartupCharacterDelete">false</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- StartupCharacterDelete -->
+
+<section>
 <title>RegistrationCP</title>
 <para><emphasis role="strong">Type:</emphasis> integer</para>
 <para><emphasis role="strong">Default:</emphasis> 0</para>

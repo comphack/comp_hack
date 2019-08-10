@@ -800,17 +800,15 @@ bool AccountManager::DeleteKillTimeExceededCharacters(uint8_t worldID)
             auto accountUID = exceeded.front()->GetAccount();
 
             std::list<std::shared_ptr<objects::Character>> subset;
-            for(auto character : exceeded)
-            {
-                if(character->GetAccount() == accountUID)
-                {
-                    subset.push_back(character);
-                }
-            }
-
-            exceeded.remove_if([accountUID](
+            exceeded.remove_if([accountUID, &subset](
                 const std::shared_ptr<objects::Character>& c)
                 {
+                    // Who says you ONLY have to remove here? :P
+                    if(c->GetAccount() == accountUID)
+                    {
+                        subset.push_back(c);
+                    }
+
                     return c->GetAccount() == accountUID;
                 });
 

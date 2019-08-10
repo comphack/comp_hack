@@ -764,7 +764,7 @@ bool AccountManager::UpdateKillTime(const libcomp::String& username,
     return false;
 }
 
-bool AccountManager::DeleteKillTimeExceededCharacters(int8_t worldID)
+bool AccountManager::DeleteKillTimeExceededCharacters(uint8_t worldID)
 {
     auto world = mServer->GetWorldByID(worldID);
     if(!world)

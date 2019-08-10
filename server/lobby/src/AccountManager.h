@@ -275,7 +275,7 @@ public:
      * @return true if the process completed successfully, false if an error
      *  occurred
      */
-    bool DeleteKillTimeExceededCharacters(int8_t worldID);
+    bool DeleteKillTimeExceededCharacters(uint8_t worldID);
 
     /**
      * Set a character on the specified account's character array and save it

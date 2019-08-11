@@ -286,6 +286,16 @@ public:
     ServerTime ToServerTime(ClientTime time) const;
 
     /**
+     * Moves the client state start time back to the supplied time if it is
+     * currently later. This is necessary to correct active timers in the
+     * client's starting zone but it should ONLY be called before the time
+     * has been communicated to the client (so before login completes).
+     * @param time Time to rewind to if start time is later
+     * @return true if the time was rewound, false if it was not
+     */
+    bool RewindStartTime(ServerTime time);
+
+    /**
      * Get the client state associated to the supplied entity ID.
      * @param id Entity ID or world ID associated to the client
      *  state to retrieve

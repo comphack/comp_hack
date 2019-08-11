@@ -405,6 +405,19 @@ ServerTime ClientState::ToServerTime(ClientTime time) const
     return static_cast<ServerTime>(time * 1000000.0f) + mStartTime;
 }
 
+bool ClientState::RewindStartTime(ServerTime time)
+{
+    if(mStartTime > time)
+    {
+        mStartTime = time;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 ClientState* ClientState::GetEntityClientState(int32_t id, bool worldID)
 {
     std::lock_guard<std::mutex> lock(sLock);

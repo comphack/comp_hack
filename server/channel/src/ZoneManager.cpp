@@ -2932,6 +2932,11 @@ void ZoneManager::HandleSpecialInstancePopulate(
             break;
         }
     }
+    else if(instance && instance->GetTimeLimitData())
+    {
+        // Normal timer running already, send to the client
+        SendInstanceTimer(instance, client, true);
+    }
     else if(zone->GetUBMatch())
     {
         mServer.lock()->GetMatchManager()->EnterUltimateBattle(client, zone);
@@ -5033,26 +5038,17 @@ bool ZoneManager::StopInstanceTimer(const std::shared_ptr<
 
     if(expired && !instance->GetTimerExpirationEventID().IsEmpty())
     {
-        // Fire the expiration event once per client
-        auto eventManager = mServer.lock()->GetEventManager();
-        for(auto client : instance->GetConnections())
-        {
-            // Originally timer expiration events were not auto-only but the
-            // benefit of being able to pop up a prompt is not worth the
-            // copious amounts of issues that can occur if an event is active
-            // while the expiration occurs. If a non-auto-only event is needed
-            // at this point, zone flag triggers can be used instead to
-            // "reattach" to a delay enabled player context.
-            EventOptions options;
-            options.AutoOnly = true;
-            options.NoInterrupt = true;
+        // Fire the expiration event in the starting zone with no default
+        // player context. If a player context or a different zone context
+        // needs to be changed to for the event itself, an ActionStartEvent
+        // with a non-default context should be used.
+        EventOptions options;
+        options.AutoOnly = true;
+        options.NoInterrupt = true;
 
-            auto state = client->GetClientState();
-            auto entityID = state->GetCharacterState()->GetEntityID();
-            eventManager->HandleEvent(client,
-                instance->GetTimerExpirationEventID(), entityID, nullptr,
-                options);
-        }
+        mServer.lock()->GetEventManager()->HandleEvent(nullptr,
+            instance->GetTimerExpirationEventID(), 0,
+            GetInstanceStartingZone(instance), options);
     }
 
     return true;

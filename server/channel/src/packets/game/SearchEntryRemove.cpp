@@ -70,19 +70,26 @@ bool Parsers::SearchEntryRemove::Parse(libcomp::ManagerPacket *pPacketManager,
     bool success = false;
     if(!existing)
     {
-        LOG_ERROR(libcomp::String("SearchEntryRemove with invalid entry ID"
-            " encountered: %1\n").Arg(type));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("SearchEntryRemove with invalid entry ID"
+                " encountered: %1\n").Arg(type);
+        });
     }
     else if(existing->GetSourceCID() != worldCID)
     {
-        LOG_ERROR(libcomp::String("SearchEntryRemove request encountered"
-            " with an entry ID associated to a different player: %1\n").Arg(type));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("SearchEntryRemove request encountered"
+                " with an entry ID associated to a different player: %1\n")
+                .Arg(type);
+        });
     }
     else
     {
         success = true;
     }
-    
+
     if(success)
     {
         // Copy the existing record and let the callback update the
@@ -108,19 +115,25 @@ bool Parsers::SearchEntryRemove::Parse(libcomp::ManagerPacket *pPacketManager,
             success = true;
             break;
         default:
-            LOG_ERROR(libcomp::String("Invalid SearchEntryRemove type"
-                " encountered: %1\n").Arg(type));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Invalid SearchEntryRemove type"
+                    " encountered: %1\n").Arg(type);
+            });
             break;
         }
-    
+
         if(success)
         {
             success = syncManager->SyncRecordRemoval(entry, "SearchEntry");
         }
         else
         {
-            LOG_ERROR(libcomp::String("Invalid SearchEntryRemove request"
-                " encountered: %1\n").Arg(type));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Invalid SearchEntryRemove request"
+                    " encountered: %1\n").Arg(type);
+            });
         }
     }
 

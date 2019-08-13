@@ -62,7 +62,9 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(0 == p.Left())
     {
-        LOG_ERROR("Invalid response received for AccountLogin.\n");
+        LogAccountManagerErrorMsg(
+            "Invalid response received for AccountLogin.\n");
+
         return false;
     }
 
@@ -76,7 +78,9 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         objects::AccountLogin response;
         if(!response.LoadPacket(p, false))
         {
-            LOG_ERROR("Invalid response received for AccountLogin.\n");
+            LogAccountManagerErrorMsg(
+                "Invalid response received for AccountLogin.\n");
+
             return false;
         }
 
@@ -87,8 +91,9 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             channelLogin = std::make_shared<objects::ChannelLogin>();
             if(!channelLogin->LoadPacket(p, false))
             {
-                LOG_ERROR("Invalid ChannelLogin response received for"
-                    " AccountLogin.\n");
+                LogAccountManagerErrorMsg("Invalid ChannelLogin response "
+                    "received for AccountLogin.\n");
+
                 return false;
             }
         }
@@ -100,8 +105,9 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         auto account = response.GetAccount().Get(server->GetLobbyDatabase());
         if(nullptr == account)
         {
-            LOG_ERROR("Unknown account returned from AccountLogin"
-                " response.\n");
+            LogAccountManagerErrorMsg("Unknown account returned from "
+                "AccountLogin response.\n");
+
             return true;
         }
 
@@ -111,8 +117,9 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             : nullptr;
         if(nullptr == character)
         {
-            LOG_ERROR("Invalid character returned from AccountLogin"
-                " response.\n");
+            LogAccountManagerErrorMsg("Invalid character returned from "
+                "AccountLogin response.\n");
+
             return true;
         }
 

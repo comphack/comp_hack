@@ -71,14 +71,20 @@ bool Parsers::QuestTitle::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!bonusData ||
         (bonusData->GetTitleID() >= (int32_t)(progress->SpecialTitlesCount() * 8)))
     {
-        LOG_ERROR(libcomp::String("Invalid quest bonus ID supplied"
-            " for QuestTitle request: %1\n").Arg(bonusID));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid quest bonus ID supplied"
+                " for QuestTitle request: %1\n").Arg(bonusID);
+        });
     }
     else if((uint32_t)bonusData->GetCount() > cState->GetQuestBonusCount())
     {
-        LOG_ERROR(libcomp::String("QuestTitle request encountered for"
-            " a quest bonus count that has not been obtained: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("QuestTitle request encountered for"
+                " a quest bonus count that has not been obtained: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
     }
     else
     {

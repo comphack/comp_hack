@@ -126,8 +126,12 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             case objects::MiNPCBarterItemData::Type_t::SKILL_DEMON:
             case objects::MiNPCBarterItemData::Type_t::PLUGIN:
             default:
-                LOG_ERROR(libcomp::String("Invalid barter trade item"
-                    " type encountered: %1\n").Arg((uint8_t)type));
+                LogBarterError([&]()
+                {
+                    return libcomp::String("Invalid barter trade item"
+                        " type encountered: %1\n").Arg((uint8_t)type);
+                });
+
                 failed = true;
                 break;
             }
@@ -170,9 +174,13 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
 
                     if(CharacterManager::HasValuable(character, valuableID))
                     {
-                        LOG_ERROR(libcomp::String("Player attempted to"
-                            " perform barter with a one-time valuable they"
-                            " already have: %1\n").Arg(valuableID));
+                        LogBarterError([&]()
+                        {
+                            return libcomp::String("Player attempted to"
+                                " perform barter with a one-time valuable they"
+                                " already have: %1\n").Arg(valuableID);
+                        });
+
                         failed = true;
                     }
                 }
@@ -223,9 +231,13 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             case objects::MiNPCBarterItemData::Type_t::SKILL_DEMON:
                 if(!state->GetDemonState()->GetEntity())
                 {
-                    LOG_ERROR(libcomp::String("Attempted to add a barter demon"
-                        " skill to a player without a demon summoned: %1\n")
-                        .Arg(state->GetAccountUID().ToString()));
+                    LogBarterError([&]()
+                    {
+                        return libcomp::String("Attempted to add a barter demon"
+                            " skill to a player without a demon summoned: %1\n")
+                            .Arg(state->GetAccountUID().ToString());
+                    });
+
                     failed = true;
                 }
                 else
@@ -246,8 +258,12 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             case objects::MiNPCBarterItemData::Type_t::NONE:
                 break;
             default:
-                LOG_ERROR(libcomp::String("Invalid barter result item"
-                    " type encountered: %1\n").Arg((uint8_t)type));
+                LogBarterError([&]()
+                {
+                    return libcomp::String("Invalid barter result item"
+                        " type encountered: %1\n").Arg((uint8_t)type);
+                });
+
                 failed = true;
                 break;
             }
@@ -272,9 +288,14 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             }
             else
             {
-                LOG_ERROR(libcomp::String("Attempted to execute barter"
-                    " with active action cooldown type %1: %2\n")
-                    .Arg(-pair.first).Arg(state->GetAccountUID().ToString()));
+                LogBarterError([&]()
+                {
+                    return libcomp::String("Attempted to execute barter"
+                        " with active action cooldown type %1: %2\n")
+                        .Arg(-pair.first).
+                        Arg(state->GetAccountUID().ToString());
+                });
+
                 failed = true;
                 break;
             }
@@ -289,9 +310,13 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             if(bethelAdjustments[i] < 0 &&
                 (progress->GetBethel(i) + bethelAdjustments[i]) < 0)
             {
-                LOG_ERROR(libcomp::String("Attempted to execute barter"
-                    " without enough bethel: %1\n")
-                    .Arg(state->GetAccountUID().ToString()));
+                LogBarterError([&]()
+                {
+                    return libcomp::String("Attempted to execute barter"
+                        " without enough bethel: %1\n")
+                        .Arg(state->GetAccountUID().ToString());
+                });
+
                 failed = true;
                 break;
             }
@@ -311,8 +336,12 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             auto itemData = definitionManager->GetItemData(itemPair.first);
             if(!itemData)
             {
-                LOG_ERROR(libcomp::String("Invalid item type encountered for"
-                    " barter request: %1\n").Arg(itemPair.first));
+                LogBarterError([&]()
+                {
+                    return libcomp::String("Invalid item type encountered for"
+                        " barter request: %1\n").Arg(itemPair.first);
+                });
+
                 failed = true;
                 break;
             }

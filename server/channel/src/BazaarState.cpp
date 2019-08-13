@@ -79,7 +79,7 @@ bool BazaarState::AddItem(channel::ClientState* state, int8_t slot, int64_t item
 
     std::lock_guard<std::mutex> lock(mLock);
     if(VerifyMarket(bazaarData))
-    {   
+    {
         // Make sure the item is valid, the slot is not taken and the item is
         // not already outside of a normal box (already in the bazaar etc)
         if(item && bazaarData->GetItems((size_t)slot).IsNull() &&
@@ -117,8 +117,13 @@ bool BazaarState::AddItem(channel::ClientState* state, int8_t slot, int64_t item
         }
         else
         {
-            LOG_ERROR(libcomp::String("Failed to add bazaar item to market"
-                " belonging to account: %1\n").Arg(state->GetAccountUID().ToString()));
+            LogBazaarError([&]()
+            {
+                return libcomp::String("Failed to add bazaar item to market"
+                    " belonging to account: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             return false;
         }
     }
@@ -146,7 +151,9 @@ bool BazaarState::DropItemFromMarket(ClientState* state, int8_t srcSlot, int64_t
     }
     else if(bazaarData->GetState() != objects::BazaarData::State_t::BAZAAR_INACTIVE)
     {
-        LOG_ERROR("Remote DropItem request encountered for an active market\n");
+        LogBazaarErrorMsg(
+            "Remote DropItem request encountered for an active market\n");
+
         return false;
     }
     else
@@ -161,7 +168,9 @@ std::shared_ptr<objects::BazaarItem> BazaarState::TryBuyItem(ClientState* state,
     auto market = GetCurrentMarket(marketID);
     if(market == nullptr)
     {
-        LOG_ERROR("BuyItem request encountered with invalid market ID\n");
+        LogBazaarErrorMsg(
+            "BuyItem request encountered with invalid market ID\n");
+
         return nullptr;
     }
 
@@ -172,22 +181,35 @@ std::shared_ptr<objects::BazaarItem> BazaarState::TryBuyItem(ClientState* state,
     auto bItem = market->GetItems((size_t)slot).Get();
     if(bItem == nullptr || itemUUID.IsNull() || bItem->GetItem().GetUUID() != itemUUID)
     {
-        LOG_ERROR(libcomp::String("BuyItem request encountered with invalid item UID: %1\n")
-            .Arg(itemUUID.ToString()));
+        LogBazaarError([&]()
+        {
+            return libcomp::String("BuyItem request encountered with invalid "
+                "item UID: %1\n").Arg(itemUUID.ToString());
+        });
+
         return nullptr;
     }
 
     if(bItem->GetCost() != (uint32_t)price)
     {
-        LOG_ERROR(libcomp::String("BuyItem request encountered with invalid price: "
-            "Expected %1, found %2\n").Arg(price).Arg(bItem->GetCost()));
+        LogBazaarError([&]()
+        {
+            return libcomp::String("BuyItem request encountered with invalid "
+                "price: Expected %1, found %2\n").Arg(price)
+                .Arg(bItem->GetCost());
+        });
+
         return nullptr;
     }
 
     if(bItem->GetSold())
     {
-        LOG_ERROR(libcomp::String("BuyItem request encountered for already sold item: %1\n")
-            .Arg(itemUUID.ToString()));
+        LogBazaarError([&]()
+        {
+            return libcomp::String("BuyItem request encountered for already "
+                "sold item: %1\n").Arg(itemUUID.ToString());
+        });
+
         return nullptr;
     }
 
@@ -211,9 +233,13 @@ bool BazaarState::VerifyMarket(const std::shared_ptr<objects::BazaarData>& data)
     auto market = mCurrentMarkets.find(data != nullptr ? data->GetMarketID() : 0);
     if(market == mCurrentMarkets.end() || market->second != data)
     {
-        LOG_ERROR(libcomp::String("Market '%1' does not match the supplied definition"
-            " for bazaar %2\n").Arg(data != nullptr ? data->GetMarketID() : 0)
-            .Arg(GetEntity()->GetID()));
+        LogBazaarError([&]()
+        {
+            return libcomp::String("Market '%1' does not match the supplied "
+                "definition for bazaar %2\n").Arg(data != nullptr ?
+                data->GetMarketID() : 0).Arg(GetEntity()->GetID());
+        });
+
         return false;
     }
 
@@ -247,7 +273,7 @@ bool BazaarState::DropItemInternal(ClientState* state, int8_t srcSlot, int64_t i
     auto bItem = bazaarData->GetItems((size_t)srcSlot).Get();
     if(item == nullptr || bItem == nullptr || bItem->GetItem().Get() != item)
     {
-        LOG_ERROR("DropItem request encountered with invalid item or"
+        LogBazaarErrorMsg("DropItem request encountered with invalid item or"
             " source slot\n");
         return false;
     }
@@ -258,7 +284,7 @@ bool BazaarState::DropItemInternal(ClientState* state, int8_t srcSlot, int64_t i
 
     if(!inventory->GetItems((size_t)destSlot).IsNull())
     {
-        LOG_ERROR("DropItem request encountered with invalid"
+        LogBazaarErrorMsg("DropItem request encountered with invalid"
             " destination slot\n");
         return false;
     }

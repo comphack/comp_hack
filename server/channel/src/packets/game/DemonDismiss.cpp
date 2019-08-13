@@ -80,8 +80,11 @@ void DismissDemon(const std::shared_ptr<ChannelServer> server,
     }
     else
     {
-        LOG_DEBUG(libcomp::String("DemonDismiss request failed. Notifying"
-            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogDemonDebug([&]()
+        {
+            return libcomp::String("DemonDismiss request failed. Notifying"
+                " requestor: %1\n").Arg(state->GetAccountUID().ToString());
+        });
 
         libcomp::Packet err;
         err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);

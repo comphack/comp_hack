@@ -60,8 +60,12 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     auto login = accountManager->GetUserLogin(username);
     if(!login)
     {
-        LOG_ERROR(libcomp::String("World requested logout for an account that"
-            " is not currently logged in: '%1'\n").Arg(username));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("World requested logout for an account that"
+                " is not currently logged in: '%1'\n").Arg(username);
+        });
+
         return true;
     }
 
@@ -73,8 +77,11 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!accountManager->ChannelToChannelSwitch(username, channelID, sessionKey))
         {
-            LOG_ERROR(libcomp::String("Failed to set channel to channel switch for"
-                " account: '%1'\n").Arg(username));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Failed to set channel to channel "
+                    "switch for account: '%1'\n").Arg(username);
+            });
         }
     }
     else
@@ -82,7 +89,12 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
         // Do not log out the user if they connected back to the lobby
         if(cLogin->GetWorldID() != -1)
         {
-            LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
+            LogGeneralDebug([&]()
+            {
+                return libcomp::String("Logging out user: '%1'\n")
+                    .Arg(username);
+            });
+
             accountManager->Logout(username);
         }
     }

@@ -141,7 +141,8 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(p.Size() < 3)
     {
-        LOG_ERROR("Invalid response received for PartyUpdate.\n");
+        LogPartyErrorMsg("Invalid response received for PartyUpdate.\n");
+
         return false;
     }
 
@@ -155,7 +156,8 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         ->GatherWorldTargetClients(p, connectionsFound);
     if(!connectionsFound)
     {
-        LOG_ERROR("Connections not found for PartyUpdate.\n");
+        LogPartyErrorMsg("Connections not found for PartyUpdate.\n");
+
         return false;
     }
 
@@ -187,7 +189,7 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                 info.IsLeader = leader;
                 members.push_back(info);
             }
-            
+
             for(auto client : clients)
             {
                 if(client->GetClientState()->GetPartyID() == partyID)

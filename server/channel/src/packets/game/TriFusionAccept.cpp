@@ -94,9 +94,12 @@ bool Parsers::TriFusionAccept::Parse(libcomp::ManagerPacket *pPacketManager,
                 }
                 else
                 {
-                    LOG_ERROR(libcomp::String("Player attempted to accept a TriFusion"
-                        " but is not participating in one: %1\n")
-                        .Arg(state->GetAccountUID().ToString()));
+                    LogGeneralError([&]()
+                    {
+                        return libcomp::String("Player attempted to accept a "
+                            "TriFusion but is not participating in one: %1\n")
+                            .Arg(state->GetAccountUID().ToString());
+                    });
                 }
             }
             break;

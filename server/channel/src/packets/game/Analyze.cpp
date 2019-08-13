@@ -66,8 +66,12 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(!entityState)
     {
-        LOG_ERROR(libcomp::String("Attempted to analyze an entity that no"
-            " longer exists: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Attempted to analyze an entity that no"
+                " longer exists: %1\n").Arg(state->GetAccountUID().ToString());
+        });
+
         return true;
     }
 
@@ -194,8 +198,12 @@ bool Parsers::Analyze::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         break;
     default:
-        LOG_ERROR(libcomp::String("Attempted to analyze an entity that is"
-            " not valid: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Attempted to analyze an entity that is"
+                " not valid: %1\n").Arg(state->GetAccountUID().ToString());
+        });
+
         break;
     }
 

@@ -72,7 +72,8 @@ bool Parsers::DepoRent::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
     if(nullptr == item)
     {
-        LOG_ERROR("Depo rental failed due to unknown purchase item ID.\n");
+        LogGeneralErrorMsg(
+            "Depo rental failed due to unknown purchase item ID.\n");
     }
     else
     {
@@ -133,7 +134,8 @@ bool Parsers::DepoRent::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            LOG_ERROR("Depo rental failed due to unknown/invalid purchase item type.\n");
+            LogGeneralErrorMsg("Depo rental failed due to unknown/invalid "
+                "purchase item type.\n");
         }
 
         if(success)

@@ -125,9 +125,13 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
 
     if(!character || !account)
     {
-        LOG_ERROR(libcomp::String("CharacterLogin encountered with no account"
-            " or character loaded: %1.\n")
-            .Arg(login->GetAccount().GetUUID().ToString()));
+        LogAccountManagerError([&]()
+        {
+            return libcomp::String("CharacterLogin encountered with no account"
+                " or character loaded: %1.\n")
+                .Arg(login->GetAccount().GetUUID().ToString());
+        });
+
         return false;
     }
 
@@ -198,9 +202,13 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
             }
             else
             {
-                LOG_ERROR(libcomp::String("Failed to load COMP to update"
-                    " demon quests on account: %1.\n")
-                    .Arg(account->GetUsername()));
+                LogAccountManagerError([&]()
+                {
+                    return libcomp::String("Failed to load COMP to update"
+                        " demon quests on account: %1.\n")
+                        .Arg(account->GetUsername());
+                });
+
                 return false;
             }
 
@@ -262,9 +270,13 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
 
     if(!worldDB->ProcessChangeSet(worldChanges) || !account->Update(lobbyDB))
     {
-        LOG_ERROR(libcomp::String("Failed to update character data"
-            " during channel login request for account: %1.\n")
-            .Arg(account->GetUsername()));
+        LogAccountManagerError([&]()
+        {
+            return libcomp::String("Failed to update character data"
+                " during channel login request for account: %1.\n")
+                .Arg(account->GetUsername());
+        });
+
         return false;
     }
 
@@ -290,9 +302,13 @@ bool AccountManager::SwitchChannel(
     std::lock_guard<std::mutex> lock(mLock);
     if(login->GetState() != objects::AccountLogin::State_t::CHANNEL)
     {
-        LOG_ERROR(libcomp::String("Channel switch for account '%1' failed "
-            "because it is not in the channel state.\n")
-            .Arg(username));
+        LogAccountManagerError([&]()
+        {
+            return libcomp::String("Channel switch for account '%1' failed "
+                "because it is not in the channel state.\n")
+                .Arg(username);
+        });
+
         return false;
     }
 
@@ -353,7 +369,10 @@ std::shared_ptr<objects::AccountLogin> AccountManager::LogoutUser(
     if (mAccountMap.end() != pair && (channel == -1 ||
         channel == pair->second->GetCharacterLogin()->GetChannelID()))
     {
-        LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
+        LogAccountManagerDebug([&]()
+        {
+            return libcomp::String("Logging out user: '%1'\n").Arg(username);
+        });
 
         result = pair->second;
         Cleanup(result);
@@ -412,8 +431,12 @@ bool AccountManager::ExpireSession(const libcomp::String& username,
             if(login && objects::AccountLogin::State_t::CHANNEL !=
                 login->GetState() && key == login->GetSessionKey())
             {
-                LOG_DEBUG(libcomp::String("Session for username '%1' has "
-                    "expired.\n").Arg(username));
+                LogAccountManagerDebug([&]()
+                {
+                    return libcomp::String("Session for username '%1' has "
+                        "expired.\n").Arg(username);
+                });
+
                 expire = true;
             }
         }
@@ -535,9 +558,12 @@ void AccountManager::CompleteLobbyLogin(
 
     if(!account)
     {
-        LOG_ERROR(libcomp::String("Invalid account sent to world"
-            " AccountLogin: %1\n").Arg(
-            login->GetAccount().GetUUID().ToString()));
+        LogAccountManagerError([&]()
+        {
+            return libcomp::String("Invalid account sent to world"
+                " AccountLogin: %1\n").Arg(
+                login->GetAccount().GetUUID().ToString());
+        });
 
         ok = false;
     }
@@ -547,8 +573,11 @@ void AccountManager::CompleteLobbyLogin(
 
         if(cUUID.IsNull() || !cLogin->GetCharacter().Get(worldDB, true))
         {
-            LOG_ERROR(libcomp::String("Character UUID '%1' is not valid"
-                " for this world.\n").Arg(cUUID.ToString()));
+            LogAccountManagerError([&]()
+            {
+                return libcomp::String("Character UUID '%1' is not valid"
+                    " for this world.\n").Arg(cUUID.ToString());
+            });
 
             ok = false;
         }
@@ -581,9 +610,13 @@ void AccountManager::CompleteLobbyLogin(
         // Login now to get the session key
         if(!LobbyLogin(login))
         {
-            LOG_ERROR(libcomp::String("Failed to login character '%1'. "
-                "Here is the state of the login object now: %2\n").Arg(
-                account->GetUsername()).Arg(login->GetXml()));
+            LogAccountManagerError([&]()
+            {
+                return libcomp::String("Failed to login character '%1'. "
+                    "Here is the state of the login object now: %2\n")
+                    .Arg(account->GetUsername()).Arg(login->GetXml());
+            });
+
             ok = false;
         }
     }
@@ -662,8 +695,12 @@ void AccountManager::CompleteLobbyLogin(
         login->SetCharacterLogin(cLogin);
         login->SavePacket(reply, false);
 
-        LOG_DEBUG(libcomp::String("Logging in account '%1' with session key"
-            " %2\n").Arg(account->GetUsername()).Arg(login->GetSessionKey()));
+        LogAccountManagerDebug([&]()
+        {
+            return libcomp::String("Logging in account '%1' with session key"
+                " %2\n").Arg(account->GetUsername())
+                .Arg(login->GetSessionKey());
+        });
 
         // Schedule channel login timeout
         server->GetTimerManager()->ScheduleEventIn(static_cast<int>(
@@ -700,40 +737,56 @@ void AccountManager::HandleChannelLogin(
     auto cLogin = login != nullptr ? login->GetCharacterLogin() : nullptr;
     if(nullptr == channel)
     {
-        LOG_ERROR("AccountLogin request received"
+        LogAccountManagerErrorMsg("AccountLogin request received"
             " from a connection not belonging to the lobby or any"
             " connected channel.\n");
+
         return;
     }
     else if(username.Length() == 0)
     {
-        LOG_ERROR("No username passed to AccountLogin from the channel.\n");
+        LogAccountManagerErrorMsg(
+            "No username passed to AccountLogin from the channel.\n");
+
         return;
     }
     else if(nullptr == login)
     {
-        LOG_ERROR(libcomp::String("Account with username '%1'"
-            " is not logged in to this world or has an expired session.\n")
-            .Arg(username));
+        LogAccountManagerError([&]()
+        {
+            return libcomp::String("Account with username '%1'"
+                " is not logged in to this world or has an expired session.\n")
+                .Arg(username);
+        });
+
         ok = false;
     }
     else if(nullptr == cLogin)
     {
-        LOG_ERROR(libcomp::String("Account with username '%1'"
-            " is not logged in to this world (bad cLogin).\n").Arg(username));
+        LogAccountManagerError([&]()
+        {
+            return libcomp::String("Account with username '%1' is not logged "
+                "in to this world (bad cLogin).\n").Arg(username);
+        });
+
         ok = false;
     }
     else if(channel->GetID() != (uint8_t)cLogin->GetChannelID())
     {
-        LOG_ERROR("AccountLogin request received from a channel"
+        LogAccountManagerErrorMsg("AccountLogin request received from a channel"
             " not matching the account's current login information.\n");
+
         ok = false;
     }
     else if(login->GetSessionKey() != sessionKey)
     {
-        LOG_ERROR(libcomp::String("Invalid session key provided for"
-            " account with username '%1': Expected %2, found %3\n")
-            .Arg(username).Arg(login->GetSessionKey()).Arg(sessionKey));
+        LogAccountManagerError([&]()
+        {
+            return libcomp::String("Invalid session key provided for"
+                " account with username '%1': Expected %2, found %3\n")
+                .Arg(username).Arg(login->GetSessionKey()).Arg(sessionKey);
+        });
+
         ok = false;
     }
 
@@ -863,8 +916,11 @@ void AccountManager::CleanupAccountWorldData()
         return;
     }
 
-    LOG_DEBUG(libcomp::String("Cleaning up %1 AccountWorldData record(s)\n")
-        .Arg(accountWorldDataList.size()));
+    LogAccountManagerDebug([&]()
+    {
+        return libcomp::String("Cleaning up %1 AccountWorldData record(s)\n")
+            .Arg(accountWorldDataList.size());
+    });
 
     for(auto accountWorldData : accountWorldDataList)
     {
@@ -873,8 +929,11 @@ void AccountManager::CleanupAccountWorldData()
 
         if(account)
         {
-            LOG_DEBUG(libcomp::String("Cleaning up AccountWorldData associated"
-                " to account: %1\n").Arg(account->GetUUID().ToString()));
+            LogAccountManagerDebug([&]()
+            {
+                return libcomp::String("Cleaning up AccountWorldData associated"
+                    " to account: %1\n").Arg(account->GetUUID().ToString());
+            });
 
             auto characters = account->GetCharacters();
 
@@ -914,9 +973,12 @@ void AccountManager::CleanupAccountWorldData()
         }
         else
         {
-            LOG_ERROR(libcomp::String("AccountWorldData associated to invalid"
-                " account: %1\n").Arg(accountWorldData->GetAccount().GetUUID()
-                    .ToString()));
+            LogAccountManagerError([&]()
+            {
+                return libcomp::String(
+                    "AccountWorldData associated to invalid account: %1\n")
+                    .Arg(accountWorldData->GetAccount().GetUUID().ToString());
+            });
         }
     }
 }
@@ -930,8 +992,11 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
     auto db = server->GetWorldDatabase();
     auto characterUUID = character->GetUUID();
 
-    LOG_DEBUG(libcomp::String("Deleting character '%1' on account: %2\n")
-        .Arg(character->GetName()).Arg(character->GetAccount().ToString()));
+    LogAccountManagerDebug([&]()
+    {
+        return libcomp::String("Deleting character '%1' on account: %2\n")
+            .Arg(character->GetName()).Arg(character->GetAccount().ToString());
+    });
 
     auto changes = libcomp::DatabaseChangeSet::Create();
 
@@ -960,8 +1025,12 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
 
         if(!left)
         {
-            LOG_ERROR(libcomp::String("Failed to remove %1 from their clan\n")
-                .Arg(characterUUID.ToString()));
+            LogAccountManagerError([&]()
+            {
+                return libcomp::String("Failed to remove %1 from their clan\n")
+                    .Arg(characterUUID.ToString());
+            });
+
             return false;
         }
     }
@@ -999,9 +1068,12 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
     // and mark the character for deletion later
     if(cLogin && cLogin->GetChannelID() >= 0)
     {
-        LOG_WARNING(libcomp::String("Deleting character '%1' is still logged"
-            " in on account: %2\n").Arg(character->GetName())
-            .Arg(character->GetAccount().ToString()));
+        LogAccountManagerWarning([&]()
+        {
+            return libcomp::String("Deleting character '%1' is still logged"
+                " in on account: %2\n").Arg(character->GetName())
+                .Arg(character->GetAccount().ToString());
+        });
 
         characterManager->RequestChannelDisconnect(
             cLogin->GetWorldCID());
@@ -1017,9 +1089,13 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
         }
         else
         {
-            LOG_ERROR(libcomp::String("Failed to delete logged in character"
-                " without associated AccountWorlData: %1\n")
-                .Arg(characterUUID.ToString()));
+            LogAccountManagerError([&]()
+            {
+                return libcomp::String("Failed to delete logged in character"
+                    " without associated AccountWorlData: %1\n")
+                    .Arg(characterUUID.ToString());
+            });
+
             return false;
         }
 
@@ -1140,9 +1216,13 @@ bool AccountManager::DeleteCharacter(const std::shared_ptr<
         return true;
     }
 
-    LOG_WARNING(libcomp::String("Failed to delete character '%1'"
-        " on account: %2\n").Arg(character->GetName())
-        .Arg(character->GetAccount().ToString()));
+    LogAccountManagerWarning([&]()
+    {
+        return libcomp::String("Failed to delete character '%1'"
+            " on account: %2\n").Arg(character->GetName())
+            .Arg(character->GetAccount().ToString());
+    });
+
     return false;
 }
 

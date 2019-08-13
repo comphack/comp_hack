@@ -62,7 +62,7 @@ bool Parsers::TeamChat::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!chatManager->HandleGMand(client, message) &&
         !chatManager->SendTeamChatMessage(client, message, teamID))
     {
-        LOG_ERROR("Team chat message could not be sent.\n");
+        LogChatManagerErrorMsg("Team chat message could not be sent.\n");
     }
 
     return true;

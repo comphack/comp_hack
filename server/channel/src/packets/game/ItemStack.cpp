@@ -80,18 +80,26 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
 
         if(targetSlot == 50 || !itemBox->GetItems((size_t)targetSlot).IsNull())
         {
-            LOG_ERROR(libcomp::String("Split stack failed because there was"
-                " no empty slot available: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogItemError([&]()
+            {
+                return libcomp::String("Split stack failed because there was"
+                    " no empty slot available: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             valid = false;
         }
 
         int32_t oldStack = (int32_t)srcItem->GetStackSize() - (int32_t)srcStack;
         if(oldStack <= 0)
         {
-            LOG_ERROR(libcomp::String("Split stack attempted with a"
-                " source stack smaller than the required amount: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogItemError([&]()
+            {
+                return libcomp::String("Split stack attempted with a"
+                    " source stack smaller than the required amount: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             valid = false;
         }
 
@@ -125,8 +133,11 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
 
     if(!valid)
     {
-        LOG_DEBUG(libcomp::String("ItemStack split request failed. Notifying"
-            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogItemDebug([&]()
+        {
+            return libcomp::String("ItemStack split request failed. Notifying"
+                " requestor: %1\n").Arg(state->GetAccountUID().ToString());
+        });
 
         libcomp::Packet err;
         err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_ITEM);
@@ -173,9 +184,13 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
             {
                 if(srcItem->GetType() != targetItem->GetType())
                 {
-                    LOG_ERROR(libcomp::String("Combine stack attempted with"
-                        " items of differing types: %1\n")
-                        .Arg(state->GetAccountUID().ToString()));
+                    LogItemError([&]()
+                    {
+                        return libcomp::String("Combine stack attempted with"
+                            " items of differing types: %1\n")
+                            .Arg(state->GetAccountUID().ToString());
+                    });
+
                     valid = false;
                     break;
                 }
@@ -184,9 +199,13 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
                     (int32_t)srcStack;
                 if(newStack > maxStack)
                 {
-                    LOG_ERROR(libcomp::String("Combine stack attempted with a"
-                        " target stack larger than the max size: %1\n")
-                        .Arg(state->GetAccountUID().ToString()));
+                    LogItemError([&]()
+                    {
+                        return libcomp::String("Combine stack attempted with a"
+                            " target stack larger than the max size: %1\n")
+                            .Arg(state->GetAccountUID().ToString());
+                    });
+
                     valid = false;
                     break;
                 }
@@ -195,19 +214,28 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
                     (int32_t)srcStack;
                 if(oldStack < 0)
                 {
-                    LOG_ERROR(libcomp::String("Combine stack attempted with a"
-                        " source stack smaller than the requested amount: %1\n")
-                        .Arg(state->GetAccountUID().ToString()));
+                    LogItemError([&]()
+                    {
+                        return libcomp::String("Combine stack attempted with a"
+                            " source stack smaller than the requested "
+                            "amount: %1\n")
+                            .Arg(state->GetAccountUID().ToString());
+                    });
+
                     valid = false;
                     break;
                 }
 
                 if(srcItem == targetItem)
                 {
-                    LOG_ERROR(libcomp::String("Player '%1' on connection '%2' "
-                        "tried to merge an item into itself! Killing their "
-                        "connection.\n").Arg(character->GetName()).Arg(
-                        client->GetName()));
+                    LogItemError([&]()
+                    {
+                        return libcomp::String("Player '%1' on connection '%2' "
+                            "tried to merge an item into itself! Killing their "
+                            "connection.\n").Arg(character->GetName()).Arg(
+                            client->GetName());
+                    });
+
                     client->Close();
                     valid = false;
                     break;
@@ -242,8 +270,11 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
 
     if(!valid)
     {
-        LOG_DEBUG(libcomp::String("ItemStack stack request failed. Notifying"
-            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogItemDebug([&]()
+        {
+            return libcomp::String("ItemStack stack request failed. Notifying"
+                " requestor: %1\n").Arg(state->GetAccountUID().ToString());
+        });
 
         libcomp::Packet err;
         err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_ITEM);
@@ -276,8 +307,9 @@ bool Parsers::ItemStack::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(slot >= 50)
         {
-            LOG_ERROR("Invalid item box source slot specified in item"
+            LogItemErrorMsg("Invalid item box source slot specified in item"
                 " stack request.");
+
             return false;
         }
 
@@ -287,7 +319,8 @@ bool Parsers::ItemStack::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(srcItems.size() == 0)
     {
-        LOG_ERROR("No source items defined in item stack request.");
+        LogItemErrorMsg("No source items defined in item stack request.");
+
         return false;
     }
 
@@ -305,8 +338,9 @@ bool Parsers::ItemStack::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         if(targetSlot >= 50)
         {
-            LOG_ERROR("Invalid item box target slot specified in item"
+            LogItemErrorMsg("Invalid item box target slot specified in item"
                 " stack request.");
+
             return false;
         }
 

@@ -266,7 +266,7 @@ void DropSetWindow::NewDropSet()
     ds->SetID(dropSetID);
 
     file->DropSets.push_back(ds);
-    
+
     file->DropSets.sort([](const std::shared_ptr<FileDropSet>& a,
         const std::shared_ptr<FileDropSet>& b)
         {
@@ -293,8 +293,12 @@ void DropSetWindow::NewFile()
     QFileInfo fi(qPath);
     if(fi.exists() && fi.isFile())
     {
-        LOG_ERROR(libcomp::String("Attempted to overwrite existing file with"
-            " new drop set file: %1").Arg(cs(qPath)));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Attempted to overwrite existing file with"
+                " new drop set file: %1").Arg(cs(qPath));
+        });
+
         return;
     }
 
@@ -471,14 +475,22 @@ bool DropSetWindow::LoadFileFromPath(const libcomp::String& path)
     tinyxml2::XMLDocument doc;
     if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
     {
-        LOG_ERROR(libcomp::String("Failed to parse file: %1\n").Arg(path));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Failed to parse file: %1\n").Arg(path);
+        });
+
         return false;
     }
-    
+
     auto rootElem = doc.RootElement();
     if(!rootElem)
     {
-        LOG_ERROR(libcomp::String("No root element in file: %1\n").Arg(path));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("No root element in file: %1\n").Arg(path);
+        });
+
         return false;
     }
 
@@ -495,8 +507,12 @@ bool DropSetWindow::LoadFileFromPath(const libcomp::String& path)
 
         if(!ds->GetID())
         {
-            LOG_ERROR(libcomp::String("Drop set with no ID encountered in"
-                " file: %1\n").Arg(path));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Drop set with no ID encountered in"
+                    " file: %1\n").Arg(path);
+            });
+
             break;
         }
 
@@ -522,13 +538,19 @@ bool DropSetWindow::LoadFileFromPath(const libcomp::String& path)
     {
         if(mFiles.find(path) != mFiles.end())
         {
-            LOG_INFO(libcomp::String("Reloaded %1 drop sets(s) from"
-                " file: %2\n").Arg(dropSets.size()).Arg(path));
+            LogGeneralInfo([&]()
+            {
+                return libcomp::String("Reloaded %1 drop sets(s) from"
+                    " file: %2\n").Arg(dropSets.size()).Arg(path);
+            });
         }
         else
         {
-            LOG_INFO(libcomp::String("Loaded %1 drop set(s) from"
-                " file: %2\n").Arg(dropSets.size()).Arg(path));
+            LogGeneralInfo([&]()
+            {
+                return libcomp::String("Loaded %1 drop set(s) from"
+                    " file: %2\n").Arg(dropSets.size()).Arg(path);
+            });
         }
 
         auto file = std::make_shared<DropSetFile>();
@@ -555,8 +577,11 @@ bool DropSetWindow::LoadFileFromPath(const libcomp::String& path)
     }
     else
     {
-        LOG_WARNING(libcomp::String("No drop sets found in file: %1\n")
-            .Arg(path));
+        LogGeneralWarning([&]()
+        {
+            return libcomp::String("No drop sets found in file: %1\n")
+                .Arg(path);
+        });
     }
 
     return false;
@@ -595,8 +620,12 @@ void DropSetWindow::SaveFiles(const std::list<libcomp::String>& paths)
         tinyxml2::XMLDocument doc;
         if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
         {
-            LOG_ERROR(libcomp::String("Failed to parse file for saving: %1\n")
-                .Arg(path));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Failed to parse file for saving: %1\n")
+                    .Arg(path);
+            });
+
             continue;
         }
 
@@ -720,6 +749,9 @@ void DropSetWindow::SaveFiles(const std::list<libcomp::String>& paths)
 
         doc.SaveFile(path.C());
 
-        LOG_DEBUG(libcomp::String("Updated drop set file '%1'\n").Arg(path));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Updated drop set file '%1'\n").Arg(path);
+        });
     }
 }

@@ -132,9 +132,13 @@ bool Parsers::AppearanceAlter::Parse(libcomp::ManagerPacket *pPacketManager,
                 faceType = (uint8_t)appearanceID;
                 break;
             default:
-                LOG_ERROR(libcomp::String("Request to alter appearance"
-                    " received for an invalid appearance item: %1\n")
-                    .Arg(item->GetType()));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Request to alter appearance"
+                        " received for an invalid appearance item: %1\n")
+                        .Arg(item->GetType());
+                });
+
                 success = false;
                 break;
             }
@@ -153,9 +157,13 @@ bool Parsers::AppearanceAlter::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            LOG_ERROR(libcomp::String("Request to alter appearance received"
-                " for an item with no appearance alteration value: %1\n")
-                .Arg(item->GetType()));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Request to alter appearance received"
+                    " for an item with no appearance alteration value: %1\n")
+                    .Arg(item->GetType());
+            });
+
             success = false;
         }
     }

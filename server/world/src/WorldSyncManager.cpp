@@ -199,8 +199,8 @@ bool WorldSyncManager::Initialize()
 
     if(activeMatches.size() > 1)
     {
-        LOG_WARNING("Multiple active Pentalpha matches found. Ending"
-            " all but the newest entry.\n");
+        LogDataSyncManagerWarningMsg("Multiple active Pentalpha matches found. "
+            "Ending all but the newest entry.\n");
 
         activeMatches.sort([](
             const std::shared_ptr<objects::PentalphaMatch>& a,
@@ -240,8 +240,8 @@ bool WorldSyncManager::Initialize()
 
     if(activeTournaments.size() > 1)
     {
-        LOG_WARNING("Multiple active Ultimate Battle tournaments found. Ending"
-            " all but the newest entry.\n");
+        LogDataSyncManagerWarningMsg("Multiple active Ultimate Battle "
+            "tournaments found. Ending all but the newest entry.\n");
 
         activeTournaments.sort([](
             const std::shared_ptr<objects::UBTournament>& a,
@@ -346,8 +346,11 @@ int8_t WorldSyncManager::Update<objects::Character>(const libcomp::String& type,
         }
         else
         {
-            LOG_ERROR(libcomp::String("Channel requested a character delete."
-                " which will be ignored: %1\n").Arg(source));
+            LogDataSyncManagerError([&]()
+            {
+                return libcomp::String("Channel requested a character delete."
+                    " which will be ignored: %1\n").Arg(source);
+            });
         }
     }
 
@@ -377,7 +380,7 @@ int8_t WorldSyncManager::Update<objects::CharacterProgress>(
     (void)isRemove;
 
     auto entry = std::dynamic_pointer_cast<objects::CharacterProgress>(obj);
-  
+
     if(source == "lobby")
     {
         // Send to the channel where the character is logged in, no need to
@@ -1069,7 +1072,7 @@ int8_t WorldSyncManager::Update<objects::SearchEntry>(const libcomp::String& typ
     (void)source;
 
     auto entry = std::dynamic_pointer_cast<objects::SearchEntry>(obj);
-    
+
     auto it = mSearchEntries.begin();
     while(it != mSearchEntries.end())
     {
@@ -1101,8 +1104,12 @@ int8_t WorldSyncManager::Update<objects::SearchEntry>(const libcomp::String& typ
 
     if(isRemove)
     {
-        LOG_WARNING(libcomp::String("No SearchEntry with ID '%1' found"
-            " for sync removal\n").Arg(entry->GetEntryID()));
+        LogDataSyncManagerWarning([&]()
+        {
+            return libcomp::String("No SearchEntry with ID '%1' found"
+                " for sync removal\n").Arg(entry->GetEntryID());
+        });
+
         return SYNC_FAILED;
     }
     else
@@ -1956,7 +1963,7 @@ bool WorldSyncManager::EndMatch(const std::shared_ptr<
     {
         ranks.push_back(std::make_pair(i, match->GetPoints(i)));
     }
-    
+
     ranks.sort([](
         const std::pair<size_t, int32_t>& a,
         const std::pair<size_t, int32_t>& b)
@@ -2067,7 +2074,7 @@ bool WorldSyncManager::EndMatch(const std::shared_ptr<
     {
         return false;
     }
-    
+
     if(entries.size() > 0)
     {
         UpdateRecord(match, "PentalphaMatch");
@@ -2097,7 +2104,7 @@ bool WorldSyncManager::RecalculateTournamentRankings(
 
     auto results = objects::UBResult::LoadUBResultListByTournament(
         server->GetWorldDatabase(), tournamentUID);
-    
+
     results.sort([](
         const std::shared_ptr<objects::UBResult>& a,
         const std::shared_ptr<objects::UBResult>& b)

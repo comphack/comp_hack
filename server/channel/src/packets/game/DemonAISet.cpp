@@ -58,7 +58,7 @@ bool Parsers::DemonAISet::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(!demon)
     {
-        LOG_WARNING("Partner demon attack settings could not be saved"
+        LogGeneralWarningMsg("Partner demon attack settings could not be saved"
             " because no demon is summoned for the requesting client\n");
         return true;
     }

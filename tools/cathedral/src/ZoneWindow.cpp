@@ -269,7 +269,7 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
                 actorMap[npc->GetActorID()] = npc;
             }
         }
-        
+
         for(auto obj : mMergedZone->Definition->GetObjects())
         {
             if(obj->GetActorID() &&
@@ -306,7 +306,7 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
             actors.push_back(sObj);
             names.push_back(name);
         }
-        
+
         auto newData = std::make_shared<BinaryDataNamedSet>(
             [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
             {
@@ -369,7 +369,7 @@ void ZoneWindow::RebuildNamedDataSet(const libcomp::String& objType)
             spawns.push_back(spawn);
             names.push_back(name);
         }
-        
+
         auto newData = std::make_shared<BinaryDataNamedSet>(
             [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
             {
@@ -581,7 +581,7 @@ std::list<std::shared_ptr<objects::Action>>
 bool ZoneWindow::ShowSpot(uint32_t spotID)
 {
     // Check if the spot exists and error if it does not
-    uint32_t dynamicMapID = mMergedZone->CurrentZone 
+    uint32_t dynamicMapID = mMergedZone->CurrentZone
         ? mMergedZone->CurrentZone->GetDynamicMapID() : 0;
     auto definitions = mMainWindow->GetDefinitions();
 
@@ -613,7 +613,11 @@ std::shared_ptr<objects::ServerZone> ZoneWindow::LoadZoneFromFile(
     tinyxml2::XMLDocument doc;
     if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
     {
-        LOG_ERROR(libcomp::String("Failed to parse file: %1\n").Arg(path));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Failed to parse file: %1\n").Arg(path);
+        });
+
         return nullptr;
     }
 
@@ -631,23 +635,34 @@ std::shared_ptr<objects::ServerZone> ZoneWindow::LoadZoneFromFile(
 
     if(!pSet.LoadXml(doc))
     {
-        LOG_ERROR(libcomp::String("Failed to load file: %1\n").Arg(path));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Failed to load file: %1\n").Arg(path);
+        });
+
         return nullptr;
     }
 
     auto objs = pSet.GetObjects();
     if(1 != objs.size())
     {
-        LOG_ERROR(libcomp::String("More than 1 zone in the XML file: %1\n")
-            .Arg(path));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("More than 1 zone in the XML file: %1\n")
+                .Arg(path);
+        });
+
         return nullptr;
     }
 
     auto zone = std::dynamic_pointer_cast<objects::ServerZone>(objs.front());
     if(!zone)
     {
-        LOG_ERROR(libcomp::String("Internal error loading zone from file:"
-            " %1\n").Arg(path));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Internal error loading zone from file:"
+                " %1\n").Arg(path);
+        });
     }
 
     return zone;
@@ -975,7 +990,7 @@ void ZoneWindow::AddSpawn(bool cloneSelected)
         }
         break;
     }
-    
+
     if(cloneSelected && !clone)
     {
         // Nothing selected
@@ -1454,14 +1469,22 @@ bool ZoneWindow::LoadZonePartials(const libcomp::String& path)
     tinyxml2::XMLDocument doc;
     if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
     {
-        LOG_ERROR(libcomp::String("Failed to parse file: %1\n").Arg(path));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Failed to parse file: %1\n").Arg(path);
+        });
+
         return false;
     }
-    
+
     auto rootElem = doc.RootElement();
     if(!rootElem)
     {
-        LOG_ERROR(libcomp::String("No root element in file: %1\n").Arg(path));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("No root element in file: %1\n").Arg(path);
+        });
+
         return false;
     }
 
@@ -1484,16 +1507,22 @@ bool ZoneWindow::LoadZonePartials(const libcomp::String& path)
     // Add the file if it has partials or no child nodes
     if(partials.size() > 0 || rootElem->FirstChild() == nullptr)
     {
-        LOG_INFO(libcomp::String("Loading %1 zone partial(s) from"
-            " file: %2\n").Arg(partials.size()).Arg(path));
+        LogGeneralInfo([&]()
+        {
+            return libcomp::String("Loading %1 zone partial(s) from"
+                " file: %2\n").Arg(partials.size()).Arg(path);
+        });
 
         std::set<uint32_t> loadedPartials;
         for(auto partial : partials)
         {
             if(mZonePartials.find(partial->GetID()) != mZonePartials.end())
             {
-                LOG_WARNING(libcomp::String("Reloaded zone partial %1 from"
-                    " file: %2\n").Arg(partial->GetID()).Arg(path));
+                LogGeneralWarning([&]()
+                {
+                    return libcomp::String("Reloaded zone partial %1 from"
+                        " file: %2\n").Arg(partial->GetID()).Arg(path);
+                });
             }
 
             mZonePartials[partial->GetID()] = partial;
@@ -1509,8 +1538,11 @@ bool ZoneWindow::LoadZonePartials(const libcomp::String& path)
     }
     else
     {
-        LOG_WARNING(libcomp::String("No zone partials found in file: %1\n")
-            .Arg(path));
+        LogGeneralWarning([&]()
+        {
+            return libcomp::String("No zone partials found in file: %1\n")
+                .Arg(path);
+        });
     }
 
     return false;
@@ -1543,8 +1575,11 @@ void ZoneWindow::SaveZone()
 
     doc.SaveFile(mMergedZone->Path.C());
 
-    LOG_DEBUG(libcomp::String("Updated zone file '%1'\n")
-        .Arg(mMergedZone->Path));
+    LogGeneralDebug([&]()
+    {
+        return libcomp::String("Updated zone file '%1'\n")
+            .Arg(mMergedZone->Path);
+    });
 }
 
 void ZoneWindow::SavePartials(const std::set<uint32_t>& partialIDs)
@@ -1568,8 +1603,12 @@ void ZoneWindow::SavePartials(const std::set<uint32_t>& partialIDs)
         tinyxml2::XMLDocument doc;
         if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
         {
-            LOG_ERROR(libcomp::String("Failed to parse file for saving: %1\n")
-                .Arg(path));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Failed to parse file for saving: %1\n")
+                    .Arg(path);
+            });
+
             continue;
         }
 
@@ -1647,8 +1686,11 @@ void ZoneWindow::SavePartials(const std::set<uint32_t>& partialIDs)
 
         doc.SaveFile(path.C());
 
-        LOG_DEBUG(libcomp::String("Updated zone partial file '%1'\n")
-            .Arg(path));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Updated zone partial file '%1'\n")
+                .Arg(path);
+        });
     }
 }
 
@@ -2411,7 +2453,7 @@ void ZoneWindow::DrawNPC(const std::shared_ptr<objects::ServerNPC>& npc,
 
 void ZoneWindow::DrawObject(const std::shared_ptr<objects::ServerObject>& obj,
     bool selected, QPainter& painter)
-{   
+{
     float x = obj->GetX();
     float y = obj->GetY();
     float rot = obj->GetRotation();

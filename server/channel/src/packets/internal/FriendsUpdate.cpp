@@ -60,8 +60,12 @@ void SendFriendInfo(std::shared_ptr<ChannelServer> server,
         auto character = login->GetCharacter();
         if(!character.Get(worldDB))
         {
-            LOG_ERROR(libcomp::String("Character failed to load: %1\n")
-                .Arg(character.GetUUID().ToString()));
+            LogFriendError([&]()
+            {
+                return libcomp::String("Character failed to load: %1\n")
+                    .Arg(character.GetUUID().ToString());
+            });
+
             return;
         }
 
@@ -69,8 +73,12 @@ void SendFriendInfo(std::shared_ptr<ChannelServer> server,
             worldDB, character->GetUUID());
         if(!fSettings)
         {
-            LOG_ERROR(libcomp::String("Character friend settings failed to load: %1\n")
-                .Arg(character.GetUUID().ToString()));
+            LogFriendError([&]()
+            {
+                return libcomp::String("Character friend settings failed to "
+                    "load: %1\n").Arg(character.GetUUID().ToString());
+            });
+
             return;
         }
 
@@ -111,7 +119,8 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(p.Size() < 6)
     {
-        LOG_ERROR("Invalid response received for CharacterLogin.\n");
+        LogFriendErrorMsg("Invalid response received for CharacterLogin.\n");
+
         return false;
     }
 
@@ -140,7 +149,9 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                 auto login = std::make_shared<objects::CharacterLogin>();
                 if(!login->LoadPacket(p, false))
                 {
-                    LOG_ERROR("Invalid character info received for CharacterLogin.\n");
+                    LogFriendErrorMsg("Invalid character info received for "
+                        "CharacterLogin.\n");
+
                     return false;
                 }
 
@@ -210,13 +221,15 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             // Reload the updated friends info
             objects::FriendSettings::LoadFriendSettingsByCharacter(
                 server->GetWorldDatabase(), cState->GetEntity()->GetUUID());
-            
+
             if(added)
             {
                 auto login = std::make_shared<objects::CharacterLogin>();
                 if(!login->LoadPacket(p, false))
                 {
-                    LOG_ERROR("Invalid character info received for CharacterLogin.\n");
+                    LogFriendErrorMsg("Invalid character info received for "
+                        "CharacterLogin.\n");
+
                     return false;
                 }
 

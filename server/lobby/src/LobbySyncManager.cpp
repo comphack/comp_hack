@@ -225,7 +225,10 @@ void LobbySyncManager::SyncCharacterProgress(const std::shared_ptr<
     }
     else
     {
-        LOG_DEBUG(libcomp::String("CharacterProgress failed to sync for"
-            " character: %1\n").Arg(progress->GetCharacter().ToString()));
+        LogDataSyncManagerDebug([&]()
+        {
+            return libcomp::String("CharacterProgress failed to sync for"
+                " character: %1\n").Arg(progress->GetCharacter().ToString());
+        });
     }
 }

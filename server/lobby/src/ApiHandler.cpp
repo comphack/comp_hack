@@ -89,7 +89,7 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
     mParsers["/webgame/start"] = &ApiHandler::WebGame_Start;
     mParsers["/webgame/update"] = &ApiHandler::WebGame_Update;
 
-    LOG_DEBUG("Loading web games...\n");
+    LogWebAPIDebugMsg("Loading web games...\n");
 
     auto serverDataManager =  new libcomp::ServerDataManager;
 
@@ -105,17 +105,23 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
 
     if(!gamesLoaded)
     {
-        LOG_ERROR(libcomp::String("API handler failed after loading %1"
-            " web game(s)\n").Arg(mGameDefinitions.size()));
+        LogWebAPIError([&]()
+        {
+            return libcomp::String("API handler failed after loading %1"
+                " web game(s)\n").Arg(mGameDefinitions.size());
+        });
     }
     else if(mGameDefinitions.size() == 0)
     {
-        LOG_DEBUG("No web games found\n");
+        LogWebAPIDebugMsg("No web games found\n");
     }
     else
     {
-        LOG_DEBUG(libcomp::String("API handler successfully loaded %1"
-            " web game(s)\n").Arg(mGameDefinitions.size()));
+        LogWebAPIDebug([&]()
+        {
+            return libcomp::String("API handler successfully loaded %1"
+                " web game(s)\n").Arg(mGameDefinitions.size());
+        });
     }
 
     delete serverDataManager;
@@ -132,7 +138,7 @@ bool ApiHandler::Auth_Token(const JsonBox::Object& request,
 
     if(it == request.end())
     {
-        LOG_ERROR("get_challenge request missing a username.\n");
+        LogWebAPIErrorMsg("get_challenge request missing a username.\n");
 
         session->Reset();
         return false;
@@ -147,7 +153,7 @@ bool ApiHandler::Auth_Token(const JsonBox::Object& request,
     // Sanity in an insane world.
     if(!db)
     {
-        LOG_ERROR("Failed to get the database.\n");
+        LogWebAPIErrorMsg("Failed to get the database.\n");
 
         session->Reset();
         return false;
@@ -160,8 +166,11 @@ bool ApiHandler::Auth_Token(const JsonBox::Object& request,
     // We must have a valid account for this to work.
     if(!session->account || !session->account->GetEnabled())
     {
-        LOG_ERROR(libcomp::String("Invalid account (is it disabled?): "
-            "%1\n").Arg(username));
+        LogWebAPIError([&]()
+        {
+            return libcomp::String("Invalid account (is it disabled?): "
+                "%1\n").Arg(username);
+        });
 
         session->Reset();
         return false;
@@ -1583,12 +1592,15 @@ bool ApiHandler::handlePost(CivetServer *pServer,
     {
         if(session && session->account)
         {
-            LOG_ERROR(libcomp::String("Account '%1' is not authorized.\n").Arg(
-                session->account->GetUsername()));
+            LogWebAPIError([&]()
+            {
+                return libcomp::String("Account '%1' is not authorized.\n")
+                    .Arg(session->account->GetUsername());
+            });
         }
         else
         {
-            LOG_ERROR("Account is not authorized.\n");
+            LogWebAPIErrorMsg("Account is not authorized.\n");
         }
 
         mg_printf(pConnection, "HTTP/1.1 401 Unauthorized\r\n"

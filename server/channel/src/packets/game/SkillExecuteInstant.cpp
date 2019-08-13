@@ -65,18 +65,26 @@ bool Parsers::SkillExecuteInstant::Parse(libcomp::ManagerPacket *pPacketManager,
     uint32_t targetType = p.ReadU32Little();
     if(targetType != ACTIVATION_NOTARGET && p.Left() == 0)
     {
-        LOG_ERROR(libcomp::String("Invalid skill target type sent from client"
-            " for instant execution request: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Invalid skill target type sent from client"
+                " for instant execution request: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
     auto source = state->GetEntityState(sourceEntityID);
     if(!source)
     {
-        LOG_ERROR(libcomp::String("Invalid skill source sent from client for"
-            " instant execution request: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Invalid skill source sent from client for"
+                " instant execution request: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }
@@ -113,9 +121,14 @@ bool Parsers::SkillExecuteInstant::Parse(libcomp::ManagerPacket *pPacketManager,
             break;
         default:
             {
-                LOG_ERROR(libcomp::String("Unknown skill target type"
-                    " encountered for instant skill execution request: %1\n")
-                    .Arg(targetType));
+                LogSkillManagerError([&]()
+                {
+                    return libcomp::String("Unknown skill target type"
+                        " encountered for instant skill execution "
+                        "request: %1\n")
+                        .Arg(targetType);
+                });
+
                 skillManager->SendFailure(source, skillID, client);
                 return true;
             }

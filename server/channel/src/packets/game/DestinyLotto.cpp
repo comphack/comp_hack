@@ -116,16 +116,24 @@ bool Parsers::DestinyLotto::Parse(libcomp::ManagerPacket *pPacketManager,
         if(it == SVR_CONST.ADJUSTMENT_ITEMS.end() ||
             it->second[0] != 2 || it->second[2] < (int32_t)bonusCount)
         {
-            LOG_ERROR(libcomp::String("Invalid Destiny lotto item or bonus"
-                " count supplied: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Invalid Destiny lotto item or bonus"
+                    " count supplied: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             success = false;
         }
         else if(it->second[1] != 1 && slotSpecified)
         {
-            LOG_ERROR(libcomp::String("Destiny lotto explicit selection"
-                " attempted with invalid assist item selected: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Destiny lotto explicit selection"
+                    " attempted with invalid assist item selected: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             success = false;
         }
         else
@@ -139,15 +147,23 @@ bool Parsers::DestinyLotto::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else if(success && slotSpecified)
     {
-        LOG_ERROR(libcomp::String("Destiny lotto explicit selection"
-            " attempted with no assist item selected: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Destiny lotto explicit selection"
+                " attempted with no assist item selected: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         success = false;
     }
     else if(success && bonusCount)
     {
-        LOG_ERROR(libcomp::String("Destiny bonus count supplied with no"
-            " assist item: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Destiny bonus count supplied with no"
+                " assist item: %1\n").Arg(state->GetAccountUID().ToString());
+        });
+
         success = false;
     }
 

@@ -79,8 +79,12 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
     auto shopData = serverDataManager->GetShopData((uint32_t)shopID);
     if(!shopData)
     {
-        LOG_ERROR(libcomp::String("Unknown shop encountered: %1\n")
-            .Arg(shopID));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Unknown shop encountered: %1\n")
+                .Arg(shopID);
+        });
+
         return true;
     }
 

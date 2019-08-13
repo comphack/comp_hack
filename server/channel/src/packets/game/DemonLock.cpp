@@ -60,8 +60,11 @@ void DemonLockSet(const std::shared_ptr<ChannelClientConnection> client,
     }
     else
     {
-        LOG_DEBUG(libcomp::String("DemonLock request failed. Notifying"
-            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("DemonLock request failed. Notifying"
+                " requestor: %1\n").Arg(state->GetAccountUID().ToString());
+        });
 
         libcomp::Packet err;
         err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);

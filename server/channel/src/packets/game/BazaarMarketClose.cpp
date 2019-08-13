@@ -74,8 +74,12 @@ bool Parsers::BazaarMarketClose::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!bazaarData->Update(server->GetWorldDatabase()))
         {
-            LOG_ERROR(libcomp::String("BazaarMarketClose failed to save: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogBazaarError([&]()
+            {
+                return libcomp::String("BazaarMarketClose failed to save: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             client->Kill();
             return true;
         }

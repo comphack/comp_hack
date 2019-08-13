@@ -522,9 +522,13 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         variantDef->GetInstanceType() == InstanceType_t::DEMON_ONLY &&
         (!dState->GetEntity() || !dState->IsAlive()))
     {
-        LOG_ERROR(libcomp::String("Request to enter a demon only"
-            " zone received with no living demon summoned: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogZoneManagerError([&]()
+        {
+            return libcomp::String("Request to enter a demon only"
+                " zone received with no living demon summoned: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
@@ -629,8 +633,12 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
 
     if(!nextZone->AddConnection(client))
     {
-        LOG_ERROR(libcomp::String("Failed to add client to zone: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogZoneManagerError([&]()
+        {
+            return libcomp::String("Failed to add client to zone: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return false;
     }
@@ -1126,9 +1134,13 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                     {
                         // Sudden disconnects will delay instance cleanup for
                         // 5 minutes
-                        LOG_DEBUG(libcomp::String("Last disconnect occurred"
-                            " in zone instance %1. Access time-out started.\n")
-                            .Arg(instance->GetID()));
+                        LogZoneManagerDebug([&]()
+                        {
+                            return libcomp::String("Last disconnect occurred"
+                                " in zone instance %1. Access time-out "
+                                "started.\n").Arg(instance->GetID());
+                        });
+
                         ScheduleInstanceAccessTimeOut(instance);
                     }
                     else
@@ -1268,8 +1280,12 @@ uint8_t ZoneManager::CreateInstance(
         ->GetDefinitionID());
     if(!def)
     {
-        LOG_ERROR(libcomp::String("Attempted to create invalid zone instance"
-            ": %1\n").Arg(access->GetDefinitionID()));
+        LogZoneManagerError([&]()
+        {
+            return libcomp::String("Attempted to create invalid zone instance"
+                ": %1\n").Arg(access->GetDefinitionID());
+        });
+
         return 0;
     }
 
@@ -1280,8 +1296,12 @@ uint8_t ZoneManager::CreateInstance(
     {
         if(!variant)
         {
-            LOG_ERROR(libcomp::String("Invalid variant encountered during"
-                " instance creation: %1\n").Arg(variantID));
+            LogZoneManagerError([&]()
+            {
+                return libcomp::String("Invalid variant encountered during"
+                    " instance creation: %1\n").Arg(variantID);
+            });
+
             return 0;
         }
 
@@ -1302,9 +1322,13 @@ uint8_t ZoneManager::CreateInstance(
                 access->GetCreateTimerID());
             if(!timeData)
             {
-                LOG_ERROR(libcomp::String("Invalid timer ID specified"
-                    " for instance creation: %1\n").Arg(access
-                    ->GetCreateTimerID()));
+                LogZoneManagerError([&]()
+                {
+                    return libcomp::String("Invalid timer ID specified"
+                        " for instance creation: %1\n")
+                        .Arg(access->GetCreateTimerID());
+                });
+
                 return 0;
             }
         }
@@ -1313,8 +1337,12 @@ uint8_t ZoneManager::CreateInstance(
             // Demon only instances use the timer ID to specify timer color
             // 0 = bronze, 1 = silver, 2 = gold
 
-            LOG_ERROR(libcomp::String("Attempted to specify a timer during"
-                " special instance creation: %1\n").Arg(variantID));
+            LogZoneManagerError([&]()
+            {
+                return libcomp::String("Attempted to specify a timer during"
+                    " special instance creation: %1\n").Arg(variantID);
+            });
+
             return 0;
         }
     }
@@ -1410,9 +1438,13 @@ uint8_t ZoneManager::CreateInstance(
             }
 
             mZoneInstances[id] = instance;
-            LOG_DEBUG(libcomp::String("Creating zone instance: %1 (%2%3)\n")
-                .Arg(id).Arg(def->GetID())
-                .Arg(variantID ? libcomp::String(": %1").Arg(variantID) : ""));
+
+            LogZoneManagerDebug([&]()
+            {
+                return libcomp::String("Creating zone instance: %1 (%2%3)\n")
+                    .Arg(id).Arg(def->GetID()).Arg(variantID ?
+                    libcomp::String(": %1").Arg(variantID) : "");
+            });
         }
 
         if(variant && variant->GetInstanceType() == InstanceType_t::DIASPORA)
@@ -1660,22 +1692,26 @@ bool ZoneManager::MoveToInstance(
                 }
                 else if(!GetMatchStartPosition(client, zone, x, y, rot))
                 {
-                    LOG_WARNING("Failed to find the Diaspora instance starting"
-                        " spot. Using the starting coordinates instead.\n");
+                    LogZoneManagerWarningMsg("Failed to find the Diaspora "
+                        "instance starting spot. Using the starting "
+                        "coordinates instead.\n");
                 }
             }
             else if(zone->GetInstanceType() == InstanceType_t::PVP &&
                 !GetMatchStartPosition(client, zone, x, y, rot))
             {
-                LOG_WARNING("Failed to find the PvP instance starting"
-                    " spot. Using the starting coordinates instead.\n");
+                LogZoneManagerWarningMsg("Failed to find the PvP instance "
+                    "starting spot. Using the starting coordinates instead.\n");
             }
 
             // No need to print the recovery message if no one has entered yet
             if(instance->GetAccessTimeOut() && instance->GetAccessed())
             {
-                LOG_DEBUG(libcomp::String("Zone instance %1 recovered"
-                    " before access expired.\n").Arg(instance->GetID()));
+                LogZoneManagerDebug([&]()
+                {
+                    return libcomp::String("Zone instance %1 recovered"
+                        " before access expired.\n").Arg(instance->GetID());
+                });
             }
 
             return EnterZone(client, zoneDef->GetID(),
@@ -3061,8 +3097,11 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
     auto spawn = zone->GetDefinition()->GetSpawns(spawnID);
     if(!spawn && spawnID)
     {
-        LOG_ERROR(libcomp::String("Failed to load spawn ID %1 in zone %2\n")
-            .Arg(spawnID).Arg(zone->GetDefinitionID()));
+        LogZoneManagerError([&]()
+        {
+            return libcomp::String("Failed to load spawn ID %1 in zone %2\n")
+                .Arg(spawnID).Arg(zone->GetDefinitionID());
+        });
     }
     else if(spawn)
     {
@@ -3116,17 +3155,25 @@ bool ZoneManager::AddEnemiesToZone(
         if(eState->GetEntityType() != EntityType_t::ENEMY &&
             eState->GetEntityType() != EntityType_t::ALLY)
         {
-            LOG_ERROR(libcomp::String("Attempted to add an entity other than"
-                " an enemy or ally via AddEnemiesToZone: %1\n")
-                .Arg(zone->GetDefinitionID()));
+            LogZoneManagerError([&]()
+            {
+                return libcomp::String("Attempted to add an entity other than"
+                    " an enemy or ally via AddEnemiesToZone: %1\n")
+                    .Arg(zone->GetDefinitionID());
+            });
+
             return false;
         }
 
         if(eState->GetZone() != zone)
         {
-            LOG_ERROR(libcomp::String("At least one enemy being added to zone"
-                " %1 was not created there\n")
-                .Arg(zone->GetDefinitionID()));
+            LogZoneManagerError([&]()
+            {
+                return libcomp::String("At least one enemy being added to zone"
+                    " %1 was not created there\n")
+                    .Arg(zone->GetDefinitionID());
+            });
+
             return false;
         }
     }
@@ -3147,8 +3194,11 @@ bool ZoneManager::AddEnemiesToZone(
             // Prepare spawn based AI
             if(!aiManager->Prepare(eState, spawn->GetAIScriptID()))
             {
-                LOG_WARNING(libcomp::String("Failed to prepare AI for"
-                    " enemy: %1\n").Arg(spawn->GetAIScriptID()));
+                LogZoneManagerWarning([&]()
+                {
+                    return libcomp::String("Failed to prepare AI for"
+                        " enemy: %1\n").Arg(spawn->GetAIScriptID());
+                });
             }
         }
         else
@@ -3248,15 +3298,23 @@ bool ZoneManager::AddEnemiesToZone(
     {
         if(!eState)
         {
-            LOG_ERROR(libcomp::String("Attempted to add null enemy to zone"
-                ": %1\n").Arg(zone->GetDefinitionID()));
+            LogZoneManagerError([&]()
+            {
+                return libcomp::String("Attempted to add null enemy to zone"
+                    ": %1\n").Arg(zone->GetDefinitionID());
+            });
+
             return false;
         }
 
         if(zone->GetActiveEntity(eState->GetEntityID()))
         {
-            LOG_ERROR(libcomp::String("Attempted to add enemy to zone twice"
-                ": %1\n").Arg(zone->GetDefinitionID()));
+            LogZoneManagerError([&]()
+            {
+                return libcomp::String("Attempted to add enemy to zone twice"
+                    ": %1\n").Arg(zone->GetDefinitionID());
+            });
+
             return false;
         }
     }
@@ -3510,9 +3568,12 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
             if(!slg)
             {
-                LOG_WARNING(libcomp::String("Skipping invalid spawn location"
-                    " group %1\n")
-                    .Arg(groupPair.first));
+                LogZoneManagerWarning([&]()
+                {
+                    return libcomp::String("Skipping invalid spawn location"
+                        " group %1\n").Arg(groupPair.first);
+                });
+
                 continue;
             }
 
@@ -3553,8 +3614,12 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         auto sg = sgID > 0 ? zoneDef->GetSpawnGroups(sgID) : nullptr;
         if(!sg)
         {
-            LOG_WARNING(libcomp::String("Skipping invalid spawn group %1\n")
-                .Arg(sgID));
+            LogZoneManagerWarning([&]()
+            {
+                return libcomp::String("Skipping invalid spawn group %1\n")
+                    .Arg(sgID);
+            });
+
             continue;
         }
 
@@ -3597,8 +3662,11 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         if(!isSpread && !SelectSpotAndLocation(useSpotID, spotID, spotIDs,
             spot, location, dynamicMap, zoneDef, locations))
         {
-            LOG_ERROR(libcomp::String("Failed to spawn group %1 at"
-                " unknown spot %2\n").Arg(sgID).Arg(spotID));
+            LogZoneManagerError([&]()
+            {
+                return libcomp::String("Failed to spawn group %1 at"
+                    " unknown spot %2\n").Arg(sgID).Arg(spotID);
+            });
 
             continue;
         }
@@ -3613,8 +3681,11 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                 if(isSpread && !SelectSpotAndLocation(useSpotID, spotID,
                     spotIDs, spot, location, dynamicMap, zoneDef, locations))
                 {
-                    LOG_ERROR(libcomp::String("Failed to spawn group %1 at"
-                        " unknown spot %2\n").Arg(sgID).Arg(spotID));
+                    LogZoneManagerError([&]()
+                    {
+                        return libcomp::String("Failed to spawn group %1 at"
+                            " unknown spot %2\n").Arg(sgID).Arg(spotID);
+                    });
 
                     locationFailed = true;
                     break;
@@ -3814,9 +3885,13 @@ bool ZoneManager::MoveToZoneChannel(
         dynamicMapID);
     if(!zoneData)
     {
-        LOG_ERROR(libcomp::String("Attempted to move player to another channel"
-            " for invalid zone %1 (%2): %3\n").Arg(zoneID)
-            .Arg(dynamicMapID).Arg(state->GetAccountUID().ToString()));
+        LogZoneManagerError([&]()
+        {
+            return libcomp::String("Attempted to move player to another channel"
+                " for invalid zone %1 (%2): %3\n").Arg(zoneID)
+                .Arg(dynamicMapID).Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
@@ -3833,19 +3908,27 @@ bool ZoneManager::MoveToZoneChannel(
         auto instAccess = GetInstanceAccess(state->GetWorldCID());
         if(!instAccess)
         {
-            LOG_ERROR(libcomp::String("Attempted to move player to instance"
-                " zone %1 (%2) with no access: %3\n").Arg(zoneID)
-                .Arg(dynamicMapID).Arg(state->GetAccountUID().ToString()));
+            LogZoneManagerError([&]()
+            {
+                return libcomp::String("Attempted to move player to instance"
+                    " zone %1 (%2) with no access: %3\n").Arg(zoneID)
+                    .Arg(dynamicMapID).Arg(state->GetAccountUID().ToString());
+            });
+
             return false;
         }
 
         if(!server->GetServerDataManager()->ExistsInInstance(
             instAccess->GetDefinitionID(), zoneID, dynamicMapID))
         {
-            LOG_ERROR(libcomp::String("Attempted to move player to instance"
-                " zone %1 (%2) that did not match their current access: %3\n")
-                .Arg(zoneID).Arg(dynamicMapID)
-                .Arg(state->GetAccountUID().ToString()));
+            LogZoneManagerError([&]()
+            {
+                return libcomp::String("Attempted to move player to instance"
+                    " zone %1 (%2) that did not match their current access: "
+                    "%3\n").Arg(zoneID).Arg(dynamicMapID)
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             return false;
         }
 
@@ -3870,9 +3953,13 @@ bool ZoneManager::MoveToZoneChannel(
     {
         if(channelLogin->GetToChannel() != (int8_t)channelID)
         {
-            LOG_ERROR(libcomp::String("Attempted to move player to two"
-                " different channels: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogZoneManagerError([&]()
+            {
+                return libcomp::String("Attempted to move player to two"
+                    " different channels: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             return false;
         }
         else
@@ -4180,16 +4267,24 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
 
     if(nullptr == def)
     {
-        LOG_ERROR(libcomp::String("Attempted to spawn invalid demon: %1\n")
-            .Arg(demonID));
+        LogZoneManagerError([&]()
+        {
+            return libcomp::String("Attempted to spawn invalid demon: %1\n")
+                .Arg(demonID);
+        });
+
         return nullptr;
     }
     else if(spawn && spawn->GetBossGroup() && !zone->GetDefinition()
         ->GetGlobalBossGroup())
     {
-        LOG_ERROR(libcomp::String("Attempted to spawn a multi-zone boss in"
-            " an invalid zone %1: %2\n").Arg(zone->GetDefinitionID())
-            .Arg(spawn->GetID()));
+        LogZoneManagerError([&]()
+        {
+            return libcomp::String("Attempted to spawn a multi-zone boss in"
+                " an invalid zone %1: %2\n").Arg(zone->GetDefinitionID())
+                .Arg(spawn->GetID());
+        });
+
         return nullptr;
     }
 
@@ -4562,8 +4657,11 @@ void ZoneManager::HandleTimedActions(const WorldClock& clock,
             {
                 if(fired.find(trigger) != fired.end())
                 {
-                    LOG_DEBUG(libcomp::String("Triggering timed actions"
-                        " in zone %1\n").Arg(zone->GetDefinitionID()));
+                    LogZoneManagerDebug([&]()
+                    {
+                        return libcomp::String("Triggering timed actions"
+                            " in zone %1\n").Arg(zone->GetDefinitionID());
+                    });
 
                     mServer.lock()->GetActionManager()->PerformActions(nullptr,
                         trigger->GetActions(), 0, zone);
@@ -4577,7 +4675,8 @@ void ZoneManager::HandleTimedActions(const WorldClock& clock,
         {
             if(fired.find(trigger) != fired.end())
             {
-                LOG_DEBUG("Triggering global timed actions\n");
+                LogZoneManagerDebugMsg("Triggering global timed actions\n");
+
                 mServer.lock()->GetActionManager()->PerformActions(nullptr,
                     trigger->GetActions(), 0);
             }
@@ -4792,7 +4891,9 @@ bool ZoneManager::ExtendInstanceTimer(const std::shared_ptr<
     case InstanceType_t::DEMON_ONLY:
     case InstanceType_t::DIGITALIZE:
     default:
-        LOG_ERROR("Attempted to extend instance timer of invalid type\n");
+        LogZoneManagerErrorMsg("Attempted to extend instance timer of "
+            "invalid type\n");
+
         return false;
     }
 
@@ -7026,8 +7127,12 @@ void ZoneManager::ScheduleTimerExpiration(const std::shared_ptr<
             if(pInstance && !pInstance->GetTimerStop() &&
                 pInstance->GetTimerExpire() == pExpireTime)
             {
-                LOG_DEBUG(libcomp::String("Expiring instance timer %1: %2\n")
-                    .Arg(pInstance->GetTimerID()).Arg(pInstanceID));
+                LogZoneManagerDebug([&]()
+                {
+                    return libcomp::String("Expiring instance timer %1: %2\n")
+                        .Arg(pInstance->GetTimerID()).Arg(pInstanceID);
+                });
+
                 pZoneManager->StopInstanceTimer(pInstance, pExpireTime);
             }
         }, this, instance->GetID(), expireTime);
@@ -7055,18 +7160,26 @@ bool ZoneManager::ValidateBossGroup(const std::shared_ptr<
                 auto spawn = boss->GetEntity()->GetSpawnSource();
                 if(spawn->GetBossGroup() == groupID)
                 {
-                    LOG_ERROR(libcomp::String("Failed to spawn duplicate"
-                        " global group boss %1 in zone group %2\n")
-                        .Arg(groupID).Arg(zoneGroupID));
+                    LogZoneManagerError([&]()
+                    {
+                        return libcomp::String("Failed to spawn duplicate"
+                            " global group boss %1 in zone group %2\n")
+                            .Arg(groupID).Arg(zoneGroupID);
+                    });
+
                     failed = true;
                     break;
                 }
                 else if(enemyState->GetDevilData() == boss->GetDevilData())
                 {
-                    LOG_ERROR(libcomp::String("Failed to spawn duplicate"
-                        " global group boss type %1 in zone group %2\n")
-                        .Arg(boss->GetEnemyBase()->GetType())
-                        .Arg(zoneGroupID));
+                    LogZoneManagerError([&]()
+                    {
+                        return libcomp::String("Failed to spawn duplicate"
+                            " global group boss type %1 in zone group %2\n")
+                            .Arg(boss->GetEnemyBase()->GetType())
+                            .Arg(zoneGroupID);
+                    });
+
                     failed = true;
                     break;
                 }
@@ -7161,8 +7274,12 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
 
             if(nullptr == zone)
             {
-                LOG_ERROR(libcomp::String("Global zone encountered that has"
-                    " not been instanced: %1\n").Arg(zoneID));
+                LogZoneManagerError([&]()
+                {
+                    return libcomp::String("Global zone encountered that has"
+                        " not been instanced: %1\n").Arg(zoneID);
+                });
+
                 return nullptr;
             }
         }
@@ -7188,18 +7305,26 @@ std::shared_ptr<Zone> ZoneManager::GetZone(uint32_t zoneID,
 
                 if(instanceID == 0)
                 {
-                    LOG_ERROR(libcomp::String("Character attempted to enter a"
-                        " zone instance that does not exist: %1\n")
-                        .Arg(state->GetAccountUID().ToString()));
+                    LogZoneManagerError([&]()
+                    {
+                        return libcomp::String("Character attempted to enter a"
+                            " zone instance that does not exist: %1\n")
+                            .Arg(state->GetAccountUID().ToString());
+                    });
+
                     return nullptr;
                 }
 
                 auto instIter = mZoneInstances.find(instanceID);
                 if(instIter == mZoneInstances.end())
                 {
-                    LOG_ERROR(libcomp::String("Character could not be added to"
-                        " the requested instance: %1\n")
-                        .Arg(state->GetAccountUID().ToString()));
+                    LogZoneManagerError([&]()
+                    {
+                        return libcomp::String("Character could not be added to"
+                            " the requested instance: %1\n")
+                            .Arg(state->GetAccountUID().ToString());
+                    });
+
                     return nullptr;
                 }
 
@@ -7257,8 +7382,11 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
         zone = CreateZone(zoneDefinition, instance);
         if(!instance->AddZone(zone))
         {
-            LOG_ERROR(libcomp::String("Failed to add zone to"
-                " instance: %1 (%2)\n").Arg(zoneID).Arg(dynamicMapID));
+            LogZoneManagerError([&]()
+            {
+                return libcomp::String("Failed to add zone to"
+                    " instance: %1 (%2)\n").Arg(zoneID).Arg(dynamicMapID);
+            });
 
             std::lock_guard<libcomp::Mutex> lock(mLock);
             RemoveZone(zone, false);
@@ -7267,8 +7395,12 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
     }
     else
     {
-        LOG_ERROR(libcomp::String("Attmpted to add invalid zone to"
-            " instance: %1 (%2)\n").Arg(zoneID).Arg(dynamicMapID));
+        LogZoneManagerError([&]()
+        {
+            return libcomp::String("Attmpted to add invalid zone to"
+                " instance: %1 (%2)\n").Arg(zoneID).Arg(dynamicMapID);
+        });
+
         return nullptr;
     }
 
@@ -7459,9 +7591,13 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         if(npc->GetSpotID() && !GetSpotPosition(dynamicMapID, npc->GetSpotID(),
             x, y, rot))
         {
-            LOG_WARNING(libcomp::String("NPC %1 in zone %2 is placed in"
-                " an invalid spot and will be ignored: %3\n")
-                .Arg(npc->GetID()).Arg(zoneStr).Arg(npc->GetSpotID()));
+            LogZoneManagerWarning([&]()
+            {
+                return libcomp::String("NPC %1 in zone %2 is placed in"
+                    " an invalid spot and will be ignored: %3\n")
+                    .Arg(npc->GetID()).Arg(zoneStr).Arg(npc->GetSpotID());
+            });
+
             continue;
         }
 
@@ -7532,9 +7668,13 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         if(obj->GetSpotID() && !GetSpotPosition(dynamicMapID, obj->GetSpotID(),
             x, y, rot))
         {
-            LOG_WARNING(libcomp::String("Object %1 in zone %2 is placed in"
-                " an invalid spot and will be ignored: %3\n")
-                .Arg(obj->GetID()).Arg(zoneStr).Arg(obj->GetSpotID()));
+            LogZoneManagerWarning([&]()
+            {
+                return libcomp::String("Object %1 in zone %2 is placed in"
+                    " an invalid spot and will be ignored: %3\n")
+                    .Arg(obj->GetID()).Arg(zoneStr).Arg(obj->GetSpotID());
+            });
+
             continue;
         }
 
@@ -7565,9 +7705,13 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             if(pSpawn->GetSpotID() && !GetSpotPosition(dynamicMapID,
                 pSpawn->GetSpotID(), x, y, rot))
             {
-                LOG_WARNING(libcomp::String("Plasma %1 in zone %2 is placed"
-                    " in an invalid spot and will be ignored.\n")
-                    .Arg(pSpawn->GetID()).Arg(zoneStr));
+                LogZoneManagerWarning([&]()
+                {
+                    return libcomp::String("Plasma %1 in zone %2 is placed"
+                        " in an invalid spot and will be ignored.\n")
+                        .Arg(pSpawn->GetID()).Arg(zoneStr);
+                });
+
                 continue;
             }
 
@@ -7619,9 +7763,13 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             if(bazaar->GetSpotID() && !GetSpotPosition(dynamicMapID,
                 bazaar->GetSpotID(), x, y, rot))
             {
-                LOG_WARNING(libcomp::String("Bazaar %1 in zone %2 is placed"
-                    " in an invalid spot and will be ignored.\n")
-                    .Arg(bazaar->GetID()).Arg(zoneStr));
+                LogZoneManagerWarning([&]()
+                {
+                    return libcomp::String("Bazaar %1 in zone %2 is placed"
+                        " in an invalid spot and will be ignored.\n")
+                        .Arg(bazaar->GetID()).Arg(zoneStr);
+                });
+
                 continue;
             }
 
@@ -7668,9 +7816,13 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
                 if(machine->GetSpotID() && !GetSpotPosition(dynamicMapID,
                     machine->GetSpotID(), x, y, rot))
                 {
-                    LOG_WARNING(libcomp::String("Culture machine %1 in zone %2"
-                        " is placed in an invalid spot and will be ignored.\n")
-                        .Arg(machine->GetID()).Arg(zoneStr));
+                    LogZoneManagerWarning([&]()
+                    {
+                        return libcomp::String("Culture machine %1 in zone %2"
+                            " is placed in an invalid spot and will be "
+                            "ignored.\n").Arg(machine->GetID()).Arg(zoneStr);
+                    });
+
                     continue;
                 }
 
@@ -7907,9 +8059,13 @@ void ZoneManager::AddPvPBases(const std::shared_ptr<Zone>& zone,
         }
         else
         {
-            LOG_WARNING(libcomp::String("One or more PvP bases could"
-                " not be placed in zone %1 from variant %2\n")
-                .Arg(def->GetID()).Arg(variant->GetID()));
+            LogZoneManagerWarning([&]()
+            {
+                return libcomp::String("One or more PvP bases could"
+                    " not be placed in zone %1 from variant %2\n")
+                    .Arg(def->GetID()).Arg(variant->GetID());
+            });
+
             break;
         }
 
@@ -7976,14 +8132,20 @@ void ZoneManager::AddDiasporaBases(const std::shared_ptr<Zone>& zone)
         float x, y, rot;
         if(!towerData)
         {
-            LOG_WARNING(libcomp::String("Invalid Diaspora base encountered"
-                " in zone %1\n").Arg(def->GetID()));
+            LogZoneManagerWarning([&]()
+            {
+                return libcomp::String("Invalid Diaspora base encountered"
+                    " in zone %1\n").Arg(def->GetID());
+            });
         }
         else if(invalidSpotIDs.find(spotID) != invalidSpotIDs.end())
         {
-            LOG_WARNING(libcomp::String("Diaspora base %1 specified"
-                " multiple times in zone %2\n").Arg(spotID)
-                .Arg(def->GetID()));
+            LogZoneManagerWarning([&]()
+            {
+                return libcomp::String("Diaspora base %1 specified"
+                    " multiple times in zone %2\n").Arg(spotID)
+                    .Arg(def->GetID());
+            });
         }
         else if(GetSpotPosition(def->GetDynamicMapID(), spotID, x, y, rot))
         {
@@ -7993,9 +8155,12 @@ void ZoneManager::AddDiasporaBases(const std::shared_ptr<Zone>& zone)
             dBase->SetBoundObject(spotObjects[spotID]);
             if(!dBase->GetBoundObject())
             {
-                LOG_WARNING(libcomp::String("Diaspora base with no bound"
-                    " server object encountered in zone %1 at spot: %2\n")
-                    .Arg(def->GetID()).Arg(spotID));
+                LogZoneManagerWarning([&]()
+                {
+                    return libcomp::String("Diaspora base with no bound"
+                        " server object encountered in zone %1 at spot: %2\n")
+                        .Arg(def->GetID()).Arg(spotID);
+                });
             }
 
             auto bState = std::make_shared<DiasporaBaseState>(dBase);
@@ -8011,9 +8176,12 @@ void ZoneManager::AddDiasporaBases(const std::shared_ptr<Zone>& zone)
         }
         else
         {
-            LOG_WARNING(libcomp::String("Invalid Diaspora base spot"
-                " %1 encountered in zone %2\n").Arg(spotID)
-                .Arg(def->GetID()));
+            LogZoneManagerWarning([&]()
+            {
+                return libcomp::String("Invalid Diaspora base spot"
+                    " %1 encountered in zone %2\n").Arg(spotID)
+                    .Arg(def->GetID());
+            });
         }
     }
 }
@@ -8207,9 +8375,12 @@ bool ZoneManager::RemoveInstance(uint32_t instanceID)
 
     access->ClearAccessCIDs();
 
-    LOG_DEBUG(libcomp::String("%1 zone instance: %2 (%3)\n")
-        .Arg(instance->GetAccessTimeOut() ? "Expiring" : "Cleaning up")
-        .Arg(instance->GetID()).Arg(instance->GetDefinitionID()));
+    LogZoneManagerDebug([&]()
+    {
+        return libcomp::String("%1 zone instance: %2 (%3)\n")
+            .Arg(instance->GetAccessTimeOut() ? "Expiring" : "Cleaning up")
+            .Arg(instance->GetID()).Arg(instance->GetDefinitionID());
+    });
 
     mZoneInstances.erase(instance->GetID());
 

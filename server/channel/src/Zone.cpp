@@ -601,7 +601,7 @@ void Zone::AddObject(const std::shared_ptr<ServerObjectState>& object)
 {
     mObjects.push_back(object);
     RegisterEntityState(object);
-    
+
     int32_t actorID = object->GetEntity()->GetActorID();
     if(actorID)
     {
@@ -1921,8 +1921,11 @@ void Zone::EnableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
         {
             if(!initializing)
             {
-                LOG_DEBUG(libcomp::String("Enabling spawn group %1 in"
-                    " zone %2\n").Arg(sgID).Arg(GetDefinitionID()));
+                LogZoneManagerDebug([&]()
+                {
+                    return libcomp::String("Enabling spawn group %1 in"
+                        " zone %2\n").Arg(sgID).Arg(GetDefinitionID());
+                });
             }
 
             enabled.insert(sgID);
@@ -2001,8 +2004,11 @@ bool Zone::DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
 
             if(!initializing)
             {
-                LOG_DEBUG(libcomp::String("Disabling spawn group %1 in"
-                    " zone %2\n").Arg(sgID).Arg(GetDefinitionID()));
+                LogZoneManagerDebug([&]()
+                {
+                    return libcomp::String("Disabling spawn group %1 in"
+                        " zone %2\n").Arg(sgID).Arg(GetDefinitionID());
+                });
             }
 
             mDisabledSpawnGroups.insert(sgID);

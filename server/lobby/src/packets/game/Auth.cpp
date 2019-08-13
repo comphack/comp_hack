@@ -84,8 +84,11 @@ static bool CompleteLogin(
 
     if(ErrorCodes_t::SUCCESS == errorCode)
     {
-        LOG_DEBUG(libcomp::String("New SID for user '%1': %2\n"
-            ).Arg(username).Arg(sid2));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("New SID for user '%1': %2\n")
+                .Arg(username).Arg(sid2);
+        });
 
         state(connection)->SetAuthenticated(true);
 
@@ -118,7 +121,10 @@ static bool NoWebAuthParse(const std::shared_ptr<LobbyServer>& server,
         libcomp::Convert::ENCODING_UTF8, true).ToLower();
 
     // Authentication hash provided by the patched client.
-    LOG_DEBUG(libcomp::String("Hash: %1\n").Arg(hash));
+    LogGeneralDebug([&]()
+    {
+        return libcomp::String("Hash: %1\n").Arg(hash);
+    });
 
     // Get the account so we may check the password hash.
     auto account = state(connection)->GetAccount();
@@ -137,8 +143,11 @@ static bool NoWebAuthParse(const std::shared_ptr<LobbyServer>& server,
     // The hash from the client must match for a proper authentication.
     if(hash != challenge)
     {
-        LOG_ERROR(libcomp::String("User '%1' password hash provided by the "
-            "client was not valid: %2\n").Arg(username).Arg(hash));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("User '%1' password hash provided by the "
+                "client was not valid: %2\n").Arg(username).Arg(hash);
+        });
 
         return LoginAuthError(connection, ErrorCodes_t::BAD_USERNAME_PASSWORD);
     }
@@ -154,8 +163,11 @@ static bool WebAuthParse(const std::shared_ptr<LobbyServer>& server,
     libcomp::String sid = p.ReadString16Little(
         libcomp::Convert::ENCODING_UTF8, true).ToLower();
 
-    LOG_DEBUG(libcomp::String("SID for user '%1': %2\n"
-        ).Arg(username).Arg(sid));
+    LogGeneralDebug([&]()
+    {
+        return libcomp::String("SID for user '%1': %2\n")
+            .Arg(username).Arg(sid);
+    });
 
     return CompleteLogin(server, connection, sid, username);
 }

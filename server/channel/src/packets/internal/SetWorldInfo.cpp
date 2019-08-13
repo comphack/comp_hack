@@ -70,8 +70,9 @@ std::shared_ptr<libcomp::Database> ParseDatabase(
 
     if(!dbConfig->LoadPacket(p, false))
     {
-        LOG_CRITICAL("No valid database connection configuration was found"
-            " that matches the configured type.\n");
+        LogGeneralCriticalMsg("No valid database connection configuration was "
+            "found that matches the configured type.\n");
+
         return nullptr;
     }
 
@@ -88,7 +89,7 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
 {
     if(p.Size() == 0)
     {
-        LOG_DEBUG("World Server connection sent an empty response."
+        LogGeneralDebugMsg("World Server connection sent an empty response."
             "  The connection will be closed.\n");
         return false;
     }
@@ -104,8 +105,9 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     auto worldDatabase = ParseDatabase(server, p);
     if(nullptr == worldDatabase)
     {
-        LOG_CRITICAL("World Server supplied database configuration could not"
-            " be initialized as a valid database.\n");
+        LogGeneralCriticalMsg("World Server supplied database configuration "
+            "could not be initialized as a valid database.\n");
+
         return false;
     }
     server->SetWorldDatabase(worldDatabase);
@@ -114,8 +116,9 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     auto lobbyDatabase = ParseDatabase(server, p);
     if(nullptr == lobbyDatabase)
     {
-        LOG_CRITICAL("World Server supplied lobby database configuration could"
-            " not be initialized as a database.\n");
+        LogGeneralCriticalMsg("World Server supplied lobby database "
+            "configuration could not be initialized as a database.\n");
+
         return false;
     }
     server->SetLobbyDatabase(lobbyDatabase);
@@ -124,8 +127,9 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     auto worldSharedConfig = std::make_shared<objects::WorldSharedConfig>();
     if(!worldSharedConfig->LoadPacket(p, false))
     {
-        LOG_CRITICAL("World Server supplied shared configuration could not"
-            " be loaded.\n");
+        LogGeneralCriticalMsg("World Server supplied shared configuration "
+            "could not be loaded.\n");
+
         return false;
     }
 
@@ -137,19 +141,26 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
         worldID);
     if(nullptr == svr)
     {
-        LOG_CRITICAL("World Server could not be loaded from the database.\n");
+        LogGeneralCriticalMsg("World Server could not be loaded from "
+            "the database.\n");
+
         return false;
     }
 
-    LOG_DEBUG(libcomp::String("Updating World Server: (%1) %2\n")
-        .Arg(svr->GetID()).Arg(svr->GetName()));
+    LogGeneralDebug([&]()
+    {
+        return libcomp::String("Updating World Server: (%1) %2\n")
+            .Arg(svr->GetID())
+            .Arg(svr->GetName());
+    });
 
     server->RegisterWorld(svr);
 
     if(!server->RegisterServer(channelID))
     {
-        LOG_CRITICAL("The server failed to register with the world's"
+        LogGeneralCriticalMsg("The server failed to register with the world's"
             " database.\n");
+
         return false;
     }
 

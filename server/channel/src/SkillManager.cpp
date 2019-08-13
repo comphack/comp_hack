@@ -681,7 +681,9 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     auto zone = source ? source->GetZone() : nullptr;
     if(nullptr == zone)
     {
-        LOG_ERROR("Skill activation attempted outside of a zone.\n");
+        LogSkillManagerErrorMsg(
+            "Skill activation attempted outside of a zone.\n");
+
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
         return false;
@@ -714,10 +716,13 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         auto state = client ? client->GetClientState() : nullptr;
         if(state)
         {
-            LOG_ERROR(libcomp::String("Invalid source player entity"
-                " attempted to use skill %1: %2\n")
-                .Arg(skillData->GetCommon()->GetID())
-                .Arg(state->GetAccountUID().ToString()));
+            LogSkillManagerError([&]()
+            {
+                return libcomp::String("Invalid source player entity"
+                    " attempted to use skill %1: %2\n")
+                    .Arg(skillData->GetCommon()->GetID())
+                    .Arg(state->GetAccountUID().ToString());
+            });
         }
 
         SendFailure(activated, client,
@@ -1603,8 +1608,12 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
         activated->GetSourceEntity()) : nullptr;
     if(!source || !zone || source->GetZone() != zone)
     {
-        LOG_DEBUG(libcomp::String("Fizzling starting skill with no source or a"
-            " source not in the skill's zone: %1\n").Arg(pSkill->SkillID));
+        LogSkillManagerDebug([&]()
+        {
+            return libcomp::String("Fizzling starting skill with no source or a"
+                " source not in the skill's zone: %1\n").Arg(pSkill->SkillID);
+        });
+
         return false;
     }
 
@@ -1720,8 +1729,12 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
             // Nothing special to do (for now)
             break;
         default:
-            LOG_ERROR(libcomp::String("Unknown target type encountered: %1\n")
-                .Arg((uint8_t)pSkill->Definition->GetTarget()->GetType()));
+            LogSkillManagerError([&]()
+            {
+                return libcomp::String("Unknown target type encountered: %1\n")
+                    .Arg((uint8_t)pSkill->Definition->GetTarget()->GetType());
+            });
+
             ctx->Fizzle = true;
         }
     }
@@ -1818,8 +1831,12 @@ bool SkillManager::CompleteSkillExecution(
         activated->GetSourceEntity()) : nullptr;
     if(!source || !zone || source->GetZone() != zone)
     {
-        LOG_DEBUG(libcomp::String("Fizzling skill with no source or a"
-            " source not in the skill's zone: %1\n").Arg(pSkill->SkillID));
+        LogSkillManagerDebug([&]()
+        {
+            return libcomp::String("Fizzling skill with no source or a"
+                " source not in the skill's zone: %1\n").Arg(pSkill->SkillID);
+        });
+
         Fizzle(ctx);
         return false;
     }
@@ -2011,10 +2028,12 @@ std::shared_ptr<objects::ActivatedAbility> SkillManager::GetActivation(
     activated = source ? source->GetActivatedAbility() : nullptr;
     if(nullptr == activated || activationID != activated->GetActivationID())
     {
-        // Commenting out because this is way too common during normal combat
-        // between two very active entities
-        /*LOG_ERROR(libcomp::String("Unknown activation ID encountered: %1\n")
-            .Arg(activationID));*/
+        LogSkillManagerDebug([&]()
+        {
+            return libcomp::String("Unknown activation ID encountered: %1\n")
+                .Arg(activationID);
+        });
+
         return nullptr;
     }
 
@@ -2073,7 +2092,9 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
                 activated->GetActivationObjectID())));
             if(demon == nullptr)
             {
-                LOG_ERROR("Attempted to summon a demon that does not exist.\n");
+                LogSkillManagerErrorMsg(
+                    "Attempted to summon a demon that does not exist.\n");
+
                 SendFailure(activated, client,
                     (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
                 return false;
@@ -2134,8 +2155,9 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
                 activated->GetActivationObjectID())));
             if(demon == nullptr)
             {
-                LOG_ERROR("Attempted to digitalize with a demon that does not"
-                    " exist.\n");
+                LogSkillManagerErrorMsg("Attempted to digitalize with a demon "
+                    "that does not exist.\n");
+
                 SendFailure(activated, client,
                     (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
                 return false;
@@ -2339,7 +2361,8 @@ bool SkillManager::DetermineNormalCosts(
             {
                 if(percentCost)
                 {
-                    LOG_ERROR("Item percent cost encountered.\n");
+                    LogSkillManagerErrorMsg("Item percent cost encountered.\n");
+
                     return false;
                 }
                 else
@@ -2358,7 +2381,9 @@ bool SkillManager::DetermineNormalCosts(
             {
                 if(percentCost)
                 {
-                    LOG_ERROR("Bullet percent cost encountered.\n");
+                    LogSkillManagerErrorMsg(
+                        "Bullet percent cost encountered.\n");
+
                     return false;
                 }
                 else
@@ -2368,8 +2393,12 @@ bool SkillManager::DetermineNormalCosts(
             }
             break;
         default:
-            LOG_ERROR(libcomp::String("Unsupported cost type"
-                " encountered: %1\n").Arg((uint8_t)cost->GetType()));
+            LogSkillManagerError([&]()
+            {
+                return libcomp::String("Unsupported cost type"
+                    " encountered: %1\n").Arg((uint8_t)cost->GetType());
+            });
+
             return false;
         }
     }
@@ -2847,8 +2876,13 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             }
             break;
         default:
-            LOG_ERROR(libcomp::String("Unsupported skill area type"
-                " encountered: %1\n").Arg((uint8_t)skillRange->GetAreaType()));
+            LogSkillManagerError([&]()
+            {
+                return libcomp::String("Unsupported skill area type"
+                    " encountered: %1\n")
+                    .Arg((uint8_t)skillRange->GetAreaType());
+            });
+
             Fizzle(ctx);
             return false;
         }
@@ -2948,8 +2982,12 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         }
         break;
     default:
-        LOG_ERROR(libcomp::String("Unsupported skill valid target type encountered: %1\n")
-            .Arg((uint8_t)validType));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Unsupported skill valid target type "
+                "encountered: %1\n").Arg((uint8_t)validType);
+        });
+
         Fizzle(ctx);
         return false;
     }
@@ -3141,8 +3179,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         auto battleDamage = damageData->GetBattleDamage();
         if(!CalculateDamage(source, pSkill))
         {
-            LOG_ERROR(libcomp::String("Damage failed to calculate: %1\n")
-                .Arg(skill.SkillID));
+            LogSkillManagerError([&]()
+            {
+                return libcomp::String("Damage failed to calculate: %1\n")
+                    .Arg(skill.SkillID);
+            });
+
             return;
         }
 
@@ -4986,9 +5028,13 @@ uint16_t SkillManager::CalculateOffenseValue(
             break;
         case 5:
         default:
-            LOG_ERROR(libcomp::String("Invalid dependency type for"
-                " damage calculation encountered: %1\n")
-                .Arg(skill.EffectiveDependencyType));
+            LogSkillManagerError([&]()
+            {
+                return libcomp::String("Invalid dependency type for"
+                    " damage calculation encountered: %1\n")
+                    .Arg(skill.EffectiveDependencyType);
+            });
+
             return false;
         }
     }
@@ -5374,7 +5420,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
             }
         }
     }
-    
+
     std::unordered_map<uint32_t, double> addStatusMap;
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiAddStatusTbl>> addStatusDefs;
@@ -5473,7 +5519,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
                 }
             }
         }
-        
+
         uint8_t statusCategory = statusDef->GetCommon()->GetCategory()
             ->GetMainCategory();
         uint8_t statusSubCategory = statusDef->GetCommon()->GetCategory()
@@ -7152,7 +7198,7 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
             {
                 talkPoints.first = (uint8_t)(affThreshold - 1);
             }
-            
+
             if(talkPoints.second >= fearThreshold)
             {
                 talkPoints.second = (uint8_t)(fearThreshold - 1);
@@ -7467,12 +7513,12 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
                 delayedLootEntityIDs[delayedLootTime].push_back(lootEntityID);
             }
         }
-        
+
         for(auto pair : lootTimeEntityIDs)
         {
             zoneManager->ScheduleEntityRemoval(pair.first, zone, pair.second, 13);
         }
-        
+
         for(auto pair : delayedLootEntityIDs)
         {
             ScheduleFreeLoot(pair.first, zone, pair.second, sourcePartyMembers);
@@ -8189,8 +8235,12 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 mod2, target.Damage2Type, target.EntityState->GetMaxMP());
             break;
         default:
-            LOG_ERROR(libcomp::String("Unknown damage formula type encountered: %1\n")
-                .Arg((uint8_t)formula));
+            LogSkillManagerError([&]()
+            {
+                return libcomp::String("Unknown damage formula type "
+                    "encountered: %1\n").Arg((uint8_t)formula);
+            });
+
             return false;
         }
 
@@ -10026,8 +10076,11 @@ bool SkillManager::DigitalizeCancel(
     {
         if(!mServer.lock()->GetCharacterManager()->DigitalizeEnd(client))
         {
-            LOG_ERROR(libcomp::String("Digitalize cancellation failed: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogSkillManagerError([&]()
+            {
+                return libcomp::String("Digitalize cancellation failed: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
         }
     }
     else
@@ -10227,7 +10280,7 @@ bool SkillManager::FamiliarityUp(
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
     auto skillData = activated->GetSkillData();
-    
+
     // Present is retrieved after updating the familiarity for an update but
     // the skill errors if any present will be given based on the starting
     // familiarity level and there is no inventory space open
@@ -10594,8 +10647,12 @@ bool SkillManager::MinionSpawn(
     auto slg = zoneDef->GetSpawnLocationGroups((uint32_t)params[1]);
     if(!slg)
     {
-        LOG_ERROR(libcomp::String("Failed to use MinionSpawn skill from"
-            " invalid SpawnLocationGroup: %1\n").Arg(params[1]));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Failed to use MinionSpawn skill from"
+                " invalid SpawnLocationGroup: %1\n").Arg(params[1]);
+        });
+
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
@@ -10604,14 +10661,18 @@ bool SkillManager::MinionSpawn(
     if(ProcessSkillResult(activated, ctx))
     {
         auto zoneManager = mServer.lock()->GetZoneManager();
-        
+
         uint32_t sgID = libcomp::Randomizer::GetEntry(slg->GetGroupIDs());
 
         auto spawnGroup = zoneDef->GetSpawnGroups(sgID);
         if(!spawnGroup)
         {
-            LOG_ERROR(libcomp::String("Invalid spawn group ID for MinionSpawn"
-                " skill: %1\n").Arg(sgID));
+            LogSkillManagerError([&]()
+            {
+                return libcomp::String("Invalid spawn group ID for MinionSpawn"
+                    " skill: %1\n").Arg(sgID);
+            });
+
             return false;
         }
 
@@ -10624,8 +10685,12 @@ bool SkillManager::MinionSpawn(
             auto spawn = zoneDef->GetSpawns(spawnPair.first);
             if(!spawn)
             {
-                LOG_ERROR(libcomp::String("Invalid spawn ID for MinionSpawn"
-                    " skill: %1\n").Arg(spawnPair.first));
+                LogSkillManagerError([&]()
+                {
+                    return libcomp::String("Invalid spawn ID for MinionSpawn"
+                        " skill: %1\n").Arg(spawnPair.first);
+                });
+
                 continue;
             }
 
@@ -10648,8 +10713,11 @@ bool SkillManager::MinionSpawn(
                 }
                 else
                 {
-                    LOG_ERROR(libcomp::String("Failed to create enemy for"
-                        " MinionSpawn skill: %1\n").Arg(spawnPair.first));
+                    LogSkillManagerError([&]()
+                    {
+                        return libcomp::String("Failed to create enemy for"
+                            " MinionSpawn skill: %1\n").Arg(spawnPair.first);
+                    });
                 }
             }
         }
@@ -11298,8 +11366,12 @@ bool SkillManager::Spawn(
     auto spawnGroup = globalDef ? globalDef->GetSpawnGroups(sgID) : nullptr;
     if(!spawnGroup)
     {
-        LOG_ERROR(libcomp::String("Failed to use Spawn skill from invalid"
-            " global SpawnGroup: %1\n").Arg(sgID));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Failed to use Spawn skill from invalid"
+                " global SpawnGroup: %1\n").Arg(sgID);
+        });
+
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
@@ -11323,8 +11395,12 @@ bool SkillManager::Spawn(
             auto spawn = globalDef->GetSpawns(spawnPair.first);
             if(!spawn)
             {
-                LOG_ERROR(libcomp::String("Invalid spawn ID for Spawn"
-                    " skill: %1\n").Arg(spawnPair.first));
+                LogSkillManagerError([&]()
+                {
+                    return libcomp::String("Invalid spawn ID for Spawn"
+                        " skill: %1\n").Arg(spawnPair.first);
+                });
+
                 continue;
             }
 
@@ -11357,18 +11433,24 @@ bool SkillManager::Spawn(
                 }
                 else
                 {
-                    LOG_ERROR(libcomp::String("Failed to create enemy for"
-                        " Spawn skill: %1\n").Arg(spawnPair.first));
+                    LogSkillManagerError([&]()
+                    {
+                        return libcomp::String("Failed to create enemy for"
+                            " Spawn skill: %1\n").Arg(spawnPair.first);
+                    });
                 }
             }
         }
 
         if(client)
         {
-            LOG_DEBUG(libcomp::String("Global spawn group %1 created by"
-                " player in zone %2: %3\n").Arg(spawnGroup->GetID())
-                .Arg(zone->GetDefinitionID())
-                .Arg(client->GetClientState()->GetAccountUID().ToString()));
+            LogSkillManagerDebug([&]()
+            {
+                return libcomp::String("Global spawn group %1 created by"
+                    " player in zone %2: %3\n").Arg(spawnGroup->GetID())
+                    .Arg(zone->GetDefinitionID())
+                    .Arg(client->GetClientState()->GetAccountUID().ToString());
+            });
         }
 
         std::list<std::shared_ptr<objects::Action>> empty;
@@ -11418,8 +11500,12 @@ bool SkillManager::SpawnZone(
     auto spawnGroup = zoneDef->GetSpawnGroups((uint32_t)params[1]);
     if(!spawnGroup)
     {
-        LOG_ERROR(libcomp::String("Failed to use SpawnZone skill from invalid"
-            " global SpawnGroup: %1\n").Arg(params[1]));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Failed to use SpawnZone skill from invalid"
+                " global SpawnGroup: %1\n").Arg(params[1]);
+        });
+
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
@@ -11445,8 +11531,12 @@ bool SkillManager::SpawnZone(
             auto spawn = zoneDef->GetSpawns(spawnPair.first);
             if(!spawn)
             {
-                LOG_ERROR(libcomp::String("Invalid spawn ID for SpawnZone"
-                    " skill: %1\n").Arg(spawnPair.first));
+                LogSkillManagerError([&]()
+                {
+                    return libcomp::String("Invalid spawn ID for SpawnZone"
+                        " skill: %1\n").Arg(spawnPair.first);
+                });
+
                 continue;
             }
 
@@ -11474,18 +11564,24 @@ bool SkillManager::SpawnZone(
                 }
                 else
                 {
-                    LOG_ERROR(libcomp::String("Failed to create enemy for"
-                        " SpawnZone skill: %1\n").Arg(spawnPair.first));
+                    LogSkillManagerError([&]()
+                    {
+                        return libcomp::String("Failed to create enemy for"
+                            " SpawnZone skill: %1\n").Arg(spawnPair.first);
+                    });
                 }
             }
         }
 
         if(client)
         {
-            LOG_DEBUG(libcomp::String("Zone spawn group %1 created by"
-                " player in zone %2: %3\n").Arg(spawnGroup->GetID())
-                .Arg(zone->GetDefinitionID())
-                .Arg(client->GetClientState()->GetAccountUID().ToString()));
+            LogSkillManagerDebug([&]()
+            {
+                return libcomp::String("Zone spawn group %1 created by"
+                    " player in zone %2: %3\n").Arg(spawnGroup->GetID())
+                    .Arg(zone->GetDefinitionID())
+                    .Arg(client->GetClientState()->GetAccountUID().ToString());
+            });
         }
 
         std::list<std::shared_ptr<objects::Action>> empty;
@@ -11518,8 +11614,11 @@ bool SkillManager::SummonDemon(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID))) : nullptr;
     if(!demon)
     {
-        LOG_ERROR(libcomp::String("Invalid demon specified to summon on"
-            " account: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Invalid demon specified to summon on"
+                " account: %1\n").Arg(state->GetAccountUID().ToString());
+        });
 
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::SUMMON_INVALID);
@@ -11585,8 +11684,11 @@ bool SkillManager::StoreDemon(
     auto demonID = activated->GetActivationObjectID();
     if(demonID <= 0)
     {
-        LOG_ERROR(libcomp::String("Invalid demon specified to store: %1\n")
-            .Arg(demonID));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Invalid demon specified to store: %1\n")
+                .Arg(demonID);
+        });
 
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::PARTNER_MISSING);

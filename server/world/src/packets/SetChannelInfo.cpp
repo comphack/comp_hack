@@ -52,8 +52,9 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(p.Size() == 0)
     {
-        LOG_DEBUG("Channel Server connection sent an empty response."
+        LogGeneralDebugMsg("Channel Server connection sent an empty response."
             "  The connection will be closed.\n");
+
         connection->Close();
         return false;
     }
@@ -64,8 +65,9 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         ->GetServer());
     if(server->GetChannelConnectionByID((int8_t)channelID))
     {
-        LOG_DEBUG("The ID of the channel requesting a connection does not"
+        LogGeneralDebugMsg("The ID of the channel requesting a connection does not"
             " match an available channel ID.\n");
+
         connection->Close();
         return true;
     }
@@ -78,9 +80,12 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
     connection->SetName(libcomp::String("%1:%2:%3").Arg(
         connection->GetName()).Arg(svr->GetID()).Arg(svr->GetName()));
 
-    LOG_DEBUG(libcomp::String("Updating Channel Server: (%1) %2\n")
-        .Arg(svr->GetID())
-        .Arg(svr->GetName()));
+    LogGeneralDebug([&]()
+    {
+        return libcomp::String("Updating Channel Server: (%1) %2\n")
+            .Arg(svr->GetID())
+            .Arg(svr->GetName());
+    });
 
     // If the channel has already set the IP, it should be the externally
     // facing IP so we'll leave it alone
@@ -89,7 +94,9 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         svr->SetIP(connection->GetRemoteAddress());
         if(!svr->Update(worldDB))
         {
-            LOG_DEBUG("Channel Server could not be updated with its address.\n");
+            LogGeneralDebugMsg(
+                "Channel Server could not be updated with its address.\n");
+
             return false;
         }
     }

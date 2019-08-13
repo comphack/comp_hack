@@ -62,8 +62,12 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     auto eState = state->GetEntityState(entityID, false);
     if(nullptr == eState)
     {
-        LOG_ERROR(libcomp::String("Invalid entity ID received from a move"
-            " request: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid entity ID received from a move"
+                " request: %1\n").Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }
@@ -121,17 +125,24 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
             switch(result)
             {
             case 1:
-                LOG_DEBUG(libcomp::String("Player movement rolled-back in"
-                    " zone %1: %2\n").Arg(zone->GetDefinitionID())
-                    .Arg(state->GetAccountUID().ToString()));
+                LogGeneralDebug([&]()
+                {
+                    return libcomp::String("Player movement rolled-back in"
+                        " zone %1: %2\n").Arg(zone->GetDefinitionID())
+                        .Arg(state->GetAccountUID().ToString());
+                });
+
                 break;
             case 2:
-                LOG_DEBUG(libcomp::String("Player movement corrected in"
-                    " zone %1: %2 ([%3, %4] => [%5, %6] to [%7, %8])\n")
-                    .Arg(zone->GetDefinitionID())
-                    .Arg(state->GetAccountUID().ToString())
-                    .Arg(src.x).Arg(src.y).Arg(destX).Arg(destY)
-                    .Arg(dest.x).Arg(dest.y));
+                LogGeneralDebug([&]()
+                {
+                    return libcomp::String("Player movement corrected in"
+                        " zone %1: %2 ([%3, %4] => [%5, %6] to [%7, %8])\n")
+                        .Arg(zone->GetDefinitionID())
+                        .Arg(state->GetAccountUID().ToString())
+                        .Arg(src.x).Arg(src.y).Arg(destX).Arg(destY)
+                        .Arg(dest.x).Arg(dest.y);
+                });
                 break;
             default:
                 break;

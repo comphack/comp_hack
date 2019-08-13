@@ -250,8 +250,12 @@ bool CharacterManager::SendToRelatedCharacters(libcomp::Packet& p,
     auto cLogin = GetCharacterLogin(worldCID);
     if(!cLogin)
     {
-        LOG_ERROR(libcomp::String("Invalid world CID encountered: %1\n")
-            .Arg(worldCID));
+        LogCharacterManagerError([&]()
+        {
+            return libcomp::String("Invalid world CID encountered: %1\n")
+                .Arg(worldCID);
+        });
+
         return false;
     }
 
@@ -287,7 +291,7 @@ std::list<std::shared_ptr<objects::CharacterLogin>>
     if(relatedTypes & RELATED_FRIENDS)
     {
         std::shared_ptr<objects::FriendSettings> fSettings;
-        
+
         // If the character is currently loaded on the server, pull the friend
         // settings directly from it so we don't need to load every time
         auto character = cLogin->GetCharacter().Get();
@@ -297,9 +301,12 @@ std::list<std::shared_ptr<objects::CharacterLogin>>
             fSettings = character->GetFriendSettings().Get(worldDB);
             if(!fSettings && !character->GetFriendSettings().IsNull())
             {
-                LOG_ERROR(libcomp::String("Failed to get friend settings. "
-                    "Character UUID: %1\n").Arg(cLogin->GetCharacter().GetUUID()
-                        .ToString()));
+                LogCharacterManagerError([&]()
+                {
+                    return libcomp::String(
+                        "Failed to get friend settings. Character UUID: %1\n")
+                        .Arg(cLogin->GetCharacter().GetUUID().ToString());
+                });
             }
         }
         else
@@ -1280,9 +1287,13 @@ void CharacterManager::RecalculateClanLevel(int32_t clanID, bool sendUpdate)
 
             if(!character)
             {
-                LOG_WARNING(libcomp::String("Invalid clan member encountered"
-                    " on clan '%1' with UID: %2\n").Arg(clan->GetName())
-                    .Arg(memberRef.GetUUID().ToString()));
+                LogCharacterManagerWarning([&]()
+                {
+                    return libcomp::String("Invalid clan member encountered"
+                        " on clan '%1' with UID: %2\n").Arg(clan->GetName())
+                        .Arg(memberRef.GetUUID().ToString());
+                });
+
                 continue;
             }
 
@@ -1956,9 +1967,13 @@ bool CharacterManager::TeamZiotiteUpdate(int32_t teamID,
     auto team = GetTeam(teamID);
     if(!team || (source && source->GetTeamID() != teamID))
     {
-        LOG_ERROR(libcomp::String("Ziotite could not be updated"
-            " for invalid team from character: %1\n").Arg(source
-                ? source->GetCharacter().GetUUID().ToString() : "NONE"));
+        LogCharacterManagerError([&]()
+        {
+            return libcomp::String("Ziotite could not be updated"
+                " for invalid team from character: %1\n").Arg(source
+                ? source->GetCharacter().GetUUID().ToString() : "NONE");
+        });
+
         return false;
     }
     else if(team->GetCategory() != objects::Team::Category_t::CATHEDRAL)
@@ -2217,10 +2232,13 @@ bool CharacterManager::RemoveFromClan(std::shared_ptr<objects::CharacterLogin> c
                 }
                 else
                 {
-                    LOG_ERROR(libcomp::String("Invalid clan member %1"
-                        " encountered on clan %1\n")
-                        .Arg(mRef.GetUUID().ToString())
-                        .Arg(clan->GetUUID().ToString()));
+                    LogCharacterManagerError([&]()
+                    {
+                        return libcomp::String("Invalid clan member %1"
+                            " encountered on clan %1\n")
+                            .Arg(mRef.GetUUID().ToString())
+                            .Arg(clan->GetUUID().ToString());
+                    });
                 }
 
                 idx++;

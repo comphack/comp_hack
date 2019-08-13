@@ -52,12 +52,17 @@ bool Parsers::SkillCancel::Parse(libcomp::ManagerPacket *pPacketManager,
 
     int32_t sourceEntityID = p.ReadS32Little();
     int8_t activationID = p.ReadS8();
-    
+
     auto source = state->GetEntityState(sourceEntityID);
     if(!source)
     {
-        LOG_ERROR(libcomp::String("Invalid skill source sent from client for"
-            " skill cancellation: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Invalid skill source sent from client for"
+                " skill cancellation: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }

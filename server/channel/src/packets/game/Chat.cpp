@@ -67,7 +67,7 @@ bool Parsers::Chat::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!chatManager->HandleGMand(client, line) &&
         !chatManager->SendChatMessage(client, (ChatType_t)chatchannel, line))
     {
-        LOG_ERROR("Chat message could not be sent.\n");
+        LogChatManagerErrorMsg("Chat message could not be sent.\n");
     }
 
     return true;

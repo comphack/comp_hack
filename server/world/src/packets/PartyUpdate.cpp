@@ -135,7 +135,7 @@ void PartyDropRule(std::shared_ptr<WorldServer> server,
     {
         responseCode = (uint16_t)PartyErrorCodes_t::SUCCESS;
     }
-    
+
     libcomp::Packet relay;
     WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_DROP_RULE);
@@ -222,7 +222,8 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     if(p.Size() < 5)
     {
-        LOG_ERROR("Invalid packet data sent to PartyUpdate\n");
+        LogPartyErrorMsg("Invalid packet data sent to PartyUpdate\n");
+
         return false;
     }
 
@@ -241,15 +242,23 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             auto member = std::make_shared<objects::PartyCharacter>();
             if(!member->LoadPacket(p, false))
             {
-                LOG_ERROR(libcomp::String("Party member data failed to load"
-                    " for command %1\n").Arg(mode));
+                LogPartyError([&]()
+                {
+                    return libcomp::String("Party member data failed to load"
+                        " for command %1\n").Arg(mode);
+                });
+
                 return false;
             }
 
             if(p.Left() < 2 || (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
             {
-                LOG_ERROR(libcomp::String("Missing target name parameter"
-                    " for command %1\n").Arg(mode));
+                LogPartyError([&]()
+                {
+                    return libcomp::String("Missing target name parameter"
+                        " for command %1\n").Arg(mode);
+                });
+
                 return false;
             }
 
@@ -272,8 +281,9 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                 // Party invite accept
                 if(p.Left() != 4)
                 {
-                    LOG_ERROR("Missing party ID parameter for party invite"
-                        " accept command\n");
+                    LogPartyErrorMsg("Missing party ID parameter for party "
+                        "invite accept command\n");
+
                     return false;
                 }
 
@@ -289,7 +299,7 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                         targetName, partyID, connection);
                 }
             }
-            
+
             return true;
         }
         break;
@@ -299,11 +309,16 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     int32_t cid = p.ReadS32Little();
-   
+
     auto cLogin = server->GetCharacterManager()->GetCharacterLogin(cid);
     if(!cLogin)
     {
-        LOG_ERROR(libcomp::String("Invalid world CID sent to PartyUpdate: %1\n").Arg(cid));
+        LogPartyError([&]()
+        {
+            return libcomp::String("Invalid world CID sent to "
+                "PartyUpdate: %1\n").Arg(cid);
+        });
+
         return false;
     }
 
@@ -313,7 +328,9 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(p.Left() < 2 || (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
             {
-                LOG_ERROR("Missing source name parameter for party invite cancel command\n");
+                LogPartyErrorMsg("Missing source name parameter for party "
+                    "invite cancel command\n");
+
                 return false;
             }
 
@@ -322,7 +339,9 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(p.Left() < 2 || (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
             {
-                LOG_ERROR("Missing target name parameter for party invite cancel command\n");
+                LogPartyErrorMsg("Missing target name parameter for party "
+                    "invite cancel command\n");
+
                 return false;
             }
 
@@ -331,8 +350,12 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(p.Left() != 4)
             {
-                LOG_ERROR(libcomp::String("Missing party ID parameter"
-                    " for command %1\n").Arg(mode));
+                LogPartyError([&]()
+                {
+                    return libcomp::String("Missing party ID parameter"
+                        " for command %1\n").Arg(mode);
+                });
+
                 return false;
             }
 
@@ -350,7 +373,9 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(p.Left() != 4)
             {
-                LOG_ERROR("Missing leader CID parameter for party leader update command\n");
+                LogPartyErrorMsg("Missing leader CID parameter for party "
+                    "leader update command\n");
+
                 return false;
             }
 
@@ -363,7 +388,9 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(p.Left() != 1)
             {
-                LOG_ERROR("Missing rule parameter for party drop rule command\n");
+                LogPartyErrorMsg(
+                    "Missing rule parameter for party drop rule command\n");
+
                 return false;
             }
 
@@ -375,7 +402,9 @@ bool Parsers::PartyUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(p.Left() != 4)
             {
-                LOG_ERROR("Missing target CID parameter for party kick command\n");
+                LogPartyErrorMsg(
+                    "Missing target CID parameter for party kick command\n");
+
                 return false;
             }
 

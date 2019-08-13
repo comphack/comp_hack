@@ -46,7 +46,7 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
 {
     if(p.Size() == 0)
     {
-        LOG_DEBUG("World Server connection sent an empty response."
+        LogGeneralDebugMsg("World Server connection sent an empty response."
             "  The connection will be closed.\n");
         return false;
     }
@@ -79,8 +79,9 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
 
     if(!dbConfig->LoadPacket(p, false))
     {
-        LOG_CRITICAL("World Server did not supply a valid database connection configuration"
-            " that matches the configured type.\n");
+        LogGeneralCriticalMsg("World Server did not supply a valid database "
+            "connection configuration that matches the configured type.\n");
+
         return false;
     }
 
@@ -91,7 +92,9 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     auto worldDatabase = server->GetDatabase(configMap, false);
     if(nullptr == worldDatabase)
     {
-        LOG_CRITICAL("World Server's database could not be initialized.\n");
+        LogGeneralCriticalMsg(
+            "World Server's database could not be initialized.\n");
+
         return false;
     }
 
@@ -105,8 +108,12 @@ bool SetWorldInfoFromPacket(libcomp::ManagerPacket *pPacketManager,
     connection->SetName(libcomp::String("world:%1:%2").Arg(svr->GetID()).Arg(
         svr->GetName()));
 
-    LOG_DEBUG(libcomp::String("Updating World Server: (%1) %2\n")
-        .Arg(svr->GetID()).Arg(svr->GetName()));
+    LogGeneralDebug([&]()
+    {
+        return libcomp::String("Updating World Server: (%1) %2\n")
+            .Arg(svr->GetID())
+            .Arg(svr->GetName());
+    });
 
     auto world = server->GetWorldByConnection(iConnection);
     world->SetWorldDatabase(worldDatabase);

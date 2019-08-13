@@ -67,7 +67,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
 {
     const libcomp::Message::ConnectionMessage *cMessage = dynamic_cast<
         const libcomp::Message::ConnectionMessage*>(pMessage);
-    
+
     switch(cMessage->GetConnectionMessageType())
     {
         case libcomp::Message::ConnectionMessageType::CONNECTION_MESSAGE_ENCRYPTED:
@@ -81,7 +81,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 {
                     RequestWorldInfo();
                 }
-        
+
                 return true;
             }
             break;
@@ -100,7 +100,9 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
 
                 if(mWorldConnection == connection)
                 {
-                    LOG_INFO("World connection closed. Shutting down.\n");
+                    LogConnectionInfoMsg(
+                        "World connection closed. Shutting down.\n");
+
                     server->Shutdown();
                 }
 
@@ -110,7 +112,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
         default:
             break;
     }
-    
+
     return false;
 }
 
@@ -267,7 +269,9 @@ std::list<std::shared_ptr<ChannelClientConnection>>
 
     if(p.Left() < 2 || p.Left() < (2 + (uint32_t)(p.PeekU16Little() * 4)))
     {
-        LOG_ERROR("Invalid CID count received for world target entity list.\n");
+        LogConnectionErrorMsg(
+            "Invalid CID count received for world target entity list.\n");
+
         return results;
     }
 
@@ -372,8 +376,11 @@ void ManagerConnection::HandleClientTimeouts(uint64_t now, uint16_t timeout)
     {
         for(auto timedOut : timeOuts)
         {
-            LOG_ERROR(libcomp::String(
-                "Client connection timed out: %1\n").Arg(timedOut));
+            LogConnectionError([&]()
+            {
+                return libcomp::String("Client connection timed out: %1\n")
+                    .Arg(timedOut);
+            });
 
             libcomp::Packet p;
             p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);

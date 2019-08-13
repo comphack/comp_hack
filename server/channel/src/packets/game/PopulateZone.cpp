@@ -58,9 +58,13 @@ bool Parsers::PopulateZone::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(entityID != cEntityID)
     {
-        LOG_ERROR(libcomp::String("PopulateZone request sent with an"
-            " entity ID not matching the client connection: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogZoneManagerError([&]()
+        {
+            return libcomp::String("PopulateZone request sent with an"
+                " entity ID not matching the client connection: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }
@@ -74,9 +78,13 @@ bool Parsers::PopulateZone::Parse(libcomp::ManagerPacket *pPacketManager,
                     {
                         auto pState = pClient->GetClientState();
                         auto uuid = pState ? pState->GetAccountUID() : NULLUUID;
-                        LOG_ERROR(libcomp::String("PopulateZone response"
-                            " failed to send data for account: %1\n")
-                            .Arg(uuid.ToString()));
+
+                        LogZoneManagerError([&]()
+                        {
+                            return libcomp::String("PopulateZone response"
+                                " failed to send data for account: %1\n")
+                                .Arg(uuid.ToString());
+                        });
                     }
                 }, server->GetZoneManager(), client);
 

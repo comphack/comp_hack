@@ -119,9 +119,12 @@ bool Parsers::MaterialInsert::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else if(!triggerDef)
     {
-        LOG_ERROR(libcomp::String("Player '%1' attempted to insert a non-material"
-            " item into the material container: %2\n")
-            .Arg(state->GetAccountUID().ToString()).Arg(itemType));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Player '%1' attempted to insert a "
+                "non-material item into the material container: %2\n")
+                .Arg(state->GetAccountUID().ToString()).Arg(itemType);
+        });
     }
 
     libcomp::Packet reply;

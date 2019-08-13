@@ -76,8 +76,11 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(!world)
     {
-        LOG_ERROR(libcomp::String("Tried to create character on world with "
-            "ID %1 but that world was not found.\n").Arg(worldID));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Tried to create character on world with "
+                "ID %1 but that world was not found.\n").Arg(worldID);
+        });
 
         return false;
     }
@@ -102,20 +105,32 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     uint32_t errorCode = 0;
     if(nextCID == characters.size())
     {
-        LOG_ERROR(libcomp::String("No new characters can be created for account %1\n")
-            .Arg(account->GetUUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("No new characters can be created for "
+                "account %1\n").Arg(account->GetUUID().ToString());
+        });
+
         errorCode = static_cast<uint32_t>(ErrorCodes_t::NO_EMPTY_CHARACTER_SLOTS);
     }
     else if(ticketCount == 0)
     {
-        LOG_ERROR(libcomp::String("No character tickets available for account %1\n")
-            .Arg(account->GetUUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("No character tickets available for "
+                "account %1\n").Arg(account->GetUUID().ToString());
+        });
+
         errorCode = static_cast<uint32_t>(ErrorCodes_t::NEED_CHARACTER_TICKET);
     }
     else if(nullptr != objects::Character::LoadCharacterByName(worldDB, name))
     {
-        LOG_ERROR(libcomp::String("Invalid character name entered for account %1\n")
-            .Arg(account->GetUUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid character name entered for "
+                "account %1\n").Arg(account->GetUUID().ToString());
+        });
+
         errorCode = static_cast<uint32_t>(ErrorCodes_t::BAD_CHARACTER_NAME);
     }
     else if(!config->GetCharacterNameRegex().IsEmpty())
@@ -125,8 +140,13 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         std::regex toFind(config->GetCharacterNameRegex().C());
         if(!std::regex_match(input, match, toFind))
         {
-            LOG_ERROR(libcomp::String("Invalid character name entered for"
-                " account for server regex %1\n").Arg(account->GetUUID().ToString()));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Invalid character name entered for"
+                    " account for server regex %1\n")
+                    .Arg(account->GetUUID().ToString());
+            });
+
             errorCode = static_cast<uint32_t>(ErrorCodes_t::BAD_CHARACTER_NAME);
         }
     }
@@ -207,14 +227,22 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!equipped)
         {
-            LOG_ERROR(libcomp::String("Character item data failed to save for account %1\n")
-                .Arg(account->GetUUID().ToString()));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Character item data failed to save for "
+                    "account %1\n").Arg(account->GetUUID().ToString());
+            });
+
             errorCode = static_cast<uint32_t>(-1);
         }
         else if(!stats->Insert(worldDB) || !character->Insert(worldDB))
         {
-            LOG_ERROR(libcomp::String("Character failed to save for account %1\n")
-                .Arg(account->GetUUID().ToString()));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Character failed to save for "
+                    "account %1\n").Arg(account->GetUUID().ToString());
+            });
+
             errorCode = static_cast<uint32_t>(-1);
         }
         else if(!account->SetTicketCount((uint8_t)(ticketCount - 1)) ||
@@ -225,8 +253,12 @@ bool Parsers::CreateCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            LOG_DEBUG(libcomp::String("Created character '%1' on world: %2\n")
-                .Arg(name).Arg(worldID));
+            LogGeneralDebug([&]()
+            {
+                return libcomp::String("Created character '%1' on world: %2\n")
+                    .Arg(name)
+                    .Arg(worldID);
+            });
         }
     }
 

@@ -628,8 +628,12 @@ void EventWindow::NewFile()
     QFileInfo fi(qPath);
     if(fi.exists() && fi.isFile())
     {
-        LOG_ERROR(libcomp::String("Attempted to overwrite existing file with"
-            " new event file: %1").Arg(cs(qPath)));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Attempted to overwrite existing file with"
+                " new event file: %1").Arg(cs(qPath));
+        });
+
         return;
     }
 
@@ -1459,14 +1463,22 @@ bool EventWindow::LoadFileFromPath(const libcomp::String& path)
     tinyxml2::XMLDocument doc;
     if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
     {
-        LOG_ERROR(libcomp::String("Failed to parse file: %1\n").Arg(path));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Failed to parse file: %1\n").Arg(path);
+        });
+
         return false;
     }
-    
+
     auto rootElem = doc.RootElement();
     if(!rootElem)
     {
-        LOG_ERROR(libcomp::String("No root element in file: %1\n").Arg(path));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("No root element in file: %1\n").Arg(path);
+        });
+
         return false;
     }
 
@@ -1485,8 +1497,12 @@ bool EventWindow::LoadFileFromPath(const libcomp::String& path)
 
         if(event->GetID().IsEmpty())
         {
-            LOG_ERROR(libcomp::String("Event with no ID encountered in"
-                " file: %1\n").Arg(path));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Event with no ID encountered in"
+                    " file: %1\n").Arg(path);
+            });
+
             break;
         }
 
@@ -1501,13 +1517,19 @@ bool EventWindow::LoadFileFromPath(const libcomp::String& path)
     {
         if(mFiles.find(path) != mFiles.end())
         {
-            LOG_INFO(libcomp::String("Reloaded %1 event(s) from"
-                " file: %2\n").Arg(events.size()).Arg(path));
+            LogGeneralInfo([&]()
+            {
+                return libcomp::String("Reloaded %1 event(s) from"
+                    " file: %2\n").Arg(events.size()).Arg(path);
+            });
         }
         else
         {
-            LOG_INFO(libcomp::String("Loaded %1 event(s) from"
-                " file: %2\n").Arg(events.size()).Arg(path));
+            LogGeneralInfo([&]()
+            {
+                return libcomp::String("Loaded %1 event(s) from"
+                    " file: %2\n").Arg(events.size()).Arg(path);
+            });
         }
 
         auto file = std::make_shared<EventFile>();
@@ -1544,8 +1566,11 @@ bool EventWindow::LoadFileFromPath(const libcomp::String& path)
     }
     else
     {
-        LOG_WARNING(libcomp::String("No events found in file: %1\n")
-            .Arg(path));
+        LogGeneralWarning([&]()
+        {
+            return libcomp::String("No events found in file: %1\n")
+                .Arg(path);
+        });
     }
 
     return false;
@@ -1659,8 +1684,12 @@ void EventWindow::SaveFiles(const std::list<libcomp::String>& paths)
         tinyxml2::XMLDocument doc;
         if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
         {
-            LOG_ERROR(libcomp::String("Failed to parse file for saving: %1\n")
-                .Arg(path));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Failed to parse file for saving: %1\n")
+                    .Arg(path);
+            });
+
             continue;
         }
 
@@ -1838,7 +1867,10 @@ void EventWindow::SaveFiles(const std::list<libcomp::String>& paths)
 
         doc.SaveFile(path.C());
 
-        LOG_DEBUG(libcomp::String("Updated event file '%1'\n").Arg(path));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Updated event file '%1'\n").Arg(path);
+        });
     }
 
     RebuildGlobalIDMap();

@@ -63,8 +63,11 @@ bool Parsers::BazaarInteract::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!eventManager->RequestMenu(client, (int32_t)SVR_CONST.MENU_BAZAAR,
         bazaarMarketID, bazaarEntityID))
     {
-        LOG_ERROR(libcomp::String("Failed to open bazaar market: %1\n")
-            .Arg(bazaarMarketID));
+        LogBazaarError([&]()
+        {
+            return libcomp::String("Failed to open bazaar market: %1\n")
+                .Arg(bazaarMarketID);
+        });
     }
 
     return true;

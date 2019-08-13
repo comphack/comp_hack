@@ -58,8 +58,11 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
 
     if(0 > worldID || 0 > channelID)
     {
-        LOG_ERROR(libcomp::String("Invalid channel (%1) or world (%2) "
-            "ID received for AccountLogin.\n").Arg(channelID).Arg(worldID));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid channel (%1) or world (%2) "
+                "ID received for AccountLogin.\n").Arg(channelID).Arg(worldID);
+        });
 
         return;
     }
@@ -83,7 +86,7 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
 
     if(!channel)
     {
-        LOG_ERROR("Unknown channel ID returned from the world.\n");
+        LogGeneralErrorMsg("Unknown channel ID returned from the world.\n");
 
         return;
     }
@@ -104,10 +107,15 @@ void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
     if(clientConnection && currentWorldID == -1)
     {
         // Initial login response from the world.
-        LOG_DEBUG(libcomp::String("Login character with UUID '%1' into "
-            "world %2, channel %3 using session key: %4\n").Arg(
-            character.GetUUID().ToString()).Arg(worldID).Arg(
-            channelID).Arg(login->GetSessionKey()));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Login character with UUID '%1' into "
+                "world %2, channel %3 using session key: %4\n")
+                .Arg(character.GetUUID().ToString())
+                .Arg(worldID)
+                .Arg(channelID)
+                .Arg(login->GetSessionKey());
+        });
 
         libcomp::Packet reply;
         reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_START_GAME);
@@ -135,7 +143,8 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     if(p.Size() < 1)
     {
-        LOG_ERROR("Invalid response received for AccountLogin.\n");
+        LogGeneralErrorMsg("Invalid response received for AccountLogin.\n");
+
         return false;
     }
 
@@ -160,7 +169,7 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             else
             {
-                LOG_ERROR("Invalid response received for "
+                LogGeneralErrorMsg("Invalid response received for "
                     "AccountLogin (lobby).\n");
 
                 p.HexDump();
@@ -185,8 +194,9 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LOG_ERROR("World server sent a malformed AccountLogin message!"
+        LogGeneralErrorMsg("World server sent a malformed AccountLogin message!"
             " Killing the connection...\n");
+
         connection->Close();
     }
 

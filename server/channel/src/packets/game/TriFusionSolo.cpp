@@ -58,8 +58,12 @@ bool Parsers::TriFusionSolo::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(fusionItemType != 1)
     {
-        LOG_ERROR(libcomp::String("Invalid solo TriFusion item type"
-            " supplied: %1\n").Arg(fusionItemType));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid solo TriFusion item type"
+                " supplied: %1\n").Arg(fusionItemType);
+        });
+
         return false;
     }
 

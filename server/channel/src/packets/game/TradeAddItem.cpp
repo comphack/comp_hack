@@ -72,7 +72,8 @@ bool Parsers::TradeAddItem::Parse(libcomp::ManagerPacket *pPacketManager,
     bool cancel = false;
     if(!item || slot >= 30)
     {
-        LOG_ERROR("Invalid item trade request.\n");
+        LogTradeErrorMsg("Invalid item trade request.\n");
+
         cancel = true;
     }
 
@@ -83,7 +84,8 @@ bool Parsers::TradeAddItem::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(!otherClient)
     {
-        LOG_ERROR("Invalid trade session.\n");
+        LogTradeErrorMsg("Invalid trade session.\n");
+
         cancel = true;
     }
 
@@ -107,9 +109,13 @@ bool Parsers::TradeAddItem::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(items[i].Get() == item)
             {
-                LOG_DEBUG(libcomp::String("Player attempted to add a trade"
-                    " item more than once: %1\n")
-                    .Arg(state->GetAccountUID().ToString()));
+                LogTradeDebug([&]()
+                {
+                    return libcomp::String("Player attempted to add a trade"
+                        " item more than once: %1\n")
+                        .Arg(state->GetAccountUID().ToString());
+                });
+
                 error = true;
                 break;
             }

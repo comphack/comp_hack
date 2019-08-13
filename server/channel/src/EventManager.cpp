@@ -166,8 +166,12 @@ std::shared_ptr<objects::EventInstance> EventManager::PrepareEvent(
     auto event = serverDataManager->GetEventData(eventID);
     if(nullptr == event)
     {
-        LOG_ERROR(libcomp::String("Invalid event ID encountered %1\n"
-            ).Arg(eventID));
+        LogEventManagerError([&]()
+        {
+            return libcomp::String("Invalid event ID encountered %1\n")
+                .Arg(eventID);
+        });
+
         return nullptr;
     }
     else
@@ -230,9 +234,13 @@ bool EventManager::RequestMenu(const std::shared_ptr<
 
     if(!allowInsert && current)
     {
-        LOG_ERROR(libcomp::String("Attempted to open menu type '%1' for"
-            " character already in an event on account: %2\n")
-            .Arg(menuType).Arg(state->GetAccountUID().ToString()));
+        LogEventManagerError([&]()
+        {
+            return libcomp::String("Attempted to open menu type '%1' for"
+                " character already in an event on account: %2\n")
+                .Arg(menuType).Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
@@ -293,7 +301,8 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
         case objects::Event::EventType_t::NPC_MESSAGE:
             if(responseID != 0)
             {
-                LOG_ERROR("Non-zero response received for message response.\n");
+                LogServerConstantsErrorMsg(
+                    "Non-zero response received for message response.\n");
             }
             else
             {
@@ -324,8 +333,11 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
                 auto choice = e->GetChoices((size_t)adjustedResponseID);
                 if(choice == nullptr)
                 {
-                    LOG_ERROR(libcomp::String("Invalid choice %1 selected for event %2\n"
-                        ).Arg(responseID).Arg(e->GetID()));
+                    LogEventManagerError([&]()
+                    {
+                        return libcomp::String("Invalid choice %1 selected for "
+                            "event %2\n").Arg(responseID).Arg(e->GetID());
+                    });
                 }
                 else
                 {
@@ -413,9 +425,12 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
                         auto choice = e->GetChoices((size_t)responseID);
                         if(choice == nullptr)
                         {
-                            LOG_ERROR(libcomp::String("Invalid choice %1"
-                                " selected for event %2\n").Arg(responseID)
-                                .Arg(e->GetID()));
+                            LogEventManagerError([&]()
+                            {
+                                return libcomp::String("Invalid choice %1"
+                                    " selected for event %2\n").Arg(responseID)
+                                    .Arg(e->GetID());
+                            });
                         }
                         else
                         {
@@ -433,8 +448,11 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
             }
             else if(responseID != 0)
             {
-                LOG_ERROR(libcomp::String("Non-zero response %1 received for"
-                    " menu %2\n").Arg(responseID).Arg(event->GetID()));
+                LogEventManagerError([&]()
+                {
+                    return libcomp::String("Non-zero response %1 received for"
+                        " menu %2\n").Arg(responseID).Arg(event->GetID());
+                });
             }
             break;
         case objects::Event::EventType_t::PLAY_SCENE:
@@ -443,13 +461,20 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
         case objects::Event::EventType_t::MULTITALK:
             if(responseID != 0)
             {
-                LOG_ERROR(libcomp::String("Non-zero response %1 received for"
-                    " event %2\n").Arg(responseID).Arg(event->GetID()));
+                LogEventManagerError([&]()
+                {
+                    return libcomp::String("Non-zero response %1 received for"
+                        " event %2\n").Arg(responseID).Arg(event->GetID());
+                });
             }
             break;
         default:
-            LOG_ERROR(libcomp::String("Response received for invalid event of"
-                " type %1\n").Arg(to_underlying(eventType)));
+            LogEventManagerError([&]()
+            {
+                return libcomp::String("Response received for invalid event of"
+                    " type %1\n").Arg(to_underlying(eventType));
+            });
+
             break;
     }
 
@@ -461,7 +486,7 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
     ctx.EventInstance = current;
     ctx.CurrentZone = cState->GetZone();
     ctx.AutoOnly = false;
-    
+
     HandleNext(ctx);
 
     return true;
@@ -509,9 +534,13 @@ bool EventManager::ContinueChannelChangeEvent(
     auto instance = PrepareEvent(channelLogin->GetActiveEvent(), 0);
     if(!instance)
     {
-        LOG_ERROR(libcomp::String("Unable to continue event '%1' after channel"
-            " change for acount: %1\n").Arg(channelLogin->GetActiveEvent())
-            .Arg(state->GetAccountUID().ToString()));
+        LogEventManagerError([&]()
+        {
+            return libcomp::String("Unable to continue event '%1' after channel"
+                " change for acount: %1\n").Arg(channelLogin->GetActiveEvent())
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
@@ -566,15 +595,23 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
 
     if(!questData)
     {
-        LOG_ERROR(libcomp::String("Invalid quest ID supplied for UpdateQuest: %1\n")
-            .Arg(questID));
+        LogEventManagerError([&]()
+        {
+            return libcomp::String("Invalid quest ID supplied for "
+                "UpdateQuest: %1\n").Arg(questID);
+        });
+
         return false;
     }
     else if((phase < -1 && ! forceUpdate) || phase < -2 ||
         phase > (int8_t)questData->GetPhaseCount())
     {
-        LOG_ERROR(libcomp::String("Invalid phase '%1' supplied for quest: %2\n")
-            .Arg(phase).Arg(questID));
+        LogEventManagerError([&]()
+        {
+            return libcomp::String("Invalid phase '%1' supplied for "
+                "quest: %2\n").Arg(phase).Arg(questID);
+        });
+
         return false;
     }
 
@@ -599,8 +636,12 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
         // Completing a quest
         if(!quest && completed && !forceUpdate)
         {
-            LOG_ERROR(libcomp::String("Quest '%1' has already been completed\n")
-                .Arg(questID));
+            LogEventManagerError([&]()
+            {
+                return libcomp::String("Quest '%1' has already been "
+                    "completed\n").Arg(questID);
+            });
+
             return false;
         }
 
@@ -640,8 +681,12 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
         // Starting a quest
         if(!forceUpdate && completed && questData->GetType() != 1)
         {
-            LOG_ERROR(libcomp::String("Already completed non-repeatable quest '%1'"
-                " cannot be started again\n").Arg(questID));
+            LogEventManagerError([&]()
+            {
+                return libcomp::String("Already completed non-repeatable "
+                    "quest '%1' cannot be started again\n").Arg(questID);
+            });
+
             return false;
         }
 
@@ -685,7 +730,7 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
         }
 
         quest->SetPhase(phase);
-        
+
         // Keep the last phase's flags but set any that are new
         for(auto pair : updateFlags)
         {
@@ -818,8 +863,12 @@ bool EventManager::EvaluateQuestConditions(EventContext& ctx, int16_t questID)
 
     if(!questData)
     {
-        LOG_ERROR(libcomp::String("Invalid quest ID supplied for"
-            " EvaluateQuestConditions: %1\n").Arg(questID));
+        LogEventManagerError([&]()
+        {
+            return libcomp::String("Invalid quest ID supplied for"
+                " EvaluateQuestConditions: %1\n").Arg(questID);
+        });
+
         return false;
     }
     else if(!questData->GetConditionsExist())
@@ -867,7 +916,9 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
                 objects::EventScriptCondition>(condition);
             if(!scriptCondition)
             {
-                LOG_ERROR("Invalid event condition of type 'SCRIPT' encountered\n");
+                LogEventManagerErrorMsg(
+                    "Invalid event condition of type 'SCRIPT' encountered\n");
+
                 return false;
             }
 
@@ -875,9 +926,12 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
             auto script = serverDataManager->GetScript(scriptCondition->GetScriptID());
             if(ctx.Client && !ctx.CurrentZone)
             {
-                LOG_ERROR(libcomp::String("Attempted to execute a client"
-                    " targeted condition script ID outside of a zone: %1\n")
-                    .Arg(scriptCondition->GetScriptID()));
+                LogEventManagerError([&]()
+                {
+                    return libcomp::String("Attempted to execute a client"
+                        " targeted condition script ID outside of a zone: %1\n")
+                        .Arg(scriptCondition->GetScriptID());
+                });
             }
             else if(script && script->Type.ToLower() == "eventcondition")
             {
@@ -918,8 +972,11 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
             }
             else
             {
-                LOG_ERROR(libcomp::String("Invalid event condition script ID: %1\n")
-                    .Arg(scriptCondition->GetScriptID()));
+                LogEventManagerError([&]()
+                {
+                    return libcomp::String("Invalid event condition script "
+                        "ID: %1\n").Arg(scriptCondition->GetScriptID());
+                });
             }
         }
         break;
@@ -941,8 +998,9 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
                 }
                 else
                 {
-                    LOG_ERROR("Attempted to set zone character"
+                    LogEventManagerErrorMsg("Attempted to set zone character"
                         " flags with no associated client: %1\n");
+
                     return false;
                 }
                 break;
@@ -957,8 +1015,9 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
                 }
                 else
                 {
-                    LOG_ERROR("Attempted to set zone instance character"
-                        " flags with no associated client: %1\n");
+                    LogEventManagerErrorMsg("Attempted to set zone instance "
+                        "character flags with no associated client: %1\n");
+
                     return false;
                 }
                 break;
@@ -1056,7 +1115,7 @@ bool EventManager::EvaluatePartnerCondition(const std::shared_ptr<
     {
         return false;
     }
-    
+
     auto compareMode = condition->GetCompareMode();
     switch(condition->GetType())
     {
@@ -1209,7 +1268,8 @@ bool EventManager::EvaluateFlagStates(const std::unordered_map<int32_t,
 {
     if(!condition)
     {
-        LOG_ERROR("Invalid event flag condition encountered\n");
+        LogEventManagerErrorMsg("Invalid event flag condition encountered\n");
+
         return false;
     }
 
@@ -1286,8 +1346,9 @@ bool EventManager::Compare(int32_t value1, int32_t value2, int32_t value3,
     {
         if(defaultCompare == EventCompareMode::DEFAULT_COMPARE)
         {
-            LOG_ERROR("Default comparison specified for non-defaulted"
-                " comparison\n");
+            LogEventManagerErrorMsg("Default comparison specified for "
+                "non-defaulted comparison\n");
+
             return false;
         }
 
@@ -1296,14 +1357,20 @@ bool EventManager::Compare(int32_t value1, int32_t value2, int32_t value3,
 
     if(compareMode == EventCompareMode::EXISTS)
     {
-        LOG_ERROR("EXISTS mode is not valid for generic comparison\n");
+        LogEventManagerErrorMsg(
+            "EXISTS mode is not valid for generic comparison\n");
+
         return false;
     }
 
     if((validCompareSetting & (uint16_t)compareMode) == 0)
     {
-        LOG_ERROR(libcomp::String("Invalid comparison mode attempted: %1\n")
-            .Arg((int32_t)compareMode));
+        LogEventManagerError([&]()
+        {
+            return libcomp::String("Invalid comparison mode attempted: %1\n")
+                .Arg((int32_t)compareMode);
+        });
+
         return false;
     }
 
@@ -1312,7 +1379,8 @@ bool EventManager::Compare(int32_t value1, int32_t value2, int32_t value3,
     case EventCompareMode::EQUAL:
         return value1 == value2;
     case EventCompareMode::LT_OR_NAN:
-        LOG_WARNING("LT_OR_NAN mode used generic comparison\n");
+        LogEventManagerWarningMsg("LT_OR_NAN mode used generic comparison\n");
+
         return value1 < value2;
     case EventCompareMode::LT:
         return value1 < value2;
@@ -1598,8 +1666,12 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
 
             if(prevQuestData == nullptr)
             {
-                LOG_ERROR(libcomp::String("Invalid previous quest ID supplied for"
-                    " EvaluateCondition: %1\n").Arg(prevQuestID));
+                LogEventManagerError([&]()
+                {
+                    return libcomp::String("Invalid previous quest ID supplied "
+                        "for EvaluateCondition: %1\n").Arg(prevQuestID);
+                });
+
                 return false;
             }
 
@@ -1984,7 +2056,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
                 auto def = base->GetDefinition();
                 if((int32_t)def->GetLetter() == condition->GetValue1())
                 {
-                    return base->GetCaptured() == 
+                    return base->GetCaptured() ==
                         (condition->GetValue2() == 1);
                 }
             }
@@ -2523,8 +2595,12 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         }
     case objects::EventConditionData::Type_t::NONE:
     default:
-        LOG_ERROR(libcomp::String("Invalid condition type supplied for"
-            " EvaluateCondition: %1\n").Arg((uint32_t)condition->GetType()));
+        LogEventManagerError([&]()
+        {
+            return libcomp::String("Invalid condition type supplied for"
+                " EvaluateCondition: %1\n").Arg((uint32_t)condition->GetType());
+        });
+
         break;
     }
 
@@ -2539,8 +2615,12 @@ bool EventManager::EvaluateQuestPhaseRequirements(const std::shared_ptr<
     auto questData = definitionManager->GetQuestData((uint32_t)questID);
     if(!questData)
     {
-        LOG_ERROR(libcomp::String("Invalid quest ID supplied for"
-            " EvaluateQuestPhaseRequirements: %1\n").Arg(questID));
+        LogEventManagerError([&]()
+        {
+            return libcomp::String("Invalid quest ID supplied for"
+                " EvaluateQuestPhaseRequirements: %1\n").Arg(questID);
+        });
+
         return false;
     }
 
@@ -2596,9 +2676,14 @@ bool EventManager::EvaluateQuestPhaseRequirements(const std::shared_ptr<
             break;
         case objects::QuestPhaseRequirement::Type_t::NONE:
         default:
-            LOG_ERROR(libcomp::String("Invalid requirement type encountered for"
-                " EvaluateQuestPhaseRequirements in quest '%1' phase '%2': %3\n")
-                .Arg(questID).Arg(currentPhase).Arg((uint32_t)req->GetType()));
+            LogEventManagerError([&]()
+            {
+                return libcomp::String("Invalid requirement type encountered "
+                    "for EvaluateQuestPhaseRequirements in quest '%1' phase "
+                    "'%2': %3\n").Arg(questID).Arg(currentPhase)
+                    .Arg((uint32_t)req->GetType());
+            });
+
             return false;
         }
     }
@@ -2685,7 +2770,7 @@ void EventManager::SendCompletedQuestList(
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
     auto completedQuests = character->GetProgress()->GetCompletedQuests();
-    
+
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_QUEST_COMPLETED_LIST);
     reply.WriteU16Little((uint16_t)completedQuests.size());
@@ -2873,9 +2958,13 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
     }
     else
     {
-        LOG_ERROR(libcomp::String("No valid demon quest could be generated"
-            " for demon type '%1' on character: %2\n").Arg(demon->GetType())
-            .Arg(character->GetUUID().ToString()));
+        LogEventManagerError([&]()
+        {
+            return libcomp::String("No valid demon quest could be generated"
+                " for demon type '%1' on character: %2\n").Arg(demon->GetType())
+                .Arg(character->GetUUID().ToString());
+        });
+
         return nullptr;
     }
 
@@ -3180,7 +3269,9 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
             }
             else
             {
-                LOG_ERROR("Failed to retrieve synth result for demon quest\n");
+                LogEventManagerErrorMsg(
+                    "Failed to retrieve synth result for demon quest\n");
+
                 return nullptr;
             }
         }
@@ -3792,8 +3883,12 @@ void EventManager::StartWebGame(const std::shared_ptr<
     {
         if(!gameSession->GetSessionID().IsEmpty())
         {
-            LOG_ERROR(libcomp::String("Second web-game session requested"
-                " for account: %1").Arg(state->GetAccountUID().ToString()));
+            LogEventManagerError([&]()
+            {
+                return libcomp::String("Second web-game session requested"
+                    " for account: %1").Arg(state->GetAccountUID().ToString());
+            });
+
             return;
         }
 
@@ -3979,8 +4074,12 @@ bool EventManager::HandleEvent(EventContext& ctx)
                 handled = true;
                 break;
             default:
-                LOG_ERROR(libcomp::String("Failed to handle event of type %1\n"
-                    ).Arg(to_underlying(eventType)));
+                LogEventManagerError([&]()
+                {
+                    return libcomp::String("Failed to handle event of "
+                        "type %1\n").Arg(to_underlying(eventType));
+                });
+
                 break;
         }
 
@@ -4041,17 +4140,26 @@ void EventManager::HandleNext(EventContext& ctx)
             auto script = serverDataManager->GetScript(branchScriptID);
             if(ctx.Client && !ctx.CurrentZone)
             {
-                LOG_ERROR(libcomp::String("Attempted to execute a client"
-                    " targeted branch script ID outside of a zone: %1\n")
-                    .Arg(branchScriptID));
+                LogEventManagerError([&]()
+                {
+                    return libcomp::String("Attempted to execute a client"
+                        " targeted branch script ID outside of a zone: %1\n")
+                        .Arg(branchScriptID);
+                });
+
                 nextEventID = "";
             }
             else if(script && script->Type.ToLower() == "eventbranchlogic")
             {
                 if(skipInvalid)
                 {
-                    LOG_ERROR(libcomp::String("Ignoring skip invalid setting"
-                        " on branch script event: %1\n").Arg(event->GetID()));
+                    LogEventManagerError([&]()
+                    {
+                        return libcomp::String("Ignoring skip invalid setting"
+                            " on branch script event: %1\n")
+                            .Arg(event->GetID());
+                    });
+
                     nextEventID = iState->GetNext();
                 }
 
@@ -4095,8 +4203,12 @@ void EventManager::HandleNext(EventContext& ctx)
             }
             else
             {
-                LOG_ERROR(libcomp::String("Invalid event branch script ID: %1\n")
-                    .Arg(branchScriptID));
+                LogEventManagerError([&]()
+                {
+                    return libcomp::String("Invalid event branch script "
+                        "ID: %1\n").Arg(branchScriptID);
+                });
+
                 nextEventID = "";
             }
         }
@@ -4507,8 +4619,12 @@ bool EventManager::ITime(EventContext& ctx)
         }
         else
         {
-            LOG_ERROR(libcomp::String("Failed to open I-Time menu: %1\n")
-                .Arg(e->GetID()));
+            LogEventManagerError([&]()
+            {
+                return libcomp::String("Failed to open I-Time menu: %1\n")
+                    .Arg(e->GetID());
+            });
+
             return false;
         }
     }
@@ -4649,7 +4765,7 @@ bool EventManager::HandleTriFusion(const std::shared_ptr<
     }
     else
     {
-        // Send special notification to all party members in the zone 
+        // Send special notification to all party members in the zone
         // (including self)
         tfSession = std::make_shared<objects::TriFusionHostSession>();
         tfSession->SetSourceEntityID(state->GetCharacterState()

@@ -179,7 +179,7 @@ bool LoginHandlerThread::ProcessLoginRequest(const std::shared_ptr<
 
     if(!ref || !(*ref))
     {
-        LOG_ERROR("Failed to process login request.\n");
+        LogGeneralErrorMsg("Failed to process login request.\n");
 
         return false;
     }
@@ -195,7 +195,7 @@ bool LoginHandlerThread::ProcessLoginReply(const std::shared_ptr<
 
     if(!ref || !(*ref))
     {
-        LOG_ERROR("Failed to process login reply.\n");
+        LogGeneralErrorMsg("Failed to process login reply.\n");
 
         return false;
     }

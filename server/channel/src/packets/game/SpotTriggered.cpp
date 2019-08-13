@@ -96,25 +96,41 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
     auto dynamicMap = zone->GetDynamicMap();
     if(!dynamicMap)
     {
-        LOG_ERROR(libcomp::String("Dynamic map information could not be found"
-            " for zone %1 with dynamic map ID %2.\n").Arg(zoneID)
-            .Arg(zoneDef->GetDynamicMapID()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Dynamic map information could not be found"
+                " for zone %1 with dynamic map ID %2.\n")
+                .Arg(zoneID)
+                .Arg(zoneDef->GetDynamicMapID());
+        });
+
         return true;
     }
 
     auto spotIter = dynamicMap->Spots.find(spotID);
     if(spotIter == dynamicMap->Spots.end())
     {
-        LOG_ERROR(libcomp::String("Invalid spot %1 sent for zone %2.\n").Arg(
-            spotID).Arg(zoneID));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid spot %1 sent for zone %2.\n")
+                .Arg(spotID)
+                .Arg(zoneID);
+        });
+
         return true;
     }
 
     bool entered = zoneManager->PointInPolygon(Point(x, y),
         spotIter->second->Vertices);
 
-    LOG_DEBUG(libcomp::String("%1 spot %2 @ (%3, %4)\n").Arg(
-        entered ? "Entered" : "Exited").Arg(spotID).Arg(x).Arg(y));
+    LogGeneralDebug([&]()
+    {
+        return libcomp::String("%1 spot %2 @ (%3, %4)\n")
+            .Arg(entered ? "Entered" : "Exited")
+            .Arg(spotID)
+            .Arg(x)
+            .Arg(y);
+    });
 
     // Lookup the spot and see if it has actions.
     auto spot = zoneDef->GetSpots(spotID);
@@ -126,8 +142,11 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
         pActionList->actions = entered
             ? spot->GetActions() : spot->GetLeaveActions();
 
-        LOG_DEBUG(libcomp::String("Got spot with %1 actions.\n").Arg(
-            pActionList->actions.size()));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Got spot with %1 actions.\n")
+                .Arg(pActionList->actions.size());
+        });
 
         // There must be at least 1 action or we are wasting our time.
         if(pActionList->actions.empty())
@@ -151,8 +170,12 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LOG_WARNING(libcomp::String("Undefined spot %1 for zone %2.\n").Arg(
-            spotID).Arg(zoneID));
+        LogGeneralWarning([&]()
+        {
+            return libcomp::String("Undefined spot %1 for zone %2.\n")
+                .Arg(spotID)
+                .Arg(zoneID);
+        });
     }
 
     return true;

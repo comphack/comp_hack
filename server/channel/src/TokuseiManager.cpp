@@ -103,15 +103,24 @@ bool TokuseiManager::Initialize()
             {
                 if(tPair.second->GetTargetType() != objects::Tokusei::TargetType_t::SELF)
                 {
-                    LOG_ERROR(libcomp::String("Skill granting tokusei encountered"
-                        " with target type other than 'self': %1\n").Arg(tPair.first));
+                    LogTokuseiManagerError([&]()
+                    {
+                        return libcomp::String("Skill granting tokusei "
+                            "encountered with target type other than "
+                            "'self': %1\n").Arg(tPair.first);
+                    });
+
                     return false;
                 }
                 else if(tPair.second->ConditionsCount() > 0 ||
                     tPair.second->SkillConditionsCount() > 0)
                 {
-                    LOG_ERROR(libcomp::String("Conditional skill granting tokusei"
-                        " encountered: %1\n").Arg(tPair.first));
+                    LogTokuseiManagerError([&]()
+                    {
+                        return libcomp::String("Conditional skill granting "
+                            "tokusei encountered: %1\n").Arg(tPair.first);
+                    });
+
                     return false;
                 }
 
@@ -146,9 +155,13 @@ bool TokuseiManager::Initialize()
                     auto it = skillGrantTokusei.find(tokuseiID);
                     if(it != skillGrantTokusei.end())
                     {
-                        LOG_ERROR(libcomp::String("Skill granted from tokusei '%1'"
-                            " contains a nested skill granting effect: '%2'\n")
-                            .Arg(skillID).Arg(tokuseiID));
+                        LogTokuseiManagerError([&]()
+                        {
+                            return libcomp::String("Skill granted from tokusei "
+                            "'%1' contains a nested skill granting effect: "
+                            "'%2'\n").Arg(skillID).Arg(tokuseiID);
+                        });
+
                         return false;
                     }
                 }
@@ -170,9 +183,13 @@ bool TokuseiManager::Initialize()
                         condition->GetComparator() !=
                         objects::TokuseiCondition::Comparator_t::NOT_EQUAL)
                     {
-                        LOG_ERROR(libcomp::String("Skill tokusei conditions"
-                            " can only compare simple equals/not equal"
-                            " conditions: %1\n").Arg(tPair.first));
+                        LogTokuseiManagerError([&]()
+                        {
+                            return libcomp::String("Skill tokusei conditions"
+                                " can only compare simple equals/not equal"
+                                " conditions: %1\n").Arg(tPair.first);
+                        });
+
                         return false;
                     }
                 }
@@ -181,8 +198,12 @@ bool TokuseiManager::Initialize()
             if(tPair.second->SkillConditionsCount() &&
                 tPair.second->SkillTargetConditionsCount())
             {
-                LOG_ERROR(libcomp::String("Skill tokusei encountered with both"
-                    " source and target conditions: %1\n").Arg(tPair.first));
+                LogTokuseiManagerError([&]()
+                {
+                    return libcomp::String("Skill tokusei encountered with both"
+                        " source and target conditions: %1\n").Arg(tPair.first);
+                });
+
                 return false;
             }
 
@@ -246,8 +267,12 @@ bool TokuseiManager::Initialize()
 
             if(invalidSkillAdjust)
             {
-                LOG_ERROR(libcomp::String("Skill tokusei encountered with an"
-                    " unsupported skill adjustment: %1\n").Arg(tPair.first));
+                LogTokuseiManagerError([&]()
+                {
+                    return libcomp::String("Skill tokusei encountered with an"
+                        " unsupported skill adjustment: %1\n").Arg(tPair.first);
+                });
+
                 return false;
             }
 
@@ -269,9 +294,13 @@ bool TokuseiManager::Initialize()
                     case TokuseiSkillConditionType::SKILL_EXPERTISE:
                         if(optionGroupIDs.find(ogID) != optionGroupIDs.end())
                         {
-                            LOG_ERROR(libcomp::String("Tokusei encountered with"
-                                " cost reduction aspects and complex skill"
-                                " conditions: %1\n").Arg(tPair.first));
+                            LogTokuseiManagerError([&]()
+                            {
+                                return libcomp::String("Tokusei encountered with"
+                                    " cost reduction aspects and complex skill"
+                                    " conditions: %1\n").Arg(tPair.first);
+                            });
+
                             return false;
                         }
                         else
@@ -280,18 +309,26 @@ bool TokuseiManager::Initialize()
                         }
                         break;
                     default:
-                        LOG_ERROR(libcomp::String("Skill tokusei encountered"
-                            " with cost reduction and unsupported skill"
-                            " condition: %1\n").Arg(tPair.first));
+                        LogTokuseiManagerError([&]()
+                        {
+                            return libcomp::String("Skill tokusei encountered"
+                                " with cost reduction and unsupported skill"
+                                " condition: %1\n").Arg(tPair.first);
+                        });
+
                         return false;
                     }
 
                     if(condition->GetComparator() !=
                         objects::TokuseiCondition::Comparator_t::EQUALS)
                     {
-                        LOG_ERROR(libcomp::String("Skill tokusei encountered"
-                            " with cost reduction and comparator other than"
-                            " equals: %1\n").Arg(tPair.first));
+                        LogTokuseiManagerError([&]()
+                        {
+                            return libcomp::String("Skill tokusei encountered"
+                                " with cost reduction and comparator other than"
+                                " equals: %1\n").Arg(tPair.first);
+                        });
+
                         return false;
                     }
                 }
@@ -364,16 +401,26 @@ bool TokuseiManager::Initialize()
 
             if(tokuseiData->ConditionsCount() > 0)
             {
-                LOG_ERROR(libcomp::String("Stat conditional enchantment tokusei"
-                    " encountered with non-skill conditions: %1\n").Arg(it->first));
+                LogTokuseiManagerError([&]()
+                {
+                    return libcomp::String("Stat conditional enchantment "
+                        "tokusei encountered with non-skill conditions: %1\n")
+                        .Arg(it->first);
+                });
+
                 return false;
             }
 
             if(tokuseiData->GetTargetType() !=
                 objects::Tokusei::TargetType_t::SELF)
             {
-                LOG_ERROR(libcomp::String("Stat conditional enchantment tokusei"
-                    " encountered with non-source target type: %1\n").Arg(it->first));
+                LogTokuseiManagerError([&]()
+                {
+                    return libcomp::String("Stat conditional enchantment "
+                        "tokusei encountered with non-source target type: %1\n")
+                        .Arg(it->first);
+                });
+
                 return false;
             }
 
@@ -388,17 +435,25 @@ bool TokuseiManager::Initialize()
                 if(ct->GetID() <= CorrectTbl::LUCK &&
                     (ct->GetType() == 1 || ct->GetType() == 101))
                 {
-                    LOG_ERROR(libcomp::String("Stat conditional enchantment tokusei"
-                        " encountered with percentage core stat adjustment: %1\n")
-                        .Arg(it->first));
+                    LogTokuseiManagerError([&]()
+                    {
+                        return libcomp::String("Stat conditional enchantment "
+                            "tokusei encountered with percentage core stat "
+                            "adjustment: %1\n").Arg(it->first);
+                    });
+
                     return false;
                 }
             }
 
             if(skillGrantTokusei.find(it->first) != skillGrantTokusei.end())
             {
-                LOG_ERROR(libcomp::String("Skill granting stat conditional enchantment"
-                    " tokusei encountered: %1\n").Arg(it->first));
+                LogTokuseiManagerError([&]()
+                {
+                    return libcomp::String("Skill granting stat conditional "
+                        "enchantment tokusei encountered: %1\n").Arg(it->first);
+                });
+
                 return false;
             }
         }
@@ -436,9 +491,13 @@ bool TokuseiManager::GatherTimedTokusei(const std::shared_ptr<
                 beforeTime[condition->GetOptionGroupID()].push_back(condition);
                 break;
             default:
-                LOG_ERROR(libcomp::String("Invalid comparator"
-                    " encountered on time restricted tokusei '%1'\n")
-                    .Arg(tokusei->GetID()));
+                LogTokuseiManagerError([&]()
+                {
+                    return libcomp::String("Invalid comparator"
+                        " encountered on time restricted tokusei '%1'\n")
+                        .Arg(tokusei->GetID());
+                });
+
                 return false;
                 break;
             }
@@ -452,10 +511,14 @@ bool TokuseiManager::GatherTimedTokusei(const std::shared_ptr<
     {
         if(afterTime.size() != beforeTime.size())
         {
-            LOG_ERROR(libcomp::String("Encountered time"
-                " restricted tokusei with at least one condition"
-                " option group that is not a timespan: '%1'\n")
-                .Arg(tokusei->GetID()));
+            LogTokuseiManagerError([&]()
+            {
+                return libcomp::String("Encountered time"
+                    " restricted tokusei with at least one condition"
+                    " option group that is not a timespan: '%1'\n")
+                    .Arg(tokusei->GetID());
+            });
+
             return false;
         }
 
@@ -463,10 +526,14 @@ bool TokuseiManager::GatherTimedTokusei(const std::shared_ptr<
         {
             if(afterTime[timePair.first].size() == 0)
             {
-                LOG_ERROR(libcomp::String("Encountered time"
-                    " restricted tokusei with condition"
-                    " option group that is not a timespan: '%1' (%2)\n")
-                    .Arg(tokusei->GetID()).Arg(timePair.first));
+                LogTokuseiManagerError([&]()
+                {
+                    return libcomp::String("Encountered time"
+                        " restricted tokusei with condition"
+                        " option group that is not a timespan: '%1' (%2)\n")
+                        .Arg(tokusei->GetID()).Arg(timePair.first);
+                });
+
                 return false;
             }
 
@@ -487,10 +554,14 @@ bool TokuseiManager::GatherTimedTokusei(const std::shared_ptr<
 
             if(!success)
             {
-                LOG_ERROR(libcomp::String("Encountered time"
-                    " restricted tokusei with invalid timespan"
-                    " option group: '%1' (%2)\n")
-                    .Arg(tokusei->GetID()).Arg(timePair.first));
+                LogTokuseiManagerError([&]()
+                {
+                    return libcomp::String("Encountered time"
+                        " restricted tokusei with invalid timespan"
+                        " option group: '%1' (%2)\n")
+                        .Arg(tokusei->GetID()).Arg(timePair.first);
+                });
+
                 return false;
             }
 

@@ -124,9 +124,13 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(failure)
             {
-                LOG_ERROR(libcomp::String("ItemMix attempted with invalid"
-                    " extension item: %1\n")
-                    .Arg(state->GetAccountUID().ToString()));
+                LogItemError([&]()
+                {
+                    return libcomp::String("ItemMix attempted with invalid"
+                        " extension item: %1\n")
+                        .Arg(state->GetAccountUID().ToString());
+                });
+
                 success = false;
             }
         }
@@ -159,8 +163,12 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
         cState->GetExpertiseRank((uint32_t)expertID, definitionManager) : 0;
     if(success && expertID && (requiredClass * 10 + requiredRank) > expertRank)
     {
-        LOG_ERROR(libcomp::String("ItemMix attempted without required"
-            " expertise rank: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogItemError([&]()
+        {
+            return libcomp::String("ItemMix attempted without required"
+                " expertise rank: %1\n").Arg(state->GetAccountUID().ToString());
+        });
+
         success = false;
     }
 
@@ -168,8 +176,12 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
     if(success && (item1->GetItemBox() != inventory->GetUUID() ||
         item2->GetItemBox() != inventory->GetUUID()))
     {
-        LOG_ERROR(libcomp::String("ItemMix attempted with an item not in the"
-            " inventory: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogItemError([&]()
+        {
+            return libcomp::String("ItemMix attempted with an item not in the"
+                " inventory: %1\n").Arg(state->GetAccountUID().ToString());
+        });
+
         success = false;
     }
 
@@ -237,8 +249,13 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else if(item1->GetType() != item1Type || item2->GetType() != item2Type)
         {
-            LOG_ERROR(libcomp::String("ItemMix supplied item types do not match"
-                " definition: %1\n").Arg(state->GetAccountUID().ToString()));
+            LogItemError([&]()
+            {
+                return libcomp::String("ItemMix supplied item types do not "
+                    "match definition: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             success = false;
         }
 
@@ -247,9 +264,13 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
             if(itemA->GetStackSize() < item1Min ||
                 itemB->GetStackSize() < item2Min)
             {
-                LOG_ERROR(libcomp::String("ItemMix supplied without enough"
-                    " items of each type required: %1\n")
-                    .Arg(state->GetAccountUID().ToString()));
+                LogItemError([&]()
+                {
+                    return libcomp::String("ItemMix supplied without enough"
+                        " items of each type required: %1\n")
+                        .Arg(state->GetAccountUID().ToString());
+                });
+
                 success = false;
             }
             else

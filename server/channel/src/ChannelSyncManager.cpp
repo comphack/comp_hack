@@ -282,8 +282,11 @@ int8_t ChannelSyncManager::Update<objects::SearchEntry>(const libcomp::String& t
     {
         if(isRemove)
         {
-            LOG_WARNING(libcomp::String("No SearchEntry with ID '%1' found"
-                " for sync removal\n").Arg(entry->GetEntryID()));
+            LogDataSyncManagerWarning([&]()
+            {
+                return libcomp::String("No SearchEntry with ID '%1' found"
+                    " for sync removal\n").Arg(entry->GetEntryID());
+            });
         }
         else
         {
@@ -555,9 +558,13 @@ void ChannelSyncManager::SyncComplete<objects::InstanceAccess>(
         {
             if(!zoneManager->CreateInstance(request))
             {
-                LOG_ERROR(libcomp::String("Failed to create zone instance from"
-                    " access request for instnace type: %1\n")
-                    .Arg(request->GetDefinitionID()));
+                LogDataSyncManagerError([&]()
+                {
+                    return libcomp::String("Failed to create zone instance from"
+                        " access request for instnace type: %1\n")
+                        .Arg(request->GetDefinitionID());
+                });
+
                 continue;
             }
 
@@ -652,8 +659,11 @@ int8_t ChannelSyncManager::Update<objects::StatusEffect>(
     auto effect = std::dynamic_pointer_cast<objects::StatusEffect>(obj);
     if(isRemove)
     {
-        LOG_ERROR(libcomp::String("Attempted to sync a status effect"
-            " removal: %1\n").Arg(effect->GetUUID().ToString()));
+        LogDataSyncManagerError([&]()
+        {
+            return libcomp::String("Attempted to sync a status effect"
+                " removal: %1\n").Arg(effect->GetUUID().ToString());
+        });
     }
     else
     {
@@ -695,8 +705,11 @@ int8_t ChannelSyncManager::Update<objects::StatusEffect>(
 
         if(!synched)
         {
-            LOG_ERROR(libcomp::String("Failed to sync status effect: %1\n")
-                .Arg(effect->GetUUID().ToString()));
+            LogDataSyncManagerError([&]()
+            {
+                return libcomp::String("Failed to sync status effect: %1\n")
+                    .Arg(effect->GetUUID().ToString());
+            });
         }
     }
 

@@ -60,14 +60,16 @@ bool ManagerClientPacket::ValidateConnectionState(const std::shared_ptr<
         case ClientToChannelPacketCode_t::PACKET_AUTH:
             if(!(valid = state->GetLoggedIn()))
             {
-                LOG_ERROR("Client connection attempted to authenticate without logging in.\n");
+                LogConnectionErrorMsg("Client connection attempted to "
+                    "authenticate without logging in.\n");
             }
             break;
         default:
             if(!(valid = state->GetAuthenticated() && state->GetLoggedIn()))
             {
-                LOG_ERROR("Client connection attempted to handle a request packet"
-                    " without authenticating and logging in first.\n");
+                LogConnectionErrorMsg("Client connection attempted to handle a "
+                    "request packet without authenticating and logging in "
+                    "first.\n");
             }
             break;
     }

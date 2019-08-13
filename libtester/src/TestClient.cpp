@@ -198,8 +198,11 @@ bool TestClient::WaitForPacket(uint16_t code,
 
         if(0 < badMessages)
         {
-            LOG_WARNING(libcomp::String("Detected %1 other messages.\n").Arg(
-                badMessages));
+            LogGeneralWarning([&]()
+            {
+                return libcomp::String("Detected %1 other messages.\n")
+                    .Arg(badMessages);
+            });
         }
 
         ClearMessages();
@@ -265,7 +268,10 @@ bool TestClient::WaitForMessage(std::function<WaitStatus(
 
     if(result)
     {
-        LOG_DEBUG(libcomp::String("Wait took %1 ms\n").Arg(waitTime));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Wait took %1 ms\n").Arg(waitTime);
+        });
     }
 
     return result;

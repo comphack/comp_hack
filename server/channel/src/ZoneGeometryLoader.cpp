@@ -107,8 +107,12 @@ bool ZoneGeometryLoader::LoadZoneQMP(
     if(!qmpFile)
     {
         //success = false;
-        LOG_ERROR(libcomp::String("Failed to load zone geometry file: %1\n")
-            .Arg(filename));
+        LogZoneManagerError([&]()
+        {
+            return libcomp::String("Failed to load zone geometry file: %1\n")
+                .Arg(filename);
+        });
+
         return true;
     }
 
@@ -181,9 +185,12 @@ bool ZoneGeometryLoader::LoadZoneQMP(
                 {
                     if(shape->OneWay)
                     {
-                        LOG_DEBUG(libcomp::String("Inverted one way"
-                            " directional line encountered in shape:"
-                            " %1\n").Arg(shape->Element->GetName()));
+                        LogZoneManagerDebug([&]()
+                        {
+                            return libcomp::String("Inverted one way"
+                                " directional line encountered in shape:"
+                                " %1\n").Arg(shape->Element->GetName());
+                        });
                     }
 
                     shape->Lines.push_back(Line(it->second, it->first));
@@ -356,8 +363,11 @@ bool ZoneGeometryLoader::LoadZoneQMP(
             .Arg(navTotal).Arg(navPoints.size());
     }
 
-    LOG_DEBUG(libcomp::String("Loaded zone geometry file: %1%2\n")
-        .Arg(filename).Arg(filterString));
+    LogZoneManagerDebug([&]()
+    {
+        return libcomp::String("Loaded zone geometry file: %1%2\n")
+            .Arg(filename).Arg(filterString);
+    });
 
     mDataLock.lock();
     mZoneGeometry[filename.C()] = geometry;

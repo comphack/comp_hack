@@ -102,8 +102,9 @@ bool Parsers::TriFusionDemonUpdate::Parse(libcomp::ManagerPacket *pPacketManager
 
             if(participantIDs.find(ownerEntityID) == participantIDs.end())
             {
-                LOG_ERROR("Received TriFusion demon update request for"
-                    " an invalid demon/character pair\n");
+                LogGeneralErrorMsg("Received TriFusion demon update request "
+                    "for an invalid demon/character pair\n");
+
                 failure = true;
                 break;
             }
@@ -134,8 +135,12 @@ bool Parsers::TriFusionDemonUpdate::Parse(libcomp::ManagerPacket *pPacketManager
             }
             else
             {
-                LOG_ERROR(libcomp::String("Invalid TriFusion demon update UID"
-                    " encountered: %1\n").Arg(demonUID.ToString()));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Invalid TriFusion demon update UID"
+                        " encountered: %1\n").Arg(demonUID.ToString());
+                });
+
                 failure = true;
                 break;
             }

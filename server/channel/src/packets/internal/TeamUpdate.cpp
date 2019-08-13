@@ -57,7 +57,8 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(p.Size() < 3)
     {
-        LOG_ERROR("Invalid response received for TeamUpdate.\n");
+        LogGeneralErrorMsg("Invalid response received for TeamUpdate.\n");
+
         return false;
     }
 
@@ -71,7 +72,8 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         ->GatherWorldTargetClients(p, connectionsFound);
     if(!connectionsFound)
     {
-        LOG_ERROR("Connections not found for TeamUpdate.\n");
+        LogGeneralErrorMsg("Connections not found for TeamUpdate.\n");
+
         return false;
     }
 
@@ -125,8 +127,12 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(p.Left() < 5)
             {
-                LOG_ERROR(libcomp::String("Missing ziotite parameter"
-                    " for command %1\n").Arg(mode));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Missing ziotite parameter"
+                        " for command %1\n").Arg(mode);
+                });
+
                 return false;
             }
 
@@ -152,7 +158,7 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             else
             {
-                LOG_ERROR("Update ziotite request received from the world"
+                LogGeneralErrorMsg("Update ziotite request received from the world"
                     " for team with no connected members");
             }
         }

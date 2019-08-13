@@ -121,7 +121,7 @@ bool ChannelServer::Initialize()
         std::set<std::string>{ "Character", "CharacterProgress", "Demon",
             "EntityStats", "Expertise", "Hotbar", "Item" }))
     {
-        LOG_INFO("No default character file loaded. New characters"
+        LogGeneralInfoMsg("No default character file loaded. New characters"
             " will start with nothing but chosen equipment and base"
             " expertise skills.\n");
     }
@@ -742,7 +742,8 @@ bool ChannelServer::Initialize()
 
     if(!connected)
     {
-        LOG_CRITICAL("Failed to connect to the world server!\n");
+        LogGeneralCriticalMsg("Failed to connect to the world server!\n");
+
         return false;
     }
 
@@ -1147,8 +1148,13 @@ void ChannelServer::Tick()
                         username);
                     if(nullptr != client)
                     {
-                        LOG_ERROR(libcomp::String("Queued updates for client"
-                            " failed to save for account: %1\n").Arg(username));
+                        LogGeneralError([&]()
+                        {
+                            return libcomp::String("Queued updates for client"
+                                " failed to save for account: %1\n")
+                                .Arg(username);
+                        });
+
                         client->Close();
                     }
                 }
@@ -1240,8 +1246,11 @@ void ChannelServer::StartGameTick()
                 {
                     if(ticksMissed)
                     {
-                        LOG_DEBUG(libcomp::String("Missed %1 tick(s) within"
-                            " the last 5 minutes.\n").Arg(ticksMissed));
+                        LogGeneralDebug([&]()
+                        {
+                            return libcomp::String("Missed %1 tick(s) within"
+                                " the last 5 minutes.\n").Arg(ticksMissed);
+                        });
                     }
 
                     ticksMissed = 0;
@@ -1412,8 +1421,11 @@ void ChannelServer::HandleClockEvents()
 
     if(recalc)
     {
-        LOG_DEBUG(libcomp::String("Handling clock events at: %1\n")
-            .Arg(clock.ToString()));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Handling clock events at: %1\n")
+                .Arg(clock.ToString());
+        });
 
         mTokuseiManager->RecalcTimedTokusei(clock);
         mZoneManager->HandleTimedActions(clock, lastTrigger);
@@ -1432,8 +1444,11 @@ void ChannelServer::HandleDemonQuestReset()
         auto state = client->GetClientState();
         if(mEventManager->ResetDemonQuests(client, now, dbChanges))
         {
-            LOG_DEBUG(libcomp::String("Resetting demon quests for"
-                " account: %1\n").Arg(state->GetAccountUID().ToString()));
+            LogGeneralDebug([&]()
+            {
+                return libcomp::String("Resetting demon quests for"
+                    " account: %1\n").Arg(state->GetAccountUID().ToString());
+            });
         }
 
         updated = true;
@@ -1441,7 +1456,7 @@ void ChannelServer::HandleDemonQuestReset()
 
     if(updated && !GetWorldDatabase()->ProcessChangeSet(dbChanges))
     {
-        LOG_ERROR("Failed to save daily demon quest resets on one or"
+        LogGeneralErrorMsg("Failed to save daily demon quest resets on one or"
             " more character(s)\n");
     }
 

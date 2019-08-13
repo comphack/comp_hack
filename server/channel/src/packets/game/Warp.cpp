@@ -68,8 +68,12 @@ bool Parsers::Warp::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(sourceState == nullptr)
     {
-        LOG_ERROR(libcomp::String("Invalid entity ID received from a warp"
-            " request: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid entity ID received from a warp"
+                " request: %1\n").Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }
@@ -82,7 +86,8 @@ bool Parsers::Warp::Parse(libcomp::ManagerPacket *pPacketManager,
     auto activatedAbility = sourceState->GetSpecialActivations(activationID);
     if(!activatedAbility)
     {
-        LOG_ERROR("Invalid activation ID encountered for Warp request\n");
+        LogGeneralErrorMsg(
+            "Invalid activation ID encountered for Warp request\n");
     }
     else
     {

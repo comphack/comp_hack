@@ -90,9 +90,12 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
                 if(!loaded)
                 {
                     // This is not a hard failure, let the channel correct
-                    LOG_ERROR(libcomp::String("One or more equipped items"
-                        " failed to load: %1\n")
-                        .Arg(character->GetUUID().ToString()));
+                    LogGeneralError([&]()
+                    {
+                        return libcomp::String("One or more equipped items"
+                            " failed to load: %1\n")
+                            .Arg(character->GetUUID().ToString());
+                    });
                 }
 
                 characters.insert(character);
@@ -100,8 +103,11 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
             else
             {
                 // If stats can't load, we need to exclude the character
-                LOG_ERROR(libcomp::String("Character stats coul not be"
-                    " loaded: %1\n").Arg(character->GetUUID().ToString()));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Character stats coul not be"
+                        " loaded: %1\n").Arg(character->GetUUID().ToString());
+                });
             }
         }
     }
@@ -144,8 +150,12 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!stats)
         {
-            LOG_ERROR(libcomp::String("Character was loaded but stats are no"
-                " longer loaded: %1\n").Arg(character->GetUUID().ToString()));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Character was loaded but stats are no"
+                    " longer loaded: %1\n").Arg(character->GetUUID().ToString());
+            });
+
             continue;
         }
 

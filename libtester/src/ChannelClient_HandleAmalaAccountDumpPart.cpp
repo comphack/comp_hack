@@ -31,13 +31,16 @@ void ChannelClient::HandleAmalaAccountDumpPart(libcomp::ReadOnlyPacket& p)
             if(!out || 1 != fwrite(&mAccountDumpData[0],
                 mAccountDumpData.size(), 1, out))
             {
-                LOG_ERROR("Failed to write account dump to disk.\n");
+                LogGeneralErrorMsg("Failed to write account dump to disk.\n");
             }
             else
             {
-                LOG_INFO(libcomp::String("Wrote backup of account '%1' to "
-                    "'%2.xml'\n").Arg(mAccountDumpAccountName).Arg(
-                    mAccountDumpAccountName));
+                LogGeneralInfo([&]()
+                {
+                    return libcomp::String("Wrote backup of account '%1' to "
+                        "'%2.xml'\n").Arg(mAccountDumpAccountName).Arg(
+                        mAccountDumpAccountName);
+                });
             }
 
             if(out)
@@ -47,7 +50,8 @@ void ChannelClient::HandleAmalaAccountDumpPart(libcomp::ReadOnlyPacket& p)
         }
         else
         {
-            LOG_ERROR("Failed to save account dump due to corruption!\n");
+            LogGeneralErrorMsg(
+                "Failed to save account dump due to corruption!\n");
         }
     }
 }

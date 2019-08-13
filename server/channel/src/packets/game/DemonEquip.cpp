@@ -88,8 +88,12 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
             demonID))) : nullptr;
     if(!demon || dState->GetEntity() != demon)
     {
-        LOG_ERROR(libcomp::String("Invalid demon requested for DemonEquip"
-            ": %1.\n").Arg(state->GetAccountUID().ToString()));
+        LogDemonError([&]()
+        {
+            return libcomp::String("Invalid demon requested for DemonEquip"
+                ": %1.\n").Arg(state->GetAccountUID().ToString());
+        });
+
         return true;
     }
 
@@ -127,8 +131,12 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
         removeAll = true;
         break;
     default:
-        LOG_ERROR(libcomp::String("Unknown DemonEquip action type"
-            " encountered: %1\n").Arg(actionType));
+        LogDemonError([&]()
+        {
+            return libcomp::String("Unknown DemonEquip action type"
+                " encountered: %1\n").Arg(actionType);
+        });
+
         return false;
     }
 
@@ -136,9 +144,13 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(!removeAll && !equip && !unequip)
     {
-        LOG_ERROR(libcomp::String("DemonEquip equip action"
-            " attempted with no valid item supplied: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogDemonError([&]()
+        {
+            return libcomp::String("DemonEquip equip action"
+                " attempted with no valid item supplied: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         success = false;
     }
 
@@ -148,17 +160,25 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
         if(equip->GetBoxSlot() != inventorySlot ||
             equip->GetItemBox() != inventory->GetUUID())
         {
-            LOG_ERROR(libcomp::String("DemonEquip equip action"
-                " attempted with incorrect inventory item slot supplied: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogDemonError([&]()
+            {
+                return libcomp::String("DemonEquip equip action attempted with "
+                    "incorrect inventory item slot supplied: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             success = false;
         }
 
         if(demonSlot >= 4)
         {
-            LOG_ERROR(libcomp::String("DemonEquip equip action"
-                " attempted with invalid target slot: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogDemonError([&]()
+            {
+                return libcomp::String("DemonEquip equip action"
+                    " attempted with invalid target slot: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             success = false;
         }
 
@@ -179,9 +199,13 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            LOG_ERROR(libcomp::String("DemonEquip equip action"
-                " attempted with item that is not demon equipment: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogDemonError([&]()
+            {
+                return libcomp::String("DemonEquip equip action"
+                    " attempted with item that is not demon equipment: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             success = false;
         }
 
@@ -219,9 +243,13 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
                 {
                     if(i == (size_t)demonSlot && equipData->GetFixed())
                     {
-                        LOG_ERROR(libcomp::String("DemonEquip attempted on"
-                            " fixed demon trait: %1\n")
-                            .Arg(state->GetAccountUID().ToString()));
+                        LogDemonError([&]()
+                        {
+                            return libcomp::String("DemonEquip attempted on"
+                                " fixed demon trait: %1\n")
+                                .Arg(state->GetAccountUID().ToString());
+                        });
+
                         success = false;
                         break;
                     }
@@ -231,9 +259,13 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
                         if(exGroup && exclusionGroups.find(exGroup) !=
                             exclusionGroups.end())
                         {
-                            LOG_ERROR(libcomp::String("DemonEquip exclusion"
-                                " group restriction failed: %1\n")
-                                .Arg(state->GetAccountUID().ToString()));
+                            LogDemonError([&]()
+                            {
+                                return libcomp::String("DemonEquip exclusion"
+                                    " group restriction failed: %1\n")
+                                    .Arg(state->GetAccountUID().ToString());
+                            });
+
                             success = false;
                             break;
                         }
@@ -245,9 +277,13 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(success && unequip && inventorySlot >= 50)
     {
-        LOG_ERROR(libcomp::String("DemonEquip unequip action"
-            " attempted with invalid target slot: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogDemonError([&]()
+        {
+            return libcomp::String("DemonEquip unequip action"
+                " attempted with invalid target slot: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         success = false;
     }
 
@@ -268,9 +304,14 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if((size_t)equipCount > removeAllSlots.size())
         {
-            LOG_ERROR(libcomp::String("DemonEquip unequip all action"
-                " attempted with insufficient inventory space available: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogDemonError([&]()
+            {
+                return libcomp::String("DemonEquip unequip all action"
+                    " attempted with insufficient inventory space "
+                    "available: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             success = false;
         }
     }

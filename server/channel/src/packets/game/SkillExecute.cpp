@@ -57,8 +57,13 @@ bool Parsers::SkillExecute::Parse(libcomp::ManagerPacket *pPacketManager,
     auto source = state->GetEntityState(sourceEntityID);
     if(!source)
     {
-        LOG_ERROR(libcomp::String("Invalid skill source sent from client for"
-            " skill execution: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Invalid skill source sent from client for"
+                " skill execution: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }

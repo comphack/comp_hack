@@ -85,8 +85,11 @@ bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!srcBox || srcBoxID != srcBox->GetBoxID() || !destBox ||
         srcDemon != srcBox->GetDemons((size_t)srcSlot).Get() || destSlot >= maxDestSlots)
     {
-        LOG_DEBUG(libcomp::String("DemonBoxMove request failed. Notifying"
-            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogDemonDebug([&]()
+        {
+            return libcomp::String("DemonBoxMove request failed. Notifying"
+                " requestor: %1\n").Arg(state->GetAccountUID().ToString());
+        });
 
         fail = true;
     }

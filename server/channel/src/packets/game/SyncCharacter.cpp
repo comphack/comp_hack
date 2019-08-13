@@ -59,8 +59,12 @@ bool Parsers::SyncCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(eState == nullptr)
     {
-        LOG_ERROR(libcomp::String("Entity not belonging to the client"
-            " requested for SyncCharacter: %1\n").Arg(entityID));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Entity not belonging to the client"
+                " requested for SyncCharacter: %1\n").Arg(entityID);
+        });
+
         return true;
     }
 

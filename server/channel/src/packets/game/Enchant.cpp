@@ -388,8 +388,9 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
         {
-            LOG_ERROR("Enchant result failed to save, disconnecting"
+            LogGeneralErrorMsg("Enchant result failed to save, disconnecting"
                 " player(s)\n");
+
             client->Kill();
 
             if(targetClient)

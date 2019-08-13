@@ -176,7 +176,7 @@ void WorldServer::FinishInitialize()
 
     if(!connected)
     {
-        LOG_CRITICAL("Failed to connect to the lobby server!\n");
+        LogConnectionCriticalMsg("Failed to connect to the lobby server!\n");
 
         return;
     }
@@ -185,7 +185,7 @@ void WorldServer::FinishInitialize()
 
     if(nullptr == dynamic_cast<libcomp::Message::WorldNotification*>(pMessage))
     {
-        LOG_CRITICAL("Lobby server did not accept the world server "
+        LogConnectionCriticalMsg("Lobby server did not accept the world server "
             "notification.\n");
 
         return;
@@ -341,12 +341,15 @@ bool WorldServer::RegisterServer()
 
     if(channelServers.size() > 0)
     {
-        LOG_DEBUG("Clearing the registered channels from the previous execution.\n");
+        LogGeneralDebugMsg(
+            "Clearing the registered channels from the previous execution.\n");
+
         auto objs = libcomp::PersistentObject::ToList<objects::RegisteredChannel>(
             channelServers);
         if(!mDatabase->DeleteObjects(objs))
         {
-            LOG_CRITICAL("Registered channel deletion failed.\n");
+            LogGeneralCriticalMsg("Registered channel deletion failed.\n");
+
             return false;
         }
     }

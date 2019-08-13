@@ -444,8 +444,9 @@ bool Parsers::DemonCrystallize::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
         {
-            LOG_ERROR("Crystallize result failed to save, disconnecting"
+            LogDemonErrorMsg("Crystallize result failed to save, disconnecting"
                 " player(s)\n");
+
             client->Kill();
 
             if(targetClient)

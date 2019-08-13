@@ -107,10 +107,14 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
                         }
                         else
                         {
-                            LOG_WARNING(libcomp::String("Failed offline relay"
-                                " attempt encountered with non-existent"
-                                " character: %1\n").Arg(login->GetCharacter()
-                                    .GetUUID().ToString()));
+                            LogGeneralWarning([&]()
+                            {
+                                return libcomp::String("Failed offline relay"
+                                    " attempt encountered with non-existent"
+                                    " character: %1\n")
+                                    .Arg(login->GetCharacter().GetUUID()
+                                    .ToString());
+                            });
                         }
                     }
                 }
@@ -184,8 +188,11 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             else
             {
-                LOG_ERROR(libcomp::String("Attempted to relay a packet for"
-                    " a party that does not exist: %1\n").Arg(partyID));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Attempted to relay a packet for"
+                        " a party that does not exist: %1\n").Arg(partyID);
+                });
             }
         }
         break;
@@ -211,8 +218,11 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             else
             {
-                LOG_ERROR(libcomp::String("Attempted to relay a packet for"
-                    " a clan that does not exist: %1\n").Arg(clanID));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Attempted to relay a packet for"
+                        " a clan that does not exist: %1\n").Arg(clanID);
+                });
             }
         }
         break;
@@ -220,7 +230,7 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             int32_t teamID = p.ReadS32Little();
             bool includeSource = p.ReadU8() == 1;
-            
+
             auto team = characterManager->GetTeam(teamID);
             if(team)
             {
@@ -236,13 +246,17 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             else
             {
-                LOG_ERROR(libcomp::String("Attempted to relay a packet for"
-                    " a team that does not exist: %1\n").Arg(teamID));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Attempted to relay a packet for"
+                        " a team that does not exist: %1\n").Arg(teamID);
+                });
             }
         }
         break;
     default:
-        LOG_ERROR("Invalid relay mode specified\n");
+        LogGeneralErrorMsg("Invalid relay mode specified\n");
+
         return false;
     }
 
@@ -268,9 +282,12 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
                 }
                 else
                 {
-                    LOG_WARNING(libcomp::String("Failed relay attempt"
-                        " encountered with non-existent character: %1\n")
-                        .Arg(c->GetCharacter().GetUUID().ToString()));
+                    LogGeneralWarning([&]()
+                    {
+                        return libcomp::String("Failed relay attempt"
+                            " encountered with non-existent character: %1\n")
+                            .Arg(c->GetCharacter().GetUUID().ToString());
+                    });
                 }
             }
         }
@@ -286,7 +303,7 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
                 libcomp::Packet relay;
                 WorldServer::GetRelayPacket(relay, pair.second, sourceCID);
                 relay.WriteArray(packetData);
-        
+
                 channel->SendPacket(relay);
             }
         }
@@ -306,7 +323,7 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
                 // Not valid anymore, nothing to do
                 return true;
             }
-            
+
             libcomp::Packet failure;
             failure.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
             failure.WriteS32Little(sourceCID);

@@ -124,69 +124,59 @@
 </section><!-- LogFileAppend -->
 
 <section>
-<title>LogDebug</title>
-<para><emphasis role="strong">Type:</emphasis> boolean</para>
-<para><emphasis role="strong">Default:</emphasis> true</para>
-<para>Indicates if debug log messages should be produced.</para>
+<title>LogLevels</title>
+<para><emphasis role="strong">Type:</emphasis> map</para>
+<para><emphasis role="strong">Default:</emphasis> WARNING</para>
+<para>Map of log categories to log level. Each category can be set to DEBUG, INFO, WARNING, ERROR or CRITICAL. Messages at the set level or more critical level(s) will be logged. For example, a level of WARNING will log messages at the ERROR and CRITICAL level as well.</para>
+
+<para>Here is the list of categories:
+<itemizedlist>
+    <listitem><para>AccountManager</para></listitem>
+    <listitem><para>ActionManager</para></listitem>
+    <listitem><para>AIManager</para></listitem>
+    <listitem><para>Barter</para></listitem>
+    <listitem><para>Bazaar</para></listitem>
+    <listitem><para>CharacterManager</para></listitem>
+    <listitem><para>ChatManager</para></listitem>
+    <listitem><para>Clan</para></listitem>
+    <listitem><para>Connection</para></listitem>
+    <listitem><para>Crypto</para></listitem>
+    <listitem><para>Database</para></listitem>
+    <listitem><para>DataStore</para></listitem>
+    <listitem><para>DataSyncManager</para></listitem>
+    <listitem><para>DefinitionManager</para></listitem>
+    <listitem><para>Demon</para></listitem>
+    <listitem><para>EventManager</para></listitem>
+    <listitem><para>Friend</para></listitem>
+    <listitem><para>FusionManager</para></listitem>
+    <listitem><para>General</para></listitem>
+    <listitem><para>Invalid</para></listitem>
+    <listitem><para>Item</para></listitem>
+    <listitem><para>MatchManager</para></listitem>
+    <listitem><para>Party</para></listitem>
+    <listitem><para>ScriptEngine</para></listitem>
+    <listitem><para>Server</para></listitem>
+    <listitem><para>ServerConstants</para></listitem>
+    <listitem><para>ServerDataManager</para></listitem>
+    <listitem><para>SkillManager</para></listitem>
+    <listitem><para>TokuseiManager</para></listitem>
+    <listitem><para>Trade</para></listitem>
+    <listitem><para>WebAPI</para></listitem>
+    <listitem><para>ZoneManager</para></listitem>
+</itemizedlist>
+</para>
 
 <section>
 <title>Example</title>
-<para><![CDATA[<member name="LogDebug">true</member>]]></para>
+<para><programlisting><![CDATA[<member name="LogLevels">
+    <pair>
+        <key>General</key>
+        <value>DEBUG</value>
+    </pair>
+</member>]]></programlisting></para>
 </section><!-- Example -->
 
-</section><!-- LogDebug -->
-
-<section>
-<title>LogInfo</title>
-<para><emphasis role="strong">Type:</emphasis> boolean</para>
-<para><emphasis role="strong">Default:</emphasis> true</para>
-<para>Indicates if info log messages should be produced.</para>
-
-<section>
-<title>Example</title>
-<para><![CDATA[<member name="LogInfo">true</member>]]></para>
-</section><!-- Example -->
-
-</section><!-- LogInfo -->
-
-<section>
-<title>LogWarning</title>
-<para><emphasis role="strong">Type:</emphasis> boolean</para>
-<para><emphasis role="strong">Default:</emphasis> true</para>
-<para>Indicates if warning log messages should be produced.</para>
-
-<section>
-<title>Example</title>
-<para><![CDATA[<member name="LogWarning">true</member>]]></para>
-</section><!-- Example -->
-
-</section><!-- LogWarning -->
-
-<section>
-<title>LogError</title>
-<para><emphasis role="strong">Type:</emphasis> boolean</para>
-<para><emphasis role="strong">Default:</emphasis> true</para>
-<para>Indicates if error log messages should be produced.</para>
-
-<section>
-<title>Example</title>
-<para><![CDATA[<member name="LogError">true</member>]]></para>
-</section><!-- Example -->
-
-</section><!-- LogError -->
-
-<section>
-<title>LogCritical</title>
-<para><emphasis role="strong">Type:</emphasis> boolean</para>
-<para><emphasis role="strong">Default:</emphasis> true</para>
-<para>Indicates if critical log messages should be produced.</para>
-
-<section>
-<title>Example</title>
-<para><![CDATA[<member name="LogCritical">true</member>]]></para>
-</section><!-- Example -->
-
-</section><!-- LogCritical -->
+</section><!-- LogLevels -->
 
 <section>
 <title>LogRotation</title>

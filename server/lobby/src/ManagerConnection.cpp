@@ -82,9 +82,11 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 uint16_t port = notification->GetPort();
                 libcomp::String address = notification->GetAddress();
 
-                LOG_DEBUG(libcomp::String(
-                    "Attempting to connect back to World: %1:%2\n").Arg(
-                    address).Arg(port));
+                LogConnectionDebug([&]()
+                {
+                    return libcomp::String("Attempting to connect back to "
+                        "World: %1:%2\n").Arg(address).Arg(port);
+                });
 
                 auto worldConnection = std::make_shared<
                     libcomp::InternalConnection>(*mService);
@@ -99,15 +101,21 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                     auto world = std::make_shared<lobby::World>();
                     world->SetConnection(worldConnection);
 
-                    LOG_INFO(libcomp::String(
-                        "New World connection established: %1:%2\n").Arg(
-                        address).Arg(port));
+                    LogConnectionInfo([&]()
+                    {
+                        return libcomp::String("New World connection "
+                            "established: %1:%2\n").Arg(address).Arg(port);
+                    });
 
                     mUnregisteredWorlds.push_back(world);
                     return true;
                 }
 
-                LOG_ERROR(libcomp::String("World connection failed: %1:%2\n").Arg(address).Arg(port));
+                LogConnectionError([&]()
+                {
+                    return libcomp::String("World connection failed: %1:%2\n")
+                        .Arg(address).Arg(port);
+                });
             }
             break;
         case libcomp::Message::ConnectionMessageType::CONNECTION_MESSAGE_ENCRYPTED:
@@ -252,8 +260,9 @@ const std::shared_ptr<lobby::World> ManagerConnection::RegisterWorld(
             }
             else if(existing->GetConnection() != connection)
             {
-                LOG_CRITICAL("Multiple world servers registered with"
-                    " the same information.\n");
+                LogConnectionCriticalMsg("Multiple world servers registered "
+                    "with the same information.\n");
+
                 return nullptr;
             }
         }
@@ -288,8 +297,11 @@ void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
             mWorlds.erase(iter);
             if(nullptr != svr)
             {
-                LOG_INFO(libcomp::String("World connection removed: (%1) %2\n")
-                    .Arg(svr->GetID()).Arg(svr->GetName()));
+                LogConnectionInfo([&]()
+                {
+                    return libcomp::String("World connection removed: (%1) "
+                        "%2\n").Arg(svr->GetID()).Arg(svr->GetName());
+                });
 
                 server->QueueWork([](std::shared_ptr<LobbyServer> lobbyServer,
                     int8_t worldID)
@@ -299,8 +311,12 @@ void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
 
                         if(usernames.size() > 0)
                         {
-                            LOG_WARNING(libcomp::String("%1 user(s) forcefully logged out"
-                                " from world %2.\n").Arg(usernames.size()).Arg(worldID));
+                            LogConnectionWarning([&]()
+                            {
+                                return libcomp::String("%1 user(s) forcefully "
+                                    "logged out from world %2.\n")
+                                    .Arg(usernames.size()).Arg(worldID);
+                            });
                         }
 
                         lobbyServer->SendWorldList(nullptr);
@@ -308,7 +324,8 @@ void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world)
             }
             else
             {
-                LOG_WARNING("Uninitialized world connection closed.\n");
+                LogConnectionWarningMsg(
+                    "Uninitialized world connection closed.\n");
             }
 
             auto db = server->GetMainDatabase();
@@ -390,7 +407,12 @@ void ManagerConnection::RemoveClientConnection(const std::shared_ptr<
         int8_t worldID;
         if(accountManager->IsLoggedIn(username, worldID) && worldID == -1)
         {
-            LOG_DEBUG(libcomp::String("Logging out user: '%1'\n").Arg(username));
+            LogConnectionDebug([&]()
+            {
+                return libcomp::String("Logging out user: '%1'\n")
+                    .Arg(username);
+            });
+
             accountManager->Logout(username);
         }
     }

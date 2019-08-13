@@ -171,8 +171,11 @@ bool GameWorker::ProcessClientMessage(
 
     if(!didProcess)
     {
-        LOG_ERROR(libcomp::String("Failed to process client message:\n%1\n").Arg(
-            pMessage->Dump()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Failed to process client message:\n%1\n")
+                .Arg(pMessage->Dump());
+        });
     }
 
     return true;

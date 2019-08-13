@@ -1097,8 +1097,12 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
         }
         break;
     default:
-        LOG_ERROR(libcomp::String("Unknown revival mode requested: %1\n")
-            .Arg(revivalMode));
+        LogCharacterManagerError([&]()
+        {
+            return libcomp::String("Unknown revival mode requested: %1\n")
+                .Arg(revivalMode);
+        });
+
         break;
     }
 
@@ -1145,8 +1149,12 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
 
     if(responseType1 == -1 && responseType2 == -1)
     {
-        LOG_ERROR(libcomp::String("Revival failed for character %1\n")
-            .Arg(cState->GetEntityUUID().ToString()));
+        LogCharacterManagerError([&]()
+        {
+            return libcomp::String("Revival failed for character %1\n")
+                .Arg(cState->GetEntityUUID().ToString());
+        });
+
         return;
     }
 
@@ -1771,8 +1779,12 @@ std::shared_ptr<objects::ItemBox> CharacterManager::GetItemBox(
         default:
             if(nullptr == box)
             {
-                LOG_ERROR(libcomp::String("Attempted to retrieve unknown"
-                    " item box of type %1, with ID %2\n").Arg(boxType).Arg(boxID));
+                LogCharacterManagerError([&]()
+                {
+                    return libcomp::String("Attempted to retrieve unknown"
+                    " item box of type %1, with ID %2\n").Arg(boxType)
+                    .Arg(boxID);
+                });
             }
             break;
     }
@@ -2033,7 +2045,7 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                 itemCounts[SVR_CONST.ITEM_MACCA] = maccaCount;
             }
         }
-        
+
         // Compress mag
         it = itemCounts.find(SVR_CONST.ITEM_MAGNETITE);
         if(it != itemCounts.end() && it->second >= ITEM_MAG_PRESSER_AMOUNT)
@@ -2278,9 +2290,13 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                 int8_t slot = item->GetBoxSlot();
                 if(slot == -1)
                 {
-                    LOG_ERROR(libcomp::String("Removal attempted on item"
-                        " not in a valid box slot: %1\n")
-                        .Arg(item->GetUUID().ToString()));
+                    LogCharacterManagerError([&]()
+                    {
+                        return libcomp::String("Removal attempted on item"
+                            " not in a valid box slot: %1\n")
+                            .Arg(item->GetUUID().ToString());
+                    });
+
                     return false;
                 }
 
@@ -2288,9 +2304,13 @@ bool CharacterManager::AddRemoveItems(const std::shared_ptr<
                 {
                     if(itemBox->GetItems((size_t)slot).Get() != item)
                     {
-                        LOG_ERROR(libcomp::String("Removal attempted on item"
-                            " assigned to the wrong box slot: %1\n")
-                            .Arg(item->GetUUID().ToString()));
+                        LogCharacterManagerError([&]()
+                        {
+                            return libcomp::String("Removal attempted on item"
+                                " assigned to the wrong box slot: %1\n")
+                                .Arg(item->GetUUID().ToString());
+                        });
+
                         return false;
                     }
 
@@ -2383,7 +2403,7 @@ bool CharacterManager::CalculateMaccaPayment(const std::shared_ptr<
     auto macca = GetExistingItems(character, SVR_CONST.ITEM_MACCA, inventory);
     auto maccaNotes = GetExistingItems(character, SVR_CONST.ITEM_MACCA_NOTE,
         inventory);
-    
+
     uint64_t totalMacca = 0;
     for(auto m : macca)
     {
@@ -2527,9 +2547,13 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
         else if(allItems.find(item) != allItems.end())
         {
             // Duplicate item found, log and resend box
-            LOG_ERROR(libcomp::String("Inventory update failed for player due"
-                " to duplicate item entries: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogCharacterManagerError([&]()
+            {
+                return libcomp::String("Inventory update failed for player due"
+                    " to duplicate item entries: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             SendItemBoxData(client, inventory);
             return false;
         }
@@ -2696,9 +2720,12 @@ bool CharacterManager::CultureItemPickup(const std::shared_ptr<
             int8_t newSlots = currentSlots;
             if(!cmDef)
             {
-                LOG_ERROR(libcomp::String("No culture machine with ID %1"
-                    " found in zone %2\n").Arg(cData->GetMachineID())
-                    .Arg(cData->GetZone()));
+                LogCharacterManagerError([&]()
+                {
+                    return libcomp::String("No culture machine with ID %1"
+                        " found in zone %2\n").Arg(cData->GetMachineID())
+                        .Arg(cData->GetZone());
+                });
             }
             else if(newSlots < 5)
             {
@@ -3020,8 +3047,12 @@ std::list<std::shared_ptr<objects::Loot>> CharacterManager::CreateLootFromDrops(
                 drop->GetItemType());
             if(!itemDef)
             {
-                LOG_ERROR(libcomp::String("Attempted to create a drop from"
-                    " an invalid item type: %1\n").Arg(drop->GetItemType()));
+                LogCharacterManagerError([&]()
+                {
+                    return libcomp::String("Attempted to create a drop from"
+                        " an invalid item type: %1\n").Arg(drop->GetItemType());
+                });
+
                 continue;
             }
 
@@ -3606,7 +3637,7 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
 
     if(!demon)
     {
-        LOG_ERROR("Failed to contract demon!\n");
+        LogCharacterManagerErrorMsg("Failed to contract demon!\n");
 
         return {};
     }
@@ -3653,7 +3684,7 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     //Return false if no slot is open
     if(compSlot == -1)
     {
-        LOG_ERROR("No free slot to contract demon.\n");
+        LogCharacterManagerErrorMsg("No free slot to contract demon.\n");
 
         return nullptr;
     }
@@ -3661,7 +3692,7 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     auto d = GenerateDemon(demonData, familiarity);
     if(!d)
     {
-        LOG_ERROR("Failed to generate demon.\n");
+        LogCharacterManagerErrorMsg("Failed to generate demon.\n");
 
         return nullptr;
     }
@@ -5027,8 +5058,12 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
     auto skill = definitionManager->GetSkillData(skillID);
     if(nullptr == skill)
     {
-        LOG_WARNING(libcomp::String("Unknown skill ID encountered in"
-            " UpdateExpertise: %1").Arg(skillID));
+        LogCharacterManagerWarning([&]()
+        {
+            return libcomp::String("Unknown skill ID encountered in"
+                " UpdateExpertise: %1").Arg(skillID);
+        });
+
         return;
     }
     else if(skill->GetCommon()->GetCategory()->GetMainCategory() == 2)
@@ -7858,7 +7893,7 @@ void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int32_t>& s
             { CorrectTbl::SPEED, 0 },
             { CorrectTbl::LUCK, 0 }
         };
-    
+
     static libcomp::EnumMap<CorrectTbl, int16_t> maxStats =
         {
             { CorrectTbl::HP_MAX, MAX_PLAYER_HP_MP },
@@ -8078,7 +8113,7 @@ void CharacterManager::GetItemDetailPacketData(libcomp::Packet& p,
     const std::shared_ptr<objects::Item>& item, uint8_t detailLevel)
 {
     if(item)
-    {   
+    {
         if(detailLevel >= 1)
         {
             if(detailLevel >= 2)

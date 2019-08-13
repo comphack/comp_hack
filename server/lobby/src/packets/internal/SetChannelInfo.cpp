@@ -76,16 +76,26 @@ bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 if(usernames.size() > 0)
                 {
-                    LOG_WARNING(libcomp::String("%1 user(s) forcefully logged out"
-                        " from channel %2 on world %3.\n").Arg(usernames.size())
-                        .Arg(channel).Arg(worldID));
+                    LogGeneralWarning([&]()
+                    {
+                        return libcomp::String("%1 user(s) forcefully logged "
+                            "out from channel %2 on world %3.\n")
+                            .Arg(usernames.size())
+                            .Arg(channel)
+                            .Arg(worldID);
+                    });
                 }
             }, server, world->GetRegisteredWorld()->GetID(), channelID);
     }
     else
     {
-        LOG_DEBUG(libcomp::String("Updating Channel Server: (%1) %2\n")
-            .Arg(svr->GetID()).Arg(svr->GetName()));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Updating Channel Server: (%1) %2\n")
+                .Arg(svr->GetID())
+                .Arg(svr->GetName());
+        });
+
         world->RegisterChannel(svr);
     }
 

@@ -81,7 +81,12 @@ bool Parsers::EntrustRequest::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LOG_ERROR(libcomp::String("Invalid entrust skill supplied: %1\n").Arg(skillID));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid entrust skill supplied: %1\n")
+                .Arg(skillID);
+        });
+
         return false;
     }
 

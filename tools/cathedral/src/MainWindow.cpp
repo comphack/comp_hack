@@ -136,7 +136,8 @@ MainWindow::~MainWindow()
 bool MainWindow::Init()
 {
     libcomp::Log::GetSingletonPtr()->AddLogHook([&](
-        libcomp::Log::Level_t level, const libcomp::String& msg)
+        libcomp::LogComponent_t comp, libcomp::Log::Level_t level,
+        const libcomp::String& msg)
     {
         ui->log->moveCursor(QTextCursor::End);
         ui->log->setFontWeight(QFont::Normal);
@@ -165,7 +166,8 @@ bool MainWindow::Init()
                 break;
         }
 
-        ui->log->insertPlainText(msg.C());
+        ui->log->insertPlainText(qs(libcomp::String("%1: %2").Arg(
+            libcomp::LogComponentToString(comp)).Arg(msg)));
         ui->log->moveCursor(QTextCursor::End);
 
         if(logCrash)
@@ -179,7 +181,8 @@ bool MainWindow::Init()
                 if(file.isOpen())
                 {
                     QTextStream oStream(&file);
-                    oStream << qs(msg);
+                    oStream << qs(libcomp::LogComponentToString(comp))
+                        << ": " << qs(msg);
                     file.close();
                 }
             }
@@ -589,7 +592,10 @@ void MainWindow::UpdateActiveZone(const libcomp::String& path)
 
     ui->zonePath->setText(qs(path));
 
-    LOG_INFO(libcomp::String("Loaded: %1\n").Arg(path));
+    LogGeneralInfo([&]()
+    {
+        return libcomp::String("Loaded: %1\n").Arg(path);
+    });
 
     ui->zoneView->setEnabled(true);
 }
@@ -669,8 +675,10 @@ bool MainWindow::LoadBinaryData(const libcomp::String& binaryFile,
     }
     else
     {
-        LOG_DEBUG(libcomp::String("Loading records from %1\n")
-            .Arg(binaryFile));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Loading records from %1\n").Arg(binaryFile);
+        });
     }
 
     std::stringstream ss(std::string(bytes.begin(), bytes.end()));
@@ -699,7 +707,7 @@ bool MainWindow::LoadBinaryData(const libcomp::String& binaryFile,
 }
 
 
-void MainWindow::CloseAllWindows() 
+void MainWindow::CloseAllWindows()
 {
     for(auto& pair : mObjectSelectors)
     {

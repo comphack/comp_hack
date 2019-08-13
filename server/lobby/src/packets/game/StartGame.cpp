@@ -79,7 +79,7 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     // What? Go away hacker.
     if(!character)
     {
-        LOG_ERROR("Failed to get character?!\n");
+        LogGeneralErrorMsg("Failed to get character?!\n");
 
         return false;
     }
@@ -89,9 +89,13 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
     // Check the world is still there.
     if(!world)
     {
-        LOG_ERROR(libcomp::String("User '%1' tried to loging to world %2 but "
-            "that world is not active.\n").Arg(username)
-            .Arg(character->GetWorldID()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("User '%1' tried to loging to world %2 but "
+                "that world is not active.\n")
+                .Arg(username)
+                .Arg(character->GetWorldID());
+        });
 
         return false;
     }
@@ -104,9 +108,13 @@ bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    LOG_DEBUG(libcomp::String("Start game request received for character"
-        " '%1' from %2\n").Arg(character->GetName())
-        .Arg(client->GetRemoteAddress()));
+    LogGeneralDebug([&]()
+    {
+        return libcomp::String("Start game request received for character"
+            " '%1' from %2\n")
+            .Arg(character->GetName())
+            .Arg(client->GetRemoteAddress());
+    });
 
     // Let the world know what we want to do.
     libcomp::Packet request;

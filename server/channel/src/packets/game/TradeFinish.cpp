@@ -57,7 +57,7 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         return false;
     }
-    
+
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto characterManager = server->GetCharacterManager();
 
@@ -209,7 +209,8 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
     auto db = server->GetWorldDatabase();
     if(!db->ProcessChangeSet(changes))
     {
-        LOG_ERROR("Trade failed to save.\n");
+        LogTradeErrorMsg("Trade failed to save.\n");
+
         client->Close();
         otherClient->Close();
     }

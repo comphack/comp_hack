@@ -119,9 +119,13 @@ void UpdateDemonSkill(const std::shared_ptr<ChannelServer> server,
 
         if(!found)
         {
-            LOG_ERROR(libcomp::String("DemonSkillUpdate request received"
-                " for skill ID '%1' which is not on the demon: %2\n")
-                .Arg(skillID).Arg(state->GetAccountUID().ToString()));
+            LogDemonError([&]()
+            {
+                return libcomp::String("DemonSkillUpdate request received"
+                    " for skill ID '%1' which is not on the demon: %2\n")
+                    .Arg(skillID).Arg(state->GetAccountUID().ToString());
+            });
+
             client->Close();
             return;
         }
@@ -188,8 +192,12 @@ bool Parsers::DemonSkillUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     auto skillDef = server->GetDefinitionManager()->GetSkillData(skillID);
     if(nullptr == skillDef)
     {
-        LOG_ERROR(libcomp::String("Invalid skill ID encountered when attempting to"
-            " to update a demon's skills: %1\n").Arg(skillID));
+        LogDemonError([&]()
+        {
+            return libcomp::String("Invalid skill ID encountered when "
+                "attempting to to update a demon's skills: %1\n").Arg(skillID);
+        });
+
         return false;
     }
 

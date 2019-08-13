@@ -87,8 +87,11 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!item || !sourceBox || !destBox ||
         sourceBox->GetItems(sourceSlot).Get() != item)
     {
-        LOG_DEBUG(libcomp::String("ItemMove request failed. Notifying"
-            " requestor: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogItemDebug([&]()
+        {
+            return libcomp::String("ItemMove request failed. Notifying"
+                " requestor: %1\n").Arg(state->GetAccountUID().ToString());
+        });
 
         fail = true;
     }

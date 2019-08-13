@@ -76,10 +76,25 @@ bool Parsers::TeamForm::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         // All other parameters seem to never be specified, debug
         // if they are not
-        LOG_DEBUG(libcomp::String("TeamForm 2: %1\n").Arg(unk2));
-        LOG_DEBUG(libcomp::String("TeamForm 3: %1\n").Arg(unk3));
-        LOG_DEBUG(libcomp::String("TeamForm 4: %1\n").Arg(unk4));
-        LOG_DEBUG(libcomp::String("TeamForm 5: %1\n").Arg(unk5));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("TeamForm 2: %1\n").Arg(unk2);
+        });
+
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("TeamForm 3: %1\n").Arg(unk3);
+        });
+
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("TeamForm 4: %1\n").Arg(unk4);
+        });
+
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("TeamForm 5: %1\n").Arg(unk5);
+        });
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(
@@ -122,7 +137,7 @@ bool Parsers::TeamForm::Parse(libcomp::ManagerPacket *pPacketManager,
             errorCode = (int8_t)TeamErrorCodes_t::SUCCESS;
         }
     }
-    
+
     if(errorCode == (int8_t)TeamErrorCodes_t::SUCCESS)
     {
         // Type verification passed, check valuables and other restrictions

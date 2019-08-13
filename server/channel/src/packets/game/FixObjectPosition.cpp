@@ -60,9 +60,13 @@ bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
     auto eState = state->GetEntityState(entityID);
     if(nullptr == eState)
     {
-        LOG_ERROR(libcomp::String("Invalid entity ID received from a fix"
-            " object position request: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid entity ID received from a fix"
+                " object position request: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }

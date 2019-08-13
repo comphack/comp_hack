@@ -60,7 +60,7 @@
 using namespace channel;
 
 void HandleCultureItem(const std::shared_ptr<ChannelServer> server,
-    const std::shared_ptr<ChannelClientConnection> client, 
+    const std::shared_ptr<ChannelClientConnection> client,
     int64_t itemID, int8_t day)
 {
     const int8_t PMODE_NORMAL = 0;
@@ -217,8 +217,14 @@ void HandleCultureItem(const std::shared_ptr<ChannelServer> server,
     if(success && pointMode != PMODE_MAX_ALL &&
         (day < 0 || daysLeft.find((uint8_t)day) == daysLeft.end()))
     {
-        LOG_ERROR(libcomp::String("Day '%1' is no longer valid for CultureItem"
-            " request: %2\n").Arg(day).Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Day '%1' is no longer valid for CultureItem"
+                " request: %2\n")
+                .Arg(day)
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         success = false;
     }
 
@@ -305,8 +311,12 @@ void HandleCultureItem(const std::shared_ptr<ChannelServer> server,
         }
         else
         {
-            LOG_ERROR(libcomp::String("Failed to consume item for CultureItem"
-                " request: %1\n").Arg(state->GetAccountUID().ToString()));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Failed to consume item for CultureItem"
+                    " request: %1\n").Arg(state->GetAccountUID().ToString());
+            });
+
             success = false;
         }
     }

@@ -96,9 +96,13 @@ void AllocatePoint(const std::shared_ptr<ChannelServer> server,
     int32_t pointCost = (int32_t)floor((currentStat + 1) / 10) + 1;
     if(points < pointCost)
     {
-        LOG_ERROR(libcomp::String("AllocateSkillPoint attempted with an"
-            " insufficient amount of stat points available: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("AllocateSkillPoint attempted with an"
+                " insufficient amount of stat points available: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Kill();
         return;
     }
@@ -109,9 +113,13 @@ void AllocatePoint(const std::shared_ptr<ChannelServer> server,
 
     if(!server->GetWorldDatabase()->ProcessChangeSet(opChangeset))
     {
-        LOG_ERROR(libcomp::String("AllocateSkillPoint failed to process"
-            " operational changeset when updating stats: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("AllocateSkillPoint failed to process"
+                " operational changeset when updating stats: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Kill();
         return;
     }

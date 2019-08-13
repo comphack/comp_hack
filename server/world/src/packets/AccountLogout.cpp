@@ -68,15 +68,21 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         if(!isLoggedIn || !cLogin)
         {
-            LOG_DEBUG(libcomp::String("Channel switch requested for user not"
-                " currently logged in: '%1'\n").Arg(username));
+            LogGeneralDebug([&]()
+            {
+                return libcomp::String("Channel switch requested for user not"
+                    " currently logged in: '%1'\n").Arg(username);
+            });
+
             return true;
         }
 
         auto channelLogin = std::make_shared<objects::ChannelLogin>();
         if(!channelLogin->LoadPacket(p))
         {
-            LOG_ERROR("Failed to load channel switch info from channel\n");
+            LogGeneralErrorMsg(
+                "Failed to load channel switch info from channel\n");
+
             return false;
         }
 
@@ -113,8 +119,9 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
                 auto relogin = std::make_shared<objects::ChannelLogin>();
                 if(!relogin->LoadPacket(p))
                 {
-                    LOG_ERROR("Failed to load channel disconnect info from"
-                        " channel\n");
+                    LogGeneralErrorMsg("Failed to load channel disconnect info "
+                        "from channel\n");
+
                     return false;
                 }
 
@@ -127,9 +134,13 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
         case 1:
             if(!cLogin)
             {
-                LOG_DEBUG(libcomp::String("Special channel disconnect failed"
-                    " because user is not currently logged in: '%1'\n")
-                    .Arg(username));
+                LogGeneralDebug([&]()
+                {
+                    return libcomp::String("Special channel disconnect failed"
+                        " because user is not currently logged in: '%1'\n")
+                        .Arg(username);
+                });
+
                 return true;
             }
             else
@@ -157,14 +168,22 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
                     if(cLogin && server->GetCharacterManager()
                         ->RequestChannelDisconnect(cLogin->GetWorldCID()))
                     {
-                        LOG_DEBUG(libcomp::String("Requesting special channel"
-                            " disconnect: '%1'\n").Arg(username));
+                        LogGeneralDebug([&]()
+                        {
+                            return libcomp::String("Requesting special channel"
+                                " disconnect: '%1'\n").Arg(username);
+                        });
+
                         return true;
                     }
                     else
                     {
-                        LOG_DEBUG(libcomp::String("Special channel disconnect"
-                            " failed to find channel: '%1'\n").Arg(username));
+                        LogGeneralDebug([&]()
+                        {
+                            return libcomp::String("Special channel disconnect"
+                                " failed to find channel: '%1'\n")
+                                .Arg(username);
+                        });
                     }
                 }
 
@@ -175,8 +194,11 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
                 }
                 else
                 {
-                    LOG_DEBUG(libcomp::String("Special channel disconnect"
-                        " user not on this world: '%1'\n").Arg(username));
+                    LogGeneralDebug([&]()
+                    {
+                        return libcomp::String("Special channel disconnect"
+                            " user not on this world: '%1'\n").Arg(username);
+                    });
                 }
 
                 // Nothing left to try but the lobby directly
@@ -190,8 +212,11 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             break;
         default:
-            LOG_ERROR(libcomp::String("Unknown logout request received"
-                " %1: '%2'\n").Arg(disconnectType).Arg(username));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Unknown logout request received"
+                    " %1: '%2'\n").Arg(disconnectType).Arg(username);
+            });
             break;
         }
     }
@@ -199,15 +224,22 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         if(!isLoggedIn || !login)
         {
-            LOG_DEBUG(libcomp::String("Logout requested for user not"
-                " currently logged in: '%1'\n").Arg(username));
+            LogGeneralDebug([&]()
+            {
+                return libcomp::String("Logout requested for user not"
+                    " currently logged in: '%1'\n").Arg(username);
+            });
+
             return true;
         }
 
         if(accountManager->ChannelSwitchPending(username, channelID))
         {
-            LOG_DEBUG(libcomp::String("User is switching to channel %1: '%2'\n")
-                .Arg(channelID).Arg(username));
+            LogGeneralDebug([&]()
+            {
+                return libcomp::String("User is switching to channel "
+                    "%1: '%2'\n").Arg(channelID).Arg(username);
+            });
 
             // Tell the lobby a channel switch is happening
             libcomp::Packet lobbyMessage;

@@ -56,7 +56,11 @@ bool Parsers::Logout::Parse(libcomp::ManagerPacket *pPacketManager,
     if(LogoutCode_t::LOGOUT_CODE_UNKNOWN_MIN >= codeValue ||
         LogoutCode_t::LOGOUT_CODE_UNKNOWN_MAX <= codeValue)
     {
-        LOG_ERROR(libcomp::String("Unknown logout code: %1\n").Arg(codeValue));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Unknown logout code: %1\n").Arg(codeValue);
+        });
+
         return false;
     }
 

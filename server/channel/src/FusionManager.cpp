@@ -301,9 +301,14 @@ bool FusionManager::HandleTriFusion(
 
                 if(!server->GetWorldDatabase()->ProcessChangeSet(changes))
                 {
-                    LOG_ERROR(libcomp::String("TriFusion items failed to save for"
-                        " account '%1'. Disconnecting all participants to avoid"
-                        " additional errors.\n").Arg(state->GetAccountUID().ToString()));
+                    LogFusionManagerError([&]()
+                    {
+                        return libcomp::String("TriFusion items failed to save "
+                        "for account '%1'. Disconnecting all participants to "
+                        "avoid additional errors.\n")
+                        .Arg(state->GetAccountUID().ToString());
+                    });
+
                     for(auto pClient : pClients)
                     {
                         pClient->Kill();
@@ -686,8 +691,9 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
 
                 if(!found1 || !found2)
                 {
-                    LOG_ERROR("Invalid single dark, dual fusion race"
-                        " encountered for trifusion\n");
+                    LogFusionManagerErrorMsg("Invalid single dark, dual fusion "
+                        "race encountered for trifusion\n");
+
                     return 0;
                 }
 
@@ -701,8 +707,9 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
 
                 if(!found1 || !found2)
                 {
-                    LOG_ERROR("Invalid single dark, 2nd dual fusion race"
-                        " encountered for trifusion\n");
+                    LogFusionManagerErrorMsg("Invalid single dark, 2nd dual "
+                        "fusion race encountered for trifusion\n");
+
                     return 0;
                 }
                 else if(!resultDef)
@@ -733,8 +740,9 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
 
                 if(!found1 || !found2)
                 {
-                    LOG_ERROR("Invalid double dark, dual fusion race"
-                        " encountered for trifusion\n");
+                    LogFusionManagerErrorMsg("Invalid double dark, dual fusion "
+                        "race encountered for trifusion\n");
+
                     return 0;
                 }
 
@@ -748,8 +756,9 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
 
                 if(!found1 || !found2 || !resultDef)
                 {
-                    LOG_ERROR("Invalid double dark, 2nd dual fusion race"
-                        " encountered for trifusion\n");
+                    LogFusionManagerErrorMsg("Invalid double dark, 2nd dual "
+                        "fusion race encountered for trifusion\n");
+
                     return 0;
                 }
 
@@ -782,7 +791,8 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
         }
         else if(elementalCount == 3)
         {
-            LOG_ERROR("Attempted to fuse 3 elementals\n");
+            LogFusionManagerErrorMsg("Attempted to fuse 3 elementals\n");
+
             return 0;
         }
         else if(elementalCount == 2)
@@ -827,7 +837,9 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
                 }
             }
 
-            LOG_ERROR("Invalid double elemental trifusion encountered\n");
+            LogFusionManagerErrorMsg(
+                "Invalid double elemental trifusion encountered\n");
+
             return 0;
         }
         else if(elementalCount == 1)
@@ -845,8 +857,9 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
 
             if(!found1 || !found2)
             {
-                LOG_ERROR("Invalid single element, dual fusion race"
-                    " encountered for trifusion\n");
+                LogFusionManagerErrorMsg("Invalid single element, dual fusion "
+                    "race encountered for trifusion\n");
+
                 return 0;
             }
 
@@ -855,8 +868,9 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
                 GetAdjustedLevelSum(otherDef1.first, otherDef2.first));
             if(resultRace == eRace)
             {
-                LOG_ERROR("Single element, dual fusion race for"
+                LogFusionManagerErrorMsg("Single element, dual fusion race for"
                     " trifusion resulted in a second elemental\n");
+
                 return 0;
             }
 
@@ -906,8 +920,9 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
 
                 if(!found1 || !found2)
                 {
-                    LOG_ERROR("Invalid dual fusion race"
+                    LogFusionManagerErrorMsg("Invalid dual fusion race"
                         " encountered for trifusion\n");
+
                     return 0;
                 }
 
@@ -922,9 +937,13 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
                         race3, def3.second->GetBasic()->GetID());
                     if(result == 0)
                     {
-                        LOG_ERROR(libcomp::String("Invalid elemental fusion request"
-                            " during TriFusion mid-point fusion: %1, %2, %3\n")
-                            .Arg(demonType1).Arg(demonType2).Arg(demonType3));
+                        LogFusionManagerError([&]()
+                        {
+                            return libcomp::String("Invalid elemental fusion "
+                                "request during TriFusion mid-point fusion: "
+                                "%1, %2, %3\n").Arg(demonType1).Arg(demonType2)
+                                .Arg(demonType3);
+                        });
                     }
 
                     // Rank is always boosted by one at this point (can result
@@ -935,10 +954,14 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
                 }
                 else
                 {
-                    LOG_ERROR(libcomp::String("Attempted TriFusion on same"
-                        " race highest level demons that did not result in"
-                        " an elemental midpoint result: %1, %2, %3\n")
-                        .Arg(demonType1).Arg(demonType2).Arg(demonType3));
+                    LogFusionManagerError([&]()
+                    {
+                        return libcomp::String("Attempted TriFusion on same"
+                            " race highest level demons that did not result in"
+                            " an elemental midpoint result: %1, %2, %3\n")
+                            .Arg(demonType1).Arg(demonType2).Arg(demonType3);
+                    });
+
                     return 0;
                 }
             }
@@ -1047,10 +1070,13 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
             demonType);
         if(result == 0)
         {
-            LOG_ERROR(libcomp::String("Invalid elemental fusion request"
-                " of demon IDs  %1 and %2 received from account: %3\n")
-                .Arg(demonType1).Arg(demonType2)
-                .Arg(state->GetAccountUID().ToString()));
+            LogFusionManagerError([&]()
+            {
+                return libcomp::String("Invalid elemental fusion request"
+                    " of demon IDs  %1 and %2 received from account: %3\n")
+                    .Arg(demonType1).Arg(demonType2)
+                    .Arg(state->GetAccountUID().ToString());
+            });
         }
 
         return result;
@@ -1059,18 +1085,26 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
     {
         if(!found1 || !found2)
         {
-            LOG_ERROR(libcomp::String("Invalid fusion request of demon IDs"
-                " %1 and %2 received from account: %3\n").Arg(demonType1)
-                .Arg(demonType2).Arg(state->GetAccountUID().ToString()));
+            LogFusionManagerError([&]()
+            {
+                return libcomp::String("Invalid fusion request of demon IDs"
+                    " %1 and %2 received from account: %3\n").Arg(demonType1)
+                    .Arg(demonType2).Arg(state->GetAccountUID().ToString());
+            });
+
             return 0;
         }
 
         resultRace = FUSION_RACE_MAP[(size_t)(race1Idx + 1)][race2Idx];
         if(resultRace == 0)
         {
-            LOG_ERROR(libcomp::String("Invalid fusion result of demon IDs"
-                " %1 and %2 requested from account: %3\n").Arg(demonType1)
-                .Arg(demonType2).Arg(state->GetAccountUID().ToString()));
+            LogFusionManagerError([&]()
+            {
+                return libcomp::String("Invalid fusion result of demon IDs"
+                    " %1 and %2 requested from account: %3\n").Arg(demonType1)
+                    .Arg(demonType2).Arg(state->GetAccountUID().ToString());
+            });
+
             return 0;
         }
 
@@ -1285,14 +1319,19 @@ int8_t FusionManager::ProcessFusion(
     }
     else
     {
-        LOG_ERROR(libcomp::String("Invalid cost item type supplied"
-            " for demon fusion: %1\n").Arg(resultDemonType));
+        LogFusionManagerError([&]()
+        {
+            return libcomp::String("Invalid cost item type supplied"
+                " for demon fusion: %1\n").Arg(resultDemonType);
+        });
+
         return -3;
     }
 
     if(!paymentSuccess)
     {
-        LOG_ERROR("Failed to pay fusion item cost\n");
+        LogFusionManagerErrorMsg("Failed to pay fusion item cost\n");
+
         return -4;
     }
 
@@ -1701,8 +1740,12 @@ std::shared_ptr<objects::MiDevilData> FusionManager::GetResultDemon(
     auto fusionRanges = definitionManager->GetFusionRanges(race);
     if(fusionRanges.size() == 0)
     {
-        LOG_ERROR(libcomp::String("No valid fusion range found"
-            " for race ID: %1\n").Arg(race));
+        LogFusionManagerError([&]()
+        {
+            return libcomp::String("No valid fusion range found"
+                " for race ID: %1\n").Arg(race);
+        });
+
         return 0;
     }
 

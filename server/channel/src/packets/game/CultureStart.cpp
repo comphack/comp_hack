@@ -166,8 +166,12 @@ bool Parsers::CultureStart::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!worldDB->ProcessChangeSet(dbChanges))
         {
-            LOG_ERROR(libcomp::String("CultureData failed to save: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("CultureData failed to save: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             client->Kill();
             return true;
         }

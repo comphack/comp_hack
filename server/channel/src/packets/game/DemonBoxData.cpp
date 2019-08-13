@@ -67,8 +67,13 @@ bool Parsers::DemonBoxData::Parse(libcomp::ManagerPacket *pPacketManager,
     size_t maxSlots = boxID == 0 ? (size_t)progress->GetMaxCOMPSlots() : 50;
     if(slot < 0 || (size_t)slot >= maxSlots)
     {
-        LOG_ERROR(libcomp::String("Demon box slot exceeded the maximum available slots"
-            " requested for demon data information.\n").Arg(slot));
+        LogDemonError([&]()
+        {
+            return libcomp::String("Demon box slot exceeded the maximum "
+                "available slots requested for demon data information.\n")
+                .Arg(slot);
+        });
+
         return false;
     }
 

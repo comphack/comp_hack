@@ -68,13 +68,20 @@ bool Parsers::SearchEntryUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     bool success = false;
     if(!existing)
     {
-        LOG_ERROR(libcomp::String("SearchEntryUpdate with invalid entry ID"
-            " encountered: %1\n").Arg(type));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("SearchEntryUpdate with invalid entry ID"
+                " encountered: %1\n").Arg(type);
+        });
     }
     else if(existing->GetSourceCID() != state->GetWorldCID())
     {
-        LOG_ERROR(libcomp::String("SearchEntryUpdate request encountered"
-            " with an entry ID associated to a different player: %1\n").Arg(type));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("SearchEntryUpdate request encountered"
+                " with an entry ID associated to a different player: %1\n")
+                .Arg(type);
+        });
     }
     else
     {
@@ -254,23 +261,34 @@ bool Parsers::SearchEntryUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         case objects::SearchEntry::Type_t::TRADE_BUYING:
         case objects::SearchEntry::Type_t::FREE_RECRUIT:
             // The client re-registers instead of updates for these types
-            LOG_ERROR(libcomp::String("Unsupported SearchEntryUpdate type"
-                " encountered: %1\n").Arg(type));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Unsupported SearchEntryUpdate type"
+                    " encountered: %1\n").Arg(type);
+            });
+
             break;
         default:
-            LOG_ERROR(libcomp::String("Invalid SearchEntryUpdate type"
-                " encountered: %1\n").Arg(type));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Invalid SearchEntryUpdate type"
+                    " encountered: %1\n").Arg(type);
+            });
+
             break;
         }
-    
+
         if(success)
         {
             success = syncManager->SyncRecordUpdate(entry, "SearchEntry");
         }
         else
         {
-            LOG_ERROR(libcomp::String("Invalid SearchEntryUpdate request"
-                " encountered: %1\n").Arg(type));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Invalid SearchEntryUpdate request"
+                    " encountered: %1\n").Arg(type);
+            });
         }
     }
 

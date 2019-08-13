@@ -97,13 +97,15 @@ bool Parsers::TriFusionRewardUpdate::Parse(libcomp::ManagerPacket *pPacketManage
 
         if(participantIDs.find(participantID) == participantIDs.end())
         {
-            LOG_ERROR("Invalid participant ID supplied for"
+            LogGeneralErrorMsg("Invalid participant ID supplied for"
                 " TriFusion reward update request\n");
+
             failure = true;
         }
         else if(slotID >= 4)
         {
-            LOG_ERROR("Invalid TriFusion reward slot ID supplied\n");
+            LogGeneralErrorMsg("Invalid TriFusion reward slot ID supplied\n");
+
             failure = true;
         }
         else
@@ -137,8 +139,9 @@ bool Parsers::TriFusionRewardUpdate::Parse(libcomp::ManagerPacket *pPacketManage
             }
             else
             {
-                LOG_ERROR("TriFusion reward update target"
+                LogGeneralErrorMsg("TriFusion reward update target"
                     " is not a participant\n");
+
                 failure = true;
             }
         }
@@ -179,10 +182,10 @@ bool Parsers::TriFusionRewardUpdate::Parse(libcomp::ManagerPacket *pPacketManage
                 ChannelToClientPacketCode_t::PACKET_TRIFUSION_REWARD_UPDATED);
             notify.WriteS32Little(participantID);
             notify.WriteS8(slotID);
-            
+
             // Double back and write for client specifically
             notify.WriteS64Little(0);
-            
+
             if(slotID >= 0)
             {
                 characterManager->GetItemDetailPacketData(notify, item);

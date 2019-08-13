@@ -185,8 +185,13 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
     {
         case ChatType_t::CHAT_PARTY:
             visibility = ChatVis_t::CHAT_VIS_PARTY;
-            LOG_INFO(libcomp::String("[Party]:  %1: %2\n").Arg(sentFrom)
-                .Arg(message));
+
+            LogChatManagerInfo([&]()
+            {
+                return libcomp::String("[Party]:  %1: %2\n").Arg(sentFrom)
+                    .Arg(message);
+            });
+
             if(state->GetPartyID())
             {
                 relayID = state->GetPartyID();
@@ -194,15 +199,24 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             }
             else
             {
-                LOG_ERROR(libcomp::String("Party chat attempted by"
-                    " character not in a party: %1\n").Arg(sentFrom));
+                LogChatManagerError([&]()
+                {
+                    return libcomp::String("Party chat attempted by"
+                        " character not in a party: %1\n").Arg(sentFrom);
+                });
+
                 return false;
             }
             break;
         case ChatType_t::CHAT_CLAN:
             visibility = ChatVis_t::CHAT_VIS_CLAN;
-            LOG_INFO(libcomp::String("[Clan]:  %1: %2\n").Arg(sentFrom)
-                .Arg(message));
+
+            LogChatManagerInfo([&]()
+            {
+                return libcomp::String("[Clan]:  %1: %2\n").Arg(sentFrom)
+                    .Arg(message);
+            });
+
             if(state->GetClanID())
             {
                 relayID = (uint32_t)state->GetClanID();
@@ -210,16 +224,25 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             }
             else
             {
-                LOG_ERROR(libcomp::String("Clan chat attempted by"
-                    " character not in a clan: %1\n").Arg(sentFrom));
+                LogChatManagerError([&]()
+                {
+                    return libcomp::String("Clan chat attempted by"
+                        " character not in a clan: %1\n").Arg(sentFrom);
+                });
+
                 return false;
             }
             break;
         case ChatType_t::CHAT_TEAM:
             visibility = ChatVis_t::CHAT_VIS_TEAM;
             relayID = (uint32_t)state->GetTeamID();
-            LOG_INFO(libcomp::String("[Team]:  %1: %2\n").Arg(sentFrom)
-                .Arg(message));
+
+            LogChatManagerInfo([&]()
+            {
+                return libcomp::String("[Team]:  %1: %2\n").Arg(sentFrom)
+                    .Arg(message);
+            });
+
             if(zone->GetInstanceType() == InstanceType_t::DIASPORA)
             {
                 // Send to the whole zone instead
@@ -231,30 +254,54 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
             }
             else
             {
-                LOG_ERROR(libcomp::String("Team chat attempted by"
-                    " character not in a team: %1\n").Arg(sentFrom));
+                LogChatManagerError([&]()
+                {
+                    return libcomp::String("Team chat attempted by"
+                        " character not in a team: %1\n").Arg(sentFrom);
+                });
+
                 return false;
             }
             break;
         case ChatType_t::CHAT_VERSUS:
             visibility = ChatVis_t::CHAT_VIS_VERSUS;
-            LOG_INFO(libcomp::String("[Versus]:  %1: %2\n").Arg(sentFrom)
-                .Arg(message));
+
+            LogChatManagerInfo([&]()
+            {
+                return libcomp::String("[Versus]:  %1: %2\n").Arg(sentFrom)
+                    .Arg(message);
+            });
+
             break;
         case ChatType_t::CHAT_SHOUT:
             visibility = ChatVis_t::CHAT_VIS_ZONE;
-            LOG_INFO(libcomp::String("[Shout]:  %1: %2\n").Arg(sentFrom)
-                .Arg(message));
+
+            LogChatManagerInfo([&]()
+            {
+                return libcomp::String("[Shout]:  %1: %2\n").Arg(sentFrom)
+                    .Arg(message);
+            });
+
             break;
         case ChatType_t::CHAT_SAY:
             visibility = ChatVis_t::CHAT_VIS_RANGE;
-            LOG_INFO(libcomp::String("[Say]:  %1: %2\n").Arg(sentFrom)
-                .Arg(message));
+
+            LogChatManagerInfo([&]()
+            {
+                return libcomp::String("[Say]:  %1: %2\n").Arg(sentFrom)
+                    .Arg(message);
+            });
+
             break;
         case ChatType_t::CHAT_SELF:
             visibility = ChatVis_t::CHAT_VIS_SELF;
-            LOG_INFO(libcomp::String("[Self]:  %1: %2\n").Arg(sentFrom)
-                .Arg(message));
+
+            LogChatManagerInfo([&]()
+            {
+                return libcomp::String("[Self]:  %1: %2\n").Arg(sentFrom)
+                .Arg(message);
+            });
+
             break;
         default:
             return false;
@@ -410,14 +457,21 @@ bool ChatManager::HandleGMand(const std::shared_ptr<
             "@license" != message)
         {
             // Don't process the message but don't fail
-            LOG_DEBUG(libcomp::String("Non-GM account attempted to execute a GM"
-                " command: %1\n").Arg(state->GetAccountUID().ToString()));
+            LogChatManagerDebug([&]()
+            {
+                return libcomp::String("Non-GM account attempted to execute a "
+                    "GM command: %1\n").Arg(state->GetAccountUID().ToString());
+            });
             return true;
         }
 
         libcomp::String sentFrom = state->GetCharacterState()->GetEntity()
             ->GetName();
-        LOG_INFO(libcomp::String("[GM] %1: %2\n").Arg(sentFrom).Arg(message));
+
+        LogChatManagerInfo([&]()
+        {
+            return libcomp::String("[GM] %1: %2\n").Arg(sentFrom).Arg(message);
+        });
 
         libcomp::String command(match[1]);
         libcomp::String args(match.max_size() > 2 ? match[2].str() : "");
@@ -438,8 +492,11 @@ bool ChatManager::HandleGMand(const std::shared_ptr<
         {
             if(!pChatManager->ExecuteGMCommand(cmdClient, cmd, cmdArgs))
             {
-                LOG_WARNING(libcomp::String("GM command could not be"
-                    " processed: %1\n").Arg(cmd));
+                LogChatManagerWarning([&]()
+                {
+                    return libcomp::String("GM command could not be"
+                        " processed: %1\n").Arg(cmd);
+                });
             }
         }, this, client, command, argsList);
 
@@ -460,8 +517,11 @@ bool ChatManager::ExecuteGMCommand(const std::shared_ptr<
         return it->second(*this, client, args);
     }
 
-    LOG_WARNING(libcomp::String("Unknown GM command encountered: %1\n").Arg(
-        cmd));
+    LogChatManagerWarning([&]()
+    {
+        return libcomp::String("Unknown GM command encountered: %1\n")
+            .Arg(cmd);
+    });
 
     return false;
 }

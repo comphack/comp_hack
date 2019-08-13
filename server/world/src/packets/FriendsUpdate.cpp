@@ -184,7 +184,7 @@ void FriendRequestAccepted(std::shared_ptr<WorldServer> server,
                 sourceName, true);
 
             sourceConnection->QueuePacket(request);
-            
+
             request.Clear();
             request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
             request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_ADD);
@@ -192,7 +192,7 @@ void FriendRequestAccepted(std::shared_ptr<WorldServer> server,
             targetLogin->SavePacket(request);
 
             sourceConnection->SendPacket(request);
-            
+
             if(channel)
             {
                 request.Clear();
@@ -285,7 +285,7 @@ void FriendRemoved(std::shared_ptr<WorldServer> server,
                     break;
                 }
             }
-            
+
             for(size_t i = 0; i < targetFSettings->FriendsCount(); i++)
             {
                 auto f = targetFSettings->GetFriends(i);
@@ -313,7 +313,7 @@ void FriendRemoved(std::shared_ptr<WorldServer> server,
             request.WriteS32Little(targetLogin->GetWorldCID());
 
             sourceConnection->SendPacket(request);
-            
+
             auto channel = server->GetChannelConnectionByID(targetLogin->GetChannelID());
             if(channel)
             {
@@ -337,18 +337,24 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     if(p.Size() < 5)
     {
-        LOG_ERROR("Invalid packet data sent to FriendsUpdate\n");
+        LogFriendErrorMsg("Invalid packet data sent to FriendsUpdate\n");
+
         return false;
     }
 
     uint8_t mode = p.ReadU8();
     int32_t cid = p.ReadS32Little();
-   
+
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
     auto cLogin = server->GetCharacterManager()->GetCharacterLogin(cid);
     if(!cLogin)
     {
-        LOG_ERROR(libcomp::String("Invalid world CID sent to FriendsUpdate: %1\n").Arg(cid));
+        LogFriendError([&]()
+        {
+            return libcomp::String("Invalid world CID sent to "
+                "FriendsUpdate: %1\n").Arg(cid);
+        });
+
         return false;
     }
 
@@ -360,8 +366,12 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         if(p.Left() < 4)
         {
-            LOG_ERROR(libcomp::String("Missing target CID parameter"
-                " for command %1\n").Arg(mode));
+            LogFriendError([&]()
+            {
+                return libcomp::String("Missing target CID parameter"
+                    " for command %1\n").Arg(mode);
+            });
+
             return false;
         }
 
@@ -372,8 +382,12 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         if(p.Left() < 2 || (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
         {
-            LOG_ERROR(libcomp::String("Missing source name parameter"
-                " for command %1\n").Arg(mode));
+            LogFriendError([&]()
+            {
+                return libcomp::String("Missing source name parameter"
+                    " for command %1\n").Arg(mode);
+            });
+
             return false;
         }
 
@@ -382,8 +396,12 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(p.Left() < 2 || (p.Left() != (uint32_t)(2 + p.PeekU16Little())))
         {
-            LOG_ERROR(libcomp::String("Missing target name parameter"
-                " for command %1\n").Arg(mode));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Missing target name parameter"
+                    " for command %1\n").Arg(mode);
+            });
+
             return false;
         }
 
@@ -406,7 +424,12 @@ bool Parsers::FriendsUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                 sourceName, targetName);
             break;
         default:
-            LOG_ERROR(libcomp::String("Unknown mode sent to FriendsUpdate: %1\n").Arg(mode));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Unknown mode sent to "
+                    "FriendsUpdate: %1\n").Arg(mode);
+            });
+
             return false;
             break;
         }

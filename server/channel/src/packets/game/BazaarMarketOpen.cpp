@@ -83,9 +83,13 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
             bazaarData->GetZone() == zone->GetDefinitionID() &&
             bazaarData->GetChannelID() == server->GetChannelID())
         {
-            LOG_ERROR(libcomp::String("Player attempted to open the same"
-                " bazaar market multiple times in a row: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogBazaarError([&]()
+            {
+                return libcomp::String("Player attempted to open the same"
+                    " bazaar market multiple times in a row: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             success = false;
         }
         else if(maccaCost > 0)
@@ -135,8 +139,12 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!worldDB->ProcessChangeSet(dbChanges))
         {
-            LOG_ERROR(libcomp::String("BazaarData failed to save: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogBazaarError([&]()
+            {
+                return libcomp::String("BazaarData failed to save: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             client->Kill();
             return true;
         }

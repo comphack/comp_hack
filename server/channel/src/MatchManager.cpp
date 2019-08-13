@@ -211,9 +211,13 @@ bool MatchManager::JoinQueue(const std::shared_ptr<
     }
     else
     {
-        LOG_WARNING(libcomp::String("One or more match entries failed to"
-            " queue for account: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogMatchManagerWarning([&]()
+        {
+            return libcomp::String("One or more match entries failed to"
+                " queue for account: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
@@ -276,9 +280,13 @@ bool MatchManager::CancelQueue(const std::shared_ptr<
         }
         else
         {
-            LOG_WARNING(libcomp::String("One or more match cancellations"
-                " failed to send to the world for account: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogMatchManagerWarning([&]()
+            {
+                return libcomp::String("One or more match cancellations"
+                    " failed to send to the world for account: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             return false;
         }
 
@@ -336,7 +344,7 @@ void MatchManager::ConfirmMatch(const std::shared_ptr<
                 {
                     std::lock_guard<std::mutex> lock(mLock);
                     size_t memberLimit = (size_t)ubMatch->GetMemberLimit();
-                    success = zone && ubMatch->MemberIDsCount() < memberLimit && 
+                    success = zone && ubMatch->MemberIDsCount() < memberLimit &&
                         (!ubMatch->GetID() || ubMatch->GetID() == matchID) &&
                         ubMatch->GetState() == objects::UBMatch::State_t::READY;
                     if(success)
@@ -588,9 +596,13 @@ bool MatchManager::RequestTeamPvPMatch(
     auto team = state->GetTeam();
     if(!team || team->GetLeaderCID() != state->GetWorldCID())
     {
-        LOG_DEBUG(libcomp::String("Team PvP creation failed: requestor"
-            " is not the team leader: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogMatchManagerDebug([&]()
+        {
+            return libcomp::String("Team PvP creation failed: requestor"
+                " is not the team leader: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
@@ -604,9 +616,13 @@ bool MatchManager::RequestTeamPvPMatch(
             memberCID, true);
         if(!teamClient)
         {
-            LOG_DEBUG(libcomp::String("Team PvP creation failed: one or more"
-                " team members is not on the channel: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogMatchManagerDebug([&]()
+            {
+                return libcomp::String("Team PvP creation failed: one or more"
+                    " team members is not on the channel: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             return false;
         }
 
@@ -616,9 +632,13 @@ bool MatchManager::RequestTeamPvPMatch(
     if(!ValidateMatchEntries(teamClients,
         (int8_t)objects::Team::Category_t::PVP, true, false))
     {
-        LOG_DEBUG(libcomp::String("Team PvP creation failed: one or more team"
-            " members is not valid: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogMatchManagerDebug([&]()
+        {
+            return libcomp::String("Team PvP creation failed: one or more team"
+                " members is not valid: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
@@ -627,18 +647,26 @@ bool MatchManager::RequestTeamPvPMatch(
         server->GetServerDataManager()->GetZoneInstanceVariantData(variantID));
     if(!variant)
     {
-        LOG_DEBUG(libcomp::String("Team PvP creation failed: invalid variant"
-            " specified for instance: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogMatchManagerDebug([&]()
+        {
+            return libcomp::String("Team PvP creation failed: invalid variant"
+                " specified for instance: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
     if(variant->GetMaxPlayers() &&
         teamClients.size() > (size_t)variant->GetMaxPlayers())
     {
-        LOG_DEBUG(libcomp::String("Team PvP creation failed: too many players"
-            " are in the current team: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogMatchManagerDebug([&]()
+        {
+            return libcomp::String("Team PvP creation failed: too many players"
+                " are in the current team: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
@@ -651,9 +679,13 @@ bool MatchManager::RequestTeamPvPMatch(
         instanceID);
     if(!instance)
     {
-        LOG_DEBUG(libcomp::String("Team PvP creation failed: invalid"
-            " instance requested: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogMatchManagerDebug([&]()
+        {
+            return libcomp::String("Team PvP creation failed: invalid"
+                " instance requested: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
@@ -710,21 +742,32 @@ bool MatchManager::RequestTeamPvPMatch(
         if(variant->GetLimitBlue() &&
             match->BlueMemberIDsCount() >= variant->GetLimitBlue())
         {
-            LOG_DEBUG(libcomp::String("Team PvP creation failed: team size"
-                " restrictions could not be met: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogMatchManagerDebug([&]()
+            {
+                return libcomp::String("Team PvP creation failed: team size"
+                    " restrictions could not be met: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             return false;
         }
     }
 
-    LOG_DEBUG(libcomp::String("Requesting team PvP match with variant %1 and"
-        " instance %2: %3\n").Arg(variantID).Arg(instanceID)
-        .Arg(client->GetClientState()->GetAccountUID().ToString()));
+    LogMatchManagerDebug([&]()
+    {
+        return libcomp::String("Requesting team PvP match with variant %1 and"
+            " instance %2: %3\n").Arg(variantID).Arg(instanceID)
+            .Arg(client->GetClientState()->GetAccountUID().ToString());
+    });
 
     if(!server->GetChannelSyncManager()->SyncRecordUpdate(match, "PvPMatch"))
     {
-        LOG_DEBUG(libcomp::String("Team PvP creation failed: match could"
-            " not be queued: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogMatchManagerDebug([&]()
+        {
+            return libcomp::String("Team PvP creation failed: match could"
+                " not be queued: %1\n").Arg(state->GetAccountUID().ToString());
+        });
+
         return false;
     }
 
@@ -827,8 +870,11 @@ void MatchManager::ExpirePvPAccess(uint32_t matchID)
 
     if(cids.size() > 0)
     {
-        LOG_DEBUG(libcomp::String("Expiring %1 unconfirmed PvP player(s)\n")
-            .Arg(cids.size()));
+        LogMatchManagerDebug([&]()
+        {
+            return libcomp::String("Expiring %1 unconfirmed PvP player(s)\n")
+                .Arg(cids.size());
+        });
 
         auto server = mServer.lock();
         auto managerConnection = server->GetManagerConnection();
@@ -936,9 +982,12 @@ bool MatchManager::PvPInviteReply(const std::shared_ptr<
                 if(!mServer.lock()->GetWorldDatabase()->ProcessChangeSet(
                     opChangeset))
                 {
-                    LOG_ERROR(libcomp::String("Failed to apply PvP"
+                    LogMatchManagerError([&]()
+                    {
+                        return libcomp::String("Failed to apply PvP"
                         " penalty: %1\n")
-                        .Arg(state->GetAccountUID().ToString()));
+                        .Arg(state->GetAccountUID().ToString());
+                    });
                 }
             }
         }
@@ -1010,8 +1059,11 @@ void MatchManager::StartPvPMatch(uint32_t instanceID)
         return;
     }
 
-    LOG_DEBUG(libcomp::String("Starting PvP match %1\n").Arg(pvpStats
-        ->GetMatch()->GetID()));
+    LogMatchManagerCritical([&]()
+    {
+        return libcomp::String("Starting PvP match %1\n")
+            .Arg(pvpStats->GetMatch()->GetID());
+    });
 
     // Players in the match, either end if only one team is here or start
     // the match and queue up complete action
@@ -1062,7 +1114,10 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
         return false;
     }
 
-    LOG_DEBUG(libcomp::String("Ending PvP match %1\n").Arg(match->GetID()));
+    LogMatchManagerDebug([&]()
+    {
+        return libcomp::String("Ending PvP match %1\n").Arg(match->GetID());
+    });
 
     // Determine trophies and calculate BP/GP
     size_t idx = 0;
@@ -1119,7 +1174,7 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
 
     std::unordered_map<int32_t, int32_t> matchGP;
     std::unordered_map<int32_t, int32_t> matchGPAdjust;
-    
+
     for(idx = 0; idx < 2; idx++)
     {
         for(auto stats : teams[idx])
@@ -1424,7 +1479,7 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
     // Save updates
     if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
     {
-        LOG_ERROR("Failed to save one or more PvP match results");
+        LogMatchManagerErrorMsg("Failed to save one or more PvP match results");
     }
 
     // Lastly grant XP
@@ -2361,7 +2416,8 @@ bool MatchManager::StartStopMatch(const std::shared_ptr<Zone>& zone,
 
             if(ubMatch)
             {
-                LOG_DEBUG("Queueing Ultimate Battle match\n");
+                LogMatchManagerDebugMsg("Queueing Ultimate Battle match\n");
+
                 ubMatch->SetState(objects::UBMatch::State_t::PREMATCH);
 
                 uint8_t queueTime = ubMatch->GetQueueDuration();
@@ -2523,13 +2579,15 @@ bool MatchManager::StartUltimateBattle(const std::shared_ptr<Zone>& zone)
 
         if(stopMatch)
         {
-            LOG_DEBUG("Skipping no entry Ultimate Battle match\n");
+            LogMatchManagerDebugMsg(
+                "Skipping no entry Ultimate Battle match\n");
+
             StartStopMatch(zone, nullptr);
             return false;
         }
     }
 
-    LOG_DEBUG("Starting Ultimate Battle\n");
+    LogMatchManagerDebugMsg("Starting Ultimate Battle\n");
 
     return true;
 }
@@ -2729,8 +2787,11 @@ bool MatchManager::StartUltimateBattleTimer(const std::shared_ptr<Zone>& zone,
     ubMatch->SetTimerExpire(expire);
     ubMatch->SetTimerEventID(eventID);
 
-    LOG_DEBUG(libcomp::String("Starting Ultimate Battle timer: %1s"
-        " (phase %2)\n").Arg(duration).Arg(ubMatch->GetPhase()));
+    LogMatchManagerDebug([&]()
+    {
+        return libcomp::String("Starting Ultimate Battle timer: %1s"
+            " (phase %2)\n").Arg(duration).Arg(ubMatch->GetPhase());
+    });
 
     SendPhase(zone, true);
 
@@ -3437,13 +3498,13 @@ void MatchManager::UpdateUBRankings(
             topPoint.push_back(result);
         }
     }
-    
+
     allTime.sort([](const std::shared_ptr<objects::UBResult>& a,
         const std::shared_ptr<objects::UBResult>& b)
         {
             return a->GetAllTimeRank() < b->GetAllTimeRank();
         });
-    
+
     topPoint.sort([](const std::shared_ptr<objects::UBResult>& a,
         const std::shared_ptr<objects::UBResult>& b)
         {
@@ -3990,8 +4051,12 @@ bool MatchManager::CreatePvPInstance(const std::shared_ptr<
         serverDataManager->GetZoneInstanceVariantData(match->GetVariantID()));
     if(!variantDef || !variantDef->GetDefaultInstanceID())
     {
-        LOG_ERROR(libcomp::String("Invalid PvP variant encountered, match"
-            " creation failed: %1\n").Arg(match->GetVariantID()));
+        LogMatchManagerError([&]()
+        {
+            return libcomp::String("Invalid PvP variant encountered, match"
+                " creation failed: %1\n").Arg(match->GetVariantID());
+        });
+
         return false;
     }
 
@@ -4013,8 +4078,12 @@ bool MatchManager::CreatePvPInstance(const std::shared_ptr<
         ->GetInstanceID());
     if(!instance)
     {
-        LOG_ERROR(libcomp::String("Failed to create PvP instance"
-            " variant: %1\n").Arg(match->GetVariantID()));
+        LogMatchManagerError([&]()
+        {
+            return libcomp::String("Failed to create PvP instance"
+                " variant: %1\n").Arg(match->GetVariantID());
+        });
+
         return false;
     }
 
@@ -4037,7 +4106,7 @@ bool MatchManager::CreatePvPInstance(const std::shared_ptr<
 
     instance->SetTimerExpire((ServerTime)(serverTime + ((uint64_t)startTime +
         instance->GetVariant()->GetTimePoints(0)) * 1000000ULL));
-    
+
     server->GetTimerManager()->ScheduleEventIn((int)startTime, []
         (MatchManager* pMatchManager, uint32_t pInstanceID)
         {
@@ -4055,8 +4124,12 @@ void MatchManager::QueuePendingPvPMatch(uint8_t type, uint32_t readyTime)
     auto variantIDs = serverDataManager->GetStandardPvPVariantIDs(type);
     if(variantIDs.size() == 0)
     {
-        LOG_ERROR(libcomp::String("PvP match queuing failed due to"
-            " undefined match type variants: %1\n").Arg(type));
+        LogMatchManagerError([&]()
+        {
+            return libcomp::String("PvP match queuing failed due to"
+                " undefined match type variants: %1\n").Arg(type);
+        });
+
         return;
     }
 
@@ -4065,8 +4138,12 @@ void MatchManager::QueuePendingPvPMatch(uint8_t type, uint32_t readyTime)
         serverDataManager->GetZoneInstanceVariantData(variantID));
     if(!variantDef || !variantDef->GetDefaultInstanceID())
     {
-        LOG_ERROR(libcomp::String("Invalid PvP variant encountered, match"
-            " creation failed: %1\n").Arg(variantID));
+        LogMatchManagerError([&]()
+        {
+            return libcomp::String("Invalid PvP variant encountered, match"
+                " creation failed: %1\n").Arg(variantID);
+        });
+
         return;
     }
 
@@ -4531,8 +4608,9 @@ bool MatchManager::ValidateMatchEntries(
     {
         if(clients.size() < 2)
         {
-            LOG_DEBUG("Match entry validation failed: teams must have"
-                " at least 2 members\n");
+            LogMatchManagerDebugMsg("Match entry validation failed: teams must "
+                "have at least 2 members\n");
+
             return false;
         }
 
@@ -4542,16 +4620,18 @@ bool MatchManager::ValidateMatchEntries(
 
         if(!team && (int8_t)team->GetCategory() != teamCategory)
         {
-            LOG_DEBUG("Match entry validation failed: invalid team"
-                " type encountered\n");
+            LogMatchManagerDebugMsg("Match entry validation failed: invalid "
+                "team type encountered\n");
+
             return false;
         }
 
         std::set<int32_t> memberIDs = team->GetMemberIDs();
         if(memberIDs.size() != clients.size())
         {
-            LOG_DEBUG("Match entry validation failed: one or more team"
-                " members is missing from validation\n");
+            LogMatchManagerDebugMsg("Match entry validation failed: one or "
+                "more team members is missing from validation\n");
+
             return false;
         }
 
@@ -4561,17 +4641,27 @@ bool MatchManager::ValidateMatchEntries(
             int32_t worldCID = client->GetClientState()->GetWorldCID();
             if(memberIDs.find(worldCID) == memberIDs.end())
             {
-                LOG_DEBUG(libcomp::String("Match entry validation failed:"
-                    " invalid team member requested: %1\n")
-                    .Arg(client->GetClientState()->GetAccountUID().ToString()));
+                LogMatchManagerDebug([&]()
+                {
+                    return libcomp::String("Match entry validation failed:"
+                        " invalid team member requested: %1\n")
+                        .Arg(client->GetClientState()->GetAccountUID()
+                        .ToString());
+                });
+
                 return false;
             }
 
             if(client->GetClientState()->GetZone() != zone)
             {
-                LOG_DEBUG(libcomp::String("Match entry validation failed: team"
-                    " members must all be in the same zone: %1\n")
-                    .Arg(client->GetClientState()->GetAccountUID().ToString()));
+                LogMatchManagerDebug([&]()
+                {
+                    return libcomp::String("Match entry validation failed: team"
+                        " members must all be in the same zone: %1\n")
+                        .Arg(client->GetClientState()->GetAccountUID()
+                        .ToString());
+                });
+
                 return false;
             }
         }
@@ -4581,17 +4671,25 @@ bool MatchManager::ValidateMatchEntries(
     {
         if(client->GetClientState()->GetPendingMatch())
         {
-            LOG_DEBUG(libcomp::String("Match entry validation failed: pending"
-                " match exists: %1\n")
-                .Arg(client->GetClientState()->GetAccountUID().ToString()));
+            LogMatchManagerDebug([&]()
+            {
+                return libcomp::String("Match entry validation failed: pending"
+                    " match exists: %1\n")
+                    .Arg(client->GetClientState()->GetAccountUID().ToString());
+            });
+
             return false;
         }
 
         if(GetMatchEntry(client->GetClientState()->GetWorldCID()))
         {
-            LOG_DEBUG(libcomp::String("Match entry validation failed: existing"
-                " queue match entry exists: %1\n")
-                .Arg(client->GetClientState()->GetAccountUID().ToString()));
+            LogMatchManagerDebug([&]()
+            {
+                return libcomp::String("Match entry validation failed: existing"
+                    " queue match entry exists: %1\n")
+                    .Arg(client->GetClientState()->GetAccountUID().ToString());
+            });
+
             return false;
         }
 
@@ -4601,17 +4699,27 @@ bool MatchManager::ValidateMatchEntries(
             auto pvpData = GetPvPData(client, true);
             if(!pvpData)
             {
-                LOG_ERROR(libcomp::String("PvP entry validation failed:"
-                    " PvPData could not be created: %1\n")
-                    .Arg(client->GetClientState()->GetAccountUID().ToString()));
+                LogMatchManagerError([&]()
+                {
+                    return libcomp::String("PvP entry validation failed:"
+                        " PvPData could not be created: %1\n")
+                        .Arg(client->GetClientState()->GetAccountUID()
+                        .ToString());
+                });
+
                 return false;
             }
 
             if(checkPenalties && pvpData->GetPenaltyCount() >= 3)
             {
-                LOG_DEBUG(libcomp::String("PvP entry validation failed: too"
-                    " many penalties exist: %1\n")
-                    .Arg(client->GetClientState()->GetAccountUID().ToString()));
+                LogMatchManagerDebug([&]()
+                {
+                    return libcomp::String("PvP entry validation failed: too"
+                        " many penalties exist: %1\n")
+                        .Arg(client->GetClientState()->GetAccountUID()
+                        .ToString());
+                });
+
                 return false;
             }
         }
@@ -4670,9 +4778,12 @@ bool MatchManager::EndUltimateBattlePhase(const std::shared_ptr<Zone>& zone,
             }
             else
             {
-                LOG_ERROR(libcomp::String("Failed to load Ultimate Battle data"
-                    " for character when ending match: %1\n")
-                    .Arg(cState->GetEntityUUID().ToString()));
+                LogMatchManagerError([&]()
+                {
+                    return libcomp::String("Failed to load Ultimate Battle data"
+                        " for character when ending match: %1\n")
+                        .Arg(cState->GetEntityUUID().ToString());
+                });
             }
         }
 
@@ -4769,7 +4880,7 @@ void MatchManager::EndUltimateBattle(const std::shared_ptr<Zone>& zone)
     if(ubMatch)
     {
         // Match over
-        LOG_DEBUG("Ending Ultimate Battle\n");
+        LogMatchManagerDebugMsg("Ending Ultimate Battle\n");
 
         if(ubMatch->GetPhase() < UB_PHASE_MAX && ubMatch->GetResult() == 0)
         {
@@ -4962,7 +5073,7 @@ void MatchManager::SendUltimateBattleMembers(const std::shared_ptr<Zone>& zone,
 
     auto playerClients = mServer.lock()->GetManagerConnection()
         ->GetEntityClients(ubMatch->GetMemberIDs(), true);
-    
+
     playerClients.remove_if([zone](
         const std::shared_ptr<ChannelClientConnection>& c)
         {
@@ -5010,7 +5121,7 @@ void MatchManager::SendUltimateBattleMemberState(
     auto server = mServer.lock();
     auto playerClients = server->GetManagerConnection()->GetEntityClients(
         ubMatch->GetMemberIDs(), true);
-    
+
     playerClients.remove_if([zone](
         const std::shared_ptr<ChannelClientConnection>& c)
         {

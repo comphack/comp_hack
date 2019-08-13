@@ -60,8 +60,13 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
     auto eState = state->GetEntityState(entityID, false);
     if(nullptr == eState)
     {
-        LOG_ERROR(libcomp::String("Invalid entity ID received from a stop"
-            " movement request: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid entity ID received from a stop"
+                " movement request: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }
@@ -108,9 +113,12 @@ bool Parsers::StopMovement::Parse(libcomp::ManagerPacket *pPacketManager,
         Point dest(destX, destY);
         if(zoneManager->CorrectClientPosition(eState, dest))
         {
-            LOG_DEBUG(libcomp::String("Player movement stop corrected in"
-                " zone %1: %2\n").Arg(zone->GetDefinitionID())
-                .Arg(state->GetAccountUID().ToString()));
+            LogGeneralDebug([&]()
+            {
+                return libcomp::String("Player movement stop corrected in"
+                    " zone %1: %2\n").Arg(zone->GetDefinitionID())
+                    .Arg(state->GetAccountUID().ToString());
+            });
 
             destX = dest.x;
             destY = dest.y;

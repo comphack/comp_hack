@@ -300,7 +300,7 @@ void LobbyServer::CreateFirstAccount()
     {
         PromptCreateAccount();
 
-        LOG_INFO("Create another account? [y/N] ");
+        LogGeneralInfoMsg("Create another account? [y/N] ");
 
         std::string val;
         std::cin >> val;
@@ -326,7 +326,7 @@ void LobbyServer::PromptCreateAccount()
 
     do
     {
-        LOG_INFO("Username: ");
+        LogGeneralInfoMsg("Username: ");
 
         std::string uname;
         std::cin >> uname;
@@ -336,14 +336,14 @@ void LobbyServer::PromptCreateAccount()
         /// @todo Use a regular expression.
         if(3 > username.Length())
         {
-            LOG_ERROR("Username is not valid.\n");
+            LogGeneralErrorMsg("Username is not valid.\n");
         }
     } while(3 > username.Length());
 
     while(true)
     {
 #ifdef WIN32
-        LOG_INFO("Password: ");
+        LogGeneralInfoMsg("Password: ");
 
         std::string pass;
         std::cin >> pass;
@@ -355,11 +355,11 @@ void LobbyServer::PromptCreateAccount()
 
         while(8 > password1.Length())
         {
-            LOG_ERROR("Account password must be at "
+            LogGeneralErrorMsg("Account password must be at "
                 "least 8 characters.\n");
 
 #ifdef WIN32
-            LOG_INFO("Password: ");
+            LogGeneralInfoMsg("Password: ");
 
             std::cin >> pass;
 
@@ -370,7 +370,7 @@ void LobbyServer::PromptCreateAccount()
         }
 
 #ifdef WIN32
-        LOG_INFO("Verify Password: ");
+        LogGeneralInfoMsg("Verify Password: ");
 
         std::cin >> pass;
 
@@ -386,10 +386,10 @@ void LobbyServer::PromptCreateAccount()
             break;
         }
 
-        LOG_ERROR("Account password did not match.\n");
+        LogGeneralErrorMsg("Account password did not match.\n");
     }
 
-    LOG_INFO("Default values will be used for this account unless you "
+    LogGeneralInfoMsg("Default values will be used for this account unless you "
         "enter\nmore details. Would you like to enter more details? [y/N] ");
 
     std::string details;
@@ -405,7 +405,7 @@ void LobbyServer::PromptCreateAccount()
 
         while(3 > enteredDisplayName.Length())
         {
-            LOG_INFO("Display name: ");
+            LogGeneralInfoMsg("Display name: ");
 
             std::string val;
             std::cin >> val;
@@ -414,14 +414,14 @@ void LobbyServer::PromptCreateAccount()
 
             if(3 > enteredDisplayName.Length())
             {
-                LOG_ERROR("You must enter a longer display name.\n");
+                LogGeneralErrorMsg("You must enter a longer display name.\n");
             }
         }
 
         /// @todo Make this a better check for a valid email.
         while(!enteredEmail.Contains("@"))
         {
-            LOG_INFO("Email: ");
+            LogGeneralInfoMsg("Email: ");
 
             std::string val;
             std::cin >> val;
@@ -430,13 +430,13 @@ void LobbyServer::PromptCreateAccount()
 
             if(!enteredEmail.Contains("@"))
             {
-                LOG_ERROR("You must enter a valid email address.\n");
+                LogGeneralErrorMsg("You must enter a valid email address.\n");
             }
         }
 
         while(1 > enteredTicketCount || 20 < enteredTicketCount)
         {
-            LOG_INFO("Character ticket count: ");
+            LogGeneralInfoMsg("Character ticket count: ");
 
             std::string val;
             std::cin >> val;
@@ -447,13 +447,14 @@ void LobbyServer::PromptCreateAccount()
 
             if(!ok || 1 > enteredTicketCount || 20 < enteredTicketCount)
             {
-                LOG_ERROR("You must enter a value between 0 and 20.\n");
+                LogGeneralErrorMsg(
+                    "You must enter a value between 0 and 20.\n");
             }
         }
 
         while(1000000 < enteredCP)
         {
-            LOG_INFO("CP (Cash Points): ");
+            LogGeneralInfoMsg("CP (Cash Points): ");
 
             std::string val;
             std::cin >> val;
@@ -464,13 +465,14 @@ void LobbyServer::PromptCreateAccount()
 
             if(!ok || 1000000 < enteredCP)
             {
-                LOG_ERROR("You must enter a value between 1 and 1,000,000.\n");
+                LogGeneralErrorMsg(
+                    "You must enter a value between 1 and 1,000,000.\n");
             }
         }
 
         while(0 > enteredUserLevel || 1000 < enteredUserLevel)
         {
-            LOG_INFO("User level (0=normal user; 1,000=full GM): ");
+            LogGeneralInfoMsg("User level (0=normal user; 1,000=full GM): ");
 
             std::string val;
             std::cin >> val;
@@ -481,12 +483,13 @@ void LobbyServer::PromptCreateAccount()
 
             if(!ok || 0 > enteredUserLevel || 1000 < enteredUserLevel)
             {
-                LOG_ERROR("You must enter a value between 0 and 1,000.\n");
+                LogGeneralErrorMsg(
+                    "You must enter a value between 0 and 1,000.\n");
             }
         }
 
         {
-            LOG_INFO("Enable this account? [Y/n] ");
+            LogGeneralInfoMsg("Enable this account? [Y/n] ");
 
             std::string val;
             std::cin >> val;
@@ -518,7 +521,7 @@ void LobbyServer::PromptCreateAccount()
 
     if(!account->Insert(mDatabase))
     {
-        LOG_ERROR("Failed to create account!\n");
+        LogGeneralErrorMsg("Failed to create account!\n");
     }
 }
 
@@ -548,14 +551,21 @@ bool LobbyServer::ResetRegisteredWorlds()
     {
         if(worldServer->GetStatus() == objects::RegisteredWorld::Status_t::ACTIVE)
         {
-            LOG_DEBUG(libcomp::String("Resetting registered world (%1) '%2' which did not exit"
-                " cleanly during the previous execution.\n")
-                .Arg(worldServer->GetID())
-                .Arg(worldServer->GetName()));
-            worldServer->SetStatus(objects::RegisteredWorld::Status_t::INACTIVE);
+            LogGeneralDebug([&]()
+            {
+                return libcomp::String("Resetting registered world (%1) '%2' "
+                    "which did not exit cleanly during the previous "
+                    "execution.\n").Arg(worldServer->GetID())
+                    .Arg(worldServer->GetName());
+            });
+
+            worldServer->SetStatus(
+                objects::RegisteredWorld::Status_t::INACTIVE);
+
             if(!worldServer->Update(mDatabase))
             {
-                LOG_CRITICAL("Registered world update failed.\n");
+                LogGeneralCriticalMsg("Registered world update failed.\n");
+
                 return false;
             }
         }
@@ -741,8 +751,11 @@ libcomp::String LobbyServer::ImportAccount(const libcomp::String& data,
 
     if(!lobbyDB->ProcessChangeSet(lobbyChangeSet))
     {
-        LOG_ERROR(libcomp::String("Import failed with lobby database error: "
-            "%1\n").Arg(lobbyDB->GetLastError()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Import failed with lobby database error: "
+                "%1\n").Arg(lobbyDB->GetLastError());
+        });
 
         return "Failed to write account into database.";
     }
@@ -756,8 +769,11 @@ libcomp::String LobbyServer::ImportAccount(const libcomp::String& data,
 
     if(!worldDB->ProcessChangeSet(worldChangeSet))
     {
-        LOG_ERROR(libcomp::String("Import failed with world database error: "
-            "%1\n").Arg(worldDB->GetLastError()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Import failed with world database error: "
+                "%1\n").Arg(worldDB->GetLastError());
+        });
 
         return "Failed to write account into database.";
     }

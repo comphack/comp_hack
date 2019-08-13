@@ -61,7 +61,9 @@ bool Parsers::SkillTarget::Parse(libcomp::ManagerPacket *pPacketManager,
     auto source = state->GetEntityState(sourceEntityID);
     if(!source)
     {
-        LOG_ERROR("Invalid skill source sent from client for skill target\n");
+        LogSkillManagerWarningMsg("Invalid skill source sent from client for "
+            "skill target\n");
+
         return false;
     }
 

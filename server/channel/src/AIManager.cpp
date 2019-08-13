@@ -152,7 +152,9 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
         baseAIType ? baseAIType : demonData->GetAI()->GetType()) : nullptr;
     if(!aiData)
     {
-        LOG_ERROR("Active entity with invalid base AI data value specified\n");
+        LogAIManagerErrorMsg(
+            "Active entity with invalid base AI data value specified\n");
+
         return false;
     }
 
@@ -200,8 +202,12 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
             auto script = serverDataManager->GetAIScript(finalAIType);
             if(!script)
             {
-                LOG_ERROR(libcomp::String("AI type '%1' does not exist\n")
-                    .Arg(finalAIType));
+                LogAIManagerError([&]()
+                {
+                    return libcomp::String("AI type '%1' does not exist\n")
+                        .Arg(finalAIType);
+                });
+
                 return false;
             }
 
@@ -210,8 +216,12 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
 
             if(!aiEngine->Eval(script->Source))
             {
-                LOG_ERROR(libcomp::String("AI type '%1' is not a valid AI script\n")
-                    .Arg(finalAIType));
+                LogAIManagerError([&]()
+                {
+                    return libcomp::String("AI type '%1' is not a valid "
+                        "AI script\n").Arg(finalAIType);
+                });
+
                 return false;
             }
 
@@ -231,8 +241,12 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
             auto result = !f.IsNull() ? f.Evaluate<int>(eState, this) : 0;
             if(!result || (*result != 0))
             {
-                LOG_ERROR(libcomp::String("Failed to prepare AI type '%1'\n")
-                    .Arg(finalAIType));
+                LogAIManagerError([&]()
+                {
+                    return libcomp::String("Failed to prepare AI type '%1'\n")
+                        .Arg(finalAIType);
+                });
+
                 return false;
             }
         }
@@ -665,8 +679,12 @@ bool AIManager::UseDiasporaQuake(const std::shared_ptr<
     }
     else if(zone->GetInstanceType() != InstanceType_t::DIASPORA)
     {
-        LOG_ERROR(libcomp::String("Attempted to use a Diaspora quake skill"
-            " outside of a Diaspora instance: %1\n").Arg(skillID));
+        LogAIManagerError([&]()
+        {
+            return libcomp::String("Attempted to use a Diaspora quake skill"
+                " outside of a Diaspora instance: %1\n").Arg(skillID);
+        });
+
         return false;
     }
 
@@ -676,8 +694,12 @@ bool AIManager::UseDiasporaQuake(const std::shared_ptr<
         ->GetFunctionIDSkills(SVR_CONST.SKILL_DIASPORA_QUAKE);
     if(validSkillIDs.find(skillID) == validSkillIDs.end())
     {
-        LOG_ERROR(libcomp::String("Attempted to use invalid Diaspora quake"
-            " skill: %1\n").Arg(skillID));
+        LogAIManagerError([&]()
+        {
+            return libcomp::String("Attempted to use invalid Diaspora quake"
+                " skill: %1\n").Arg(skillID);
+        });
+
         return false;
     }
 
@@ -1345,7 +1367,7 @@ bool AIManager::UpdateEnemyState(
             return false;
         }
     }
-            
+
     float targetDist = 0.f, targetX = 0.f, targetY = 0.f;
     if(target)
     {

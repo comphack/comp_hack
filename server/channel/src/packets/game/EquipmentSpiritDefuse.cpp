@@ -117,17 +117,25 @@ bool Parsers::EquipmentSpiritDefuse::Parse(libcomp::ManagerPacket *pPacketManage
         if(characterManager->CalculateItemRemoval(client, fuseItemType,
             fuseItemCost, updateItems) > 0)
         {
-            LOG_ERROR(libcomp::String("EquipmentSpiritDefuse request"
-                " attempted with insufficient fusion item count: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogItemError([&]()
+            {
+                return libcomp::String("EquipmentSpiritDefuse request"
+                    " attempted with insufficient fusion item count: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             error = true;
         }
         else if(characterManager->CalculateItemRemoval(client,
             SVR_CONST.ITEM_KREUZ, kzCost, updateItems) > 0)
         {
-            LOG_ERROR(libcomp::String("EquipmentSpiritDefuse request"
-                " attempted with insufficient kreuz: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogItemError([&]()
+            {
+                return libcomp::String("EquipmentSpiritDefuse request"
+                    " attempted with insufficient kreuz: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             error = true;
         }
     }
@@ -319,9 +327,12 @@ bool Parsers::EquipmentSpiritDefuse::Parse(libcomp::ManagerPacket *pPacketManage
         if(!characterManager->UpdateItems(client, false, insertItems,
             updateItems))
         {
-            LOG_ERROR(libcomp::String("EquipmentSpiritDefuse failed"
-                " to update items: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogItemError([&]()
+            {
+                return libcomp::String("EquipmentSpiritDefuse failed"
+                    " to update items: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
 
             // Roll it back
             equipment->SetBasicEffect(basicEffectCurrent);

@@ -83,7 +83,7 @@ bool Parsers::SynthesizeRecipe::Parse(libcomp::ManagerPacket *pPacketManager,
     if((!catalystID || catalyst) && exchangeSession && synthData)
     {
         exchangeSession->SetSelectionID(recipeID);
-        
+
         if(catalyst)
         {
             exchangeSession->SetItems(0, catalyst);
@@ -125,9 +125,13 @@ bool Parsers::SynthesizeRecipe::Parse(libcomp::ManagerPacket *pPacketManager,
                 if(materialID &&
                     character->GetMaterials(materialID) < mat->GetAmount())
                 {
-                    LOG_ERROR(libcomp::String("SynthesizeRecipe set attampted"
-                        " without the necessary materials: %1\n")
-                        .Arg(state->GetAccountUID().ToString()));
+                    LogGeneralError([&]()
+                    {
+                        return libcomp::String("SynthesizeRecipe set attampted"
+                            " without the necessary materials: %1\n")
+                            .Arg(state->GetAccountUID().ToString());
+                    });
+
                     success = false;
                     break;
                 }

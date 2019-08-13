@@ -61,8 +61,12 @@ bool Parsers::Pivot::Parse(libcomp::ManagerPacket *pPacketManager,
     auto eState = state->GetEntityState(entityID);
     if(!eState)
     {
-        LOG_ERROR(libcomp::String("Invalid entity ID received from a pivot"
-            " request: %1\n").Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid entity ID received from a pivot"
+                " request: %1\n").Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }
@@ -101,9 +105,12 @@ bool Parsers::Pivot::Parse(libcomp::ManagerPacket *pPacketManager,
         Point dest(x, y);
         if(zoneManager->CorrectClientPosition(eState, dest))
         {
-            LOG_DEBUG(libcomp::String("Player pivot corrected in"
-                " zone %1: %2\n").Arg(zone->GetDefinitionID())
-                .Arg(state->GetAccountUID().ToString()));
+            LogGeneralDebug([&]()
+            {
+                return libcomp::String("Player pivot corrected in"
+                    " zone %1: %2\n").Arg(zone->GetDefinitionID())
+                    .Arg(state->GetAccountUID().ToString());
+            });
 
             x = dest.x;
             y = dest.y;

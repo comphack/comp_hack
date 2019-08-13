@@ -70,8 +70,9 @@ bool ManagerClientPacket::ValidateConnectionState(const std::shared_ptr<
 
             if(!valid)
             {
-                LOG_ERROR("Client connection attempted to handle a request "
-                    "packet without authenticating and logging in first.\n");
+                LogConnectionErrorMsg("Client connection attempted to handle a "
+                    "request packet without authenticating and logging in "
+                    "first.\n");
             }
             break;
         }

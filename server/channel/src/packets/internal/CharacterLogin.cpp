@@ -56,7 +56,9 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(p.Size() < 5)
     {
-        LOG_ERROR("Invalid response received for CharacterLogin.\n");
+        LogCharacterManagerErrorMsg(
+            "Invalid response received for CharacterLogin.\n");
+
         return false;
     }
 
@@ -69,7 +71,9 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         ->GatherWorldTargetClients(p, connectionsFound);
     if(!connectionsFound)
     {
-        LOG_ERROR("Connections not found for CharacterLogin.\n");
+        LogCharacterManagerErrorMsg(
+            "Connections not found for CharacterLogin.\n");
+
         return false;
     }
 
@@ -84,7 +88,9 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     auto login = std::make_shared<objects::CharacterLogin>();
     if(!login->LoadPacket(p, false))
     {
-        LOG_ERROR("Invalid character info received for CharacterLogin.\n");
+        LogCharacterManagerErrorMsg(
+            "Invalid character info received for CharacterLogin.\n");
+
         return false;
     }
 
@@ -92,15 +98,19 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO &&
         !member->LoadPacket(p, true))
     {
-        LOG_ERROR("Invalid party member character received for CharacterLogin.\n");
+        LogCharacterManagerErrorMsg(
+            "Invalid party member character received for CharacterLogin.\n");
+
         return false;
     }
-    
+
     auto partyDemon = std::make_shared<objects::PartyMember>();
     if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO &&
         !partyDemon->LoadPacket(p, true))
     {
-        LOG_ERROR("Invalid party member demon received for CharacterLogin.\n");
+        LogCharacterManagerErrorMsg(
+            "Invalid party member demon received for CharacterLogin.\n");
+
         return false;
     }
 
@@ -111,8 +121,13 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             worldDB, login->GetCharacter().GetUUID());
         if(!fSettings)
         {
-            LOG_ERROR(libcomp::String("Character friend settings failed to load: %1\n")
-                .Arg(login->GetCharacter().GetUUID().ToString()));
+            LogCharacterManagerError([&]()
+            {
+                return libcomp::String("Character friend settings "
+                    "failed to load: %1\n")
+                    .Arg(login->GetCharacter().GetUUID().ToString());
+            });
+
             return true;
         }
 
@@ -166,7 +181,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 
         ChannelClientConnection::BroadcastPacket(friendConnections, packet);
     }
-    
+
     // Update clan information
     if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC)
     {
@@ -209,7 +224,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 
         ChannelClientConnection::BroadcastPacket(clanConnections, packet);
     }
-    
+
     // Update local party information
     if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_FLAGS
         && login->GetPartyID())
@@ -312,7 +327,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 
             ChannelClientConnection::BroadcastPacket(sameZoneConnections, packet);
         }
-        
+
         if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO &&
             sameZoneConnections.size() > 0)
         {
@@ -327,7 +342,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 
             ChannelClientConnection::BroadcastPacket(sameZoneConnections, packet);
         }
-        
+
         if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_ICON)
         {
             libcomp::Packet packet;

@@ -62,7 +62,7 @@ bool Parsers::Tell::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!chatManager->HandleGMand(client, message) &&
         !chatManager->SendTellMessage(client, message, targetName))
     {
-        LOG_ERROR("Tell message could not be sent.\n");
+        LogChatManagerErrorMsg("Tell message could not be sent.\n");
     }
 
     return true;

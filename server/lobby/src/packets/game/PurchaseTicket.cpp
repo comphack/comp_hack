@@ -66,14 +66,22 @@ bool Parsers::PurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!account->Update(lobbyDB))
         {
-            LOG_ERROR(libcomp::String("Account purchased a character ticket but could"
-                " not be updated: %1").Arg(account->GetUUID().ToString()));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Account purchased a character ticket "
+                    "but could not be updated: %1")
+                    .Arg(account->GetUUID().ToString());
+            });
         }
     }
     else
     {
-        LOG_ERROR(libcomp::String("Account attempted to purchase a character ticket"
-            " without having enough CP available: %1").Arg(account->GetUUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Account attempted to purchase a character "
+                "ticket without having enough CP available: %1")
+                .Arg(account->GetUUID().ToString());
+        });
     }
 
     libcomp::Packet reply;

@@ -117,10 +117,13 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(isHidden)
             {
-                LOG_WARNING(libcomp::String("Entity %1 is currently hidden"
-                    " and cannot be interacted with by player: %1\n")
-                    .Arg(objDef->GetID())
-                    .Arg(state->GetAccountUID().ToString()));
+                LogGeneralWarning([&]()
+                {
+                    return libcomp::String("Entity %1 is currently hidden"
+                        " and cannot be interacted with by player: %1\n")
+                        .Arg(objDef->GetID())
+                        .Arg(state->GetAccountUID().ToString());
+                });
             }
             else
             {
@@ -129,10 +132,13 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
                 if(cState->GetDistance(objState->GetCurrentX(),
                     objState->GetCurrentY()) > MAX_INTERACT_DISTANCE)
                 {
-                    LOG_WARNING(libcomp::String("Entity %1 is too far from"
-                        " player character to interact with: %1\n")
-                        .Arg(objDef->GetID())
-                        .Arg(state->GetAccountUID().ToString()));
+                    LogGeneralWarning([&]()
+                    {
+                        return libcomp::String("Entity %1 is too far from"
+                            " player character to interact with: %1\n")
+                            .Arg(objDef->GetID())
+                            .Arg(state->GetAccountUID().ToString());
+                    });
                 }
                 else
                 {
@@ -147,21 +153,27 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LOG_WARNING(libcomp::String("Unknown entity %1\n").Arg(
+        LogGeneralWarningMsg(libcomp::String("Unknown entity %1\n").Arg(
             entityID));
     }
 
     if(valid)
     {
-        LOG_DEBUG(libcomp::String("Interacted with entity %1\n").Arg(entityID));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Interacted with entity %1\n").Arg(entityID);
+        });
 
         // Get the action list.
         auto pActionList = new ActionList;
         pActionList->actions = objDef->GetActions();
         pActionList->sourceEntityID = entityID;
 
-        LOG_DEBUG(libcomp::String("Got entity with %1 actions.\n").Arg(
-            pActionList->actions.size()));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Got entity with %1 actions.\n")
+                .Arg(pActionList->actions.size());
+        });
 
         // There must be at least 1 action or we are wasting our time.
         if(pActionList->actions.empty())

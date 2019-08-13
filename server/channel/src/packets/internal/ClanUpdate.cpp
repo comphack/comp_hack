@@ -60,12 +60,13 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(p.Size() < 1)
     {
-        LOG_ERROR("Invalid response received for ClanUpdate.\n");
+        LogClanErrorMsg("Invalid response received for ClanUpdate.\n");
+
         return false;
     }
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    
+
     bool connectionsFound = false;
     uint8_t mode = p.ReadU8();
 
@@ -73,7 +74,8 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         ->GatherWorldTargetClients(p, connectionsFound);
     if(!connectionsFound)
     {
-        LOG_ERROR("Connections not found for ClanUpdate.\n");
+        LogClanErrorMsg("Connections not found for ClanUpdate.\n");
+
         return false;
     }
 
@@ -143,7 +145,7 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             bool emblemUpdated = (updateFlags & 0x02) != 0;
             bool levelUpdated = (updateFlags & 0x04) != 0;
             bool clanUpdated = (updateFlags & 0x08) != 0;
-            
+
             libcomp::String name;
             if(nameUpdated)
             {

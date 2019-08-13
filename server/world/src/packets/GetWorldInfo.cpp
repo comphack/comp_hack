@@ -74,8 +74,10 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!dbConfig->LoadPacket(p, false))
         {
-            LOG_CRITICAL("The lobby did not supply a valid database connection configuration"
-                " for the current database type.\n");
+            LogGeneralCriticalMsg("The lobby did not supply a valid "
+                "database connection configuration for the current "
+                "database type.\n");
+
             return false;
         }
 
@@ -93,8 +95,8 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!server->RegisterServer())
         {
-            LOG_CRITICAL("The server failed to register with the lobby's database."
-                " Notifying the lobby of the failure.\n");
+            LogGeneralCriticalMsg("The server failed to register with the "
+                "lobby's database. Notifying the lobby of the failure.\n");
         }
 
         // Initialize the sync manager
@@ -104,7 +106,7 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
         if(!syncManager->Initialize() ||
             !syncManager->RegisterConnection(server->GetLobbyConnection(), lobbyTypes))
         {
-            LOG_CRITICAL("Failed to initialize the sync manager!\n");
+            LogGeneralCriticalMsg("Failed to initialize the sync manager!\n");
         }
 
         // Cleanup AccountWorldData and schedule additional runs every hour
@@ -142,9 +144,13 @@ bool Parsers::GetWorldInfo::Parse(libcomp::ManagerPacket *pPacketManager,
             {
                 if(server->GetChannelConnectionByID(reservedID))
                 {
-                    LOG_ERROR(libcomp::String("Channel requested reserved ID"
-                        " %1 which has already been given to another server\n")
-                        .Arg(reservedID));
+                    LogGeneralError([&]()
+                    {
+                        return libcomp::String("Channel requested reserved ID"
+                            " %1 which has already been given to another "
+                            "server\n").Arg(reservedID);
+                    });
+
                     connection->Close();
                     return true;
                 }

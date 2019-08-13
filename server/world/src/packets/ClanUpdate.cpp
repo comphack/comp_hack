@@ -195,7 +195,8 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     if(p.Size() < 5)
     {
-        LOG_ERROR("Invalid packet data sent to ClanUpdate\n");
+        LogClanErrorMsg("Invalid packet data sent to ClanUpdate\n");
+
         return false;
     }
 
@@ -207,7 +208,12 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     auto cLogin = characterManager->GetCharacterLogin(cid);
     if(!cLogin)
     {
-        LOG_ERROR(libcomp::String("Invalid world CID sent to ClanUpdate: %1\n").Arg(cid));
+        LogClanError([&]()
+        {
+            return libcomp::String("Invalid world CID sent to "
+                "ClanUpdate: %1\n").Arg(cid);
+
+        });
         return false;
     }
 
@@ -234,7 +240,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(p.Left() < 2 || (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
             {
-                LOG_ERROR("Missing clan name parameter for clan formation command\n");
+                LogClanErrorMsg(
+                    "Missing clan name parameter for clan formation command\n");
+
                 return false;
             }
 
@@ -243,8 +251,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(p.Left() != 5)
             {
-                LOG_ERROR("Missing base zone ID or activation ID parameters for"
-                    " clan formation command\n");
+                LogClanErrorMsg("Missing base zone ID or activation ID "
+                    "parameters for clan formation command\n");
+
                 return false;
             }
 
@@ -258,7 +267,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(p.Left() < 5)
             {
-                LOG_ERROR("Missing clan ID or update flag parameters for clan update command\n");
+                LogClanErrorMsg("Missing clan ID or update flag parameters for "
+                    "clan update command\n");
+
                 return false;
             }
 
@@ -291,14 +302,18 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(p.Left() < 2 || (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
             {
-                LOG_ERROR(libcomp::String("Missing target name parameter"
-                    " for command %1\n").Arg(mode));
+                LogClanError([&]()
+                {
+                    return libcomp::String("Missing target name parameter"
+                        " for command %1\n").Arg(mode);
+                });
+
                 return false;
             }
 
             libcomp::String targetName = p.ReadString16Little(
                 libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
-            
+
             // Clan invite accept
             if(clanID == 0 && !targetName.IsEmpty())
             {
@@ -327,7 +342,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(p.Left() < 4)
             {
-                LOG_ERROR("Missing clan ID parameter for clan disband command\n");
+                LogClanErrorMsg(
+                    "Missing clan ID parameter for clan disband command\n");
+
                 return false;
             }
 
@@ -339,7 +356,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(p.Left() < 4)
             {
-                LOG_ERROR("Missing clan ID parameter for clan disband command\n");
+                LogClanErrorMsg(
+                    "Missing clan ID parameter for clan disband command\n");
+
                 return false;
             }
 
@@ -351,7 +370,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(p.Left() < 8)
             {
-                LOG_ERROR("Missing leader CID parameter for clan leader update command\n");
+                LogClanErrorMsg("Missing leader CID parameter for clan "
+                    "leader update command\n");
+
                 return false;
             }
 
@@ -360,7 +381,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(p.Left() < 1)
             {
-                LOG_ERROR("Missing update type parameter for clan leader update command\n");
+                LogClanErrorMsg("Missing update type parameter for clan "
+                    "leader update command\n");
+
                 return false;
             }
 
@@ -392,8 +415,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                     if(!sourceMember || sourceMember->GetMemberType() !=
                         objects::ClanMember::MemberType_t::MASTER)
                     {
-                        LOG_ERROR("Non-master clan member attempted to reassign the"
-                            " clan master role\n");
+                        LogClanErrorMsg("Non-master clan member attempted to "
+                            "reassign the clan master role\n");
+
                         break;
                     }
 
@@ -444,14 +468,17 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                     if(!sourceMember || sourceMember->GetMemberType() ==
                         objects::ClanMember::MemberType_t::NORMAL)
                     {
-                        LOG_ERROR("Non-sub-master level clan member attempted to adjust a"
-                            " clan sub-master role\n");
+                        LogClanErrorMsg("Non-sub-master level clan member "
+                            "attempted to adjust a clan sub-master role\n");
+
                         break;
                     }
                     else if(targetMember->GetMemberType() ==
                         objects::ClanMember::MemberType_t::MASTER)
                     {
-                        LOG_ERROR("Attempted to set the clan master to a sub-master\n");
+                        LogClanErrorMsg("Attempted to set the clan master "
+                            "to a sub-master\n");
+
                         break;
                     }
 
@@ -474,8 +501,13 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
                 }
                 break;
             default:
-                LOG_ERROR(libcomp::String("Invalid update type for clan leader update"
-                    " command encountered: %1\n").Arg(updateType));
+                LogClanError([&]()
+                {
+                    return libcomp::String("Invalid update type for clan "
+                        "leader update command encountered: %1\n")
+                        .Arg(updateType);
+                });
+
                 return false;
             }
         }
@@ -484,7 +516,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(p.Left() < 4)
             {
-                LOG_ERROR("Missing clan ID parameter for clan emblem update command\n");
+                LogClanErrorMsg("Missing clan ID parameter for clan "
+                    "emblem update command\n");
+
                 return false;
             }
 
@@ -500,7 +534,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(p.Left() < 8)
             {
-                LOG_ERROR("Missing emblem definition parameters for clan emblem update command\n");
+                LogClanErrorMsg("Missing emblem definition parameters for "
+                    "clan emblem update command\n");
+
                 return false;
             }
 
@@ -536,7 +572,9 @@ bool Parsers::ClanUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(p.Left() < 8)
             {
-                LOG_ERROR("Missing clan ID or target CID parameter for clan kick command\n");
+                LogClanErrorMsg("Missing clan ID or target CID parameter "
+                    "for clan kick command\n");
+
                 return false;
             }
 

@@ -59,7 +59,10 @@ void PerformanceTimer::Stop(const libcomp::String& metric)
     {
         ServerTime diff = mServer->GetServerTime() - mStart;
 
-        LOG_DEBUG(libcomp::String("PERF: %1 in %2 us\n").Arg(
-            metric).Arg(diff));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("PERF: %1 in %2 us\n")
+                .Arg(metric).Arg(diff);
+        });
     }
 }

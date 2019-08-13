@@ -84,7 +84,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
                 {
                     //Nothing to do upon encrypting a channel connection (for now)
                 }
-        
+
                 return true;
             }
             break;
@@ -100,7 +100,9 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
 
                 if(mLobbyConnection == connection)
                 {
-                    LOG_INFO(libcomp::String("Lobby connection closed. Shutting down."));
+                    LogConnectionInfoMsg(
+                        "Lobby connection closed. Shutting down.");
+
                     server->Shutdown();
                 }
                 else
@@ -115,7 +117,7 @@ bool ManagerConnection::ProcessMessage(const libcomp::Message::Message *pMessage
         default:
             break;
     }
-    
+
     return false;
 }
 
@@ -151,8 +153,12 @@ void ManagerConnection::RemoveConnection(std::shared_ptr<libcomp::InternalConnec
 
                 if(loggedOut.size() > 0)
                 {
-                    LOG_WARNING(libcomp::String("%1 user(s) forcefully logged out"
-                        " from channel %2.\n").Arg(loggedOut.size()).Arg(channelID));
+                    LogConnectionWarning([&]()
+                    {
+                        return libcomp::String("%1 user(s) forcefully logged "
+                            "out from channel %2.\n").Arg(loggedOut.size())
+                            .Arg(channelID);
+                    });
 
                     bool flushSyncData = false;
                     std::list<std::shared_ptr<objects::CharacterLogin>> cLogOuts;

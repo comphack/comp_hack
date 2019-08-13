@@ -91,8 +91,11 @@ bool Parsers::DeleteCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LOG_ERROR(libcomp::String("Client tried to delete character with "
-            "invalid CID %1\n").Arg(cid));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Client tried to delete character with "
+                "invalid CID %1\n").Arg(cid);
+        });
 
         connection->Close();
     }

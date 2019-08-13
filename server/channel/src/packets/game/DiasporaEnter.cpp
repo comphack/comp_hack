@@ -60,9 +60,13 @@ bool Parsers::DiasporaEnter::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(confirmation != 0)
     {
-        LOG_ERROR(libcomp::String("Player set up to enter Disapora but"
-            " confirmation was not returned: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Player set up to enter Disapora but"
+                " confirmation was not returned: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         return true;
     }
 

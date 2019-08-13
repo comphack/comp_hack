@@ -67,9 +67,13 @@ bool Parsers::ItemRepairMax::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(sourceState == nullptr)
     {
-        LOG_ERROR(libcomp::String("Invalid entity ID received from a"
-            " ItemRepairMax request: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogItemError([&]()
+        {
+            return libcomp::String("Invalid entity ID received from a"
+                " ItemRepairMax request: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }
@@ -86,11 +90,13 @@ bool Parsers::ItemRepairMax::Parse(libcomp::ManagerPacket *pPacketManager,
     bool success = false;
     if(!item)
     {
-        LOG_ERROR("Invalid item ID encountered for ItemRepairMax request\n");
+        LogItemErrorMsg(
+            "Invalid item ID encountered for ItemRepairMax request\n");
     }
     else if(!activatedAbility)
     {
-        LOG_ERROR("Invalid activation ID encountered for ItemRepairMax request\n");
+        LogItemErrorMsg(
+            "Invalid activation ID encountered for ItemRepairMax request\n");
     }
     else
     {

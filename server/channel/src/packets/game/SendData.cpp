@@ -92,7 +92,7 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
 
     // Send any server system messages
     libcomp::String systemMessage = conf->GetSystemMessage();
-    if(!systemMessage.IsEmpty()) 
+    if(!systemMessage.IsEmpty())
     {
         server->SendSystemMessage(client, systemMessage,
             (int8_t)conf->GetSystemMessageColor(), false);
@@ -149,9 +149,13 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
         {
             if(!zoneManager->MoveToInstance(client, instAccess, true))
             {
-                LOG_ERROR(libcomp::String("Failed to add client to zone"
-                    " instance %1. Closing the connection.\n")
-                    .Arg(instAccess->GetDefinitionID()));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Failed to add client to zone"
+                        " instance %1. Closing the connection.\n")
+                        .Arg(instAccess->GetDefinitionID());
+                });
+
                 client->Close();
                 return;
             }
@@ -166,9 +170,13 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
             if(!zoneManager->GetLoginZone(character, zoneID, dynamicMapID,
                 channelID, x, y, rot))
             {
-                LOG_ERROR(libcomp::String("Login zone for character %1 could"
-                    " not be determined.\n")
-                    .Arg(character->GetUUID().ToString()));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Login zone for character %1 could"
+                        " not be determined.\n")
+                        .Arg(character->GetUUID().ToString());
+                });
+
                 client->Close();
                 return;
             }
@@ -176,15 +184,22 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
                 (uint8_t)channelID != server->GetChannelID())
             {
                 // Don't actually fail here, attempt to move to other channel
-                LOG_ERROR(libcomp::String("Login zone information determined"
-                    " for character %1 was not valid for this channel.\n")
-                    .Arg(character->GetUUID().ToString()));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Login zone information determined"
+                        " for character %1 was not valid for this channel.\n")
+                        .Arg(character->GetUUID().ToString());
+                });
             }
 
             if(!zoneManager->EnterZone(client, zoneID, dynamicMapID, x, y, rot))
             {
-                LOG_ERROR(libcomp::String("Failed to add client to zone"
-                    " %1. Closing the connection.\n").Arg(zoneID));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Failed to add client to zone"
+                        " %1. Closing the connection.\n").Arg(zoneID);
+                });
+
                 client->Close();
                 return;
             }

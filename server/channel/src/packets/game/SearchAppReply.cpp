@@ -81,7 +81,7 @@ bool Parsers::SearchAppReply::Parse(libcomp::ManagerPacket *pPacketManager,
             break;
         }
     }
-    
+
     bool success = false;
     if(parent && replyEntry &&
         parent->GetSourceCID() != replyEntry->GetSourceCID())
@@ -185,7 +185,12 @@ bool Parsers::SearchAppReply::Parse(libcomp::ManagerPacket *pPacketManager,
             // These are just tells and clear requests
             break;
         default:
-            LOG_ERROR(libcomp::String("Invalid SearchAppReply type encountered: %1\n").Arg(parentType));
+            LogGeneralError([&]()
+            {
+                return libcomp::String("Invalid SearchAppReply type "
+                    "encountered: %1\n").Arg(parentType);
+            });
+
             break;
         }
 

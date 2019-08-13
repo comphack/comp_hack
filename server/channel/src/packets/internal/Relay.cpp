@@ -63,7 +63,7 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
         if(!sourceClient)
         {
             // Stop here, do not send a failure about a failure back
-            LOG_ERROR("Packet relay failed and could not be reported"
+            LogGeneralErrorMsg("Packet relay failed and could not be reported"
                 " back to the source.\n");
             return true;
         }
@@ -118,8 +118,12 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else if(mode != PacketRelayMode_t::RELAY_CIDS)
     {
-        LOG_ERROR(libcomp::String("Invalid relay mode received from"
-            " the world: %1\n").Arg((uint8_t)mode));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid relay mode received from"
+                " the world: %1\n").Arg((uint8_t)mode);
+        });
+
         return false;
     }
 

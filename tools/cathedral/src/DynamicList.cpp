@@ -92,7 +92,7 @@ void DynamicList::Setup(DynamicItemType_t type, MainWindow *pMainWindow,
     }
     else
     {
-        LOG_ERROR("Attempted to set a DynamicList item type twice\n");
+        LogGeneralErrorMsg("Attempted to set a DynamicList item type twice\n");
     }
 }
 
@@ -116,8 +116,9 @@ bool DynamicList::AddInteger(int32_t val)
     {
         if(mType != DynamicItemType_t::PRIMITIVE_INT)
         {
-            LOG_ERROR("Attempted to assign a signed integer value to a differing"
-                " DynamicList type\n");
+            LogGeneralErrorMsg("Attempted to assign a signed integer value to "
+                "a differing DynamicList type\n");
+
             return false;
         }
 
@@ -167,8 +168,9 @@ bool DynamicList::AddUnsignedInteger(uint32_t val)
     {
         if(mType != DynamicItemType_t::PRIMITIVE_UINT)
         {
-            LOG_ERROR("Attempted to assign a unsigned integer value to a"
-                " differing DynamicList type\n");
+            LogGeneralErrorMsg("Attempted to assign a unsigned integer value "
+                "to a differing DynamicList type\n");
+
             return false;
         }
 
@@ -199,8 +201,9 @@ bool DynamicList::AddString(const libcomp::String& val)
     if(mType != DynamicItemType_t::PRIMITIVE_STRING &&
         mType != DynamicItemType_t::PRIMITIVE_MULTILINE_STRING)
     {
-        LOG_ERROR("Attempted to assign a string value to a differing"
+        LogGeneralErrorMsg("Attempted to assign a string value to a differing"
             " DynamicList type\n");
+
         return false;
     }
 
@@ -257,8 +260,9 @@ bool DynamicList::AddObject<objects::EventBase>(
 {
     if(mType != DynamicItemType_t::OBJ_EVENT_BASE)
     {
-        LOG_ERROR("Attempted to assign an EventBase object to a differing"
-            " DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to assign an EventBase object to a "
+            "differing DynamicList type\n");
+
         return false;
     }
 
@@ -293,8 +297,9 @@ bool DynamicList::AddObject<objects::EventChoice>(
     if(mType != DynamicItemType_t::OBJ_EVENT_CHOICE &&
         mType != DynamicItemType_t::OBJ_EVENT_ITIME_CHOICE)
     {
-        LOG_ERROR("Attempted to assign an EventChoice object to a differing"
-            " DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to assign an EventChoice object to a "
+            "differing DynamicList type\n");
+
         return false;
     }
 
@@ -327,8 +332,9 @@ bool DynamicList::AddObject<objects::EventCondition>(
 {
     if(mType != DynamicItemType_t::OBJ_EVENT_CONDITION)
     {
-        LOG_ERROR("Attempted to assign an EventCondition object to a differing"
-            " DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to assign an EventCondition object to a "
+            "differing DynamicList type\n");
+
         return false;
     }
 
@@ -361,8 +367,9 @@ bool DynamicList::AddObject<objects::ItemDrop>(
 {
     if(mType != DynamicItemType_t::OBJ_ITEM_DROP)
     {
-        LOG_ERROR("Attempted to assign an ItemDrop object to a differing"
-            " DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to assign an ItemDrop object to a "
+            "differing DynamicList type\n");
+
         return false;
     }
 
@@ -397,8 +404,9 @@ bool DynamicList::AddObject<objects::ObjectPosition>(
 {
     if(mType != DynamicItemType_t::OBJ_OBJECT_POSITION)
     {
-        LOG_ERROR("Attempted to assign an ObjectPosition object to a differing"
-            " DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to assign an ObjectPosition object to "
+            "a differing DynamicList type\n");
+
         return false;
     }
 
@@ -431,8 +439,9 @@ bool DynamicList::AddObject<objects::SpawnLocation>(
 {
     if(mType != DynamicItemType_t::OBJ_SPAWN_LOCATION)
     {
-        LOG_ERROR("Attempted to assign an SpawnLocation object to a differing"
-            " DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to assign an SpawnLocation object to a "
+            "differing DynamicList type\n");
+
         return false;
     }
 
@@ -465,8 +474,9 @@ bool DynamicList::AddObject<objects::ServerZoneTrigger>(
 {
     if(mType != DynamicItemType_t::OBJ_ZONE_TRIGGER)
     {
-        LOG_ERROR("Attempted to assign an ServerZoneTrigger object to a"
-            " differing DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to assign an ServerZoneTrigger object "
+            "to a differing DynamicList type\n");
+
         return false;
     }
 
@@ -527,11 +537,12 @@ std::list<int32_t> DynamicList::GetIntegerList() const
     {
         if(mType != DynamicItemType_t::PRIMITIVE_INT)
         {
-            LOG_ERROR("Attempted to retrieve signed integer list from a"
-                " differing DynamicList type\n");
+            LogGeneralErrorMsg("Attempted to retrieve signed integer list "
+                "from a differing DynamicList type\n");
+
             return result;
         }
-    
+
         int total = ui->layoutItems->count();
         for(int childIdx = 0; childIdx < total; childIdx++)
         {
@@ -571,8 +582,9 @@ std::list<uint32_t> DynamicList::GetUnsignedIntegerList() const
     {
         if(mType != DynamicItemType_t::PRIMITIVE_UINT)
         {
-            LOG_ERROR("Attempted to retrieve unsigned integer list from a"
-                " differing DynamicList type\n");
+            LogGeneralErrorMsg("Attempted to retrieve unsigned integer list "
+                "from a differing DynamicList type\n");
+
             return result;
         }
 
@@ -596,8 +608,9 @@ std::list<libcomp::String> DynamicList::GetStringList() const
     std::list<libcomp::String> result;
     if(!singleLine && !multiLine)
     {
-        LOG_ERROR("Attempted to retrieve a string list from a differing"
-            " DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to retrieve a string list from a "
+            "differing DynamicList type\n");
+
         return result;
     }
 
@@ -629,8 +642,9 @@ std::list<std::shared_ptr<objects::EventBase>>
     std::list<std::shared_ptr<objects::EventBase>> result;
     if(mType != DynamicItemType_t::OBJ_EVENT_BASE)
     {
-        LOG_ERROR("Attempted to retrieve an EventBase list from a differing"
-            " DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to retrieve an EventBase list from a "
+            "differing DynamicList type\n");
+
         return result;
     }
 
@@ -653,8 +667,9 @@ std::list<std::shared_ptr<objects::EventChoice>>
     if(mType != DynamicItemType_t::OBJ_EVENT_CHOICE &&
         mType != DynamicItemType_t::OBJ_EVENT_ITIME_CHOICE)
     {
-        LOG_ERROR("Attempted to retrieve an EventChoice list from a differing"
-            " DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to retrieve an EventChoice list from a "
+            "differing DynamicList type\n");
+
         return result;
     }
 
@@ -676,8 +691,9 @@ std::list<std::shared_ptr<objects::EventCondition>>
     std::list<std::shared_ptr<objects::EventCondition>> result;
     if(mType != DynamicItemType_t::OBJ_EVENT_CONDITION)
     {
-        LOG_ERROR("Attempted to retrieve an EventCondition list from a"
-            " differing DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to retrieve an EventCondition list "
+            "from a differing DynamicList type\n");
+
         return result;
     }
 
@@ -699,8 +715,9 @@ std::list<std::shared_ptr<objects::ItemDrop>>
     std::list<std::shared_ptr<objects::ItemDrop>> result;
     if(mType != DynamicItemType_t::OBJ_ITEM_DROP)
     {
-        LOG_ERROR("Attempted to retrieve an ItemDrop list from a differing"
-            " DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to retrieve an ItemDrop list from a "
+            "differing DynamicList type\n");
+
         return result;
     }
 
@@ -722,8 +739,9 @@ std::list<std::shared_ptr<objects::ObjectPosition>>
     std::list<std::shared_ptr<objects::ObjectPosition>> result;
     if(mType != DynamicItemType_t::OBJ_OBJECT_POSITION)
     {
-        LOG_ERROR("Attempted to retrieve an ObjectPosition list from a"
-            " differing DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to retrieve an ObjectPosition list "
+            "from a differing DynamicList type\n");
+
         return result;
     }
 
@@ -745,8 +763,9 @@ std::list<std::shared_ptr<objects::ServerZoneTrigger>>
     std::list<std::shared_ptr<objects::ServerZoneTrigger>> result;
     if(mType != DynamicItemType_t::OBJ_ZONE_TRIGGER)
     {
-        LOG_ERROR("Attempted to retrieve a ServerZoneTrigger list from a"
-            " differing DynamicList type\n");
+        LogGeneralErrorMsg("Attempted to retrieve a ServerZoneTrigger list "
+            "from a differing DynamicList type\n");
+
         return result;
     }
 
@@ -768,7 +787,7 @@ std::list<std::shared_ptr<objects::SpawnLocation>>
     std::list<std::shared_ptr<objects::SpawnLocation>> result;
     if(mType != DynamicItemType_t::OBJ_SPAWN_LOCATION)
     {
-        LOG_ERROR("Attempted to retrieve a SpawnLocation list from a"
+        LogGeneralErrorMsg("Attempted to retrieve a SpawnLocation list from a"
             " differing DynamicList type\n");
         return result;
     }
@@ -857,8 +876,9 @@ void DynamicList::AddRow()
         canReorder = true;
         break;
     case DynamicItemType_t::NONE:
-        LOG_ERROR("Attempted to add a row to a DynamicList with no assigned"
-            " item type\n");
+        LogGeneralErrorMsg("Attempted to add a row to a DynamicList with no "
+            "assigned item type\n");
+
         return;
     }
 

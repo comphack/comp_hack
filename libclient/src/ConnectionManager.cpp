@@ -188,7 +188,7 @@ bool ConnectionManager::ProcessClientMessage(
             if(!ConnectLobby(pInfo->GetConnectionID(), pInfo->GetHost(),
                    pInfo->GetPort()))
             {
-                LOG_ERROR("Failed to connect to lobby server!\n");
+                LogConnectionErrorMsg("Failed to connect to lobby server!\n");
             }
 
             return true;
@@ -202,7 +202,7 @@ bool ConnectionManager::ProcessClientMessage(
             if(!ConnectChannel(pInfo->GetConnectionID(), pInfo->GetHost(),
                    pInfo->GetPort()))
             {
-                LOG_ERROR("Failed to connect to channel server!\n");
+                LogConnectionErrorMsg("Failed to connect to channel server!\n");
             }
 
             return true;
@@ -211,7 +211,7 @@ bool ConnectionManager::ProcessClientMessage(
         {
             if(!CloseConnection())
             {
-                LOG_ERROR("Failed to close connection!\n");
+                LogConnectionErrorMsg("Failed to close connection!\n");
             }
 
             return true;
@@ -281,7 +281,10 @@ bool ConnectionManager::SetupConnection(
     mActiveConnection->SetMessageQueue(mMessageQueue);
     mActiveConnection->SetName(connectionID);
 
-    LOG_DEBUG(libcomp::String("Connecting to %1:%2\n").Arg(host).Arg(port));
+    LogConnectionDebug([&]()
+    {
+        return libcomp::String("Connecting to %1:%2\n").Arg(host).Arg(port);
+    });
 
     bool result = mActiveConnection->Connect(host, port);
 

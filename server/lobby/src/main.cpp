@@ -80,7 +80,7 @@ int main(int argc, const char *argv[])
         argc--;
         argv++;
 
-        LOG_DEBUG("Starting the lobby in unit test mode.\n");
+        LogGeneralDebugMsg("Starting the lobby in unit test mode.\n");
 
         unitTestMode = true;
     }
@@ -91,8 +91,11 @@ int main(int argc, const char *argv[])
     {
         configPath = arguments.front().ToUtf8();
 
-        LOG_DEBUG(libcomp::String("Using custom config path %1\n").Arg(
-            configPath));
+        LogGeneralDebug([&]()
+        {
+            return libcomp::String("Using custom config path %1\n")
+                .Arg(configPath);
+        });
 
         size_t pos = configPath.find_last_of("\\/");
         if(std::string::npos != pos)
@@ -105,13 +108,13 @@ int main(int argc, const char *argv[])
     auto config = std::make_shared<objects::LobbyConfig>();
     if(!libcomp::BaseServer::ReadConfig(config, configPath))
     {
-        LOG_WARNING("Failed to load the lobby config file."
+        LogGeneralWarningMsg("Failed to load the lobby config file."
             " Default values will be used.\n");
     }
 
     if(!libcomp::PersistentObject::Initialize())
     {
-        LOG_CRITICAL("One or more persistent object definition "
+        LogGeneralCriticalMsg("One or more persistent object definition "
             "failed to load.\n");
 
         return EXIT_FAILURE;
@@ -121,7 +124,7 @@ int main(int argc, const char *argv[])
 
     if(!server->Initialize())
     {
-        LOG_CRITICAL("The server could not be initialized.\n");
+        LogGeneralCriticalMsg("The server could not be initialized.\n");
 
         return EXIT_FAILURE;
     }
@@ -164,8 +167,11 @@ int main(int argc, const char *argv[])
     }
     catch(CivetException e)
     {
-        LOG_CRITICAL(libcomp::String("The lobby API server failed to start "
-            "with the following message: %1\n").Arg(e.what()));
+        LogGeneralCritical([&]()
+        {
+            return libcomp::String("The lobby API server failed to start "
+                "with the following message: %1\n").Arg(e.what());
+        });
 
         return EXIT_FAILURE;
     }
@@ -183,7 +189,7 @@ int main(int argc, const char *argv[])
     // Complete the shutdown process.
     libcomp::Shutdown::Complete();
 
-    LOG_INFO("\rBye!\n");
+    LogGeneralInfoMsg("\rBye!\n");
 
     return returnCode;
 }

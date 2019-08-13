@@ -67,8 +67,9 @@ bool Parsers::BazaarItemUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     auto bItem = bazaarData->GetItems((size_t)slot).Get();
     if(bItem == nullptr || bItem->GetItem().GetUUID() != state->GetObjectUUID(itemID))
     {
-        LOG_ERROR("BazaarItemUpdate request encountered with invalid item or"
-            " source slot\n");
+        LogBazaarErrorMsg("BazaarItemUpdate request encountered with invalid "
+            "item or source slot\n");
+
         ok = false;
     }
     else
@@ -80,8 +81,12 @@ bool Parsers::BazaarItemUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
         {
-            LOG_ERROR(libcomp::String("BazaarItemUpdate failed to save: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogBazaarError([&]()
+            {
+                return libcomp::String("BazaarItemUpdate failed to save: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             client->Kill();
             return true;
         }

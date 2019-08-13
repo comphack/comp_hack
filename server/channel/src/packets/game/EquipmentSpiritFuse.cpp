@@ -117,10 +117,14 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
             ((basicDef->GetBasic()->GetFlags() & 0x0800) != 0) ||
             ((specialDef->GetBasic()->GetFlags() & 0x0800) != 0))
         {
-            LOG_ERROR(libcomp::String("EquipmentSpiritFuse request received"
-                " with one or more invalid item type(s): %1, %2, %3\n")
-                .Arg(mainItem->GetType()).Arg(basicItem->GetType())
-                .Arg(specialItem->GetType()));
+            LogItemError([&]()
+            {
+                return libcomp::String("EquipmentSpiritFuse request received"
+                    " with one or more invalid item type(s): %1, %2, %3\n")
+                    .Arg(mainItem->GetType()).Arg(basicItem->GetType())
+                    .Arg(specialItem->GetType());
+            });
+
             error = true;
         }
         else if(equipType ==
@@ -128,17 +132,25 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
             equipType ==
             objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE)
         {
-            LOG_ERROR(libcomp::String("EquipmentSpiritFuse request received"
-                " with invalid equipment type item: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogItemError([&]()
+            {
+                return libcomp::String("EquipmentSpiritFuse request received"
+                    " with invalid equipment type item: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             error = true;
         }
         else if(equipType != basicDef->GetBasic()->GetEquipType() ||
             equipType != specialDef->GetBasic()->GetEquipType())
         {
-            LOG_ERROR(libcomp::String("EquipmentSpiritFuse request received"
-                " with equipment types that do not match: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogItemError([&]()
+            {
+                return libcomp::String("EquipmentSpiritFuse request received"
+                    " with equipment types that do not match: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
+
             error = true;
         }
         else if(equipType !=
@@ -155,9 +167,13 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(genders.size() > 1)
             {
-                LOG_ERROR(libcomp::String("EquipmentSpiritFuse request"
-                    " received with differing gender armor: %1\n")
-                    .Arg(state->GetAccountUID().ToString()));
+                LogItemError([&]()
+                {
+                    return libcomp::String("EquipmentSpiritFuse request"
+                        " received with differing gender armor: %1\n")
+                        .Arg(state->GetAccountUID().ToString());
+                });
+
                 error = true;
             }
         }
@@ -221,9 +237,13 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!error && !characterManager->CalculateMaccaPayment(client,
         (uint64_t)cost, insertItems, updateItems))
     {
-        LOG_ERROR(libcomp::String("EquipmentSpiritFuse request"
-            " attempted with insufficient macca: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogItemError([&]()
+        {
+            return libcomp::String("EquipmentSpiritFuse request"
+                " attempted with insufficient macca: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         error = true;
     }
 
@@ -397,7 +417,7 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
                 // Add fusion bonuses, one point guaranteed, random chance
                 // to increase the rest
                 std::set<size_t> bonusSlots;
-                
+
                 switch(equipType)
                 {
                 case objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON:
@@ -495,9 +515,12 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            LOG_ERROR(libcomp::String("EquipmentSpiritFuse failed"
-                " to update items: %1\n")
-                .Arg(state->GetAccountUID().ToString()));
+            LogItemError([&]()
+            {
+                return libcomp::String("EquipmentSpiritFuse failed"
+                    " to update items: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
+            });
 
             // Roll it back
             mainItem->SetBasicEffect(basicEffectCurrent);

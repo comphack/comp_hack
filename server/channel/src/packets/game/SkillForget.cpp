@@ -64,9 +64,13 @@ bool Parsers::SkillForget::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(cState->GetEntityID() != entityID)
     {
-        LOG_ERROR(libcomp::String("Player attempted to forget a skill for a"
-            " character that does not belong to the client: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Player attempted to forget a skill for a"
+                " character that does not belong to the client: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }
@@ -78,7 +82,8 @@ bool Parsers::SkillForget::Parse(libcomp::ManagerPacket *pPacketManager,
     auto activatedAbility = cState->GetSpecialActivations(activationID);
     if(!activatedAbility)
     {
-        LOG_ERROR("Invalid activation ID encountered for SkillForget request\n");
+        LogSkillManagerErrorMsg(
+            "Invalid activation ID encountered for SkillForget request\n");
     }
     else
     {

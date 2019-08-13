@@ -63,7 +63,7 @@ bool Parsers::ClanChat::Parse(libcomp::ManagerPacket *pPacketManager,
     if(!chatManager->HandleGMand(client, message) &&
         !chatManager->SendChatMessage(client, ChatType_t::CHAT_CLAN, message))
     {
-        LOG_ERROR("Clan chat message could not be sent.\n");
+        LogChatManagerErrorMsg("Clan chat message could not be sent.\n");
     }
 
     return true;

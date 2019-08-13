@@ -303,7 +303,10 @@ bool LobbyClient::GetCharacterList()
 
     uint8_t characterCount = reply.ReadU8();
 
-    LOG_DEBUG(libcomp::String("Character Count: %1\n").Arg(characterCount));
+    LogGeneralDebug([&]()
+    {
+        return libcomp::String("Character Count: %1\n").Arg(characterCount);
+    });
 
     for(uint8_t i = 0; i < characterCount; ++i)
     {

@@ -117,8 +117,12 @@ bool Parsers::BazaarMarketSales::Parse(libcomp::ManagerPacket *pPacketManager,
 
             if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
             {
-                LOG_ERROR(libcomp::String("BazaarMarketSales failed to save: %1\n")
-                    .Arg(state->GetAccountUID().ToString()));
+                LogBazaarError([&]()
+                {
+                    return libcomp::String("BazaarMarketSales failed to "
+                        "save: %1\n").Arg(state->GetAccountUID().ToString());
+                });
+
                 client->Kill();
                 return true;
             }

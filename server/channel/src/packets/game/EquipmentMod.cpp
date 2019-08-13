@@ -157,8 +157,13 @@ bool Parsers::EquipmentMod::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             else
             {
-                LOG_ERROR(libcomp::String("Invalid data encountered for weapon"
-                    " modification for slot item: %1\n").Arg(slotItem->GetType()));
+                LogItemError([&]()
+                {
+                    return libcomp::String("Invalid data encountered for weapon"
+                        " modification for slot item: %1\n")
+                        .Arg(slotItem->GetType());
+                });
+
                 resultCode = RESULT_CODE_ERROR;
             }
         }
@@ -196,8 +201,13 @@ bool Parsers::EquipmentMod::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             else
             {
-                LOG_ERROR(libcomp::String("Invalid data encountered for equipment"
-                    " modification for slot item: %1\n").Arg(slotItem->GetType()));
+                LogItemError([&]()
+                {
+                    return libcomp::String("Invalid data encountered for "
+                        "equipment modification for slot item: %1\n")
+                        .Arg(slotItem->GetType());
+                });
+
                 resultCode = RESULT_CODE_ERROR;
             }
         }
@@ -239,17 +249,29 @@ bool Parsers::EquipmentMod::Parse(libcomp::ManagerPacket *pPacketManager,
                 if(effectSequenceID != currentEffectSequenceID + 1)
                 {
                     // Attempting to update to a value other than the next step
-                    LOG_ERROR(libcomp::String("Invalid request to update modification effect"
-                        " %1 from rank %2 to %3\n").Arg(effectType)
-                        .Arg(currentEffectSequenceID).Arg(effectSequenceID));
+                    LogItemError([&]()
+                    {
+                        return libcomp::String("Invalid request to update "
+                            "modification effect %1 from rank %2 to %3\n")
+                            .Arg(effectType)
+                            .Arg(currentEffectSequenceID)
+                            .Arg(effectSequenceID);
+                    });
+
                     resultCode = RESULT_CODE_ERROR;
                 }
             }
             else if(effectSequenceID != 1)
             {
                 // Attempting to skip past first level
-                LOG_ERROR(libcomp::String("Invalid request to update modification effect"
-                    " %1 directly to rank %2\n").Arg(effectType).Arg(effectSequenceID));
+                LogItemError([&]()
+                {
+                    return libcomp::String("Invalid request to update "
+                        "modification effect %1 directly to rank %2\n")
+                        .Arg(effectType)
+                        .Arg(effectSequenceID);
+                });
+
                 resultCode = RESULT_CODE_ERROR;
             }
         }

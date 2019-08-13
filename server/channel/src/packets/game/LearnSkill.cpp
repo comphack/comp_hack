@@ -68,9 +68,13 @@ bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(cState->GetEntityID() != entityID)
     {
-        LOG_ERROR(libcomp::String("Attempted to learn a skill on an entity"
-            " that is not the current character: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Attempted to learn a skill on an entity"
+                " that is not the current character: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
+
         client->Close();
         return true;
     }
@@ -119,9 +123,12 @@ bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LOG_ERROR(libcomp::String("Attempted to learn a skill not available"
-            " to the current character's expertise ranks: %1\n")
-            .Arg(state->GetAccountUID().ToString()));
+        LogSkillManagerError([&]()
+        {
+            return libcomp::String("Attempted to learn a skill not available"
+                " to the current character's expertise ranks: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+        });
     }
 
     return true;

@@ -77,7 +77,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
         if(p.Left() == 1)
         {
             int8_t filter = p.ReadS8();
-            
+
             if(filter != 0)
             {
                 entries.remove_if([filter](
@@ -95,7 +95,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             int8_t filter = p.ReadS8();
             int8_t viewMode = p.ReadS8();
-            
+
             if(filter != 0)
             {
                 entries.remove_if([filter](
@@ -209,7 +209,11 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         break;
     default:
-        LOG_ERROR(libcomp::String("Invalid SearchList type encountered: %1\n").Arg(type));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid SearchList type encountered: %1\n")
+                .Arg(type);
+        });
         break;
     }
 
@@ -374,7 +378,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS8(0);   // Unknown
 
                 reply.WriteS32Little(entry->GetData(SEARCH_IDX_ITEM_TYPE));
-                
+
                 auto character = libcomp::PersistentObject::LoadObjectByUUID<
                     objects::Character>(worldDB, entry->GetRelatedTo());
 
@@ -394,7 +398,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS8(0);   // Unknown
 
                 reply.WriteS32Little(entry->GetData(SEARCH_IDX_ITEM_TYPE));
-                
+
                 auto character = libcomp::PersistentObject::LoadObjectByUUID<
                     objects::Character>(worldDB, entry->GetRelatedTo());
 
@@ -466,7 +470,12 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LOG_ERROR(libcomp::String("SearchList with type '%1' request was not valid\n").Arg(type));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("SearchList with type '%1' request was "
+                "not valid\n").Arg(type);
+        });
+
         reply.WriteS32Little(-1);
     }
 

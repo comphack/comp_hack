@@ -81,8 +81,13 @@ bool Parsers::ItemExchange::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(!itemDef || !optionDef)
     {
-        LOG_ERROR(libcomp::String("Invalid exchange ID encountered for ItemExchange"
-            " request: %1, %2\n").Arg(item ? item->GetType() : 0).Arg(optionID));
+        LogItemError([&]()
+        {
+            return libcomp::String("Invalid exchange ID encountered for "
+                "ItemExchange request: %1, %2\n")
+                .Arg(item ? item->GetType() : 0)
+                .Arg(optionID);
+        });
     }
     else if(!state->GetCharacterState()->IsAlive())
     {
@@ -173,16 +178,23 @@ bool Parsers::ItemExchange::Parse(libcomp::ManagerPacket *pPacketManager,
         }
         else
         {
-            LOG_ERROR(libcomp::String("Attempted to add '%1' demon(s) from"
-                " ItemExchange request but only had room for %2\n")
-                .Arg(demonTypes.size()).Arg(freeCount));
+            LogItemError([&]()
+            {
+                return libcomp::String("Attempted to add '%1' demon(s) from"
+                    " ItemExchange request but only had room for %2\n")
+                    .Arg(demonTypes.size())
+                    .Arg(freeCount);
+            });
         }
     }
     else
     {
-        LOG_ERROR(libcomp::String("Invalid source item sub-category encountered"
-            " for ItemExchange request: %1, %2\n")
-            .Arg(itemDef->GetCommon()->GetCategory()->GetSubCategory()));
+        LogItemError([&]()
+        {
+            return libcomp::String("Invalid source item sub-category encountered"
+                " for ItemExchange request: %1, %2\n")
+                .Arg(itemDef->GetCommon()->GetCategory()->GetSubCategory());
+        });
     }
 
     libcomp::Packet reply;

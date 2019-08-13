@@ -130,7 +130,7 @@ bool Parsers::Synthesize::Parse(libcomp::ManagerPacket *pPacketManager,
         // them now
         auto character = cState->GetEntity();
         auto materials = character->GetMaterials();
-        
+
         std::set<uint32_t> materialIDs;
         for(auto mat : synthData->GetMaterials())
         {
@@ -141,9 +141,13 @@ bool Parsers::Synthesize::Parse(libcomp::ManagerPacket *pPacketManager,
             if(matIter == materials.end() ||
                 matIter->second < mat->GetAmount())
             {
-                LOG_ERROR(libcomp::String("Synthesize attampted"
-                    " without the necessary materials: %1\n")
-                    .Arg(state->GetAccountUID().ToString()));
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Synthesize attampted"
+                        " without the necessary materials: %1\n")
+                        .Arg(state->GetAccountUID().ToString());
+                });
+
                 success = false;
                 break;
             }

@@ -52,19 +52,25 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     if(p.Size() < 5)
     {
-        LOG_ERROR("Invalid packet data sent to CharacterLogin\n");
+        LogGeneralErrorMsg("Invalid packet data sent to CharacterLogin\n");
+
         return false;
     }
 
     int32_t cid = p.ReadS32Little();
     uint8_t updateFlags = p.ReadU8();
-   
+
     auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
     auto cLogin = server->GetCharacterManager()->GetCharacterLogin(cid);
     auto characterManager = server->GetCharacterManager();
     if(!cLogin)
     {
-        LOG_ERROR(libcomp::String("Invalid world CID sent to CharacterLogin: %1\n").Arg(cid));
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Invalid world CID sent to "
+                "CharacterLogin: %1\n").Arg(cid);
+        });
+
         return false;
     }
 
@@ -96,7 +102,9 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         if(p.Left() < 1)
         {
-            LOG_ERROR("CharacterLogin status update sent with no status specified\n");
+            LogGeneralErrorMsg(
+                "CharacterLogin status update sent with no status specified\n");
+
             return false;
         }
 
@@ -110,7 +118,9 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         if(p.Left() < 4)
         {
-            LOG_ERROR("CharacterLogin zone update sent with no zone specified\n");
+            LogGeneralErrorMsg(
+                "CharacterLogin zone update sent with no zone specified\n");
+
             return false;
         }
 
@@ -132,17 +142,21 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(!member->LoadPacket(p, true))
             {
-                LOG_ERROR("CharacterLogin party member info failed to load\n");
+                LogGeneralErrorMsg(
+                    "CharacterLogin party member info failed to load\n");
+
                 return false;
             }
         }
-        
+
         if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO)
         {
             auto partyDemon = member->GetDemon();
             if(!partyDemon->LoadPacket(p, true))
             {
-                LOG_ERROR("CharacterLogin party demon info failed to load\n");
+                LogGeneralErrorMsg(
+                    "CharacterLogin party demon info failed to load\n");
+
                 return false;
             }
         }
@@ -161,7 +175,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
     // Send the updates
     std::list<std::shared_ptr<objects::CharacterLogin>> logins = { cLogin };
     characterManager->SendStatusToRelatedCharacters(logins, updateFlags, true);
-    
+
     // If changing zones and in a party, update party member visibility (inverse of previous)
     if(partyMove)
     {

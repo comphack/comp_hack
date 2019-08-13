@@ -55,7 +55,7 @@ LoginHandler::LoginHandler(const std::shared_ptr<libcomp::Database>& database)
 
     if(!mVfs.AddArchive(pMemoryFile, ""))
     {
-        LOG_CRITICAL("Failed to add login resource archive.\n");
+        LogWebAPICriticalMsg("Failed to add login resource archive.\n");
     }
 }
 
@@ -189,7 +189,7 @@ bool LoginHandler::HandlePage(CivetServer *pServer,
         if(pageData.empty() ||
             !mThreadHandler.Init(libcomp::String(&pageData[0])))
         {
-            LOG_ERROR("Failed to load web script handler.nut\n");
+            LogWebAPIErrorMsg("Failed to load web script handler.nut\n");
 
             return false;
         }
@@ -287,7 +287,10 @@ bool LoginHandler::HandlePage(CivetServer *pServer,
         uri = loginOK ? req->GetPage() : req->GetPageError();
     }
 
-    LOG_DEBUG(libcomp::String("URI: %1\n").Arg(uri));
+    LogWebAPIDebug([&]()
+    {
+        return libcomp::String("URI: %1\n").Arg(uri);
+    });
 
     // Attempt to load the URI.
     std::vector<char> pageData = LoadVfsFile(uri);
@@ -381,7 +384,10 @@ std::vector<char> LoginHandler::LoadVfsFile(const libcomp::String& path)
     ttvfs::File *vf = mVfs.GetFile(path.C());
     if(!vf)
     {
-        LOG_ERROR(libcomp::String("Failed to find file: %1\n").Arg(path));
+        LogWebAPIError([&]()
+        {
+            return libcomp::String("Failed to find file: %1\n").Arg(path);
+        });
 
         return std::vector<char>();
     }
@@ -392,14 +398,20 @@ std::vector<char> LoginHandler::LoadVfsFile(const libcomp::String& path)
 
     if(!vf->open("rb"))
     {
-        LOG_ERROR(libcomp::String("Failed to open file: %1\n").Arg(path));
+        LogWebAPIError([&]()
+        {
+            return libcomp::String("Failed to open file: %1\n").Arg(path);
+        });
 
         return std::vector<char>();
     }
 
     if(fileSize != vf->read(&data[0], fileSize))
     {
-        LOG_ERROR(libcomp::String("Failed to read file: %1\n").Arg(path));
+        LogWebAPIError([&]()
+        {
+            return libcomp::String("Failed to read file: %1\n").Arg(path);
+        });
 
         return std::vector<char>();
     }

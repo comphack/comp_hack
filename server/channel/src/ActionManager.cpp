@@ -287,13 +287,43 @@ void ActionManager::PerformActions(
             }
             else if(srcCtx == objects::Action::SourceContext_t::NONE)
             {
-                // Remove current player context
-                ActionContext copyCtx = ctx;
-                copyCtx.Client = nullptr;
-                copyCtx.SourceEntityID = 0;
-                copyCtx.Options.AutoEventsOnly = true;
+                std::list<std::shared_ptr<Zone>> ctxZones;
+                switch(action->GetLocation())
+                {
+                case objects::Action::Location_t::INSTANCE:
+                    // Once per zone in the instance
+                    {
+                        auto ctxZone = ctx.CurrentZone;
+                        auto ctxInst = ctxZone
+                            ? ctxZone->GetInstance() : nullptr;
+                        if(ctxInst)
+                        {
+                            ctxZones = ctxInst->GetZones();
+                        }
+                    }
+                    break;
+                case objects::Action::Location_t::ZONE:
+                    ctxZones.push_back(ctx.CurrentZone);
+                    break;
+                case objects::Action::Location_t::CHANNEL:
+                default:
+                    break;
+                }
 
-                failure |= !it->second(*this, copyCtx);
+                for(auto ctxZone : ctxZones)
+                {
+                    if(ctxZone)
+                    {
+                        // Remove current player context
+                        ActionContext copyCtx = ctx;
+                        copyCtx.Client = nullptr;
+                        copyCtx.CurrentZone = ctxZone;
+                        copyCtx.SourceEntityID = 0;
+                        copyCtx.Options.AutoEventsOnly = true;
+
+                        failure |= !it->second(*this, copyCtx);
+                    }
+                }
             }
             else if(srcCtx != objects::Action::SourceContext_t::SOURCE)
             {

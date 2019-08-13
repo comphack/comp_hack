@@ -319,7 +319,7 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
 
     CharacterManager::AdjustDemonBaseStats(demon, demonStats, true, true);
     CharacterManager::AdjustMitamaStats(demon, demonStats, definitionManager,
-        0, 0, mitamaSet);
+        0, GetEntityID(), mitamaSet);
 
     // Add base stats and HP/MP
     for(uint8_t i = (size_t)CorrectTbl::STR; i <= (uint8_t)CorrectTbl::MP_MAX; i++)

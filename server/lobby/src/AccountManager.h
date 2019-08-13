@@ -270,6 +270,14 @@ public:
         uint8_t cid, std::shared_ptr<LobbyServer>& server);
 
     /**
+     * Delete all characters with an exceeded kill time on a connected world.
+     * @param worldID World ID to delete characters on
+     * @return true if the process completed successfully, false if an error
+     *  occurred
+     */
+    bool DeleteKillTimeExceededCharacters(uint8_t worldID);
+
+    /**
      * Set a character on the specified account's character array and save it
      * @param account Pointer to the account to create the character on
      * @param character Pointer to the character to create

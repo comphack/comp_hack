@@ -57,6 +57,9 @@ namespace libcomp
                 Sqrat::NoConstructor<ZoneInstance>> binding(mVM, "ZoneInstance");
             binding
                 .Func("GetDefinitionID", &ZoneInstance::GetDefinitionID)
+                .Func("GetZones", &ZoneInstance::GetZones)
+                .Func<std::shared_ptr<Zone>(ZoneInstance::*)(uint32_t, uint32_t)>(
+                    "GetZone", &ZoneInstance::GetZone)
                 .Func("GetFlagState", &ZoneInstance::GetFlagStateValue)
                 .Func("SetFlagState", &ZoneInstance::SetFlagState);
 

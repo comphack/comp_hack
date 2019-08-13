@@ -1887,31 +1887,43 @@ void ActiveEntityState::ActivateStatusEffect(
 
     auto se = definitionManager->GetStatusData(effectType);
     auto cancel = se->GetCancel();
-    switch(cancel->GetDurationType())
+    if(!effect->GetIsConstant())
     {
-        case objects::MiCancelData::DurationType_t::MS:
-        case objects::MiCancelData::DurationType_t::MS_SET:
-            if(!effect->GetIsConstant())
-            {
-                // Force next tick time to duration
-                uint32_t time = (uint32_t)(now + (effect->GetExpiration() * 0.001));
-                mNextEffectTimes[time].insert(effectType);
-            }
-            break;
-        case objects::MiCancelData::DurationType_t::NONE:
-            if(!effect->GetIsConstant() && effect->GetExpiration())
-            {
-                // Force next tick time to duration but only if it has time
-                uint32_t time = (uint32_t)(now + (effect->GetExpiration() * 0.001));
-                mNextEffectTimes[time].insert(effectType);
-            }
-            break;
-        default:
-            if(!effect->GetIsConstant())
-            {
-                mNextEffectTimes[effect->GetExpiration()].insert(effectType);
-            }
-            break;
+        switch(cancel->GetDurationType())
+        {
+            case objects::MiCancelData::DurationType_t::MS:
+            case objects::MiCancelData::DurationType_t::MS_SET:
+                {
+                    // Force next tick time to duration
+                    uint32_t time = (uint32_t)(now + (effect->GetExpiration() *
+                        0.001));
+                    mNextEffectTimes[time].insert(effectType);
+                }
+                break;
+            case objects::MiCancelData::DurationType_t::NONE:
+                if(effect->GetExpiration())
+                {
+                    // Force next tick time to duration but only if it has time
+                    uint32_t time = (uint32_t)(now + (effect->GetExpiration() *
+                        0.001));
+                    mNextEffectTimes[time].insert(effectType);
+                }
+                break;
+            default:
+                if(effect->GetExpiration())
+                {
+                    // Next tick is absolute time
+                    mNextEffectTimes[effect->GetExpiration()].insert(
+                        effectType);
+                }
+                else
+                {
+                    // Effect is not a constant, not type NONE and has no
+                    // expiration, remove at the earliest possible time
+                    mNextEffectTimes[3].insert(effectType);
+                }
+                break;
+        }
     }
 
     // Store the definition for quick access later

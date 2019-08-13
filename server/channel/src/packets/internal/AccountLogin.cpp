@@ -39,6 +39,7 @@
 #include <ChannelLogin.h>
 #include <Character.h>
 #include <CharacterLogin.h>
+#include <InstanceAccess.h>
 
 // channel Includes
 #include "AccountManager.h"
@@ -132,12 +133,32 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             return true;
         }
 
-        auto login = client->GetClientState()->GetAccountLogin();
+        auto state = client->GetClientState();
+
+        auto login = state->GetAccountLogin();
         login->SetSessionID(response.GetSessionID());
         login->SetCharacterLogin(response.GetCharacterLogin());
 
         // Respond to this in the handler
         client->GetClientState()->SetChannelLogin(channelLogin);
+
+        if(channelLogin)
+        {
+            // Character is reconnecting or changing channels, if they have
+            // access to an instance and it has an active timer, rewind the
+            // start time on the state so the timer displays properly
+            auto zoneManager = server->GetZoneManager();
+            auto access = zoneManager->GetInstanceAccess(state->GetWorldCID());
+            if(access)
+            {
+                auto instance = zoneManager->GetInstance(access->GetInstanceID());
+                uint64_t timerStart = instance ? instance->GetTimerStart() : 0;
+                if(timerStart)
+                {
+                    state->RewindStartTime(timerStart);
+                }
+            }
+        }
 
         server->QueueWork(HandleLoginResponse, server->GetAccountManager(),
             client);

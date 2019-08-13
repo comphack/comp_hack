@@ -1517,10 +1517,10 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             // Game time between [value 1] and [value 2] (format: HHmm)
             auto clock = mServer.lock()->GetWorldClockTime();
 
-            int8_t minHours = (int8_t)floorl((float)condition->GetValue1() * 0.01);
+            int8_t minHours = (int8_t)(condition->GetValue1() / 100);
             int8_t minMinutes = (int8_t)(condition->GetValue1() - (minHours * 100));
 
-            int8_t maxHours = (int8_t)floorl((float)condition->GetValue2() * 0.01);
+            int8_t maxHours = (int8_t)(condition->GetValue2() / 100);
             int8_t maxMinutes = (int8_t)(condition->GetValue2() - (maxHours * 100));
 
             uint16_t serverSum = (uint16_t)((clock.Hour * 60) + clock.Min);
@@ -1554,15 +1554,15 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             int32_t val1 = condition->GetValue1();
             int32_t val2 = condition->GetValue2();
 
-            int8_t minDays = (int8_t)floorl((float)val1 * 0.0001);
-            int8_t minHours = (int8_t)floorl((float)(val1 - (minDays * 10000)) * 0.01);
-            int8_t minMinutes = (int8_t)floorl((float)(val1 - (minDays * 10000)
-                - (minHours * 100)));
+            int8_t minDays = (int8_t)(val1 / 10000);
+            int8_t minHours = (int8_t)((val1 - (minDays * 10000)) / 100);
+            int8_t minMinutes = (int8_t)(val1 - (minDays * 10000)
+                - (minHours * 100));
 
-            int8_t maxDays = (int8_t)floorl((float)val2 * 0.0001);
-            int8_t maxHours = (int8_t)floorl((float)(val2 - (maxDays * 10000)) * 0.01);
-            int8_t maxMinutes = (int8_t)floorl((float)(val2 - (maxDays * 10000)
-                - (maxHours * 100)));
+            int8_t maxDays = (int8_t)(val2 / 10000);
+            int8_t maxHours = (int8_t)((val2 - (maxDays * 10000)) / 100);
+            int8_t maxMinutes = (int8_t)(val2 - (maxDays * 10000)
+                - (maxHours * 100));
 
             bool skipDay = minDays == 7 && maxDays == 7;
 

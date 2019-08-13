@@ -46,6 +46,7 @@
 #include "ApiHandler.h"
 #include "LobbyServer.h"
 #include "LobbySyncManager.h"
+#include "World.h"
 
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
@@ -866,6 +867,81 @@ bool AccountManager::UpdateKillTime(const libcomp::String& username,
     }
 
     return false;
+}
+
+bool AccountManager::DeleteKillTimeExceededCharacters(uint8_t worldID)
+{
+    auto world = mServer->GetWorldByID(worldID);
+    if(!world)
+    {
+        return false;
+    }
+
+    uint32_t now = (uint32_t)std::time(0);
+    auto svr = world->GetRegisteredWorld();
+    auto mainDB = mServer->GetMainDatabase();
+    auto worldDB = world->GetWorldDatabase();
+
+    LOG_DEBUG(libcomp::String("Loading kill time exceeded characters for"
+        " world server: (%1) %2\n").Arg(svr->GetID()).Arg(svr->GetName()));
+
+    std::list<std::shared_ptr<objects::Character>> exceeded;
+    for(auto character : libcomp::PersistentObject::LoadAll<
+        objects::Character>(worldDB))
+    {
+        if(character->GetKillTime() && character->GetKillTime() < now)
+        {
+            exceeded.push_back(character);
+        }
+    }
+
+    if(exceeded.size() > 0)
+    {
+        LOG_DEBUG(libcomp::String("%1 character(s) found for deletion\n")
+            .Arg(exceeded.size()));
+
+        while(exceeded.size() > 0)
+        {
+            auto accountUID = exceeded.front()->GetAccount();
+
+            std::list<std::shared_ptr<objects::Character>> subset;
+            exceeded.remove_if([accountUID, &subset](
+                const std::shared_ptr<objects::Character>& c)
+                {
+                    // Who says you ONLY have to remove here? :P
+                    if(c->GetAccount() == accountUID)
+                    {
+                        subset.push_back(c);
+                    }
+
+                    return c->GetAccount() == accountUID;
+                });
+
+            auto account = libcomp::PersistentObject::LoadObjectByUUID<
+                objects::Account>(mainDB, accountUID);
+            if(account)
+            {
+                for(auto character : subset)
+                {
+                    DeleteCharacter(account, character);
+                }
+            }
+            else
+            {
+                LOG_DEBUG(libcomp::String("Failed to load account %1"
+                    " associated to kill time exceeded character(s)\n")
+                    .Arg(accountUID.ToString()));
+            }
+        }
+
+        LOG_DEBUG("Character deletions complete\n");
+    }
+    else
+    {
+        LOG_DEBUG("No characters deletions required\n");
+    }
+
+    return true;
 }
 
 bool AccountManager::SetCharacterOnAccount(

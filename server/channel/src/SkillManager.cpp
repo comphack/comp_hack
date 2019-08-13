@@ -47,6 +47,7 @@
 #include <CalculatedEntityState.h>
 #include <ChannelConfig.h>
 #include <CharacterProgress.h>
+#include <DemonFamiliarityType.h>
 #include <DigitalizeState.h>
 #include <DropSet.h>
 #include <Expertise.h>
@@ -3459,10 +3460,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             bool targetAlive = target.EntityState->IsAlive();
 
             // If the target can be killed by the hit, get clench chance
-            // but only if ailment damage has not occurred and the skill
-            // is not a suicide skill
+            // but only if ailment damage has not occurred. Suicide skills
+            // cannot allow the source to clench and zone target all skills
+            // cannot be clenched by anyone.
             int32_t clenchChance = 0;
             if(hpDamage > 0 && targetAlive && !target.AilmentDamage &&
+                skill.FunctionID != SVR_CONST.SKILL_ZONE_TARGET_ALL &&
                 (skill.FunctionID != SVR_CONST.SKILL_SUICIDE ||
                     target.EntityState != source))
             {
@@ -3588,7 +3591,8 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
         }
 
-        if(target.CanHitstun && !target.HitAvoided)
+        // Hitstun or damage counts as a hit cancellation
+        if((target.CanHitstun || hpAdjustedSum < 0) && !target.HitAvoided)
         {
             target.EffectCancellations |= EFFECT_CANCEL_HIT;
         }
@@ -4165,7 +4169,16 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         playerSkill = true;
         break;
     case EntityType_t::PARTNER_DEMON:
-        inheritSkill.insert(source);
+        // If any (direct) target didn't auto avoid, raise inheritance
+        for(SkillTargetResult& target : skill.Targets)
+        {
+            if(!target.IndirectTarget &&
+                (!target.HitAvoided || !target.HitNull || !target.HitReflect))
+            {
+                inheritSkill.insert(source);
+                break;
+            }
+        }
         playerSkill = true;
         break;
     default:
@@ -4181,14 +4194,17 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         switch(eState->GetEntityType())
         {
         case EntityType_t::CHARACTER:
-            if(!target.HitAvoided && !target.HitAbsorb)
+            if(!target.IndirectTarget && !target.HitAvoided &&
+                !target.HitAbsorb)
             {
                 durabilityHit.insert(eState);
             }
             playerEntity = true;
             break;
         case EntityType_t::PARTNER_DEMON:
-            if(!target.HitAvoided)
+            // Manual avoids do not raise inheritance, auto avoids do
+            if(!target.IndirectTarget &&
+                (!target.HitAvoided || target.HitNull || target.HitReflect))
             {
                 inheritSkill.insert(eState);
             }
@@ -5042,9 +5058,18 @@ uint16_t SkillManager::CalculateOffenseValue(
     if(skill.ExecutionContext->CounteredSkill)
     {
         // If countering, modify the offensive value with the offense value
-        // of the original skill used
-        uint16_t counterOff = CalculateOffenseValue(target, source,
-            skill.ExecutionContext->CounteredSkill);
+        // of the original skill used, min for invalid dependency type
+        uint16_t counterOff = 0;
+        if(skill.ExecutionContext->CounteredSkill
+            ->EffectiveDependencyType == 5)
+        {
+            counterOff = 1;
+        }
+        else
+        {
+            counterOff = CalculateOffenseValue(target, source,
+                skill.ExecutionContext->CounteredSkill);
+        }
 
         off = (uint16_t)(off + (counterOff * 2));
     }
@@ -5126,11 +5151,16 @@ bool SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
         {
         case objects::MiSkillBasicData::ActionType_t::ATTACK:
         case objects::MiSkillBasicData::ActionType_t::SPIN:
+        case objects::MiSkillBasicData::ActionType_t::TAUNT:
             guardValid = true;
             break;
         case objects::MiSkillBasicData::ActionType_t::RUSH:
+        case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
             cancelType = 3; // Display guard break animation
             break;
+        case objects::MiSkillBasicData::ActionType_t::TALK:
+            // Nothing happens, skill stays active
+            return true;
         default:
             break;
         }
@@ -5197,6 +5227,7 @@ bool SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
         {
         case objects::MiSkillBasicData::ActionType_t::ATTACK:
         case objects::MiSkillBasicData::ActionType_t::RUSH:
+        case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
             if(tActivated->GetChargedTime() <= pSkill->Activated->GetHitTime())
             {
                 target.Flags1 |= FLAG1_GUARDED;
@@ -5216,8 +5247,12 @@ bool SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
             }
             break;
         case objects::MiSkillBasicData::ActionType_t::SPIN:
+        case objects::MiSkillBasicData::ActionType_t::TAUNT:
             cancelType = 3; // Display counter break animation
             break;
+        case objects::MiSkillBasicData::ActionType_t::TALK:
+            // Nothing happens, skill stays active
+            return true;
         default:
             break;
         }
@@ -5244,6 +5279,7 @@ bool SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
         {
         case objects::MiSkillBasicData::ActionType_t::SHOT:
         case objects::MiSkillBasicData::ActionType_t::RAPID:
+        case objects::MiSkillBasicData::ActionType_t::TALK:
             if(tActivated->GetChargedTime() <= pSkill->Activated->GetHitTime())
             {
                 target.Flags1 |= FLAG1_DODGED;
@@ -5264,6 +5300,10 @@ bool SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
                 }
             }
             break;
+        case objects::MiSkillBasicData::ActionType_t::INTIMIDATE:
+        case objects::MiSkillBasicData::ActionType_t::TAUNT:
+            // Nothing happens, skill stays active
+            return true;
         default:
             break;
         }
@@ -5424,6 +5464,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
     std::unordered_map<uint32_t, double> addStatusMap;
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::MiAddStatusTbl>> addStatusDefs;
+    std::set<uint32_t> maxRates;
     for(auto addStatus : directStatuses)
     {
         uint32_t effectID = addStatus->GetStatusID();
@@ -5431,6 +5472,10 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         {
             addStatusMap[effectID] = (double)addStatus->GetSuccessRate();
             addStatusDefs[effectID] = addStatus;
+            if(addStatus->GetSuccessRate() >= 100)
+            {
+                maxRates.insert(effectID);
+            }
         }
     }
 
@@ -5443,13 +5488,19 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         for(auto addStatus : mServer.lock()->GetTokuseiManager()->GetAspectMap(source,
             TokuseiAspectType::KNOCKBACK_STATUS_ADD, sourceCalc))
         {
-            if(addStatusMap.find((uint32_t)addStatus.first) != addStatusMap.end())
+            uint32_t effectID = (uint32_t)addStatus.first;
+            if(addStatus.second >= 100)
             {
-                addStatusMap[(uint32_t)addStatus.first] += addStatus.second;
+                maxRates.insert(effectID);
+            }
+
+            if(addStatusMap.find(effectID) != addStatusMap.end())
+            {
+                addStatusMap[effectID] += addStatus.second;
             }
             else
             {
-                addStatusMap[(uint32_t)addStatus.first] = addStatus.second;
+                addStatusMap[effectID] = addStatus.second;
             }
         }
     }
@@ -5486,6 +5537,11 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         if(!statusDef) continue;
 
         uint8_t affinity = statusDef->GetCommon()->GetAffinity();
+        uint8_t statusCategory = statusDef->GetCommon()->GetCategory()
+            ->GetMainCategory();
+
+        // Adjusted category (-category - 1) can be used to null or alter rate
+        int32_t adjustCategory = (int32_t)(statusCategory * -1) - 1;
 
         // Determine if the effect can be added
         if(!isRemove)
@@ -5498,8 +5554,13 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
                 continue;
             }
 
-            // Determine if the effect should be nullified
+            // Determine if the effect should be nullified by direct ID,
+            // then adjusted category
             if(statusNulls.find((int32_t)effectID) != statusNulls.end())
+            {
+                continue;
+            }
+            else if(statusNulls.find(adjustCategory) != statusNulls.end())
             {
                 continue;
             }
@@ -5520,8 +5581,6 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
             }
         }
 
-        uint8_t statusCategory = statusDef->GetCommon()->GetCategory()
-            ->GetMainCategory();
         uint8_t statusSubCategory = statusDef->GetCommon()->GetCategory()
             ->GetSubCategory();
 
@@ -5533,7 +5592,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         double successRate = statusPair.second;
 
         // Hard 100% success rates cannot be adjusted, only avoided entirely
-        if(successRate < 100.f)
+        if(maxRates.find(effectID) == maxRates.end())
         {
             // Add affinity boost/2
             successRate += (double)GetAffinityBoost(source, sourceCalc,
@@ -5575,8 +5634,8 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
                     rateBoost += it->second;
                 }
 
-                // Boost success by category inflict adjust (-category - 1)
-                it = statusAdjusts.find((int32_t)(statusCategory * -1) - 1);
+                // Boost success by adjusted category inflict adjust
+                it = statusAdjusts.find(adjustCategory);
                 if(it != statusAdjusts.end())
                 {
                     rateBoost += it->second;
@@ -5693,34 +5752,15 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
 
     auto zConnections = zone->GetConnectionList();
 
-    // Familiarity is reduced from death (0) or same demon kills (1)
-    // and is dependent upon familiarity type
-    const int16_t fTypeMap[17][2] =
-        {
-            { -100, -5 },   // Type 0
-            { -20, -50 },   // Type 1
-            { -20, -20 },   // Type 2
-            { -50, -50 },   // Type 3
-            { -100, -100 }, // Type 4
-            { -100, -100 }, // Type 5
-            { -20, -20 },   // Type 6
-            { -50, -50 },   // Type 7
-            { -100, -100 }, // Type 8
-            { -100, -100 }, // Type 9
-            { -50, -100 },  // Type 10
-            { -50, 0 },     // Type 11
-            { -100, -100 }, // Type 12
-            { -120, -120 }, // Type 13
-            { 0, 0 },       // Type 14 (invalid)
-            { 0, 0 },       // Type 15 (invalid)
-            { -100, -100 }  // Type 16
-        };
-
     auto sourceDevilData = source->GetDevilData();
     uint32_t sourceDemonType = sourceDevilData
         ? sourceDevilData->GetBasic()->GetID() : 0;
-    int32_t sourceDemonFType = sourceDevilData
-        ? sourceDevilData->GetFamiliarity()->GetFamiliarityType() : 0;
+
+    // Familiarity is reduced from death or same demon kills and is dependent
+    // upon familiarity type
+    auto sourceDemonFType = sourceDevilData ? server->GetServerDataManager()
+        ->GetDemonFamiliarityTypeData(sourceDevilData->GetFamiliarity()
+            ->GetFamiliarityType()) : nullptr;
 
     bool playerSource = source->GetEntityType() == EntityType_t::CHARACTER ||
         source->GetEntityType() == EntityType_t::PARTNER_DEMON;
@@ -5815,22 +5855,24 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 client);
         }
 
-        if(demonData)
+        if(demonData && sourceDemonFType)
         {
             std::list<std::pair<int32_t, int32_t>> adjusts;
             if(partnerDeath)
             {
                 // Partner demon has died
+                int32_t adjust = (int32_t)sourceDemonFType->GetDeath();
                 adjusts.push_back(std::pair<int32_t, int32_t>(
-                    entity->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][0]));
+                    entity->GetEntityID(), adjust));
             }
 
             if(entity != source && sourceDemonType == demonData->GetBasic()
                 ->GetID())
             {
                 // Same demon type killed
+                int32_t adjust = (int32_t)sourceDemonFType->GetKillTypeMatch();
                 adjusts.push_back(std::pair<int32_t, int32_t>(
-                    source->GetEntityID(), fTypeMap[(size_t)sourceDemonFType][1]));
+                    source->GetEntityID(), adjust));
             }
 
             for(auto aPair : adjusts)
@@ -6411,10 +6453,13 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                     // Ziotite can only be granted to a team and is increased
                     // by 15% per team member over 1
                     auto team = sourceState->GetTeam();
-                    valSum = (int32_t)((float)valSum * (1.f +
-                        (float)(team->MemberIDsCount() - 1) * 0.15f));
-                    server->GetMatchManager()->UpdateZiotite(team, valSum, 0,
-                        sourceState->GetWorldCID());
+                    if(team)
+                    {
+                        valSum = (int32_t)((float)valSum * (1.f +
+                            (float)(team->MemberIDsCount() - 1) * 0.15f));
+                        server->GetMatchManager()->UpdateZiotite(team, valSum, 0,
+                            sourceState->GetWorldCID());
+                    }
                 }
                 break;
             case objects::Spawn::KillValueType_t::INHERITED:
@@ -7123,7 +7168,9 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
     // No points in anything but still primary talk skill means
     // the skill will always result in a join
     bool isTalkAction = IsTalkSkill(pSkill->Definition, true);
-    bool autoJoin = isTalkAction && !talkAffSuccess &&
+    bool avoided = (target.Flags1 & FLAG1_GUARDED) != 0 ||
+        (target.Flags1 & FLAG1_DODGED);
+    bool autoJoin = isTalkAction && !talkAffSuccess && !avoided &&
         !talkAffFailure && !talkFearSuccess && !talkFearFailure;
 
     int32_t talkType = 0;
@@ -7155,7 +7202,7 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
     }
     else
     {
-        double talkSuccess = spawn
+        double talkSuccess = spawn && !avoided
             ? (double)(100 - spawn->GetTalkResist()) : 0.0;
 
         auto calcState = GetCalculatedState(source, pSkill, false, eState);
@@ -7376,6 +7423,13 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
         return;
     }
 
+    // Partner demon can gain familiarity from successful negotiations
+    int32_t fGain = 0;
+    auto partnerDef = sourceState->GetDemonState()->GetDevilData();
+    auto fType = partnerDef ? server->GetServerDataManager()
+        ->GetDemonFamiliarityTypeData(partnerDef->GetFamiliarity()
+            ->GetFamiliarityType()) : nullptr;
+
     // Keep track of demons that have "joined" for demon quests
     std::unordered_map<uint32_t, int32_t> joined;
 
@@ -7443,6 +7497,11 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
 
                 zone->AddLootBox(lState);
             }
+        }
+
+        if(fType && pair.second != TALK_REJECT)
+        {
+            fGain = fGain + (int32_t)fType->GetTalkSuccess();
         }
     }
 
@@ -7548,6 +7607,12 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
     }
 
     ChannelClientConnection::FlushAllOutgoing(zConnections);
+
+    // Lastly update familiarity
+    if(fGain)
+    {
+        characterManager->UpdateFamiliarity(sourceClient, fGain, true, true);
+    }
 }
 
 void SkillManager::HandleSkillLearning(const std::shared_ptr<ActiveEntityState> entity,
@@ -8220,19 +8285,23 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
                 mod2, target.Damage2Type);
             break;
         case objects::MiBattleDamageData::Formula_t::DMG_PERCENT:
-            target.Damage1 = CalculateDamage_Percent(
-                mod1, target.Damage1Type,
-                target.EntityState->GetCoreStats()->GetHP());
-            target.Damage2 = CalculateDamage_Percent(
-                mod2, target.Damage2Type,
-                target.EntityState->GetCoreStats()->GetMP());
+            {
+                auto cs = target.EntityState->GetCoreStats();
+                target.Damage1 = CalculateDamage_Percent(
+                    mod1, target.Damage1Type, cs ? cs->GetHP() : 0);
+                target.Damage2 = CalculateDamage_Percent(
+                    mod2, target.Damage2Type, cs ? cs->GetMP() : 0);
+            }
             break;
         case objects::MiBattleDamageData::Formula_t::DMG_MAX_PERCENT:
         case objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT:
-            target.Damage1 = CalculateDamage_MaxPercent(
-                mod1, target.Damage1Type, target.EntityState->GetMaxHP());
-            target.Damage2 = CalculateDamage_MaxPercent(
-                mod2, target.Damage2Type, target.EntityState->GetMaxMP());
+            {
+                auto cs = target.EntityState->GetCoreStats();
+                target.Damage1 = CalculateDamage_MaxPercent(
+                    mod1, target.Damage1Type, cs ? cs->GetMaxHP() : 0);
+                target.Damage2 = CalculateDamage_MaxPercent(
+                    mod2, target.Damage2Type, cs ? cs->GetMaxMP() : 0);
+            }
             break;
         default:
             LogSkillManagerError([&]()
@@ -10309,9 +10378,9 @@ bool SkillManager::FamiliarityUp(
         }
     }
 
-    int32_t fType = demonData->GetFamiliarity()->GetFamiliarityType();
-
-    if(fType > 16)
+    auto fType = server->GetServerDataManager()->GetDemonFamiliarityTypeData(
+        demonData->GetFamiliarity()->GetFamiliarityType());
+    if(!fType)
     {
         SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
@@ -10328,30 +10397,10 @@ bool SkillManager::FamiliarityUp(
 
     // Familiarity is adjusted based on the demon's familiarity type
     // and if it shares the same alignment with the character
-    const uint16_t fTypeMap[17][2] =
-        {
-            { 50, 25 },     // Type 0
-            { 4000, 2000 }, // Type 1
-            { 2000, 1000 }, // Type 2
-            { 550, 225 },   // Type 3
-            { 250, 125 },   // Type 4
-            { 75, 40 },     // Type 5
-            { 2000, 1500 }, // Type 6
-            { 500, 375 },   // Type 7
-            { 250, 180 },   // Type 8
-            { 100, 75 },    // Type 9
-            { 50, 38 },     // Type 10
-            { 10, 10 },     // Type 11
-            { 2000, 200 },  // Type 12
-            { 650, 65 },    // Type 13
-            { 0, 0 },       // Type 14 (invalid)
-            { 0, 0 },       // Type 15 (invalid)
-            { 5000, 5000 } // Type 16
-        };
-
     bool sameLNC = cState->GetLNCType() == dState->GetLNCType();
 
-    int32_t fPoints = (int32_t)fTypeMap[(size_t)fType][sameLNC ? 0 : 1];
+    int32_t fPoints = (int32_t)(sameLNC
+        ? fType->GetBoostSkillLNCMatch() : fType->GetBoostSkill());
     characterManager->UpdateFamiliarity(client, fPoints, true);
 
     // Apply the status effects

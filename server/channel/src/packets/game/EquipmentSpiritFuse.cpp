@@ -92,9 +92,11 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(assistID)));
 
     // Check all required items and make sure equipment is not broken
+    // Also make sure they didn't somehow send us the same item for all three
     bool error = !mainItem || !basicItem || !specialItem ||
         (assistID != -1 && !assistItem) || !mainItem->GetMaxDurability() ||
-        !basicItem->GetMaxDurability() || !specialItem->GetMaxDurability();
+        !basicItem->GetMaxDurability() || !specialItem->GetMaxDurability() ||
+        (mainItem == basicItem && mainItem == specialItem);
 
     auto equipType = objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE;
 

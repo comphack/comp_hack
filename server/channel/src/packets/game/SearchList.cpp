@@ -59,10 +59,9 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
     auto worldDB = server->GetWorldDatabase();
 
     int32_t type = p.ReadS32Little();
-    int32_t maxID = p.ReadS32Little();  // Always seems to be max int
-    int32_t firstPageID = p.ReadS32Little();
-    (void)maxID;
-    (void)firstPageID;
+    int32_t pageID = p.ReadS32Little();
+    int32_t unused = p.ReadS32Little(); // Always zero?
+    (void)unused;
 
     auto entries = syncManager->GetSearchEntries((objects::SearchEntry::Type_t)type);
 
@@ -70,6 +69,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
 
     // Verify the filters and apply to the list of entries
     bool clanEventView = false;
+    size_t maxPageSize = 8;
     switch((objects::SearchEntry::Type_t)type)
     {
     case objects::SearchEntry::Type_t::PARTY_JOIN:
@@ -107,6 +107,11 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
 
             clanEventView = viewMode == 0;
 
+            if(clanEventView)
+            {
+                maxPageSize = 16;
+            }
+
             success = true;
         }
         break;
@@ -142,6 +147,8 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                             return entry->GetData(SEARCH_IDX_LOCATION) != eventZoneID;
                         });
                 }
+
+                maxPageSize = 4;
             }
 
             success = true;
@@ -165,6 +172,8 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                         (subCategory != 0 &&
                             entry->GetData(SEARCH_IDX_SUB_CATEGORY) != subCategory);
                 });
+
+            maxPageSize = 10;
 
             success = true;
         }
@@ -205,6 +214,8 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                     });
             }
 
+            maxPageSize = 10;
+
             success = true;
         }
         break;
@@ -225,24 +236,46 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         reply.WriteS32Little(0);    // Success
 
-        // Write the first entry ID
-        if(entries.size() > 0)
+        std::list<std::shared_ptr<objects::SearchEntry>> current;
+        std::shared_ptr<objects::SearchEntry> prev;
+        std::shared_ptr<objects::SearchEntry> next;
+        for(auto entry : entries)
         {
-            reply.WriteS32Little(entries.front()->GetEntryID());
+            // If page ID is not zero, current starts after that value
+            if(current.size() >= maxPageSize)
+            {
+                next = entry;
+                break;
+            }
+            else if(current.size() > 0 || pageID == 0)
+            {
+                current.push_back(entry);
+            }
+            else if(entry->GetEntryID() >= pageID)
+            {
+                prev = entry;
+            }
+            else
+            {
+                current.push_back(entry);
+            }
+        }
+
+        // Write previous (or first) entry ID
+        if(!prev && current.size() > 0)
+        {
+            reply.WriteS32Little(current.front()->GetEntryID());
         }
         else
         {
-            reply.WriteS32Little(0);
+            reply.WriteS32Little(prev ? prev->GetEntryID() : -1);
         }
-
-        int32_t previousPageIndexID = -1;
-        int32_t nextPageIndexID = -1;
 
         switch((objects::SearchEntry::Type_t)type)
         {
         case objects::SearchEntry::Type_t::PARTY_JOIN:
         case objects::SearchEntry::Type_t::PARTY_RECRUIT:
-            for(auto entry : entries)
+            for(auto entry : current)
             {
                 reply.WriteS32Little(entry->GetEntryID());
                 reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_GOAL));
@@ -273,7 +306,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             break;
         case objects::SearchEntry::Type_t::CLAN_JOIN:
-            for(auto entry : entries)
+            for(auto entry : current)
             {
                 reply.WriteS32Little(entry->GetEntryID());
                 reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PLAYSTYLE));
@@ -312,7 +345,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             break;
         case objects::SearchEntry::Type_t::CLAN_RECRUIT:
-            for(auto entry : entries)
+            for(auto entry : current)
             {
                 reply.WriteS32Little(entry->GetEntryID());
                 reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PLAYSTYLE));
@@ -372,7 +405,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             break;
         case objects::SearchEntry::Type_t::TRADE_SELLING:
-            for(auto entry : entries)
+            for(auto entry : current)
             {
                 reply.WriteS32Little(entry->GetEntryID());
                 reply.WriteS8(0);   // Unknown
@@ -392,7 +425,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             break;
         case objects::SearchEntry::Type_t::TRADE_BUYING:
-            for(auto entry : entries)
+            for(auto entry : current)
             {
                 reply.WriteS32Little(entry->GetEntryID());
                 reply.WriteS8(0);   // Unknown
@@ -411,7 +444,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             break;
         case objects::SearchEntry::Type_t::FREE_RECRUIT:
-            for(auto entry : entries)
+            for(auto entry : current)
             {
                 reply.WriteS32Little(entry->GetEntryID());
                 reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_GOAL));
@@ -446,7 +479,7 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
         case objects::SearchEntry::Type_t::CLAN_RECRUIT_APP:
         case objects::SearchEntry::Type_t::TRADE_SELLING_APP:
         case objects::SearchEntry::Type_t::TRADE_BUYING_APP:
-            for(auto entry : entries)
+            for(auto entry : current)
             {
                 reply.WriteS32Little(entry->GetEntryID());
 
@@ -456,17 +489,15 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
                     character ? character->GetName() : "", true);
 
-                reply.WriteS8(0);   // Unknown
-
-                reply.WriteS32Little((int32_t)entry->GetPostTime());
+                reply.WriteBlank(3);    // Padding?
             }
             break;
         default:
             break;
         }
 
-        reply.WriteS32Little(previousPageIndexID);
-        reply.WriteS32Little(nextPageIndexID);
+        reply.WriteS32Little(-1);   // End marker
+        reply.WriteS32Little(next ? next->GetEntryID() : -1);
     }
     else
     {

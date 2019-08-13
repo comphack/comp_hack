@@ -224,6 +224,26 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
         }
     }
 
+    auto activatedAbility = cState->GetSpecialActivations(skillActivationID);
+    if(activatedAbility)
+    {
+        if(responseCode != RESULT_CODE_ERROR)
+        {
+            if(!server->GetSkillManager()->ExecuteSkill(cState, skillActivationID,
+                (int64_t)cState->GetEntityID()))
+            {
+                responseCode = RESULT_CODE_ERROR;
+            }
+        }
+        else
+        {
+            uint32_t skillID = activatedAbility->GetSkillData()->GetCommon()
+                ->GetID();
+            server->GetSkillManager()->SendFailure(cState, skillID,
+                client);
+        }
+    }
+
     if(responseCode != RESULT_CODE_ERROR)
     {
         if(responseCode == RESULT_CODE_SUCCESS)
@@ -241,23 +261,6 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
         else
         {
             server->GetCharacterManager()->UpdateDurability(client, item, -5000);
-        }
-    }
-
-    auto activatedAbility = cState->GetSpecialActivations(skillActivationID);
-    if(activatedAbility)
-    {
-        if(responseCode != RESULT_CODE_ERROR)
-        {
-            server->GetSkillManager()->ExecuteSkill(cState, skillActivationID,
-                (int64_t)cState->GetEntityID());
-        }
-        else
-        {
-            uint32_t skillID = activatedAbility->GetSkillData()->GetCommon()
-                ->GetID();
-            server->GetSkillManager()->SendFailure(cState, skillID,
-                client);
         }
     }
 

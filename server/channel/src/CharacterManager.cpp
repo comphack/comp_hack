@@ -49,6 +49,7 @@
 #include <Clan.h>
 #include <CultureData.h>
 #include <DemonBox.h>
+#include <DemonFamiliarityType.h>
 #include <DemonPresent.h>
 #include <DemonQuest.h>
 #include <DropSet.h>
@@ -1518,10 +1519,16 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     }
 
     // If the demon's current familiarity is lower than the top 2
-    // ranks, boost familiarity slightly
+    // ranks, adjust familiarity
     if(GetFamiliarityRank(demon->GetFamiliarity()) < 3)
     {
-        UpdateFamiliarity(client, 2, true, false);
+        auto fType = server->GetServerDataManager()
+            ->GetDemonFamiliarityTypeData(def->GetFamiliarity()
+                ->GetFamiliarityType());
+        if(fType)
+        {
+            UpdateFamiliarity(client, fType->GetSummon(), true, false);
+        }
     }
 
     // Apply initial tokusei/stat calculation
@@ -4861,27 +4868,9 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
 
             // Familiarity is adjusted based on the demon's familiarity type
             // and level achieved
-            int32_t fType = demonData->GetFamiliarity()->GetFamiliarityType();
-            const uint8_t fTypeMultiplier[17] =
-            {
-                10,     // Type 0
-                15,     // Type 1
-                40,     // Type 2
-                40,     // Type 3
-                50,     // Type 4
-                150,    // Type 5
-                50,     // Type 6
-                40,     // Type 7
-                50,     // Type 8
-                120,    // Type 9
-                200,    // Type 10
-                100,    // Type 11
-                40,     // Type 12
-                50,     // Type 13
-                0,      // Type 14 (invalid)
-                0,      // Type 15 (invalid)
-                100     // Type 16
-            };
+            auto fType = server->GetServerDataManager()
+                ->GetDemonFamiliarityTypeData(demonData->GetFamiliarity()
+                    ->GetFamiliarityType());
 
             // Gain familiarity and expertise points per level
             int32_t familiarityGain = 0;
@@ -4889,7 +4878,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
             for(int8_t lvl = startingLevel; lvl <= level; lvl++)
             {
                 familiarityGain = familiarityGain +
-                    (int32_t)(lvl * fTypeMultiplier[fType]);
+                    (int32_t)(lvl * (fType ? fType->GetLevelUp() : 0));
 
                 // Psychology raises by different amounts based on character
                 // and demon level difference
@@ -7097,10 +7086,9 @@ bool CharacterManager::DigitalizeEnd(const std::shared_ptr<
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dgState = cState->GetDigitalizeState();
-    auto zone = cState->GetZone();
-    if(!dgState || !zone)
+    if(!dgState)
     {
-        // Not digitalized or invalid
+        // Not digitalized
         return false;
     }
 
@@ -7963,12 +7951,14 @@ uint32_t CharacterManager::GetDemonPresent(uint32_t demonType, int8_t level,
     uint32_t baseType = demonDef
         ? demonDef->GetUnionData()->GetBaseDemonID() : 0;
 
-    auto baseDef = baseType
-        ? definitionManager->GetDevilData(baseType) : nullptr;
+    // Pull direct demon definition, else base demon definition
+    auto presentDef = serverDataManager->GetDemonPresentData(demonType);
+    if(!presentDef && demonType != baseType)
+    {
+        presentDef = serverDataManager->GetDemonPresentData(baseType);
+    }
 
-    auto presentDef = baseType
-        ? serverDataManager->GetDemonPresentData(baseType) : nullptr;
-    if(baseDef && presentDef)
+    if(demonDef && presentDef)
     {
         // Attempt to pull presents from rares then uncommons, then commons
         std::array<std::list<uint32_t>, 3> presents;
@@ -7976,7 +7966,7 @@ uint32_t CharacterManager::GetDemonPresent(uint32_t demonType, int8_t level,
         presents[1] = presentDef->GetUncommonItems();
         presents[2] = presentDef->GetCommonItems();
 
-        uint8_t baseLevel = baseDef->GetGrowth()->GetBaseLevel();
+        uint8_t baseLevel = demonDef->GetGrowth()->GetBaseLevel();
 
         // Rates for uncommons and rares start at 0% at base level and increase
         // to a maximum of 25% and 15% respectively up to max level

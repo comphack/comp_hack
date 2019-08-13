@@ -882,8 +882,11 @@ bool AccountManager::DeleteKillTimeExceededCharacters(uint8_t worldID)
     auto mainDB = mServer->GetMainDatabase();
     auto worldDB = world->GetWorldDatabase();
 
-    LOG_DEBUG(libcomp::String("Loading kill time exceeded characters for"
-        " world server: (%1) %2\n").Arg(svr->GetID()).Arg(svr->GetName()));
+    LogAccountManagerDebug([&]()
+    {
+        return libcomp::String("Loading kill time exceeded characters for"
+            " world server: (%1) %2\n").Arg(svr->GetID()).Arg(svr->GetName());
+    });
 
     std::list<std::shared_ptr<objects::Character>> exceeded;
     for(auto character : libcomp::PersistentObject::LoadAll<
@@ -897,8 +900,11 @@ bool AccountManager::DeleteKillTimeExceededCharacters(uint8_t worldID)
 
     if(exceeded.size() > 0)
     {
-        LOG_DEBUG(libcomp::String("%1 character(s) found for deletion\n")
-            .Arg(exceeded.size()));
+        LogAccountManagerDebug([&]()
+        {
+            return libcomp::String("%1 character(s) found for deletion\n")
+                .Arg(exceeded.size());
+        });
 
         while(exceeded.size() > 0)
         {
@@ -928,17 +934,20 @@ bool AccountManager::DeleteKillTimeExceededCharacters(uint8_t worldID)
             }
             else
             {
-                LOG_DEBUG(libcomp::String("Failed to load account %1"
-                    " associated to kill time exceeded character(s)\n")
-                    .Arg(accountUID.ToString()));
+                LogAccountManagerDebug([&]()
+                {
+                    return libcomp::String("Failed to load account %1"
+                        " associated to kill time exceeded character(s)\n")
+                        .Arg(accountUID.ToString());
+                });
             }
         }
 
-        LOG_DEBUG("Character deletions complete\n");
+        LogAccountManagerDebugMsg("Character deletions complete\n");
     }
     else
     {
-        LOG_DEBUG("No characters deletions required\n");
+        LogAccountManagerDebugMsg("No characters deletions required\n");
     }
 
     return true;

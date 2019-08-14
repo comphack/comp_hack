@@ -1059,7 +1059,7 @@ void MatchManager::StartPvPMatch(uint32_t instanceID)
         return;
     }
 
-    LogMatchManagerCritical([&]()
+    LogMatchManagerDebug([&]()
     {
         return libcomp::String("Starting PvP match %1\n")
             .Arg(pvpStats->GetMatch()->GetID());

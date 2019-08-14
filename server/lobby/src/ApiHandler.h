@@ -55,6 +55,7 @@ class WebGameSession;
 
 namespace libobjects
 {
+class DefinitionManager;
 class ScriptEngine;
 }
 
@@ -135,6 +136,18 @@ protected:
     bool Admin_UpdateAccount(const JsonBox::Object& request,
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
+    bool Admin_KickPlayer(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+    bool Admin_MessageWorld(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+    bool Admin_Online(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
+    bool Admin_PostItems(const JsonBox::Object& request,
+        JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session);
     bool Admin_GetPromos(const JsonBox::Object& request,
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
@@ -165,10 +178,18 @@ protected:
         int64_t coins, bool adjust);
 
 private:
+    std::shared_ptr<objects::Account> GetAccount(
+        const JsonBox::Object& obj, JsonBox::Object& response);
+    std::shared_ptr<World> GetWorld(
+        const JsonBox::Object& obj, JsonBox::Object& response);
+
     bool GetWebGameSession(JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session,
         std::shared_ptr<objects::WebGameSession>& gameSession,
         std::shared_ptr<World>& world);
+
+    bool HaveUserLevel(JsonBox::Object& response,
+        const std::shared_ptr<ApiSession>& session, uint32_t requiredLevel);
 
     // List of API sessions.
     std::unordered_map<libcomp::String, std::shared_ptr<ApiSession>> mSessions;
@@ -185,6 +206,7 @@ private:
         std::shared_ptr<libcomp::ServerScript>> mGameDefinitions;
 
     AccountManager *mAccountManager;
+    libcomp::DefinitionManager *mDefinitionManager;
 };
 
 } // namespace lobby

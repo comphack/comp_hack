@@ -81,18 +81,6 @@ public:
     int64_t GetDemonID(int8_t slot) const;
 
 protected:
-    enum ChatType_t : uint16_t
-    {
-
-        CHAT_PARTY = 41,
-        CHAT_SHOUT = 44,
-        CHAT_SAY = 45,
-        CHAT_TELL = 46,
-        CHAT_SELF = 47,
-        CHAT_CLAN = 48,
-        CHAT_TEAM = 714,
-    };
-
     virtual void HandlePacket(ChannelToClientPacketCode_t cmd,
         libcomp::ReadOnlyPacket& p);
 

@@ -145,15 +145,9 @@ bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
             }
             else
             {
-                // Tell the source channel to disconnect
-                libcomp::Packet reply;
-                reply.WritePacketCode(
-                    InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
-                reply.WriteS32Little(cLogin->GetWorldCID());
-                reply.WriteU32Little(
-                    (uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
-
-                connection->SendPacket(reply);
+                // Tell the channel to disconnect the character
+                server->GetCharacterManager()
+                    ->RequestChannelDisconnect(cLogin->GetWorldCID());
             }
             break;
         case 2:

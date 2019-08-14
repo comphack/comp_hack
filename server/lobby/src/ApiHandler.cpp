@@ -29,19 +29,23 @@
 // libcomp Includes
 #include <AccountManager.h>
 #include <BaseServer.h>
+#include <Crypto.h>
 #include <CString.h>
 #include <DatabaseConfigMariaDB.h>
 #include <DatabaseConfigSQLite3.h>
-#include <Crypto.h>
+#include <DefinitionManager.h>
 #include <ErrorCodes.h>
 #include <Log.h>
 #include <PacketCodes.h>
 #include <Randomizer.h>
 #include <ScriptEngine.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <Character.h>
+#include <CharacterLogin.h>
 #include <CharacterProgress.h>
+#include <MiShopProductData.h>
 #include <PostItem.h>
 #include <Promo.h>
 #include <WebGameSession.h>
@@ -82,12 +86,23 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
     mParsers["/admin/get_account"] = &ApiHandler::Admin_GetAccount;
     mParsers["/admin/delete_account"] = &ApiHandler::Admin_DeleteAccount;
     mParsers["/admin/update_account"] = &ApiHandler::Admin_UpdateAccount;
+    mParsers["/admin/kick_player"] = &ApiHandler::Admin_KickPlayer;
+    mParsers["/admin/message_world"] = &ApiHandler::Admin_MessageWorld;
+    mParsers["/admin/online"] = &ApiHandler::Admin_Online;
+    mParsers["/admin/post_items"] = &ApiHandler::Admin_PostItems;
     mParsers["/admin/get_promos"] = &ApiHandler::Admin_GetPromos;
     mParsers["/admin/create_promo"] = &ApiHandler::Admin_CreatePromo;
     mParsers["/admin/delete_promo"] = &ApiHandler::Admin_DeletePromo;
     mParsers["/webgame/get_coins"] = &ApiHandler::WebGame_GetCoins;
     mParsers["/webgame/start"] = &ApiHandler::WebGame_Start;
     mParsers["/webgame/update"] = &ApiHandler::WebGame_Update;
+
+    LogWebAPIDebugMsg("Loading API binary definitions...\n");
+
+    mDefinitionManager = new libcomp::DefinitionManager;
+
+    mDefinitionManager->LoadData<objects::MiShopProductData>(server
+        ->GetDataStore());
 
     LogWebAPIDebugMsg("Loading web games...\n");
 
@@ -499,6 +514,11 @@ bool ApiHandler::Admin_GetAccounts(const JsonBox::Object& request,
     (void)request;
     (void)session;
 
+    if(!HaveUserLevel(response, session, SVR_CONST.API_ADMIN_LVL_GET_ACCOUNTS))
+    {
+        return true;
+    }
+
     auto accounts = libcomp::PersistentObject::LoadAll<objects::Account>(
         GetDatabase());
 
@@ -548,6 +568,11 @@ bool ApiHandler::Admin_GetAccount(const JsonBox::Object& request,
     JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
 {
     (void)session;
+
+    if(!HaveUserLevel(response, session, SVR_CONST.API_ADMIN_LVL_GET_ACCOUNT))
+    {
+        return true;
+    }
 
     libcomp::String username;
 
@@ -601,6 +626,12 @@ bool ApiHandler::Admin_DeleteAccount(const JsonBox::Object& request,
 {
     (void)response;
 
+    if(!HaveUserLevel(response, session,
+        SVR_CONST.API_ADMIN_LVL_DELETE_ACCOUNT))
+    {
+        return true;
+    }
+
     libcomp::String username;
 
     auto it = request.find("username");
@@ -637,33 +668,21 @@ bool ApiHandler::Admin_DeleteAccount(const JsonBox::Object& request,
 bool ApiHandler::Admin_UpdateAccount(const JsonBox::Object& request,
     JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
 {
-    libcomp::String username, password;
-
-    auto it = request.find("username");
-
-    if(it != request.end())
+    if(!HaveUserLevel(response, session,
+        SVR_CONST.API_ADMIN_LVL_UPDATE_ACCOUNT))
     {
-        username = it->second.getString();
-        username = username.ToLower();
-    }
-    else
-    {
-        response["error"] = "Username not found.";
-
         return true;
     }
 
-    auto db = GetDatabase();
-    auto account = objects::Account::LoadAccountByUsername(db, username);
+    libcomp::String password;
 
+    auto account = GetAccount(request, response);
     if(!account)
     {
-        response["error"] = "Account not found.";
-
         return true;
     }
 
-    it = request.find("password");
+    auto it = request.find("password");
 
     if(it != request.end())
     {
@@ -763,9 +782,10 @@ bool ApiHandler::Admin_UpdateAccount(const JsonBox::Object& request,
         account->SetEnabled(it->second.getBoolean());
     }
 
+    auto db = GetDatabase();
     bool didUpdate = account->Update(db);
 
-    if(session->username == username)
+    if(session->username == account->GetUsername().ToLower())
     {
         session->username.Clear();
         session->account.reset();
@@ -783,11 +803,530 @@ bool ApiHandler::Admin_UpdateAccount(const JsonBox::Object& request,
     return true;
 }
 
+bool ApiHandler::Admin_KickPlayer(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)session;
+
+    if(!HaveUserLevel(response, session, SVR_CONST.API_ADMIN_LVL_KICK_PLAYER))
+    {
+        return true;
+    }
+
+    int8_t kickLevel = 1;
+
+    auto account = GetAccount(request, response);
+    if(!account)
+    {
+        return true;
+    }
+
+    int8_t worldID = -1;
+    if(!mAccountManager->IsLoggedIn(account->GetUsername(), worldID))
+    {
+        response["error"] = "Target account is not logged in.";
+
+        return true;
+    }
+
+    if(worldID == -1)
+    {
+        // Kick them from the lobby and move on
+        auto connection = mServer->GetManagerConnection()->GetClientConnection(
+            account->GetUsername());
+        if(connection)
+        {
+            connection->Close();
+        }
+    }
+    else
+    {
+        auto world = mServer->GetManagerConnection()->GetWorldByID(
+            (uint8_t)worldID);
+        auto worldConnection = world ? world->GetConnection() : nullptr;
+        if(!worldConnection)
+        {
+            // Hopefully this can only occur with very specific timing
+            response["error"] = "Account (somehow) connected to invalid"
+                " world.";
+
+            return true;
+        }
+
+        auto it = request.find("kick_level");
+
+        if(it != request.end())
+        {
+            kickLevel = (int8_t)it->second.getInteger();
+        }
+
+        if(kickLevel < 1 || kickLevel > 3)
+        {
+            response["error"] = "Invalid kick level specified.";
+
+            return true;
+        }
+
+        libcomp::Packet p;
+        p.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT);
+        p.WriteU32Little((uint32_t)LogoutPacketAction_t::LOGOUT_DISCONNECT);
+        p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+            account->GetUsername());
+        p.WriteS8(kickLevel);
+
+        worldConnection->SendPacket(p);
+    }
+
+    response["error"] = "Success";
+
+    return true;
+}
+
+bool ApiHandler::Admin_MessageWorld(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)session;
+
+    if(!HaveUserLevel(response, session,
+        SVR_CONST.API_ADMIN_LVL_MESSAGE_WORLD))
+    {
+        return true;
+    }
+
+    libcomp::String message, type;
+
+    auto world = GetWorld(request, response);
+    auto worldConnection = world ? world->GetConnection() : nullptr;
+    if(!worldConnection)
+    {
+        return true;
+    }
+
+    auto it = request.find("message");
+
+    if(it != request.end())
+    {
+        message = it->second.getString();
+    }
+
+    if(message.IsEmpty())
+    {
+        response["error"] = "No message specified.";
+
+        return true;
+    }
+
+    it = request.find("type");
+
+    if(it != request.end())
+    {
+        type = it->second.getString();
+    }
+
+    libcomp::Packet relay;
+    relay.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
+    relay.WriteS32Little(0);    // No sender
+    relay.WriteU8((uint8_t)PacketRelayMode_t::RELAY_ALL);
+
+    if(type.ToLower() == "console")
+    {
+        // I don't believe this is visible anywhere but still allow changing it
+        libcomp::String from = "SYSTEM";
+
+        it = request.find("from");
+
+        if(it != request.end())
+        {
+            from = it->second.getString();
+        }
+
+        relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHAT);
+        relay.WriteU16Little((uint16_t)ChatType_t::CHAT_SELF);
+        relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+            from, true);
+        relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+            message, true);
+    }
+    else if(type.ToLower() == "ticker")
+    {
+        int8_t mode = 0;
+        int8_t subMode = 0;
+
+        it = request.find("mode");
+
+        if(it != request.end())
+        {
+            mode = (int8_t)it->second.getInteger();
+        }
+
+        it = request.find("sub_mode");
+
+        if(it != request.end())
+        {
+            subMode = (int8_t)it->second.getInteger();
+        }
+
+        relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYSTEM_MSG);
+        relay.WriteS8(mode);
+        relay.WriteS8(subMode);
+        relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+            message, true);
+    }
+    else
+    {
+        response["error"] = "Invalid message type specified.";
+
+        return true;
+    }
+
+    worldConnection->SendPacket(relay);
+
+    response["error"] = "Success";
+
+    return true;
+}
+
+bool ApiHandler::Admin_Online(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)session;
+
+    if(!HaveUserLevel(response, session, SVR_CONST.API_ADMIN_LVL_ONLINE))
+    {
+        return true;
+    }
+
+    JsonBox::Array targets;
+
+    auto it = request.find("targets");
+
+    if(it != request.end())
+    {
+        targets = it->second.getArray();
+    }
+
+    if(targets.empty())
+    {
+        // Return number of online characters in all worlds
+        JsonBox::Array objectList;
+
+        size_t total = 0;
+        for(auto world : mServer->GetManagerConnection()->GetWorlds())
+        {
+            auto rWorld = world->GetRegisteredWorld();
+            auto usernames = mAccountManager->GetUsersInWorld(
+                (int8_t)rWorld->GetID());
+
+            JsonBox::Object obj;
+
+            obj["world_id"] = (int)rWorld->GetID();
+            obj["character_count"] = (int)usernames.size();
+
+            total = (size_t)(total + usernames.size());
+
+            objectList.push_back(obj);
+        }
+
+        response["counts"] = objectList;
+        response["total"] = (int)total;
+    }
+    else
+    {
+        // Get specific accounts/characters
+        JsonBox::Array objectList;
+
+        auto lobbyDB = mServer->GetMainDatabase();
+
+        for(auto target : targets)
+        {
+            auto tObj = target.getObject();
+
+            it = tObj.find("name");
+
+            libcomp::String name = it == tObj.end()
+                ? "" : it->second.getString();
+            if(name.IsEmpty())
+            {
+                response["error"] = "Target name not specified.";
+
+                return true;
+            }
+
+            it = tObj.find("type");
+
+            if(it == tObj.end())
+            {
+                response["error"] = "Target type not specified.";
+
+                return true;
+            }
+
+            libcomp::String type = it->second.getString();
+
+            JsonBox::Object obj;
+
+            if(type.ToLower() == "account")
+            {
+                auto login = mAccountManager->GetUserLogin(name);
+
+                obj["type"] = "Account";
+
+                auto cLogin = login
+                    ? login->GetCharacterLogin() : nullptr;
+                if(!login)
+                {
+                    obj["character"] = "None";
+                    obj["status"] = "Offline";
+                }
+                else if(cLogin && cLogin->GetWorldID() >= 0)
+                {
+                    obj["character"] = "Unknown";
+                    obj["status"] = "Online";
+                    obj["world_id"] = (int)cLogin->GetWorldID();
+
+                    auto world = mServer->GetManagerConnection()->GetWorldByID(
+                        (uint8_t)cLogin->GetWorldID());
+                    auto worldDB = world ? world->GetWorldDatabase() : nullptr;
+                    if(worldDB)
+                    {
+                        auto character = cLogin->GetCharacter().Get(worldDB);
+                        if(character)
+                        {
+                            obj["character"] = character->GetName().ToUtf8();
+                        }
+                    }
+                }
+                else
+                {
+                    obj["character"] = "None";
+                    obj["status"] = "Lobby";
+                }
+            }
+            else if(type.ToLower() == "character")
+            {
+                auto world = GetWorld(tObj, response);
+                auto worldDB = world ? world->GetWorldDatabase() : nullptr;
+                if(!worldDB)
+                {
+                    return true;
+                }
+
+                auto character = objects::Character::LoadCharacterByName(
+                    worldDB, name);
+                if(character)
+                {
+                    auto account = libcomp::PersistentObject::LoadObjectByUUID<
+                        objects::Account>(lobbyDB, character->GetAccount());
+
+                    obj["character"] = character->GetName().ToUtf8();
+
+                    if(account)
+                    {
+                        auto login = mAccountManager->GetUserLogin(
+                            account->GetUsername());
+
+                        obj["account"] = account->GetUsername().ToUtf8();
+
+                        auto cLogin = login
+                            ? login->GetCharacterLogin() : nullptr;
+                        if(!login)
+                        {
+                            obj["status"] = "Offline";
+                        }
+                        else if(cLogin && cLogin->GetWorldID() >= 0)
+                        {
+                            obj["status"] = "Online";
+                            obj["world_id"] = (int)cLogin->GetWorldID();
+                        }
+                        else
+                        {
+                            obj["status"] = "Lobby";
+                        }
+                    }
+                    else
+                    {
+                        obj["account"] = "Unknown";
+                        obj["status"] = "Unknown";
+                    }
+                }
+                else
+                {
+                    obj["character"] = name.ToUtf8();
+                    obj["account"] = "Unknown";
+                    obj["status"] = "Unknown";
+                }
+
+                obj["type"] = "Character";
+            }
+            else
+            {
+                response["error"] = "Invalid target type specified.";
+
+                return true;
+            }
+
+            objectList.push_back(obj);
+        }
+
+        response["results"] = objectList;
+    }
+
+    response["error"] = "Success";
+
+    return true;
+}
+
+bool ApiHandler::Admin_PostItems(const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    (void)session;
+
+    if(!HaveUserLevel(response, session, SVR_CONST.API_ADMIN_LVL_POST_ITEMS))
+    {
+        return true;
+    }
+
+    auto account = GetAccount(request, response);
+    if(!account)
+    {
+        return true;
+    }
+
+    int32_t cpCost = 0;
+    JsonBox::Array products;
+
+    auto it = request.find("cp");
+
+    if(it != request.end())
+    {
+        cpCost = it->second.getInteger();
+    }
+
+    if(cpCost < 0)
+    {
+        response["error"] = "Cannot add CP via post purchase.";
+
+        return true;
+    }
+    else if(cpCost > 0 && (uint32_t)cpCost > account->GetCP())
+    {
+        response["error"] = "Not enough CP.";
+
+        return true;
+    }
+
+    it = request.find("products");
+
+    if(it != request.end())
+    {
+        products = it->second.getArray();
+    }
+
+    if(products.empty())
+    {
+        response["error"] = "No product specified.";
+
+        return true;
+    }
+
+    std::list<uint32_t> productIDs;
+    for(auto product : products)
+    {
+        uint32_t productID = (uint32_t)product.getInteger();
+
+        if(!mDefinitionManager->GetShopProductData(productID))
+        {
+            response["error"] = "Invalid product.";
+
+            return true;
+        }
+
+        productIDs.push_back(productID);
+    }
+
+    auto mainDB = mServer->GetMainDatabase();
+
+    auto postItems = objects::PostItem::LoadPostItemListByAccount(
+        mainDB, account);
+    if((postItems.size() + productIDs.size()) >= MAX_POST_ITEM_COUNT)
+    {
+        response["error"] = "Maximum post item count exceeded.";
+
+        return true;
+    }
+
+    uint32_t now = (uint32_t)std::time(0);
+
+    auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
+
+    if(cpCost)
+    {
+        auto expl = std::make_shared<libcomp::DBExplicitUpdate>(account);
+        expl->SubtractFrom<int64_t>("CP", cpCost, (int64_t)account->GetCP());
+        opChangeset->AddOperation(expl);
+    }
+
+    for(auto productID : productIDs)
+    {
+        auto postItem = libcomp::PersistentObject::New<objects::PostItem>(
+            true);
+        postItem->SetType(productID);
+        postItem->SetTimestamp(now);
+        postItem->SetAccount(account);
+
+        opChangeset->Insert(postItem);
+    }
+
+    if(!mainDB->ProcessChangeSet(opChangeset))
+    {
+        response["error"] = "Purchase failed.";
+
+        return true;
+    }
+
+    auto login = mAccountManager->GetUserLogin(account->GetUsername());
+    auto cLogin = login ? login->GetCharacterLogin() : nullptr;
+    if(cLogin && cLogin->GetWorldID() >= 0)
+    {
+        // Sync the new value and relay the CP update to the channel so this
+        // call works while logged in too
+        libcomp::Packet relay;
+        relay.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
+        relay.WriteS32Little(cLogin->GetWorldCID());   // Source (self to self)
+        relay.WriteU8((uint8_t)PacketRelayMode_t::RELAY_CIDS);
+        relay.WriteU16Little(1);    // CID count
+        relay.WriteS32Little(cLogin->GetWorldCID());    // Target
+
+        relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CASH_BALANCE);
+        relay.WriteS64Little((int64_t)account->GetCP());
+
+        auto world = mServer->GetManagerConnection()->GetWorldByID(
+            (uint8_t)cLogin->GetWorldID());
+        auto worldConnection = world ? world->GetConnection() : nullptr;
+        if(worldConnection)
+        {
+            worldConnection->SendPacket(relay);
+        }
+
+        mServer->GetLobbySyncManager()->SyncRecordUpdate(account, "Account");
+    }
+
+    response["error"] = "Success";
+    response["cp"] = (int)account->GetCP();
+
+    return true;
+}
+
 bool ApiHandler::Admin_GetPromos(const JsonBox::Object& request,
     JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
 {
     (void)request;
     (void)session;
+
+    if(!HaveUserLevel(response, session, SVR_CONST.API_ADMIN_LVL_GET_PROMOS))
+    {
+        return true;
+    }
 
     auto promos = libcomp::PersistentObject::LoadAll<objects::Promo>(
         GetDatabase());
@@ -839,6 +1378,11 @@ bool ApiHandler::Admin_CreatePromo(const JsonBox::Object& request,
     JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
 {
     (void)session;
+
+    if(!HaveUserLevel(response, session, SVR_CONST.API_ADMIN_LVL_CREATE_PROMO))
+    {
+        return true;
+    }
 
     libcomp::String code;
     libcomp::String limitType;
@@ -939,13 +1483,11 @@ bool ApiHandler::Admin_CreatePromo(const JsonBox::Object& request,
 
     for(auto item : items)
     {
-        int32_t productID = item.getInteger();
+        uint32_t productID = (uint32_t)item.getInteger();
 
-        /// @todo Check the shop product ID is valid.
-
-        if(0 == productID)
+        if(!mDefinitionManager->GetShopProductData(productID))
         {
-            response["error"] = "Invalid item.";
+            response["error"] = "Invalid product.";
 
             return true;
         }
@@ -991,6 +1533,11 @@ bool ApiHandler::Admin_DeletePromo(const JsonBox::Object& request,
     JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
 {
     (void)session;
+
+    if(!HaveUserLevel(response, session, SVR_CONST.API_ADMIN_LVL_DELETE_PROMO))
+    {
+        return true;
+    }
 
     libcomp::String code;
     int promoCount = 0;
@@ -1645,6 +2192,73 @@ void ApiHandler::SetAccountManager(AccountManager *pManager)
     mAccountManager = pManager;
 }
 
+std::shared_ptr<objects::Account> ApiHandler::GetAccount(
+    const JsonBox::Object& obj, JsonBox::Object& response)
+{
+    libcomp::String username;
+
+    auto it = obj.find("username");
+
+    if(it != obj.end())
+    {
+        username = it->second.getString();
+        username = username.ToLower();
+    }
+    else
+    {
+        response["error"] = "Username not found.";
+
+        return nullptr;
+    }
+
+    auto db = GetDatabase();
+    auto account = objects::Account::LoadAccountByUsername(db, username);
+
+    if(!account)
+    {
+        response["error"] = "Account not found.";
+
+        return nullptr;
+    }
+
+    return account;
+}
+
+std::shared_ptr<World> ApiHandler::GetWorld(
+    const JsonBox::Object& obj, JsonBox::Object& response)
+{
+    uint8_t worldID;
+
+    auto it = obj.find("world_id");
+
+    if(it != obj.end())
+    {
+        worldID = (uint8_t)it->second.getInteger();
+    }
+    else
+    {
+        response["error"] = "Invalid world ID.";
+
+        return nullptr;
+    }
+
+    auto world = mServer->GetManagerConnection()->GetWorldByID(worldID);
+    if(!world)
+    {
+        response["error"] = "World server not found.";
+
+        return nullptr;
+    }
+    else if(!world->GetWorldDatabase())
+    {
+        response["error"] = "World server not currently active.";
+
+        return nullptr;
+    }
+
+    return world;
+}
+
 bool ApiHandler::GetWebGameSession(JsonBox::Object& response,
     const std::shared_ptr<ApiSession>& session, std::shared_ptr<
     objects::WebGameSession>& gameSession, std::shared_ptr<World>& world)
@@ -1662,6 +2276,23 @@ bool ApiHandler::GetWebGameSession(JsonBox::Object& response,
     if(!world)
     {
         response["error"] = "World connection down";
+        return false;
+    }
+
+    return true;
+}
+
+bool ApiHandler::HaveUserLevel(JsonBox::Object& response,
+    const std::shared_ptr<ApiSession>& session, uint32_t requiredLevel)
+{
+    auto account = session ? session->account : nullptr;
+    int32_t currentLevel = account ? account->GetUserLevel() : 0;
+    if(currentLevel < (int32_t)requiredLevel)
+    {
+        response["error"] = libcomp::String("Requested command requires"
+            " a user level of at least %1. Session level is only %2.")
+            .Arg(requiredLevel).Arg(currentLevel).ToUtf8();
+
         return false;
     }
 

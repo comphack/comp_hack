@@ -29,6 +29,9 @@
 
 #include "ChannelClientConnection.h"
 
+// libcomp Includes
+#include <PacketCodes.h>
+
 namespace objects
 {
 class Account;
@@ -39,24 +42,6 @@ namespace channel
 {
 
 class ChannelServer;
-
-/**
- * Chat type sent from and returned to the client to signify what type of
- * chat message is being sent.  This value is used to determine the
- * ChatVis_t level.
- */
-enum ChatType_t : uint16_t
-{
-
-    CHAT_PARTY = 41,
-    CHAT_SHOUT = 44,
-    CHAT_SAY = 45,
-    CHAT_TELL = 46,
-    CHAT_SELF = 47,
-    CHAT_CLAN = 48,
-    CHAT_VERSUS = 597,
-    CHAT_TEAM = 714,
-};
 
 /*
  * Visiblity for a chat message used internally to route messages. This level

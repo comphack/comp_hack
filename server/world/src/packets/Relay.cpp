@@ -56,9 +56,10 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto channelConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(
+    auto iConnection = std::dynamic_pointer_cast<libcomp::InternalConnection>(
         connection);
-    auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager
+        ->GetServer());
     auto characterManager = server->GetCharacterManager();
     auto db = server->GetWorldDatabase();
 
@@ -76,7 +77,7 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
             // The only difference between a CID relay and a failure is the
             // retry check
             auto registeredChannel = mode == PacketRelayMode_t::RELAY_FAILURE
-                ? server->GetChannel(channelConnection) : nullptr;
+                ? server->GetChannel(iConnection) : nullptr;
 
             uint16_t cidCount = p.ReadU16Little();
 
@@ -252,6 +253,25 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
                         " a team that does not exist: %1\n").Arg(teamID);
                 });
             }
+        }
+        break;
+    case PacketRelayMode_t::RELAY_ALL:
+        {
+            // Recreate the packet and send to all channels
+            auto packetData = p.ReadArray(p.Left());
+
+            for(auto& cPair : server->GetChannels())
+            {
+                libcomp::Packet relay;
+                relay.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
+                relay.WriteS32Little(sourceCID);
+                relay.WriteU8((uint8_t)PacketRelayMode_t::RELAY_ALL);
+                relay.WriteArray(packetData);
+
+                cPair.first->SendPacket(relay);
+            }
+
+            return true;
         }
         break;
     default:

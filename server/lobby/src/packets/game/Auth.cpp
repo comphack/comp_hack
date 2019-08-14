@@ -152,6 +152,18 @@ static bool NoWebAuthParse(const std::shared_ptr<LobbyServer>& server,
         return LoginAuthError(connection, ErrorCodes_t::BAD_USERNAME_PASSWORD);
     }
 
+    // Prevent game access for API only accounts
+    if(account->GetAPIOnly())
+    {
+        LogGeneralError([&]()
+        {
+            return libcomp::String("API only account '%1' attempted to login"
+                " via NoWebAuth method\n").Arg(username);
+        });
+
+        return LoginAuthError(connection, ErrorCodes_t::NOT_AUTHORIZED);
+    }
+
     return CompleteLogin(server, connection, libcomp::String(), username);
 }
 

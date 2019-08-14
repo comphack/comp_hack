@@ -116,6 +116,24 @@ bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
 
         return true;
     }
+    else if(mode == PacketRelayMode_t::RELAY_ALL)
+    {
+        // The rest is the packet itself, send to everyone
+        if(p.Left() < 2)
+        {
+            LogGeneralErrorMsg("Malformed RELAY_ALL packet encountered\n");
+            return true;
+        }
+
+        auto packetData = p.ReadArray(p.Left());
+
+        libcomp::Packet relay;
+        relay.WriteArray(packetData);
+
+        connectionManager->BroadcastPacketToClients(relay);
+
+        return true;
+    }
     else if(mode != PacketRelayMode_t::RELAY_CIDS)
     {
         LogGeneralError([&]()

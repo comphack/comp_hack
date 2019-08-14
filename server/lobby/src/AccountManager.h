@@ -248,6 +248,16 @@ public:
         const libcomp::String& username);
 
     /**
+     * Get all users in a given world (and optionally on a specific channel).
+     * @param world World to get all users from.
+     * @param channel Channel in the world to get all users from. If
+     * this is empty, all users in the world will be retrieved.
+     * @return List of usernames in the world (and channel).
+     */
+    std::list<libcomp::String> GetUsersInWorld(int8_t world,
+        int8_t channel = -1);
+
+    /**
      * Log out all users in a given world (and optionally on a specific
      * channel). This should only be called when a world or channel disconnects.
      * @param world World to log out all users from.

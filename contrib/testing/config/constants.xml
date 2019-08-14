@@ -1447,6 +1447,19 @@
         <element>21938</element>
     </constant>
 
+    <!-- API Admin Levels -->
+    <constant name="API_ADMIN_LVL_CREATE_PROMO">300</constant>
+    <constant name="API_ADMIN_LVL_DELETE_ACCOUNT">950</constant>
+    <constant name="API_ADMIN_LVL_DELETE_PROMO">300</constant>
+    <constant name="API_ADMIN_LVL_GET_ACCOUNT">150</constant>
+    <constant name="API_ADMIN_LVL_GET_ACCOUNTS">150</constant>
+    <constant name="API_ADMIN_LVL_GET_PROMOS">250</constant>
+    <constant name="API_ADMIN_LVL_KICK_PLAYER">100</constant>
+    <constant name="API_ADMIN_LVL_MESSAGE_WORLD">200</constant>
+    <constant name="API_ADMIN_LVL_ONLINE">1</constant>
+    <constant name="API_ADMIN_LVL_POST_ITEMS">750</constant>
+    <constant name="API_ADMIN_LVL_UPDATE_ACCOUNT">950</constant>
+
     <!-- GM Command Levels -->
     <constant name="GM_CMD_LVL_ADD_CP">950</constant>
     <constant name="GM_CMD_LVL_ANNOUNCE">100</constant>

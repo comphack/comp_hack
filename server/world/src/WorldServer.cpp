@@ -108,6 +108,8 @@ void WorldServer::FinishInitialize()
         InternalPacketCode_t::PACKET_ACCOUNT_LOGIN));
     packetManager->AddParser<Parsers::AccountLogout>(to_underlying(
         InternalPacketCode_t::PACKET_ACCOUNT_LOGOUT));
+    packetManager->AddParser<Parsers::Relay>(to_underlying(
+        InternalPacketCode_t::PACKET_RELAY));
     packetManager->AddParser<Parsers::DataSync>(to_underlying(
         InternalPacketCode_t::PACKET_DATA_SYNC));
     packetManager->AddParser<Parsers::WebGame>(

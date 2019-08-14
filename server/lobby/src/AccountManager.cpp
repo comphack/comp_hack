@@ -211,6 +211,20 @@ ErrorCodes_t AccountManager::WebAuthLogin(const libcomp::String& username,
         return ErrorCodes_t::ACCOUNT_DISABLED;
     }
 
+    // Prevent game access for API only accounts
+    if(account->GetAPIOnly())
+    {
+        LogAccountManagerDebug([&]()
+        {
+            return libcomp::String("Web auth login for API only account '%1'"
+                " failed.\n").Arg(username);
+        });
+
+        EraseLogin(username);
+
+        return ErrorCodes_t::BAD_USERNAME_PASSWORD;
+    }
+
     // We are now ready. Generate the session ID and transition login state.
     sid = libcomp::Crypto::GenerateRandom(300).ToLower();
     login->SetState(objects::AccountLogin::State_t::LOBBY_WAIT);
@@ -785,7 +799,7 @@ std::shared_ptr<objects::AccountLogin> AccountManager::GetUserLogin(
     return pair != mAccountMap.end() ? pair->second : nullptr;
 }
 
-std::list<libcomp::String> AccountManager::LogoutUsersInWorld(int8_t world,
+std::list<libcomp::String> AccountManager::GetUsersInWorld(int8_t world,
     int8_t channel)
 {
     if(0 > world)
@@ -805,6 +819,20 @@ std::list<libcomp::String> AccountManager::LogoutUsersInWorld(int8_t world,
             usernames.push_back(pair.first);
         }
     }
+
+    return usernames;
+}
+
+std::list<libcomp::String> AccountManager::LogoutUsersInWorld(int8_t world,
+    int8_t channel)
+{
+    auto usernames = GetUsersInWorld(world, channel);
+    if(usernames.size() == 0)
+    {
+        return usernames;
+    }
+
+    std::lock_guard<std::mutex> lock(mAccountLock);
 
     for(auto username : usernames)
     {

@@ -131,6 +131,8 @@ int main(int argc, char *argv[])
         locale = QString::fromLocal8Bit(file.readLine()).trimmed();
     }
 
+    Updater *pUpdater = nullptr;
+
     if(locale.isEmpty())
     {
         (new LanguageSelection)->show();
@@ -149,10 +151,13 @@ int main(int argc, char *argv[])
             app.installTranslator(pTranslator);
         }
 
-        (new Updater)->show();
+        pUpdater = new Updater;
+        pUpdater->show();
     }
 
     int ret = app.exec();
+
+    delete pUpdater;
 
 #ifdef Q_OS_WIN32
     // Delete the copy now

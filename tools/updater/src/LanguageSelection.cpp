@@ -144,6 +144,8 @@ void LanguageSelection::Save()
     }
 
     (new Updater)->show();
+
+    close();
 }
 
 void LanguageSelection::changeEvent(QEvent *pEvent)

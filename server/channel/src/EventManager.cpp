@@ -150,6 +150,7 @@ bool EventManager::HandleEvent(
         ctx.CurrentZone = client ? client->GetClientState()
             ->GetCharacterState()->GetZone() : zone;
         ctx.AutoOnly = options.AutoOnly || !client;
+        ctx.TransformScriptParams = options.TransformScriptParams;
 
         return HandleEvent(ctx);
     }
@@ -2274,31 +2275,77 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         }
         else
         {
-            // NPC in the same zone with actor ID [value 1] state compares to [value 2]
-            auto npc = ctx.CurrentZone->GetActor(condition->GetValue1());
+            // NPC in the same zone with actor ID [value 1] state compares to
+            // [value 2]. [value 1] of zero will use source entity.
+            std::shared_ptr<objects::EntityStateObject> npc;
+            if(condition->GetValue1())
+            {
+                npc = ctx.CurrentZone->GetActor(condition->GetValue1());
+            }
+            else if(ctx.EventInstance)
+            {
+                npc = ctx.CurrentZone->GetEntity(ctx.EventInstance
+                    ->GetSourceEntityID());
+            }
 
-            uint8_t npcState = 0;
             if(!npc)
             {
                 return false;
             }
 
-            switch(npc->GetEntityType())
+            if(condition->GetValue2() == -1)
             {
-            case EntityType_t::NPC:
-                npcState = std::dynamic_pointer_cast<NPCState>(npc)
-                    ->GetEntity()->GetState();
-                break;
-            case EntityType_t::OBJECT:
-                npcState = std::dynamic_pointer_cast<ServerObjectState>(npc)
-                    ->GetEntity()->GetState();
-                break;
-            default:
+                // Special comparison check if any (other) player is currently
+                // interacting with the NPC
+                for(auto c : ctx.CurrentZone->GetConnectionList())
+                {
+                    if(c == ctx.Client) continue;
+
+                    auto eventState = c->GetClientState()->GetEventState();
+
+                    std::list<std::shared_ptr<
+                        objects::EventInstance>> eInstances;
+                    if(eventState)
+                    {
+                        eInstances.push_back(eventState->GetCurrent());
+                        for(auto queued : eventState->GetQueued())
+                        {
+                            eInstances.push_back(queued);
+                        }
+                    }
+
+                    for(auto eInst : eInstances)
+                    {
+                        if(eInst && eInst->GetSourceEntityID() == npc
+                            ->GetEntityID())
+                        {
+                            return true;
+                        }
+                    }
+                }
+
                 return false;
             }
+            else
+            {
+                uint8_t npcState = 0;
+                switch(npc->GetEntityType())
+                {
+                case EntityType_t::NPC:
+                    npcState = std::dynamic_pointer_cast<NPCState>(npc)
+                        ->GetEntity()->GetState();
+                    break;
+                case EntityType_t::OBJECT:
+                    npcState = std::dynamic_pointer_cast<ServerObjectState>(npc)
+                        ->GetEntity()->GetState();
+                    break;
+                default:
+                    return false;
+                }
 
-            return npc && Compare((int32_t)npcState, condition->GetValue2(),
-                0, compareMode, EventCompareMode::EQUAL, EVENT_COMPARE_NUMERIC);
+                return Compare((int32_t)npcState, condition->GetValue2(),
+                    0, compareMode, EventCompareMode::EQUAL, EVENT_COMPARE_NUMERIC);
+            }
         }
     case objects::EventCondition::Type_t::PARTY_SIZE:
         if(!client)
@@ -3991,12 +4038,30 @@ bool EventManager::HandleEvent(EventContext& ctx)
         }
     }
 
+    auto event = ctx.EventInstance->GetEvent();
+    if(ctx.Client)
+    {
+        auto accountUID = ctx.Client->GetClientState()->GetAccountUID();
+        LogEventManagerDebug([event, accountUID]()
+        {
+            return libcomp::String("Handling event %1 for player: %2\n")
+                .Arg(event->GetID()).Arg(accountUID.ToString());
+        });
+    }
+    else
+    {
+        LogEventManagerDebug([event]()
+        {
+            return libcomp::String("Handling no player event %1\n")
+                .Arg(event->GetID());
+        });
+    }
+
     ctx.EventInstance->SetState(ctx.EventInstance->GetEvent());
 
     bool handled = false;
 
     // If the event is conditional, check it now and end if it fails
-    auto event = ctx.EventInstance->GetEvent();
     auto conditions = event->GetConditions();
     if(conditions.size() > 0 && !EvaluateEventConditions(ctx, conditions))
     {
@@ -4833,7 +4898,8 @@ bool EventManager::HandleWebGame(const std::shared_ptr<
 bool EventManager::PrepareTransformScript(EventContext& ctx,
     std::shared_ptr<libcomp::ScriptEngine> engine)
 {
-    auto serverDataManager = mServer.lock()->GetServerDataManager();
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
     auto e = ctx.EventInstance->GetEvent();
     auto script = e
         ? serverDataManager->GetScript(e->GetTransformScriptID()) : nullptr;
@@ -4845,6 +4911,12 @@ bool EventManager::PrepareTransformScript(EventContext& ctx,
         engine->Using<EnemyState>();
         engine->Using<Zone>();
         engine->Using<libcomp::Randomizer>();
+
+        if(e->GetEventType() == objects::Event::EventType_t::PERFORM_ACTIONS)
+        {
+            // Bind all action types for script usage
+            server->GetActionManager()->BindAllActionTypes(engine);
+        }
 
         auto src = libcomp::String("local event;\n"
             "function prepare(e) { event = e; return 0; }\n%1")
@@ -4864,9 +4936,19 @@ bool EventManager::TransformEvent(EventContext& ctx,
     auto e = ctx.EventInstance->GetEvent();
 
     Sqrat::Array sqParams(engine->GetVM());
-    for(libcomp::String p : e->GetTransformScriptParams())
+    if(ctx.TransformScriptParams.size() > 0)
     {
-        sqParams.Append(p);
+        for(libcomp::String p : ctx.TransformScriptParams)
+        {
+            sqParams.Append(p);
+        }
+    }
+    else
+    {
+        for(libcomp::String p : e->GetTransformScriptParams())
+        {
+            sqParams.Append(p);
+        }
     }
 
     int32_t sourceEntityID = ctx.EventInstance->GetSourceEntityID();

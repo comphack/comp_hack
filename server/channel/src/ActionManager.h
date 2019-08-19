@@ -126,6 +126,20 @@ public:
         int32_t messageID, int8_t effectType, bool includeMessage,
         int32_t messageValue = 0);
 
+    /**
+     * Get an action name by its type
+     * @param type Action type to retrieve the name of
+     * @return Action name matching the type
+     */
+    static libcomp::String GetActionName(objects::Action::ActionType_t type);
+
+    /**
+     * Bind all action types to the supplied script engine
+     * @param engine ScriptEngine to bind to
+     */
+    void BindAllActionTypes(const std::shared_ptr<
+        libcomp::ScriptEngine>& engine);
+
 private:
     struct ActionContext
     {

@@ -429,7 +429,8 @@ void ActionManager::PerformActions(
                     {
                         return libcomp::String("Quitting mid-action execution"
                             " following the result of action type: %1.\n")
-                            .Arg((int32_t)action->GetActionType());
+                            .Arg(ActionManager::GetActionName(action
+                                ->GetActionType()));
                     });
                 }
 
@@ -468,6 +469,93 @@ void ActionManager::SendStageEffect(
     }
 
     client->FlushOutgoing();
+}
+
+libcomp::String ActionManager::GetActionName(
+    objects::Action::ActionType_t type)
+{
+    switch(type)
+    {
+    case objects::Action::ActionType_t::ADD_REMOVE_ITEMS:
+        return "ActionAddRemoveItems";
+    case objects::Action::ActionType_t::ADD_REMOVE_STATUS:
+        return "ActionAddRemoveStatus";
+    case objects::Action::ActionType_t::CREATE_LOOT:
+        return "ActionCreateLoot";
+    case objects::Action::ActionType_t::DELAY:
+        return "ActionDelay";
+    case objects::Action::ActionType_t::DISPLAY_MESSAGE:
+        return "ActionDisplayMessage";
+    case objects::Action::ActionType_t::GRANT_SKILLS:
+        return "ActionGrantSkills";
+    case objects::Action::ActionType_t::GRANT_XP:
+        return "ActionGrantXP";
+    case objects::Action::ActionType_t::PLAY_BGM:
+        return "ActionPlayBGM";
+    case objects::Action::ActionType_t::PLAY_SOUND_EFFECT:
+        return "ActionPlaySoundEffect";
+    case objects::Action::ActionType_t::RUN_SCRIPT:
+        return "ActionRunScript";
+    case objects::Action::ActionType_t::SET_HOMEPOINT:
+        return "ActionSetHomepoint";
+    case objects::Action::ActionType_t::SET_NPC_STATE:
+        return "ActionSetNPCState";
+    case objects::Action::ActionType_t::SPAWN:
+        return "ActionSpawn";
+    case objects::Action::ActionType_t::SPECIAL_DIRECTION:
+        return "ActionSpecialDirection";
+    case objects::Action::ActionType_t::STAGE_EFFECT:
+        return "ActionStageEffect";
+    case objects::Action::ActionType_t::START_EVENT:
+        return "ActionStartEvent";
+    case objects::Action::ActionType_t::UPDATE_COMP:
+        return "ActionUpdateCOMP";
+    case objects::Action::ActionType_t::UPDATE_FLAG:
+        return "ActionUpdateFlag";
+    case objects::Action::ActionType_t::UPDATE_LNC:
+        return "ActionUpdateLNC";
+    case objects::Action::ActionType_t::UPDATE_POINTS:
+        return "ActionUpdatePoints";
+    case objects::Action::ActionType_t::UPDATE_QUEST:
+        return "ActionUpdateQuest";
+    case objects::Action::ActionType_t::UPDATE_ZONE_FLAGS:
+        return "ActionUpdateZoneFlags";
+    case objects::Action::ActionType_t::ZONE_CHANGE:
+        return "ActionZoneChange";
+    case objects::Action::ActionType_t::ZONE_INSTANCE:
+        return "ActionZoneInstance";
+    default:
+        return "";
+    }
+}
+
+void ActionManager::BindAllActionTypes(const std::shared_ptr<
+    libcomp::ScriptEngine>& engine)
+{
+    engine->Using<objects::ActionAddRemoveItems>();
+    engine->Using<objects::ActionAddRemoveStatus>();
+    engine->Using<objects::ActionCreateLoot>();
+    engine->Using<objects::ActionDelay>();
+    engine->Using<objects::ActionDisplayMessage>();
+    engine->Using<objects::ActionGrantSkills>();
+    engine->Using<objects::ActionGrantXP>();
+    engine->Using<objects::ActionPlayBGM>();
+    engine->Using<objects::ActionPlaySoundEffect>();
+    engine->Using<objects::ActionRunScript>();
+    engine->Using<objects::ActionSetHomepoint>();
+    engine->Using<objects::ActionSetNPCState>();
+    engine->Using<objects::ActionSpawn>();
+    engine->Using<objects::ActionSpecialDirection>();
+    engine->Using<objects::ActionStageEffect>();
+    engine->Using<objects::ActionStartEvent>();
+    engine->Using<objects::ActionUpdateCOMP>();
+    engine->Using<objects::ActionUpdateFlag>();
+    engine->Using<objects::ActionUpdateLNC>();
+    engine->Using<objects::ActionUpdatePoints>();
+    engine->Using<objects::ActionUpdateQuest>();
+    engine->Using<objects::ActionUpdateZoneFlags>();
+    engine->Using<objects::ActionZoneChange>();
+    engine->Using<objects::ActionZoneInstance>();
 }
 
 std::set<int32_t> ActionManager::GetActionContextCIDs(
@@ -3626,6 +3714,13 @@ bool ActionManager::PrepareTransformScript(ActionContext& ctx,
         engine->Using<EnemyState>();
         engine->Using<Zone>();
         engine->Using<libcomp::Randomizer>();
+
+        if(act->GetActionType() == objects::Action::ActionType_t::DELAY ||
+            act->GetActionType() == objects::Action::ActionType_t::SPAWN)
+        {
+            // Bind all action types for script usage when defining sub-actions
+            BindAllActionTypes(engine);
+        }
 
         auto src = libcomp::String("local action;\n"
             "function prepare(a) { action = a; return 0; }\n%1")

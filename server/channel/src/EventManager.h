@@ -76,6 +76,10 @@ struct EventOptions
     // Disallow interruption of any events in the set. Events that are queued
     // but not started can still be interrupted if another is active.
     bool NoInterrupt = false;
+
+    // Override any transform script params on the first event being handled.
+    // If the event is not a transform event, these will be ignored.
+    std::list<libcomp::String> TransformScriptParams;
 };
 
 /**
@@ -341,6 +345,7 @@ private:
         std::shared_ptr<ChannelClientConnection> Client;
         std::shared_ptr<Zone> CurrentZone;
         std::shared_ptr<objects::EventInstance> EventInstance;
+        std::list<libcomp::String> TransformScriptParams;
         bool AutoOnly = false;
     };
 

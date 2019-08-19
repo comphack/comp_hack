@@ -708,7 +708,7 @@ void EventCondition::RefreshTypeContext()
         ui->lblValue2->setText("State:");
         defaultCompareTxt = "Equal";
         selectorObjectType = "Actor";
-        minValues[1] = 0;
+        minValues[1] = -1;
         maxValues[1] = 255;
         cmpBetween = cmpExists = false;
         break;

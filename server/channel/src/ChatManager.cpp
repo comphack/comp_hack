@@ -1342,9 +1342,13 @@ bool ChatManager::GMCommand_Event(const std::shared_ptr<
         {
             auto state = client->GetClientState();
             auto cState = state->GetCharacterState();
+            auto zone = state->GetZone();
+
+            EventOptions options;
+            options.TransformScriptParams = argsCopy;
 
             if(server->GetEventManager()->HandleEvent(client, eventID,
-                cState->GetEntityID()))
+                cState->GetEntityID(), zone, options))
             {
                 return SendChatMessage(client, ChatType_t::CHAT_SELF,
                     libcomp::String("Event started: %1").Arg(eventID));
@@ -1853,9 +1857,11 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "type is used instead of the default."
         } },
         { "event", {
-            "@event [ID]",
+            "@event [ID [PARAMS]]",
             "Starts an event specified by ID or returns the current",
-            "event if not specified.",
+            "event if not specified. If additional PARAMS are supplied",
+            "and the event is a transform event, the params will be used",
+            "to override the existing transform script params."
         } },
         { "expertise", {
             "@expertise ID RANK",

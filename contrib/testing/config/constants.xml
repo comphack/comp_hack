@@ -13,6 +13,7 @@
     <constant name="ITEM_BALM_OF_LIFE_DEMON">43001</constant>
     <constant name="ITEM_KREUZ">12198</constant>
     <constant name="ITEM_RBLOODSTONE">12203</constant>
+    <constant name="MENU_BARTER">808</constant>
     <constant name="MENU_BAZAAR">360</constant>
     <constant name="MENU_COMP_SHOP">531</constant>
     <constant name="MENU_CULTURE">805</constant>
@@ -21,6 +22,9 @@
     <constant name="MENU_ITEM_DEPO">180</constant>
     <constant name="MENU_ITIME">804</constant>
     <constant name="MENU_REPAIR_KZ">765</constant>
+    <constant name="MENU_SHOP_BUY">175</constant>
+    <constant name="MENU_SHOP_REPAIR">177</constant>
+    <constant name="MENU_SHOP_SELL">176</constant>
     <constant name="MENU_TRIFUSION">179</constant>
     <constant name="MENU_TRIFUSION_KZ">801</constant>
     <constant name="MENU_UB_RANKING">803</constant>

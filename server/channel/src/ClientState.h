@@ -137,10 +137,11 @@ public:
 
     /**
      * Get the shop ID of the state's current event if it is an
-     * "open menu" type
+     * "open menu" type, optionally matching a specified type only
+     * @param type Optional required menu type to match against the event
      * @return Shop ID or 0 if not applicable
      */
-    int32_t GetCurrentMenuShopID() const;
+    int32_t GetCurrentMenuShopID(int32_t type = 0) const;
 
     /**
      * Registers the client state with the static entity map for access by

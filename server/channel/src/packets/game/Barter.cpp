@@ -40,6 +40,8 @@
 #include <ItemBox.h>
 #include <MiItemData.h>
 #include <MiNPCBarterData.h>
+#include <MiNPCBarterGroupData.h>
+#include <MiNPCBarterGroupEntry.h>
 #include <MiNPCBarterItemData.h>
 #include <MiPossessionData.h>
 
@@ -61,6 +63,8 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     auto definitionManager = server->GetDefinitionManager();
 
     auto barterData = definitionManager->GetNPCBarterData(barterID);
+    auto barterGroupData = definitionManager->GetNPCBarterGroupData(
+        (uint16_t)state->GetCurrentMenuShopID((int32_t)SVR_CONST.MENU_BARTER));
 
     int32_t spAdjust = 0;
     int64_t coinAdjust = 0;
@@ -69,7 +73,23 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     bool includesBethel = false;
     std::array<int32_t, 5> bethelAdjustments = { { 0, 0, 0, 0, 0 } };
 
-    bool failed = barterData == nullptr;
+    bool failed = barterData == nullptr || barterGroupData == nullptr;
+
+    std::shared_ptr<objects::MiNPCBarterGroupEntry> groupEntry;
+    if(!failed)
+    {
+        for(auto entry : barterGroupData->GetEntries())
+        {
+            if(entry->GetBarterID() == barterID)
+            {
+                groupEntry = entry;
+                break;
+            }
+        }
+
+        failed = groupEntry == nullptr;
+    }
+
     if(!failed)
     {
         for(auto itemData : barterData->GetTradeItems())
@@ -488,7 +508,8 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
 
             for(uint16_t valuableID : oneTimeValuables)
             {
-                failed |= characterManager->AddPlugin(client, valuableID);
+                failed |= !characterManager->AddRemoveValuable(client,
+                    valuableID, false);
             }
 
             if(!failed)
@@ -514,27 +535,41 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             {
                 for(auto& pair : eCounters)
                 {
-                    failed |= characterManager->UpdateEventCounter(client,
+                    failed |= !characterManager->UpdateEventCounter(client,
                         pair.first, pair.second, true);
                 }
             }
         }
     }
 
+    // Certain exchanges need to force the menu to close so pre-barter checks
+    // can run again
+    bool autoCloseEnabled = oneTimeValuables.size() > 0 ||
+        cooldowns.size() > 0 || eCounters.size() > 0 ||
+        (groupEntry && (groupEntry->GetFlags() & 0x01) != 0);
+
+    int8_t result = failed ? -1 : 0;
+    if(!failed && autoCloseEnabled)
+    {
+        // Close menu and wait for next event or event end
+        result = 1;
+    }
+
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BARTER);
-    reply.WriteS8(failed ? -1 : 0); // No special error codes for this
+    reply.WriteS8(result);
     reply.WriteU16Little(barterID);
 
-    client->SendPacket(reply);
+    client->QueuePacket(reply);
 
-    // Certain types need to force the event to end so pre-barter checks can
-    // run again
-    if(!failed && (oneTimeValuables.size() > 0 || cooldowns.size() > 0) &&
-        state->GetCurrentMenuShopID() != 0)
+    if(result == 1)
     {
+        // When auto-close occurs, support "next" event handling via a system
+        // response
         server->GetEventManager()->HandleResponse(client, -1);
     }
+
+    client->FlushOutgoing();
 }
 
 bool Parsers::Barter::Parse(libcomp::ManagerPacket *pPacketManager,

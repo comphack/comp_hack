@@ -171,7 +171,7 @@ int32_t ClientState::GetEventSourceEntityID() const
     return current ? current->GetSourceEntityID() : 0;
 }
 
-int32_t ClientState::GetCurrentMenuShopID() const
+int32_t ClientState::GetCurrentMenuShopID(int32_t type) const
 {
     auto eState = GetEventState();
     auto current = eState ? eState->GetCurrent() : nullptr;
@@ -179,7 +179,7 @@ int32_t ClientState::GetCurrentMenuShopID() const
     {
         auto menu = std::dynamic_pointer_cast<
             objects::EventOpenMenu>(current->GetEvent());
-        if(menu)
+        if(menu && (!type || menu->GetMenuType() == type))
         {
             return menu->GetShopID();
         }

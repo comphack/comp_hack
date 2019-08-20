@@ -49,6 +49,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 
 using namespace channel;
 
@@ -76,6 +77,28 @@ bool Parsers::ShopRepair::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
+
+    int32_t repairShopID = state->GetCurrentMenuShopID(
+        (int32_t)SVR_CONST.MENU_SHOP_REPAIR);
+    if(repairShopID != shopID)
+    {
+        auto accountUID = state->GetAccountUID();
+        LogGeneralError([shopID, accountUID]()
+        {
+            return libcomp::String("Player attempted item repair at shop %1"
+                " which they are not currently interacting with: %2\n")
+                .Arg(shopID).Arg(accountUID.ToString());
+        });
+
+        // No error code for this, end the event if any repair shop is being
+        // interacted with
+        if(repairShopID)
+        {
+            server->GetEventManager()->HandleEvent(client, nullptr);
+        }
+
+        return true;
+    }
 
     auto item = std::dynamic_pointer_cast<objects::Item>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));

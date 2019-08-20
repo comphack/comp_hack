@@ -85,6 +85,20 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
 
+    if(state->GetCurrentMenuShopID((int32_t)SVR_CONST.MENU_SHOP_SELL) != shopID)
+    {
+        auto accountUID = state->GetAccountUID();
+        LogGeneralError([shopID, accountUID]()
+        {
+            return libcomp::String("Player attempted a sale at shop %1"
+                " which they are not currently interacting with: %2\n")
+                .Arg(shopID).Arg(accountUID.ToString());
+        });
+
+        SendShopSaleReply(client, shopID, -2, false);
+        return;
+    }
+
     auto shop = server->GetServerDataManager()->GetShopData((uint32_t)shopID);
     if(!shop)
     {

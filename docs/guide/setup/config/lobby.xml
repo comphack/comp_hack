@@ -227,4 +227,17 @@
 
 </section><!-- ImportWorld -->
 
+<section>
+<title>MaxClients</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 0</para>
+<para>Maximum number of clients that may connect from the same machine. If this number is 0 or less, an unlimited number of clients may connect from the same machine.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="MaxClients">2</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- MaxClients -->
+
 </section>

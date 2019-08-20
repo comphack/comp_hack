@@ -60,10 +60,12 @@ static bool LoginAuthError(const std::shared_ptr<
 }
 
 static bool CompleteLogin(
+    libcomp::ManagerPacket *pPacketManager,
     const std::shared_ptr<LobbyServer>& server,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     const libcomp::String& sid,
-    const libcomp::String& username)
+    const libcomp::String& username,
+    const libcomp::String& machineUUID = {})
 {
     libcomp::String sid2;
 
@@ -71,15 +73,19 @@ static bool CompleteLogin(
 
     ErrorCodes_t errorCode;
 
+    auto conf = config(pPacketManager);
+    int32_t maxClients = conf->GetMaxClients();
+
     if(sid.IsEmpty())
     {
         // Login from NoWebAuth
-        errorCode = accountManager->LobbyLogin(username, sid2);
+        errorCode = accountManager->LobbyLogin(username, sid2, maxClients,
+            machineUUID);
     }
     else
     {
         // Login from WebAuth
-        errorCode = accountManager->LobbyLogin(username, sid, sid2);
+        errorCode = accountManager->LobbyLogin(username, sid, sid2, maxClients);
     }
 
     if(ErrorCodes_t::SUCCESS == errorCode)
@@ -112,13 +118,54 @@ static bool CompleteLogin(
     return true;
 }
 
-static bool NoWebAuthParse(const std::shared_ptr<LobbyServer>& server,
+static bool NoWebAuthParse(libcomp::ManagerPacket *pPacketManager,
+    const std::shared_ptr<LobbyServer>& server,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p, const libcomp::String& username)
 {
+    libcomp::String machineUUID;
+
     // Get the hash provided by the client.
     libcomp::String hash = p.ReadString16Little(
         libcomp::Convert::ENCODING_UTF8, true).ToLower();
+
+    auto conf = config(pPacketManager);
+    int32_t maxClients = conf->GetMaxClients();
+
+    // Sanity check the machine UUID.
+    if(165 == hash.Length())
+    {
+        // Check for the slash
+        if('/' != hash.At(128))
+        {
+            return LoginAuthError(connection,
+                ErrorCodes_t::NOT_AUTHORIZED);
+        }
+
+        machineUUID = hash.Mid(129);
+        hash = hash.Left(128);
+
+        // Check for the UUID format.
+        if(!std::regex_match(machineUUID.ToUtf8(), std::regex("^[0-9a-f]{8}\\"
+            "-[0-9a-f]{4}\\-[0-9a-f]{4}\\-[0-9a-f]{4}\\-[0-9a-f]{12}$")))
+        {
+            return LoginAuthError(connection,
+                ErrorCodes_t::NOT_AUTHORIZED);
+        }
+    }
+    else if(0 < maxClients)
+    {
+        // Report this error only if we have enabled a max number of clients.
+        LogAccountManagerError([&]()
+        {
+            return libcomp::String("Account '%1' did not provide a machine "
+                "UUID. They did not update the comp_client.dll!\n")
+                .Arg(username);
+        });
+
+        return LoginAuthError(connection,
+                ErrorCodes_t::NOT_AUTHORIZED);
+    }
 
     // Authentication hash provided by the patched client.
     LogGeneralDebug([&]()
@@ -164,10 +211,12 @@ static bool NoWebAuthParse(const std::shared_ptr<LobbyServer>& server,
         return LoginAuthError(connection, ErrorCodes_t::NOT_AUTHORIZED);
     }
 
-    return CompleteLogin(server, connection, libcomp::String(), username);
+    return CompleteLogin(pPacketManager, server, connection,
+        libcomp::String(), username, machineUUID);
 }
 
-static bool WebAuthParse(const std::shared_ptr<LobbyServer>& server,
+static bool WebAuthParse(libcomp::ManagerPacket *pPacketManager,
+    const std::shared_ptr<LobbyServer>& server,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p, const libcomp::String& username)
 {
@@ -181,7 +230,7 @@ static bool WebAuthParse(const std::shared_ptr<LobbyServer>& server,
             .Arg(username).Arg(sid);
     });
 
-    return CompleteLogin(server, connection, sid, username);
+    return CompleteLogin(pPacketManager, server, connection, sid, username);
 }
 
 bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
@@ -193,13 +242,14 @@ bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
     auto server = std::dynamic_pointer_cast<LobbyServer>(
         pPacketManager->GetServer());
 
-    if(p.Size() == 131 || p.PeekU16Little() == 129)
+    if( (p.Size() == 131 && p.PeekU16Little() == 129) ||
+        (p.Size() == 168 && p.PeekU16Little() == 166) )
     {
-        return NoWebAuthParse(server, connection, p, username);
+        return NoWebAuthParse(pPacketManager, server, connection, p, username);
     }
-    else if(p.Size() == 303 || p.PeekU16Little() == 301)
+    else if(p.Size() == 303 && p.PeekU16Little() == 301)
     {
-        return WebAuthParse(server, connection, p, username);
+        return WebAuthParse(pPacketManager, server, connection, p, username);
     }
     else
     {

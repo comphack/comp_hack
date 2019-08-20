@@ -123,6 +123,8 @@ public:
      * @param username Username of the account to authenticate.
      * @param sid Session ID given by the web authentication.
      * @param sid2 Session ID to give back to the client.
+     * @param maxClients Maximum number of clients that may be connected from
+     *   the same machine. A value of 0 or less is an unlimited number.
      * @returns Error code indicating the success or failure of this
      * operation. This function can return one of:
      * - SUCCESS (login was valid and a session ID was generated)
@@ -132,7 +134,8 @@ public:
      * @note This function is thread safe.
      */
     ErrorCodes_t LobbyLogin(const libcomp::String& username,
-        const libcomp::String& sid, libcomp::String& sid2);
+        const libcomp::String& sid, libcomp::String& sid2,
+        int maxClients = 0);
 
     /**
      * Transitions the user login state from OFFLINE to LOBBY. It is assumed
@@ -140,6 +143,9 @@ public:
      * the classic login packet handlers.
      * @param username Username of the account to authenticate.
      * @param sid2 Session ID to give back to the client.
+     * @param maxClients Maximum number of clients that may be connected from
+     *   the same machine. A value of 0 or less is an unlimited number.
+     * @param machineUUID Machine UUID used to limit multiclienting.
      * @returns Error code indicating the success or failure of this
      * operation. This function can return one of:
      * - SUCCESS (login was valid and a session ID was generated)
@@ -151,7 +157,8 @@ public:
      * @note This function is thread safe.
      */
     ErrorCodes_t LobbyLogin(const libcomp::String& username,
-        libcomp::String& sid2);
+        libcomp::String& sid2, int maxClients = 0,
+        const libcomp::String& machineUUID = {});
 
     /**
      * Set the character associated to the supplied account in preparation
@@ -401,10 +408,13 @@ private:
     std::unordered_map<libcomp::String, std::shared_ptr<
         objects::WebGameSession>> mWebGameSessions;
 
-    // List of web-game API sessions by username. Only valid for as long
-    // as there is a web-game session active
+    /// List of web-game API sessions by username. Only valid for as long
+    /// as there is a web-game session active
     std::unordered_map<libcomp::String,
         std::shared_ptr<WebGameApiSession>> mWebGameAPISessions;
+
+    /// List of clients connected for each machine UUID.
+    std::unordered_map<libcomp::String, int32_t> mMachineUUIDs;
 };
 
 } // namespace lobby

@@ -255,7 +255,7 @@ ErrorCodes_t AccountManager::WebAuthLoginApi(const libcomp::String& username,
 }
 
 ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
-    const libcomp::String& sid, libcomp::String& sid2)
+    const libcomp::String& sid, libcomp::String& sid2, int maxClients)
 {
     LogAccountManagerDebug([&]()
     {
@@ -316,6 +316,19 @@ ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
         return ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN;
     }
 
+    // Client must use the NoWebAuth method if this option is enabled.
+    if(0 < maxClients)
+    {
+        LogAccountManagerInfo([&]()
+        {
+            return libcomp::String("Classic login for account '%1' "
+                "failed due to multiclienting (not using classic login).\n")
+                .Arg(username);
+        });
+
+        return ErrorCodes_t::NOT_AUTHORIZED;
+    }
+
     // We are now ready. Generate the session ID and transition to logged in.
     sid2 = libcomp::Crypto::GenerateRandom(300).ToLower();
     login->SetState(objects::AccountLogin::State_t::LOBBY);
@@ -325,7 +338,7 @@ ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
 }
 
 ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
-    libcomp::String& sid2)
+    libcomp::String& sid2, int maxClients, const libcomp::String& machineUUID)
 {
     /// @todo Check if the server is full and return SERVER_FULL.
 
@@ -405,10 +418,59 @@ ErrorCodes_t AccountManager::LobbyLogin(const libcomp::String& username,
         return ErrorCodes_t::ACCOUNT_DISABLED;
     }
 
+    // Check for the number of logins with the same machine UUID.
+    if(0 < maxClients)
+    {
+        auto matchIt = mMachineUUIDs.find(machineUUID);
+
+        if(matchIt != mMachineUUIDs.end())
+        {
+            // There is at least one client already logged in. See how many
+            // more are allowed.
+            if(maxClients <= matchIt->second)
+            {
+                LogAccountManagerInfo([&]()
+                {
+                    return libcomp::String("Classic login for account '%1' "
+                        "failed due to multiclienting (machine UUID: %2).\n")
+                        .Arg(username)
+                        .Arg(machineUUID);
+                });
+
+                return ErrorCodes_t::NOT_AUTHORIZED;
+            }
+
+            LogAccountManagerInfo([&]()
+            {
+                return libcomp::String("Machine UUID '%1' for account '%2' is "
+                    "logged in %3 times.\n")
+                    .Arg(machineUUID)
+                    .Arg(username)
+                    .Arg(matchIt->second + 1);
+            });
+
+            mMachineUUIDs[machineUUID] = matchIt->second + 1;
+        }
+        else
+        {
+            // This is the first client.
+            LogAccountManagerInfo([&]()
+            {
+                return libcomp::String("Machine UUID '%1' for account '%2' is "
+                    "logged in 1 time.\n")
+                    .Arg(machineUUID)
+                    .Arg(username);
+            });
+
+            mMachineUUIDs[machineUUID] = 1;
+        }
+    }
+
     // We are now ready. Generate the session ID and transition to logged in.
     sid2 = libcomp::Crypto::GenerateRandom(300).ToLower();
     login->SetState(objects::AccountLogin::State_t::LOBBY);
     login->SetSessionID(sid2);
+    login->SetMachineUUID(machineUUID);
 
     return ErrorCodes_t::SUCCESS;
 }
@@ -759,6 +821,27 @@ void AccountManager::EraseLogin(const libcomp::String& username)
 {
     // Convert the username to lowercase for lookup.
     libcomp::String lookup = username.ToLower();
+
+    auto accountIt = mAccountMap.find(lookup);
+
+    // Decrement the number of clients using the machine UUID.
+    if(accountIt != mAccountMap.end())
+    {
+        auto machineUUID = accountIt->second->GetMachineUUID();
+        auto entryIt = mMachineUUIDs.find(machineUUID);
+
+        if(entryIt != mMachineUUIDs.end())
+        {
+            if(1 < entryIt->second)
+            {
+                mMachineUUIDs[machineUUID] = entryIt->second - 1;
+            }
+            else
+            {
+                mMachineUUIDs.erase(machineUUID);
+            }
+        }
+    }
 
     mAccountMap.erase(lookup);
     mWebGameSessions.erase(lookup);

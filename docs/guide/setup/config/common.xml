@@ -127,7 +127,7 @@
 <title>LogLevels</title>
 <para><emphasis role="strong">Type:</emphasis> map</para>
 <para><emphasis role="strong">Default:</emphasis> WARNING</para>
-<para>Map of log categories to log level. Each category can be set to DEBUG, INFO, WARNING, ERROR or CRITICAL. Messages at the set level or more critical level(s) will be logged. For example, a level of WARNING will log messages at the ERROR and CRITICAL level as well.</para>
+<para>Map of log categories to log level. Each category can be set to LEVEL_DEBUG, LEVEL_INFO, LEVEL_WARNING, LEVEL_ERROR or LEVEL_CRITICAL. Messages at the set level or more critical level(s) will be logged. For example, a level of LEVEL_WARNING will log messages at the LEVEL_ERROR and LEVEL_CRITICAL level as well.</para>
 
 <para>Here is the list of categories:
 <itemizedlist>
@@ -171,7 +171,7 @@
 <para><programlisting><![CDATA[<member name="LogLevels">
     <pair>
         <key>General</key>
-        <value>DEBUG</value>
+        <value>LEVEL_DEBUG</value>
     </pair>
 </member>]]></programlisting></para>
 </section><!-- Example -->

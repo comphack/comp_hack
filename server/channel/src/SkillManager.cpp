@@ -700,16 +700,12 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         return false;
     }
 
-    bool demonOnlyInst = zone->GetInstanceType() == InstanceType_t::DEMON_ONLY;
-
     bool invalidSource = !source;
     if(!invalidSource)
     {
-        // The source must be ready and also visible (unless they are a
-        // character in a demon only variant)
-        bool ignoreDisplayState = demonOnlyInst &&
-            source->GetEntityType() == EntityType_t::CHARACTER;
-        invalidSource = !source->Ready(ignoreDisplayState);
+        // The source must be ready and in the active state
+        invalidSource = !source->Ready(true) ||
+            source->GetDisplayState() != ActiveDisplayState_t::ACTIVE;
     }
 
     if(invalidSource)
@@ -812,6 +808,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
 
     // Stop skills that are demon only instance restricted when not in one
     // as well as non-restricted skills used by an invalid player entity
+    bool demonOnlyInst = zone->GetInstanceType() == InstanceType_t::DEMON_ONLY;
     bool instRestrict = skillData->GetBasic()->GetFamily() == 6;
     if((instRestrict && !demonOnlyInst) ||
         (!instRestrict && demonOnlyInst && client &&
@@ -1141,7 +1138,10 @@ int8_t SkillManager::ValidateSkillTarget(
         return (int8_t)SkillErrorCodes_t::SILENT_FAIL;
     }
 
-    if(!target->Ready())
+    // Target must be ready (ignore display state for skills targeting
+    // hidden sources)
+    if(!target->Ready(target == source &&
+        source->GetDisplayState() == ActiveDisplayState_t::ACTIVE))
     {
         return (int8_t)SkillErrorCodes_t::TARGET_INVALID;
     }

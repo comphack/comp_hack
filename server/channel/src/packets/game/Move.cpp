@@ -32,6 +32,7 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
+#include <ServerConstants.h>
 #include <TcpConnection.h>
 
 // Standard C++11 Includes
@@ -234,10 +235,13 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     case EntityType_t::PARTNER_DEMON:
         // If a demon is moving while the character is hidden, warp the
         // character to the destination spot
-        if(state->GetCharacterState()->GetIsHidden())
         {
-            zoneManager->Warp(client, state->GetCharacterState(),
-                destX, destY, 0.f);
+            const static uint32_t demonOnly = SVR_CONST.STATUS_DEMON_ONLY;
+            if(state->GetCharacterState()->StatusEffectActive(demonOnly))
+            {
+                zoneManager->Warp(client, state->GetCharacterState(),
+                    destX, destY, 0.f);
+            }
         }
         break;
     default:

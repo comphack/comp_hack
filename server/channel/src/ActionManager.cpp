@@ -1786,7 +1786,7 @@ bool ActionManager::GrantXP(ActionContext& ctx)
 
     for(auto eState : entityStates)
     {
-        if(eState->Ready())
+        if(eState->Ready(true))
         {
             int64_t xp = act->GetXP();
             if(act->GetAdjustable())
@@ -1905,7 +1905,7 @@ bool ActionManager::GrantSkills(ActionContext& ctx)
         break;
     }
 
-    if(eState->Ready())
+    if(eState->Ready(true))
     {
         for(uint32_t skillID : act->GetSkillIDs())
         {

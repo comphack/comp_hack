@@ -1120,9 +1120,12 @@ bool Zone::GroupHasSpawned(uint32_t groupID, bool isLocation, bool aliveOnly)
         return true;
     }
 
+    // Entities need to be alive (and not mid despawn)
     for(auto eState : it->second)
     {
-        if(eState->IsAlive())
+        auto entityID = eState->GetEntityID();
+        if(eState->IsAlive() && mPendingDespawnEntities.find(entityID) ==
+            mPendingDespawnEntities.end())
         {
             return true;
         }

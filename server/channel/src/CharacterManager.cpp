@@ -4738,7 +4738,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
 
     auto eState = state->GetEntityState(entityID);
     auto stats = eState ? eState->GetCoreStats() : nullptr;
-    if(!eState || !eState->Ready() || !stats)
+    if(!eState || !eState->Ready(true) || !stats)
     {
         return;
     }

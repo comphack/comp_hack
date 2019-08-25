@@ -1848,7 +1848,8 @@ void ActiveEntityState::RemoveStatusEffects(const std::set<uint32_t>& effectType
     }
 
     if(GetIsHidden() &&
-        mStatusEffects.find(SVR_CONST.STATUS_DEMON_ONLY) == mStatusEffects.end())
+        mStatusEffects.find(SVR_CONST.STATUS_DEMON_ONLY) == mStatusEffects.end() &&
+        mStatusEffects.find(SVR_CONST.STATUS_STEALTH) == mStatusEffects.end())
     {
         SetIsHidden(false);
     }
@@ -2001,7 +2002,8 @@ void ActiveEntityState::ActivateStatusEffect(
         }
     }
 
-    if(!GetIsHidden() && effect->GetEffect() == SVR_CONST.STATUS_DEMON_ONLY)
+    if(!GetIsHidden() && (effect->GetEffect() == SVR_CONST.STATUS_DEMON_ONLY ||
+        effect->GetEffect() == SVR_CONST.STATUS_STEALTH))
     {
         SetIsHidden(true);
     }
@@ -2022,8 +2024,10 @@ bool ActiveEntityState::IsIgnoreEffect(uint32_t effectType) const
     const static std::set<uint32_t> IGNORE_EFFECTS = {
         SVR_CONST.STATUS_BIKE,
         SVR_CONST.STATUS_CLOAK,
+        SVR_CONST.STATUS_DEMON_ONLY,
         SVR_CONST.STATUS_MOUNT,
-        SVR_CONST.STATUS_MOUNT_SUPER
+        SVR_CONST.STATUS_MOUNT_SUPER,
+        SVR_CONST.STATUS_STEALTH
     };
 
     return IGNORE_EFFECTS.find(effectType) != IGNORE_EFFECTS.end();

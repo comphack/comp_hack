@@ -135,10 +135,13 @@ MainWindow::~MainWindow()
 
 bool MainWindow::Init()
 {
-    libcomp::Log::GetSingletonPtr()->AddLogHook([&](
+    auto log = libcomp::Log::GetSingletonPtr();
+    log->AddLogHook([&](
         libcomp::LogComponent_t comp, libcomp::Log::Level_t level,
         const libcomp::String& msg)
     {
+        (void)comp;
+
         ui->log->moveCursor(QTextCursor::End);
         ui->log->setFontWeight(QFont::Normal);
 
@@ -166,8 +169,8 @@ bool MainWindow::Init()
                 break;
         }
 
-        ui->log->insertPlainText(qs(libcomp::String("%1: %2").Arg(
-            libcomp::LogComponentToString(comp)).Arg(msg)));
+        // Message is already formatted
+        ui->log->insertPlainText(qs(msg));
         ui->log->moveCursor(QTextCursor::End);
 
         if(logCrash)
@@ -181,13 +184,20 @@ bool MainWindow::Init()
                 if(file.isOpen())
                 {
                     QTextStream oStream(&file);
-                    oStream << qs(libcomp::LogComponentToString(comp))
-                        << ": " << qs(msg);
+                    oStream << qs(msg);
                     file.close();
                 }
             }
         }
     });
+
+    // Set some useful logging levels
+    log->SetLogLevel(libcomp::LogComponent_t::General,
+        libcomp::Log::Level_t::LOG_LEVEL_DEBUG);
+    log->SetLogLevel(libcomp::LogComponent_t::DefinitionManager,
+        libcomp::Log::Level_t::LOG_LEVEL_DEBUG);
+    log->SetLogLevel(libcomp::LogComponent_t::ServerDataManager,
+        libcomp::Log::Level_t::LOG_LEVEL_DEBUG);
 
     libcomp::Exception::RegisterSignalHandler();
 
@@ -675,7 +685,7 @@ bool MainWindow::LoadBinaryData(const libcomp::String& binaryFile,
     }
     else
     {
-        LogGeneralDebug([&]()
+        LogGeneralInfo([&]()
         {
             return libcomp::String("Loading records from %1\n").Arg(binaryFile);
         });

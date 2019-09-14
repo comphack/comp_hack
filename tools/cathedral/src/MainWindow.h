@@ -39,6 +39,7 @@ namespace objects
 {
 
 class MiCEventMessageData;
+class MiNPCInvisibleData;
 
 } // namespace objects
 
@@ -109,6 +110,9 @@ protected:
     void CloseAllWindows();
 
     void closeEvent(QCloseEvent* event) override;
+
+    libcomp::String GetInvisibleDataDescription(
+        const std::shared_ptr<objects::MiNPCInvisibleData>& invisibleData);
 
 private slots:
     void BrowseZone();

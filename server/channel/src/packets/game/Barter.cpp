@@ -36,14 +36,24 @@
 
 // object Includes
 #include <CharacterProgress.h>
+#include <Demon.h>
+#include <InheritedSkill.h>
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiAcquisitionData.h>
+#include <MiDevilData.h>
+#include <MiGrowthData.h>
 #include <MiItemData.h>
 #include <MiNPCBarterData.h>
+#include <MiNPCBarterConditionData.h>
+#include <MiNPCBarterConditionDataEntry.h>
 #include <MiNPCBarterGroupData.h>
 #include <MiNPCBarterGroupEntry.h>
 #include <MiNPCBarterItemData.h>
+#include <MiNPCBasicData.h>
 #include <MiPossessionData.h>
+#include <MiSkillData.h>
+#include <MiUnionData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -52,12 +62,186 @@
 
 using namespace channel;
 
+bool BarterConditionValid(const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<CharacterState>& cState,
+    const std::shared_ptr<DemonState>& dState,
+    const std::shared_ptr<objects::MiNPCBarterData>& barterData,
+    const std::shared_ptr<objects::MiNPCBarterConditionDataEntry>& condition)
+{
+    switch(condition->GetType())
+    {
+    case objects::MiNPCBarterConditionDataEntry::Type_t::CHARACTER_LEVEL:
+        {
+            // Character level between range
+            auto lvl = (int32_t)cState->GetLevel();
+            return (!condition->GetValue1() || lvl >= condition->GetValue1()) &&
+                (!condition->GetValue2() || lvl <= condition->GetValue2());
+        }
+    case objects::MiNPCBarterConditionDataEntry::Type_t::DEMON_LEVEL:
+        {
+            // Demon level between range
+            auto lvl = (int32_t)dState->GetLevel();
+            return (!condition->GetValue1() || lvl >= condition->GetValue1()) &&
+                (!condition->GetValue2() || lvl <= condition->GetValue2());
+        }
+    case objects::MiNPCBarterConditionDataEntry::Type_t::CHARACTER_SKILL:
+        {
+            // Character has skill
+            auto character = cState->GetEntity();
+            return character && character->LearnedSkillsContains(
+                (uint32_t)condition->GetValue1());
+        }
+    case objects::MiNPCBarterConditionDataEntry::Type_t::DEMON_SKILL:
+        {
+            // Demon has skill (learned)
+            auto demon = dState->GetEntity();
+            if(demon)
+            {
+                for(uint32_t skillID : demon->GetAcquiredSkills())
+                {
+                    if(skillID == (uint32_t)condition->GetValue1())
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+    case objects::MiNPCBarterConditionDataEntry::Type_t::DEMON_SKILL_INHERITANCE:
+        {
+            // Demon has inheritence type for skill
+            auto devilData = dState->GetDevilData();
+            auto skillData = server->GetDefinitionManager()
+                ->GetSkillData((uint32_t)condition->GetValue1());
+            if(devilData && skillData)
+            {
+                auto dRestr = devilData->GetGrowth()
+                    ->GetInheritanceRestrictions();
+                auto sRestr = skillData->GetAcquisition()
+                    ->GetInheritanceRestriction();
+                return (dRestr & (uint16_t)(1 << sRestr)) != 0;
+            }
+
+            return false;
+        }
+    case objects::MiNPCBarterConditionDataEntry::Type_t::CHARACTER_NO_STATUS:
+        {
+            // Character does not have status
+            return !cState->StatusEffectActive(
+                (uint32_t)condition->GetValue1());
+        }
+    case objects::MiNPCBarterConditionDataEntry::Type_t::DEMON_NO_STATUS:
+        {
+            // Demon does not have status
+            return !dState->StatusEffectActive(
+                (uint32_t)condition->GetValue1());
+        }
+    case objects::MiNPCBarterConditionDataEntry::Type_t::CHARACTER_NO_SKILL:
+        {
+            // Exchange target (character or demon) does not have skill
+            bool targetCharacter = false;
+            bool targetDemon = false;
+            for(auto itemData : barterData->GetResultItems())
+            {
+                auto type = itemData->GetType();
+                switch (type)
+                {
+                case objects::MiNPCBarterItemData::Type_t::STATUS_CHARACTER:
+                case objects::MiNPCBarterItemData::Type_t::SKILL_CHARACTER:
+                    targetCharacter = true;
+                    break;
+                case objects::MiNPCBarterItemData::Type_t::STATUS_DEMON:
+                case objects::MiNPCBarterItemData::Type_t::SKILL_DEMON:
+                    targetDemon = true;
+                    break;
+                case objects::MiNPCBarterItemData::Type_t::
+                    STATUS_CHARACTER_AND_DEMON:
+                    targetCharacter = true;
+                    targetDemon = true;
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            if(targetCharacter)
+            {
+                auto character = cState->GetEntity();
+                if(!character || character->LearnedSkillsContains(
+                    (uint32_t)condition->GetValue1()))
+                {
+                    return false;
+                }
+            }
+
+            // Defaults to demon if no target
+            if(targetDemon || !targetCharacter)
+            {
+                auto demon = dState->GetEntity();
+                if(demon)
+                {
+                    // Skill existing anywhere on the demon makes it invalid
+                    for(uint32_t skillID : demon->GetAcquiredSkills())
+                    {
+                        if(skillID == (uint32_t)condition->GetValue1())
+                        {
+                            return false;
+                        }
+                    }
+
+                    for(uint32_t skillID : demon->GetLearnedSkills())
+                    {
+                        if(skillID == (uint32_t)condition->GetValue1())
+                        {
+                            return false;
+                        }
+                    }
+
+                    for(auto iSkillRef : demon->GetInheritedSkills())
+                    {
+                        auto iSkill = iSkillRef.Get();
+                        if(iSkill && iSkill->GetSkill() ==
+                            (uint32_t)condition->GetValue1())
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+    case objects::MiNPCBarterConditionDataEntry::Type_t::DEMON_TYPE:
+        {
+            // Demon has specific type
+            auto devilData = dState->GetDevilData();
+            return devilData && devilData->GetBasic()
+                ->GetID() == (uint32_t)condition->GetValue1();
+        }
+    case objects::MiNPCBarterConditionDataEntry::Type_t::DEMON_BASE_TYPE:
+        {
+            // Demon has base type
+            auto devilData = dState->GetDevilData();
+            return devilData && devilData->GetUnionData()
+                ->GetBaseDemonID() == (uint32_t)condition->GetValue1();
+        }
+    case objects::MiNPCBarterConditionDataEntry::Type_t::NONE:
+    default:
+        break;
+    }
+
+    return true;
+}
+
 void HandleBarter(const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client, uint16_t barterID)
 {
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
     auto character = cState->GetEntity();
+    auto demon = dState->GetEntity();
 
     auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
@@ -65,6 +249,8 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
     auto barterData = definitionManager->GetNPCBarterData(barterID);
     auto barterGroupData = definitionManager->GetNPCBarterGroupData(
         (uint16_t)state->GetCurrentMenuShopID((int32_t)SVR_CONST.MENU_BARTER));
+    auto barterConditions = barterGroupData ? definitionManager
+        ->GetNPCBarterConditionData(barterGroupData->GetID()) : nullptr;
 
     int32_t spAdjust = 0;
     int64_t coinAdjust = 0;
@@ -90,6 +276,27 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
         failed = groupEntry == nullptr;
     }
 
+    if(!failed && barterConditions)
+    {
+        for(auto condition : barterConditions->GetConditions())
+        {
+            if(!BarterConditionValid(server, cState, dState, barterData,
+                condition))
+            {
+                LogBarterError([&]()
+                {
+                    return libcomp::String("One or more barter conditions"
+                        " invalid for player on barter ID %1: %2\n")
+                        .Arg(barterID)
+                        .Arg(state->GetAccountUID().ToString());
+                });
+
+                failed = true;
+                break;
+            }
+        }
+    }
+
     if(!failed)
     {
         for(auto itemData : barterData->GetTradeItems())
@@ -113,6 +320,11 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 break;
             case objects::MiNPCBarterItemData::Type_t::SOUL_POINT:
                 spAdjust = (int32_t)(spAdjust - itemData->GetSubtype());
+
+                if(!demon || (demon->GetSoulPoints() < -spAdjust))
+                {
+                    failed = true;
+                }
                 break;
             case objects::MiNPCBarterItemData::Type_t::BETHEL:
                 includesBethel = true;
@@ -125,6 +337,12 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                     size_t bethelType = (size_t)(itemData->GetSubtype() - 1);
                     bethelAdjustments[bethelType] = (int32_t)(
                         bethelAdjustments[bethelType] - itemData->GetAmount());
+
+                    if(character->GetProgress()->GetBethel(bethelType) <
+                        -bethelAdjustments[bethelType])
+                    {
+                        failed = true;
+                    }
                 }
                 break;
             case objects::MiNPCBarterItemData::Type_t::COIN:
@@ -132,6 +350,11 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                     int64_t total = (int64_t)((int64_t)itemData->GetSubtype() *
                         1000000 + (int64_t)itemData->GetAmount());
                     coinAdjust = (int64_t)(coinAdjust - total);
+
+                    if(character->GetProgress()->GetCoins() < -coinAdjust)
+                    {
+                        failed = true;
+                    }
                 }
                 break;
             case objects::MiNPCBarterItemData::Type_t::NONE:
@@ -249,7 +472,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 characterSkills.push_back(itemData->GetSubtype());
                 break;
             case objects::MiNPCBarterItemData::Type_t::SKILL_DEMON:
-                if(!state->GetDemonState()->GetEntity())
+                if(!demon)
                 {
                     LogBarterError([&]()
                     {

@@ -203,7 +203,7 @@
              <item row="0" column="1">
               <widget class="QSpinBox" name="baseAIType">
                <property name="readOnly">
-                <bool>true</bool>
+                <bool>false</bool>
                </property>
                <property name="maximum">
                 <number>65535</number>
@@ -239,7 +239,11 @@
               </widget>
              </item>
              <item row="1" column="1">
-              <widget class="QLineEdit" name="aiAggroLimit"/>
+              <widget class="QLineEdit" name="aiAggroLimit">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
              </item>
              <item row="3" column="3">
               <widget class="QLineEdit" name="aiThinkSpeed">

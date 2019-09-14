@@ -814,8 +814,12 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         // Teams are not valid when changing zones unless they are queued
         // for a match, the player is in an instance or the new zone allows
         // that team type
+        auto globalPartial = server->GetServerDataManager()
+            ->GetZonePartialData(0);
         if(!matchEntryExists && !nextInstance &&
-            !zoneDef->ValidTeamTypesContains(team->GetType()))
+            !zoneDef->ValidTeamTypesContains(team->GetType()) &&
+            (!globalPartial || !globalPartial->ValidTeamTypesContains(
+                team->GetType())))
         {
             matchManager->LeaveTeam(client, team->GetID());
             team = nullptr;
@@ -2117,7 +2121,8 @@ void ZoneManager::ShowNPC(const std::shared_ptr<Zone>& zone,
     p.WriteFloat(npcState->GetCurrentRotation());
 
     // Client side display value, mostly replaced with event conditions
-    // but still useful for "modal" NPCs that change with game time
+    // but still useful for "modal" NPCs that change with game state.
+    // See NPCInvisibleData for the matching IDs and criteria.
     p.WriteS16Little(npc->GetDisplayFlag());
 
     ChannelClientConnection::BroadcastPacket(clients, p, true);

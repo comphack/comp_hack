@@ -123,6 +123,7 @@
 #include <MiNPCBarterGroupData.h>
 #include <MiNPCBarterTextData.h>
 #include <MiNPCBasicData.h>
+#include <MiNPCInvisibleData.h>
 #include <MiONPCData.h>
 #include <MiPMAttachCharacterTbl.h>
 #include <MiPMBaseInfo.h>
@@ -311,6 +312,7 @@ int main(int argc, char *argv[])
     ADD_TYPE    ("  npcbartercondition    Format for NPCBarterConditionData.sbin", "npcbartercondition", MiNPCBarterConditionData);
     ADD_TYPE    ("  npcbartergroup        Format for NPCBarterGroupData.sbin", "npcbartergroup", MiNPCBarterGroupData);
     ADD_TYPE    ("  npcbartertext         Format for NPCBarterTextData.sbin", "npcbartertext", MiNPCBarterTextData);
+    ADD_TYPE    ("  npcinvisible          Format for NPCInvisibleData.sbin", "npcinvisible", MiNPCInvisibleData);
     ADD_TYPE    ("  onpc                  Format for oNPCData.sbin", "onpc", MiONPCData);
     ADD_TYPE    ("  quest                 Format for QuestData.sbin", "quest", MiQuestData);
     ADD_TYPE    ("  questbonus            Format for QuestBonusData.sbin", "questbonus", MiQuestBonusData);

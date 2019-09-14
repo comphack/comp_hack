@@ -53,6 +53,8 @@
 #include <MiHNPCData.h>
 #include <MiKeyItemData.h>
 #include <MiNPCBasicData.h>
+#include <MiNPCInvisibleData.h>
+#include <MiNPCInvisibleDataEntry.h>
 #include <MiONPCData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiShopProductData.h>
@@ -283,6 +285,18 @@ bool MainWindow::Init()
         GetBasic()->GetName());
 
     // Special data sets that will be modified later
+    mBinaryDataSets["NPCInvisibleData"] = std::make_shared<
+        BinaryDataNamedSet>([]()
+        {
+            return std::make_shared<objects::MiNPCInvisibleData>();
+        },
+        [](const std::shared_ptr<libcomp::Object>& obj)->uint32_t
+        {
+            return (uint32_t)std::dynamic_pointer_cast<
+                objects::MiNPCInvisibleData>(obj)->GetID();
+        },
+        // Names will be mapped below
+        nullptr);
     mBinaryDataSets["ShopProductData"] = std::make_shared<
         BinaryDataNamedSet>([]()
         {
@@ -383,6 +397,11 @@ bool MainWindow::Init()
     {
         err = "Failed to load hNPC data.";
     }
+    else if(!LoadBinaryData("Shield/NPCInvisibleData.sbin", "NPCInvisibleData",
+        true, true))
+    {
+        err = "Failed to load NPC invisible data.";
+    }
     else if(!LoadBinaryData("Shield/oNPCData.sbin", "oNPCData", true, true))
     {
         err = "Failed to load oNPC data.";
@@ -470,6 +489,23 @@ bool MainWindow::Init()
         dataset->MapRecords(objs, names);
 
         // Build Shop Product
+        dataset = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+            mBinaryDataSets["NPCInvisibleData"]);
+
+        names.clear();
+        objs.clear();
+        for(auto obj : dataset->GetObjects())
+        {
+            auto inv = std::dynamic_pointer_cast<
+                objects::MiNPCInvisibleData>(obj);
+
+            names.push_back(GetInvisibleDataDescription(inv));
+            objs.push_back(obj);
+        }
+
+        dataset->MapRecords(objs, names);
+
+        // Build Shop Product
         auto items = std::dynamic_pointer_cast<BinaryDataNamedSet>(
             mBinaryDataSets["CItemData"]);
         dataset = std::dynamic_pointer_cast<BinaryDataNamedSet>(
@@ -516,6 +552,177 @@ bool MainWindow::Init()
     }
 
     return true;
+}
+
+libcomp::String MainWindow::GetInvisibleDataDescription(
+    const std::shared_ptr<objects::MiNPCInvisibleData>& invisibleData)
+{
+    auto statuses = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+        mBinaryDataSets["CStatusData"]);
+    auto quests = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+        mBinaryDataSets["CQuestData"]);
+    auto valuables = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+        mBinaryDataSets["CValuablesData"]);
+
+    int8_t currentGroup = 0;
+
+    std::list<std::list<libcomp::String>> clauseSets;
+    for(auto entry : invisibleData->GetEntries())
+    {
+        if(!entry->GetLogicGroup())
+        {
+            continue;
+        }
+        if(entry->GetLogicGroup() != currentGroup)
+        {
+            currentGroup = entry->GetLogicGroup();
+            clauseSets.push_back(std::list<libcomp::String>());
+        }
+
+        switch(entry->GetType())
+        {
+        case objects::MiNPCInvisibleDataEntry::Type_t::QUEST_PHASE:
+            {
+                auto quest = quests->GetObjectByID((uint32_t)entry
+                    ->GetMainParams(0));
+
+                std::list<libcomp::String> phases;
+                for(size_t i = 0; i < 8; i++)
+                {
+                    if(entry->GetSubParams(i) == 1)
+                    {
+                        phases.push_back(libcomp::String("%1").Arg(i));
+                    }
+                }
+
+                if(phases.size() == 8)
+                {
+                    clauseSets.back().push_back(libcomp::String(
+                        "during any phase of quest [%1 (%2)]")
+                        .Arg(quests->GetName(quest))
+                        .Arg(entry->GetMainParams(0)));
+                }
+                else
+                {
+                    clauseSets.back().push_back(libcomp::String(
+                        "during quest [%1 (%2)] phase(s) %3")
+                        .Arg(quests->GetName(quest))
+                        .Arg(entry->GetMainParams(0))
+                        .Arg(libcomp::String::Join(phases, ", ")));
+                }
+            }
+            break;
+        case objects::MiNPCInvisibleDataEntry::Type_t::QUEST_STATE:
+            {
+                auto quest = quests->GetObjectByID((uint32_t)entry
+                    ->GetMainParams(0));
+
+                libcomp::String state;
+                switch(entry->GetMainParams(1))
+                {
+                case 1:
+                    state = "complete";
+                    break;
+                case 2:
+                    state = "active";
+                    break;
+                case 0:
+                default:
+                    state = "not started";
+                    break;
+                }
+
+                clauseSets.back().push_back(libcomp::String(
+                    "if quest [%1 (%2)] is %3")
+                    .Arg(quests->GetName(quest))
+                    .Arg(entry->GetMainParams(0)).Arg(state));
+            }
+            break;
+        case objects::MiNPCInvisibleDataEntry::Type_t::QUEST_DATA:
+            {
+                auto quest = quests->GetObjectByID((uint32_t)entry
+                    ->GetMainParams(0));
+
+                std::list<libcomp::String> dList;
+                for(size_t i = 0; i < 8; i++)
+                {
+                    dList.push_back(libcomp::String("%1")
+                        .Arg(entry->GetSubParams(i)));
+                }
+
+                clauseSets.back().push_back(libcomp::String(
+                    "while quest [%1 (%2)] custom data is (%3)")
+                    .Arg(quests->GetName(quest))
+                    .Arg(entry->GetMainParams(0))
+                    .Arg(libcomp::String::Join(dList, ", ")));
+            }
+            break;
+        case objects::MiNPCInvisibleDataEntry::Type_t::VALUABLE:
+            {
+                auto val = valuables->GetObjectByID((uint32_t)entry
+                    ->GetMainParams(0));
+
+                clauseSets.back().push_back(libcomp::String(
+                    "if valuable [%1 (%2)] %3obtained")
+                    .Arg(valuables->GetName(val))
+                    .Arg(entry->GetMainParams(0))
+                    .Arg(entry->GetMainParams(1) == 0 ? "not " : ""));
+            }
+            break;
+        case objects::MiNPCInvisibleDataEntry::Type_t::GAMETIME:
+            clauseSets.back().push_back(libcomp::String(
+                "between game times %1~%2")
+                .Arg(entry->GetSubParams(0))
+                .Arg(entry->GetSubParams(1)));
+            break;
+        case objects::MiNPCInvisibleDataEntry::Type_t::DATETIME:
+            clauseSets.back().push_back(libcomp::String(
+                "between system datetimes %1 at %2~%3 at %4")
+                .Arg(entry->GetSubParams(0))
+                .Arg(entry->GetSubParams(1))
+                .Arg(entry->GetSubParams(2))
+                .Arg(entry->GetSubParams(3)));
+            break;
+        case objects::MiNPCInvisibleDataEntry::Type_t::STATUS:
+            {
+                auto status = statuses->GetObjectByID((uint32_t)entry
+                    ->GetMainParams(0));
+
+                clauseSets.back().push_back(libcomp::String(
+                    "if status [%1 (%2)] %3active")
+                    .Arg(statuses->GetName(status))
+                    .Arg(entry->GetMainParams(0))
+                    .Arg(entry->GetMainParams(1) == 0 ? "not " : ""));
+            }
+            break;
+        case objects::MiNPCInvisibleDataEntry::Type_t::ITIME:
+            clauseSets.back().push_back(libcomp::String(
+                "if I-Time points for NPC %1 between %2 and %3")
+                .Arg(entry->GetMainParams(0))
+                .Arg(entry->GetSubParams(0))
+                .Arg(entry->GetSubParams(1)));
+            break;
+        case objects::MiNPCInvisibleDataEntry::Type_t::SYSTIME:
+            clauseSets.back().push_back(libcomp::String(
+                "between system times %1~%2")
+                .Arg(entry->GetSubParams(0))
+                .Arg(entry->GetSubParams(1)));
+            break;
+        case objects::MiNPCInvisibleDataEntry::Type_t::NONE:
+        default:
+            break;
+        }
+    }
+
+    std::list<libcomp::String> clauses;
+    for(auto& clauseSet : clauseSets)
+    {
+        clauses.push_back(libcomp::String::Join(clauseSet, " AND "));
+    }
+
+    return libcomp::String(invisibleData->GetShow()
+       ? "Show %1" : "Hide %1")
+        .Arg(libcomp::String::Join(clauses, " OR "));
 }
 
 std::shared_ptr<libcomp::DataStore> MainWindow::GetDatastore() const

@@ -65,6 +65,7 @@ void NPCList::Bind(MainWindow *pMainWindow, bool isHNPC)
     SetMainWindow(pMainWindow);
 
     prop->type->BindSelector(pMainWindow, isHNPC ? "hNPCData" : "oNPCData");
+    prop->displayFlag->BindSelector(pMainWindow, "NPCInvisibleData");
     prop->position->SetMainWindow(pMainWindow);
     prop->actions->SetMainWindow(pMainWindow);
 }
@@ -148,7 +149,7 @@ void NPCList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
         auto nObj = std::dynamic_pointer_cast<objects::ServerNPC>(obj);
         if(nObj)
         {
-            prop->displayFlag->setValue(nObj->GetDisplayFlag());
+            prop->displayFlag->SetValue((uint32_t)nObj->GetDisplayFlag());
         }
         else
         {
@@ -183,7 +184,7 @@ void NPCList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
         auto nObj = std::dynamic_pointer_cast<objects::ServerNPC>(obj);
         if(nObj)
         {
-            nObj->SetDisplayFlag((int16_t)prop->displayFlag->value());
+            nObj->SetDisplayFlag((int16_t)prop->displayFlag->GetValue());
         }
     }
 }

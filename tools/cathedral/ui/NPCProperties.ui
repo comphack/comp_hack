@@ -107,11 +107,7 @@
         </widget>
        </item>
        <item row="5" column="1">
-        <widget class="QSpinBox" name="displayFlag">
-         <property name="maximum">
-          <number>32767</number>
-         </property>
-        </widget>
+        <widget class="ObjectSelector" name="displayFlag" native="true"/>
        </item>
       </layout>
      </widget>

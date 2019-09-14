@@ -218,6 +218,7 @@ bool ZoneWindow::ShowZone()
     auto zone = mMergedZone->CurrentZone;
     if(!zone)
     {
+        LogGeneralErrorMsg("No zone currently loaded\n");
         return false;
     }
 
@@ -1918,6 +1919,11 @@ bool ZoneWindow::LoadMapFromZone()
         dataset->GetObjectByID(zone->GetID()));
     if(!mZoneData)
     {
+        LogGeneralError([zone]()
+        {
+            return libcomp::String("No MiZoneData found for ID %1\n")
+                .Arg(zone->GetID());
+        });
         return false;
     }
 
@@ -1926,6 +1932,11 @@ bool ZoneWindow::LoadMapFromZone()
         &*mMainWindow->GetDatastore());
     if(!mQmpFile)
     {
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Failed to load QMP file: %1\n")
+                .Arg(mZoneData->GetFile()->GetQmpFile());
+        });
         return false;
     }
 

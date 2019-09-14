@@ -33,7 +33,9 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ServerConstants.h>
+#include <ServerDataManager.h>
 #include <ServerZone.h>
+#include <ServerZonePartial.h>
 
 // object Includes
 #include <PvPData.h>
@@ -156,18 +158,30 @@ bool Parsers::TeamForm::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             errorCode = (int8_t)TeamErrorCodes_t::VALUABLE_MISSING;
         }
-        else if(!zone || !zone->GetDefinition()->ValidTeamTypesContains(type))
+        else if(!zone)
         {
+            // Shouldn't happen
             errorCode = (int8_t)TeamErrorCodes_t::ZONE_INVALID;
         }
         else
         {
-            auto it2 = SVR_CONST.TEAM_STATUS_COOLDOWN.find(type);
-            if(it2 != SVR_CONST.TEAM_STATUS_COOLDOWN.end() &&
-                cState->StatusEffectActive(it2->second))
+            auto globalPartial = server->GetServerDataManager()
+                ->GetZonePartialData(0);
+            if(!zone->GetDefinition()->ValidTeamTypesContains(type) &&
+                (!globalPartial || !globalPartial->ValidTeamTypesContains(type)))
             {
-                errorCode = (int8_t)TeamErrorCodes_t::COOLDOWN_20H;
+                errorCode = (int8_t)TeamErrorCodes_t::ZONE_INVALID;
             }
+        }
+    }
+
+    if(errorCode == (int8_t)TeamErrorCodes_t::SUCCESS)
+    {
+        auto it2 = SVR_CONST.TEAM_STATUS_COOLDOWN.find(type);
+        if(it2 != SVR_CONST.TEAM_STATUS_COOLDOWN.end() &&
+            cState->StatusEffectActive(it2->second))
+        {
+            errorCode = (int8_t)TeamErrorCodes_t::COOLDOWN_20H;
         }
     }
 

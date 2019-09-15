@@ -2718,6 +2718,34 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
             upkeepCost, added, updated, removed);
         if(!result) continue;
 
+        // Send removes first in case an effect is removed then added back
+        if(removed.size() > 0)
+        {
+            libcomp::Packet p;
+            if(characterManager->GetRemovedStatusesPacket(p,
+                entity->GetEntityID(), removed))
+            {
+                zonePackets.push_back(p);
+            }
+
+            recalc.insert(entity);
+
+            // If a digitalize status was removed, update the client state
+            for(uint32_t effectID : dgStatusEffectIDs)
+            {
+                if(removed.find(effectID) != removed.end())
+                {
+                    auto client = server->GetManagerConnection()
+                        ->GetEntityClient(entity->GetEntityID());
+                    if(client)
+                    {
+                        characterManager->DigitalizeEnd(client);
+                    }
+                    break;
+                }
+            }
+        }
+
         if(added.size() > 0 || updated.size() > 0)
         {
             auto effectMap = entity->GetStatusEffects();
@@ -2800,33 +2828,6 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
                 std::set<TokuseiConditionType>
                 { TokuseiConditionType::CURRENT_HP,
                     TokuseiConditionType::CURRENT_MP });
-        }
-
-        if(removed.size() > 0)
-        {
-            libcomp::Packet p;
-            if(characterManager->GetRemovedStatusesPacket(p,
-                entity->GetEntityID(), removed))
-            {
-                zonePackets.push_back(p);
-            }
-
-            recalc.insert(entity);
-
-            // If a digitalize status was removed, update the client state
-            for(uint32_t effectID : dgStatusEffectIDs)
-            {
-                if(removed.find(effectID) != removed.end())
-                {
-                    auto client = server->GetManagerConnection()
-                        ->GetEntityClient(entity->GetEntityID());
-                    if(client)
-                    {
-                        characterManager->DigitalizeEnd(client);
-                    }
-                    break;
-                }
-            }
         }
 
         if(result & 0x02)
@@ -2975,8 +2976,12 @@ void ZoneManager::HandleSpecialInstancePopulate(
     }
     else if(instance && instance->GetTimeLimitData())
     {
-        // Normal timer running already, send to the client
-        SendInstanceTimer(instance, client, true);
+        auto state = client->GetClientState();
+        if(state->GetLastInstanceID() != instance->GetID())
+        {
+            // Normal timer running already, send to the client (once)
+            SendInstanceTimer(instance, client, true);
+        }
     }
     else if(zone->GetUBMatch())
     {
@@ -3581,7 +3586,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                 LogZoneManagerWarning([&]()
                 {
                     return libcomp::String("Skipping invalid spawn location"
-                        " group %1\n").Arg(groupPair.first);
+                        " group %1\n").Arg(slgID);
                 });
 
                 continue;
@@ -6224,7 +6229,48 @@ bool ZoneManager::TriggerZoneActions(const std::shared_ptr<Zone>& zone,
     auto triggers = GetZoneTriggers(zone, trigger);
     if(triggers.size() > 0)
     {
-        if(entities.size() > 0)
+        if(trigger == ZoneTrigger_t::ON_SPAWN)
+        {
+            // Check to see if any trigger values are specified, never fire
+            // without an entity
+            auto validTriggers = triggers;
+            validTriggers.remove_if([](
+                const std::shared_ptr<objects::ServerZoneTrigger>& t)
+                {
+                    return t->GetValue() != 0;
+                });
+
+            if(validTriggers.size() == triggers.size())
+            {
+                // No trigger values, fire all for each entity
+                for(auto entity : entities)
+                {
+                    executed |= HandleZoneTriggers(zone, triggers, entity,
+                        client);
+                }
+            }
+            else
+            {
+                // Fire triggers for value 0 or value matching the spawn ID
+                for(auto entity : entities)
+                {
+                    auto eBase = entity->GetEnemyBase();
+                    auto spawn = eBase ? eBase->GetSpawnSource() : nullptr;
+                    validTriggers = triggers;
+
+                    validTriggers.remove_if([spawn](
+                        const std::shared_ptr<objects::ServerZoneTrigger>& t)
+                        {
+                            return t->GetValue() != 0 && (!spawn ||
+                                (uint32_t)t->GetValue() != spawn->GetID());
+                        });
+
+                    executed |= HandleZoneTriggers(zone, validTriggers, entity,
+                        client);
+                }
+            }
+        }
+        else if(entities.size() > 0)
         {
             // Execute once per entity
             for(auto entity : entities)

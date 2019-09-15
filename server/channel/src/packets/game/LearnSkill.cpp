@@ -108,9 +108,32 @@ bool Parsers::LearnSkill::Parse(libcomp::ManagerPacket *pPacketManager,
                     }
                 }
 
-                rank++;
+                if(valid)
+                {
+                    // Make sure the max skill count is not exceeded
+                    auto character = cState->GetEntity();
 
-                if(valid) break;
+                    size_t count = 0;
+                    for(uint32_t eSkillID : rankData->GetSkill())
+                    {
+                        if(eSkillID &&
+                            character->LearnedSkillsContains(eSkillID))
+                        {
+                            count++;
+                        }
+                    }
+
+                    if(count >= (size_t)rankData->GetSkillCount())
+                    {
+                        valid = false;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                rank++;
             }
 
             if(valid) break;

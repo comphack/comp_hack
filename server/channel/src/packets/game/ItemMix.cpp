@@ -414,8 +414,10 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
         // Apply expertise boosts
         successRate = successRate +
             (uint32_t)(expSuccessBoost * expertRank);
-        gSuccessRate = gSuccessRate +
-            (uint32_t)(expGSuccessBoost * expertRank);
+
+        // You cannot get a great success without a great success item
+        gSuccessRate = item2Type
+            ? (gSuccessRate + (uint32_t)(expGSuccessBoost * expertRank)) : 0;
 
         int32_t outcome = 0;    // Failure
         uint16_t itemCount = 0;

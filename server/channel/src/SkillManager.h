@@ -302,7 +302,7 @@ public:
      * for any executing entity, not just a player entity. Useful for AI
      * determining skill usefullness. Determining if the costs CAN be paid
      * must be handled elsewhere.
-     * @param source Poitner to the entity that would use the skill
+     * @param source Pointer to the entity that would use the skill
      * @param skillData Pointer to the skill definition
      * @param hpCost Output parameter containing the HP cost, adjusted
      *  for tokusei
@@ -321,6 +321,17 @@ public:
         int32_t& hpCost, int32_t& mpCost, uint16_t& bulletCost,
         std::unordered_map<uint32_t, uint32_t>& itemCosts,
         std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
+
+    /**
+     * Schedule automatic skill cancellation after a set amount of time
+     * as defined by the skill definition. If the skill is mutli-use,
+     * this should be called after each non-final execution.
+     * @param source Pointer to the entity using the skill
+     * @param activated Pointer to the activated skill ability
+     */
+    void ScheduleAutoCancel(
+        const std::shared_ptr<ActiveEntityState> source,
+        const std::shared_ptr<objects::ActivatedAbility>& activated);
 
     /**
      * Check if the supplied function ID is mapped to a special function within

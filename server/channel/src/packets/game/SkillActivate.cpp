@@ -124,8 +124,8 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
                     {
                         if(lvlLimit > 100)
                         {
-                            // Level must be less than limit - 100
-                            valid = source->GetLevel() < (int8_t)(lvlLimit - 100);
+                            // Level must be less than or equal to limit - 100
+                            valid = source->GetLevel() <= (int8_t)(lvlLimit - 100);
                         }
                         else
                         {

@@ -123,21 +123,24 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
                 }
 
                 // Start with the base success rate and lower for
-                // the later slots
-                switch(subMode)
+                // the later slots (ignore if starting at 100%)
+                if(successRate < 10000)
                 {
-                case 1:
-                    successRate = (int32_t)(successRate / 3);
-                    break;
-                case 2:
-                    successRate = (int32_t)(successRate / 6);
-                    break;
-                case 3:
-                case 4:
-                    successRate = (int32_t)(successRate / 20);
-                    break;
-                default:
-                    break;
+                    switch(subMode)
+                    {
+                    case 1:
+                        successRate = (int32_t)(successRate / 3);
+                        break;
+                    case 2:
+                        successRate = (int32_t)(successRate / 6);
+                        break;
+                    case 3:
+                    case 4:
+                        successRate = (int32_t)(successRate / 20);
+                        break;
+                    default:
+                        break;
+                    }
                 }
 
                 if(RNG(int32_t, 1, 10000) <= successRate)

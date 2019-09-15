@@ -1968,9 +1968,9 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "Adds plugin for the player with the given ID.",
         } },
         { "pos", {
-            "@pos [X Y]",
+            "@pos [SPOTID|X Y]",
             "Prints out the X, Y position of the player or moves",
-            "the player to the given X, Y position."
+            "the player to the given SPOTID or X, Y position."
         } },
         { "post", {
             "@post ID [NAME]",
@@ -2830,8 +2830,42 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
 
     std::list<libcomp::String> argsCopy = args;
 
-    if(!args.empty() && args.size() == 2)
+    if(args.size() == 1)
     {
+        // Go to spot
+        uint32_t spotID = 0;
+        if(!GetIntegerArg<uint32_t>(spotID, argsCopy))
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                "Invalid args supplied for @pos command");
+        }
+
+        auto zone = cState->GetZone();
+        auto def = zone ? zone->GetDefinition() : nullptr;
+
+        float x, y, rot;
+        if(def && zoneManager->GetSpotPosition(def->GetDynamicMapID(),
+            spotID, x, y, rot))
+        {
+            auto dState = state->GetDemonState();
+
+            zoneManager->Warp(client, cState, x, y, rot);
+            if(dState->GetEntity())
+            {
+                zoneManager->Warp(client, dState, x, y, rot);
+            }
+        }
+        else
+        {
+            return SendChatMessage(client, ChatType_t::CHAT_SELF,
+                "Failed to find spot for @pos command");
+        }
+
+        return true;
+    }
+    if(args.size() == 2)
+    {
+        // Go to coordinates
         float destX, destY;
 
         if(!GetDecimalArg<float>(destX, argsCopy) ||
@@ -2853,10 +2887,10 @@ bool ChatManager::GMCommand_Position(const std::shared_ptr<
 
         return true;
     }
-    else if(!args.empty() && args.size() != 2)
+    else if(!args.empty())
     {
         return SendChatMessage(client, ChatType_t::CHAT_SELF,
-            "@pos requires zero or two args");
+            "@pos supplied with too many args");
     }
 
     cState->RefreshCurrentPosition(server->GetServerTime());

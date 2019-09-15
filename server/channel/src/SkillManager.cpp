@@ -601,6 +601,10 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
                     }
                 }, server, source, activated, client);
         }
+        else if(cast->GetCancel()->GetAutoCancelTime())
+        {
+            ScheduleAutoCancel(source, activated);
+        }
     }
 
     return true;
@@ -2453,6 +2457,44 @@ bool SkillManager::DetermineNormalCosts(
     return true;
 }
 
+void SkillManager::ScheduleAutoCancel(
+    const std::shared_ptr<ActiveEntityState> source,
+    const std::shared_ptr<objects::ActivatedAbility>& activated)
+{
+    uint32_t cancelTime = activated->GetSkillData()->GetCast()->GetCancel()
+        ->GetAutoCancelTime();
+    auto zone = source ? source->GetZone() : nullptr;
+    if(cancelTime && zone)
+    {
+        uint64_t time = ChannelServer::GetServerTime();
+        if(time < activated->GetChargedTime())
+        {
+            // If not already charged, start after charge is complete
+            time = activated->GetChargedTime();
+        }
+
+        time = (uint64_t)(time + (uint64_t)(cancelTime * 1000));
+
+        auto server = mServer.lock();
+        server->ScheduleWork(time, [](SkillManager* skillManager,
+            uint8_t execCount, const std::shared_ptr<Zone> pZone,
+            const std::shared_ptr<ActiveEntityState> pSource,
+            const std::shared_ptr<objects::ActivatedAbility> pActivated)
+            {
+                // If the source is still in the zone with the same skill usage
+                // pending and its not executing now, cancel it automatically
+                if(pSource->GetZone() == pZone &&
+                    pSource->GetActivatedAbility() == pActivated &&
+                    pActivated->GetExecuteCount() == execCount &&
+                    !pActivated->GetExecutionRequestTime())
+                {
+                    skillManager->CancelSkill(pSource,
+                        pActivated->GetActivationID());
+                }
+            }, this, activated->GetExecuteCount(), zone, source, activated);
+    }
+}
+
 bool SkillManager::FunctionIDMapped(uint16_t functionID)
 {
     return mSkillFunctions.find(functionID) != mSkillFunctions.end() ||
@@ -2574,6 +2616,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
 
     ProcessingSkill& skill = *pSkill.get();
 
+    bool initialHitNull = pSkill->Nulled != 0;
     bool initialHitReflect = pSkill->Reflected != 0;
     if(pSkill->Nulled || pSkill->Reflected || pSkill->Absorbed)
     {
@@ -2668,11 +2711,40 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         }
     }
 
-    // If the final target state of the skill was nulled or reflected or
-    // the primary target avoided the hit, do not gather targets
-    bool gatherTargets = !pSkill->Nulled && !pSkill->Reflected;
-    if(gatherTargets && pSkill->PrimaryTarget)
+    // Determine if the AoE targets should be gathered based on the state
+    // of the hit against the primary target
+    bool gatherTargets = true;
+    if(initialHitNull || initialHitReflect)
     {
+        // AoE targeting from passive avoidance via null or reflect depends
+        // on the AoE type
+        switch(skillData->GetRange()->GetAreaType())
+        {
+        case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS:
+        case objects::MiEffectiveRangeData::AreaType_t::FRONT_1:
+        case objects::MiEffectiveRangeData::AreaType_t::FRONT_2:
+        case objects::MiEffectiveRangeData::AreaType_t::SOURCE:
+            // Ignore what happened to the primary target completely
+            break;
+        case objects::MiEffectiveRangeData::AreaType_t::TARGET_RADIUS:
+        case objects::MiEffectiveRangeData::AreaType_t::FRONT_3:
+            // Double reflect and reflect to null stops all AoE. Otherwise
+            // reflect activates AoE on source from target.
+            gatherTargets = !initialHitNull && !pSkill->Reflected &&
+                !pSkill->Nulled;
+            break;
+        case objects::MiEffectiveRangeData::AreaType_t::NONE:
+        case objects::MiEffectiveRangeData::AreaType_t::STRAIGHT_LINE:
+        case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS2:
+        default:
+            // AoE does nothing upon initial null or reflect
+            gatherTargets = false;
+            break;
+        }
+    }
+    else if(pSkill->PrimaryTarget && !pSkill->Reflected && !pSkill->Nulled)
+    {
+        // Counter/dodge stop all AoE types
         for(auto& target : pSkill->Targets)
         {
             if(target.EntityState == pSkill->PrimaryTarget)
@@ -2681,6 +2753,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 {
                     gatherTargets = false;
                 }
+
                 break;
             }
         }
@@ -2721,22 +2794,17 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             break;
         case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS:
         case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS2:
-            // Difference between type 1 and 2 is unknown
-            if(!initialHitReflect)
-            {
-                // AoE range is extended by the hitbox size of the source
-                aoeRange = aoeRange + (double)(effectiveSource
-                    ->GetHitboxSize() * 10.0);
+            // AoE range is extended by the hitbox size of the source
+            aoeRange = aoeRange + (double)(effectiveSource
+                ->GetHitboxSize() * 10.0);
 
-                effectiveTargets = zone->GetActiveEntitiesInRadius(
-                    srcPoint.x, srcPoint.y, aoeRange, true);
-            }
+            effectiveTargets = zone->GetActiveEntitiesInRadius(
+                srcPoint.x, srcPoint.y, aoeRange, true);
             break;
         case objects::MiEffectiveRangeData::AreaType_t::TARGET_RADIUS:
-            // If the primary target is set and NRA did not occur, gather other
-            // targets
-            if(primaryTarget && !skill.Nulled && !skill.Reflected &&
-                !skill.Absorbed)
+            // If the primary target is set and the hit was not absorbed,
+            // gather other targets
+            if(primaryTarget && !skill.Absorbed)
             {
                 // AoE range is not extended
                 effectiveTargets = zone->GetActiveEntitiesInRadius(
@@ -2747,10 +2815,12 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_1:
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_2:
         case objects::MiEffectiveRangeData::AreaType_t::FRONT_3:
-            if(!initialHitReflect)
+            // NRA behavior differs between the three but is already filtered
+            // at this point so use effective source to calculate. Type 3 is
+            // prevented by being absorbed.
+            if(!skill.Absorbed || skillRange->GetAreaType() !=
+                objects::MiEffectiveRangeData::AreaType_t::FRONT_3)
             {
-                /// @todo: figure out how these 3 differ
-
                 double maxTargetRange = (double)(skillData->GetTarget()
                     ->GetRange() * 10);
 
@@ -2778,8 +2848,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             }
             break;
         case objects::MiEffectiveRangeData::AreaType_t::STRAIGHT_LINE:
-            if(!initialHitReflect && primaryTarget &&
-                skillRange->GetAoeLineWidth() >= 0)
+            if(primaryTarget && skillRange->GetAoeLineWidth() >= 0)
             {
                 // Create a rotated rectangle to represent the line with
                 // a designated width equal to the AoE range
@@ -8015,9 +8084,11 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         {
             // Use pre-cost values
             hpMpCurrent.push_back(std::pair<int32_t, int32_t>(
-                cs->GetHP() + skill.Activated->GetHPCost(), cs->GetMaxHP()));
+                cs->GetHP() + skill.Activated->GetHPCost(),
+                source->GetMaxHP()));
             hpMpCurrent.push_back(std::pair<int32_t, int32_t>(
-                cs->GetMP() + skill.Activated->GetMPCost(), cs->GetMaxMP()));
+                cs->GetMP() + skill.Activated->GetMPCost(),
+                source->GetMaxMP()));
         }
         else
         {
@@ -8080,7 +8151,7 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
             float percentLeft = 0.f;
             if(cs)
             {
-                percentLeft = (float)cs->GetHP() / (float)cs->GetMaxHP();
+                percentLeft = (float)cs->GetHP() / (float)source->GetMaxHP();
             }
 
             if((lt && percentLeft <= split) ||
@@ -8296,11 +8367,10 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         case objects::MiBattleDamageData::Formula_t::DMG_MAX_PERCENT:
         case objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT:
             {
-                auto cs = target.EntityState->GetCoreStats();
-                target.Damage1 = CalculateDamage_MaxPercent(
-                    mod1, target.Damage1Type, cs ? cs->GetMaxHP() : 0);
-                target.Damage2 = CalculateDamage_MaxPercent(
-                    mod2, target.Damage2Type, cs ? cs->GetMaxMP() : 0);
+                target.Damage1 = CalculateDamage_MaxPercent(mod1,
+                    target.Damage1Type, target.EntityState->GetMaxHP());
+                target.Damage2 = CalculateDamage_MaxPercent(mod2,
+                    target.Damage2Type, target.EntityState->GetMaxMP());
             }
             break;
         default:
@@ -9635,6 +9705,13 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
     {
         source->RemoveSkillCooldowns(pSkill->Definition->GetBasic()
             ->GetCooldownID());
+    }
+
+    // Auto-cancel skills reset each execution
+    if(moreUses && execCount > 0 &&
+        pSkill->Definition->GetCast()->GetCancel()->GetAutoCancelTime())
+    {
+        ScheduleAutoCancel(source, activated);
     }
 
     return !executed || !moreUses;

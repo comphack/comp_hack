@@ -84,7 +84,6 @@ void UpdateDemonSkill(const std::shared_ptr<ChannelServer> server,
     bool recalc = false;
 
     uint32_t currentSkillID = demon->GetLearnedSkills((size_t)skillSlot);
-    demon->SetLearnedSkills((size_t)skillSlot, skillID);
     if(action == ACTION_LEARN_ACQUIRED)
     {
         bool found = false;
@@ -129,11 +128,16 @@ void UpdateDemonSkill(const std::shared_ptr<ChannelServer> server,
             client->Close();
             return;
         }
+        else
+        {
+            demon->SetLearnedSkills((size_t)skillSlot, skillID);
+        }
 
         recalc = true;
     }
     else if(action == ACTION_MOVE)
     {
+        demon->SetLearnedSkills((size_t)skillSlot, skillID);
         demon->SetLearnedSkills((size_t)oldSlot, currentSkillID);
     }
 

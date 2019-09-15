@@ -554,7 +554,8 @@ bool AIManager::QueueUseSkillCommand(
         return false;
     }
 
-    auto definitionManager = mServer.lock()->GetDefinitionManager();
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
     auto skillData = definitionManager->GetSkillData(skillID);
     if(!skillData)
     {
@@ -564,6 +565,13 @@ bool AIManager::QueueUseSkillCommand(
     if(advance)
     {
         SkillAdvance(eState, skillData);
+    }
+    else if(skillData->GetBasic()->GetActivationType() == 6)
+    {
+        // Do not actually queue since its an instant activation, use it now
+        server->GetSkillManager()->ActivateSkill(eState, skillID,
+            targetEntityID, targetEntityID, ACTIVATION_TARGET);
+        return true;
     }
 
     auto skillCmd = std::make_shared<AIUseSkillCommand>(skillData,
@@ -641,6 +649,13 @@ void AIManager::UpdateAggro(const std::shared_ptr<ActiveEntityState>& eState,
             if(newTarget)
             {
                 newTarget->InsertAggroIDs(eState->GetEntityID());
+            }
+
+            // If current command targets current target, switch to new
+            auto cmd = aiState->GetCurrentCommand();
+            if(cmd && cmd->GetTargetEntityID() == currentTargetID)
+            {
+                cmd->SetTargetEntityID(targetID);
             }
         }
         else if(currentTargetID > 0)
@@ -1413,6 +1428,7 @@ bool AIManager::UpdateEnemyState(
 
     targetEntityID = target->GetEntityID();
 
+    bool skillActivationWait = false;
     if(activated)
     {
         if(eState->GetStatusTimes(STATUS_CHARGING))
@@ -1427,8 +1443,21 @@ bool AIManager::UpdateEnemyState(
             (uint64_t)1000ULL;
         if(now < minCharge)
         {
+            // Minimum charge stagger has not passed
             return false;
         }
+
+        if(activated->GetExecutionRequestTime() &&
+            activated->GetExecutionTime() && activated->GetErrorCode() == -1)
+        {
+            // Skill mid execution
+            return false;
+        }
+
+        // If a skill has been activated but for less than 15s, do not decide
+        // to do something else by default (ex: rapid/counter)
+        skillActivationWait = now <
+            (activated->GetActivationTime() + 15000000ULL);
 
         bool cancelAndReset = false;
         if(!CanRetrySkill(eState, activated))
@@ -1436,11 +1465,9 @@ bool AIManager::UpdateEnemyState(
             // Somehow we have an error
             cancelAndReset = true;
         }
-        else if(now > activated->GetActivationTime() + 15000000ULL &&
-            RNG(uint16_t, 1, 2) == 1)
+        else if(!skillActivationWait && RNG(uint16_t, 1, 2) == 1)
         {
-            // Skill activation has been active for at least 15s, cancel
-            // and reset
+            // Chance to cancel and reset if we've waited for a while
             cancelAndReset = true;
         }
         else if(activated->GetSkillData()->GetBasic()
@@ -1497,8 +1524,16 @@ bool AIManager::UpdateEnemyState(
         }
         else if(moveResponse == 1)
         {
-            // Could not move forward
-            skillManager->CancelSkill(eState, activated->GetActivationID());
+            // Could not move forward, either continue waiting or cancel
+            if(skillActivationWait)
+            {
+                return false;
+            }
+            else
+            {
+                skillManager->CancelSkill(eState,
+                    activated->GetActivationID());
+            }
         }
         else if(CanRetrySkill(eState, activated))
         {
@@ -2309,7 +2344,7 @@ bool AIManager::PrepareSkillUsage(
         aiState->GetStatus() == AIStatus_t::COMBAT);
 
     bool canHeal = logicGroup && (float)cs->GetHP() /
-        (float)cs->GetMaxHP() <= (float)logicGroup->GetHealThreshold() * 0.01f;
+        (float)eState->GetMaxHP() <= (float)logicGroup->GetHealThreshold() * 0.01f;
     bool canSupport = skillMap[AI_SKILL_TYPE_SUPPORT].size() > 0;
     bool canDefend = skillMap[AI_SKILL_TYPE_DEF].size() > 0;
     if(skillMap.size() > 0 && (canFight || canHeal || canSupport || canDefend))
@@ -2332,10 +2367,10 @@ bool AIManager::PrepareSkillUsage(
             bool isHeal = pair.first == AI_SKILL_TYPE_HEAL;
             bool isDefense = pair.first == AI_SKILL_TYPE_DEF;
             bool isSupport = pair.first == AI_SKILL_TYPE_SUPPORT;
+
             if((aiState->GetSkillSettings() & pair.first) != 0 &&
-                ((isHeal && canHeal) ||
-                (!isHeal && !isSupport && (isDefense || canFight)) ||
-                isSupport)) // No special requirement
+                (isSupport || isHeal || // No special requirement (yet)
+                (isDefense || canFight)))
             {
                 for(auto& weight : pair.second)
                 {
@@ -2351,11 +2386,22 @@ bool AIManager::PrepareSkillUsage(
                         continue;
                     }
 
+                    auto skillTarget = target;
+                    if(skillData->GetTarget()->GetType() !=
+                        objects::MiTargetData::Type_t::ENEMY)
+                    {
+                        if(isHeal && !canHeal)
+                        {
+                            // Can't currently heal self
+                            continue;
+                        }
+
+                        skillTarget = eState;
+                    }
+
                     // Make sure the target is valid
-                    if((!isHeal && !isSupport && !skillManager
-                        ->ValidateSkillTarget(eState, skillData, target)) ||
-                        ((isHeal || isSupport) && !skillManager
-                            ->ValidateSkillTarget(eState, skillData, eState)))
+                    if(!skillManager->ValidateSkillTarget(eState, skillData,
+                        skillTarget))
                     {
                         continue;
                     }
@@ -2487,14 +2533,10 @@ bool AIManager::PrepareSkillUsage(
         {
             // The skill target is either the aggro target or the entity itself
             int32_t skillTargetID = targetID;
-            switch(skillTypes[skillData->GetCommon()->GetID()])
+            if(skillData->GetTarget()->GetType() !=
+                objects::MiTargetData::Type_t::ENEMY)
             {
-            case AI_SKILL_TYPE_HEAL:
-            case AI_SKILL_TYPE_SUPPORT:
                 skillTargetID = eState->GetEntityID();
-                break;
-            default:
-                break;
             }
 
             switch(skillData->GetBasic()->GetActionType())

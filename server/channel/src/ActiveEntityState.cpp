@@ -61,6 +61,7 @@
 #include <Spawn.h>
 #include <Tokusei.h>
 #include <TokuseiAspect.h>
+#include <TokuseiAttributes.h>
 #include <TokuseiCorrectTbl.h>
 
 // channel Includes
@@ -2578,8 +2579,40 @@ void ActiveEntityState::AdjustStats(
             auto tct = std::dynamic_pointer_cast<objects::TokuseiCorrectTbl>(ct);
             if(tct)
             {
+                auto attr = tct->GetAttributes();
+
+                int32_t baseValue = 0;
+                if(attr && attr->GetMultiplierType() ==
+                    objects::TokuseiAttributes::MultiplierType_t::BASE_AND_LEVEL)
+                {
+                    auto cs = GetCoreStats();
+                    switch(tblID)
+                    {
+                    case CorrectTbl::STR:
+                        baseValue = cs ? cs->GetSTR() : 0;
+                        break;
+                    case CorrectTbl::MAGIC:
+                        baseValue = cs ? cs->GetMAGIC() : 0;
+                        break;
+                    case CorrectTbl::VIT:
+                        baseValue = cs ? cs->GetVIT() : 0;
+                        break;
+                    case CorrectTbl::INT:
+                        baseValue = cs ? cs->GetINTEL() : 0;
+                        break;
+                    case CorrectTbl::SPEED:
+                        baseValue = cs ? cs->GetSPEED() : 0;
+                        break;
+                    case CorrectTbl::LUCK:
+                        baseValue = cs ? cs->GetLUCK() : 0;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+
                 effectiveValue = (int32_t)TokuseiManager::CalculateAttributeValue(
-                    this, tct->GetValue(), effectiveValue, tct->GetAttributes());
+                    this, effectiveValue, baseValue, attr);
             }
 
             calcAdjust = true;

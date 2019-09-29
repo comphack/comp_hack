@@ -3465,6 +3465,14 @@ void MatchManager::UpdateUBRankings(
         {
             auto results = objects::UBResult::LoadUBResultListByTournament(
                 mServer.lock()->GetWorldDatabase(), tournamentIDs[i]);
+
+            // Drop entries not in top ranking
+            results.remove_if([](const std::shared_ptr<objects::UBResult>& r)
+                {
+                    return r->GetTournamentRank() == 0;
+                });
+
+            // Sort remaining in order
             results.sort([](const std::shared_ptr<objects::UBResult>& a,
                 const std::shared_ptr<objects::UBResult>& b)
                 {

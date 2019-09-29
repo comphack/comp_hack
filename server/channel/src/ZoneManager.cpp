@@ -2460,6 +2460,13 @@ void ZoneManager::ExpireRentals(const std::shared_ptr<Zone>& zone)
             {
                 zoneManager->ExpireRentals(pZone);
             }, this, zone);
+
+        LogZoneManagerDebug([&]()
+        {
+            return libcomp::String("Scheduling zone rental expirations for"
+                " %1 in %2s\n").Arg(zone->GetDefinitionID())
+                .Arg(nextExpiration - now);
+        });
     }
 }
 

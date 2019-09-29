@@ -806,12 +806,15 @@ void EventCondition::RefreshTypeContext()
         selectorObjectType = "CQuestData";
         minValues[0] = 0;
         minValues[1] = -2;
+        maxValues[1] = 7;
         break;
     case objects::EventCondition::Type_t::QUEST_PHASE_REQUIREMENTS:
         ui->lblValue1->setText("Quest:");
-        value2Ignored = true;
+        ui->lblValue2->setText("Phase (-1 = current):");
         selectorObjectType = "CQuestData";
         minValues[0] = 0;
+        minValues[1] = -1;
+        maxValues[1] = 7;
         cmpNumeric = cmpBetween = cmpEqual = cmpExists = false;
         break;
     case objects::EventCondition::Type_t::QUEST_SEQUENCE:

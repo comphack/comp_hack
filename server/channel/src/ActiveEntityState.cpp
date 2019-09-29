@@ -99,6 +99,7 @@ namespace libcomp
                 .Func("GetAIState", &ActiveEntityState::GetAIState)
                 .Func("GetWorldCID", &ActiveEntityState::GetWorldCID)
                 .Func("GetEnemyBase", &ActiveEntityState::GetEnemyBase)
+                .Func("GetStatusEffects", &ActiveEntityState::GetStatusEffectsList)
                 .Func("StatusEffectActive", &ActiveEntityState::StatusEffectActive)
                 .Func("StatusEffectTimeLeft", &ActiveEntityState::StatusEffectTimeLeft);
 
@@ -759,6 +760,20 @@ const std::unordered_map<uint32_t, std::shared_ptr<objects::StatusEffect>>&
     ActiveEntityState::GetStatusEffects() const
 {
     return mStatusEffects;
+}
+
+std::list<std::shared_ptr<objects::StatusEffect>>
+    ActiveEntityState::GetStatusEffectsList()
+{
+    std::list<std::shared_ptr<objects::StatusEffect>> effects;
+
+    std::lock_guard<std::mutex> lock(mLock);
+    for(auto& pair : mStatusEffects)
+    {
+        effects.push_back(pair.second);
+    }
+
+    return effects;
 }
 
 bool ActiveEntityState::StatusEffectActive(uint32_t effectType)
@@ -2774,7 +2789,8 @@ void ActiveEntityState::AdjustStats(
 
                     // Add enemy only HP if it exists (can be boosted by layer
                     // 2 effects)
-                    if(GetEntityType() == EntityType_t::ENEMY)
+                    if(GetEntityType() == EntityType_t::ALLY ||
+                        GetEntityType() == EntityType_t::ENEMY)
                     {
                         stats[CorrectTbl::HP_MAX] = stats[CorrectTbl::HP_MAX] +
                             GetDevilData()->GetBattleData()->GetEnemyHP(0);

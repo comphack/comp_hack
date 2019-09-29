@@ -554,6 +554,12 @@ public:
         std::shared_ptr<objects::StatusEffect>>& GetStatusEffects() const;
 
     /**
+     * Get the list of current status effects
+     * @return List of status effects
+     */
+    std::list<std::shared_ptr<objects::StatusEffect>> GetStatusEffectsList();
+
+    /**
      * Determine if the supplied status effect is active on the entity
      * @param effectType Status effect type to look for
      * @return true if the status effect is active, false if it is not

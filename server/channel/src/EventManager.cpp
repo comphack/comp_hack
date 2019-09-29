@@ -701,10 +701,10 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
         dbChanges->Insert(quest);
         dbChanges->Update(character);
     }
-    else if(phase == 0)
+    else if(phase == 0 && !forceUpdate)
     {
-        // If the quest already existed and we're not setting the phase,
-        // check if we're setting the flags instead
+        // If the quest already existed and we're not explicitly setting
+        // the phase, check if we're setting the flags instead
         if(updateFlags.size() > 0)
         {
             sendUpdate = false;
@@ -2677,7 +2677,7 @@ bool EventManager::EvaluateQuestPhaseRequirements(const std::shared_ptr<
     auto quest = character->GetQuests(questID).Get();
 
     int8_t currentPhase = quest ? quest->GetPhase() : -1;
-    if(currentPhase < 0 || currentPhase != phase ||
+    if(currentPhase < 0 || (currentPhase != phase && phase != -1) ||
         (int8_t)questData->GetPhaseCount() < currentPhase)
     {
         return false;

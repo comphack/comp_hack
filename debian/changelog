@@ -1,3 +1,15 @@
+comphack (4.4.0) xenial; urgency=low
+
+  * AoE null/reflect/absorb logic corrected
+  * Defensive skills react to negotiation correctly
+  * Search lists (trade, party etc) no longer broken
+  * Configurable demon familiarity behavior
+  * Configurable multiclient limiting
+  * event GMand now accepts transform parameters
+  * API calls added for kick, post, online status and system ticker messages
+
+ -- COMP Omega <compomega@tutanota.com>  Wed, 02 Oct 2019 22:48:30 -0600
+
 comphack (4.3.0) xenial; urgency=low
 
   * TriFusion same race logic fixed

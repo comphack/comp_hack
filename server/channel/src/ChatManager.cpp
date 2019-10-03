@@ -43,6 +43,7 @@
 #include <Character.h>
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
+#include <Clan.h>
 #include <Event.h>
 #include <EventCounter.h>
 #include <EventInstance.h>
@@ -213,8 +214,12 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
 
             LogChatManagerInfo([&]()
             {
-                return libcomp::String("[Clan]:  %1: %2\n").Arg(sentFrom)
-                    .Arg(message);
+                auto clan = character->GetClan().Get();
+                auto name = clan ? clan->GetName() :
+                    libcomp::String("<unknown clan>");
+
+                return libcomp::String("[Clan]:  %1: %2: %3\n").Arg(name)
+                    .Arg(sentFrom).Arg(message);
             });
 
             if(state->GetClanID())
@@ -278,8 +283,13 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
 
             LogChatManagerInfo([&]()
             {
-                return libcomp::String("[Shout]:  %1: %2\n").Arg(sentFrom)
-                    .Arg(message);
+                auto zoneMapID = zone->GetDynamicMapID();
+                auto zoneID = zone->GetInstance() ? libcomp::String("%1(%2)")
+                    .Arg(zoneMapID).Arg(zone->GetInstanceID()) :
+                    libcomp::String("%1").Arg(zoneMapID);
+
+                return libcomp::String("[Shout]:  %1: %2: %3\n").Arg(zoneID)
+                    .Arg(sentFrom).Arg(message);
             });
 
             break;
@@ -288,8 +298,13 @@ bool ChatManager::SendChatMessage(const std::shared_ptr<
 
             LogChatManagerInfo([&]()
             {
-                return libcomp::String("[Say]:  %1: %2\n").Arg(sentFrom)
-                    .Arg(message);
+                auto zoneMapID = zone->GetDynamicMapID();
+                auto zoneID = zone->GetInstance() ? libcomp::String("%1(%2)")
+                    .Arg(zoneMapID).Arg(zone->GetInstanceID()) :
+                    libcomp::String("%1").Arg(zoneMapID);
+
+                return libcomp::String("[Say]:  %1: %2: %3\n").Arg(zoneID)
+                    .Arg(sentFrom).Arg(message);
             });
 
             break;

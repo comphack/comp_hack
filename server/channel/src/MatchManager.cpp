@@ -3808,6 +3808,7 @@ void MatchManager::UpdatePvPMatches(
     uint32_t now = (uint32_t)std::time(0);
     ServerTime serverTime = ChannelServer::GetServerTime();
 
+    std::list<std::shared_ptr<ChannelClientConnection>> noQueueJoin;
     std::unordered_map<uint32_t, int32_t> localExpire;
     {
         std::lock_guard<std::mutex> lock(mLock);
@@ -3841,20 +3842,7 @@ void MatchManager::UpdatePvPMatches(
                     {
                         if(match->GetNoQueue())
                         {
-                            // PvP zones do not work properly unless they are
-                            // "prepped" with a confirmation first
-                            libcomp::Packet request;
-                            request.WritePacketCode(
-                                ChannelToClientPacketCode_t::PACKET_PVP_CONFIRM);
-                            request.WriteS8(0);   // Confirmed
-                            request.WriteS32Little(0);
-
-                            client->QueuePacket(request);
-
-                            // Immediately move to the zone
-                            server->GetZoneManager()->MoveToInstance(client);
-
-                            client->FlushOutgoing();
+                            noQueueJoin.push_back(client);
                         }
                         else
                         {
@@ -3882,6 +3870,24 @@ void MatchManager::UpdatePvPMatches(
                 localExpire[match->GetID()] = confirmTime;
             }
         }
+    }
+
+    for(auto& client : noQueueJoin)
+    {
+        // PvP zones do not work properly unless they are "prepped" with a
+        // confirmation first
+        libcomp::Packet request;
+        request.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_PVP_CONFIRM);
+        request.WriteS8(0);   // Confirmed
+        request.WriteS32Little(0);
+
+        client->QueuePacket(request);
+
+        // Immediately move to the zone
+        server->GetZoneManager()->MoveToInstance(client);
+
+        client->FlushOutgoing();
     }
 
     for(auto& pair : localExpire)

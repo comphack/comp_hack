@@ -125,6 +125,7 @@ bool Parsers::SearchAppReply::Parse(libcomp::ManagerPacket *pPacketManager,
                     libcomp::Packet request;
                     request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
                     request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_YN_REQUEST);
+                    request.WriteU8(0); // Not from (normal) recruit
                     member->SavePacket(request, false);
                     request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
                         target->GetName(), true);

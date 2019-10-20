@@ -4346,6 +4346,8 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
         state = aState;
     }
 
+    eBase->SetCanRevive(spawn && spawn->GetCanRevive());
+
     state->SetEntityID(server->GetNextEntityID());
     state->SetOriginX(x);
     state->SetOriginY(y);

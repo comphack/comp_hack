@@ -44,6 +44,7 @@
 #include <ChannelConfig.h>
 #include <ChannelLogin.h>
 #include <CharacterProgress.h>
+#include <Clan.h>
 #include <DemonBox.h>
 #include <DemonQuest.h>
 #include <DemonQuestReward.h>
@@ -1889,10 +1890,13 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         }
         else
         {
-            // Character homepoint zone = [value 1]
-            auto character = client->GetClientState()->GetCharacterState()->GetEntity();
+            // Character clan home base zone = [value 1]
+            auto character = client->GetClientState()
+                ->GetCharacterState()->GetEntity();
+            auto clan = character ? character->GetClan().Get() : nullptr;
 
-            return character->GetHomepointZone() == (uint32_t)condition->GetValue1();
+            uint32_t zoneID = clan ? clan->GetBaseZoneID() : 0;
+            return zoneID == (uint32_t)condition->GetValue1();
         }
     case objects::EventConditionData::Type_t::COMP_DEMON:
         if(!client || (compareMode != EventCompareMode::EXISTS &&

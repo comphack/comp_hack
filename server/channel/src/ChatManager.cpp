@@ -3328,8 +3328,8 @@ bool ChatManager::GMCommand_Scrap(const std::shared_ptr<
                 false, insertItems, stackAdjustItems))
             {
                 return SendChatMessage(client, ChatType_t::CHAT_SELF,
-                    libcomp::String("Item %1 in slot %2 scrapped")
-                    .Arg(item->GetType()).Arg(slotNum));
+                    libcomp::String("Item %1 (x%2) in slot %3 scrapped")
+                    .Arg(item->GetType()).Arg(item->GetStackSize()).Arg(slotNum));
             }
         }
         else

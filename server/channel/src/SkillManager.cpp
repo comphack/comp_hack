@@ -6041,21 +6041,11 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             zone->RemoveEntity(eState->GetEntityID(), 1);
             levels.push_back(eState->GetLevel());
 
-            auto eBase = eState->GetEnemyBase();
-            if(eState->GetEntityType() == EntityType_t::ALLY &&
-                eBase && eBase->GetEncounterID() == 0)
+            if(eState->GetEnemyBase()->GetCanRevive())
             {
-                // If entity is actually an ally and is not configured
-                // for respawning, leave it as reviveable
-                auto slg = zone->GetDefinition()->GetSpawnLocationGroups(
-                    eBase->GetSpawnLocationGroupID());
-                if(!slg || slg->GetRespawnTime() == 0)
-                {
-                    canRevive.insert(eState->GetEntityID());
-                }
+                canRevive.insert(eState->GetEntityID());
             }
-
-            if(canRevive.find(eState->GetEntityID()) == canRevive.end())
+            else
             {
                 removeIDs.push_back(eState->GetEntityID());
             }

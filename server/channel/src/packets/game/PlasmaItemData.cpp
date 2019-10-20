@@ -102,6 +102,10 @@ bool Parsers::PlasmaItemData::Parse(libcomp::ManagerPacket *pPacketManager,
                 success = pState->SetLoot((uint32_t)pointID, state->GetWorldCID(),
                     loot);
             }
+            else
+            {
+                success = false;
+            }
         }
 
         reply.WriteS32Little(success ? 0 : -1);

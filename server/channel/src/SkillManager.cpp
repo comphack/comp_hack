@@ -1709,10 +1709,21 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
                 if(SetNRA(target, *pSkill, false))
                 {
                     // The skill is reflected and the source becomes
-                    // the primary target
-                    pSkill->PrimaryTarget = source;
-                    pSkill->EffectiveSource = targetEntity;
-                    pSkill->Targets.push_back(target);
+                    // the primary target (except for specific AoE types)
+                    switch(pSkill->Definition->GetRange()->GetAreaType())
+                    {
+                    case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS:
+                    case objects::MiEffectiveRangeData::AreaType_t::FRONT_1:
+                    case objects::MiEffectiveRangeData::AreaType_t::FRONT_2:
+                    case objects::MiEffectiveRangeData::AreaType_t::SOURCE:
+                        pSkill->PrimaryTarget = targetEntity;
+                        break;
+                    default:
+                        pSkill->PrimaryTarget = source;
+                        pSkill->EffectiveSource = targetEntity;
+                        pSkill->Targets.push_back(target);
+                        break;
+                    }
 
                     pSkill->Reflected = target.HitReflect;
                     pSkill->NRAAffinity = target.NRAAffinity;
@@ -5601,6 +5612,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
 
         bool isRemove = addStatus && addStatus->GetMinStack() == 0 &&
             addStatus->GetMaxStack() == 0;
+        bool isReplace = addStatus && addStatus->GetIsReplace();
 
         auto statusDef = definitionManager->GetStatusData(effectID);
         if(!statusDef) continue;
@@ -5616,9 +5628,9 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         if(!isRemove)
         {
             // If its application logic type 1, it cannot be applied if
-            // it is already active (ex: sleep)
+            // it is already active unless we're replacing (ex: sleep)
             if(statusDef->GetBasic()->GetApplicationLogic() == 1 &&
-                eState->StatusEffectActive(effectID))
+                !isReplace && eState->StatusEffectActive(effectID))
             {
                 continue;
             }
@@ -5740,7 +5752,6 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
             // application logic, otherwise default to 1 non-replace
             int8_t minStack = addStatus ? addStatus->GetMinStack() : 1;
             int8_t maxStack = addStatus ? addStatus->GetMaxStack() : 1;
-            bool isReplace = addStatus && addStatus->GetIsReplace();
 
             // Scale stacks
             if(stackScale > 1)
@@ -6698,9 +6709,10 @@ void SkillManager::HandleKillXP(const std::shared_ptr<objects::Enemy>& enemy,
                 int64_t finalXP = (int64_t)ceil((double)xpPair.second *
                     ((double)cState->GetCorrectValue(CorrectTbl::RATE_XP)
                         * 0.01));
-
-                characterManager->ExperienceGain(c, (uint64_t)finalXP,
-                    cState->GetEntityID());
+                if(finalXP > 0)
+                {
+                    characterManager->UpdateExperience(c, finalXP, cState->GetEntityID());
+                }
             }
         }
     }
@@ -11969,7 +11981,7 @@ bool SkillManager::XPUp(
 
     if(ProcessSkillResult(activated, ctx))
     {
-        characterManager->ExperienceGain(client, (uint64_t)skillData
+        characterManager->UpdateExperience(client, skillData
             ->GetSpecial()->GetSpecialParams(0), eState->GetEntityID());
         return true;
     }

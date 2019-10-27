@@ -882,13 +882,17 @@ public:
 
     /**
      * Update the client's character or demon's experience and level
-     * up if the level threshold is passed.
+     * up if the level threshold is passed. XP can be reduced as well
+     * but cannot result in the entity leveling down.
      * @param client Pointer to the client connection
-     * @param xpGain Experience amount to gain
+     * @param xp Experience amount to add or remove
      * @param entityID Character or demon ID to gain experience
+     * @return true if the update succeeded or nothing was done, false
+     *  if an error occurred or the entity attempted to deduct more
+     *  XP than the amount on the current level
      */
-    void ExperienceGain(const std::shared_ptr<
-        channel::ChannelClientConnection>& client, uint64_t xpGain,
+    bool UpdateExperience(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int64_t xp,
         int32_t entityID);
 
     /**

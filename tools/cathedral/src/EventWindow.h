@@ -94,6 +94,7 @@ private slots:
     void SaveAllFiles();
     void NewFile();
     void NewEvent();
+    void Convert();
     void RemoveEvent();
     void Search();
     void Refresh(bool reselectEvent = true);

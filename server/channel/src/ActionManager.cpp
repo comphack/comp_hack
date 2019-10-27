@@ -1789,13 +1789,23 @@ bool ActionManager::GrantXP(ActionContext& ctx)
         if(eState->Ready(true))
         {
             int64_t xp = act->GetXP();
-            if(act->GetAdjustable())
+            if(act->GetAdjustable() && xp > 0)
             {
-                xp = (int64_t)ceil((double)xp *
+                int64_t newXp = (int64_t)ceil((double)xp *
                     ((double)eState->GetCorrectValue(CorrectTbl::RATE_XP) * 0.01));
+
+                if(newXp < 0)
+                {
+                    // XP cannot go negative
+                    xp = 0;
+                }
+                else
+                {
+                    xp = newXp;
+                }
             }
 
-            characterManager->ExperienceGain(ctx.Client, (uint64_t)xp,
+            characterManager->UpdateExperience(ctx.Client, xp,
                 eState->GetEntityID());
         }
     }

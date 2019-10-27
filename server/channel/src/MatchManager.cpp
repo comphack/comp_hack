@@ -1190,7 +1190,7 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
         }
     }
 
-    std::unordered_map<int32_t, uint64_t> xpGain;
+    std::unordered_map<int32_t, int64_t> xpDeltas;
     auto dbChanges = libcomp::DatabaseChangeSet::Create();
 
     libcomp::Packet p;
@@ -1247,7 +1247,7 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
             auto pvpData = character ? character->LoadPvPData(db) : nullptr;
 
             auto eState = inMatch[stats->GetEntityID()];
-            xpGain[stats->GetEntityID()] = 0;
+            xpDeltas[stats->GetEntityID()] = 0;
 
             int32_t oldGP = matchGP[stats->GetEntityID()];
             int32_t newGP = matchGP[stats->GetEntityID()];
@@ -1376,7 +1376,7 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
                             eState->GetCorrectValue(CorrectTbl::RATE_XP) *
                             0.01));
 
-                        xpGain[stats->GetEntityID()] = (uint64_t)xp;
+                        xpDeltas[stats->GetEntityID()] = xp;
                     }
                 }
 
@@ -1470,7 +1470,7 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
                 p.WriteS8(trophy);
             }
 
-            p.WriteS32Little((int32_t)xpGain[stats->GetEntityID()]);
+            p.WriteS32Little((int32_t)xpDeltas[stats->GetEntityID()]);
         }
     }
 
@@ -1485,12 +1485,12 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
     // Lastly grant XP
     auto characterManager = server->GetCharacterManager();
     auto managerConnection = server->GetManagerConnection();
-    for(auto& xpPair : xpGain)
+    for(auto& xpPair : xpDeltas)
     {
         auto client = managerConnection->GetEntityClient(xpPair.first, false);
         if(client)
         {
-            characterManager->ExperienceGain(client, xpPair.second,
+            characterManager->UpdateExperience(client, xpPair.second,
                 xpPair.first);
         }
     }

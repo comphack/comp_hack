@@ -3532,7 +3532,7 @@ bool CharacterManager::UpdateDurability(const std::shared_ptr<
 
                 client->QueuePacket(p);
 
-                ExperienceGain(client, (uint32_t)xp, cState->GetEntityID());
+                UpdateExperience(client, xp, cState->GetEntityID());
             }
         }
     }
@@ -4724,8 +4724,8 @@ bool CharacterManager::UpdateEventCounter(const std::shared_ptr<
     return true;
 }
 
-void CharacterManager::ExperienceGain(const std::shared_ptr<
-    channel::ChannelClientConnection>& client, uint64_t xpGain,
+bool CharacterManager::UpdateExperience(const std::shared_ptr<
+    channel::ChannelClientConnection>& client, int64_t xp,
     int32_t entityID)
 {
     auto server = mServer.lock();
@@ -4740,7 +4740,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     auto stats = eState ? eState->GetCoreStats() : nullptr;
     if(!eState || !eState->Ready(true) || !stats)
     {
-        return;
+        return false;
     }
 
     const static int8_t levelCap = server->GetWorldSharedConfig()
@@ -4749,21 +4749,27 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     int8_t level = stats->GetLevel();
     if(level >= levelCap)
     {
-        return;
+        return true;
     }
 
     auto demonData = eState->GetDevilData();
     if(eState == dState && (!dState->IsAlive() || !demonData))
     {
         // Demons cannot level when dead
-        return;
+        return false;
+    }
+
+    if(xp < 0 && (stats->GetXP() + xp) < 0)
+    {
+        // Attempted to remove more XP than the current level
+        return false;
     }
 
     auto dbChanges = libcomp::DatabaseChangeSet::Create(state
         ->GetAccountUID());
 
     int8_t startingLevel = level;
-    int64_t xpDelta = stats->GetXP() + (int64_t)xpGain;
+    int64_t xpDelta = stats->GetXP() + xp;
     int64_t xpCurrent = xpDelta;
     while(level < levelCap &&
         xpDelta >= (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level])
@@ -4784,8 +4790,7 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_XP_UPDATE);
     reply.WriteS32Little(entityID);
     reply.WriteS64(xpCurrent);  // Can show above 100% until level up
-    reply.WriteS32Little((int32_t)xpGain);
-    reply.WriteS32Little(0);    // Unknown, always 0
+    reply.WriteS64Little(xp);
 
     client->QueuePacket(reply);
 
@@ -4999,6 +5004,8 @@ void CharacterManager::ExperienceGain(const std::shared_ptr<
     client->FlushOutgoing();
 
     server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+
+    return true;
 }
 
 void CharacterManager::LevelUp(const std::shared_ptr<
@@ -5017,20 +5024,21 @@ void CharacterManager::LevelUp(const std::shared_ptr<
         return;
     }
 
-    uint64_t xpGain = 0;
+    int64_t xpGain = 0;
     for(int8_t i = stats->GetLevel(); i < level; i++)
     {
         if(xpGain == 0)
         {
-            xpGain += libcomp::LEVEL_XP_REQUIREMENTS[i] - (uint64_t)stats->GetXP();
+            xpGain += (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[i] -
+                stats->GetXP();
         }
         else
         {
-            xpGain += libcomp::LEVEL_XP_REQUIREMENTS[i];
+            xpGain += (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[i];
         }
     }
 
-    ExperienceGain(client, xpGain, entityID);
+    UpdateExperience(client, xpGain, entityID);
 }
 
 void CharacterManager::UpdateExpertise(const std::shared_ptr<

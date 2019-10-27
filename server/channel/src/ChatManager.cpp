@@ -4091,9 +4091,9 @@ bool ChatManager::GMCommand_XP(const std::shared_ptr<
 
     std::list<libcomp::String> argsCopy = args;
 
-    uint64_t xpGain;
+    int64_t xp;
 
-    if(!GetIntegerArg<uint64_t>(xpGain, argsCopy))
+    if(!GetIntegerArg<int64_t>(xp, argsCopy))
     {
         return false;
     }
@@ -4105,7 +4105,8 @@ bool ChatManager::GMCommand_XP(const std::shared_ptr<
     auto entityID = isDemon ? state->GetDemonState()->GetEntityID()
         : state->GetCharacterState()->GetEntityID();
 
-    mServer.lock()->GetCharacterManager()->ExperienceGain(client, xpGain, entityID);
+    mServer.lock()->GetCharacterManager()->UpdateExperience(client, xp,
+        entityID);
 
     return true;
 }

@@ -161,6 +161,13 @@
            </spacer>
           </item>
           <item>
+           <widget class="QPushButton" name="convert">
+            <property name="text">
+             <string>Convert</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="removeEvent">
             <property name="text">
              <string>Remove Event</string>

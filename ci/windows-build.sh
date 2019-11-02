@@ -99,6 +99,9 @@ cmake -DUSE_PREBUILT_LIBCOMP=ON -DGENERATE_DOCUMENTATION=OFF -DIMPORT_CHANNEL=ON
 echo "Running build"
 cmake --build . --config "$CONFIGURATION" --target package
 
+echo "Cleaning build"
+cmake --build . --config "$CONFIGURATION" --target clean
+
 echo "Copying build result to the cache"
 mkdir "${ROOT_DIR}/deploy"
 cp comp_hack-*.{zip,msi} "${ROOT_DIR}/deploy/"

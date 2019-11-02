@@ -28,7 +28,7 @@ mkdir build
 cd build
 
 echo "Installing external dependencies"
-tar xf "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.tar.bz2" | "${ROOT_DIR}/ci/report-progress.sh"
+tar xf "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.tar.bz2"
 mv external* ../binaries
 chmod +x ../binaries/ttvfs/bin/ttvfs_gen
 echo "Installed external dependencies"

@@ -13,7 +13,7 @@ mkdir build
 cd build
 
 echo "Installing external dependencies"
-tar xf "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.tar.bz2" | ../ci/report-progress.sh
+tar xf "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.tar.bz2"
 mv external* ../binaries
 chmod +x ../binaries/ttvfs/bin/ttvfs_gen
 echo "Installed external dependencies"
@@ -27,7 +27,7 @@ else
     cp "${CACHE_DIR}/libcomp-${PLATFORM}.tar.bz2" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 fi
 
-tar xf "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2" | ../ci/report-progress.sh
+tar xf "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.tar.bz2"
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp

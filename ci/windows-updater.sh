@@ -16,7 +16,7 @@ mkdir build
 cd build
 
 echo "Installing external dependencies"
-unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip" | ../ci/report-progress.sh
+unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip"
 mv external* ../binaries
 echo "Installed external dependencies"
 

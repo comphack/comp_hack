@@ -20,7 +20,7 @@ powershell Install-WindowsFeature Net-Framework-Core
 echo "Installed .NET 3.5"
 
 echo "Installing WiX"
-cinst -y wixtoolset | ci/report-progress.sh
+cinst -y wixtoolset
 set PATH="C:/Program Files (x86)/WiX Toolset v3.11/bin:${PATH}"
 echo "Installed WiX"
 
@@ -29,7 +29,7 @@ mkdir build
 cd build
 
 echo "Installing external dependencies"
-unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip" | ../ci/report-progress.sh
+unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip"
 mv external* ../binaries
 echo "Installed external dependencies"
 
@@ -48,7 +48,7 @@ else
     cp "${CACHE_DIR}/libcomp-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 fi
 
-unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" | ../ci/report-progress.sh
+unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 mv libcomp* ../deps/libcomp
 ls ../deps/libcomp

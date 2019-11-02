@@ -102,16 +102,26 @@ cmake --build . --config "$CONFIGURATION" --target package
 echo "Cleaning build"
 cmake --build . --config "$CONFIGURATION" --target clean
 
-echo "Copying build result to the cache"
-mkdir "${ROOT_DIR}/deploy"
-cp comp_hack-*.{zip,msi} "${ROOT_DIR}/deploy/"
+# Get the original filename for the zip and msi for deploy after upload.
+ORIGINAL_ZIP=`ls comp_hack-*.zip`
+ORIGINAL_MSI=`ls comp_hack-*.msi`
+
+# Move the files in case we upload to Dropbox.
 mv comp_hack-*.zip "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 mv comp_hack-*.msi "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
 
 if [ $USE_DROPBOX ]; then
+    echo "Uploading build result to Dropbox"
     dropbox_upload_rel "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
     dropbox_upload_rel "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi"
 fi
+
+# Move the files back and into the deploy folder.
+echo "Moving build result for deployment"
+mkdir "${ROOT_DIR}/deploy"
+mv "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip" "${ORIGINAL_ZIP}"
+mv "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.msi" "${ORIGINAL_MSI}"
+mv comp_hack-*.{zip,msi} "${ROOT_DIR}/deploy/"
 
 # Change back to the root.
 cd "${ROOT_DIR}"

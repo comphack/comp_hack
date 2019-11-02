@@ -532,7 +532,7 @@ void CharacterManager::SendPartnerData(const std::shared_ptr<
         reply.WriteS8(reunionRank);
     }
 
-    reply.WriteS8(d->GetMagReduction());
+    reply.WriteS8(CalculateMagReduction(client, d));
     reply.WriteS32Little(d->GetSoulPoints());
 
     reply.WriteS32Little(d->GetBenefitGauge());
@@ -724,7 +724,7 @@ void CharacterManager::SendDemonData(const std::shared_ptr<
         reply.WriteS8(reunionRank);
     }
 
-    reply.WriteS8(d->GetMagReduction());
+    reply.WriteS8(CalculateMagReduction(client, d));
     reply.WriteS32Little(d->GetSoulPoints());
 
     reply.WriteS32Little(d->GetBenefitGauge());
@@ -1536,45 +1536,61 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
         std::set<int32_t>{ dState->GetEntityID() });
     dState->RecalculateStats(definitionManager);
 
-    // If HP/MP adjustments occur and the max value increases, keep
-    // the same percentage of HP/MP after recalc
-    auto cs = demon->GetCoreStats();
-    int32_t maxHP = cs->GetMaxHP();
-    int32_t maxMP = cs->GetMaxMP();
-    float hpPercent = (float)cs->GetHP() / (float)cs->GetMaxHP();
-    float mpPercent = (float)cs->GetMP() / (float)cs->GetMaxMP();
-
-    dState->SetStatusEffectsActive(true, definitionManager);
-    dState->SetDestinationX(cState->GetDestinationX());
-    dState->SetDestinationY(cState->GetDestinationY());
-
-    if(dState->GetMaxHP() > maxHP)
+    // Recalc pre-summon stats at leaset once, twice if pre-zone in triggers
+    // existed
+    for(size_t i = 0; i < 2; i++)
     {
-        cs->SetHP((int32_t)((float)dState->GetMaxHP() * hpPercent));
-    }
+        // If HP/MP adjustments occur and the max value increases, keep
+        // the same percentage of HP/MP after recalc
+        auto cs = demon->GetCoreStats();
+        int32_t maxHP = cs->GetMaxHP();
+        int32_t maxMP = cs->GetMaxMP();
+        float hpPercent = (float)cs->GetHP() / (float)cs->GetMaxHP();
+        float mpPercent = (float)cs->GetMP() / (float)cs->GetMaxMP();
 
-    if(dState->GetMaxMP() > maxMP)
-    {
-        cs->SetMP((int32_t)((float)dState->GetMaxMP() * mpPercent));
-    }
+        dState->SetStatusEffectsActive(true, definitionManager);
+        dState->SetDestinationX(cState->GetDestinationX());
+        dState->SetDestinationY(cState->GetDestinationY());
 
-    // Apply any extra summon status effects
-    for(auto eState : { std::dynamic_pointer_cast<ActiveEntityState>(cState),
-        std::dynamic_pointer_cast<ActiveEntityState>(dState) })
-    {
-        StatusEffectChanges effects;
-        for(double val : tokuseiManager->GetAspectValueList(eState,
-            TokuseiAspectType::SUMMON_STATUS))
+        if(dState->GetMaxHP() > maxHP)
         {
-            effects[(uint32_t)val] = StatusEffectChange((uint32_t)val, 1,
-                true);
+            cs->SetHP((int32_t)((float)dState->GetMaxHP() * hpPercent));
         }
 
-        if(effects.size() > 0)
+        if(dState->GetMaxMP() > maxMP)
         {
-            eState->AddStatusEffects(effects, definitionManager);
-            tokuseiManager->Recalculate(cState, true,
-                std::set<int32_t>{ dState->GetEntityID() });
+            cs->SetMP((int32_t)((float)dState->GetMaxMP() * mpPercent));
+        }
+
+        if(i == 0)
+        {
+            // Apply any extra summon status effects
+            for(auto eState : {
+                std::dynamic_pointer_cast<ActiveEntityState>(cState),
+                std::dynamic_pointer_cast<ActiveEntityState>(dState) })
+            {
+                StatusEffectChanges effects;
+                for(double val : tokuseiManager->GetAspectValueList(eState,
+                    TokuseiAspectType::SUMMON_STATUS))
+                {
+                    effects[(uint32_t)val] = StatusEffectChange((uint32_t)val,
+                        1, true);
+                }
+
+                if(effects.size() > 0)
+                {
+                    eState->AddStatusEffects(effects, definitionManager);
+                    tokuseiManager->Recalculate(cState, true,
+                        std::set<int32_t>{ dState->GetEntityID() });
+                }
+            }
+
+            // Pre-zone in triggers necessitate a second check of HP/MP
+            if(!server->GetZoneManager()->TriggerZoneActions(zone, { dState },
+                ZoneTrigger_t::PRE_ZONE_IN, client))
+            {
+                break;
+            }
         }
     }
 
@@ -4068,7 +4084,7 @@ bool CharacterManager::ReunionDemon(
             notify.WriteS8(reunionRank);
         }
 
-        notify.WriteS8(demon->GetMagReduction());
+        notify.WriteS8(CalculateMagReduction(client, demon));
 
         server->GetZoneManager()->BroadcastPacket(client, notify);
     }
@@ -7702,6 +7718,75 @@ bool CharacterManager::GetMitamaBonuses(const std::shared_ptr<
     return false;
 }
 
+std::list<int32_t> CharacterManager::GetMitamaIndirectSetBonuses(
+    const std::shared_ptr<objects::Demon>& demon,
+    libcomp::DefinitionManager* definitionManager, bool exBonus,
+    int8_t& magReduction)
+{
+    int32_t setReduction = 0;
+    std::list<int32_t> tokuseiIDs;
+    std::unordered_map<uint8_t, uint8_t> bonuses;
+    std::set<uint32_t> setBonuses;
+    if(demon->GetMitamaType() && GetMitamaBonuses(demon, definitionManager,
+        bonuses, setBonuses, false))
+    {
+        for(auto& pair : definitionManager->GetMitamaReunionSetBonusData())
+        {
+            if(setBonuses.find(pair.first) != setBonuses.end())
+            {
+                auto boost = exBonus ? pair.second->GetBonusEx()
+                    : pair.second->GetBonus();
+                for(size_t i = 0; i < boost.size(); )
+                {
+                    int32_t type = boost[i];
+                    int32_t val = boost[(size_t)(i + 1)];
+                    if(type == -1 && val)
+                    {
+                        tokuseiIDs.push_back(val);
+                    }
+                    else if(type == -2)
+                    {
+                        setReduction += val;
+                    }
+
+                    i += 2;
+                }
+            }
+        }
+    }
+
+    magReduction = setReduction > 100 ? 100 : (int8_t)setReduction;
+
+    return tokuseiIDs;
+}
+
+int8_t CharacterManager::CalculateMagReduction(
+    const std::shared_ptr<channel::ChannelClientConnection>& client,
+    const std::shared_ptr<objects::Demon>& demon)
+{
+    if(!demon)
+    {
+        return 0;
+    }
+
+    int32_t magReduction = (int32_t)demon->GetMagReduction();
+    if(magReduction < 100 && demon->GetMitamaType())
+    {
+        auto cState = client
+            ? client->GetClientState()->GetCharacterState() : nullptr;
+        bool exBonus = cState && cState->SkillAvailable(
+            SVR_CONST.MITAMA_SET_BOOST);
+
+        int8_t setReduction = 0;
+        CharacterManager::GetMitamaIndirectSetBonuses(demon,
+            mServer.lock()->GetDefinitionManager(), exBonus, setReduction);
+
+        magReduction = (int32_t)(magReduction + setReduction);
+    }
+
+    return magReduction > 100 ? 100 : (int8_t)magReduction;
+}
+
 std::set<uint32_t> CharacterManager::GetTraitSkills(
     const std::shared_ptr<objects::Demon>& demon,
     const std::shared_ptr<objects::MiDevilData>& demonData,
@@ -8089,7 +8174,7 @@ void CharacterManager::GetDemonPacketData(libcomp::Packet& p,
             }
         }
 
-        p.WriteS8(demon->GetMagReduction());
+        p.WriteS8(CalculateMagReduction(client, demon));
 
         bool equipped = false;
         for(auto equip : demon->GetEquippedItems())

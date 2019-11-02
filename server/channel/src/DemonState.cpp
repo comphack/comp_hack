@@ -238,34 +238,16 @@ bool DemonState::UpdateDemonState(libcomp::DefinitionManager* definitionManager)
         auto state = ClientState::GetEntityClientState(GetEntityID());
         auto cState = state ? state->GetCharacterState() : nullptr;
 
-        std::unordered_map<uint8_t, uint8_t> bonuses;
-        std::set<uint32_t> setBonuses;
-        if(demon->GetMitamaType() && CharacterManager::GetMitamaBonuses(demon,
-            definitionManager, bonuses, setBonuses, false))
+        if(demon->GetMitamaType())
         {
             bool exBonus = cState && cState->SkillAvailable(
                 SVR_CONST.MITAMA_SET_BOOST);
 
-            for(auto& pair : definitionManager->GetMitamaReunionSetBonusData())
-            {
-                if(setBonuses.find(pair.first) != setBonuses.end())
-                {
-                    auto boost = exBonus ? pair.second->GetBonusEx()
-                        : pair.second->GetBonus();
-                    for(size_t i = 0; i < boost.size(); )
-                    {
-                        int32_t type = boost[i];
-                        int32_t val = boost[(size_t)(i + 1)];
-                        if(type == -1 && val)
-                        {
-                            mDemonTokuseiIDs.push_back(val);
-                            updated = true;
-                        }
+            int8_t magReduction = 0;
+            mDemonTokuseiIDs = CharacterManager::GetMitamaIndirectSetBonuses(
+                demon, definitionManager, exBonus, magReduction);
 
-                        i += 2;
-                    }
-                }
-            }
+            updated = mDemonTokuseiIDs.size() > 0;
         }
 
         for(uint16_t stackID : demon->GetForceStack())

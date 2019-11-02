@@ -443,6 +443,20 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
             }
 
             auto itemData = definitionManager->GetItemData(itemType);
+            if(!itemData)
+            {
+                LogItemError([&]()
+                {
+                    return libcomp::String("ItemMix resulted in an invalid"
+                        " item with item type '%1' from recipe '%2': %3\n")
+                        .Arg(itemType).Arg(blendID)
+                        .Arg(state->GetAccountUID().ToString());
+                });
+
+                client->Close();
+
+                return true;
+            }
 
             // Add to an existing stack if possible
             for(auto existing : characterManager->GetExistingItems(character,

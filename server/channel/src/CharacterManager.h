@@ -1386,6 +1386,36 @@ public:
         std::set<uint32_t>& setBonuses, bool excludeTokusei);
 
     /**
+     * Get all mitama set bonuses not covered by direct stat adjustments
+     * @param demon Pointer to a demon
+     * @param definitionManager Pointer to the definition manager to use to
+     *  retrieve bonus information
+     * @param exBonus Designates that the current character has the mitama
+     *  set boost passive available
+     * @param magReduction Output parameter designating additional mag
+     *  reduction gained from set bonuses
+     * @return List of tokusei IDs granted by set bonuses
+     */
+    static std::list<int32_t> GetMitamaIndirectSetBonuses(
+        const std::shared_ptr<objects::Demon>& demon,
+        libcomp::DefinitionManager* definitionManager, bool exBonus,
+        int8_t& magReduction);
+
+    /**
+     * Calculate the summoning mag reduction for a demon associated to
+     * their current player character. Mag reduction is static from
+     * reunion bonuses but can also be increased mitama set bonuses as
+     * well as being further boosted by the current character's mitama
+     * set bonus boosting passive. Reduction cannot exceed 100.
+     * @param client Current client to retrieve demon information relative to
+     * @param demon Demon to retrieve the reduction value for
+     * @return Final combined summoning mag reduction
+     */
+    int8_t CalculateMagReduction(
+        const std::shared_ptr<channel::ChannelClientConnection>& client,
+        const std::shared_ptr<objects::Demon>& demon);
+
+    /**
      * Get all trait skill IDs on the supplied demon directly or from equipment
      * @param demon Pointer to a demon
      * @param demonData Pointer to the demon's definition

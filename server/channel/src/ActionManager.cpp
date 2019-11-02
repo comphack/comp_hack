@@ -1460,19 +1460,46 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
             break;
         }
 
-        bool allowNull = act->GetAllowNull() && server->GetWorldSharedConfig()
-            ->GetNRAStatusNull();
         for(auto eState : entities)
         {
-            if(allowNull)
+            if(act->GetAllowNull())
             {
-                // Copy the effects that are not NRA'd
+                auto statusNulls = tokuseiManager->GetAspectMap(eState,
+                    TokuseiAspectType::STATUS_NULL);
+
+                // Copy the effects that are not nullified
                 StatusEffectChanges activeEffects;
                 for(auto& pair : effects)
                 {
                     auto statusDef = definitionManager->GetStatusData(
                         pair.first);
-                    if(statusDef)
+                    if(!statusDef) continue;
+
+                    // Determine if the effect will be nullified by direct
+                    // ID or adjusted category (-category - 1)
+                    if(statusNulls.size() > 0)
+                    {
+                        if(statusNulls.find((int32_t)pair.first) !=
+                            statusNulls.end())
+                        {
+                            // Nullified by direct ID
+                            continue;
+                        }
+
+                        uint8_t statusCategory = statusDef->GetCommon()
+                            ->GetCategory()->GetMainCategory();
+                        int32_t adjustCategory = (int32_t)
+                            (statusCategory * -1) - 1;
+                        if(statusNulls.find(adjustCategory) !=
+                            statusNulls.end())
+                        {
+                            // Nullified by adjusted category
+                            continue;
+                        }
+                    }
+
+                    // Determine if the effect will be nullified by NRA rule
+                    if(server->GetWorldSharedConfig()->GetNRAStatusNull())
                     {
                         uint8_t affinity = statusDef->GetCommon()
                             ->GetAffinity();
@@ -1482,7 +1509,7 @@ bool ActionManager::AddRemoveStatus(ActionContext& ctx)
                             eState->GetNRAChance(NRA_REFLECT, nraType) > 0 ||
                             eState->GetNRAChance(NRA_ABSORB, nraType) > 0)
                         {
-                            // Nullified, do not add
+                            // Nullified by NRA
                             continue;
                         }
                     }

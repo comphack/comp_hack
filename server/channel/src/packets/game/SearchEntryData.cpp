@@ -237,7 +237,6 @@ bool Parsers::SearchEntryData::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_MAX_DURABILITY));
                 reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_DURABILITY));
                 reply.WriteS32Little(entry->GetData(SEARCH_IDX_PRICE));
-                reply.WriteS16Little(0);    // Unknown
 
                 reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT));
                 reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 1));
@@ -247,6 +246,8 @@ bool Parsers::SearchEntryData::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 reply.WriteS32Little(entry->GetData(SEARCH_IDX_BASIC_EFFECT));
                 reply.WriteS32Little(entry->GetData(SEARCH_IDX_SPECIAL_EFFECT));
+
+                reply.WriteS16Little(0);    // Unknown
             }
             break;
         case objects::SearchEntry::Type_t::TRADE_BUYING:

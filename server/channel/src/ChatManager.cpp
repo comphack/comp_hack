@@ -1360,7 +1360,15 @@ bool ChatManager::GMCommand_Event(const std::shared_ptr<
             auto zone = state->GetZone();
 
             EventOptions options;
-            options.TransformScriptParams = argsCopy;
+            if(argsCopy.size() > 0)
+            {
+                // Copy in additional arguments as strings to preserve spaces
+                libcomp::String param;
+                while(argsCopy.size() > 0 && GetStringArg(param, argsCopy))
+                {
+                    options.TransformScriptParams.push_back(param);
+                }
+            }
 
             if(server->GetEventManager()->HandleEvent(client, eventID,
                 cState->GetEntityID(), zone, options))

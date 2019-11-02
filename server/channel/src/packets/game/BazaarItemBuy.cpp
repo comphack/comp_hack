@@ -31,6 +31,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // object Includes
 #include <BazaarItem.h>
@@ -95,47 +96,78 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
 
         uint64_t totalMacca = characterManager->GetTotalMacca(character);
 
-        int8_t destSlot = -1;
+        std::set<size_t> freeSlots;
         bItem = bState->TryBuyItem(state, marketID, slot, itemID, price);
         if(bItem)
         {
             // Since the bazaar purchase response is so particular about format
-            // auto stacking is NOT supported for this, find an empty slot
-            for(size_t i = 0; i < 50; i++)
-            {
-                if(inventory->GetItems(i).IsNull())
-                {
-                    destSlot = (int8_t)i;
-                    break;
-                }
-            }
+            // auto stacking is NOT supported for this, find empty slot(s)
+            freeSlots = characterManager->GetFreeSlots(client, inventory);
         }
 
         if(!bItem || totalMacca < (uint64_t)bItem->GetCost())
         {
             // No new error code for these
         }
-        else if(destSlot == -1)
+        else if(freeSlots.size() == 0)
         {
-            errorCode = -2; // Not enough space
+            // No free slots
+            errorCode = -2;
+        }
+        else if(freeSlots.size() == 1 && characterManager->GetExistingItemCount(
+                character, SVR_CONST.ITEM_MACCA, inventory) < bItem->GetCost())
+        {
+            // If there is only one free space and not enough macca coins to
+            // cover the cost, there is not enough space. Macca notes will be
+            // split to pay bazaar costs but the new stack can fill the
+            // inventory as well.
+            errorCode = -2;
+
+            LogBazaarError([&]()
+                {
+                    return libcomp::String("BazaarItemBuy failed due to"
+                        " required macca splitting without enough space"
+                        " available: %1\n")
+                        .Arg(state->GetAccountUID().ToString());
+                });
         }
         else if(bState->BuyItem(bItem))
         {
-            if(!server->GetCharacterManager()->PayMacca(client, (uint64_t)bItem->GetCost()))
+            if(!characterManager->PayMacca(client, (uint64_t)bItem->GetCost()))
             {
                 // Undo sale
                 bItem->SetSold(false);
             }
             else
             {
+                // Do not fail the item update at this point. Default to the
+                // first free slot but grab the new free slots following the
+                // payment. If all else fails, put the item in the box so
+                // relogging will recover the item (under normal circumstances
+                // this will not happen).
+                int8_t destSlot = (int8_t)*freeSlots.begin();
+                if(!inventory->GetItems((size_t)destSlot).IsNull())
+                {
+                    for(size_t freeSlot : characterManager->GetFreeSlots(
+                        client, inventory))
+                    {
+                        destSlot = (int8_t)freeSlot;
+                        break;
+                    }
+                }
+
                 auto dbChanges = libcomp::DatabaseChangeSet::Create();
 
-                inventory->SetItems((size_t)destSlot, item);
+                if(inventory->GetItems((size_t)destSlot).IsNull())
+                {
+                    inventory->SetItems((size_t)destSlot, item);
+                    dbChanges->Update(inventory);
+                }
+
                 item->SetItemBox(inventory->GetUUID());
                 item->SetBoxSlot(destSlot);
 
                 dbChanges->Update(bItem);
-                dbChanges->Update(inventory);
                 dbChanges->Update(item);
 
                 if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))

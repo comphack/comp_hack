@@ -847,7 +847,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         server->GetWorldDatabase()->QueueUpdate(character);
     }
 
-    // Fire login and pre-zone in just for the character
+    // Fire pre-zone in for both and login just for the character
     if(!currentZone)
     {
         TriggerZoneActions(nextZone, { cState }, ZoneTrigger_t::ON_LOGIN,
@@ -867,7 +867,8 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
             { { std::dynamic_pointer_cast<ActiveEntityState>(cState),
             std::dynamic_pointer_cast<ActiveEntityState>(dState) } };
 
-        if(HandleZoneTriggers(nextZone, triggers, cState, client))
+        if(TriggerZoneActions(nextZone, { cState, dState },
+            ZoneTrigger_t::PRE_ZONE_IN, client))
         {
             for(size_t i = 0; i < 2; i++)
             {
@@ -1052,8 +1053,10 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
                 ->ExistsInInstance(instance->GetDefinitionID(), newZoneID,
                     newDynamicMapID);
 
+            // PvP ignores normal disconnect logic
             instanceDisconnect = instanceLeft && logOut &&
-                !state->GetLogoutTimer() && !state->GetChannelLogin();
+                !state->GetLogoutTimer() && !state->GetChannelLogin() &&
+                zone->GetInstanceType() != InstanceType_t::PVP;
             if(instanceDisconnect)
             {
                 // Disconnecting from an instance puts the player's last
@@ -1233,7 +1236,12 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     else
     {
         // Set the previous zone
-        cState->GetEntity()->SetPreviousZone(zone->GetDefinitionID());
+        if(newZoneID != zone->GetDefinitionID())
+        {
+            // Only change previous zone if actually changing zones
+            cState->GetEntity()->SetPreviousZone(zone->GetDefinitionID());
+        }
+
         state->SetLastZoneID(zone->GetID());
         state->SetLastInstanceID(zone->GetInstanceID());
     }
@@ -6595,83 +6603,98 @@ uint8_t ZoneManager::CorrectClientPosition(const std::shared_ptr<
     float serverX2 = eState->GetDestinationX();
     float serverY2 = eState->GetDestinationY();
 
-    // If moving, check if the source position is valid
-    if(isMove && (src.x != serverX2 || src.y != serverY2))
+    bool checkGeometry = true;
+    if(isMove)
     {
-        // Movement origin is not the previous destination
-        bool correctSrc = false;
-        if(serverX1 == serverX2 && serverY1 == serverY2)
-        {
-            // Last movement was actually stationary
-            correctSrc = true;
-        }
-        else if(((src.x > serverX1) == (src.x > serverX2)) ||
-            ((src.x < serverX1) == (src.x < serverX2)) ||
-            ((src.y > serverY1) == (src.y > serverY2)) ||
-            ((src.y < serverY1) == (src.y < serverY2)))
-        {
-            // Movement origin not between movement points
-            correctSrc = true;
-        }
-        else if((serverX1 * (serverY2 - src.y) +
-            serverX2 * (src.y - serverY1) +
-            src.x * (serverY1 - serverY2)) != 0.f)
-        {
-            // Movement origin is not collinear with last movement
-            correctSrc = true;
-        }
+        float maxRatePerSec = eState->GetMovementSpeed();
 
-        if(correctSrc)
+        // Check if the source position is valid first
+        if(src.x != serverX2 || src.y != serverY2)
         {
-            // Check if it lies within the allowed movement threshold based
-            // on max movement speed per before checking collision.
-            float maxRatePerSec = eState->GetMovementSpeed();
-
-            // Check distance to previous movement points first as it is
-            // quicker than the point to line distance formula
-            if(src.GetDistance(Point(serverX2, serverY2)) > maxRatePerSec &&
-                src.GetDistance(Point(serverX1, serverY1)) > maxRatePerSec)
+            // Movement origin is not the previous destination
+            bool correctSrc = false;
+            if(serverX1 == serverX2 && serverY1 == serverY2)
             {
-                float distance = 0.f;
-                if(serverX2 == serverX1)
-                {
-                    // Check perpendicular horizontal line distance
-                    distance = src.GetDistance(Point(serverX2, serverY2));
-                }
-                else
-                {
-                    // Check point to line distance
-                    Line lastMove(Point(serverX1, serverY1),
-                        Point(serverX2, serverY2));
-                    distance = GetPointToLineDistance(lastMove, src);
-                }
-
-                if(distance > maxRatePerSec)
-                {
-                    // Roll back movement
-                    src.x = dest.x = serverX1;
-                    src.y = dest.y = serverY1;
-                    startTime = stopTime = eState->GetDestinationTicks();
-                    result = 0x01;
-                }
+                // Last movement was actually stationary
+                correctSrc = true;
+            }
+            else if(((src.x > serverX1) == (src.x > serverX2)) ||
+                ((src.x < serverX1) == (src.x < serverX2)) ||
+                ((src.y > serverY1) == (src.y > serverY2)) ||
+                ((src.y < serverY1) == (src.y < serverY2)))
+            {
+                // Movement origin not between movement points
+                correctSrc = true;
+            }
+            else if((serverX1 * (serverY2 - src.y) +
+                serverX2 * (src.y - serverY1) +
+                src.x * (serverY1 - serverY2)) != 0.f)
+            {
+                // Movement origin is not collinear with last movement
+                correctSrc = true;
             }
 
-            if(!result)
+            if(correctSrc)
             {
-                // Check collision based on the last destination, not new
-                // origin because the client has skipped ahead an acceptable
-                // distance. If we don't do this the movement will ocassionally
-                // "start" from outside of the wall etc. Do not bother to send
-                // the corrected origin to the source as the server values
-                // have not actually changed yet.
-                src.x = serverX2;
-                src.y = serverY2;
+                // Check if it lies within the allowed movement threshold based
+                // on max movement speed per before checking collision. Use
+                // distance to previous movement points first as it is quicker
+                // than the point to line distance formula
+                if(src.GetDistance(Point(serverX2, serverY2)) > maxRatePerSec &&
+                    src.GetDistance(Point(serverX1, serverY1)) > maxRatePerSec)
+                {
+                    float distance = 0.f;
+                    if(serverX2 == serverX1)
+                    {
+                        // Check perpendicular horizontal line distance
+                        distance = src.GetDistance(Point(serverX2, serverY2));
+                    }
+                    else
+                    {
+                        // Check point to line distance
+                        Line lastMove(Point(serverX1, serverY1),
+                            Point(serverX2, serverY2));
+                        distance = GetPointToLineDistance(lastMove, src);
+                    }
+
+                    if(distance > maxRatePerSec)
+                    {
+                        // Roll back movement
+                        result = 0x01;
+                        src.x = dest.x = serverX1;
+                        src.y = dest.y = serverY1;
+                        startTime = stopTime = eState->GetDestinationTicks();
+                        checkGeometry = false;
+                    }
+                }
+
+                if(!result)
+                {
+                    // Check collision based on the last destination, not new
+                    // origin because the client has skipped ahead an
+                    // acceptable distance. If we don't do this the movement
+                    // will ocassionally "start" from outside of the wall etc.
+                    // Do not bother to send the corrected origin to the source
+                    // as the server values have not actually changed yet.
+                    src.x = serverX2;
+                    src.y = serverY2;
+                }
             }
+        }
+
+        // If no error yet, check if the entity is requesting a move that is
+        // too far for their max speed
+        if(!result && src.GetDistance(dest) > maxRatePerSec)
+        {
+            // Do not stop the entity but limit to max speed
+            dest = GetLinearPoint(src.x, src.y, dest.x, dest.y, maxRatePerSec,
+                false);
+            result = 0x01;
         }
     }
 
     auto geometry = zone->GetGeometry();
-    if(!result && geometry)
+    if(checkGeometry && geometry)
     {
         // Movement origin valid and geometry exists, check collision
         Line path(Point(src.x, src.y), Point(dest.x, dest.y));

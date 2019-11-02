@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include <Constants.h>
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
@@ -288,6 +289,14 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
                     break;
                 }
 
+                auto itemData = server->GetDefinitionManager()->GetItemData(
+                    (uint32_t)itemType);
+                if(!itemData)
+                {
+                    // Invalid item supplied, garbage sent or malformed
+                    break;
+                }
+
                 libcomp::String comment = p.ReadString16Little(
                     libcomp::Convert::Encoding_t::ENCODING_CP932, true);
 
@@ -342,6 +351,14 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 if(p.Left() < (uint32_t)(4 + p.PeekU16Little()))
                 {
+                    break;
+                }
+
+                auto itemData = server->GetDefinitionManager()->GetItemData(
+                    (uint32_t)itemType);
+                if(!itemData)
+                {
+                    // Invalid item supplied, garbage sent or malformed
                     break;
                 }
 

@@ -2138,10 +2138,11 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
                 double mag = (magAdjust * lncAdjust / 18000000.0) +
                     (magAdjust * 0.25);
 
-                if(demon->GetMagReduction() > 0)
+                int8_t magReduction = characterManager->CalculateMagReduction(
+                    client, demon);
+                if(magReduction > 0)
                 {
-                    mag = mag * (double)(100 - demon->GetMagReduction()) *
-                        0.01;
+                    mag = mag * (double)(100 - magReduction) * 0.01;
                 }
 
                 uint32_t cost = (uint32_t)round(mag);
@@ -3472,7 +3473,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 targetCalc) * 100;
 
             target.CanKnockback = true;
-            if(kbRemove && (kbRemove >= 10000 ||
+            if(target.EntityState->StatusRestrictKnockbackCount() > 0)
+            {
+                // Target knockback locked by status
+                target.CanKnockback = false;
+            }
+            else if(kbRemove && (kbRemove >= 10000 ||
                 RNG(int32_t, 1, 10000) <= kbRemove))
             {
                 // Source nulls knockback

@@ -3165,7 +3165,7 @@ void MatchManager::UltimateBattleTick(uint32_t zoneID, uint32_t dynamicMapID,
         if(!eventID.IsEmpty())
         {
             server->GetEventManager()->HandleEvent(nullptr,
-                eventID, 0, zone);
+                eventID, 0, zone, {});
         }
 
         // Get the new expiratin if set

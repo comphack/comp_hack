@@ -1,3 +1,16 @@
+comphack (4.5.0) xenial; urgency=low
+
+  * Loosened ShopBuy restrictions for COMP shops
+  * Fixed NoQueue PvP mutex locking issue
+  * Fixed response to party search list postings
+  * Added event XP loss feature
+  * Fixed issues with Aoe reflect and app logic type 1 status effects
+  * Fixed ItemMix great success crash
+  * Fixed linker error for Ubuntu Xenial (should fix the PPA)
+  * Fixed the rehash utility to no longer exclude ImagineUpdate.dat
+
+ -- COMP Omega <compomega@tutanota.com>  Wed, 20 Nov 2019 17:55:51 -0700
+
 comphack (4.4.0) xenial; urgency=low
 
   * AoE null/reflect/absorb logic corrected

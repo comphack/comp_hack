@@ -17,8 +17,8 @@
 | [Peorth](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-peorth)   | ■ ■ ■ ■ ■ ■ ■ ■ |
 | [Eoh](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eoh)         | ■ ■ ■ ■ ■ ■ ■ ■ |
 | [Eihwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eihwaz)   | ■ ■ ■ ■ ■ ■ ■ ■ |
-| [Uruz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-uruz)       | ■ ■ □ □ □ □ □ □ |
-| [Hagalaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-hagalaz) | □ □ □ □ □ □ □ □ |
+| [Uruz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-uruz)       | ■ ■ ■ ■ ■ ■ ■ ■ |
+| [Hagalaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-hagalaz) | ■ ■ ■ ■ ■ ■ ■ □ |
 | [Laguz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-laguz)     | □ □ □ □ □ □ □ □ |
 | [Ansuz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-ansuz)     | □ □ □ □ □ □ □ □ |
 | [Nauthiz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-nauthiz) | □ □ □ □ □ □ □ □ |

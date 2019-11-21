@@ -38,13 +38,13 @@ SET(VERSION_YEAR  2019)
 SET(VERSION_MAJOR 4)
 
 # Minor release (1 = SP1).
-SET(VERSION_MINOR 4)
+SET(VERSION_MINOR 5)
 
 # Patch version (a hotfix).
 SET(VERSION_PATCH 0)
 
 # Codename for the version.
-SET(VERSION_CODENAME "Eihwaz")
+SET(VERSION_CODENAME "Uruz")
 
 #
 # END OF VERSION CONSTANTS

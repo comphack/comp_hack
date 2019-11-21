@@ -251,9 +251,6 @@ int main(int argc, char *argv[])
     {
         FileData *d = file.second;
 
-        // Don't compress this file.
-        if(d->path == "ImagineUpdate.dat.compressed")
-            continue;
 
         libcomp::String line = "FILE : .\\%1,%2,%3,%4,%5 ";
         line = line.Arg(d->path.Replace("/", "\\"));

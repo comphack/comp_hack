@@ -317,13 +317,14 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
         auto outItem2 = blendData->GetResultItems(1);
 
         uint32_t item1Type = outItem1->GetItemID();
-        uint32_t item2Type = outItem2 ? outItem2->GetItemID() : 0;
+        uint32_t item2Type = outItem2->GetItemID() != static_cast<uint32_t>(-1)
+            ? outItem2->GetItemID() : 0;
 
         uint16_t item1Min = outItem1->GetMin();
-        uint16_t item2Min = outItem2 ? outItem2->GetMin() : 0;
+        uint16_t item2Min = item2Type ? outItem2->GetMin() : 0;
 
         uint16_t item1Max = outItem1->GetMax();
-        uint16_t item2Max = outItem2 ? outItem2->GetMax() : 0;
+        uint16_t item2Max = item2Type ? outItem2->GetMax() : 0;
 
         // Apply extension transformations
         if(extItemDefs.size() > 0)
@@ -443,6 +444,20 @@ bool Parsers::ItemMix::Parse(libcomp::ManagerPacket *pPacketManager,
             }
 
             auto itemData = definitionManager->GetItemData(itemType);
+            if(!itemData)
+            {
+                LogItemError([&]()
+                {
+                    return libcomp::String("ItemMix resulted in an invalid"
+                        " item with item type '%1' from recipe '%2': %3\n")
+                        .Arg(itemType).Arg(blendID)
+                        .Arg(state->GetAccountUID().ToString());
+                });
+
+                client->Close();
+
+                return true;
+            }
 
             // Add to an existing stack if possible
             for(auto existing : characterManager->GetExistingItems(character,

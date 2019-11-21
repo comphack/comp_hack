@@ -1360,7 +1360,15 @@ bool ChatManager::GMCommand_Event(const std::shared_ptr<
             auto zone = state->GetZone();
 
             EventOptions options;
-            options.TransformScriptParams = argsCopy;
+            if(argsCopy.size() > 0)
+            {
+                // Copy in additional arguments as strings to preserve spaces
+                libcomp::String param;
+                while(argsCopy.size() > 0 && GetStringArg(param, argsCopy))
+                {
+                    options.TransformScriptParams.push_back(param);
+                }
+            }
 
             if(server->GetEventManager()->HandleEvent(client, eventID,
                 cState->GetEntityID(), zone, options))
@@ -3328,8 +3336,8 @@ bool ChatManager::GMCommand_Scrap(const std::shared_ptr<
                 false, insertItems, stackAdjustItems))
             {
                 return SendChatMessage(client, ChatType_t::CHAT_SELF,
-                    libcomp::String("Item %1 in slot %2 scrapped")
-                    .Arg(item->GetType()).Arg(slotNum));
+                    libcomp::String("Item %1 (x%2) in slot %3 scrapped")
+                    .Arg(item->GetType()).Arg(item->GetStackSize()).Arg(slotNum));
             }
         }
         else
@@ -4091,9 +4099,9 @@ bool ChatManager::GMCommand_XP(const std::shared_ptr<
 
     std::list<libcomp::String> argsCopy = args;
 
-    uint64_t xpGain;
+    int64_t xp;
 
-    if(!GetIntegerArg<uint64_t>(xpGain, argsCopy))
+    if(!GetIntegerArg<int64_t>(xp, argsCopy))
     {
         return false;
     }
@@ -4105,7 +4113,8 @@ bool ChatManager::GMCommand_XP(const std::shared_ptr<
     auto entityID = isDemon ? state->GetDemonState()->GetEntityID()
         : state->GetCharacterState()->GetEntityID();
 
-    mServer.lock()->GetCharacterManager()->ExperienceGain(client, xpGain, entityID);
+    mServer.lock()->GetCharacterManager()->UpdateExperience(client, xp,
+        entityID);
 
     return true;
 }

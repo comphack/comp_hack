@@ -716,11 +716,22 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
                     {
                         map = &otherEffects[eState->GetEntityID()][skillTokusei];
                     }
+                    else if(eState->GetEntityType() == EntityType_t::CHARACTER)
+                    {
+                        // Mostly affects digitalize skills
+                        map = &newMaps[eState->GetEntityID()][skillTokusei];
+                    }
                     break;
                 case objects::Tokusei::TargetType_t::PARTNER:
                     if(eState->GetEntityType() == EntityType_t::CHARACTER)
                     {
                         map = &otherEffects[eState->GetEntityID()][skillTokusei];
+                    }
+                    else if(eState->GetEntityType() == EntityType_t::PARTNER_DEMON)
+                    {
+                        // May never happen on actual skills but keep it
+                        // consistent with digitalize behavior
+                        map = &newMaps[eState->GetEntityID()][skillTokusei];
                     }
                     break;
                 case objects::Tokusei::TargetType_t::SELF:

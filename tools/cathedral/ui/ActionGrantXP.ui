@@ -64,7 +64,7 @@
      <item row="1" column="1">
       <widget class="QSpinBox" name="xp">
        <property name="minimum">
-        <number>0</number>
+        <number>-2147483647</number>
        </property>
        <property name="maximum">
         <number>2147483647</number>

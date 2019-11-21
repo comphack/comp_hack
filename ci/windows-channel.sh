@@ -25,7 +25,7 @@ mkdir build
 cd build
 
 echo "Installing external dependencies"
-unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip" | ../ci/report-progress.sh
+unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip"
 mv external* ../binaries
 echo "Installed external dependencies"
 
@@ -43,7 +43,7 @@ else
     cp "${CACHE_DIR}/libcomp-${PLATFORM}.zip" "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 fi
 
-unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip" | ../ci/report-progress.sh
+unzip "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 rm "libcomp-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 ls -lh
 mv libcomp* ../deps/libcomp

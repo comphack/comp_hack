@@ -209,6 +209,38 @@ EventWindow::EventWindow(MainWindow *pMainWindow, QWidget *pParent) :
         findAction->action->addItem(qs(pair.first), pair.second);
     }
 
+    pMenu = new QMenu(tr("Convert"));
+
+    pAction = pMenu->addAction("Display Message");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::PERFORM_ACTIONS) +
+        100 * to_underlying(objects::Action::ActionType_t::DISPLAY_MESSAGE));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(Convert()));
+
+    pAction = pMenu->addAction("EX NPC Message");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::EX_NPC_MESSAGE));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(Convert()));
+
+    pAction = pMenu->addAction("NPC Message");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::NPC_MESSAGE));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(Convert()));
+
+    pAction = pMenu->addAction("Prompt");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::PROMPT));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(Convert()));
+
+    pAction = pMenu->addAction("Stage Effect");
+    pAction->setData(to_underlying(
+        objects::Event::EventType_t::PERFORM_ACTIONS) +
+        100 * to_underlying(objects::Action::ActionType_t::STAGE_EFFECT));
+    connect(pAction, SIGNAL(triggered()), this, SLOT(Convert()));
+
+    ui->convert->setMenu(pMenu);
+
+    ui->convert->hide();
     ui->removeEvent->hide();
     ui->actionMoveUp->setDisabled(true);
     ui->actionMoveDown->setDisabled(true);
@@ -738,6 +770,191 @@ void EventWindow::Search()
             item->setHidden(true);
         }
     }
+}
+
+void EventWindow::Convert()
+{
+    QAction *pAction = qobject_cast<QAction*>(sender());
+    if(!pAction)
+    {
+        return;
+    }
+
+    auto fIter = mFiles.find(mCurrentFileName);
+    if(fIter == mFiles.end())
+    {
+        // No file
+        return;
+    }
+
+    auto current = mCurrentEvent;
+    if(!current && !current->Event)
+    {
+        return;
+    }
+
+    auto currentType = current->Event->GetEventType();
+
+    auto file = fIter->second;
+    auto dataVal = pAction->data().toUInt();
+    auto eventType = (objects::Event::EventType_t)(dataVal % 100);
+    if(currentType == eventType)
+    {
+        QMessageBox err;
+        err.setText("Cannot convert event to same type");
+        err.exec();
+
+        return;
+    }
+
+    // Grab the first message ID that exists
+    int32_t messageID = 0;
+    switch(currentType)
+    {
+    case objects::Event::EventType_t::EX_NPC_MESSAGE:
+        {
+            auto msg = std::dynamic_pointer_cast<objects::EventExNPCMessage>(
+                current->Event);
+            if(msg)
+            {
+                messageID = msg->GetMessageID();
+            }
+        }
+        break;
+    case objects::Event::EventType_t::NPC_MESSAGE:
+        {
+            auto msg = std::dynamic_pointer_cast<objects::EventNPCMessage>(
+                current->Event);
+            if(msg && msg->MessageIDsCount() > 0)
+            {
+                messageID = msg->GetMessageIDs(0);
+            }
+        }
+        break;
+    case objects::Event::EventType_t::PERFORM_ACTIONS:
+        {
+            auto pa = std::dynamic_pointer_cast<objects::EventPerformActions>(
+                current->Event);
+            if(pa)
+            {
+                for(auto act : pa->GetActions())
+                {
+                    auto dm = std::dynamic_pointer_cast<
+                        objects::ActionDisplayMessage>(act);
+                    if(dm && dm->MessageIDsCount() > 0)
+                    {
+                        messageID = dm->GetMessageIDs(0);
+                        break;
+                    }
+
+                    auto se = std::dynamic_pointer_cast<
+                        objects::ActionStageEffect>(act);
+                    if(se)
+                    {
+                        messageID = se->GetMessageID();
+                        break;
+                    }
+                }
+            }
+        }
+        break;
+    case objects::Event::EventType_t::PROMPT:
+        {
+            auto pr = std::dynamic_pointer_cast<objects::EventPrompt>(
+                current->Event);
+            if(pr)
+            {
+                // Get the prompt message
+                messageID = pr->GetMessageID();
+            }
+        }
+        break;
+    default:
+        {
+            QMessageBox err;
+            err.setText("Attempted to convert from an invalid event type");
+            err.exec();
+
+            return;
+        }
+        break;
+    }
+
+    if(!messageID)
+    {
+        QMessageBox err;
+        err.setText("Nothing to convert on the current event");
+        err.exec();
+
+        return;
+    }
+
+    auto e = GetNewEvent(eventType);
+    e->SetID(current->Event->GetID());
+
+    switch(eventType)
+    {
+    case objects::Event::EventType_t::EX_NPC_MESSAGE:
+        std::dynamic_pointer_cast<objects::EventExNPCMessage>(e)
+            ->SetMessageID(messageID);
+        break;
+    case objects::Event::EventType_t::NPC_MESSAGE:
+        std::dynamic_pointer_cast<objects::EventNPCMessage>(e)
+            ->AppendMessageIDs(messageID);
+        break;
+    case objects::Event::EventType_t::PERFORM_ACTIONS:
+        if((dataVal / 100) ==
+            (int32_t)objects::Action::ActionType_t::DISPLAY_MESSAGE)
+        {
+            auto dm = std::make_shared<objects::ActionDisplayMessage>();
+            dm->AppendMessageIDs(messageID);
+
+            std::dynamic_pointer_cast<objects::EventPerformActions>(e)
+                ->AppendActions(dm);
+        }
+        else if((dataVal / 100) ==
+            (int32_t)objects::Action::ActionType_t::STAGE_EFFECT)
+        {
+            auto se = std::make_shared<objects::ActionStageEffect>();
+            se->SetMessageID(messageID);
+
+            std::dynamic_pointer_cast<objects::EventPerformActions>(e)
+                ->AppendActions(se);
+        }
+        break;
+    case objects::Event::EventType_t::PROMPT:
+        std::dynamic_pointer_cast<objects::EventPrompt>(e)
+            ->SetMessageID(messageID);
+        break;
+    default:
+        // Nothing mapped to others
+        break;
+    }
+
+    // Remove existing and replace with copy
+    if(!current->FileEventID.IsEmpty())
+    {
+        file->PendingRemovals.insert(current->FileEventID);
+    }
+
+    for(auto it = file->Events.begin(); it != file->Events.end(); it++)
+    {
+        if(*it == mCurrentEvent)
+        {
+            it = file->Events.erase(it);
+            file->Events.insert(it, std::make_shared<FileEvent>(e, true));
+            break;
+        }
+    }
+
+    // Rebuild the global map and update the main window
+    RebuildLocalIDMap(file);
+    RebuildGlobalIDMap();
+    mMainWindow->ResetEventCount();
+
+    // Refresh the file and select the new event
+    Refresh(false);
+    GoToEvent(e->GetID());
 }
 
 void EventWindow::NewEvent()
@@ -1962,6 +2179,7 @@ void EventWindow::BindSelectedEvent(bool storePrevious)
         }
     }
 
+    bool enableConvert = false;
     if(!eNode)
     {
         if(fileIdx != -1 && file && file->Events.size() >
@@ -1991,6 +2209,7 @@ void EventWindow::BindSelectedEvent(bool storePrevious)
                     eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
+                    enableConvert = true;
                 }
                 break;
             case objects::Event::EventType_t::EX_NPC_MESSAGE:
@@ -1999,6 +2218,7 @@ void EventWindow::BindSelectedEvent(bool storePrevious)
                     eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
+                    enableConvert = true;
                 }
                 break;
             case objects::Event::EventType_t::MULTITALK:
@@ -2015,6 +2235,7 @@ void EventWindow::BindSelectedEvent(bool storePrevious)
                     eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
+                    enableConvert = true;
                 }
                 break;
             case objects::Event::EventType_t::PERFORM_ACTIONS:
@@ -2023,6 +2244,7 @@ void EventWindow::BindSelectedEvent(bool storePrevious)
                     eUI->Load(mCurrentEvent->Event);
 
                     eNode = eUI;
+                    enableConvert = true;
                 }
                 break;
             case objects::Event::EventType_t::OPEN_MENU:
@@ -2067,6 +2289,8 @@ void EventWindow::BindSelectedEvent(bool storePrevious)
             }
         }
     }
+
+    ui->convert->setHidden(!enableConvert);
 
     if(previousEvent)
     {

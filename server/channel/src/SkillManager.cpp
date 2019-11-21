@@ -1709,10 +1709,21 @@ bool SkillManager::BeginSkillExecution(std::shared_ptr<ProcessingSkill> pSkill,
                 if(SetNRA(target, *pSkill, false))
                 {
                     // The skill is reflected and the source becomes
-                    // the primary target
-                    pSkill->PrimaryTarget = source;
-                    pSkill->EffectiveSource = targetEntity;
-                    pSkill->Targets.push_back(target);
+                    // the primary target (except for specific AoE types)
+                    switch(pSkill->Definition->GetRange()->GetAreaType())
+                    {
+                    case objects::MiEffectiveRangeData::AreaType_t::SOURCE_RADIUS:
+                    case objects::MiEffectiveRangeData::AreaType_t::FRONT_1:
+                    case objects::MiEffectiveRangeData::AreaType_t::FRONT_2:
+                    case objects::MiEffectiveRangeData::AreaType_t::SOURCE:
+                        pSkill->PrimaryTarget = targetEntity;
+                        break;
+                    default:
+                        pSkill->PrimaryTarget = source;
+                        pSkill->EffectiveSource = targetEntity;
+                        pSkill->Targets.push_back(target);
+                        break;
+                    }
 
                     pSkill->Reflected = target.HitReflect;
                     pSkill->NRAAffinity = target.NRAAffinity;
@@ -2127,10 +2138,11 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
                 double mag = (magAdjust * lncAdjust / 18000000.0) +
                     (magAdjust * 0.25);
 
-                if(demon->GetMagReduction() > 0)
+                int8_t magReduction = characterManager->CalculateMagReduction(
+                    client, demon);
+                if(magReduction > 0)
                 {
-                    mag = mag * (double)(100 - demon->GetMagReduction()) *
-                        0.01;
+                    mag = mag * (double)(100 - magReduction) * 0.01;
                 }
 
                 uint32_t cost = (uint32_t)round(mag);
@@ -3461,7 +3473,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                 targetCalc) * 100;
 
             target.CanKnockback = true;
-            if(kbRemove && (kbRemove >= 10000 ||
+            if(target.EntityState->StatusRestrictKnockbackCount() > 0)
+            {
+                // Target knockback locked by status
+                target.CanKnockback = false;
+            }
+            else if(kbRemove && (kbRemove >= 10000 ||
                 RNG(int32_t, 1, 10000) <= kbRemove))
             {
                 // Source nulls knockback
@@ -5601,6 +5618,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
 
         bool isRemove = addStatus && addStatus->GetMinStack() == 0 &&
             addStatus->GetMaxStack() == 0;
+        bool isReplace = addStatus && addStatus->GetIsReplace();
 
         auto statusDef = definitionManager->GetStatusData(effectID);
         if(!statusDef) continue;
@@ -5616,9 +5634,9 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         if(!isRemove)
         {
             // If its application logic type 1, it cannot be applied if
-            // it is already active (ex: sleep)
+            // it is already active unless we're replacing (ex: sleep)
             if(statusDef->GetBasic()->GetApplicationLogic() == 1 &&
-                eState->StatusEffectActive(effectID))
+                !isReplace && eState->StatusEffectActive(effectID))
             {
                 continue;
             }
@@ -5740,7 +5758,6 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
             // application logic, otherwise default to 1 non-replace
             int8_t minStack = addStatus ? addStatus->GetMinStack() : 1;
             int8_t maxStack = addStatus ? addStatus->GetMaxStack() : 1;
-            bool isReplace = addStatus && addStatus->GetIsReplace();
 
             // Scale stacks
             if(stackScale > 1)
@@ -6041,21 +6058,11 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             zone->RemoveEntity(eState->GetEntityID(), 1);
             levels.push_back(eState->GetLevel());
 
-            auto eBase = eState->GetEnemyBase();
-            if(eState->GetEntityType() == EntityType_t::ALLY &&
-                eBase && eBase->GetEncounterID() == 0)
+            if(eState->GetEnemyBase()->GetCanRevive())
             {
-                // If entity is actually an ally and is not configured
-                // for respawning, leave it as reviveable
-                auto slg = zone->GetDefinition()->GetSpawnLocationGroups(
-                    eBase->GetSpawnLocationGroupID());
-                if(!slg || slg->GetRespawnTime() == 0)
-                {
-                    canRevive.insert(eState->GetEntityID());
-                }
+                canRevive.insert(eState->GetEntityID());
             }
-
-            if(canRevive.find(eState->GetEntityID()) == canRevive.end())
+            else
             {
                 removeIDs.push_back(eState->GetEntityID());
             }
@@ -6708,9 +6715,10 @@ void SkillManager::HandleKillXP(const std::shared_ptr<objects::Enemy>& enemy,
                 int64_t finalXP = (int64_t)ceil((double)xpPair.second *
                     ((double)cState->GetCorrectValue(CorrectTbl::RATE_XP)
                         * 0.01));
-
-                characterManager->ExperienceGain(c, (uint64_t)finalXP,
-                    cState->GetEntityID());
+                if(finalXP > 0)
+                {
+                    characterManager->UpdateExperience(c, finalXP, cState->GetEntityID());
+                }
             }
         }
     }
@@ -11979,7 +11987,7 @@ bool SkillManager::XPUp(
 
     if(ProcessSkillResult(activated, ctx))
     {
-        characterManager->ExperienceGain(client, (uint64_t)skillData
+        characterManager->UpdateExperience(client, skillData
             ->GetSpecial()->GetSpecialParams(0), eState->GetEntityID());
         return true;
     }

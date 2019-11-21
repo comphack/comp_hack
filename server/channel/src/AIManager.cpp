@@ -1454,10 +1454,10 @@ bool AIManager::UpdateEnemyState(
             return false;
         }
 
-        // If a skill has been activated but for less than 15s, do not decide
+        // If a skill has been charged but for less than 15s, do not decide
         // to do something else by default (ex: rapid/counter)
         skillActivationWait = now <
-            (activated->GetActivationTime() + 15000000ULL);
+            (activated->GetChargedTime() + 15000000ULL);
 
         bool cancelAndReset = false;
         if(!CanRetrySkill(eState, activated))

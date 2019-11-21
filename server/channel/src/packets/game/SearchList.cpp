@@ -418,9 +418,43 @@ bool Parsers::SearchList::Parse(libcomp::ManagerPacket *pPacketManager,
                 reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
                     character ? character->GetName() : "", true);
 
+                int8_t slotCount = 0;
+                int8_t attrMask = 0;
+
+                if(entry->GetData(SEARCH_IDX_TAROT) > 0)
+                {
+                    attrMask = (int8_t)(attrMask | 0x01);
+                }
+
+                if(entry->GetData(SEARCH_IDX_SOUL) > 0)
+                {
+                    attrMask = (int8_t)(attrMask | 0x02);
+                }
+
+                if(entry->GetData(SEARCH_IDX_BASIC_EFFECT) > 0 ||
+                    entry->GetData(SEARCH_IDX_SPECIAL_EFFECT) > 0)
+                {
+                    attrMask = (int8_t)(attrMask | 0x80);
+                }
+
+                for(size_t i = 0; i < 5; i++)
+                {
+                    int32_t idx = (int32_t)(i + SEARCH_BASE_MOD_SLOT);
+
+                    if(entry->GetData(idx) != 0)
+                    {
+                        slotCount = (int8_t)(slotCount + 1);
+
+                        if(entry->GetData(idx) != MOD_SLOT_NULL_EFFECT)
+                        {
+                            attrMask = (int8_t)(attrMask | (0x01 << (i + 2)));
+                        }
+                    }
+                }
+
                 reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_SUB_CATEGORY));
-                reply.WriteS8(0);   // Unknown
-                reply.WriteS8(0);   // Unknown
+                reply.WriteS8(slotCount);
+                reply.WriteS8(attrMask);
                 reply.WriteS32Little(entry->GetData(SEARCH_IDX_PRICE));
             }
             break;

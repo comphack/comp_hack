@@ -1190,7 +1190,7 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
         }
     }
 
-    std::unordered_map<int32_t, uint64_t> xpGain;
+    std::unordered_map<int32_t, int64_t> xpDeltas;
     auto dbChanges = libcomp::DatabaseChangeSet::Create();
 
     libcomp::Packet p;
@@ -1247,7 +1247,7 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
             auto pvpData = character ? character->LoadPvPData(db) : nullptr;
 
             auto eState = inMatch[stats->GetEntityID()];
-            xpGain[stats->GetEntityID()] = 0;
+            xpDeltas[stats->GetEntityID()] = 0;
 
             int32_t oldGP = matchGP[stats->GetEntityID()];
             int32_t newGP = matchGP[stats->GetEntityID()];
@@ -1376,7 +1376,7 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
                             eState->GetCorrectValue(CorrectTbl::RATE_XP) *
                             0.01));
 
-                        xpGain[stats->GetEntityID()] = (uint64_t)xp;
+                        xpDeltas[stats->GetEntityID()] = xp;
                     }
                 }
 
@@ -1470,7 +1470,7 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
                 p.WriteS8(trophy);
             }
 
-            p.WriteS32Little((int32_t)xpGain[stats->GetEntityID()]);
+            p.WriteS32Little((int32_t)xpDeltas[stats->GetEntityID()]);
         }
     }
 
@@ -1485,12 +1485,12 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID)
     // Lastly grant XP
     auto characterManager = server->GetCharacterManager();
     auto managerConnection = server->GetManagerConnection();
-    for(auto& xpPair : xpGain)
+    for(auto& xpPair : xpDeltas)
     {
         auto client = managerConnection->GetEntityClient(xpPair.first, false);
         if(client)
         {
-            characterManager->ExperienceGain(client, xpPair.second,
+            characterManager->UpdateExperience(client, xpPair.second,
                 xpPair.first);
         }
     }
@@ -3165,7 +3165,7 @@ void MatchManager::UltimateBattleTick(uint32_t zoneID, uint32_t dynamicMapID,
         if(!eventID.IsEmpty())
         {
             server->GetEventManager()->HandleEvent(nullptr,
-                eventID, 0, zone);
+                eventID, 0, zone, {});
         }
 
         // Get the new expiratin if set
@@ -3808,6 +3808,7 @@ void MatchManager::UpdatePvPMatches(
     uint32_t now = (uint32_t)std::time(0);
     ServerTime serverTime = ChannelServer::GetServerTime();
 
+    std::list<std::shared_ptr<ChannelClientConnection>> noQueueJoin;
     std::unordered_map<uint32_t, int32_t> localExpire;
     {
         std::lock_guard<std::mutex> lock(mLock);
@@ -3841,20 +3842,7 @@ void MatchManager::UpdatePvPMatches(
                     {
                         if(match->GetNoQueue())
                         {
-                            // PvP zones do not work properly unless they are
-                            // "prepped" with a confirmation first
-                            libcomp::Packet request;
-                            request.WritePacketCode(
-                                ChannelToClientPacketCode_t::PACKET_PVP_CONFIRM);
-                            request.WriteS8(0);   // Confirmed
-                            request.WriteS32Little(0);
-
-                            client->QueuePacket(request);
-
-                            // Immediately move to the zone
-                            server->GetZoneManager()->MoveToInstance(client);
-
-                            client->FlushOutgoing();
+                            noQueueJoin.push_back(client);
                         }
                         else
                         {
@@ -3882,6 +3870,24 @@ void MatchManager::UpdatePvPMatches(
                 localExpire[match->GetID()] = confirmTime;
             }
         }
+    }
+
+    for(auto& client : noQueueJoin)
+    {
+        // PvP zones do not work properly unless they are "prepped" with a
+        // confirmation first
+        libcomp::Packet request;
+        request.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_PVP_CONFIRM);
+        request.WriteS8(0);   // Confirmed
+        request.WriteS32Little(0);
+
+        client->QueuePacket(request);
+
+        // Immediately move to the zone
+        server->GetZoneManager()->MoveToInstance(client);
+
+        client->FlushOutgoing();
     }
 
     for(auto& pair : localExpire)

@@ -153,6 +153,9 @@
         <member type="set" name="StatusRestrictAct">
             <element type="u32"/>
         </member>
+        <member type="set" name="StatusRestrictKnockback">
+            <element type="u32"/>
+        </member>
         <member type="set" name="StatusRestrictMove">
             <element type="u32"/>
         </member>

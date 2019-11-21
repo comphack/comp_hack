@@ -254,7 +254,18 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
             }
             break;
         case objects::MiGuardianAssistData::Type_t::MITAMA_SET:
-            mitamaSet = true;
+            {
+                bool exBonus = SkillAvailable(SVR_CONST.MITAMA_SET_BOOST);
+
+                int8_t magReduction = 0;
+                for(int32_t tokuseiID : CharacterManager::GetMitamaIndirectSetBonuses(
+                    demon, definitionManager, exBonus, magReduction))
+                {
+                    mDigitalizeState->AppendTokuseiIDs(tokuseiID);
+                }
+
+                mitamaSet = true;
+            }
             break;
         case objects::MiGuardianAssistData::Type_t::EXTEND_TIME:
             mDigitalizeState->SetTimeExtension(
@@ -970,9 +981,13 @@ uint8_t CharacterState::RecalculateStats(
     // Calculate based on adjustments
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
     std::list<std::shared_ptr<objects::MiCorrectTbl>> nraTbls;
-    for(auto equip : c->GetEquippedItems())
+    for(size_t i = 0; i < 15; i++)
     {
-        if(!equip.IsNull() && equip->GetDurability() > 0 &&
+        bool bullets = i ==
+            (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS;
+
+        auto equip = c->GetEquippedItems(i).Get();
+        if(equip && (equip->GetDurability() > 0 || bullets) &&
             (!equip->GetRentalExpiration() || now < equip->GetRentalExpiration()))
         {
             uint32_t basicEffect = equip->GetBasicEffect();

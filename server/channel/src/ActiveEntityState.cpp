@@ -812,6 +812,7 @@ void ActiveEntityState::SetStatusEffects(
     mNextUpkeep = 0;
 
     ClearStatusRestrictAct();
+    ClearStatusRestrictKnockback();
     ClearStatusRestrictMove();
     ClearStatusRestrictMagic();
     ClearStatusRestrictSpecial();
@@ -1815,6 +1816,7 @@ void ActiveEntityState::RemoveStatusEffects(const std::set<uint32_t>& effectType
         }
 
         RemoveStatusRestrictAct(effectType);
+        RemoveStatusRestrictKnockback(effectType);
         RemoveStatusRestrictMove(effectType);
         RemoveStatusRestrictMagic(effectType);
         RemoveStatusRestrictSpecial(effectType);
@@ -1964,6 +1966,16 @@ void ActiveEntityState::ActivateStatusEffect(
     {
         // No movement
         InsertStatusRestrictMove(effectType);
+
+        // Disable knockback if movement locked and hit result won't cancel
+        // the status
+        uint8_t cancelTypes = se->GetCancel()->GetCancelTypes();
+        if((cancelTypes & EFFECT_CANCEL_HIT) == 0 &&
+            (cancelTypes & EFFECT_CANCEL_DAMAGE) == 0 &&
+            (cancelTypes & EFFECT_CANCEL_KNOCKBACK) == 0)
+        {
+            InsertStatusRestrictKnockback(effectType);
+        }
     }
 
     if(restr & 0x04)

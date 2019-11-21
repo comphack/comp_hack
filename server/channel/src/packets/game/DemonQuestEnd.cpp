@@ -141,20 +141,20 @@ bool Parsers::DemonQuestEnd::Parse(libcomp::ManagerPacket *pPacketManager,
         }
 
         // Grant all XP rewards
-        uint64_t xp = 0;
+        int64_t xp = 0;
         if(dQuest->GetXPReward() > 0)
         {
-            xp = (uint64_t)dQuest->GetXPReward();
+            xp = dQuest->GetXPReward();
         }
 
         for(uint32_t bonusXP : dQuest->GetBonusXP())
         {
-            xp = xp + (uint64_t)bonusXP;
+            xp = (int64_t)(xp + bonusXP);
         }
 
         if(xp)
         {
-            characterManager->ExperienceGain(client, xp,
+            characterManager->UpdateExperience(client, xp,
                 cState->GetEntityID());
         }
     }

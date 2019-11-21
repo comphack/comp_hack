@@ -31,14 +31,14 @@ mkdir build
 cd build
 
 echo "Installing external dependencies"
-unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip" | "${ROOT_DIR}/ci/report-progress.sh"
+unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip"
 mv external* ../binaries
 echo "Installed external dependencies"
 
 echo "Installing Doxygen"
 mkdir doxygen
 cd doxygen
-unzip "${CACHE_DIR}/doxygen.zip" | "${ROOT_DIR}/ci/report-progress.sh"
+unzip "${CACHE_DIR}/doxygen.zip"
 cd ..
 export PATH="${ROOT_DIR}/libcomp/build/doxygen;${PATH}"
 echo "Installed Doxygen"

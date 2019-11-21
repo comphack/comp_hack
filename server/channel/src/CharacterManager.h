@@ -882,13 +882,17 @@ public:
 
     /**
      * Update the client's character or demon's experience and level
-     * up if the level threshold is passed.
+     * up if the level threshold is passed. XP can be reduced as well
+     * but cannot result in the entity leveling down.
      * @param client Pointer to the client connection
-     * @param xpGain Experience amount to gain
+     * @param xp Experience amount to add or remove
      * @param entityID Character or demon ID to gain experience
+     * @return true if the update succeeded or nothing was done, false
+     *  if an error occurred or the entity attempted to deduct more
+     *  XP than the amount on the current level
      */
-    void ExperienceGain(const std::shared_ptr<
-        channel::ChannelClientConnection>& client, uint64_t xpGain,
+    bool UpdateExperience(const std::shared_ptr<
+        channel::ChannelClientConnection>& client, int64_t xp,
         int32_t entityID);
 
     /**
@@ -1380,6 +1384,36 @@ public:
         libcomp::DefinitionManager* definitionManager,
         std::unordered_map<uint8_t, uint8_t>& bonuses,
         std::set<uint32_t>& setBonuses, bool excludeTokusei);
+
+    /**
+     * Get all mitama set bonuses not covered by direct stat adjustments
+     * @param demon Pointer to a demon
+     * @param definitionManager Pointer to the definition manager to use to
+     *  retrieve bonus information
+     * @param exBonus Designates that the current character has the mitama
+     *  set boost passive available
+     * @param magReduction Output parameter designating additional mag
+     *  reduction gained from set bonuses
+     * @return List of tokusei IDs granted by set bonuses
+     */
+    static std::list<int32_t> GetMitamaIndirectSetBonuses(
+        const std::shared_ptr<objects::Demon>& demon,
+        libcomp::DefinitionManager* definitionManager, bool exBonus,
+        int8_t& magReduction);
+
+    /**
+     * Calculate the summoning mag reduction for a demon associated to
+     * their current player character. Mag reduction is static from
+     * reunion bonuses but can also be increased mitama set bonuses as
+     * well as being further boosted by the current character's mitama
+     * set bonus boosting passive. Reduction cannot exceed 100.
+     * @param client Current client to retrieve demon information relative to
+     * @param demon Demon to retrieve the reduction value for
+     * @return Final combined summoning mag reduction
+     */
+    int8_t CalculateMagReduction(
+        const std::shared_ptr<channel::ChannelClientConnection>& client,
+        const std::shared_ptr<objects::Demon>& demon);
 
     /**
      * Get all trait skill IDs on the supplied demon directly or from equipment

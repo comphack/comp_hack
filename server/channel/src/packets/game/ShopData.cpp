@@ -73,9 +73,6 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
     auto definitionManager = server->GetDefinitionManager();
     auto serverDataManager = server->GetServerDataManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-
     auto shopData = serverDataManager->GetShopData((uint32_t)shopID);
     if(!shopData)
     {
@@ -88,7 +85,11 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
         return true;
     }
 
-    auto cEvent = client->GetClientState()->GetEventState()->GetCurrent();
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
+    auto state = client->GetClientState();
+    auto zone = state->GetZone();
+    auto cEvent = state->GetEventState()->GetCurrent();
 
     std::set<uint8_t> disabledTabs;
     if(cEvent)
@@ -99,7 +100,7 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             auto tab = shopData->GetTabs(i);
             if(tab->ConditionsCount() > 0 && !eventManager
-                ->EvaluateEventConditions(client, tab->GetConditions()))
+                ->EvaluateEventConditions(zone, tab->GetConditions(), client))
             {
                 cEvent->InsertDisabledChoices(i);
                 disabledTabs.insert(i);

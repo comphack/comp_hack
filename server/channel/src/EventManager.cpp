@@ -1396,14 +1396,14 @@ bool EventManager::Compare(int32_t value1, int32_t value2, int32_t value3,
 }
 
 bool EventManager::EvaluateEventConditions(
-    const std::shared_ptr<ChannelClientConnection>& client,
-    const std::list<std::shared_ptr<objects::EventCondition>>& conditions)
+    const std::shared_ptr<Zone>& zone,
+    const std::list<std::shared_ptr<objects::EventCondition>>& conditions,
+    const std::shared_ptr<ChannelClientConnection>& client)
 {
     EventContext ctx;
     ctx.Client = client;
     ctx.EventInstance = std::make_shared<objects::EventInstance>(); // No event
-    ctx.CurrentZone = client
-        ? client->GetClientState()->GetCharacterState()->GetZone() : nullptr;
+    ctx.CurrentZone = zone;
     ctx.AutoOnly = true;
 
     return EvaluateEventConditions(ctx, conditions);

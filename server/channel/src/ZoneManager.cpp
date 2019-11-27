@@ -2240,7 +2240,10 @@ void ZoneManager::SendLootBoxData(const std::shared_ptr<ChannelClientConnection>
 {
     auto box = lState->GetEntity();
     auto zone = GetCurrentZone(client);
-    auto zoneData = zone->GetDefinition();
+    if(!zone)
+    {
+        return;
+    }
 
     libcomp::Packet p;
 

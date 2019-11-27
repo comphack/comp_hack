@@ -493,13 +493,15 @@ public:
      * Get all dropsets from a list of IDs, filtering mutually exclusive sets
      * as well as any applicable condition checks
      * @param dropSetIDs List of dropset IDs to gather and filter
-     * @param client Pointer to the client connection creating the drops, can
-     *  be null
+     * @param zone Zone the drops will be determined for
+     * @param client Optional pointer to the client connection creating the
+     *  drops (used when evaluating conditions)
      * @param filter Filters drops if true, defaults to true
      * @return List of valid drop set definitions
      */
     std::list<std::shared_ptr<objects::DropSet>> DetermineDropSets(
         const std::list<uint32_t>& dropSetIDs, const std::shared_ptr<
+        Zone>& zone, const std::shared_ptr<
         channel::ChannelClientConnection>& client, bool filter = true);
 
     /**

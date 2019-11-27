@@ -3324,6 +3324,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     hpDrain = (int32_t)(hpDrain -
                         (int32_t)floorl((float)target.Damage1 *
                             (float)hpDrainPercent * 0.01f));
+
+                    // Check limit
+                    if(hpDrain > 9999)
+                    {
+                        hpDrain = 9999;
+                    }
                 }
 
                 if(target.Damage2Type == DAMAGE_TYPE_GENERIC &&
@@ -3332,6 +3338,12 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
                     mpDrain = (int32_t)(mpDrain -
                         (int32_t)floorl((float)target.Damage2 *
                             (float)mpDrainPercent * 0.01f));
+
+                    // Check limit
+                    if(mpDrain > 9999)
+                    {
+                        mpDrain = 9999;
+                    }
                 }
             }
 
@@ -9238,14 +9250,33 @@ std::unordered_map<uint8_t, std::list<
         std::list<std::shared_ptr<objects::ItemDrop>>> dropsTemp;
     if(giftMode)
     {
-        for(auto drop : spawn->GetGifts())
+        for(auto gift : spawn->GetGifts())
         {
-            dropsTemp[(uint8_t)objects::DropSet::Type_t::NORMAL].push_back(drop);
+            dropsTemp[(uint8_t)objects::DropSet::Type_t::NORMAL].push_back(gift);
         }
 
-        for(uint32_t dropSetID : spawn->GetGiftSetIDs())
+        for(uint32_t giftSetID : spawn->GetGiftSetIDs())
         {
-            dropSetIDs.push_back(dropSetID);
+            dropSetIDs.push_back(giftSetID);
+        }
+
+        if(spawn->GetInheritDrops())
+        {
+            // Add global gifts
+            auto globalDef = serverDataManager->GetZonePartialData(0);
+            if(globalDef)
+            {
+                for(uint32_t giftSetID : globalDef->GetGiftSetIDs())
+                {
+                    dropSetIDs.push_back(giftSetID);
+                }
+            }
+
+            // Add zone gifts
+            for(uint32_t giftSetID : zone->GetDefinition()->GetGiftSetIDs())
+            {
+                dropSetIDs.push_back(giftSetID);
+            }
         }
     }
     else
@@ -9281,7 +9312,8 @@ std::unordered_map<uint8_t, std::list<
     }
 
     // Get drops from drop sets
-    for(auto dropSet : characterManager->DetermineDropSets(dropSetIDs, client))
+    for(auto dropSet : characterManager->DetermineDropSets(dropSetIDs, zone,
+        client))
     {
         uint8_t type = (uint8_t)dropSet->GetType();
         for(auto drop : dropSet->GetDrops())

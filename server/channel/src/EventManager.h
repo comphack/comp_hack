@@ -331,13 +331,15 @@ public:
 
     /**
      * Evaluate a list of event conditions for a client
-     * @param client Pointer to the client connection
+     * @param zone Zone to evaluate the conditions in
      * @param conditions Event conditions to evaluate
+     * @param client Optional pointer to the client connection
      * @return true if the event conditions evaluate to true, otherwise false
      */
     bool EvaluateEventConditions(
-        const std::shared_ptr<ChannelClientConnection>& client,
-        const std::list<std::shared_ptr<objects::EventCondition>>& conditions);
+        const std::shared_ptr<Zone>& zone,
+        const std::list<std::shared_ptr<objects::EventCondition>>& conditions,
+        const std::shared_ptr<ChannelClientConnection>& client = nullptr);
 
 private:
     struct EventContext

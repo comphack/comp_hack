@@ -3355,7 +3355,7 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
 
         auto drops = act->GetDrops();
         for(auto dropSet : characterManager->DetermineDropSets(act
-            ->GetDropSetIDs(), ctx.Client))
+            ->GetDropSetIDs(), ctx.CurrentZone, ctx.Client))
         {
             for(auto drop : dropSet->GetDrops())
             {

@@ -2863,8 +2863,8 @@ bool CharacterManager::CultureItemPickup(const std::shared_ptr<
 
 std::list<std::shared_ptr<objects::DropSet>>
     CharacterManager::DetermineDropSets(const std::list<uint32_t>& dropSetIDs,
-        const std::shared_ptr<channel::ChannelClientConnection>& client,
-        bool filter)
+        const std::shared_ptr<Zone>& zone, const std::shared_ptr<
+        channel::ChannelClientConnection>& client, bool filter)
 {
     std::list<std::shared_ptr<objects::DropSet>> dropSets;
 
@@ -2917,7 +2917,7 @@ std::list<std::shared_ptr<objects::DropSet>>
                 else if(dropSet->ConditionsCount() > 0)
                 {
                     if(!server->GetEventManager()->EvaluateEventConditions(
-                        client, dropSet->GetConditions()))
+                        zone, dropSet->GetConditions(), client))
                     {
                         valid = false;
                     }

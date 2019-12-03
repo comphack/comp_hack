@@ -78,22 +78,22 @@ bool Parsers::TeamForm::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         // All other parameters seem to never be specified, debug
         // if they are not
-        LogGeneralDebug([&]()
+        LogTeamDebug([&]()
         {
             return libcomp::String("TeamForm 2: %1\n").Arg(unk2);
         });
 
-        LogGeneralDebug([&]()
+        LogTeamDebug([&]()
         {
             return libcomp::String("TeamForm 3: %1\n").Arg(unk3);
         });
 
-        LogGeneralDebug([&]()
+        LogTeamDebug([&]()
         {
             return libcomp::String("TeamForm 4: %1\n").Arg(unk4);
         });
 
-        LogGeneralDebug([&]()
+        LogTeamDebug([&]()
         {
             return libcomp::String("TeamForm 5: %1\n").Arg(unk5);
         });

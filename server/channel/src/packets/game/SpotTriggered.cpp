@@ -170,7 +170,7 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LogGeneralWarning([&]()
+        LogGeneralDebug([&]()
         {
             return libcomp::String("Undefined spot %1 for zone %2.\n")
                 .Arg(spotID)

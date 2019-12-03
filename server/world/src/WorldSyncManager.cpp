@@ -1991,7 +1991,7 @@ bool WorldSyncManager::EndMatch(const std::shared_ptr<
         ranks.pop_back();
 
         match->SetRankings(top.first, bestRank);
-        if(ranks.back().second != top.second)
+        if(ranks.size() > 0 && ranks.back().second != top.second)
         {
             bestRank++;
         }

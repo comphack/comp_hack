@@ -28,6 +28,7 @@
 
 // libcomp Includes
 #include <ManagerPacket.h>
+#include <Log.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
@@ -57,6 +58,8 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         auto login = std::make_shared<objects::AccountLogin>();
         if(!login->LoadPacket(p, false))
         {
+            LogGeneralErrorMsg("Invalid AccountLogin sent from lobby"
+                " when requesting login channel for account.\n");
             return false;
         }
 
@@ -89,12 +92,21 @@ bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             auto login = std::make_shared<objects::AccountLogin>();
             if(!login->LoadPacket(p, false))
             {
+                LogGeneralErrorMsg("Invalid AccountLogin sent from"
+                    " channel when requesting first login info.\n");
                 return false;
             }
 
             auto channelLogin = std::make_shared<objects::ChannelLogin>();
             if(!channelLogin->LoadPacket(p, false))
             {
+                LogGeneralError([&]()
+                {
+                    return libcomp::String("Invalid ChannelLogin sent from"
+                        " channel when requesting first login info for"
+                        " account: %1.\n")
+                        .Arg(login->GetAccount().GetUUID().ToString());
+                });
                 return false;
             }
 

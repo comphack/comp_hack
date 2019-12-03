@@ -74,6 +74,8 @@ bool Parsers::WebGame::Parse(libcomp::ManagerPacket *pPacketManager,
             if(p.Left() < 2 ||
                 (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
             {
+                LogGeneralErrorMsg("WebGame request from lobby did not supply"
+                    " a source username\n");
                 return false;
             }
 
@@ -83,8 +85,10 @@ bool Parsers::WebGame::Parse(libcomp::ManagerPacket *pPacketManager,
         else
         {
             // Convert world CID to account username
-            if(p.Left() < 1)
+            if(p.Left() < 4)
             {
+                LogGeneralErrorMsg("WebGame request from channel did not"
+                    " supply a source world CID\n");
                 return false;
             }
 
@@ -120,6 +124,8 @@ bool Parsers::WebGame::Parse(libcomp::ManagerPacket *pPacketManager,
         if(p.Left() < 2 ||
             (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
         {
+            LogGeneralErrorMsg("WebGame request from lobby did not supply"
+                " a source username\n");
             return false;
         }
 
@@ -129,6 +135,12 @@ bool Parsers::WebGame::Parse(libcomp::ManagerPacket *pPacketManager,
         if(p.Left() < 2 ||
             (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
         {
+            LogGeneralError([username]()
+            {
+                return libcomp::String("WebGame request from lobby did not"
+                    " supply a source session ID from account: %1.\n")
+                    .Arg(username);
+            });
             return false;
         }
 
@@ -189,6 +201,8 @@ bool Parsers::WebGame::Parse(libcomp::ManagerPacket *pPacketManager,
                 auto gameSession = std::make_shared<objects::WebGameSession>();
                 if(!gameSession->LoadPacket(p, false))
                 {
+                    LogGeneralErrorMsg("Channel requested WebGame session"
+                        " supplied invalid game session data\n");
                     return false;
                 }
 

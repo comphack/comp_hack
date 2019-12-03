@@ -504,6 +504,15 @@ bool CharacterManager::AddToParty(std::shared_ptr<objects::PartyCharacter> membe
         }
     }
 
+    if(success)
+    {
+        LogPartyDebug([login, partyID]()
+        {
+            return libcomp::String("Adding member to party %1: %2\n")
+                .Arg(partyID).Arg(login->GetCharacter().GetUUID().ToString());
+        });
+    }
+
     if(success && partyID && login->GetTeamID())
     {
         // When joining a party, all teams must be left
@@ -763,6 +772,12 @@ void CharacterManager::PartyDisband(uint32_t partyID, int32_t sourceCID,
             mParties.erase(party->GetID());
         }
 
+        LogPartyDebug([partyID]()
+        {
+            return libcomp::String("Party %1 has been disbanded\n")
+                .Arg(partyID);
+        });
+
         std::list<int32_t> includeCIDs;
         for(auto login : partyLogins)
         {
@@ -844,6 +859,13 @@ void CharacterManager::PartyKick(std::shared_ptr<objects::CharacterLogin> cLogin
     auto partyLogins = GetRelatedCharacterLogins(cLogin, RELATED_PARTY);
     if(targetLogin)
     {
+        LogPartyDebug([cLogin, party]()
+        {
+            return libcomp::String("Kicking member from party %1: %2\n")
+                .Arg(party->GetID())
+                .Arg(cLogin->GetCharacter().GetUUID().ToString());
+        });
+
         RemoveFromParty(targetLogin, party->GetID());
         targetLogin->SetPartyID(0);
     }
@@ -1026,6 +1048,12 @@ bool CharacterManager::ClanJoin(std::shared_ptr<objects::CharacterLogin> cLogin,
         character->SetClan(NULLUUID);
         return false;
     }
+
+    LogClanDebug([character, clan]()
+    {
+        return libcomp::String("Adding member to clan '%1': %2\n")
+            .Arg(clan->GetName()).Arg(character->GetUUID().ToString());
+    });
 
     // Follow up with the the source so they can update the locally set clan
     // and update other players in the zone with the new info
@@ -1213,6 +1241,12 @@ void CharacterManager::ClanDisband(int32_t clanID, int32_t sourceCID,
             return;
         }
 
+        LogClanDebug([clan]()
+        {
+            return libcomp::String("Clan '%1' has been disbanded\n")
+                .Arg(clan->GetName());
+        });
+
         libcomp::Packet relay;
         auto cidOffset = WorldServer::GetRelayPacket(relay);
         relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_DISBANDED);
@@ -1246,18 +1280,28 @@ void CharacterManager::ClanKick(std::shared_ptr<objects::CharacterLogin> cLogin,
     auto targetLogin = GetCharacterLogin(targetCID);
     auto clanLogins = GetRelatedCharacterLogins(targetLogin, RELATED_CLAN);
     clanLogins.push_back(targetLogin);
-    if(targetLogin && RemoveFromClan(targetLogin, clanID))
+    if(targetLogin)
     {
-        libcomp::Packet relay;
-        auto cidOffset = WorldServer::GetRelayPacket(relay);
-        relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_KICKED);
-        relay.WriteS32Little(clanID);
-        relay.WriteS32Little(targetLogin->GetWorldCID());
+        LogPartyDebug([targetLogin]()
+        {
+            return libcomp::String("Kicking member from registered clan: %1\n")
+                .Arg(targetLogin->GetCharacter().GetUUID().ToString());
+        });
 
-        SendToCharacters(relay, clanLogins, cidOffset);
+        if(RemoveFromClan(targetLogin, clanID))
+        {
+            libcomp::Packet relay;
+            auto cidOffset = WorldServer::GetRelayPacket(relay);
+            relay.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_CLAN_KICKED);
+            relay.WriteS32Little(clanID);
+            relay.WriteS32Little(targetLogin->GetWorldCID());
 
-        std::list<int32_t> cids = { targetCID };
-        SendClanInfo(0, 0x0F, cids);
+            SendToCharacters(relay, clanLogins, cidOffset);
+
+            std::list<int32_t> cids = { targetCID };
+            SendClanInfo(0, 0x0F, cids);
+        }
     }
 
     if(requestConnection)
@@ -1273,7 +1317,18 @@ void CharacterManager::RecalculateClanLevel(int32_t clanID, bool sendUpdate)
     {
         auto server = mServer.lock();
         auto db = server->GetWorldDatabase();
-        auto clan = clanInfo->GetClan();
+        auto clan = clanInfo->GetClan().Get();
+        if(!clan)
+        {
+            // Shouldn't happen
+            return;
+        }
+
+        LogClanDebug([clan]()
+        {
+            return libcomp::String("Recalculating clan level for '%1'\n")
+                .Arg(clan->GetName());
+        });
 
         int8_t currentLevel = clan->GetLevel();
 
@@ -1612,6 +1667,7 @@ int32_t CharacterManager::AddToTeam(int32_t worldCID, int32_t teamID)
         return teamID == 0 ? login->GetTeamID() : 0;
     }
 
+    bool isNew = false;
     if(teamID)
     {
         // Add to existing team
@@ -1641,6 +1697,25 @@ int32_t CharacterManager::AddToTeam(int32_t worldCID, int32_t teamID)
         team->SetLeaderCID(worldCID);
         team->InsertMemberIDs(worldCID);
         mTeams[teamID] = team;
+
+        isNew = true;
+    }
+
+    if(isNew)
+    {
+        LogTeamDebug([login, teamID]()
+        {
+            return libcomp::String("Team %1 created by leader: %2.\n")
+                .Arg(teamID).Arg(login->GetCharacter().GetUUID().ToString());
+        });
+    }
+    else
+    {
+        LogTeamDebug([login, teamID]()
+        {
+            return libcomp::String("Adding member to team %1: %2\n")
+                .Arg(teamID).Arg(login->GetCharacter().GetUUID().ToString());
+        });
     }
 
     return teamID;
@@ -1794,6 +1869,12 @@ void CharacterManager::TeamDisband(int32_t teamID, int32_t sourceCID,
             std::lock_guard<std::mutex> lock(mLock);
             mTeams.erase(teamID);
         }
+
+        LogTeamDebug([teamID]()
+        {
+            return libcomp::String("Team %1 has been disbanded\n")
+                .Arg(teamID);
+        });
 
         std::list<int32_t> includeCIDs;
         for(auto login : teamLogins)
@@ -2105,6 +2186,15 @@ uint32_t CharacterManager::CreateParty(std::shared_ptr<objects::PartyCharacter> 
         }
     }
 
+    if(partyID)
+    {
+        LogPartyDebug([partyID, login]()
+        {
+            return libcomp::String("Party %1 created by leader: %2.\n")
+                .Arg(partyID).Arg(login->GetCharacter().GetUUID().ToString());
+        });
+    }
+
     if(partyID && login->GetTeamID())
     {
         // When creating a party, all teams must be left
@@ -2187,17 +2277,29 @@ void CharacterManager::SendPartyMember(
 bool CharacterManager::RemoveFromParty(std::shared_ptr<objects::CharacterLogin> cLogin,
     uint32_t partyID)
 {
-    std::lock_guard<std::mutex> lock(mLock);
-    auto cid = cLogin->GetWorldCID();
-    auto it = mParties.find(partyID);
-    if(it != mParties.end() && it->second->MemberIDsContains(cid))
+    bool success = false;
     {
-        it->second->RemoveMemberIDs(cid);
-        mPartyCharacters.erase(cid);
-        return true;
+        std::lock_guard<std::mutex> lock(mLock);
+        auto cid = cLogin->GetWorldCID();
+        auto it = mParties.find(partyID);
+        if (it != mParties.end() && it->second->MemberIDsContains(cid))
+        {
+            it->second->RemoveMemberIDs(cid);
+            mPartyCharacters.erase(cid);
+            success = true;
+        }
     }
 
-    return false;
+    if(success)
+    {
+        LogPartyDebug([cLogin, partyID]()
+        {
+            return libcomp::String("Removing member from party %1: %2\n")
+                .Arg(partyID).Arg(cLogin->GetCharacter().GetUUID().ToString());
+        });
+    }
+
+    return success;
 }
 
 bool CharacterManager::RemoveFromClan(std::shared_ptr<objects::CharacterLogin> cLogin,
@@ -2261,7 +2363,17 @@ bool CharacterManager::RemoveFromClan(std::shared_ptr<objects::CharacterLogin> c
             dbChanges->Update(character);
         }
 
-        return worldDB->ProcessChangeSet(dbChanges);
+        if(worldDB->ProcessChangeSet(dbChanges))
+        {
+            LogClanDebug([clan, character]()
+            {
+                return libcomp::String("Successfully removed member from"
+                    " clan '%1': %2\n").Arg(clan->GetName())
+                    .Arg(character->GetUUID().ToString());
+            });
+
+            return true;
+        }
     }
 
     return false;
@@ -2292,6 +2404,15 @@ bool CharacterManager::RemoveFromTeam(std::shared_ptr<
         {
             syncManager->SyncOutgoing();
         }
+    }
+
+    if(success)
+    {
+        LogTeamDebug([cLogin, teamID]()
+        {
+            return libcomp::String("Removing member from team %1: %2\n")
+                .Arg(teamID).Arg(cLogin->GetCharacter().GetUUID().ToString());
+        });
     }
 
     return success;

@@ -108,6 +108,23 @@ bool AccountManager::LobbyLogin(std::shared_ptr<objects::AccountLogin> login)
         // This pair is the iterator (first) and a bool indicating it was
         // inserted into the map (second).
         result = res.second;
+
+        if(result)
+        {
+            LogAccountManagerDebug([lookup]()
+            {
+                return libcomp::String("LobbyLogin succeeded for user: '%1'\n")
+                    .Arg(lookup);
+            });
+        }
+        else
+        {
+            LogAccountManagerError([lookup]()
+            {
+                return libcomp::String("LobbyLogin failed for user: '%1'\n")
+                    .Arg(lookup);
+            });
+        }
     }
 
     return result;
@@ -133,6 +150,14 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
         });
 
         return false;
+    }
+    else
+    {
+        LogAccountManagerDebug([&]()
+        {
+            return libcomp::String("Handling channel login for user: %1.\n")
+                .Arg(login->GetAccount().GetUUID().ToString());
+        });
     }
 
     auto worldChanges = libcomp::DatabaseChangeSet::Create();
@@ -175,6 +200,13 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
 
         // Count any time before today as one day
         uint32_t daysSinceLogin = ((today - lastLogin) / (24 * 60 * 60)) + 1;
+
+        LogAccountManagerDebug([character, daysSinceLogin]()
+        {
+            return libcomp::String("Performing one time daily character login"
+                " actions for character %1 (last login %2 day(s) ago).\n")
+                .Arg(character->GetUUID().ToString()).Arg(daysSinceLogin);
+        });
 
         // Only reset the demon quests if they were not reset since the
         // previous login (since the channel sets them while playing too)
@@ -311,6 +343,13 @@ bool AccountManager::SwitchChannel(
 
         return false;
     }
+
+    LogAccountManagerDebug([username, switchDef]()
+    {
+        return libcomp::String("Channel switch requested from channel %1 to %2"
+            " by user: '%3'\n").Arg(switchDef->GetFromChannel())
+            .Arg(switchDef->GetToChannel()).Arg(username);
+    });
 
     PushChannelSwitch(username, switchDef);
 
@@ -496,6 +535,12 @@ void AccountManager::HandleLobbyLogin(
     auto config = std::dynamic_pointer_cast<objects::WorldConfig>(
         server->GetConfig());
 
+    LogAccountManagerDebug([login]()
+    {
+        return libcomp::String("Lobby login request received from user:"
+            " '%1'\n").Arg(login->GetAccount().GetUUID().ToString());
+    });
+
     // Check if there is a channel login pending from last session
     // which would only occur if the character login is already
     // registered here
@@ -519,6 +564,12 @@ void AccountManager::HandleLobbyLogin(
             login->SavePacket(p, false);
 
             primaryChannel->SendPacket(p);
+
+            LogAccountManagerDebug([login]()
+            {
+                return libcomp::String("Requesting login channel for user:"
+                    " '%1'\n").Arg(login->GetAccount().GetUUID().ToString());
+            });
         }
         else
         {
@@ -534,6 +585,9 @@ void AccountManager::HandleLobbyLogin(
             }
 
             server->GetLobbyConnection()->SendPacket(p);
+
+            LogAccountManagerErrorMsg("Lobby login failed because there is no"
+                " primary login channel configured.");
         }
     }
     else
@@ -1253,6 +1307,12 @@ bool AccountManager::StartWebGameSession(const std::shared_ptr<
         return false;
     }
 
+    LogAccountManagerDebug([lookup]()
+    {
+        return libcomp::String("Starting WebGame session for user: '%1'\n")
+            .Arg(lookup);
+    });
+
     // Session is valid, generate the session ID and register it
     auto sessionID = libcomp::Crypto::GenerateRandom(20).ToLower();
     gameSession->SetSessionID(sessionID);
@@ -1342,6 +1402,15 @@ bool AccountManager::EndWebGameSession(const libcomp::String& username,
                 channel->SendPacket(notify);
             }
         }
+    }
+
+    if(existed)
+    {
+        LogAccountManagerDebug([username]()
+        {
+            return libcomp::String("Ending WebGame session for user: '%1'\n")
+                .Arg(username);
+        });
     }
 
     return existed;

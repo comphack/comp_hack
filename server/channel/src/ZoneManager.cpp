@@ -575,6 +575,28 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         state->SetLastInstanceID(currentZone->GetInstanceID());
     }
 
+    if(!currentZone || currentZone != nextZone)
+    {
+        if(currentZone)
+        {
+            LogZoneManagerDebug([&]()
+            {
+                return libcomp::String("Character entering zone %1 from"
+                    " %2: %3\n").Arg(zoneID)
+                    .Arg(currentZone->GetDefinitionID())
+                    .Arg(cState->GetEntityUUID().ToString());
+            });
+        }
+        else
+        {
+            LogZoneManagerDebug([&]()
+            {
+                return libcomp::String("Character starting in zone %1: %2\n")
+                    .Arg(zoneID).Arg(cState->GetEntityUUID().ToString());
+            });
+        }
+    }
+
     auto uniqueID = nextZone->GetID();
 
     bool firstConnection = false;
@@ -1232,6 +1254,16 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
 
         cState->SetZone(nullptr);
         dState->SetZone(nullptr);
+
+        if(zone)
+        {
+            LogZoneManagerDebug([&]()
+            {
+                return libcomp::String("Character left zone %1: %2\n")
+                    .Arg(zone->GetDefinitionID())
+                    .Arg(cState->GetEntityUUID().ToString());
+            });
+        }
     }
     else
     {
@@ -2829,6 +2861,8 @@ void ZoneManager::UpdateStatusEffectStates(const std::shared_ptr<Zone>& zone,
             if(entity->SetHPMP(0, -upkeepCost, true,
                 false, 0, hpAdjusted, mpAdjusted))
             {
+                displayStateModified.insert(entity);
+
                 libcomp::Packet p;
                 p.WritePacketCode(
                     ChannelToClientPacketCode_t::PACKET_SKILL_UPKEEP_COST);

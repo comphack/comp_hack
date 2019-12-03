@@ -242,7 +242,7 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
 {
     if(p.Size() < 9)
     {
-        LogGeneralErrorMsg("Invalid packet data sent to TeamUpdate\n");
+        LogTeamErrorMsg("Invalid packet data sent to TeamUpdate\n");
 
         return false;
     }
@@ -258,7 +258,7 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     auto cLogin = characterManager->GetCharacterLogin(cid);
     if(!cLogin)
     {
-        LogGeneralError([&]()
+        LogTeamError([&]()
         {
             return libcomp::String("Invalid world CID sent to TeamUpdate: %1\n")
                 .Arg(cid);
@@ -274,7 +274,7 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             // Request to form a team
             if(p.Left() < 1)
             {
-                LogGeneralErrorMsg("Team form request encountered without type"
+                LogTeamErrorMsg("Team form request encountered without type"
                     " specified\n");
 
                 return false;
@@ -289,7 +289,7 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             // Request to invite a new team member
             if(p.Left() < 2 || (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
             {
-                LogGeneralError([&]()
+                LogTeamError([&]()
                 {
                     return libcomp::String("Missing target name parameter"
                         " for command %1\n").Arg(mode);
@@ -365,7 +365,7 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             // Update team leader
             if(p.Left() < 4)
             {
-                LogGeneralError([&]()
+                LogTeamError([&]()
                 {
                     return libcomp::String("Missing target CID parameter"
                         " for command %1\n").Arg(mode);
@@ -384,7 +384,7 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             // Kick a member
             if(p.Left() < 4)
             {
-                LogGeneralError([&]()
+                LogTeamError([&]()
                 {
                     return libcomp::String("Missing target CID parameter"
                         " for command %1\n").Arg(mode);
@@ -402,7 +402,7 @@ bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
             // Update team ziotite
             if(p.Left() < 5)
             {
-                LogGeneralError([&]()
+                LogTeamError([&]()
                 {
                     return libcomp::String("Missing ziotite amount parameters"
                         " for command %1\n").Arg(mode);

@@ -1,3 +1,13 @@
+comphack (4.6.0) xenial; urgency=low
+
+  * Plasma modifiable with zone partials
+  * Zone-wide gift sets (also in partials)
+  * HP/MP drain cap
+  * Additional logging levels for TEAM and PACKET
+  * More channel and world logging
+
+ -- COMP Omega <compomega@tutanota.com>  Sun, 08 Dec 2019 11:00:09 -0700
+
 comphack (4.5.0) xenial; urgency=low
 
   * Loosened ShopBuy restrictions for COMP shops

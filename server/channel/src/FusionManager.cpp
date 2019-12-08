@@ -1498,10 +1498,65 @@ int8_t FusionManager::ProcessFusion(
 
         characterManager->UpdateExpertisePoints(client, expPoints);
 
+        if(demon3)
+        {
+            LogFusionManagerDebug([&]()
+            {
+                return libcomp::String("Tri-fusion failed for result %1"
+                    " (%2 x %3 x %4) with success rate %5 for character: %6\n")
+                    .Arg(resultDemonType)
+                    .Arg(demon1->GetType())
+                    .Arg(demon2->GetType())
+                    .Arg(demon3->GetType())
+                    .Arg(successRate)
+                    .Arg(cState->GetEntityUUID().ToString());
+            });
+        }
+        else
+        {
+            LogFusionManagerDebug([&]()
+            {
+                return libcomp::String("Fusion failed for result %1"
+                    " (%2 x %3) with success rate %4 for character: %5\n")
+                    .Arg(resultDemonType)
+                    .Arg(demon1->GetType())
+                    .Arg(demon2->GetType())
+                    .Arg(successRate)
+                    .Arg(cState->GetEntityUUID().ToString());
+            });
+        }
+
         return 1;
     }
 
     // Fusion success past this point, create the demon and update all old data
+    if(demon3)
+    {
+        LogFusionManagerDebug([&]()
+        {
+            return libcomp::String("Tri-fusion succeeded with result %1"
+                " (%2 x %3 x %4) with success rate %5 for character: %6\n")
+                .Arg(resultDemonType)
+                .Arg(demon1->GetType())
+                .Arg(demon2->GetType())
+                .Arg(demon3->GetType())
+                .Arg(successRate)
+                .Arg(cState->GetEntityUUID().ToString());
+        });
+    }
+    else
+    {
+        LogFusionManagerDebug([&]()
+        {
+            return libcomp::String("Fusion succeeded with result %1"
+                " (%2 x %3) with success rate %4 for character: %5\n")
+                .Arg(resultDemonType)
+                .Arg(demon1->GetType())
+                .Arg(demon2->GetType())
+                .Arg(successRate)
+                .Arg(cState->GetEntityUUID().ToString());
+        });
+    }
 
     // Calculate familiarity, store demons in the COMP and determine first
     // slot to add the new demon to
@@ -1735,6 +1790,13 @@ int8_t FusionManager::GetAdjustedLevelSum(uint8_t level1, uint8_t level2,
 std::shared_ptr<objects::MiDevilData> FusionManager::GetResultDemon(
     uint8_t race, int8_t adjustedLevelSum)
 {
+    if(race == 0)
+    {
+        // Don't bother with error as caller needs to handle invalid params
+        // as well as irregular result
+        return nullptr;
+    }
+
     // Normal race selection adjusted for level range
     auto definitionManager = mServer.lock()->GetDefinitionManager();
     auto fusionRanges = definitionManager->GetFusionRanges(race);
@@ -1746,7 +1808,7 @@ std::shared_ptr<objects::MiDevilData> FusionManager::GetResultDemon(
                 " for race ID: %1\n").Arg(race);
         });
 
-        return 0;
+        return nullptr;
     }
 
     // Traverse the pre-sorted list and take the highest range accessible

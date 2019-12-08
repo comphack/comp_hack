@@ -29,6 +29,7 @@
 
 // libcomp Includes
 #include <DefinitionManager.h>
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -165,6 +166,8 @@ void ExtractReunionPoints(const std::shared_ptr<ChannelServer> server,
         uint32_t baseDemonType = demonData->GetUnionData()->GetBaseDemonID();
         if(characterManager->IsMitamaDemon(demonData) && baseDemonType)
         {
+            uint32_t currentType = demon->GetType();
+
             auto definitionManager = server->GetDefinitionManager();
             newDemonData = definitionManager->GetDevilData(baseDemonType);
 
@@ -176,6 +179,24 @@ void ExtractReunionPoints(const std::shared_ptr<ChannelServer> server,
             {
                 demon->SetMitamaReunion(i, 0);
             }
+
+            LogCharacterManagerDebug([&]()
+            {
+                return libcomp::String("Extracting %1 reunion point(s), %2"
+                    " mitama point(s) and reverting demon type %3 to base"
+                    " type %4: %5\n")
+                    .Arg(rPoints).Arg(mPoints).Arg(currentType)
+                    .Arg(baseDemonType).Arg(demon->GetUUID().ToString());
+            });
+        }
+        else
+        {
+            LogCharacterManagerDebug([rPoints, demon]()
+            {
+                return libcomp::String("Extracting %1 reunion point(s) from"
+                    " demon: %2\n").Arg(rPoints)
+                    .Arg(demon->GetUUID().ToString());
+            });
         }
 
         // Growth type reverts to default

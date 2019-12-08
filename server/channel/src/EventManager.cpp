@@ -236,6 +236,19 @@ bool EventManager::RequestMenu(const std::shared_ptr<
 
     if(!allowInsert && current)
     {
+        if(state->GetCurrentMenuShopID(menuType) == shopID)
+        {
+            // Already open, do not fail due to request spamming
+            LogEventManagerDebug([&]()
+            {
+                return libcomp::String("Attempted to open menu type '%1' for"
+                    " character that was already in menu on account: %2\n")
+                    .Arg(menuType).Arg(state->GetAccountUID().ToString());
+            });
+
+            return true;
+        }
+
         LogEventManagerError([&]()
         {
             return libcomp::String("Attempted to open menu type '%1' for"

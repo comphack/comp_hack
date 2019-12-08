@@ -2090,7 +2090,9 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
         LogActionManagerError([&]()
         {
             return libcomp::String("SetNPCState attempted on invalid "
-                "target: %1\n").Arg(act->GetActorID());
+                "target in zone %1: %2\n")
+                .Arg(ctx.CurrentZone->GetDefinitionID())
+                .Arg(act->GetActorID());
         });
 
         return false;

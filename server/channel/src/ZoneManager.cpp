@@ -3732,7 +3732,8 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
             LogZoneManagerError([&]()
             {
                 return libcomp::String("Failed to spawn group %1 at"
-                    " unknown spot %2\n").Arg(sgID).Arg(spotID);
+                    " unknown spot %2 in zone %3\n")
+                    .Arg(sgID).Arg(spotID).Arg(zone->GetDefinitionID());
             });
 
             continue;
@@ -3751,7 +3752,8 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                     LogZoneManagerError([&]()
                     {
                         return libcomp::String("Failed to spawn group %1 at"
-                            " unknown spot %2\n").Arg(sgID).Arg(spotID);
+                            " unknown spot %2 in zone %3\n").Arg(sgID)
+                            .Arg(spotID).Arg(zone->GetDefinitionID());
                     });
 
                     locationFailed = true;
@@ -7513,7 +7515,7 @@ std::shared_ptr<Zone> ZoneManager::GetInstanceZone(
     {
         LogZoneManagerError([&]()
         {
-            return libcomp::String("Attmpted to add invalid zone to"
+            return libcomp::String("Attempted to add invalid zone to"
                 " instance: %1 (%2)\n").Arg(zoneID).Arg(dynamicMapID);
         });
 

@@ -174,13 +174,16 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
     auto changes = libcomp::DatabaseChangeSet::Create();
 
     changes->Update(inventory);
+
+    auto itemIter = otherTradeItems.begin();
     for(size_t i = 0; i < inventory->ItemsCount()
-        && otherTradeItems.size() > 0; i++)
+        && itemIter != otherTradeItems.end(); i++)
     {
         if(freeSlots.find(i) != freeSlots.end())
         {
-            auto item = otherTradeItems.front();
-            otherTradeItems.erase(otherTradeItems.begin());
+            auto item = *itemIter;
+            itemIter++;
+
             inventory->SetItems(i, item);
             item->SetBoxSlot((int8_t)i);
             item->SetItemBox(inventory->GetUUID());
@@ -190,13 +193,16 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     changes->Update(otherInventory);
+
+    itemIter = tradeItems.begin();
     for(size_t i = 0; i < otherInventory->ItemsCount()
-        && tradeItems.size() > 0; i++)
+        && itemIter != tradeItems.end(); i++)
     {
         if(otherFreeSlots.find(i) != otherFreeSlots.end())
         {
-            auto item = tradeItems.front();
-            tradeItems.erase(tradeItems.begin());
+            auto item = *itemIter;
+            itemIter++;
+
             otherInventory->SetItems(i, item);
             item->SetBoxSlot((int8_t)i);
             item->SetItemBox(otherInventory->GetUUID());
@@ -223,6 +229,49 @@ bool Parsers::TradeFinish::Parse(libcomp::ManagerPacket *pPacketManager,
 
         characterManager->EndExchange(client, 0);
         characterManager->EndExchange(otherClient, 0);
+
+        LogTradeDebug([cState, otherCState, tradeItems, otherTradeItems]()
+        {
+            std::list<libcomp::String> itemList1;
+            std::list<libcomp::String> itemList2;
+
+            for(auto item : tradeItems)
+            {
+                if(item->GetStackSize() > 1)
+                {
+                    itemList1.push_back(libcomp::String("%1 x%2")
+                        .Arg(item->GetType()).Arg(item->GetStackSize()));
+                }
+                else
+                {
+                    itemList1.push_back(libcomp::String("%1")
+                        .Arg(item->GetType()));
+                }
+            }
+
+            for(auto item : otherTradeItems)
+            {
+                if(item->GetStackSize() > 1)
+                {
+                    itemList2.push_back(libcomp::String("%1 x%2")
+                        .Arg(item->GetType()).Arg(item->GetStackSize()));
+                }
+                else
+                {
+                    itemList2.push_back(libcomp::String("%1")
+                        .Arg(item->GetType()));
+                }
+            }
+
+            return libcomp::String("Successfully traded %1 from character %2"
+                " for %3 from character %4.\n")
+                .Arg(itemList1.size() > 0
+                    ? libcomp::String::Join(itemList1, ", ") : "no items")
+                .Arg(cState->GetEntityUUID().ToString())
+                .Arg(itemList2.size() > 0
+                    ? libcomp::String::Join(itemList2, ", ") : "no items")
+                .Arg(otherCState->GetEntityUUID().ToString());
+        });
     }
 
     return true;

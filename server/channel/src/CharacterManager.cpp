@@ -3407,6 +3407,13 @@ bool CharacterManager::UpdateDurability(const std::shared_ptr<
             if(newValue == 0)
             {
                 // Item is broken, remove it
+                LogItemDebug([item, cState]()
+                {
+                    return libcomp::String("Item type %1 owned by character"
+                        " %2 has broken.\n").Arg(item->GetType())
+                        .Arg(cState->GetEntityUUID().ToString());
+                });
+
                 UnequipItem(client, item);
                 item->SetDurability(0);
                 item->SetMaxDurability(0);
@@ -4145,14 +4152,26 @@ bool CharacterManager::MitamaDemon(const std::shared_ptr<
         uint16_t rTotal = GetReunionRankTotal(demon);
         if(rTotal >= 48)
         {
+            uint32_t currentType = demon->GetType();
+            uint32_t newType = demonData->GetUnionData()->GetMitamaFusionID();
+
             int8_t mRank = (int8_t)floor((rTotal - 48) / 4);
 
             demon->SetGrowthType(growthType);
-            demon->SetType(demonData->GetUnionData()->GetMitamaFusionID());
+            demon->SetType(newType);
             demon->SetMitamaRank((uint8_t)mRank);
             demon->SetMitamaType(mitamaType);
 
             success = true;
+
+            LogCharacterManagerDebug([&]()
+            {
+                return libcomp::String("Demon type %1 became type %2 with"
+                    " mitama type %3 and growh type %4: %5\n")
+                    .Arg(currentType).Arg(newType)
+                    .Arg(mitamaType).Arg(growthType)
+                    .Arg(demon->GetUUID().ToString());
+            });
         }
     }
 
@@ -4941,6 +4960,13 @@ bool CharacterManager::UpdateExperience(const std::shared_ptr<
             }
 
             dbChanges->Update(demon);
+
+            LogCharacterManagerDebug([demon, startingLevel, level]()
+            {
+                return libcomp::String("Demon has leveled up from"
+                    " %1 to %2!\n").Arg(demon->GetUUID().ToString())
+                    .Arg(startingLevel).Arg(level);
+            });
         }
         else
         {
@@ -5014,6 +5040,13 @@ bool CharacterManager::UpdateExperience(const std::shared_ptr<
             }
 
             dbChanges->Update(character);
+
+            LogCharacterManagerDebug([cState, startingLevel, level]()
+            {
+                return libcomp::String("Character has leveled up from"
+                    " %1 to %2!\n").Arg(cState->GetEntityUUID().ToString())
+                    .Arg(startingLevel).Arg(level);
+            });
         }
     }
 

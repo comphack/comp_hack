@@ -716,6 +716,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
     state->SetAccountWorldData(worldData);
 
+    // Keep track of any login updates
+    auto dbUpdates = libcomp::DatabaseChangeSet::Create(account);
+
     // Bazaar
     if(!worldData->GetBazaarData().IsNull())
     {
@@ -763,6 +766,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
                 bazaarData->SetItems(i, NULLUUID);
                 openSlots.insert(i);
+
+                dbUpdates->Update(bazaarData);
+
                 continue;
             }
 
@@ -785,6 +791,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
                     bazaarData->SetItems(idx, bItem);
                     recovered++;
+
+                    dbUpdates->Update(bazaarData);
 
                     if(openSlots.size() == 0) break;
                 }
@@ -924,6 +932,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
                 itemBox->SetItems(i, NULLUUID);
                 openSlots.insert(i);
+
+                dbUpdates->Update(itemBox.Get());
+
                 continue;
             }
 
@@ -940,6 +951,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
                 itemBox->SetItems(i, NULLUUID);
                 openSlots.insert(i);
+
+                dbUpdates->Update(itemBox.Get());
+
                 continue;
             }
 
@@ -964,6 +978,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                     itemBox->SetItems(idx, item);
                     item->SetBoxSlot((int8_t)idx);
                     recovered++;
+
+                    dbUpdates->Update(itemBox.Get());
+                    dbUpdates->Update(item);
 
                     if(openSlots.size() == 0) break;
                 }
@@ -1007,6 +1024,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 });
 
                 character->SetEquippedItems(i, NULLUUID);
+
+                dbUpdates->Update(character.Get());
             }
         }
     }
@@ -1054,6 +1073,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             });
 
             character->AppendStatusEffects(effect);
+
+            dbUpdates->Update(character.Get());
         }
     }
 
@@ -1075,6 +1096,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                 });
 
                 character->RemoveStatusEffects((size_t)i);
+
+                dbUpdates->Update(character.Get());
             }
         }
     }
@@ -1181,6 +1204,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                     });
 
                     demon->AppendStatusEffects(effect);
+
+                    dbUpdates->Update(demon.Get());
                 }
             }
 
@@ -1202,6 +1227,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                         });
 
                         demon->RemoveStatusEffects((size_t)i);
+
+                        dbUpdates->Update(demon.Get());
                     }
                 }
             }
@@ -1223,6 +1250,9 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
                     });
 
                     demon->SetEquippedItems(i, NULLUUID);
+
+                    dbUpdates->Update(demon.Get());
+
                     continue;
                 }
 
@@ -1244,6 +1274,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         });
 
         character->SetActiveDemon(NULLUUID);
+
+        dbUpdates->Update(character.Get());
     }
 
     // Validate skills associated to the character
@@ -1306,6 +1338,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             });
 
             character->SetQuests(quest->GetQuestID(), quest);
+
+            dbUpdates->Update(character.Get());
         }
     }
 
@@ -1323,6 +1357,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
             });
 
             character->RemoveQuests(questID);
+
+            dbUpdates->Update(character.Get());
         }
     }
 
@@ -1368,6 +1404,8 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
 
                 return false;
             }
+
+            dbUpdates->Update(character.Get());
         }
     }
 
@@ -1412,7 +1450,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         }
     }
 
-    return !newCharacter || character->Update(db);
+    return db->ProcessChangeSet(dbUpdates);
 }
 
 bool AccountManager::InitializeNewCharacter(std::shared_ptr<

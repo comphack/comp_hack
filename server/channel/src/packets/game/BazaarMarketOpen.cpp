@@ -158,6 +158,14 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
 
         reply.WriteS32Little((int32_t)timeLeft);
         reply.WriteS32Little(0);        // Success
+
+        LogBazaarDebug([bazaarData, zone, timeLeft]()
+        {
+            return libcomp::String("Player opened bazaar market %1 in zone %2"
+                " for %3 seconds: %4\n").Arg(bazaarData->GetMarketID())
+                .Arg(zone->GetDefinitionID()).Arg(timeLeft)
+                .Arg(bazaarData->GetAccount().GetUUID().ToString());
+        });
     }
     else
     {

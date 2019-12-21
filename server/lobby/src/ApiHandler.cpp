@@ -1784,7 +1784,8 @@ bool ApiHandler::WebGame_Update(const JsonBox::Object& request,
     }
     else
     {
-        response["error"] = "Invalid action attempted";
+        response["error"] = libcomp::String("Invalid action attempted: %1")
+            .Arg(action).C();
         return true;
     }
 
@@ -2047,6 +2048,10 @@ bool ApiHandler::handlePost(CivetServer *pServer,
     postContentLength = static_cast<size_t>(mg_read(
         pConnection, szPostData, postContentLength));
     szPostData[postContentLength] = 0;
+
+    LogWebAPIDebugMsg(libcomp::String("%1 post data received from %2: %3\n")
+        .Arg(pRequestInfo->request_uri).Arg(pRequestInfo->remote_addr)
+        .Arg(szPostData));
 
     JsonBox::Value request;
     request.loadFromString(szPostData);

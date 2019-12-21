@@ -166,10 +166,11 @@ bool Parsers::CultureStart::Parse(libcomp::ManagerPacket *pPacketManager,
 
         if(!worldDB->ProcessChangeSet(dbChanges))
         {
-            LogGeneralError([&]()
+            auto accountUID = state->GetAccountUID();
+            LogGeneralError([accountUID]()
             {
                 return libcomp::String("CultureData failed to save: %1\n")
-                    .Arg(state->GetAccountUID().ToString());
+                    .Arg(accountUID.ToString());
             });
 
             client->Kill();
@@ -194,6 +195,14 @@ bool Parsers::CultureStart::Parse(libcomp::ManagerPacket *pPacketManager,
 
         reply.WriteS8(0);        // Success
         reply.WriteS32Little((int32_t)timeLeft);
+
+        LogItemDebug([cData, zone, timeLeft]()
+        {
+            return libcomp::String("Character started culture machine %1 in"
+                " zone %2 for %3 seconds: %4\n")
+                .Arg(cData->GetMachineID()).Arg(zone->GetDefinitionID())
+                .Arg(timeLeft).Arg(cData->GetCharacter().ToString());
+        });
     }
     else
     {

@@ -124,7 +124,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         ? definitionManager->GetItemData(product->GetItem()) : nullptr;
     if(!shop || !product || !def)
     {
-        LogGeneralError([&]()
+        LogGeneralError([shopID, productID]()
         {
             return libcomp::String("Invalid shop purchase: shopID=%1, "
                 "productID=%2\n")
@@ -197,7 +197,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
 
     if(!productFound)
     {
-        LogGeneralError([&]()
+        LogGeneralError([shopID, productID]()
         {
             return libcomp::String("Shop '%1' does not currently contain"
                 " product '%2'\n").Arg(shopID).Arg(productID);
@@ -278,11 +278,12 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         if(!characterManager->CalculateMaccaPayment(client, (uint64_t)price,
             insertItems, stackAdjustItems))
         {
-            LogGeneralError([&]()
+            auto accountUID = state->GetAccountUID();
+            LogGeneralError([accountUID]()
             {
                 return libcomp::String("Attempted to buy an item the player "
                     "could not afford: %1\n")
-                    .Arg(state->GetAccountUID().ToString());
+                    .Arg(accountUID.ToString());
             });
 
             SendShopPurchaseReply(client, shopID, productID, -2, false);
@@ -328,6 +329,14 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
             stackAdjustItems))
         {
             result = 0; // Normal success
+
+            auto accountUID = state->GetAccountUID();
+            LogItemDebug([productID, quantity, price, accountUID]()
+            {
+                return libcomp::String("Shop product %1 (x%2) purchased for %3"
+                    " macca by player: %4\n").Arg(productID).Arg(quantity)
+                    .Arg(price).Arg(accountUID.ToString());
+            });
         }
     }
     else
@@ -345,7 +354,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
 
             if(targetCharacter == nullptr)
             {
-                LogGeneralError([&]()
+                LogGeneralError([gifteeName]()
                 {
                     return libcomp::String("Invalid gift target character"
                         " name: '%1'\n").Arg(gifteeName);
@@ -398,11 +407,11 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
 
         if(!lobbyDB->ProcessChangeSet(opChangeset))
         {
-            LogGeneralError([&]()
+            LogGeneralError([account]()
             {
                 return libcomp::String("Attempted to buy an item exceeding the"
                     " player's CP amount: %1\n")
-                    .Arg(state->GetAccountUID().ToString());
+                    .Arg(account->GetUUID().ToString());
             });
 
             SendShopPurchaseReply(client, shopID, productID, -2, false);
@@ -413,6 +422,13 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
             result = !gifteeName.IsEmpty() ? 2 : 1;
             server->GetChannelSyncManager()->SyncRecordUpdate(account,
                 "Account");
+
+            LogItemDebug([productID, price, account]()
+            {
+                return libcomp::String("Shop product %1 purchased for %2 CP by"
+                    " player: %3\n").Arg(productID).Arg(price)
+                    .Arg(account->GetUUID().ToString());
+            });
         }
     }
 

@@ -36,10 +36,15 @@
 
 // objects Includes
 #include <MiSpotData.h>
+#include <PlasmaSpawn.h>
+#include <ServerBazaar.h>
+#include <ServerNPC.h>
+#include <ServerObject.h>
 #include <ServerZone.h>
 #include <ServerZonePartial.h>
 #include <ServerZoneSpot.h>
 #include <SpawnLocation.h>
+#include <SpawnLocationGroup.h>
 
 // libcomp Includes
 #include <Log.h>
@@ -97,23 +102,83 @@ QString SpotList::GetObjectName(const std::shared_ptr<
     {
         QString typeTxt = prop->type->itemText((int)spotDef->GetType());
 
+        bool defined = false;
+        bool occupied = false;
+        bool spawned = false;
         if(mMainWindow)
         {
             auto zoneWindow = mMainWindow->GetZones();
             if(zoneWindow)
             {
                 auto merged = zoneWindow->GetMergedZone();
-                if(merged && merged->Definition->SpotsKeyExists(spotDef
-                    ->GetID()))
+                if(merged)
                 {
-                    return QString("%1 [%2] [Defined]").arg(typeTxt)
-                        .arg(spotDef->GetType());
+                    defined = merged->Definition->SpotsKeyExists(spotDef
+                        ->GetID());
+
+                    for(auto npc : merged->Definition->GetNPCs())
+                    {
+                        if(npc->GetSpotID() == spotDef->GetID())
+                        {
+                            occupied = true;
+                            break;
+                        }
+                    }
+
+                    if(!occupied)
+                    {
+                        for(auto o : merged->Definition->GetObjects())
+                        {
+                            if(o->GetSpotID() == spotDef->GetID())
+                            {
+                                occupied = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if(!occupied)
+                    {
+                        for(auto bazaar : merged->Definition->GetBazaars())
+                        {
+                            if(bazaar->GetSpotID() == spotDef->GetID() ||
+                                bazaar->MarketIDsContains(spotDef->GetID()))
+                            {
+                                occupied = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    for(auto slgPair : merged->Definition
+                        ->GetSpawnLocationGroups())
+                    {
+                        if(slgPair.second->SpotIDsContains(spotDef->GetID()))
+                        {
+                            spawned = true;
+                            break;
+                        }
+                    }
+
+                    if(!spawned)
+                    {
+                        for(auto pPair : merged->Definition->GetPlasmaSpawns())
+                        {
+                            if(pPair.second->GetSpotID() == spotDef->GetID())
+                            {
+                                spawned = true;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }
 
         // Client only definition
-        return QString("%1 [%2]").arg(typeTxt).arg(spotDef->GetType());
+        return QString("%1 [%2]%3%4%5").arg(typeTxt).arg(spotDef->GetType())
+            .arg(defined ? " [Defined]" : "").arg(spawned ? " [Spawned]" : "")
+            .arg(occupied ? " [Occupied]" : "");
     }
     else if(spot)
     {

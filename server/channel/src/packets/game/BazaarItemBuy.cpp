@@ -93,6 +93,7 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         auto character = cState->GetEntity();
         auto inventory = character->GetItemBoxes(0).Get();
+        auto market = bState->GetCurrentMarket(marketID);
 
         uint64_t totalMacca = characterManager->GetTotalMacca(character);
 
@@ -123,17 +124,18 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
             // inventory as well.
             errorCode = -2;
 
-            LogBazaarError([&]()
+            auto accountUID = state->GetAccountUID();
+            LogBazaarError([accountUID]()
                 {
                     return libcomp::String("BazaarItemBuy failed due to"
                         " required macca splitting without enough space"
-                        " available: %1\n")
-                        .Arg(state->GetAccountUID().ToString());
+                        " available: %1\n").Arg(accountUID.ToString());
                 });
         }
         else if(bState->BuyItem(bItem))
         {
-            if(!characterManager->PayMacca(client, (uint64_t)bItem->GetCost()))
+            uint64_t cost = (uint64_t)bItem->GetCost();
+            if(!characterManager->PayMacca(client, cost))
             {
                 // Undo sale
                 bItem->SetSold(false);
@@ -172,11 +174,11 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
                 {
-                    LogBazaarError([&]()
+                    auto accountUID = state->GetAccountUID();
+                    LogBazaarError([accountUID]()
                     {
                         return libcomp::String("BazaarItemBuy failed to "
-                            "save: %1\n")
-                            .Arg(state->GetAccountUID().ToString());
+                            "save: %1\n").Arg(accountUID.ToString());
                     });
 
                     client->Kill();
@@ -190,6 +192,17 @@ bool Parsers::BazaarItemBuy::Parse(libcomp::ManagerPacket *pPacketManager,
                 std::list<uint16_t> updatedSlots = { (uint16_t)destSlot };
                 server->GetCharacterManager()->SendItemBoxData(client,
                     inventory, updatedSlots);
+
+                auto accountUID = state->GetAccountUID();
+                auto ownerUID = market->GetAccount().GetUUID();
+                LogBazaarDebug([item, bItem, cost, ownerUID, accountUID]()
+                {
+                    return libcomp::String("Item %1 (type %2) purchased for %3"
+                        " macca from player %4 by player: %5\n")
+                        .Arg(item->GetUUID().ToString()).Arg(item->GetType())
+                        .Arg(cost).Arg(ownerUID.ToString())
+                        .Arg(accountUID.ToString());
+                });
             }
         }
     }

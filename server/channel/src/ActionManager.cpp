@@ -2082,7 +2082,13 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
     }
     else
     {
-        oNPCState = ctx.CurrentZone->GetServerObject(ctx.SourceEntityID);
+        // Get the NPC or object currently being interacted with
+        oNPCState = ctx.CurrentZone->GetNPC(ctx.SourceEntityID);
+
+        if(!oNPCState)
+        {
+            oNPCState = ctx.CurrentZone->GetServerObject(ctx.SourceEntityID);
+        }
     }
 
     if(!oNPCState)
@@ -2111,15 +2117,16 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
         break;
     }
 
+    if(oNPC &&
+        act->GetFrom() >= 0 && oNPC->GetState() != (uint8_t)act->GetFrom())
+    {
+        // Stop all actions past this point
+        return false;
+    }
+
     if(oNPC && (act->GetSourceClientOnly() ||
         act->GetState() != oNPC->GetState()))
     {
-        if(act->GetFrom() >= 0 && oNPC->GetState() != (uint8_t)act->GetFrom())
-        {
-            // Stop all actions past this point
-            return false;
-        }
-
         uint8_t from = oNPC->GetState();
         if(!act->GetSourceClientOnly())
         {

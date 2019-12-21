@@ -81,7 +81,7 @@ bool Parsers::ItemExchange::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(!itemDef || !optionDef)
     {
-        LogItemError([&]()
+        LogItemError([item, optionID]()
         {
             return libcomp::String("Invalid exchange ID encountered for "
                 "ItemExchange request: %1, %2\n")
@@ -117,6 +117,14 @@ bool Parsers::ItemExchange::Parse(libcomp::ManagerPacket *pPacketManager,
         if(characterManager->UpdateItems(client, false, inserts, updates))
         {
             responseCode = 0;   // Success
+
+            auto accountUID = state->GetAccountUID();
+            LogItemDebug([item, optionID, accountUID]()
+            {
+                return libcomp::String("Player exchanged item type %1 for"
+                    " item option %2: %3\n").Arg(item->GetType())
+                    .Arg(optionID).Arg(accountUID.ToString());
+            });
         }
         else
         {
@@ -174,11 +182,19 @@ bool Parsers::ItemExchange::Parse(libcomp::ManagerPacket *pPacketManager,
                     characterManager->ContractDemon(client, demonData,
                         cState->GetEntityID(), 3000);
                 }
+
+                auto accountUID = state->GetAccountUID();
+                LogItemDebug([item, optionID, accountUID]()
+                {
+                    return libcomp::String("Player exchanged item type %1 for"
+                        " demon option %2: %3\n").Arg(item->GetType())
+                        .Arg(optionID).Arg(accountUID.ToString());
+                });
             }
         }
         else
         {
-            LogItemError([&]()
+            LogItemError([demonTypes, freeCount]()
             {
                 return libcomp::String("Attempted to add '%1' demon(s) from"
                     " ItemExchange request but only had room for %2\n")
@@ -189,7 +205,7 @@ bool Parsers::ItemExchange::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LogItemError([&]()
+        LogItemError([itemDef]()
         {
             return libcomp::String("Invalid source item sub-category encountered"
                 " for ItemExchange request: %1, %2\n")

@@ -283,12 +283,12 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             if(!BarterConditionValid(server, cState, dState, barterData,
                 condition))
             {
-                LogBarterError([&]()
+                auto accountUID = state->GetAccountUID();
+                LogBarterError([barterID, accountUID]()
                 {
                     return libcomp::String("One or more barter conditions"
                         " invalid for player on barter ID %1: %2\n")
-                        .Arg(barterID)
-                        .Arg(state->GetAccountUID().ToString());
+                        .Arg(barterID).Arg(accountUID.ToString());
                 });
 
                 failed = true;
@@ -369,7 +369,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             case objects::MiNPCBarterItemData::Type_t::SKILL_DEMON:
             case objects::MiNPCBarterItemData::Type_t::PLUGIN:
             default:
-                LogBarterError([&]()
+                LogBarterError([type]()
                 {
                     return libcomp::String("Invalid barter trade item"
                         " type encountered: %1\n").Arg((uint8_t)type);
@@ -417,7 +417,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
 
                     if(CharacterManager::HasValuable(character, valuableID))
                     {
-                        LogBarterError([&]()
+                        LogBarterError([valuableID]()
                         {
                             return libcomp::String("Player attempted to"
                                 " perform barter with a one-time valuable they"
@@ -474,11 +474,12 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             case objects::MiNPCBarterItemData::Type_t::SKILL_DEMON:
                 if(!demon)
                 {
-                    LogBarterError([&]()
+                    auto accountUID = state->GetAccountUID();
+                    LogBarterError([accountUID]()
                     {
                         return libcomp::String("Attempted to add a barter demon"
                             " skill to a player without a demon summoned: %1\n")
-                            .Arg(state->GetAccountUID().ToString());
+                            .Arg(accountUID.ToString());
                     });
 
                     failed = true;
@@ -501,7 +502,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             case objects::MiNPCBarterItemData::Type_t::NONE:
                 break;
             default:
-                LogBarterError([&]()
+                LogBarterError([type]()
                 {
                     return libcomp::String("Invalid barter result item"
                         " type encountered: %1\n").Arg((uint8_t)type);
@@ -531,12 +532,13 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             }
             else
             {
-                LogBarterError([&]()
+                int32_t cooldownID = pair.first;
+                auto accountUID = state->GetAccountUID();
+                LogBarterError([cooldownID, accountUID]()
                 {
                     return libcomp::String("Attempted to execute barter"
                         " with active action cooldown type %1: %2\n")
-                        .Arg(-pair.first).
-                        Arg(state->GetAccountUID().ToString());
+                        .Arg(-cooldownID).Arg(accountUID.ToString());
                 });
 
                 failed = true;
@@ -553,11 +555,12 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             if(bethelAdjustments[i] < 0 &&
                 (progress->GetBethel(i) + bethelAdjustments[i]) < 0)
             {
-                LogBarterError([&]()
+                auto accountUID = state->GetAccountUID();
+                LogBarterError([accountUID]()
                 {
                     return libcomp::String("Attempted to execute barter"
                         " without enough bethel: %1\n")
-                        .Arg(state->GetAccountUID().ToString());
+                        .Arg(accountUID.ToString());
                 });
 
                 failed = true;
@@ -772,6 +775,16 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
         (groupEntry && (groupEntry->GetFlags() & 0x01) != 0);
 
     int8_t result = failed ? -1 : 0;
+    if(result == 0)
+    {
+        auto accountUID = state->GetAccountUID();
+        LogBarterDebug([barterID, accountUID]()
+        {
+            return libcomp::String("Barter %1 successful for player: %2\n")
+                .Arg(barterID).Arg(accountUID.ToString());
+        });
+    }
+
     if(!failed && autoCloseEnabled)
     {
         // Close menu and wait for next event or event end

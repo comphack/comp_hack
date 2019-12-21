@@ -1383,6 +1383,12 @@ bool WorldSyncManager::CleanUpCharacterLogin(int32_t worldCID, bool flushOutgoin
 void WorldSyncManager::SyncExistingChannelRecords(const std::shared_ptr<
     libcomp::InternalConnection>& connection)
 {
+    LogDataSyncManagerDebug([connection]()
+    {
+        return libcomp::String("Synchronizing existing records with new"
+            " channel connection: %1\n").Arg(connection->GetName());
+    });
+
     std::lock_guard<std::mutex> lock(mLock);
 
     std::set<std::shared_ptr<libcomp::Object>> records;
@@ -1469,6 +1475,12 @@ void WorldSyncManager::StartPvPMatch(uint32_t time, uint8_t type)
     bool recheck = !queuedTime;
     if(start)
     {
+        LogDataSyncManagerDebug([type]()
+        {
+            return libcomp::String("Starting PvP match type %1.\n")
+                .Arg(type);
+        });
+
         // Check if the required number of entries exist. If they do, form
         // teams and create match
         size_t minCount = type == 0 ? PVP_FATE_PLAYER_MIN
@@ -1583,6 +1595,12 @@ void WorldSyncManager::StartTeamPvPMatch(uint32_t time, uint8_t type)
     bool recheck = !queuedTime;
     if(start)
     {
+        LogDataSyncManagerDebug([type]()
+        {
+            return libcomp::String("Starting team PvP match type %1.\n")
+                .Arg(type);
+        });
+
         // Check if two teams with the required number of entries exist.
         // If they do, form teams and create match
         size_t minCount = (size_t)((type == 0 ? PVP_FATE_PLAYER_MIN
@@ -1719,6 +1737,12 @@ bool WorldSyncManager::DeterminePvPMatch(uint8_t type,
         return false;
     }
 
+    LogDataSyncManagerDebug([type]()
+    {
+        return libcomp::String("Recalculating queue for PvP match type %1.\n")
+            .Arg(type);
+    });
+
     uint32_t time = 0;
     std::list<std::shared_ptr<objects::MatchEntry>> soloEntries;
     {
@@ -1798,6 +1822,12 @@ bool WorldSyncManager::DetermineTeamPvPMatch(uint8_t type,
         // Not a standard PvP type
         return false;
     }
+
+    LogDataSyncManagerDebug([type]()
+    {
+        return libcomp::String("Recalculating queue for team PvP match type"
+            " %1.\n").Arg(type);
+    });
 
     uint32_t time = 0;
     std::unordered_map<int32_t, std::list<std::shared_ptr<
@@ -1949,6 +1979,12 @@ std::unordered_map<int32_t, std::list<std::shared_ptr<
 bool WorldSyncManager::EndMatch(const std::shared_ptr<
     objects::PentalphaMatch>& match)
 {
+    LogDataSyncManagerDebug([match]()
+    {
+        return libcomp::String("Ending Pentalpha match: %1\n")
+            .Arg(match->GetUUID().ToString());
+    });
+
     auto server = mServer.lock();
     auto db = server->GetWorldDatabase();
 
@@ -2100,6 +2136,12 @@ bool WorldSyncManager::EndMatch(const std::shared_ptr<
 bool WorldSyncManager::RecalculateTournamentRankings(
     const libobjgen::UUID& tournamentUID)
 {
+    LogDataSyncManagerDebug([tournamentUID]()
+    {
+        return libcomp::String("Recalculating UB Tournament rankings: %1\n")
+            .Arg(tournamentUID.ToString());
+    });
+
     auto server = mServer.lock();
 
     auto results = objects::UBResult::LoadUBResultListByTournament(
@@ -2293,6 +2335,12 @@ bool WorldSyncManager::EndTournament(
         {
             return false;
         }
+
+        LogDataSyncManagerDebug([tournament]()
+        {
+            return libcomp::String("UB Tournament has ended: %1\n")
+                .Arg(tournament->GetUUID().ToString());
+        });
     }
 
     if(RecalculateTournamentRankings(tournament->GetUUID()))

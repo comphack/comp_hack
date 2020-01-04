@@ -307,6 +307,13 @@ int8_t WorldSyncManager::Update<objects::Account>(const libcomp::String& type,
             auto channel = server->GetChannelConnectionByID(channelID);
             if (channel)
             {
+                LogDataSyncManagerDebug([channelID, entry]()
+                {
+                    return libcomp::String("Relaying lobby Account update to"
+                        " channel %1: %2\n").Arg(channelID)
+                        .Arg(entry->GetUUID().ToString());
+                });
+
                 WriteOutgoingRecord(p, true, "Account", entry);
                 channel->SendPacket(p);
             }
@@ -315,6 +322,12 @@ int8_t WorldSyncManager::Update<objects::Account>(const libcomp::String& type,
     else
     {
         // Send to the lobby
+        LogDataSyncManagerDebug([entry]()
+        {
+            return libcomp::String("Relaying channel Account update to"
+                " lobby: %1\n").Arg(entry->GetUUID().ToString());
+        });
+
         WriteOutgoingRecord(p, true, "Account", entry);
         mServer.lock()->GetLobbyConnection()->SendPacket(p);
     }

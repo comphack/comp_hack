@@ -314,11 +314,13 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
 
     // Now that the login actions are complete, update the account and character
     // states
-    std::lock_guard<std::mutex> lock(mLock);
+    {
+        std::lock_guard<std::mutex> lock(mLock);
 
-    login->SetState(objects::AccountLogin::State_t::CHANNEL);
-    cLogin->SetWorldID((int8_t)server->GetRegisteredWorld()->GetID());
-    cLogin->SetStatus(objects::CharacterLogin::Status_t::ONLINE);
+        login->SetState(objects::AccountLogin::State_t::CHANNEL);
+        cLogin->SetWorldID((int8_t)server->GetRegisteredWorld()->GetID());
+        cLogin->SetStatus(objects::CharacterLogin::Status_t::ONLINE);
+    }
 
     server->GetWorldSyncManager()->SyncRecordUpdate(cLogin, "CharacterLogin");
 
@@ -329,46 +331,46 @@ bool AccountManager::SwitchChannel(
     std::shared_ptr<objects::AccountLogin> login,
     const std::shared_ptr<objects::ChannelLogin>& switchDef)
 {
+    auto cLogin = login->GetCharacterLogin();
     auto username = login->GetAccount()->GetUsername();
-
-    std::lock_guard<std::mutex> lock(mLock);
-    if(login->GetState() != objects::AccountLogin::State_t::CHANNEL)
     {
-        LogAccountManagerError([&]()
+        std::lock_guard<std::mutex> lock(mLock);
+        if(login->GetState() != objects::AccountLogin::State_t::CHANNEL)
         {
-            return libcomp::String("Channel switch for account '%1' failed "
-                "because it is not in the channel state.\n")
-                .Arg(username);
+            LogAccountManagerError([&]()
+            {
+                return libcomp::String("Channel switch for account '%1' failed "
+                    "because it is not in the channel state.\n")
+                    .Arg(username);
+            });
+
+            return false;
+        }
+
+        LogAccountManagerDebug([username, switchDef]()
+        {
+            return libcomp::String("Channel switch requested from channel %1 to %2"
+                " by user: '%3'\n").Arg(switchDef->GetFromChannel())
+                .Arg(switchDef->GetToChannel()).Arg(username);
         });
 
-        return false;
+        PushChannelSwitch(username, switchDef);
+
+        // Mark the expected location for when the connection returns
+        cLogin->SetChannelID(switchDef->GetToChannel());
+        cLogin->SetZoneID(0);
+
+        // Set the session key now but only update the lobby if the channel
+        // switch actually occurs
+        UpdateSessionKey(login);
+
+        // Update the state regardless of if the channel honors its own request
+        // so the timeout can occur
+        login->SetState(objects::AccountLogin::State_t::CHANNEL_TO_CHANNEL);
     }
 
-    LogAccountManagerDebug([username, switchDef]()
-    {
-        return libcomp::String("Channel switch requested from channel %1 to %2"
-            " by user: '%3'\n").Arg(switchDef->GetFromChannel())
-            .Arg(switchDef->GetToChannel()).Arg(username);
-    });
-
-    PushChannelSwitch(username, switchDef);
-
     auto server = mServer.lock();
-    auto cLogin = login->GetCharacterLogin();
-
-    // Mark the expected location for when the connection returns
-    cLogin->SetChannelID(switchDef->GetToChannel());
-    cLogin->SetZoneID(0);
-
     server->GetWorldSyncManager()->SyncRecordUpdate(cLogin, "CharacterLogin");
-
-    // Set the session key now but only update the lobby if the channel
-    // switch actually occurs
-    UpdateSessionKey(login);
-
-    // Update the state regardless of if the channel honors its own request
-    // so the timeout can occur
-    login->SetState(objects::AccountLogin::State_t::CHANNEL_TO_CHANNEL);
 
     auto config = std::dynamic_pointer_cast<objects::WorldConfig>(
         server->GetConfig());
@@ -401,25 +403,29 @@ std::shared_ptr<objects::AccountLogin> AccountManager::LogoutUser(
     std::shared_ptr<objects::AccountLogin> result;
 
     libcomp::String lookup = username.ToLower();
-
-    std::lock_guard<std::mutex> lock(mLock);
-    auto pair = mAccountMap.find(lookup);
-
-    if (mAccountMap.end() != pair && (channel == -1 ||
-        channel == pair->second->GetCharacterLogin()->GetChannelID()))
     {
-        LogAccountManagerDebug([&]()
+        std::lock_guard<std::mutex> lock(mLock);
+        auto pair = mAccountMap.find(lookup);
+
+        if(mAccountMap.end() != pair && (channel == -1 ||
+            channel == pair->second->GetCharacterLogin()->GetChannelID()))
         {
-            return libcomp::String("Logging out user: '%1'\n").Arg(username);
-        });
+            LogAccountManagerDebug([&]()
+            {
+                return libcomp::String("Logging out user: '%1'\n")
+                    .Arg(username);
+            });
 
-        result = pair->second;
-        Cleanup(result);
-        mAccountMap.erase(pair);
-        mWebGameSessions.erase(lookup);
+            result = pair->second;
+            Cleanup(result);
+            mAccountMap.erase(pair);
+            mWebGameSessions.erase(lookup);
+        }
+    }
 
+    if(result)
+    {
         auto cLogin = result->GetCharacterLogin();
-
         if(cLogin && !cLogin->GetCharacter().IsNull())
         {
             auto server = mServer.lock();

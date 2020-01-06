@@ -98,6 +98,32 @@
 </section><!-- DeathPenaltyDisabled -->
 
 <section>
+<title>DeadTokuseiDisabled</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>If enabled, tokusei effects originating from an entity will stop the moment it dies and re-enable when they are revived. Effects that target the dead entity will still apply.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DeadTokuseiDisabled">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DeadTokuseiDisabled -->
+
+<section>
+<title>DropLuckScalingCap</title>
+<para><emphasis role="strong">Type:</emphasis> float</para>
+<para><emphasis role="strong">Default:</emphasis> -1.0</para>
+<para>When set to 0 or greater, sets a hard multiplier cap on how much a drop rate can increase due to the source entity's luck stat (ex: 0.5 would cap a 5% drop rate at 7.5%). When set to less than 0, no cap applies. Applies before and does not affect DropRateBonus setting.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="DropLuckScalingCap">1.0</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- DropLuckScalingCap -->
+
+<section>
 <title>XPBonus</title>
 <para><emphasis role="strong">Type:</emphasis> float</para>
 <para><emphasis role="strong">Default:</emphasis> 0.0</para>
@@ -319,17 +345,43 @@
 </section><!-- ChannelDistribution -->
 
 <section>
-<title>AggroLimit</title>
-<para><emphasis role="strong">Type:</emphasis> boolean</para>
-<para><emphasis role="strong">Default:</emphasis> true</para>
-<para>Limits how many normal AI controlled entities will decide to aggro on a valid target that is already being pursued.</para>
+<title>AIAggroLimit</title>
+<para><emphasis role="strong">Type:</emphasis> enumeration</para>
+<para><emphasis role="strong">Default:</emphasis> PLAYER_SHARED</para>
+<para>Determines how AI controlled eneities decide to aggro on a valid target that is already being pursued. Values must be <emphasis>PLAYER_SHARED</emphasis> (character and demon limit are shared), <emphasis>INDEPENDENT</emphasis> (character and demon limit are not shared) or <emphasis>NONE</emphasis> (aggro limit is ignored).</para>
 
 <section>
 <title>Example</title>
-<para><![CDATA[<member name="AggroLimit">false</member>]]></para>
+<para><![CDATA[<member name="AIAggroLimit">INDEPENDENT</member>]]></para>
 </section><!-- Example -->
 
-</section><!-- AggroLimit -->
+</section><!-- AIAggroLimit -->
+
+<section>
+<title>AICombatStagger</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Causes AI controlled entities to pause for a brief period after skill charge completion as well as when they are able to move but their target is being knocked back.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="AICombatStagger">false</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- AICombatStagger -->
+
+<section>
+<title>AILazyPathing</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> true</para>
+<para>Disables AI pathing around zone geometry when enabled. Entities will still navigate around obstacles for explicit move commands, wandering and finding their way back to spawn points.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="AILazyPathing">false</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- AILazyPathing -->
 
 <section>
 <title>IFramesEnabled</title>

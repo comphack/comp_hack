@@ -1244,11 +1244,20 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
 
     client->FlushOutgoing();
 
+    auto tokuseiManager = server->GetTokuseiManager();
     for(auto& pair : hpRestores)
     {
-        // If any entity was revived, check HP based effects
-        server->GetTokuseiManager()->Recalculate(pair.first,
-            std::set<TokuseiConditionType> { TokuseiConditionType::CURRENT_HP });
+        // If any entity was revived, check HP based effects or recalc
+        // immediately if dead tokusei are enabled
+        if(tokuseiManager->DeadTokuseiDisabled())
+        {
+            tokuseiManager->Recalculate(pair.first, true);
+        }
+        else
+        {
+            tokuseiManager->Recalculate(pair.first, std::set<
+                TokuseiConditionType> { TokuseiConditionType::CURRENT_HP });
+        }
     }
 
     // Lastly fire respawn action in new (or same) zone
@@ -1482,6 +1491,13 @@ void CharacterManager::SummonDemon(const std::shared_ptr<
     // the summon effect only displays once
     dState->SetDisplayState(ActiveDisplayState_t::AWAITING_SUMMON);
 
+    if(server->GetWorldSharedConfig()->GetAIAggroLimit() ==
+        objects::WorldSharedConfig::AIAggroLimit_t::PLAYER_SHARED)
+    {
+        // Begin sharing aggro immediately
+        dState->SetAggroIDs(cState->GetAggroIDs());
+    }
+
     // If the character and demon share alignment, apply summon sync
     if(cState->GetLNCType() == dState->GetLNCType())
     {
@@ -1638,6 +1654,7 @@ void CharacterManager::StoreDemon(const std::shared_ptr<
 
     // Remove all opponents
     AddRemoveOpponent(false, dState, nullptr);
+    dState->ClearAggroIDs();
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -2939,11 +2956,20 @@ std::list<std::shared_ptr<objects::ItemDrop>> CharacterManager::DetermineDrops(
     int16_t luck, bool minLast)
 {
     std::list<std::shared_ptr<objects::ItemDrop>> results;
+    if(drops.size() == 0)
+    {
+        return results;
+    }
+
+    auto sharedConfig = mServer.lock()->GetWorldSharedConfig();
+    float globalDropBonus = sharedConfig->GetDropRateBonus();
+    float scalingCap = sharedConfig->GetDropLuckScalingCap();
+
     for(auto drop : drops)
     {
         double baseRate = (double)drop->GetRate();
         uint32_t dropRate = (uint32_t)(baseRate * 100.0);
-        if(luck > 0)
+        if(luck > 0 && scalingCap != 0.f)
         {
             // Scale drop rates based on luck, more for high drop rates and higher luck.
             // Estimates roughly to:
@@ -2956,10 +2982,14 @@ std::list<std::shared_ptr<objects::ItemDrop>> CharacterManager::DetermineDrops(
             dropRate = (uint32_t)(baseRate * (100.f +
                 100.f * (float)(((double)luck / 30.0) * 10.0 * (double)luck) /
                 (1000.0 + 7.0 * (double)luck + (deltaDiff * deltaDiff))));
-        }
 
-        float globalDropBonus = mServer.lock()->GetWorldSharedConfig()
-            ->GetDropRateBonus();
+            // Limit luck scaling based on cap
+            if(scalingCap > 0.f &&
+                (float)((double)dropRate / baseRate) > (1.f + scalingCap))
+            {
+                dropRate = (uint32_t)(baseRate * (1.0 + (double)scalingCap));
+            }
+        }
 
         dropRate = (uint32_t)((double)dropRate * (double)(1.f + globalDropBonus));
 

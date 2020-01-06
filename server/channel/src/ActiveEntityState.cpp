@@ -54,6 +54,7 @@
 #include <MiEffectData.h>
 #include <MiGrowthData.h>
 #include <MiItemData.h>
+#include <MiNPCBasicData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiStatusBasicData.h>
@@ -118,6 +119,34 @@ ActiveEntityState::ActiveEntityState() : mCurrentZone(0),
     mCloaked(false), mLastRefresh(0), mNextRegenSync(0), mNextUpkeep(0),
     mNextActivatedAbilityID(1)
 {
+}
+
+libcomp::String ActiveEntityState::GetEntityLabel() const
+{
+    auto devilData = GetDevilData();
+    switch(GetEntityType())
+    {
+    case EntityType_t::ALLY:
+        return libcomp::String("ALLY(%1)[%2]")
+            .Arg(devilData->GetBasic()->GetID()).Arg(GetEntityID());
+    case EntityType_t::CHARACTER:
+        return libcomp::String("CHARACTER[%1]").Arg(GetEntityID());
+    case EntityType_t::ENEMY:
+        return libcomp::String("ENEMY(%1)[%2]")
+            .Arg(devilData->GetBasic()->GetID()).Arg(GetEntityID());
+    case EntityType_t::PARTNER_DEMON:
+        if(devilData)
+        {
+            return libcomp::String("DEMON(%1)[%2]")
+                .Arg(devilData->GetBasic()->GetID()).Arg(GetEntityID());
+        }
+        else
+        {
+            return libcomp::String("DEMON[%1]").Arg(GetEntityID());
+        }
+    default:
+        return libcomp::String("UNKNOWN[%1]").Arg(GetEntityID());
+    }
 }
 
 int16_t ActiveEntityState::GetCorrectValue(CorrectTbl tableID,

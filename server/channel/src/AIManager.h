@@ -218,11 +218,15 @@ public:
      *  0 to ignore
      * @param interrupt If true the command will interrupt whatever
      *  the current command is
+     * @param allowLazy If true and AILazyPathing is enabled, attempt to reach
+     *  the destination via a linear path only. If false, navigate around
+     *  obstacles via the shortest path.
      * @return true if the command was queued, false if it was not
      */
     bool Chase(const std::shared_ptr<ActiveEntityState>& eState,
         int32_t targetEntityID, float minDistance = 0.f,
-        float maxDistance = 0.f, bool interrupt = false);
+        float maxDistance = 0.f, bool interrupt = false,
+        bool allowLazy = false);
 
     /**
      * Create a move command that causes the entity to retreat from a
@@ -404,11 +408,15 @@ private:
      * @param split If true, movements will be split into smaller segments to
      *  be more accurate to original movement. Disable for less important
      *  actions such as wandering with no target for less packet traffic.
+     * @param allowLazy If true and AILazyPathing is enabled, attempt to reach
+     *  the destination via a linear path only. If false, navigate around
+     *  obstacles via the shortest path.
      * @return Pointer to the new move command
      */
     std::shared_ptr<AIMoveCommand> GetMoveCommand(
         const std::shared_ptr<ActiveEntityState>& eState,
-        const Point& dest, float reduce = 0.f, bool split = true) const;
+        const Point& dest, float reduce = 0.f, bool split = true,
+        bool allowLazy = false);
 
     /**
      * Get a new wait command
@@ -419,11 +427,38 @@ private:
     std::shared_ptr<AICommand> GetWaitCommand(uint32_t waitTime) const;
 
     /**
-     * Determine if the aggro limit is enabled for the server to
-     * adjust AI behavior
-     * @return true if the aggro limit is enabled, false if it is not
+     * Add or remove a specific entity ID from the aggro targets on the
+     * supplied entity
+     * @param eState Pointer to the entity state
+     * @param targetID Entity ID representing the target entity
+     * @param remove If true, remove the entity, otherwise add it
      */
-    bool AggroLimitEnabled();
+    void AddRemoveAggro(const std::shared_ptr<ActiveEntityState>& eState,
+        int32_t targetID, bool remove);
+
+    /**
+     * Get the other entity that shares aggro with the supplied entity or
+     * null if none exists or the server is not configured to use shared
+     * aggro
+     * @param eState Pointer to the entity state
+     * @return Pointer to the other entity
+     */
+    std::shared_ptr<ActiveEntityState> GetSharedAggroEntity(
+        const std::shared_ptr<ActiveEntityState>& eState);
+
+    /**
+     * Determine if combat stagger is enabled for the server to adjust
+     * timing of post charge and follow up attacks.
+     * @return true if combat stagger is enabled, false if it is not
+     */
+    bool CombatStaggerEnabled();
+
+    /**
+     * Determine if the AI does not bother to navigate to a target that is
+     * not in direct line of sight. Only affects specific movement types.
+     * @return true if lazy pathing is enabled, false if it is not
+     */
+    bool LazyPathingEnabled();
 
     /// Static map of scripts that have been loaded and compiled
     /// by AI type name

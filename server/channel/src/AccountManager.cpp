@@ -575,6 +575,12 @@ bool AccountManager::IncreaseCP(const std::shared_ptr<
 
     if(lobbyDB->ProcessChangeSet(opChangeset))
     {
+        LogAccountManagerDebug([account, addAmount]()
+        {
+            return libcomp::String("Player CP increased by %1: %2\n")
+                .Arg(addAmount).Arg(account->GetUUID().ToString());
+        });
+
         server->GetChannelSyncManager()->SyncRecordUpdate(account, "Account");
         return true;
     }

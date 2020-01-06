@@ -270,6 +270,14 @@ public:
      */
     void UpdateDiasporaMinibossCount(const std::shared_ptr<Zone>& zone);
 
+    /**
+     * Determine if the server is configured for tokusei to become inactive
+     * from a source after it has been killed
+     * @return true if the tokusei should become inactive, false if they
+     *  should stay active
+     */
+    bool DeadTokuseiDisabled();
+
 private:
     /**
      * Recalculate skill cost adjustments from tokusei for the specified

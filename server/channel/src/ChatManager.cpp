@@ -2529,13 +2529,20 @@ bool ChatManager::GMCommand_Kill(const std::shared_ptr<
         zoneManager->UpdateTrackedZone(targetState->GetZone(),
             targetState->GetTeam());
 
-        server->GetTokuseiManager()->Recalculate(targetCState,
+        auto tokuseiManager = server->GetTokuseiManager();
+        tokuseiManager->Recalculate(targetCState,
             std::set<TokuseiConditionType> { TokuseiConditionType::CURRENT_HP });
 
         auto entityClient = server->GetManagerConnection()->GetEntityClient(
             targetCState->GetEntityID());
         zoneManager->TriggerZoneActions(targetCState->GetZone(),
             { targetCState }, ZoneTrigger_t::ON_DEATH, entityClient);
+
+        // Recalculate (if we haven't already) if dead tokusei are disabled
+        if(tokuseiManager->DeadTokuseiDisabled())
+        {
+            tokuseiManager->Recalculate(targetCState, true);
+        }
     }
 
     return true;
@@ -3328,6 +3335,8 @@ bool ChatManager::GMCommand_Scrap(const std::shared_ptr<
         auto item = inventory ? inventory->GetItems((size_t)(slotNum - 1)).Get() : nullptr;
         if(item)
         {
+            uint16_t stackSize = item->GetStackSize();
+
             std::list<std::shared_ptr<objects::Item>> insertItems;
             std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
             stackAdjustItems[item] = 0;
@@ -3337,7 +3346,7 @@ bool ChatManager::GMCommand_Scrap(const std::shared_ptr<
             {
                 return SendChatMessage(client, ChatType_t::CHAT_SELF,
                     libcomp::String("Item %1 (x%2) in slot %3 scrapped")
-                    .Arg(item->GetType()).Arg(item->GetStackSize()).Arg(slotNum));
+                    .Arg(item->GetType()).Arg(stackSize).Arg(slotNum));
             }
         }
         else

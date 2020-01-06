@@ -183,6 +183,13 @@ public:
     ActiveEntityState();
 
     /**
+     * Get a label string formatted with the entity type, ID and demon type
+     * when applicable. Used for logging.
+     * @return Entity label string
+     */
+    libcomp::String GetEntityLabel() const;
+
+    /**
      * Get the adjusted correct table value associated to the entity.
      * @param tableID ID of the correct table value to retrieve
      * @param calcState Override CalculatedEntityState to use instead of

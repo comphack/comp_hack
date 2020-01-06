@@ -202,7 +202,7 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
             auto script = serverDataManager->GetAIScript(finalAIType);
             if(!script)
             {
-                LogAIManagerError([&]()
+                LogAIManagerError([finalAIType]()
                 {
                     return libcomp::String("AI type '%1' does not exist\n")
                         .Arg(finalAIType);
@@ -216,7 +216,7 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
 
             if(!aiEngine->Eval(script->Source))
             {
-                LogAIManagerError([&]()
+                LogAIManagerError([finalAIType]()
                 {
                     return libcomp::String("AI type '%1' is not a valid "
                         "AI script\n").Arg(finalAIType);
@@ -241,7 +241,7 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
             auto result = !f.IsNull() ? f.Evaluate<int>(eState, this) : 0;
             if(!result || (*result != 0))
             {
-                LogAIManagerError([&]()
+                LogAIManagerError([finalAIType]()
                 {
                     return libcomp::String("Failed to prepare AI type '%1'\n")
                         .Arg(finalAIType);
@@ -362,6 +362,13 @@ void AIManager::CombatSkillHit(
             libcomp::String fOverride = aiState->GetActionOverrides(
                 "combatSkillHit");
 
+            LogAIManagerDebug([eState, fOverride]()
+            {
+                return libcomp::String("Executing combatSkillHit override for"
+                    " %1: %2\n").Arg(eState->GetEntityLabel())
+                    .Arg(fOverride);
+            });
+
             Sqrat::Function f(Sqrat::RootTable(aiState->GetScript()->GetVM()),
                 fOverride.IsEmpty() ? "combatSkillHit" : fOverride.C());
 
@@ -418,6 +425,13 @@ void AIManager::CombatSkillComplete(
     {
         libcomp::String fOverride = aiState->GetActionOverrides(
             "combatSkillComplete");
+
+        LogAIManagerDebug([eState, fOverride]()
+        {
+            return libcomp::String("Executing combatSkillComplete override for"
+                " %1: %2\n").Arg(eState->GetEntityLabel())
+                .Arg(fOverride);
+        });
 
         Sqrat::Function f(Sqrat::RootTable(aiState->GetScript()->GetVM()),
             fOverride.IsEmpty() ? "combatSkillComplete" : fOverride.C());
@@ -606,6 +620,12 @@ bool AIManager::StartEvent(const std::shared_ptr<ActiveEntityState>& eState,
 {
     if(eState)
     {
+        LogAIManagerDebug([eState, eventID]()
+        {
+            return libcomp::String("%1 is starting event: %2\n")
+                .Arg(eState->GetEntityLabel()).Arg(eventID);
+        });
+
         auto eventManager = mServer.lock()->GetEventManager();
 
         EventOptions options;
@@ -632,7 +652,14 @@ void AIManager::UpdateAggro(const std::shared_ptr<ActiveEntityState>& eState,
             auto oldTarget = zone->GetActiveEntity(currentTargetID);
             if(oldTarget)
             {
-                oldTarget->RemoveAggroIDs(eState->GetEntityID());
+                LogAIManagerDebug([eState, oldTarget]()
+                {
+                    return libcomp::String("%1 loses aggro on %2.\n")
+                        .Arg(eState->GetEntityLabel())
+                        .Arg(oldTarget->GetEntityLabel());
+                });
+
+                AddRemoveAggro(oldTarget, eState->GetEntityID(), true);
             }
         }
 
@@ -648,7 +675,14 @@ void AIManager::UpdateAggro(const std::shared_ptr<ActiveEntityState>& eState,
             auto newTarget = zone->GetActiveEntity(targetID);
             if(newTarget)
             {
-                newTarget->InsertAggroIDs(eState->GetEntityID());
+                LogAIManagerDebug([eState, newTarget]()
+                {
+                    return libcomp::String("%1 aggros on %2.\n")
+                        .Arg(eState->GetEntityLabel())
+                        .Arg(newTarget->GetEntityLabel());
+                });
+
+                AddRemoveAggro(newTarget, eState->GetEntityID(), false);
             }
 
             // If current command targets current target, switch to new
@@ -694,7 +728,7 @@ bool AIManager::UseDiasporaQuake(const std::shared_ptr<
     }
     else if(zone->GetInstanceType() != InstanceType_t::DIASPORA)
     {
-        LogAIManagerError([&]()
+        LogAIManagerError([skillID]()
         {
             return libcomp::String("Attempted to use a Diaspora quake skill"
                 " outside of a Diaspora instance: %1\n").Arg(skillID);
@@ -709,7 +743,7 @@ bool AIManager::UseDiasporaQuake(const std::shared_ptr<
         ->GetFunctionIDSkills(SVR_CONST.SKILL_DIASPORA_QUAKE);
     if(validSkillIDs.find(skillID) == validSkillIDs.end())
     {
-        LogAIManagerError([&]()
+        LogAIManagerError([skillID]()
         {
             return libcomp::String("Attempted to use invalid Diaspora quake"
                 " skill: %1\n").Arg(skillID);
@@ -764,7 +798,7 @@ bool AIManager::UseDiasporaQuake(const std::shared_ptr<
 
 bool AIManager::Chase(const std::shared_ptr<ActiveEntityState>& eState,
     int32_t targetEntityID, float minDistance, float maxDistance,
-    bool interrupt)
+    bool interrupt, bool allowLazy)
 {
     auto zone = eState ? eState->GetZone() : nullptr;
     auto aiState = eState ? eState->GetAIState() : nullptr;
@@ -788,7 +822,8 @@ bool AIManager::Chase(const std::shared_ptr<ActiveEntityState>& eState,
     auto point = zoneManager->GetLinearPoint(src.x, src.y,
         dest.x, dest.y, src.GetDistance(dest), false);
 
-    auto cmd = GetMoveCommand(eState, point, minDistance);
+    auto cmd = GetMoveCommand(eState, point, minDistance, true,
+        allowLazy);
     if(cmd)
     {
         cmd->SetTargetEntityID(targetEntityID);
@@ -1164,7 +1199,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                             {
                                 // End point is no longer valid, repath
                                 auto cmdNew = GetMoveCommand(eState, tPoint,
-                                    minDistance);
+                                    minDistance, true, true);
                                 if(cmdNew && cmdMove->GetEndDestination(endPoint))
                                 {
                                     cmdMove->SetPathing(cmdNew->GetPathing());
@@ -1251,6 +1286,15 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                         targetEntity->GetAIIgnored())
                     {
                         // Target invalid or dead, cancel the skill and move on
+                        LogAIManagerDebug([eState, activated, cmdSkill]()
+                        {
+                            return libcomp::String("%1 canceling skill %2 on"
+                                " no longer valid target: %3\n")
+                                .Arg(eState->GetEntityLabel()).Arg(activated
+                                    ->GetSkillData()->GetCommon()->GetID())
+                                .Arg(cmdSkill->GetTargetEntityID());
+                        });
+
                         if(activated)
                         {
                             skillManager->CancelSkill(eState, activated
@@ -1269,7 +1313,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
 
                     uint64_t kbTime = targetEntity->GetStatusTimes(
                         STATUS_KNOCKBACK);
-                    if(AggroLimitEnabled() && kbTime)
+                    if(CombatStaggerEnabled() && kbTime)
                     {
                         // Delay execution or activation
                         QueueWaitCommand(aiState, (uint32_t)((kbTime - now) /
@@ -1307,6 +1351,13 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             {
                 // Execute a custom scripted command
                 auto cmdScript = std::dynamic_pointer_cast<AIScriptedCommand>(cmd);
+
+                LogAIManagerDebug([eState, cmdScript]()
+                {
+                    return libcomp::String("%1 executing custom script: %2\n")
+                        .Arg(eState->GetEntityLabel())
+                        .Arg(cmdScript->GetFunctionName());
+                });
 
                 int32_t result = 0;
                 if(!ExecuteScriptFunction(eState, cmdScript->GetFunctionName(), now,
@@ -1574,7 +1625,7 @@ bool AIManager::UpdateEnemyState(
             {
                 target->ExpireStatusTimes(now);
                 uint64_t kbTime = target->GetStatusTimes(STATUS_KNOCKBACK);
-                if(AggroLimitEnabled() && kbTime)
+                if(CombatStaggerEnabled() && kbTime)
                 {
                     waitTime = (uint32_t)((kbTime - now) / 1000 + 500);
                 }
@@ -1801,7 +1852,8 @@ uint8_t AIManager::SkillAdvance(
         // Stop at de-aggro distance
         float maxDistance = aiState->GetDeaggroDistance(false);
 
-        if(Chase(eState, targetEntityID, minDistance, maxDistance, false))
+        if(Chase(eState, targetEntityID, minDistance, maxDistance, false,
+            true))
         {
             return 0;
         }
@@ -1916,7 +1968,9 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
 
             // If aggro limiting is enabled, remove targets based upon level
             // limit
-            if(AggroLimitEnabled())
+            const static auto aggroLimit = mServer.lock()
+                ->GetWorldSharedConfig()->GetAIAggroLimit();
+            if(aggroLimit != objects::WorldSharedConfig::AIAggroLimit_t::NONE)
             {
                 for(auto f : filtered)
                 {
@@ -1926,19 +1980,50 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
                         auto other = zone->GetActiveEntity(aggroID);
                         auto otherState = other
                             ? other->GetAIState() : nullptr;
-                        if(!other || !other->Ready() || !otherState ||
+
+                        bool remove = false;
+                        if(otherState &&
                             otherState->GetTargetEntityID() != f->GetEntityID())
                         {
-                            f->RemoveAggroIDs(aggroID);
+                            // If aggro is shared, check to see if they're
+                            // actually aggroed on the other entity and let
+                            // them handle this logic
+                            if(aggroLimit == objects::WorldSharedConfig::
+                                AIAggroLimit_t::PLAYER_SHARED)
+                            {
+                                auto sEntity = GetSharedAggroEntity(f);
+                                remove = !sEntity || sEntity->GetEntityID() !=
+                                    otherState->GetTargetEntityID();
+                            }
+                            else
+                            {
+                                remove = true;
+                            }
+                        }
+                        else if(!other || !other->Ready() || !otherState)
+                        {
+                            remove = true;
+                        }
+
+                        if(remove)
+                        {
+                            LogAIManagerDebug([aggroID, f]()
+                            {
+                                return libcomp::String("Removing invalid aggro"
+                                    " entity ID for %1: %2\n")
+                                    .Arg(f->GetEntityLabel()).Arg(aggroID);
+                            });
+
+                            AddRemoveAggro(f, aggroID, true);
                         }
                     }
                 }
 
                 // Do not pursue if they're already being pursued by too
                 // many enemies (this is ignored for opponents)
-                uint8_t aggroLimit = aiState->GetAggroLimit();
+                uint8_t limit = aiState->GetAggroLimit();
                 size_t max = 0;
-                if(aggroLimit)
+                if(limit)
                 {
                     // Aggro limits dictate both max count and priority. The
                     // count is determined by the sum of bit shift values and
@@ -1949,7 +2034,7 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
                     // currently supported.
                     for(uint8_t i = 0; i < 8; i++)
                     {
-                        if((aggroLimit >> i) & 0x01)
+                        if((limit >> i) & 0x01)
                         {
                             max = (size_t)(max + i + 1);
                         }
@@ -2575,7 +2660,7 @@ bool AIManager::PrepareSkillUsage(
 
 std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(
     const std::shared_ptr<ActiveEntityState>& eState, const Point& dest,
-    float reduce, bool split) const
+    float reduce, bool split, bool allowLazy)
 {
     auto zone = eState->GetZone();
     if(!zone || !eState->CanMove())
@@ -2592,8 +2677,22 @@ std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(
 
     auto zoneManager = mServer.lock()->GetZoneManager();
 
-    auto shortestPath = zoneManager->GetShortestPath(zone, source, dest);
-    if(shortestPath.size() == 0)
+    std::list<Point> pathing;
+    if(allowLazy && LazyPathingEnabled())
+    {
+        // Set path only if there is no linear collision
+        Point collidePoint;
+        if(!zone->Collides(Line(source, dest), collidePoint))
+        {
+            pathing.push_back(dest);
+        }
+    }
+    else
+    {
+        pathing = zoneManager->GetShortestPath(zone, source, dest);
+    }
+
+    if(pathing.size() == 0)
     {
         // No valid path
         return nullptr;
@@ -2602,11 +2701,11 @@ std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(
     auto cmd = std::make_shared<AIMoveCommand>();
     if(reduce > 0.f)
     {
-        auto it = shortestPath.rbegin();
+        auto it = pathing.rbegin();
         Point& last = *it;
 
         Point secondLast;
-        if(shortestPath.size() > 1)
+        if(pathing.size() > 1)
         {
             it++;
             secondLast = *it;
@@ -2632,8 +2731,8 @@ std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(
 
         Point prev = source;
 
-        std::list<Point> pathing;
-        for(auto& p : shortestPath)
+        std::list<Point> splitPath;
+        for(auto& p : pathing)
         {
             if(prev.GetDistance(p) > maxMoveDistance)
             {
@@ -2643,12 +2742,12 @@ std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(
                 {
                     Point sub = zoneManager->GetLinearPoint(prev.x, prev.y,
                         p.x, p.y, maxMoveDistance, false);
-                    pathing.push_back(sub);
+                    splitPath.push_back(sub);
                     prev = sub;
 
                     if(prev.GetDistance(p) <= maxMoveDistance)
                     {
-                        pathing.push_back(p);
+                        splitPath.push_back(p);
                         splitMore = false;
                         prev = p;
                     }
@@ -2656,16 +2755,16 @@ std::shared_ptr<AIMoveCommand> AIManager::GetMoveCommand(
             }
             else
             {
-                pathing.push_back(p);
+                splitPath.push_back(p);
                 prev = p;
             }
         }
 
-        cmd->SetPathing(pathing);
+        cmd->SetPathing(splitPath);
     }
     else
     {
-        cmd->SetPathing(shortestPath);
+        cmd->SetPathing(pathing);
     }
 
     return cmd;
@@ -2679,9 +2778,114 @@ std::shared_ptr<AICommand> AIManager::GetWaitCommand(uint32_t waitTime) const
     return cmd;
 }
 
-bool AIManager::AggroLimitEnabled()
+void AIManager::AddRemoveAggro(const std::shared_ptr<
+    ActiveEntityState>& eState, int32_t targetID, bool remove)
+{
+    if(!eState)
+    {
+        return;
+    }
+
+    const static bool sharePlayerAggro = mServer.lock()
+        ->GetWorldSharedConfig()->GetAIAggroLimit() ==
+        objects::WorldSharedConfig::AIAggroLimit_t::PLAYER_SHARED;
+
+    if(sharePlayerAggro)
+    {
+        auto sharedEntity = GetSharedAggroEntity(eState);
+        if(sharedEntity)
+        {
+            // Update both entities
+            std::list<std::shared_ptr<ActiveEntityState>> eStates;
+            eStates.push_back(eState);
+            eStates.push_back(sharedEntity);
+            for(auto e : eStates)
+            {
+                if(e->Ready(true))
+                {
+                    if(remove)
+                    {
+                        e->RemoveAggroIDs(targetID);
+
+                        LogAIManagerDebug([e]()
+                        {
+                            return libcomp::String("%1 shared aggro count"
+                                " lowered to %2.\n").Arg(e->GetEntityLabel())
+                                .Arg(e->AggroIDsCount());
+                        });
+                    }
+                    else
+                    {
+                        e->InsertAggroIDs(targetID);
+
+                        LogAIManagerDebug([e]()
+                        {
+                            return libcomp::String("%1 shared aggro count"
+                                " raised to %2.\n").Arg(e->GetEntityLabel())
+                                .Arg(e->AggroIDsCount());
+                        });
+                    }
+                }
+            }
+
+            return;
+        }
+    }
+
+    if(remove)
+    {
+        eState->RemoveAggroIDs(targetID);
+
+        LogAIManagerDebug([eState]()
+        {
+            return libcomp::String("%1 aggro count lowered to %2.\n")
+                .Arg(eState->GetEntityLabel()).Arg(eState->AggroIDsCount());
+        });
+    }
+    else
+    {
+        eState->InsertAggroIDs(targetID);
+
+        LogAIManagerDebug([eState]()
+        {
+            return libcomp::String("%1 aggro count raised to %2.\n")
+                .Arg(eState->GetEntityLabel()).Arg(eState->AggroIDsCount());
+        });
+    }
+}
+
+std::shared_ptr<ActiveEntityState> AIManager::GetSharedAggroEntity(
+    const std::shared_ptr<ActiveEntityState>& eState)
+{
+    int32_t worldCID = eState ? eState->GetWorldCID() : 0;
+    auto state = worldCID > 0
+        ? ClientState::GetEntityClientState(worldCID, true) : nullptr;
+    if(state)
+    {
+        auto cState = state->GetCharacterState();
+        if(eState == cState)
+        {
+            return state->GetDemonState();
+        }
+        else
+        {
+            return cState;
+        }
+    }
+
+    return nullptr;
+}
+
+bool AIManager::CombatStaggerEnabled()
 {
     const static bool enabled = mServer.lock()->GetWorldSharedConfig()
-        ->GetAggroLimit();
+        ->GetAICombatStagger();
+    return enabled;
+}
+
+bool AIManager::LazyPathingEnabled()
+{
+    const static bool enabled = mServer.lock()->GetWorldSharedConfig()
+        ->GetAILazyPathing();
     return enabled;
 }

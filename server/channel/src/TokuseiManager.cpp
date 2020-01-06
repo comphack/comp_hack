@@ -60,6 +60,7 @@
 #include <TokuseiAttributes.h>
 #include <TokuseiCondition.h>
 #include <TokuseiCorrectTbl.h>
+#include <WorldSharedConfig.h>
 
 // C++ Standard Includes
 #include <cmath>
@@ -1045,6 +1046,10 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
     const std::shared_ptr<ActiveEntityState>& eState)
 {
     std::list<std::shared_ptr<objects::Tokusei>> retval;
+    if(DeadTokuseiDisabled() && !eState->IsAlive())
+    {
+        return retval;
+    }
 
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -2151,6 +2156,13 @@ void TokuseiManager::UpdateDiasporaMinibossCount(
     {
         Recalculate(entities, true);
     }
+}
+
+bool TokuseiManager::DeadTokuseiDisabled()
+{
+    const static bool disabled = mServer.lock()->GetWorldSharedConfig()
+        ->GetDeadTokuseiDisabled();
+    return disabled;
 }
 
 void TokuseiManager::RecalcCostAdjustments(const std::shared_ptr<

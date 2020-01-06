@@ -579,21 +579,49 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
     {
         if(currentZone)
         {
-            LogZoneManagerDebug([&]()
+            if(dState->GetEntity())
             {
-                return libcomp::String("Character entering zone %1 from"
-                    " %2: %3\n").Arg(zoneID)
-                    .Arg(currentZone->GetDefinitionID())
-                    .Arg(cState->GetEntityUUID().ToString());
-            });
+                LogZoneManagerDebug([cState, dState, zoneID, currentZone]()
+                {
+                    return libcomp::String("%1 and %2 entering zone %3 from"
+                        " %4: %5\n").Arg(cState->GetEntityLabel())
+                        .Arg(dState->GetEntityLabel()).Arg(zoneID)
+                        .Arg(currentZone->GetDefinitionID())
+                        .Arg(cState->GetEntityUUID().ToString());
+                });
+            }
+            else
+            {
+                LogZoneManagerDebug([cState, zoneID, currentZone]()
+                {
+                    return libcomp::String("%1 entering zone %2 from"
+                        " %3: %4\n").Arg(cState->GetEntityLabel())
+                        .Arg(zoneID).Arg(currentZone->GetDefinitionID())
+                        .Arg(cState->GetEntityUUID().ToString());
+                });
+            }
         }
         else
         {
-            LogZoneManagerDebug([&]()
+            if(dState->GetEntity())
             {
-                return libcomp::String("Character starting in zone %1: %2\n")
-                    .Arg(zoneID).Arg(cState->GetEntityUUID().ToString());
-            });
+                LogZoneManagerDebug([cState, dState, zoneID]()
+                {
+                    return libcomp::String("%1 and %2 starting in zone %3"
+                        ": %4\n").Arg(cState->GetEntityLabel())
+                        .Arg(dState->GetEntityLabel()).Arg(zoneID)
+                        .Arg(cState->GetEntityUUID().ToString());
+                });
+            }
+            else
+            {
+                LogZoneManagerDebug([cState, zoneID]()
+                {
+                    return libcomp::String("%1 starting in zone %2: %3\n")
+                        .Arg(cState->GetEntityLabel()).Arg(zoneID)
+                        .Arg(cState->GetEntityUUID().ToString());
+                });
+            }
         }
     }
 

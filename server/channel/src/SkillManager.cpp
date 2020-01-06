@@ -574,6 +574,12 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
     if(executeNow)
     {
+        LogSkillManagerDebug([source, skillID]()
+        {
+            return libcomp::String("%1 instantly executes skill %2.\n")
+                .Arg(source->GetEntityLabel()).Arg(skillID);
+        });
+
         if(!ExecuteSkill(source, activated, client, ctx))
         {
             return false;
@@ -581,6 +587,13 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     }
     else
     {
+        LogSkillManagerDebug([source, skillID, activated]()
+        {
+            return libcomp::String("%1 activates skill %2[%3].\n")
+                .Arg(source->GetEntityLabel()).Arg(skillID)
+                .Arg(activated->GetActivationID());
+        });
+
         source->SetStatusTimes(STATUS_CHARGING, chargedTime);
 
         if(activationType == 3 || activationType == 4)
@@ -850,6 +863,25 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         }
 
         activated->SetEntityTargeted(true);
+
+        LogSkillManagerDebug([source, activated, targetEntity]()
+        {
+            return libcomp::String("%1 executes skill %2[%3] targeting %4.\n")
+                .Arg(source->GetEntityLabel())
+                .Arg(activated->GetSkillData()->GetCommon()->GetID())
+                .Arg(activated->GetActivationID())
+                .Arg(targetEntity->GetEntityLabel());
+        });
+    }
+    else
+    {
+        LogSkillManagerDebug([source, activated]()
+        {
+            return libcomp::String("%1 executes skill %2[%3].\n")
+                .Arg(source->GetEntityLabel())
+                .Arg(activated->GetSkillData()->GetCommon()->GetID())
+                .Arg(activated->GetActivationID());
+        });
     }
 
     // Make sure we have an execution context
@@ -971,6 +1003,24 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
 
             mServer.lock()->GetZoneManager()->BroadcastPacket(source
                 ->GetZone(), notify);
+
+            LogSkillManagerDebug([source, activated]()
+            {
+                return libcomp::String("%1 skill %2[%3] has been hit"
+                    " cancelled.\n").Arg(source->GetEntityLabel())
+                    .Arg(activated->GetSkillData()->GetCommon()->GetID())
+                    .Arg(activated->GetActivationID());
+            });
+        }
+        else
+        {
+            LogSkillManagerDebug([source, activated]()
+            {
+                return libcomp::String("%1 cancels skill %2[%3].\n")
+                    .Arg(source->GetEntityLabel())
+                    .Arg(activated->GetSkillData()->GetCommon()->GetID())
+                    .Arg(activated->GetActivationID());
+            });
         }
 
         if(source->GetSpecialActivations(activationID) == activated)
@@ -2044,10 +2094,10 @@ std::shared_ptr<objects::ActivatedAbility> SkillManager::GetActivation(
     activated = source ? source->GetActivatedAbility() : nullptr;
     if(nullptr == activated || activationID != activated->GetActivationID())
     {
-        LogSkillManagerDebug([&]()
+        LogSkillManagerDebug([source, activationID]()
         {
-            return libcomp::String("Unknown activation ID encountered: %1\n")
-                .Arg(activationID);
+            return libcomp::String("Unknown activation ID encountered from %1"
+                ": %2\n").Arg(source->GetEntityLabel()).Arg(activationID);
         });
 
         return nullptr;
@@ -5291,6 +5341,14 @@ bool SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,
         if(ExecuteSkill(target.EntityState, activationID, source
             ->GetEntityID(), guardCtx))
         {
+            LogSkillManagerDebug([target, pSkill]()
+            {
+                return libcomp::String("%1 guards against skill %2[%3].\n")
+                    .Arg(target.EntityState->GetEntityLabel())
+                    .Arg(pSkill->SkillID)
+                    .Arg(pSkill->Activated->GetActivationID());
+            });
+
             if(quake)
             {
                 // The Diaspora Quake skill is fully cancelled when guarding
@@ -5338,6 +5396,14 @@ bool SkillManager::HandleCounter(const std::shared_ptr<ActiveEntityState>& sourc
                 if(ExecuteSkill(target.EntityState, activationID, source
                     ->GetEntityID(), counterCtx))
                 {
+                    LogSkillManagerDebug([target, pSkill]()
+                    {
+                        return libcomp::String("%1 counters skill %2[%3].\n")
+                            .Arg(target.EntityState->GetEntityLabel())
+                            .Arg(pSkill->SkillID)
+                            .Arg(pSkill->Activated->GetActivationID());
+                    });
+
                     pSkill->ExecutionContext->SubContexts.push_back(
                         counterCtx);
                     return true;
@@ -5380,6 +5446,14 @@ bool SkillManager::HandleDodge(const std::shared_ptr<ActiveEntityState>& source,
         case objects::MiSkillBasicData::ActionType_t::TALK:
             if(tActivated->GetChargedTime() <= pSkill->Activated->GetHitTime())
             {
+                LogSkillManagerDebug([target, pSkill]()
+                {
+                    return libcomp::String("%1 dodges skill %2[%3].\n")
+                        .Arg(target.EntityState->GetEntityLabel())
+                        .Arg(pSkill->SkillID)
+                        .Arg(pSkill->Activated->GetActivationID());
+                });
+
                 target.Flags1 |= FLAG1_DODGED;
                 target.Damage1Type = target.Damage2Type = DAMAGE_TYPE_MISS;
                 target.HitAvoided = true;
@@ -5986,6 +6060,12 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                 }
             }
         }
+
+        LogSkillManagerDebug([entity]()
+        {
+            return libcomp::String("%1 has been killed.\n")
+                .Arg(entity->GetEntityLabel());
+        });
     }
 
     // Apply familiarity adjustments
@@ -6065,8 +6145,12 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
         std::list<int32_t> removeIDs;
         std::list<int8_t> levels;
         std::set<int32_t> canRevive;
+
+        auto aiManager = server->GetAIManager();
         for(auto eState : enemiesKilled)
         {
+            aiManager->UpdateAggro(eState, -1);
+
             zone->RemoveEntity(eState->GetEntityID(), 1);
             levels.push_back(eState->GetLevel());
 
@@ -6557,6 +6641,22 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
             }
         }
     }
+
+    if(playersKilled.size() > 0 || partnerDemonsKilled.size() > 0)
+    {
+        // If dead tokusei are disabled, recalculate player entities now
+        auto tokuseiManager = server->GetTokuseiManager();
+        if(tokuseiManager->DeadTokuseiDisabled())
+        {
+            auto all = playersKilled;
+            for(auto demon : partnerDemonsKilled)
+            {
+                all.push_back(demon);
+            }
+
+            tokuseiManager->Recalculate(all, true);
+        }
+    }
 }
 
 void SkillManager::HandleKillXP(const std::shared_ptr<objects::Enemy>& enemy,
@@ -6883,6 +6983,12 @@ void SkillManager::HandleRevives(const std::shared_ptr<Zone>& zone,
                 characterManager->UpdateRevivalXP(cState, xpLossPercent);
             }
         }
+
+        LogSkillManagerDebug([entity]()
+        {
+            return libcomp::String("%1 has been revived.\n")
+                .Arg(entity->GetEntityLabel());
+        });
     }
 
     // Trigger revival actions (but not respawn)
@@ -6897,6 +7003,30 @@ void SkillManager::HandleRevives(const std::shared_ptr<Zone>& zone,
                 ->GetEntityID());
             zoneManager->HandleZoneTriggers(zone, reviveTriggers, entity,
                 client);
+        }
+    }
+
+    // Check if we need to recalculate player tokusei
+    auto tokuseiManager = server->GetTokuseiManager();
+    if(tokuseiManager->DeadTokuseiDisabled())
+    {
+        std::list<std::shared_ptr<ActiveEntityState>> playerEntities;
+        for(auto e : revived)
+        {
+            switch(e->GetEntityType())
+            {
+            case EntityType_t::CHARACTER:
+            case EntityType_t::PARTNER_DEMON:
+                playerEntities.push_back(e);
+                break;
+            default:
+                break;
+            }
+        }
+
+        if(playerEntities.size() > 0)
+        {
+            tokuseiManager->Recalculate(playerEntities, true);
         }
     }
 }
@@ -9098,6 +9228,14 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill,
             }
 
             target.HitAvoided = true;
+
+            LogSkillManagerDebug([target, skill]()
+            {
+                return libcomp::String("%1 nullifies skill %2[%3].\n")
+                    .Arg(target.EntityState->GetEntityLabel())
+                    .Arg(skill.SkillID)
+                    .Arg(skill.Activated->GetActivationID());
+            });
         }
         return false;
     case NRA_REFLECT:
@@ -9116,9 +9254,25 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill,
             break;
         }
         target.HitAvoided = true;
+
+        LogSkillManagerDebug([target, skill]()
+        {
+            return libcomp::String("%1 reflects skill %2[%3].\n")
+                .Arg(target.EntityState->GetEntityLabel())
+                .Arg(skill.SkillID)
+                .Arg(skill.Activated->GetActivationID());
+        });
         return true;
     case NRA_ABSORB:
         target.HitAbsorb = true;
+
+        LogSkillManagerDebug([target, skill]()
+        {
+            return libcomp::String("%1 absorbs skill %2[%3].\n")
+                .Arg(target.EntityState->GetEntityLabel())
+                .Arg(skill.SkillID)
+                .Arg(skill.Activated->GetActivationID());
+        });
         return false;
     default:
         return false;
@@ -10052,6 +10206,13 @@ bool SkillManager::Desummon(
                 encounterGroups[eBase->GetEncounterID()] = eBase
                     ->GetSpawnGroupID();
             }
+
+            LogSkillManagerDebug([source, target]()
+            {
+                return libcomp::String("%1 desummons %2.\n")
+                    .Arg(source->GetEntityLabel())
+                    .Arg(target->GetEntityLabel());
+            });
 
             auto state = client ? client->GetClientState() : nullptr;
             switch(target->GetEntityType())
@@ -11774,6 +11935,7 @@ bool SkillManager::SummonDemon(
 
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
     auto dgState = cState->GetDigitalizeState();
     auto demonID = activated->GetActivationObjectID();
     auto demon = demonID > 0 ? std::dynamic_pointer_cast<objects::Demon>(
@@ -11829,6 +11991,12 @@ bool SkillManager::SummonDemon(
 
     mServer.lock()->GetCharacterManager()->SummonDemon(client, demonID);
 
+    LogSkillManagerDebug([cState, dState]()
+    {
+        return libcomp::String("%1 summons %2.\n")
+            .Arg(cState->GetEntityLabel()).Arg(dState->GetEntityLabel());
+    });
+
     return true;
 }
 
@@ -11862,14 +12030,15 @@ bool SkillManager::StoreDemon(
     }
 
     auto state = client->GetClientState();
-    if(state->GetCharacterState()->IsMounted())
+    auto cState = state->GetCharacterState();
+    auto dState = state->GetDemonState();
+    if(cState->IsMounted())
     {
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::MOUNT_SUMMON_RESTRICT);
         return false;
     }
-    else if(state->GetObjectID(state->GetDemonState()
-        ->GetEntityUUID()) != demonID)
+    else if(state->GetObjectID(dState->GetEntityUUID()) != demonID)
     {
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
@@ -11877,6 +12046,12 @@ bool SkillManager::StoreDemon(
     }
 
     ProcessSkillResult(activated, ctx);
+
+    LogSkillManagerDebug([cState, dState]()
+    {
+        return libcomp::String("%1 stores %2.\n")
+            .Arg(cState->GetEntityLabel()).Arg(dState->GetEntityLabel());
+    });
 
     mServer.lock()->GetCharacterManager()->StoreDemon(client);
 
@@ -12079,6 +12254,14 @@ void SkillManager::Fizzle(
 
             counteringSkill->ExecutionContext = nullptr;
         }
+
+        LogSkillManagerDebug([ctx]()
+        {
+            return libcomp::String("Skill %1[%2] from %3 fizzles.\n")
+                .Arg(ctx->Skill->SkillID)
+                .Arg(ctx->Skill->Activated->GetActivationID())
+                .Arg(ctx->Skill->EffectiveSource->GetEntityLabel());
+        });
     }
 }
 

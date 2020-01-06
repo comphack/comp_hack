@@ -96,7 +96,7 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
     auto dynamicMap = zone->GetDynamicMap();
     if(!dynamicMap)
     {
-        LogGeneralError([&]()
+        LogGeneralError([zoneID, zoneDef]()
         {
             return libcomp::String("Dynamic map information could not be found"
                 " for zone %1 with dynamic map ID %2.\n")
@@ -110,7 +110,7 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
     auto spotIter = dynamicMap->Spots.find(spotID);
     if(spotIter == dynamicMap->Spots.end())
     {
-        LogGeneralError([&]()
+        LogGeneralError([spotID, zoneID]()
         {
             return libcomp::String("Invalid spot %1 sent for zone %2.\n")
                 .Arg(spotID)
@@ -120,17 +120,9 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
         return true;
     }
 
+    auto accountUID = state->GetAccountUID();
     bool entered = zoneManager->PointInPolygon(Point(x, y),
         spotIter->second->Vertices);
-
-    LogGeneralDebug([&]()
-    {
-        return libcomp::String("%1 spot %2 @ (%3, %4)\n")
-            .Arg(entered ? "Entered" : "Exited")
-            .Arg(spotID)
-            .Arg(x)
-            .Arg(y);
-    });
 
     // Lookup the spot and see if it has actions.
     auto spot = zoneDef->GetSpots(spotID);
@@ -142,19 +134,29 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
         pActionList->actions = entered
             ? spot->GetActions() : spot->GetLeaveActions();
 
-        LogGeneralDebug([&]()
-        {
-            return libcomp::String("Got spot with %1 actions.\n")
-                .Arg(pActionList->actions.size());
-        });
-
         // There must be at least 1 action or we are wasting our time.
         if(pActionList->actions.empty())
         {
             delete pActionList;
 
+            LogGeneralDebug([entered, spotID, x, y, accountUID]()
+            {
+                return libcomp::String("Player %1 spot %2 @ (%3, %4) with no"
+                    " actions: %5\n").Arg(entered ? "entered" : "exited")
+                    .Arg(spotID).Arg(x).Arg(y).Arg(accountUID.ToString());
+            });
+
             return true;
         }
+
+        auto actionCount = pActionList->actions.size();
+        LogGeneralDebug([entered, spotID, x, y, actionCount, accountUID]()
+        {
+            return libcomp::String("Player %1 spot %2 @ (%3, %4) with %5"
+                " action(s): %6\n").Arg(entered ? "entered" : "exited")
+                .Arg(spotID).Arg(x).Arg(y).Arg(actionCount)
+                .Arg(accountUID.ToString());
+        });
 
         // Perform the action(s) in the list.
         server->QueueWork([](
@@ -170,11 +172,11 @@ bool Parsers::SpotTriggered::Parse(libcomp::ManagerPacket *pPacketManager,
     }
     else
     {
-        LogGeneralDebug([&]()
+        LogGeneralDebug([spotID, zoneID, accountUID]()
         {
-            return libcomp::String("Undefined spot %1 for zone %2.\n")
-                .Arg(spotID)
-                .Arg(zoneID);
+            return libcomp::String("Undefined spot %1 in zone %2 triggered"
+                " by player: %3\n").Arg(spotID).Arg(zoneID)
+                .Arg(accountUID.ToString());
         });
     }
 

@@ -159,28 +159,58 @@ bool Parsers::ObjectInteraction::Parse(libcomp::ManagerPacket *pPacketManager,
 
     if(valid)
     {
-        LogGeneralDebug([&]()
-        {
-            return libcomp::String("Interacted with entity %1\n").Arg(entityID);
-        });
+        auto accountUID = client->GetClientState()->GetAccountUID();
 
         // Get the action list.
         auto pActionList = new ActionList;
         pActionList->actions = objDef->GetActions();
         pActionList->sourceEntityID = entityID;
 
-        LogGeneralDebug([&]()
-        {
-            return libcomp::String("Got entity with %1 actions.\n")
-                .Arg(pActionList->actions.size());
-        });
-
         // There must be at least 1 action or we are wasting our time.
         if(pActionList->actions.empty())
         {
             delete pActionList;
 
+            if(npc)
+            {
+                LogGeneralDebug([objDef, entityID, accountUID]()
+                {
+                    return libcomp::String("Player interacted with HNPC(%1)[%2]"
+                        " with no actions: %3\n").Arg(objDef->GetID())
+                        .Arg(entityID).Arg(accountUID.ToString());
+                });
+            }
+            else
+            {
+                LogGeneralDebug([objDef, entityID, accountUID]()
+                {
+                    return libcomp::String("Player interacted with ONPC(%1)[%2]"
+                        " with no actions: %3\n").Arg(objDef->GetID())
+                        .Arg(entityID).Arg(accountUID.ToString());
+                });
+            }
+
             return true;
+        }
+
+        auto actionCount = pActionList->actions.size();
+        if(npc)
+        {
+            LogGeneralDebug([objDef, entityID, actionCount, accountUID]()
+            {
+                return libcomp::String("Player interacted with HNPC(%1)[%2]"
+                    " and received %3 action(s): %4\n").Arg(objDef->GetID())
+                    .Arg(entityID).Arg(actionCount).Arg(accountUID.ToString());
+            });
+        }
+        else
+        {
+            LogGeneralDebug([objDef, entityID, actionCount, accountUID]()
+            {
+                return libcomp::String("Player interacted with ONPC(%1)[%2]"
+                    " and received %3 action(s): %4\n").Arg(objDef->GetID())
+                    .Arg(entityID).Arg(actionCount).Arg(accountUID.ToString());
+            });
         }
 
         // Perform the action(s) in the list.

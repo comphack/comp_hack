@@ -1,7 +1,7 @@
 # COMP\_hack #
 
 [![AGPL License](http://img.shields.io/badge/license-AGPL-brightgreen.svg)](https://opensource.org/licenses/AGPL-3.0)
-[![Latest Release](https://img.shields.io/github/downloads/comphack/comp_hack/v4.6.0-hagalaz/total.svg)](https://github.com/comphack/comp_hack/releases/tag/v4.6.0-hagalaz)
+[![Latest Release](https://img.shields.io/github/downloads/comphack/comp_hack/v4.7.0-laguz/total.svg)](https://github.com/comphack/comp_hack/releases/tag/v4.7.0-laguz)
 [![Discord Chat](https://img.shields.io/discord/322024695266541579.svg)](http://discord.gg/9jXeKcJ)
 
 [![Build Status](https://travis-ci.com/comphack/comp_hack.svg?branch=develop)](https://travis-ci.com/comphack/comp_hack)
@@ -19,8 +19,8 @@
 | [Eihwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-eihwaz)   | ■ ■ ■ ■ ■ ■ ■ ■ |
 | [Uruz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-uruz)       | ■ ■ ■ ■ ■ ■ ■ ■ |
 | [Hagalaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-hagalaz) | ■ ■ ■ ■ ■ ■ ■ ■ |
-| [Laguz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-laguz)     | ■ ■ ■ ■ ■ ■ ■ □ |
-| [Ansuz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-ansuz)     | □ □ □ □ □ □ □ □ |
+| [Laguz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-laguz)     | ■ ■ ■ ■ ■ ■ ■ ■ |
+| [Ansuz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-ansuz)     | ■ ■ ■ ■ ■ ■ ■ □ |
 | [Nauthiz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-nauthiz) | □ □ □ □ □ □ □ □ |
 | [Ingwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-ingwaz)   | □ □ □ □ □ □ □ □ |
 | [Sigel](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-sigel)     | □ □ □ □ □ □ □ □ |

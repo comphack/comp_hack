@@ -1,3 +1,16 @@
+comphack (4.7.0) xenial; urgency=low
+
+  * Content adjustments
+  * Fixed issue that would cause world server to become unresponsive
+  * Logging for inter-server communication
+  * Skill and AI low level logging (as well as many other key features)
+  * Settings added for more accurate AI aggro and pathing
+  * Setting to disable tokusei from dead entities (ex: party effects)
+  * Setting to cap drop rate gain from luck stat
+  * Check if we want to recheck before doing a recheck (updater)
+
+ -- COMP Omega <compomega@tutanota.com>  Wed, 08 Jan 2020 18:48:05 -0700
+
 comphack (4.6.0) xenial; urgency=low
 
   * Plasma modifiable with zone partials

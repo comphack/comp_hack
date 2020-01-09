@@ -398,11 +398,11 @@ void Updater::startGame()
             return;
         ver = mVersionMap.value(tag);
     }
-    else 
+    else
     {
         ver = *mVersionMap.begin();
     }
-    
+
     if (!ver)
         return;
 
@@ -484,6 +484,13 @@ void Updater::showDXDiag()
 
 void Updater::recheck()
 {
+    if(QMessageBox::No == QMessageBox::question(this, tr("Recheck Files"),
+        tr("Are you sure you wish to recheck all files? "
+        "This can take a very long time to complete.")))
+    {
+        return;
+    }
+
     QString path = QString("%1/ImagineUpdate2.dat").arg(
         qApp->applicationDirPath() );
 

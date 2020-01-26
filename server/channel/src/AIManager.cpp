@@ -1286,17 +1286,17 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                         targetEntity->GetAIIgnored())
                     {
                         // Target invalid or dead, cancel the skill and move on
-                        LogAIManagerDebug([eState, activated, cmdSkill]()
-                        {
-                            return libcomp::String("%1 canceling skill %2 on"
-                                " no longer valid target: %3\n")
-                                .Arg(eState->GetEntityLabel()).Arg(activated
-                                    ->GetSkillData()->GetCommon()->GetID())
-                                .Arg(cmdSkill->GetTargetEntityID());
-                        });
-
                         if(activated)
                         {
+                            LogAIManagerDebug([eState, activated, cmdSkill]()
+                            {
+                                return libcomp::String("%1 canceling skill %2 on"
+                                    " no longer valid target: %3\n")
+                                    .Arg(eState->GetEntityLabel()).Arg(activated
+                                        ->GetSkillData()->GetCommon()->GetID())
+                                    .Arg(cmdSkill->GetTargetEntityID());
+                            });
+
                             skillManager->CancelSkill(eState, activated
                                 ->GetActivationID());
                         }

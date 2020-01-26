@@ -2985,9 +2985,9 @@ std::list<std::shared_ptr<objects::ItemDrop>> CharacterManager::DetermineDrops(
 
             // Limit luck scaling based on cap
             if(scalingCap > 0.f &&
-                (float)((double)dropRate / baseRate) > (1.f + scalingCap))
+                (float)((double)dropRate / (baseRate * 100.0)) > (1.f + scalingCap))
             {
-                dropRate = (uint32_t)(baseRate * (1.0 + (double)scalingCap));
+                dropRate = (uint32_t)(baseRate * 100.0 * (1.0 + (double)scalingCap));
             }
         }
 

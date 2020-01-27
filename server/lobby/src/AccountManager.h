@@ -381,6 +381,14 @@ protected:
     void EraseLogin(const libcomp::String& username);
 
     /**
+     * Decrement the count associated to the login restricted machine UUID
+     * map. If the account is not currently logged in, this will do nothing.
+     * @param username Username of the machine to lower the count for.
+     * @note This function is NOT thread safe. You MUST lock access first!
+     */
+    void UnregisterMachineClient(const libcomp::String& username);
+
+    /**
      * Print the status of the accounts managed by this object.
      * @note This function is NOT thread safe. You MUST lock access first!
      */

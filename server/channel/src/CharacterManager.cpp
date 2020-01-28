@@ -4209,7 +4209,7 @@ bool CharacterManager::MitamaDemon(const std::shared_ptr<
 }
 
 bool CharacterManager::IsMitamaDemon(const std::shared_ptr<
-    objects::MiDevilData>& devilData) const
+    objects::MiDevilData>& devilData)
 {
     return devilData &&
         (devilData->GetUnionData()->GetFusionOptions() & 0x08) != 0;

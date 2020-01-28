@@ -10285,11 +10285,10 @@ bool SkillManager::Digitalize(
     }
 
     auto server = mServer.lock();
-    auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
 
     auto demonData = definitionManager->GetDevilData(demon->GetType());
-    if(characterManager->IsMitamaDemon(demonData) && dgAbility < 2)
+    if(CharacterManager::IsMitamaDemon(demonData) && dgAbility < 2)
     {
         // Mitama demon not valid
         SendFailure(activated, client,
@@ -11098,7 +11097,7 @@ bool SkillManager::Mooch(
     if(characterManager->GetFamiliarityRank(demon->GetFamiliarity()) < 3)
     {
         SendFailure(activated, client,
-            (uint8_t)SkillErrorCodes_t::PARTNER_FAMILIARITY);
+            (uint8_t)SkillErrorCodes_t::MOOCH_PARTNER_FAMILIARITY);
         return false;
     }
 

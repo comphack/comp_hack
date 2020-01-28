@@ -2049,10 +2049,6 @@ bool ApiHandler::handlePost(CivetServer *pServer,
         pConnection, szPostData, postContentLength));
     szPostData[postContentLength] = 0;
 
-    LogWebAPIDebugMsg(libcomp::String("%1 post data received from %2: %3\n")
-        .Arg(pRequestInfo->request_uri).Arg(pRequestInfo->remote_addr)
-        .Arg(szPostData));
-
     JsonBox::Value request;
     request.loadFromString(szPostData);
 
@@ -2064,9 +2060,34 @@ bool ApiHandler::handlePost(CivetServer *pServer,
         return true;
     }
 
-    delete[] szPostData;
-
     const JsonBox::Object& obj = request.getObject();
+
+    if(method == "/account/change_password" || method == "/account/register" ||
+        method == "/admin/update_account")
+    {
+        // Do not print post data as these contain passwords
+        auto it = obj.find("username");
+        if(it != obj.end())
+        {
+            LogWebAPIDebugMsg(libcomp::String("%1 post request received for"
+                " account '%2' from %3.\n").Arg(pRequestInfo->request_uri)
+                .Arg(it->second.getString()).Arg(pRequestInfo->remote_addr));
+        }
+        else
+        {
+            LogWebAPIDebugMsg(libcomp::String("%1 post request received from"
+                " %2.\n").Arg(pRequestInfo->request_uri)
+                .Arg(pRequestInfo->remote_addr));
+        }
+    }
+    else
+    {
+        LogWebAPIDebugMsg(libcomp::String("%1 post data received from %2: %3\n")
+            .Arg(pRequestInfo->request_uri).Arg(pRequestInfo->remote_addr)
+            .Arg(szPostData));
+    }
+
+    delete[] szPostData;
 
     std::stringstream ss;
     JsonBox::Object response;

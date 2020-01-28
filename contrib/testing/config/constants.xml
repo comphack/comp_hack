@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <constants>
     <!-- Primitive types -->
+    <constant name="DIGITALIZE_STAT_RATES">10,30</constant>
     <constant name="ELEMENTAL_1_FLAEMIS">581</constant>
     <constant name="ELEMENTAL_2_AQUANS">582</constant>
     <constant name="ELEMENTAL_3_AEROS">583</constant>

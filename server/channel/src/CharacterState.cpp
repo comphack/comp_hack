@@ -174,8 +174,8 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
     mDigitalizeState->SetDemon(demon);
     mDigitalizeState->SetRaceID(raceID);
 
-    uint8_t dgAbilty = GetDigitalizeAbilityLevel();
-    uint8_t statRate = (uint8_t)(dgAbilty == 2 ? 30 : 10);
+    uint8_t statRate = SVR_CONST.DIGITALIZE_STAT_RATES[
+        CharacterManager::IsMitamaDemon(devilData) ? 1 : 0];
 
     // Gather active assist values
     std::list<std::shared_ptr<objects::MiGuardianAssistData>> activeAssists;

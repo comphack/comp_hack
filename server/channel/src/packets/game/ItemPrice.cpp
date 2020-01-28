@@ -174,12 +174,12 @@ bool Parsers::ItemPrice::Parse(libcomp::ManagerPacket *pPacketManager,
                     (int8_t)(durability / 1000)) * itemData->GetBasic()
                     ->GetRepairPrice() * 2);
             }
+        }
 
-            // Set minimum of 1
-            if(price <= 0)
-            {
-                price = 1;
-            }
+        // Set minimum of 1
+        if(price <= 0)
+        {
+            price = 1;
         }
 
         if(expiration)

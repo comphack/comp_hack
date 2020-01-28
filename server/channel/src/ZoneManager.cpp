@@ -897,13 +897,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         server->GetWorldDatabase()->QueueUpdate(character);
     }
 
-    // Fire pre-zone in for both and login just for the character
-    if(!currentZone)
-    {
-        TriggerZoneActions(nextZone, { cState }, ZoneTrigger_t::ON_LOGIN,
-            client);
-    }
-
+    // Fire pre-zone in for both character and demon
     auto triggers = GetZoneTriggers(nextZone, ZoneTrigger_t::PRE_ZONE_IN);
     if(triggers.size() > 0)
     {
@@ -1890,7 +1884,13 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
     cState->SetStatusEffectsActive(true, definitionManager);
     dState->SetStatusEffectsActive(true, definitionManager);
 
-    // Trigger zone-in actions
+    // Trigger zone-in actions (and login if starting zone)
+    if(state->GetLastZoneID() == 0)
+    {
+        TriggerZoneActions(zone, { cState }, ZoneTrigger_t::ON_LOGIN,
+            client);
+    }
+
     TriggerZoneActions(zone, { cState, dState }, ZoneTrigger_t::ON_ZONE_IN,
         client);
 

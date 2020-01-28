@@ -738,8 +738,8 @@ public:
      * @return true if the definition belongs to a mitama'd type, false if
      *  it does not
      */
-    bool IsMitamaDemon(const std::shared_ptr<
-        objects::MiDevilData>& devilData) const;
+    static bool IsMitamaDemon(const std::shared_ptr<
+        objects::MiDevilData>& devilData);
 
     /**
      * Apply special effects that occur as part of the normal regen synced

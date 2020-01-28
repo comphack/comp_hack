@@ -696,7 +696,7 @@ bool AccountManager::ChannelToChannelSwitch(const libcomp::String& username,
 
 bool AccountManager::Logout(const libcomp::String& username)
 {
-    LogAccountManagerDebug([&]()
+    LogAccountManagerDebug([username]()
     {
         return libcomp::String("Logging out account '%1'.\n").Arg(username);
     });
@@ -731,13 +731,30 @@ bool AccountManager::Logout(const libcomp::String& username)
         mWebGameAPISessions.erase(username.ToLower());
     }
 
-    // Set the session to expire.
-    mServer->GetTimerManager()->ScheduleEventIn(static_cast<int>(
-        config->GetWebAuthTimeOut()), [this](const libcomp::String& _username,
-        const libcomp::String& _sid)
+    if(objects::AccountLogin::State_t::LOBBY == login->GetState())
     {
-        ExpireSession(_username, _sid);
-    }, username, login->GetSessionID());
+        // User is leaving the lobby directly, don't bother with the
+        // expiration and instead remove them now.
+        EraseLogin(username);
+    }
+    else
+    {
+        LogAccountManagerDebug([username, config]()
+        {
+            return libcomp::String("Account session for '%1' will expire in"
+                " %2 second(s).\n").Arg(username)
+                .Arg(config->GetWebAuthTimeOut());
+        });
+
+        // Set the session to expire.
+        mServer->GetTimerManager()->ScheduleEventIn(static_cast<int>(
+            config->GetWebAuthTimeOut()), [this](
+                const libcomp::String& _username,
+                const libcomp::String& _sid)
+        {
+            ExpireSession(_username, _sid);
+        }, username, login->GetSessionID());
+    }
 
     // Reset the character information
     auto cLogin = login->GetCharacterLogin();
@@ -836,7 +853,8 @@ std::shared_ptr<objects::AccountLogin> AccountManager::GetOrCreateLogin(
     return login;
 }
 
-void AccountManager::EraseLogin(const libcomp::String& username)
+void AccountManager::EraseLogin(const libcomp::String& username,
+    bool updateDebugStatus)
 {
     UnregisterMachineClient(username);
 
@@ -847,7 +865,10 @@ void AccountManager::EraseLogin(const libcomp::String& username)
     mWebGameSessions.erase(lookup);
     mWebGameAPISessions.erase(lookup);
 
-    UpdateDebugStatus();
+    if(updateDebugStatus)
+    {
+        UpdateDebugStatus();
+    }
 }
 
 void AccountManager::UnregisterMachineClient(const libcomp::String& username)
@@ -961,16 +982,9 @@ std::list<libcomp::String> AccountManager::LogoutUsersInWorld(int8_t world,
 
     std::lock_guard<std::mutex> lock(mAccountLock);
 
-    // Remove all registered player data
     for(auto username : usernames)
     {
-        libcomp::String lookup = username.ToLower();
-
-        UnregisterMachineClient(username);
-
-        mAccountMap.erase(username);
-        mWebGameSessions.erase(lookup);
-        mWebGameAPISessions.erase(lookup);
+        EraseLogin(username, false);
     }
 
     UpdateDebugStatus();

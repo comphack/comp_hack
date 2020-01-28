@@ -376,9 +376,12 @@ protected:
      * This will remove a login entry for the account map. Accounts not in
      * the map are considered OFFLINE.
      * @param username Username of the account to remove from the login map.
+     * @param updateDebugStatus Optional flag to update the debug status after
+     * removing the login information. Defaults to true.
      * @note This function is NOT thread safe. You MUST lock access first!
      */
-    void EraseLogin(const libcomp::String& username);
+    void EraseLogin(const libcomp::String& username,
+        bool updateDebugStatus = true);
 
     /**
      * Decrement the count associated to the login restricted machine UUID

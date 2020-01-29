@@ -1,3 +1,12 @@
+comphack (4.8.0) xenial; urgency=low
+
+  * Multiclient logic updated to lower counts properly
+  * ON_LOGIN trigger timing moved for better accuracy
+  * Digitalize base stat rate configurable and checking mitama properly
+  * Adjusted web API post data logging
+
+ -- COMP Omega <compomega@tutanota.com>  Wed, 29 Jan 2020 09:01:58 -0700
+
 comphack (4.7.0) xenial; urgency=low
 
   * Content adjustments

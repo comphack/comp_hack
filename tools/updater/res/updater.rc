@@ -11,7 +11,7 @@ BEGIN
       VALUE "FileDescription", "Client updater"
       VALUE "FileVersion", "0.0.1.1"
       VALUE "InternalName", "comp_updater"
-      VALUE "LegalCopyright", "Copyright (C) 2010-2016 COMP_hack Team"
+      VALUE "LegalCopyright", "Copyright (C) 2010-2020 COMP_hack Team"
       VALUE "OriginalFilename", "ImagineUpdate.exe"
       VALUE "ProductName", "COMP_hack Updater"
       VALUE "ProductVersion", "0.0.1 build 1"

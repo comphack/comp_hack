@@ -11,7 +11,7 @@ BEGIN
       VALUE "FileDescription", "Generates the hashlist.dat update file"
       VALUE "FileVersion", "0.0.1.1"
       VALUE "InternalName", "comp_rehash"
-      VALUE "LegalCopyright", "Copyright (C) 2010-2016 COMP_hack Team"
+      VALUE "LegalCopyright", "Copyright (C) 2010-2020 COMP_hack Team"
       VALUE "OriginalFilename", "comp_rehash.exe"
       VALUE "ProductName", "COMP_hack Rehash"
       VALUE "ProductVersion", "0.0.1 build 1"

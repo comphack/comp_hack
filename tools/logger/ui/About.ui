@@ -50,7 +50,7 @@
      <item>
       <widget class="QLabel" name="notice">
        <property name="text">
-        <string>&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;COMP_hack Logger&lt;/span&gt;&lt;br/&gt;Version 0.0.1 build 3&lt;br/&gt;&lt;br/&gt;Copyright © 2010-2016 COMP_hack Team&lt;br/&gt;&lt;a href=&quot;mailto:compomega@tutanota.com&quot;&gt;compomega@tutanota.com&lt;/a&gt;</string>
+        <string>&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;COMP_hack Logger&lt;/span&gt;&lt;br/&gt;Version 0.0.1 build 3&lt;br/&gt;&lt;br/&gt;Copyright © 2010-2020 COMP_hack Team&lt;br/&gt;&lt;a href=&quot;mailto:compomega@tutanota.com&quot;&gt;compomega@tutanota.com&lt;/a&gt;</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>

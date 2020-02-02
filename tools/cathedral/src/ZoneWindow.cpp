@@ -7,7 +7,7 @@
  * @brief Zone window which allows for visualization and modification of zone
  *  map data.
  *
- * Copyright (C) 2012-2018 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2012-2020 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as

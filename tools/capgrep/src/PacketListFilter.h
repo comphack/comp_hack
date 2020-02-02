@@ -6,7 +6,7 @@
  *
  * @brief Filter for the packet list.
  *
- * Copyright (C) 2010-2016 COMP_hack Team <compomega@tutanota.com>
+ * Copyright (C) 2010-2020 COMP_hack Team <compomega@tutanota.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as

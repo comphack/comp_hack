@@ -11,7 +11,7 @@ BEGIN
       VALUE "FileDescription", "COMP_hack Cathedral of Content"
       VALUE "FileVersion", "0.0.1.1"
       VALUE "InternalName", "comp_cathedral"
-      VALUE "LegalCopyright", "Copyright (C) 2010-2018 COMP_hack Team"
+      VALUE "LegalCopyright", "Copyright (C) 2010-2020 COMP_hack Team"
       VALUE "OriginalFilename", "comp_cathedral.exe"
       VALUE "ProductName", "COMP_hack Cathedral of Content"
       VALUE "ProductVersion", "0.0.1 build 1"

@@ -11,7 +11,7 @@ BEGIN
       VALUE "FileDescription", "Packet logging tool"
       VALUE "FileVersion", "0.0.1.3"
       VALUE "InternalName", "comp_logger"
-      VALUE "LegalCopyright", "Copyright (C) 2010-2016 COMP_hack Team"
+      VALUE "LegalCopyright", "Copyright (C) 2010-2020 COMP_hack Team"
       VALUE "OriginalFilename", "comp_logger.exe"
       VALUE "ProductName", "COMP_hack Logger"
       VALUE "ProductVersion", "0.0.1 build 3"

@@ -11,7 +11,7 @@ BEGIN
       VALUE "FileDescription", "Packet capture analysis tool"
       VALUE "FileVersion", "0.0.1.1"
       VALUE "InternalName", "comp_capgrep"
-      VALUE "LegalCopyright", "Copyright (C) 2010-2016 COMP_hack Team"
+      VALUE "LegalCopyright", "Copyright (C) 2010-2020 COMP_hack Team"
       VALUE "OriginalFilename", "comp_capgrep.exe"
       VALUE "ProductName", "COMP_hack Capture Grep"
       VALUE "ProductVersion", "0.0.1 build 1"

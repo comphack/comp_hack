@@ -45,6 +45,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "ManagerConnection.h"
+#include "Zone.h"
 
 using namespace channel;
 
@@ -234,6 +235,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
         auto state = ClientState::GetEntityClientState(login->GetWorldCID(), true);
         int32_t localEntityID = state ? state->GetCharacterState()->GetEntityID() : -1;
         int32_t localDemonEntityID = state ? state->GetDemonState()->GetEntityID() : -1;
+        auto localZone = state ? state->GetZone() : nullptr;
 
         std::shared_ptr<ChannelClientConnection> selfConnection;
         std::list<std::shared_ptr<ChannelClientConnection>> partyConnections;
@@ -250,8 +252,7 @@ bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
             else if(otherState->GetPartyID() == login->GetPartyID())
             {
                 partyConnections.push_back(client);
-                if(otherLogin->GetZoneID() == zoneID &&
-                    otherLogin->GetChannelID() == login->GetChannelID())
+                if(localZone && otherState->GetZone() == localZone)
                 {
                     sameZoneConnections.push_back(client);
                 }

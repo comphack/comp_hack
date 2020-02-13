@@ -17,6 +17,7 @@ export LINUX_CMAKE_FULL_VERSION=3.6.1
 export LINUX_CLANG_VERSION=3.8.0
 
 export WINDOWS_QT_VERSION=5.12.3
+export QT_EXTERNAL_RELEASE=external-25
 
 export DROPBOX_ENV=DROPBOX_OAUTH_BEARER_$(echo $TRAVIS_REPO_SLUG | LC_ALL=C sed -e "s/\//_/" | awk '{ print toupper($0) }')
 export USE_DROPBOX=
@@ -38,13 +39,14 @@ fi
 
 if [ "$TRAVIS_OS_NAME" == "windows" ]; then
     export CONFIGURATION="RelWithDebInfo"
+    export QT_EXTRACT_DIR="C:/Qt/5.12.3"
 
     if [ "$PLATFORM" != "win32" ]; then
-        export CMAKE_PREFIX_PATH="C:/Qt/5.12.3/msvc2017_64"
+        export CMAKE_PREFIX_PATH="${QT_EXTRACT_DIR}/msvc2017_64"
         export GENERATOR="Visual Studio 15 2017 Win64"
         export MSPLATFORM="x64"
     else
-        export CMAKE_PREFIX_PATH="C:/Qt/5.12.3/msvc2017"
+        export CMAKE_PREFIX_PATH="${QT_EXTRACT_DIR}/msvc2017"
         export GENERATOR="Visual Studio 15 2017"
         export MSPLATFORM="Win32"
     fi

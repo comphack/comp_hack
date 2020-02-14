@@ -105,6 +105,7 @@ class DefinitionManager;
 namespace objects
 {
 class EnemyBase;
+class MiSkillData;
 class MiStatusData;
 }
 
@@ -208,6 +209,9 @@ public:
      *  entity's default. If a value is supplied for this, the entity's stats
      *  will not be updated as a result of the calculation, instead the
      *  supplied state will be updated to simulate "effective stats".
+     * @param contextSkill Optional contextual skill to apply adjustments from.
+     *  Essentially adjusts stats "while a skill is being used" which can
+     *  vary between scenarios.
      * @return Flags indicating if the calculation resulted in a change that
      *  should be communicated to the client or world:
      *  0x01) ENTITY_CALC_STAT_LOCAL = locallly visible stats were changed
@@ -215,7 +219,8 @@ public:
      *  0x04) ENTITY_CALC_SKILL = skill set has changed (character only)
      */
     virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
-        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
+        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr,
+        std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
 
     /**
      * Check if the entity has the supplied skill learned and not currently
@@ -886,10 +891,14 @@ protected:
      * @param calcState Override CalculatedEntityState to use instead of the
      *  entity's default
      * @param adjustments Output list parameter to add the adjustments to
+     * @param contextSkill Optional contextual skill to apply adjustments from.
+     *  Essentially adjusts stats "while a skill is being used" which can
+     *  vary between scenarios.
      */
     void GetAdditionalCorrectTbls(libcomp::DefinitionManager* definitionManager,
         std::shared_ptr<objects::CalculatedEntityState> calcState,
-        std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
+        std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
+        std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
 
     /**
      * Apply a set of skill correct table value adjustments.
@@ -911,13 +920,17 @@ protected:
      *  calculated values.
      * @param calcState Override CalculatedEntityState to use instead of the
      *  entity's default
+     * @param contextSkill Contextual skill to apply adjustments from.
+     *  Essentially adjusts stats "while a skill is being used" which can
+     *  vary between scenarios.
      * @return 1 if the calculation resulted in a change to the stats that should
      *  be sent to the client, 2 if one of the changes should be communicated to
      *  the world (for party members etc), 0 otherwise
      */
     uint8_t RecalculateDemonStats(libcomp::DefinitionManager* definitionManager,
         libcomp::EnumMap<CorrectTbl, int32_t>& stats,
-        std::shared_ptr<objects::CalculatedEntityState> calcState);
+        std::shared_ptr<objects::CalculatedEntityState> calcState,
+        std::shared_ptr<objects::MiSkillData> contextSkill);
 
     /**
      * Recalculate a entity's stats for an enemy or ally which have all types
@@ -926,12 +939,16 @@ protected:
      *  determining how effects and items interact with the entity
      * @param calcState Override CalculatedEntityState to use instead of the
      *  entity's default
+     * @param contextSkill Contextual skill to apply adjustments from.
+     *  Essentially adjusts stats "while a skill is being used" which can
+     *  vary between scenarios.
      * @return 1 if the calculation resulted in a change to the stats that should
      *  be sent to the client, 2 if one of the changes should be communicated to
      *  the world (for party members etc), 0 otherwise
      */
     uint8_t RecalculateEnemyStats(libcomp::DefinitionManager* definitionManager,
-        std::shared_ptr<objects::CalculatedEntityState> calcState);
+        std::shared_ptr<objects::CalculatedEntityState> calcState,
+        std::shared_ptr<objects::MiSkillData> contextSkill);
 
     /**
      * Get all skills that the enemy or ally entity currently has available.

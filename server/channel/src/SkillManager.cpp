@@ -4763,7 +4763,51 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
         auto pendingSkillTokusei = calcState->GetPendingSkillTokusei();
         auto aspects = calcState->GetExistingTokuseiAspects();
 
-        bool modified = false;
+        // Determine if a skill context will change the state calculation
+        std::shared_ptr<objects::MiSkillData> contextSkill;
+        if(!isTarget)
+        {
+            // Always use current skill
+            contextSkill = skill.Definition;
+        }
+        else
+        {
+            // Only apply guard stats if targeted (adjustments apply while
+            // guarding too)
+            auto otherSkill = eState->GetActivatedAbility();
+            auto otherDef = otherSkill ? otherSkill->GetSkillData() : nullptr;
+            if(otherDef && otherDef->GetBasic()->GetActionType() ==
+                objects::MiSkillBasicData::ActionType_t::GUARD)
+            {
+                contextSkill = otherDef;
+            }
+        }
+
+        bool useSkillContext = contextSkill != nullptr;
+        if(useSkillContext)
+        {
+            // Filter invalid skills out
+            if(contextSkill->GetCommon()->GetCategory()->GetMainCategory() != 1)
+            {
+                // Active only
+                contextSkill = nullptr;
+                useSkillContext = false;
+            }
+            else if(contextSkill->GetCommon()->CorrectTblCount() == 0)
+            {
+                // No adjustments, nothing to do
+                contextSkill = nullptr;
+                useSkillContext = false;
+            }
+            else if(contextSkill->GetDamage()->GetBattleDamage()->GetFormula() ==
+                objects::MiBattleDamageData::Formula_t::DMG_NORMAL_SIMPLE)
+            {
+                // Used post recalc only
+                useSkillContext = false;
+            }
+        }
+
+        bool modified = contextSkill != nullptr;
         for(auto pair : pendingSkillTokusei)
         {
             auto tokusei = definitionManager->GetTokuseiData(pair.first);
@@ -4807,7 +4851,19 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
             calcState->SetEffectiveTokusei(effectiveTokusei);
             calcState->SetPendingSkillTokusei(stillPendingSkillTokusei);
 
-            eState->RecalculateStats(definitionManager, calcState);
+            eState->RecalculateStats(definitionManager, calcState,
+                useSkillContext ? contextSkill : nullptr);
+
+            if(contextSkill &&
+                contextSkill->GetDamage()->GetBattleDamage()->GetFormula() ==
+                objects::MiBattleDamageData::Formula_t::DMG_NORMAL_SIMPLE)
+            {
+                // Stats on skill override entity stats
+                for(auto ct : contextSkill->GetCommon()->GetCorrectTbl())
+                {
+                    calcState->SetCorrectTbl(ct->GetType(), ct->GetValue());
+                }
+            }
         }
 
         if(isTarget)
@@ -5138,69 +5194,59 @@ uint16_t SkillManager::CalculateOffenseValue(
         return skill.OffenseValues[target->GetEntityID()];
     }
 
+    auto calcState = GetCalculatedState(source, pSkill, false, target);
+
+    int16_t clsr = calcState->GetCorrectTbl((size_t)CorrectTbl::CLSR);
+    int16_t lngr = calcState->GetCorrectTbl((size_t)CorrectTbl::LNGR);
+    int16_t spell = calcState->GetCorrectTbl((size_t)CorrectTbl::SPELL);
+    int16_t support = calcState->GetCorrectTbl((size_t)CorrectTbl::SUPPORT);
+
     uint16_t off = 0;
-
-    auto damageData = skill.Definition->GetDamage()->GetBattleDamage();
-    if(damageData->GetFormula() == objects::MiBattleDamageData::Formula_t::DMG_NORMAL_SIMPLE)
+    switch(skill.EffectiveDependencyType)
     {
-        // Damage is determined entirely from mod value, use 1 if countered somehow
-        off = 1;
-    }
-    else
-    {
-        auto calcState = GetCalculatedState(source, pSkill, false, target);
-
-        int16_t clsr = calcState->GetCorrectTbl((size_t)CorrectTbl::CLSR);
-        int16_t lngr = calcState->GetCorrectTbl((size_t)CorrectTbl::LNGR);
-        int16_t spell = calcState->GetCorrectTbl((size_t)CorrectTbl::SPELL);
-        int16_t support = calcState->GetCorrectTbl((size_t)CorrectTbl::SUPPORT);
-
-        switch(skill.EffectiveDependencyType)
+    case 0:
+        off = (uint16_t)clsr;
+        break;
+    case 1:
+        off = (uint16_t)lngr;
+        break;
+    case 2:
+        off = (uint16_t)spell;
+        break;
+    case 3:
+        off = (uint16_t)support;
+        break;
+    case 6:
+        off = (uint16_t)(lngr + spell / 2);
+        break;
+    case 7:
+        off = (uint16_t)(spell + clsr / 2);
+        break;
+    case 8:
+        off = (uint16_t)(spell + lngr / 2);
+        break;
+    case 9:
+        off = (uint16_t)(clsr + lngr + spell);
+        break;
+    case 10:
+        off = (uint16_t)(lngr + clsr + spell);
+        break;
+    case 11:
+        off = (uint16_t)(spell + clsr + lngr);
+        break;
+    case 12:
+        off = (uint16_t)(clsr + spell / 2);
+        break;
+    case 5:
+    default:
+        LogSkillManagerError([&]()
         {
-        case 0:
-            off = (uint16_t)clsr;
-            break;
-        case 1:
-            off = (uint16_t)lngr;
-            break;
-        case 2:
-            off = (uint16_t)spell;
-            break;
-        case 3:
-            off = (uint16_t)support;
-            break;
-        case 6:
-            off = (uint16_t)(lngr + spell / 2);
-            break;
-        case 7:
-            off = (uint16_t)(spell + clsr / 2);
-            break;
-        case 8:
-            off = (uint16_t)(spell + lngr / 2);
-            break;
-        case 9:
-            off = (uint16_t)(clsr + lngr + spell);
-            break;
-        case 10:
-            off = (uint16_t)(lngr + clsr + spell);
-            break;
-        case 11:
-            off = (uint16_t)(spell + clsr + lngr);
-            break;
-        case 12:
-            off = (uint16_t)(clsr + spell / 2);
-            break;
-        case 5:
-        default:
-            LogSkillManagerError([&]()
-            {
-                return libcomp::String("Invalid dependency type for"
-                    " damage calculation encountered: %1\n")
-                    .Arg(skill.EffectiveDependencyType);
-            });
+            return libcomp::String("Invalid dependency type for"
+                " damage calculation encountered: %1\n")
+                .Arg(skill.EffectiveDependencyType);
+        });
 
-            return false;
-        }
+        return false;
     }
 
     if(skill.ExecutionContext->CounteredSkill)
@@ -8896,8 +8942,6 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
     {
         ProcessingSkill& skill = *pSkill.get();
         auto damageData = skill.Definition->GetDamage()->GetBattleDamage();
-        bool isSimpleDamage = damageData->GetFormula() ==
-            objects::MiBattleDamageData::Formula_t::DMG_NORMAL_SIMPLE;
 
         auto calcState = GetCalculatedState(source, pSkill, false, target.EntityState);
         auto targetState = GetCalculatedState(target.EntityState, pSkill, true, source);
@@ -8982,17 +9026,8 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
                 break;
         }
 
-        float calc = 0.f;
-        if(isSimpleDamage)
-        {
-            // Simple damage starts with modifier/2
-            calc = (float)mod * 0.5f;
-        }
-        else
-        {
-            // Normal damage starts with offense stat * modifier/100
-            calc = (float)off * ((float)mod * 0.01f);
-        }
+        // Damage starts with offense stat * modifier/100
+        float calc = (float)off * ((float)mod * 0.01f);
 
         // Add the expertise modifier
         calc = calc + (float)skill.ExpertiseRankBoost * 0.5f;

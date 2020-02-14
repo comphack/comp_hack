@@ -2192,6 +2192,9 @@ bool ApiHandler::handlePost(CivetServer *pServer,
         return true;
     }
 
+    // Lock the mutex while processing the request
+    session->requestLock.lock();
+
     if(!it->second(*this, obj, response, session))
     {
         mg_printf(pConnection, "HTTP/1.1 400 Bad Request\r\n"
@@ -2199,6 +2202,8 @@ bool ApiHandler::handlePost(CivetServer *pServer,
 
         return true;
     }
+
+    session->requestLock.unlock();
 
     JsonBox::Value responseValue(response);
     responseValue.writeToStream(ss);

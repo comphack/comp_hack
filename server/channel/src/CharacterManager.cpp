@@ -5073,8 +5073,8 @@ bool CharacterManager::UpdateExperience(const std::shared_ptr<
 
             LogCharacterManagerDebug([cState, startingLevel, level]()
             {
-                return libcomp::String("Character has leveled up from"
-                    " %1 to %2!\n").Arg(cState->GetEntityUUID().ToString())
+                return libcomp::String("Character %1 has leveled up from"
+                    " %2 to %3!\n").Arg(cState->GetEntityUUID().ToString())
                     .Arg(startingLevel).Arg(level);
             });
         }

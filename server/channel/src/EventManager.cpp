@@ -3737,6 +3737,13 @@ bool EventManager::ResetDemonQuests(const std::shared_ptr<
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
+    if(!character)
+    {
+        // Since all connections are being pulled, its possible one isn't
+        // ready yet
+        return false;
+    }
+
     auto progress = character->GetProgress().Get();
 
     std::set<std::shared_ptr<objects::Demon>> demons;

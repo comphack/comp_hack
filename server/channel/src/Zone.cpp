@@ -1686,7 +1686,8 @@ uint32_t Zone::SetNextRentalExpiration()
     for(auto& cmPair : mCultureMachines)
     {
         auto rental = cmPair.second->GetRentalData();
-        if(rental && (mNextRentalExpiration == 0 ||
+        if(rental && rental->GetActive() &&
+            (mNextRentalExpiration == 0 ||
             mNextRentalExpiration > rental->GetExpiration()))
         {
             mNextRentalExpiration = rental->GetExpiration();

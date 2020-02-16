@@ -90,7 +90,8 @@ std::shared_ptr<objects::EnemyBase> EnemyState::GetEnemyBase() const
 
 uint8_t EnemyState::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
-    std::shared_ptr<objects::CalculatedEntityState> calcState)
+    std::shared_ptr<objects::CalculatedEntityState> calcState,
+    std::shared_ptr<objects::MiSkillData> contextSkill)
 {
     std::lock_guard<std::mutex> lock(mLock);
 
@@ -100,7 +101,8 @@ uint8_t EnemyState::RecalculateStats(
         return true;
     }
 
-    return RecalculateEnemyStats(definitionManager, calcState);
+    return RecalculateEnemyStats(definitionManager, calcState,
+        contextSkill);
 }
 
 std::set<uint32_t> EnemyState::GetAllSkills(

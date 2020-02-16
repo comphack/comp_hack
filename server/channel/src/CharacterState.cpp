@@ -329,8 +329,17 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
         definitionManager, demon->GetGrowthType(), demonLvl);
 
     CharacterManager::AdjustDemonBaseStats(demon, demonStats, true, true);
+
+    // Get mitama default stats
     CharacterManager::AdjustMitamaStats(demon, demonStats, definitionManager,
-        0, GetEntityID(), mitamaSet);
+        1, GetEntityID(), mitamaSet);
+
+    // Calculate HP/MP values
+    CharacterManager::CalculateDependentStats(demonStats, demonLvl, true);
+
+    // Get mitama summoned stats
+    CharacterManager::AdjustMitamaStats(demon, demonStats, definitionManager,
+        2, GetEntityID(), mitamaSet);
 
     // Add base stats and HP/MP
     for(uint8_t i = (size_t)CorrectTbl::STR; i <= (uint8_t)CorrectTbl::MP_MAX; i++)
@@ -912,7 +921,8 @@ const libobjgen::UUID CharacterState::GetEntityUUID()
 
 uint8_t CharacterState::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
-    std::shared_ptr<objects::CalculatedEntityState> calcState)
+    std::shared_ptr<objects::CalculatedEntityState> calcState,
+    std::shared_ptr<objects::MiSkillData> contextSkill)
 {
     uint8_t result = 0;
 
@@ -955,10 +965,15 @@ uint8_t CharacterState::RecalculateStats(
     auto dgState = mDigitalizeState;
     if(dgState)
     {
+        // Apply digitalize non-HP/MP stats (which apply further down)
         for(auto& pair : dgState->GetCorrectValues())
         {
-            stats[(CorrectTbl)pair.first] = (int16_t)(
-                stats[(CorrectTbl)pair.first] + pair.second);
+            if(pair.first != (uint8_t)CorrectTbl::HP_MAX &&
+                pair.first != (uint8_t)CorrectTbl::MP_MAX)
+            {
+                stats[(CorrectTbl)pair.first] = (int16_t)(
+                    stats[(CorrectTbl)pair.first] + pair.second);
+            }
         }
     }
 
@@ -1015,7 +1030,8 @@ uint8_t CharacterState::RecalculateStats(
         ApplySkillCorrectTbls(dgPassives, definitionManager, correctTbls);
     }
 
-    GetAdditionalCorrectTbls(definitionManager, calcState, correctTbls);
+    GetAdditionalCorrectTbls(definitionManager, calcState, correctTbls,
+        contextSkill);
 
     UpdateNRAChances(stats, calcState, nraTbls);
     AdjustStats(correctTbls, stats, calcState, true);
@@ -1027,6 +1043,15 @@ uint8_t CharacterState::RecalculateStats(
     }
 
     CharacterManager::CalculateDependentStats(stats, cs->GetLevel(), false);
+
+    if(dgState)
+    {
+        // Add digitalize HP/MP now
+        stats[CorrectTbl::HP_MAX] = (int16_t)(stats[CorrectTbl::HP_MAX] +
+            dgState->GetCorrectValues((uint8_t)CorrectTbl::HP_MAX));
+        stats[CorrectTbl::MP_MAX] = (int16_t)(stats[CorrectTbl::MP_MAX] +
+            dgState->GetCorrectValues((uint8_t)CorrectTbl::MP_MAX));
+    }
 
     if(selfState)
     {

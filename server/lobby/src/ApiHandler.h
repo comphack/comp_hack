@@ -76,6 +76,7 @@ public:
     libcomp::String challenge;
     libcomp::String clientAddress;
     std::shared_ptr<objects::Account> account;
+    std::mutex requestLock;
 };
 
 class WebGameApiSession : public ApiSession

@@ -249,6 +249,8 @@ bool Zone::AddConnection(const std::shared_ptr<ChannelClientConnection>& client)
 
         std::lock_guard<std::mutex> lock(mLock);
         mConnections[state->GetWorldCID()] = client;
+        mActiveEntities.push_back(cState);
+        mActiveEntities.push_back(dState);
 
         return true;
     }
@@ -283,6 +285,9 @@ void Zone::RemoveConnection(const std::shared_ptr<ChannelClientConnection>& clie
     std::lock_guard<std::mutex> lock(mLock);
     mConnections.erase(state->GetWorldCID());
 
+    mActiveEntities.remove(cState);
+    mActiveEntities.remove(dState);
+
     // If this zone is not part of an instance, clear the character
     // specific flags
     if(!mZoneInstance)
@@ -298,6 +303,12 @@ void Zone::RemoveEntity(int32_t entityID, uint32_t spawnDelay)
     if(state)
     {
         std::lock_guard<std::mutex> lock(mLock);
+
+        mActiveEntities.remove_if([entityID]
+            (const std::shared_ptr<ActiveEntityState>& a)
+            {
+                return a->GetEntityID() == entityID;
+            });
 
         std::shared_ptr<ActiveEntityState> removeSpawn;
         switch(state->GetEntityType())
@@ -639,19 +650,7 @@ const std::shared_ptr<ActiveEntityState> Zone::GetActiveEntity(int32_t entityID)
 
 const std::list<std::shared_ptr<ActiveEntityState>> Zone::GetActiveEntities()
 {
-    std::list<std::shared_ptr<ActiveEntityState>> results;
-
-    std::lock_guard<std::mutex> lock(mLock);
-    for(auto ePair : mAllEntities)
-    {
-        auto active = std::dynamic_pointer_cast<ActiveEntityState>(ePair.second);
-        if(active)
-        {
-            results.push_back(active);
-        }
-    }
-
-    return results;
+    return mActiveEntities;
 }
 
 const std::list<std::shared_ptr<ActiveEntityState>>
@@ -1865,6 +1864,8 @@ bool Zone::TimeRestrictionActive(const WorldClock& clock,
 void Zone::AddSpawnedEntity(const std::shared_ptr<ActiveEntityState>& state,
     uint32_t spotID, uint32_t sgID, uint32_t slgID)
 {
+    mActiveEntities.push_back(state);
+
     if(spotID != 0)
     {
         mSpotsSpawned.insert(spotID);

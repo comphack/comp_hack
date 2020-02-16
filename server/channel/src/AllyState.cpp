@@ -77,7 +77,8 @@ std::set<uint32_t> AllyState::GetAllSkills(
 
 uint8_t AllyState::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
-    std::shared_ptr<objects::CalculatedEntityState> calcState)
+    std::shared_ptr<objects::CalculatedEntityState> calcState,
+    std::shared_ptr<objects::MiSkillData> contextSkill)
 {
     std::lock_guard<std::mutex> lock(mLock);
 
@@ -87,7 +88,8 @@ uint8_t AllyState::RecalculateStats(
         return true;
     }
 
-    return RecalculateEnemyStats(definitionManager, calcState);
+    return RecalculateEnemyStats(definitionManager, calcState,
+        contextSkill);
 }
 
 uint8_t AllyState::GetLNCType()

@@ -373,7 +373,8 @@ const libobjgen::UUID DemonState::GetEntityUUID()
 
 uint8_t DemonState::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
-    std::shared_ptr<objects::CalculatedEntityState> calcState)
+    std::shared_ptr<objects::CalculatedEntityState> calcState,
+    std::shared_ptr<objects::MiSkillData> contextSkill)
 {
     std::lock_guard<std::mutex> lock(mLock);
 
@@ -433,7 +434,8 @@ uint8_t DemonState::RecalculateStats(
     CharacterManager::FamiliarityBoostStats(entity->GetFamiliarity(), stats,
         levelRate);
 
-    return RecalculateDemonStats(definitionManager, stats, calcState);
+    return RecalculateDemonStats(definitionManager, stats, calcState,
+        contextSkill);
 }
 
 std::set<uint32_t> DemonState::GetAllSkills(

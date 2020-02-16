@@ -2256,10 +2256,12 @@ bool ActiveEntityState::IsLNCType(uint8_t lncType, bool invertFlag)
 
 // "Abstract implementations" required for Sqrat usage
 uint8_t ActiveEntityState::RecalculateStats(libcomp::DefinitionManager* definitionManager,
-    std::shared_ptr<objects::CalculatedEntityState> calcState)
+    std::shared_ptr<objects::CalculatedEntityState> calcState,
+    std::shared_ptr<objects::MiSkillData> contextSkill)
 {
     (void)definitionManager;
     (void)calcState;
+    (void)contextSkill;
     return 0;
 }
 
@@ -2973,7 +2975,8 @@ void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int32_t>& 
 void ActiveEntityState::GetAdditionalCorrectTbls(
     libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
-    std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments)
+    std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
+    std::shared_ptr<objects::MiSkillData> contextSkill)
 {
     // 1) Gather skill adjustments
     auto currentSkillIDs = GetCurrentSkills();
@@ -3014,6 +3017,16 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
                     adjustments.push_back(ct);
                 }
             }
+        }
+    }
+
+    // 4) Gather skill adjustments but only if applying to a skill contextual
+    // calculated state
+    if(contextSkill && calcState != GetCalculatedState())
+    {
+        for(auto ct : contextSkill->GetCommon()->GetCorrectTbl())
+        {
+            adjustments.push_back(ct);
         }
     }
 
@@ -3065,7 +3078,8 @@ void ActiveEntityState::ApplySkillCorrectTbls(
 uint8_t ActiveEntityState::RecalculateDemonStats(
     libcomp::DefinitionManager* definitionManager,
     libcomp::EnumMap<CorrectTbl, int32_t>& stats,
-    std::shared_ptr<objects::CalculatedEntityState> calcState)
+    std::shared_ptr<objects::CalculatedEntityState> calcState,
+    std::shared_ptr<objects::MiSkillData> contextSkill)
 {
     bool selfState = calcState == GetCalculatedState();
     if(selfState)
@@ -3081,7 +3095,8 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
     }
 
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
-    GetAdditionalCorrectTbls(definitionManager, calcState, correctTbls);
+    GetAdditionalCorrectTbls(definitionManager, calcState, correctTbls,
+        contextSkill);
 
     UpdateNRAChances(stats, calcState);
     AdjustStats(correctTbls, stats, calcState, true);
@@ -3115,7 +3130,8 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
 
 uint8_t ActiveEntityState::RecalculateEnemyStats(
     libcomp::DefinitionManager* definitionManager,
-    std::shared_ptr<objects::CalculatedEntityState> calcState)
+    std::shared_ptr<objects::CalculatedEntityState> calcState,
+    std::shared_ptr<objects::MiSkillData> contextSkill)
 {
     bool selfState = calcState == GetCalculatedState();
     if(calcState == nullptr)
@@ -3179,7 +3195,8 @@ uint8_t ActiveEntityState::RecalculateEnemyStats(
     stats[CorrectTbl::SPEED] = cs->GetSPEED();
     stats[CorrectTbl::LUCK] = cs->GetLUCK();
 
-    return RecalculateDemonStats(definitionManager, stats, calcState);
+    return RecalculateDemonStats(definitionManager, stats, calcState,
+        contextSkill);
 }
 
 std::set<uint32_t> ActiveEntityState::GetAllEnemySkills(

@@ -818,6 +818,9 @@ private:
     /// Map of world CIDs to client connections
     std::unordered_map<int32_t, std::shared_ptr<ChannelClientConnection>> mConnections;
 
+    /// List of active entities in the zone
+    std::list<std::shared_ptr<ActiveEntityState>> mActiveEntities;
+
     /// List of pointers to allies instantiated for the zone
     std::list<std::shared_ptr<AllyState>> mAllies;
 

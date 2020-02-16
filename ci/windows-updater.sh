@@ -20,11 +20,12 @@ unzip "${CACHE_DIR}/external-${EXTERNAL_VERSION}-${PLATFORM}.zip"
 mv external* ../binaries
 echo "Installed external dependencies"
 
-# Restore the cache (this mostly just handles Qt)
-echo "Restoring cache"
-cd "${ROOT_DIR}"
-ci/travis-cache-windows.sh restore
-echo "Restored cache"
+echo "Installing Qt"
+mkdir -p "${QT_EXTRACT_DIR}"
+cd "${QT_EXTRACT_DIR}"
+7z x "${CACHE_DIR}/qt-${WINDOWS_QT_VERSION}-${PLATFORM}.7z"
+cd ..
+echo "Installed Qt"
 
 #
 # Build

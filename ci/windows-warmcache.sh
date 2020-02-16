@@ -30,11 +30,8 @@ fi
 
 # Grab Qt
 echo "Downloading Qt"
-if [ ! -f "Qt-${WINDOWS_QT_VERSION}-${PLATFORM}.tar" ]; then
-    cd "${ROOT_DIR}"
-
-    ci/travis-install-qt-windows.sh
-    ci/travis-cache-windows.sh save
+if [ ! -f qt-${WINDOWS_QT_VERSION}-${PLATFORM}.7z ]; then
+    curl -Lo "qt-${WINDOWS_QT_VERSION}-${PLATFORM}.7z" "https://github.com/comphack/external/releases/download/${QT_EXTERNAL_RELEASE}/qt-${WINDOWS_QT_VERSION}-${PLATFORM}.7z"
 fi
 
 # Grab the build of libcomp if Dropbox isn't being used.

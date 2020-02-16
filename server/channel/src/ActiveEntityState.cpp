@@ -1422,11 +1422,17 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
             mCurrentZone->SetNextStatusEffectTime(0, GetEntityID());
         }
 
+        // Gather non-system times to unregister as they will be registered
+        // again when reactivated. If we don't do this, the delay between
+        // deactivation and reactivation needs to round to the same second
+        // or the status will be double expired.
+        std::set<uint32_t> nonSystemTimes;
         for(auto pair : mNextEffectTimes)
         {
-            // Skip non-system times
+            // Skip system times
             if(pair.first <= 3) continue;
 
+            nonSystemTimes.insert(pair.first);
             for(auto effectType : pair.second)
             {
                 auto it = mStatusEffects.find(effectType);
@@ -1445,6 +1451,11 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
 
                 effect->SetExpiration(exp);
             }
+        }
+
+        for(uint32_t time : nonSystemTimes)
+        {
+            mNextEffectTimes.erase(time);
         }
     }
 }
@@ -1543,9 +1554,9 @@ uint8_t ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
                             if(instance && instance->GetPoisonLevel())
                             {
                                 skipHPRegen = true;
-                                hpTDamage = (int32_t)((float)hpTDamage +
-                                    ceil((float)instance->GetPoisonLevel() *
-                                        0.01f * (float)GetMaxHP()));
+                                hpTDamage = hpTDamage + (int32_t)ceil(
+                                    (float)instance->GetPoisonLevel() *
+                                        0.01f * (float)GetMaxHP());
                             }
                         }
 

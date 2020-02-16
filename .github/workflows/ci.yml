@@ -1,0 +1,66 @@
+name: C/C++ CI
+
+on: [push, pull_request]
+
+jobs:
+  linux-build:
+    name: Ubuntu 16.04 64-bit
+    runs-on: [self-hosted, linux]
+    steps:
+    - uses: actions/checkout@v1
+      name: Checkout
+      with:
+        submodules: true
+    - name: Build
+      run: bash ci/github-linux.sh
+    - name: Documentation
+      uses: JamesIves/github-pages-deploy-action@releases/v3
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        BRANCH: gh-pages
+        FOLDER: pages
+
+  win32-build:
+    name: Windows 10 32-bit
+    runs-on: [self-hosted, windows]
+    steps:
+    - uses: actions/checkout@v1
+      name: Checkout
+      with:
+        submodules: true
+    - name: Build
+      run: .\ci\github-win32.ps1
+    - uses: actions/upload-artifact@v1
+      name: Upload release artifact (zip)
+      with:
+        name: Windows 32-bit Release
+        path: build/artifacts
+    - uses: fnkr/github-action-ghr@v1
+      name: Release
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        GHR_PATH: build/artifacts
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  win64-build:
+    name: Windows 10 64-bit
+    runs-on: [self-hosted, windows]
+    steps:
+    - uses: actions/checkout@v1
+      name: Checkout
+      with:
+        submodules: true
+    - name: Build
+      run: .\ci\github-win64.ps1
+    - uses: actions/upload-artifact@v1
+      name: Upload release artifacts
+      with:
+        name: Windows 64-bit Release
+        path: build/artifacts
+    - uses: fnkr/github-action-ghr@v1
+      name: Release
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        GHR_PATH: build/artifacts
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

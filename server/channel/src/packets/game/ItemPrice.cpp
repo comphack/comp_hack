@@ -67,9 +67,9 @@ bool Parsers::ItemPrice::Parse(libcomp::ManagerPacket *pPacketManager,
     std::array<uint16_t, 5> modSlots;
     modSlots[0] = p.ReadU16Little();
     modSlots[1] = p.ReadU16Little();
+    modSlots[2] = p.ReadU16Little();
     modSlots[3] = p.ReadU16Little();
     modSlots[4] = p.ReadU16Little();
-    modSlots[5] = p.ReadU16Little();
 
     int32_t expiration = p.ReadS32Little();
     uint32_t basicEffect = p.ReadU32Little();

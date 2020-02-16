@@ -1543,7 +1543,7 @@ uint8_t ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
                             if(instance && instance->GetPoisonLevel())
                             {
                                 skipHPRegen = true;
-                                hpTDamage = (int32_t)(hpTDamage +
+                                hpTDamage = (int32_t)((float)hpTDamage +
                                     ceil((float)instance->GetPoisonLevel() *
                                         0.01f * (float)GetMaxHP()));
                             }

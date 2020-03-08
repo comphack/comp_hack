@@ -70,6 +70,7 @@ namespace libcomp
         {
             Import("database");
 
+            Using<AIManager>();
             Using<ChannelSyncManager>();
             Using<MatchManager>();
             Using<WorldClock>();
@@ -81,6 +82,7 @@ namespace libcomp
                 .Func("GetWorldClockTime", &ChannelServer::GetWorldClockTime)
                 .Func("GetWorldDatabase", &ChannelServer::GetWorldDatabase)
                 .Func("GetLobbyDatabase", &ChannelServer::GetLobbyDatabase)
+                .Func("GetAIManager", &ChannelServer::GetAIManager)
                 .Func("GetChannelSyncManager", &ChannelServer::GetChannelSyncManager)
                 .Func("GetMatchManager", &ChannelServer::GetMatchManager)
                 .Func("GetZoneManager", &ChannelServer::GetZoneManager)

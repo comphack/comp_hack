@@ -57,6 +57,10 @@ class SkillExecutionContext
 {
 friend class SkillManager;
 
+public:
+    /// If specified, the availability of the requested skill will be ignored
+    bool IgnoreAvailable = false;
+
 protected:
     /* The following options are for internal processing use only */
 
@@ -184,10 +188,12 @@ public:
      * Determine if the specified skill is locked from use on the supplied entity.
      * @param source Entity that is attempting to use the skill
      * @param skillData Pointer to the skill's definition
+     * @param ctx Special execution state for the skill
      * @return true if the skill is restricted from being used
      */
     bool SkillRestricted(const std::shared_ptr<ActiveEntityState> source,
-        const std::shared_ptr<objects::MiSkillData>& skillData);
+        const std::shared_ptr<objects::MiSkillData>& skillData,
+        std::shared_ptr<SkillExecutionContext> ctx = nullptr);
 
     /**
      * Determine if the specified skill is locked from use in the current zone.

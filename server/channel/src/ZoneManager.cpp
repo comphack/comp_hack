@@ -136,6 +136,7 @@ namespace libcomp
                 .Func("GetGlobalZone", &ZoneManager::GetGlobalZone)
                 .Func("GetExistingZone", &ZoneManager::GetExistingZone)
                 .Func("GetInstanceStartingZone", &ZoneManager::GetInstanceStartingZone)
+                .Func("CreateAlly", &ZoneManager::CreateAlly)
                 .Func<std::shared_ptr<ActiveEntityState>(ZoneManager::*)(
                     const std::shared_ptr<Zone>&, uint32_t, uint32_t, uint32_t,
                     float, float, float)>("CreateEnemy", &ZoneManager::CreateEnemy)
@@ -3011,7 +3012,7 @@ void ZoneManager::HandleSpecialInstancePopulate(
                     auto obj = base ? base->GetBoundObject() : nullptr;
 
                     uint64_t reset = base->GetResetTime();
-                    float timeLeft = reset < now ? 0.f
+                    float timeLeft = now < reset ? 0.f
                         : (float)((double)(reset - now) / 1000000.0);
 
                     libcomp::Packet p;
@@ -3057,7 +3058,8 @@ void ZoneManager::HandleSpecialInstancePopulate(
     else if(instance && instance->GetTimeLimitData())
     {
         auto state = client->GetClientState();
-        if(state->GetLastInstanceID() != instance->GetID())
+        if(state->GetLastInstanceID() != instance->GetID() ||
+            !state->GetInstanceTimerActive())
         {
             // Normal timer running already, send to the client (once)
             SendInstanceTimer(instance, client, true);
@@ -3117,8 +3119,7 @@ void ZoneManager::SendToRange(const std::shared_ptr<ChannelClientConnection>& cl
         auto otherCState = zConnection->GetClientState()->GetCharacterState();
         otherCState->RefreshCurrentPosition(now);
 
-        if(rSquared >= cState->GetDistance(otherCState->GetCurrentX(),
-            otherCState->GetCurrentY(), true))
+        if(rSquared >= cState->GetDistance(otherCState, true))
         {
             zConnections.push_back(zConnection);
         }
@@ -3183,6 +3184,41 @@ bool ZoneManager::SpawnEnemy(const std::shared_ptr<Zone>& zone, uint32_t demonID
     {
         return false;
     }
+}
+
+std::shared_ptr<ActiveEntityState> ZoneManager::CreateAlly(
+    const std::shared_ptr<Zone>& zone, uint32_t demonID, uint32_t spotID,
+    float x, float y, float rot)
+{
+    if(!zone || !demonID)
+    {
+        return nullptr;
+    }
+
+    if(spotID)
+    {
+        auto definitionManager = mServer.lock()->GetDefinitionManager();
+        auto spots = definitionManager->GetSpotData(zone->GetDynamicMapID());
+        auto spotIter = spots.find(spotID);
+        if(spotIter != spots.end())
+        {
+            auto zoneData = definitionManager->GetZoneData(
+                zone->GetDefinitionID());
+
+            Point p = GetRandomSpotPoint(spotIter->second, zoneData);
+            x = p.x;
+            y = p.y;
+            rot = spotIter->second->GetRotation();
+        }
+    }
+
+    auto eState = CreateEnemy(zone, demonID, nullptr, x, y, rot, true);
+    if(eState)
+    {
+        eState->GetEnemyBase()->SetSpawnSpotID(spotID);
+    }
+
+    return eState;
 }
 
 std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
@@ -4356,7 +4392,8 @@ void ZoneManager::SyncInstanceAccess(
 
 std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
     const std::shared_ptr<Zone>& zone, uint32_t demonID,
-    const std::shared_ptr<objects::Spawn>& spawn, float x, float y, float rot)
+    const std::shared_ptr<objects::Spawn>& spawn, float x, float y, float rot,
+    bool asAlly)
 {
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
@@ -4392,7 +4429,8 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
 
     std::shared_ptr<ActiveEntityState> state;
     std::shared_ptr<objects::EnemyBase> eBase;
-    if(!spawn || spawn->GetCategory() != objects::Spawn::Category_t::ALLY)
+    if(!asAlly &&
+        (!spawn || spawn->GetCategory() != objects::Spawn::Category_t::ALLY))
     {
         // Building an enemy
         auto enemy = std::make_shared<objects::Enemy>();

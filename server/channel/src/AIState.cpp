@@ -56,6 +56,7 @@ namespace libcomp
             Sqrat::Enumeration e(mVM);
             e.Const("IDLE", (int32_t)AIStatus_t::IDLE);
             e.Const("WANDERING", (int32_t)AIStatus_t::WANDERING);
+            e.Const("FOLLOWING", (int32_t)AIStatus_t::FOLLOWING);
             e.Const("AGGRO", (int32_t)AIStatus_t::AGGRO);
             e.Const("COMBAT", (int32_t)AIStatus_t::COMBAT);
 
@@ -103,7 +104,8 @@ bool AIState::SetStatus(AIStatus_t status, bool isDefault)
 {
     // Disallow default setting to target dependent status
     if(isDefault &&
-        (status == AIStatus_t::AGGRO || status == AIStatus_t::COMBAT))
+        (status == AIStatus_t::AGGRO || status == AIStatus_t::COMBAT ||
+            status == AIStatus_t::FOLLOWING))
     {
         return false;
     }
@@ -130,18 +132,18 @@ bool AIState::SetStatus(AIStatus_t status, bool isDefault)
         if(status == AIStatus_t::WANDERING)
         {
             uint64_t now = ChannelServer::GetServerTime();
-            if(GetDespawnWhenLost())
+            if(GetDespawnWhenLost() && !HasFollowTarget())
             {
-                // Most entities despawn when switching to wandering after 5
-                // minutes if they don't make their way back to their spawn
+                // Most entities despawn when switching to wandering after a
+                // set time if they don't make their way back to their spawn
                 // location
-                SetDespawnTimeout(now + 300000000ULL);
+                SetDespawnTimeout(now + (uint64_t)AI_DESPAWN_TIMEOUT);
             }
 
             // Set next target time based on think speed
             SetNextTargetTime(now + (uint64_t)(GetThinkSpeed() * 1000));
         }
-        else if(GetDespawnTimeout())
+        else if(GetDespawnTimeout() && !HasFollowTarget())
         {
             // Clear if switching to anything else
             SetDespawnTimeout(0);
@@ -151,9 +153,35 @@ bool AIState::SetStatus(AIStatus_t status, bool isDefault)
     return true;
 }
 
+bool AIState::InCombat() const
+{
+    return mStatus == AIStatus_t::COMBAT;
+}
+
+bool AIState::IsAggro(bool includeCombat) const
+{
+    return mStatus == AIStatus_t::AGGRO ||
+        (includeCombat && mStatus == AIStatus_t::COMBAT);
+}
+
+bool AIState::IsFollowing() const
+{
+    return mStatus == AIStatus_t::FOLLOWING;
+}
+
 bool AIState::IsIdle() const
 {
     return mStatus == AIStatus_t::IDLE;
+}
+
+bool AIState::IsWandering() const
+{
+    return mStatus == AIStatus_t::WANDERING;
+}
+
+bool AIState::HasFollowTarget() const
+{
+    return GetFollowEntityID() > 0;
 }
 
 bool AIState::StatusChanged() const

@@ -55,6 +55,7 @@
 #include <MiSkillBasicData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
+#include <MiSkillSpecialParams.h>
 #include <MiTargetData.h>
 #include <Spawn.h>
 #include <SpawnLocation.h>
@@ -68,6 +69,10 @@
 #include "SkillManager.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
+
+#define FOLLOW_DISTANCE_MAX (MAX_ENTITY_DRAW_DISTANCE * 0.66f)
+#define FOLLOW_DISTANCE_FAR (MAX_ENTITY_DRAW_DISTANCE * 0.25f)
+#define FOLLOW_DISTANCE_CLOSE (300.f)
 
 using namespace channel;
 
@@ -427,10 +432,9 @@ void AIManager::CombatSkillHit(
                 UpdateAggro(eState, source->GetEntityID());
             }
 
-            // If the entity is not active, clear all pending commands
+            // If the entity is not aggro'd, clear all pending commands
             // and let them figure out if they need to resume later
-            if(aiState->GetStatus() == AIStatus_t::IDLE &&
-                aiState->GetStatus() == AIStatus_t::WANDERING)
+            if(!aiState->IsAggro())
             {
                 aiState->ClearCommands();
             }
@@ -597,12 +601,6 @@ bool AIManager::QueueUseSkillCommand(
     const std::shared_ptr<ActiveEntityState>& eState, uint32_t skillID,
     int32_t targetEntityID, bool advance)
 {
-    auto aiState = eState ? eState->GetAIState() : nullptr;
-    if(!aiState)
-    {
-        return false;
-    }
-
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
     auto skillData = definitionManager->GetSkillData(skillID);
@@ -611,16 +609,27 @@ bool AIManager::QueueUseSkillCommand(
         return false;
     }
 
+    bool instantUse = skillData->GetBasic()->GetActivationType() == 6;
+
+    // Allow non-AI controlled entity if instantly using skill
+    auto aiState = eState ? eState->GetAIState() : nullptr;
+    if(!aiState && (advance || !instantUse))
+    {
+        return false;
+    }
+
     if(advance)
     {
         SkillAdvance(eState, skillData);
     }
-    else if(skillData->GetBasic()->GetActivationType() == 6)
+    else if(instantUse)
     {
         // Do not actually queue since its an instant activation, use it now
-        server->GetSkillManager()->ActivateSkill(eState, skillID,
-            targetEntityID, targetEntityID, ACTIVATION_TARGET);
-        return true;
+        auto ctx = std::make_shared<SkillExecutionContext>();
+        ctx->IgnoreAvailable = true;
+
+        return server->GetSkillManager()->ActivateSkill(eState, skillID,
+            targetEntityID, targetEntityID, ACTIVATION_TARGET, ctx);
     }
 
     auto skillCmd = std::make_shared<AIUseSkillCommand>(skillData,
@@ -701,8 +710,7 @@ void AIManager::UpdateAggro(const std::shared_ptr<ActiveEntityState>& eState,
         if(targetID > 0)
         {
             // Set aggro
-            if(aiState->GetStatus() == AIStatus_t::IDLE ||
-                aiState->GetStatus() == AIStatus_t::WANDERING)
+            if(!aiState->IsAggro())
             {
                 aiState->SetStatus(AIStatus_t::AGGRO);
             }
@@ -757,7 +765,7 @@ bool AIManager::UseDiasporaQuake(const std::shared_ptr<
     ActiveEntityState>& source, uint32_t skillID, float delay)
 {
     auto zone = source ? source->GetZone() : nullptr;
-    if(!zone)
+    if(!zone || !source->GetAIState())
     {
         return false;
     }
@@ -1010,17 +1018,21 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
     }
 
     if(aiState->IsIdle() &&
-        !aiState->ActionOverridesKeyExists("idle"))
+        !aiState->ActionOverridesKeyExists("idle") &&
+        !aiState->HasFollowTarget() &&
+        !aiState->GetCurrentCommand())
     {
+        // Nothing to do
         return false;
     }
 
     eState->ExpireStatusTimes(now);
 
     bool canAct = !eState->GetStatusTimes(STATUS_RESTING) && eState->CanAct();
+    bool noTargetState = aiState->IsIdle() || aiState->IsFollowing();
 
     // If no target exists and the next target time has passed, search now
-    if(canAct && aiState->GetTargetEntityID() <= 0 &&
+    if(canAct && !noTargetState && aiState->GetTargetEntityID() <= 0 &&
         eState->GetOpponentIDs().size() == 0 &&
         (!aiState->GetNextTargetTime() || aiState->GetNextTargetTime() <= now))
     {
@@ -1060,8 +1072,16 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             eState->Stop(now);
             return true;
         }
-
-        return false;
+        else if(!canAct)
+        {
+            return false;
+        }
+        else if(!aiState->HasFollowTarget() || !aiState->IsWandering())
+        {
+            // Do not actually wait (here) if wandering with an entity to
+            // follow
+            return false;
+        }
     }
 
     // Entity cannot do anything if still affected by skill lockout
@@ -1101,6 +1121,9 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             break;
         case AIStatus_t::WANDERING:
             actionName = "wander";
+            break;
+        case AIStatus_t::FOLLOWING:
+            actionName = "follow";
             break;
         case AIStatus_t::AGGRO:
             actionName = "aggro";
@@ -1431,7 +1454,20 @@ bool AIManager::UpdateEnemyState(
     bool isNight)
 {
     auto aiState = eState->GetAIState();
-    if(aiState->GetStatus() == AIStatus_t::WANDERING && eBase)
+
+    // Check if we need to pursue the follow target
+    if(aiState->HasFollowTarget() && Follow(eState, now))
+    {
+        return false;
+    }
+
+    // If we get here and are still idle, stop now
+    if(aiState->IsIdle())
+    {
+        return false;
+    }
+
+    if(aiState->IsWandering() && eBase)
     {
         // If we're wandering but have opponents (typically from being hit)
         // try to target one of them and stop here if we do
@@ -1555,6 +1591,15 @@ bool AIManager::UpdateEnemyState(
         {
             // Chance to cancel and reset if we've waited for a while
             cancelAndReset = true;
+        }
+        else if(aiState->GetFollowEntityID() > 0 &&
+            eState->GetDistance(zone->GetActiveEntity(
+                aiState->GetFollowEntityID())) > FOLLOW_DISTANCE_MAX)
+        {
+            // Cancel to pursue follow target
+            server->GetSkillManager()->CancelSkill(eState, activated
+                ->GetActivationID());
+            return false;
         }
         else if(activated->GetSkillData()->GetBasic()
             ->GetActivationType() == 5 && target &&
@@ -1704,6 +1749,89 @@ bool AIManager::UpdateEnemyState(
     return false;
 }
 
+bool AIManager::Follow(const std::shared_ptr<ActiveEntityState>& eState,
+    uint64_t now)
+{
+    auto aiState = eState->GetAIState();
+    auto zone = eState->GetZone();
+    if(!zone || eState->GetActivatedAbility())
+    {
+        return false;
+    }
+
+    auto followEntity = zone->GetActiveEntity(aiState
+        ->GetFollowEntityID());
+    if(followEntity)
+    {
+        if(aiState->GetDespawnTimeout())
+        {
+            // Do not despawn even if nowhere near entity
+            aiState->SetDespawnTimeout(0);
+        }
+
+        followEntity->RefreshCurrentPosition(now);
+
+        float maxDistance = aiState->IsAggro()
+            ? FOLLOW_DISTANCE_MAX : FOLLOW_DISTANCE_FAR;
+        if(eState->GetDistance(followEntity) > maxDistance)
+        {
+            // Pursue follow target
+            if(Chase(eState, followEntity->GetEntityID(),
+                FOLLOW_DISTANCE_CLOSE))
+            {
+                // Start following
+                if(!aiState->IsFollowing())
+                {
+                    UpdateAggro(eState, -1);
+                    eState->RemoveStatusTimes(STATUS_WAITING);
+                    aiState->SetStatus(AIStatus_t::FOLLOWING);
+                }
+            }
+
+            return true;
+        }
+    }
+    else if(aiState->GetDespawnWhenLost() &&
+        !aiState->GetDespawnTimeout())
+    {
+        aiState->SetDespawnTimeout(now +
+            (uint64_t)AI_DESPAWN_TIMEOUT);
+    }
+
+    if(aiState->IsFollowing())
+    {
+        // Reset default state and walk to a point near the target
+        aiState->SetStatus(aiState->GetDefaultStatus());
+
+        if(followEntity)
+        {
+            Point src(followEntity->GetCurrentX(),
+                followEntity->GetCurrentY());
+            Point target(src.x, src.y + FOLLOW_DISTANCE_CLOSE);
+
+            target = ZoneManager::RotatePoint(target, src,
+                (float)RNG(int32_t, -314, 314) * 0.01f);
+
+            if(QueueMoveCommand(eState, target.x, target.y))
+            {
+                QueueWaitCommand(aiState, 3000);
+
+                // Undo status change so the commands remain
+                aiState->ResetStatusChanged();
+            }
+        }
+
+        return true;
+    }
+    else if(eState->GetStatusTimes(STATUS_WAITING))
+    {
+        // Keep waiting
+        return true;
+    }
+
+    return false;
+}
+
 void AIManager::Move(const std::shared_ptr<ActiveEntityState>& eState,
     Point dest, uint64_t now)
 {
@@ -1828,8 +1956,9 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
 
             // If the entity has a respawn timeout, clear it if they can
             // reach the designated point which is in the spawn area or
-            // they don't actually need to wander back
-            if(aiState->GetDespawnTimeout() && (!wanderBack || canReach))
+            // they don't actually need to wander back (ignore for following)
+            if(aiState->GetDespawnTimeout() && !aiState->HasFollowTarget() &&
+                (!wanderBack || canReach))
             {
                 aiState->SetDespawnTimeout(0);
             }
@@ -2127,7 +2256,7 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
                 {
                     possibleTargets.push_back(entity);
 
-                    if(aiState->GetStatus() == AIStatus_t::WANDERING)
+                    if(aiState->IsFollowing() || aiState->IsWandering())
                     {
                         aiState->SetStatus(AIStatus_t::AGGRO);
                     }
@@ -2365,6 +2494,7 @@ bool AIManager::SkillIsValid(
                 SVR_CONST.SKILL_HP_DEPENDENT,
                 SVR_CONST.SKILL_HP_MP_MIN,
                 SVR_CONST.SKILL_LNC_DAMAGE,
+                SVR_CONST.SKILL_MINION_SPAWN,
                 SVR_CONST.SKILL_PIERCE,
                 SVR_CONST.SKILL_SLEEP_RESTRICTED,
                 SVR_CONST.SKILL_STAT_SUM_DAMAGE,
@@ -2461,7 +2591,7 @@ bool AIManager::PrepareSkillUsage(
     // Non-defensive/support combat skills are only accessible to first
     // strike entities unless combat has already started
     bool canFight = target && (aiState->GetStrikeFirst() ||
-        aiState->GetStatus() == AIStatus_t::COMBAT);
+        aiState->InCombat());
 
     bool canHeal = logicGroup && (float)cs->GetHP() /
         (float)eState->GetMaxHP() <= (float)logicGroup->GetHealThreshold() * 0.01f;
@@ -2517,6 +2647,22 @@ bool AIManager::PrepareSkillUsage(
                         }
 
                         skillTarget = eState;
+                    }
+
+                    // If it is a minion spawning skill, make sure the SLG is
+                    // not currently spawned (restricted for auto-use only)
+                    const static auto minionSpawnFID =
+                        SVR_CONST.SKILL_MINION_SPAWN;
+                    if(skillData->GetDamage()->GetFunctionID() ==
+                        minionSpawnFID)
+                    {
+                        auto params = skillData->GetSpecial()
+                            ->GetSpecialParams();
+                        if(params[0] != zone->GetDefinitionID() ||
+                            zone->MinionSpawned(eState, params[1]))
+                        {
+                            continue;
+                        }
                     }
 
                     // Make sure the target is valid

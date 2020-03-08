@@ -519,6 +519,16 @@ public:
     bool GroupHasSpawned(uint32_t groupID, bool isLocation, bool aliveOnly);
 
     /**
+     * Determine if a minion has been spawned in the zone with an optional
+     * spawn location group
+     * @param eState Pointer to the summoner entity
+     * @param slgID Optional spawn location group ID
+     * @return true if an entity has spawned, false one has not
+     */
+    bool MinionSpawned(const std::shared_ptr<ActiveEntityState>& eState,
+        int32_t slgID = 0);
+
+    /**
      * Check if an entity has ever spawned at the specified spot.
      * @param spotID Spot ID of the spawn to check
      * @return true if an entity has ever spawned at the spot

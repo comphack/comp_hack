@@ -372,7 +372,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     }
 
     // Check additional restrictions
-    if(SkillRestricted(source, def))
+    if(SkillRestricted(source, def, ctx))
     {
         SendFailure(source, skillID, client,
             (uint8_t)SkillErrorCodes_t::GENERIC);
@@ -754,7 +754,7 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     uint16_t functionID = skillData->GetDamage()->GetFunctionID();
     uint8_t skillCategory = skillData->GetCommon()->GetCategory()->GetMainCategory();
 
-    if(skillCategory == 0 || SkillRestricted(source, skillData))
+    if(skillCategory == 0 || SkillRestricted(source, skillData, ctx))
     {
         SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
@@ -859,6 +859,13 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
         if(errCode != -1)
         {
             SendFailure(activated, client, (uint8_t)errCode);
+            return false;
+        }
+
+        // Line of sight required for primary target
+        if(!source->HasLineOfSight(targetEntity))
+        {
+            SendFailure(activated, client);
             return false;
         }
 
@@ -1069,8 +1076,38 @@ void SkillManager::SendFailure(const std::shared_ptr<ActiveEntityState> source,
 
 bool SkillManager::SkillRestricted(
     const std::shared_ptr<ActiveEntityState> source,
-    const std::shared_ptr<objects::MiSkillData>& skillData)
+    const std::shared_ptr<objects::MiSkillData>& skillData,
+    std::shared_ptr<SkillExecutionContext> ctx)
 {
+    bool playerEntity = source->GetEntityType() == EntityType_t::CHARACTER ||
+        source->GetEntityType() == EntityType_t::PARTNER_DEMON;
+    if(playerEntity && (!ctx || !ctx->IgnoreAvailable))
+    {
+        // Player entities need to have proper availability to the skill
+        switch(skillData->GetBasic()->GetFamily())
+        {
+        case 0:     // Normal
+        case 1:     // Magic
+        case 3:     // Special
+            // Normal availability required
+            if(!source->CurrentSkillsContains(skillData->GetCommon()->GetID()))
+            {
+                // Ignore special function IDs
+                if(skillData->GetDamage()->GetFunctionID() !=
+                    SVR_CONST.SKILL_CAMEO &&
+                    skillData->GetDamage()->GetFunctionID() !=
+                    SVR_CONST.SKILL_DEMON_FUSION)
+                {
+                    return true;
+                }
+            }
+            break;
+        case 5:     // Fusion (should be prepared elsewhere)
+        default:    // Handle item skills etc via their cost
+            break;
+        }
+    }
+
     if(skillData->GetDamage()->GetFunctionID() ==
         SVR_CONST.SKILL_DIASPORA_QUAKE)
     {
@@ -1091,8 +1128,7 @@ bool SkillManager::SkillRestricted(
 
     // Player entities can by restricted by bases in the zone
     auto zone = source->GetZone();
-    if(zone && (source->GetEntityType() == EntityType_t::CHARACTER ||
-        source->GetEntityType() == EntityType_t::PARTNER_DEMON))
+    if(zone && playerEntity)
     {
         auto restricted = zone->GetBaseRestrictedActionTypes();
         if(restricted.size() > 0)
@@ -1926,19 +1962,9 @@ bool SkillManager::CompleteSkillExecution(
             // counter which always hits at this point)
             auto target = zone->GetActiveEntity((int32_t)activated
                 ->GetTargetObjectID());
-            if(target)
+            if(target && !source->HasLineOfSight(target))
             {
-                uint64_t now = ChannelServer::GetServerTime();
-                source->RefreshCurrentPosition(now);
-                target->RefreshCurrentPosition(now);
-
-                Point src(source->GetCurrentX(), source->GetCurrentY());
-                Point dest(target->GetCurrentX(), target->GetCurrentY());
-                Point collidePoint;
-                if(zone->Collides(Line(src, dest), collidePoint))
-                {
-                    ctx->Fizzle = true;
-                }
+                ctx->Fizzle = true;
             }
         }
     }
@@ -11056,8 +11082,11 @@ bool SkillManager::MinionSpawn(
             return false;
         }
 
-        // Pick one spot ID
-        uint32_t spotID = libcomp::Randomizer::GetEntry(slg->GetSpotIDs());
+        // Pick one spot ID (default to source spot if its one of them)
+        uint32_t sourceSpotID = source && source->GetEnemyBase()
+            ? source->GetEnemyBase()->GetSpawnSpotID() : 0;
+        uint32_t spotID = sourceSpotID && slg->SpotIDsContains(sourceSpotID)
+            ? sourceSpotID : libcomp::Randomizer::GetEntry(slg->GetSpotIDs());
 
         std::list<std::shared_ptr<ActiveEntityState>> enemies;
         for(auto& spawnPair : spawnGroup->GetSpawns())
@@ -11833,8 +11862,18 @@ bool SkillManager::Spawn(
             });
         }
 
-        std::list<std::shared_ptr<objects::Action>> empty;
-        zoneManager->AddEnemiesToZone(enemies, zone, true, true, empty);
+        auto defeatActions = spawnGroup->GetDefeatActions();
+        zoneManager->AddEnemiesToZone(enemies, zone, true, true,
+            defeatActions);
+
+        if(spawnGroup->SpawnActionsCount() > 0)
+        {
+            ActionOptions options;
+            options.GroupID = spawnGroup->GetID();
+
+            server->GetActionManager()->PerformActions(nullptr,
+                spawnGroup->GetSpawnActions(), 0, zone, options);
+        }
     }
 
     return true;
@@ -11893,7 +11932,8 @@ bool SkillManager::SpawnZone(
 
     if(ProcessSkillResult(activated, ctx))
     {
-        auto zoneManager = mServer.lock()->GetZoneManager();
+        auto server = mServer.lock();
+        auto zoneManager = server->GetZoneManager();
 
         Point center(source->GetCurrentX(), source->GetCurrentY());
 
@@ -11933,7 +11973,7 @@ bool SkillManager::SpawnZone(
 
                 float rot = RNG_DEC(float, -3.14f, 3.14f, 2);
                 auto enemy = zoneManager->CreateEnemy(zone, spawn
-                    ->GetEnemyType(), 0, 0, sp.x, sp.y, rot);
+                    ->GetEnemyType(), spawn->GetID(), 0, sp.x, sp.y, rot);
                 if(enemy)
                 {
                     auto eBase = enemy->GetEnemyBase();
@@ -11964,8 +12004,18 @@ bool SkillManager::SpawnZone(
             });
         }
 
-        std::list<std::shared_ptr<objects::Action>> empty;
-        zoneManager->AddEnemiesToZone(enemies, zone, true, true, empty);
+        auto defeatActions = spawnGroup->GetDefeatActions();
+        zoneManager->AddEnemiesToZone(enemies, zone, true, true,
+            defeatActions);
+
+        if(spawnGroup->SpawnActionsCount() > 0)
+        {
+            ActionOptions options;
+            options.GroupID = spawnGroup->GetID();
+
+            server->GetActionManager()->PerformActions(nullptr,
+                spawnGroup->GetSpawnActions(), 0, zone, options);
+        }
     }
 
     return true;

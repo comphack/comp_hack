@@ -290,6 +290,16 @@ private:
         bool isNight);
 
     /**
+     * Determine any follow state specific logic for the supplied entity
+     * @param eState Pointer to the entity with a follow entity
+     * @param now Current timestamp of the server
+     * @return true if follow specific actions were performed and the
+     *  entity state has completed being updated, false otherwise
+     */
+    bool Follow(const std::shared_ptr<ActiveEntityState>& eState,
+        uint64_t now);
+
+    /**
      * Set the entity's destination position based on the supplied
      * values and uses the current position values to set the origin.
      * Communicating that the move has taken place must be done elsewhere.

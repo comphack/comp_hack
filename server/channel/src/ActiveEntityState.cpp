@@ -330,6 +330,44 @@ float ActiveEntityState::GetDistance(float x, float y, bool squared)
     return squared ? dSquared : std::sqrt(dSquared);
 }
 
+float ActiveEntityState::GetDistance(std::shared_ptr<ActiveEntityState> other,
+    bool squared)
+{
+    if(other)
+    {
+        return GetDistance(other->GetCurrentX(), other->GetCurrentY(),
+            squared);
+    }
+    else
+    {
+        return 0.f;
+    }
+}
+
+bool ActiveEntityState::HasLineOfSight(
+    std::shared_ptr<ActiveEntityState> other, uint64_t now)
+{
+    auto zone = GetZone();
+    if(!other || zone != other->GetZone())
+    {
+        return false;
+    }
+
+    if(!now)
+    {
+        now = ChannelServer::GetServerTime();
+    }
+
+    RefreshCurrentPosition(now);
+    other->RefreshCurrentPosition(now);
+
+    Point src(GetCurrentX(), GetCurrentY());
+    Point dest(other->GetCurrentX(), other->GetCurrentY());
+    Point collidePoint;
+
+    return !zone->Collides(Line(src, dest), collidePoint);
+}
+
 float ActiveEntityState::GetMovementSpeed(bool ignoreSkill,
     bool altSpeed)
 {

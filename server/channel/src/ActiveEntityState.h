@@ -391,6 +391,26 @@ public:
     float GetDistance(float x, float y, bool squared = false);
 
     /**
+     * Calculate the distance between this entity and another.
+     * @param other Pointer to the other entity
+     * @param squared Optional parameter to return the distance squared
+     *  for faster radius comparisons
+     * @return Distance between this entity and the other
+     */
+    float GetDistance(std::shared_ptr<ActiveEntityState> other,
+        bool squared = false);
+
+    /**
+     * Determine if the entity has line of sight to another, taking into
+     * account normal and one way barriers.
+     * @param other Pointer to the other entity
+     * @param now Current timestamp of the server
+     * @return true if the entity has line of sight
+     */
+    bool HasLineOfSight(std::shared_ptr<ActiveEntityState> other,
+        uint64_t now = 0);
+
+    /**
      * Get the entity's adjusted movement speed.
      * @param ignoreSkill If true the current activated ability will be ignored
      *  for determining current speed state

@@ -2,6 +2,7 @@
 <objgen>
     <object name="AIStateObject" scriptenabled="true" persistent="false">
         <member type="s32" name="TargetEntityID"/>
+        <member type="s32" name="FollowEntityID"/>
         <member type="MiAIData*" name="BaseAI" nulldefault="true"/>
         <member type="AILogicGroup*" name="LogicGroup" nulldefault="true"/>
         <member type="u64" name="DespawnTimeout"/>

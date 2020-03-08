@@ -44,6 +44,9 @@ class MiSkillData;
 namespace channel
 {
 
+/// AI despawn timeout in microseconds
+const uint32_t AI_DESPAWN_TIMEOUT = 300000000;
+
 /// AI skill type for close ranged attacks
 const uint16_t AI_SKILL_TYPE_CLSR = 0x01;
 
@@ -79,6 +82,7 @@ enum AIStatus_t : uint8_t
 {
     IDLE = 0,   //!< Entity is either stationary or otherwise not active
     WANDERING,  //!< Enemy entity is wandering around its spawn location
+    FOLLOWING,  //!< Entity is following its follow target (if possible)
     AGGRO,  //!< Entity is not in combat yet but is pursuing a target
     COMBAT, //!< Entity is engaged in combat with one or more opponent
 };
@@ -123,10 +127,42 @@ public:
     bool SetStatus(AIStatus_t status, bool isDefault = false);
 
     /**
+     * Check if the status is set to combat
+     * @return true if the status is set to combat
+     */
+    bool InCombat() const;
+
+    /**
+     * Check if the status is set to aggro (or optionally combat)
+     * @param includeCombat Optional parameter to include the combat state too
+     * @return true if the status is set to aggro (or optionally combat)
+     */
+    bool IsAggro(bool includeCombat = true) const;
+
+    /**
+     * Check if the status is set to following (which means they are either
+     * currently following a target or were and have not updated)
+     * @return true if the status is set to following
+     */
+    bool IsFollowing() const;
+
+    /**
      * Check if the status is set to idle
      * @return true if the status is set to idle
      */
     bool IsIdle() const;
+
+    /**
+     * Check if the status is set to wandering
+     * @return true if the status is set to wandering
+     */
+    bool IsWandering() const;
+
+    /**
+     * Check if the entity has a follow entity target
+     * @return true if a follow entity target is assigned
+     */
+    bool HasFollowTarget() const;
 
     /**
      * Check if the status has changed since the last server refresh

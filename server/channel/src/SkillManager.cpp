@@ -10597,12 +10597,25 @@ bool SkillManager::Estoma(
     auto aiManager = server->GetAIManager();
     auto characterManager = server->GetCharacterManager();
 
+    const static bool chargeIgnore = server->GetWorldSharedConfig()
+        ->GetAIEstomaChargeIgnore();
+    const static auto duration = server->GetWorldSharedConfig()
+        ->GetAIEstomaDuration();
+
+    uint64_t waitTime = (uint64_t)(server->GetServerTime() +
+        ((uint64_t)duration * 1000000ULL));
+
     for(SkillTargetResult& target : pSkill->Targets)
     {
         auto eState = target.EntityState;
         auto aiState = eState->GetAIState();
-        if(aiState)
+        auto targetSkill = eState->GetActivatedAbility();
+        if(aiState && !aiState->GetIgnoreEstoma() &&
+            (!chargeIgnore || !targetSkill ||
+                targetSkill->GetActivationObjectID() != source->GetEntityID()))
         {
+            eState->SetStatusTimes(STATUS_RESTING, waitTime);
+
             for(int32_t opponentID : eState->GetOpponentIDs())
             {
                 auto other = pSkill->CurrentZone->GetActiveEntity(opponentID);
@@ -10614,6 +10627,12 @@ bool SkillManager::Estoma(
             }
 
             aiManager->UpdateAggro(target.EntityState, -1);
+
+            // Cancel skill if one is active and not currently executing
+            if(targetSkill && !targetSkill->GetExecutionRequestTime())
+            {
+                CancelSkill(eState, targetSkill->GetActivationID());
+            }
         }
     }
 

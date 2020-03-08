@@ -85,7 +85,7 @@ const uint8_t STATUS_KNOCKBACK = 0x04;
 /// Entity is charging a skill
 const uint8_t STATUS_CHARGING = 0x08;
 
-/// Entity is using the rest command
+/// Entity is using the rest command or will not attempt to act (AI only)
 const uint8_t STATUS_RESTING = 0x10;
 
 /// Entity is still affected by a skill's lockout time

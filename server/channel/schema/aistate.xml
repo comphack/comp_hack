@@ -30,5 +30,6 @@
         <member type="bool" name="DespawnWhenLost" default="true"/>
         <member type="bool" name="IgnoreDeaggroMin"/>
         <member type="bool" name="IgnoreDeaggroMax"/>
+        <member type="bool" name="IgnoreEstoma"/>
     </object>
 </objgen>

@@ -81,10 +81,12 @@ public:
      * other necessary data
      * @param eState Pointer to the entity state
      * @param aiType AI script type to bind to the entity
+     * @param baseAIType Optional base AI type to default to. Setting this
+     *  to a value with a bound AI script will override the supplied type.
      * @return true on sucess, false upon failure
      */
     bool Prepare(const std::shared_ptr<ActiveEntityState>& eState,
-        const libcomp::String& aiType);
+        const libcomp::String& aiType, uint16_t baseAIType = 0);
 
     /**
      * Update the AI state of all active AI controlled entities in the

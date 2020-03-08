@@ -92,6 +92,7 @@ namespace libcomp
                 .Func("QueueScriptCommand", &AIManager::QueueScriptCommand)
                 .Func("QueueUseSkillCommand", &AIManager::QueueUseSkillCommand)
                 .Func("QueueWaitCommand", &AIManager::QueueWaitCommand)
+                .Func("Prepare", &AIManager::Prepare)
                 .Func("StartEvent", &AIManager::StartEvent)
                 .Func("UseDiasporaQuake", &AIManager::UseDiasporaQuake)
                 .Func("Chase", &AIManager::Chase)
@@ -119,8 +120,19 @@ AIManager::~AIManager()
 }
 
 bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
-    const libcomp::String& aiType)
+    const libcomp::String& aiType, uint16_t baseAIType)
 {
+    if(!eState)
+    {
+        return false;
+    }
+
+    if(eState->GetAIState())
+    {
+        // AI state already set
+        return true;
+    }
+
     auto aiState = std::make_shared<AIState>();
     eState->SetAIState(aiState);
 
@@ -141,28 +153,25 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
         }
     }
 
-    auto demonData = eState->GetDevilData();
-    auto spawn = eBase ? eBase->GetSpawnSource() : nullptr;
-    uint16_t baseAIType = spawn ? spawn->GetBaseAIType() : 0;
-
     auto server = mServer.lock();
     auto serverDataManager = server->GetServerDataManager();
 
-    auto aiData = demonData ? server->GetDefinitionManager()->GetAIData(
-        baseAIType ? baseAIType : demonData->GetAI()->GetType()) : nullptr;
-    if(!aiData)
+    auto demonData = eState->GetDevilData();
+    auto spawn = eBase ? eBase->GetSpawnSource() : nullptr;
+    if(spawn && spawn->GetCategory() == objects::Spawn::Category_t::BOSS)
     {
-        LogAIManagerErrorMsg(
-            "Active entity with invalid base AI data value specified\n");
-
-        return false;
+        // Determine if we should default to ignoring estoma
+        const static bool bossIgnore = server->GetWorldSharedConfig()
+            ->GetAIEstomaBossIgnore();
+        aiState->SetIgnoreEstoma(bossIgnore);
     }
 
     // Logic group 1 corresponds to idle/wander logic, group 2 is used
     // for aggro and combat, 3 is unknown and potentially unused as all
     // known instances of it match group 1. For our purposes custom AI
     // and group 2 are all that are actually needed.
-    uint16_t logicGroupID = demonData->GetAI()->GetLogicGroupIDs(1);
+    uint16_t logicGroupID = demonData
+        ? demonData->GetAI()->GetLogicGroupIDs(1) : 0;
     if(spawn && spawn->GetLogicGroupID())
     {
         logicGroupID = spawn->GetLogicGroupID();
@@ -176,16 +185,39 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
         logicGroup = serverDataManager->GetAILogicGroup(0);
     }
 
-    // Set all default values now so any call to the script prepare function
-    // can modify them
-    aiState->SetBaseAI(aiData);
-    aiState->SetLogicGroup(logicGroup);
-    aiState->SetAggroLevelLimit(aiData->GetAggroLevelLimit());
-    aiState->SetThinkSpeed(aiData->GetThinkSpeed());
-    aiState->SetDeaggroScale((uint8_t)aiData->GetDeaggroScale());
-    aiState->SetStrikeFirst(aiData->GetStrikeFirst());
-    aiState->SetNormalSkillUse(aiData->GetNormalSkillUse());
-    aiState->SetAggroLimit((uint8_t)aiData->GetAggroLimit());
+    if(!baseAIType)
+    {
+        // Use spawn, else demon definition
+        baseAIType = spawn ? spawn->GetBaseAIType() : 0;
+
+        if(!baseAIType && demonData)
+        {
+            baseAIType = demonData->GetAI()->GetType();
+        }
+    }
+
+    auto aiData = server->GetDefinitionManager()->GetAIData(baseAIType);
+    if(!aiData)
+    {
+        LogAIManagerError([baseAIType]()
+        {
+            return libcomp::String("Active entity with invalid base AI"
+                " data value specified: %1\n").Arg(baseAIType);
+        });
+    }
+    else
+    {
+        // Set all default values now so any call to the script prepare
+        // function can modify them
+        aiState->SetBaseAI(aiData);
+        aiState->SetLogicGroup(logicGroup);
+        aiState->SetAggroLevelLimit(aiData->GetAggroLevelLimit());
+        aiState->SetThinkSpeed(aiData->GetThinkSpeed());
+        aiState->SetDeaggroScale((uint8_t)aiData->GetDeaggroScale());
+        aiState->SetStrikeFirst(aiData->GetStrikeFirst());
+        aiState->SetNormalSkillUse(aiData->GetNormalSkillUse());
+        aiState->SetAggroLimit((uint8_t)aiData->GetAggroLimit());
+    }
 
     libcomp::String finalAIType = aiType;
     if(aiType.IsEmpty() && logicGroup)
@@ -356,6 +388,9 @@ void AIManager::CombatSkillHit(
         {
             aiState->PopCommand();
         }
+
+        // If currently not acting, cancel now
+        eState->RemoveStatusTimes(STATUS_RESTING);
 
         if(aiState->ActionOverridesKeyExists("combatSkillHit"))
         {
@@ -982,7 +1017,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
 
     eState->ExpireStatusTimes(now);
 
-    bool canAct = eState->CanAct();
+    bool canAct = !eState->GetStatusTimes(STATUS_RESTING) && eState->CanAct();
 
     // If no target exists and the next target time has passed, search now
     if(canAct && aiState->GetTargetEntityID() <= 0 &&

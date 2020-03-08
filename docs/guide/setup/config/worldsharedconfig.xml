@@ -371,6 +371,45 @@
 </section><!-- AICombatStagger -->
 
 <section>
+<title>AIEstomaBossIgnore</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>Defaults BOSS category spawns to completely ignore the effects of the aggro clearing Estoma skill.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="AIEstomaBossIgnore">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- AIEstomaBossIgnore -->
+
+<section>
+<title>AIEstomaChargeIgnore</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>Causes AI controlled entities to not lose aggro when hit with Estoma from an entity they are currently targeting with a skill.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="AIEstomaChargeIgnore">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- AIEstomaChargeIgnore -->
+
+<section>
+<title>AIEstomaDuration</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 30</para>
+<para>Sets the amount of time in seconds that an AI controlled entity hit with Estoma will remain inactive.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="AIEstomaDuration">10</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- AIEstomaDuration -->
+
+<section>
 <title>AILazyPathing</title>
 <para><emphasis role="strong">Type:</emphasis> boolean</para>
 <para><emphasis role="strong">Default:</emphasis> true</para>

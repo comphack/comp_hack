@@ -1134,21 +1134,21 @@ bool Zone::GroupHasSpawned(uint32_t groupID, bool isLocation, bool aliveOnly)
 }
 
 bool Zone::MinionSpawned(const std::shared_ptr<ActiveEntityState>& eState,
-    int32_t slgID)
+    uint32_t slgID)
 {
     auto eBase = eState ? eState->GetEnemyBase() : nullptr;
-    if(eBase)
+    if(!eBase)
     {
         return false;
     }
 
-    for(auto minionID : eState->GetEnemyBase()->GetMinionIDs())
+    for(auto minionID : eBase->GetMinionIDs())
     {
         auto minion = GetActiveEntity(minionID);
         if(minion)
         {
-            auto eBase = minion->GetEnemyBase();
-            if(!slgID || (eBase && eBase->GetSpawnLocationGroupID() == slgID))
+            auto eBase2 = minion->GetEnemyBase();
+            if(!slgID || (eBase2 && eBase2->GetSpawnLocationGroupID() == slgID))
             {
                 return true;
             }

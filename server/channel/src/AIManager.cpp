@@ -2658,8 +2658,8 @@ bool AIManager::PrepareSkillUsage(
                     {
                         auto params = skillData->GetSpecial()
                             ->GetSpecialParams();
-                        if(params[0] != zone->GetDefinitionID() ||
-                            zone->MinionSpawned(eState, params[1]))
+                        if((uint32_t)params[0] != zone->GetDefinitionID() ||
+                            zone->MinionSpawned(eState, (uint32_t)params[1]))
                         {
                             continue;
                         }

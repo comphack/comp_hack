@@ -526,7 +526,7 @@ public:
      * @return true if an entity has spawned, false one has not
      */
     bool MinionSpawned(const std::shared_ptr<ActiveEntityState>& eState,
-        int32_t slgID = 0);
+        uint32_t slgID = 0);
 
     /**
      * Check if an entity has ever spawned at the specified spot.

@@ -3848,7 +3848,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                     auto rPoint = GetRandomPoint(location->GetWidth(), location->GetHeight());
                     x = location->GetX() + rPoint.x;
                     y = location->GetY() - rPoint.y;
-                    rot = RNG_DEC(float, -3.14f, 3.14f, 2);
+                    rot = ZoneManager::GetRandomRotation();
                 }
 
                 // Create the entity state
@@ -6611,6 +6611,12 @@ Point ZoneManager::GetRandomSpotPoint(
     }
 
     return transformed;
+}
+
+float ZoneManager::GetRandomRotation()
+{
+    /// @todo: replace with pi constant
+    return RNG_DEC(float, -3.14f, 3.14f, 2);
 }
 
 Point ZoneManager::GetLinearPoint(float sourceX, float sourceY,

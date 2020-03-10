@@ -767,6 +767,12 @@ bool AIManager::UseDiasporaQuake(const std::shared_ptr<
     auto zone = source ? source->GetZone() : nullptr;
     if(!zone || !source->GetAIState())
     {
+        LogAIManagerError([skillID]()
+        {
+            return libcomp::String("Attempted to use a Diaspora quake skill"
+                " from an invalid entity or zone: %1\n").Arg(skillID);
+        });
+
         return false;
     }
     else if(zone->GetInstanceType() != InstanceType_t::DIASPORA)
@@ -1810,7 +1816,7 @@ bool AIManager::Follow(const std::shared_ptr<ActiveEntityState>& eState,
             Point target(src.x, src.y + FOLLOW_DISTANCE_CLOSE);
 
             target = ZoneManager::RotatePoint(target, src,
-                (float)RNG(int32_t, -314, 314) * 0.01f);
+                ZoneManager::GetRandomRotation());
 
             if(QueueMoveCommand(eState, target.x, target.y))
             {
@@ -1921,7 +1927,7 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
             // Wander aimlessly by just picking a direction to go
             dest = Point(source.x, source.y + moveDistance);
             dest = zoneManager->RotatePoint(dest, source,
-                RNG_DEC(float, -3.14f, 3.14f, 2));
+                ZoneManager::GetRandomRotation());
 
             // Nothing to wander back to
             wanderBack = false;

@@ -950,6 +950,12 @@ public:
         const std::shared_ptr<objects::MiZoneData>& zoneData = nullptr);
 
     /**
+     * Get a random rotation value (in radians)
+     * @return Rotation value (in radians)
+     */
+    static float GetRandomRotation();
+
+    /**
      * Get a point directly away or directly towards two specified points.
      * @param sourceX Point 1 X coordinate
      * @param sourceY Point 1 Y coordinate

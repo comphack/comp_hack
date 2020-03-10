@@ -11824,7 +11824,7 @@ bool SkillManager::Spawn(
                 sp = zoneManager->GetLinearPoint(center.x, center.y,
                     sp.x, sp.y, center.GetDistance(sp), false, zone);
 
-                float rot = RNG_DEC(float, -3.14f, 3.14f, 2);
+                float rot = ZoneManager::GetRandomRotation();
                 auto enemy = zoneManager->CreateEnemy(zone, spawn
                     ->GetEnemyType(), 0, 0, sp.x, sp.y, rot);
                 if(enemy)
@@ -11971,7 +11971,7 @@ bool SkillManager::SpawnZone(
                 sp = zoneManager->GetLinearPoint(center.x, center.y,
                     sp.x, sp.y, center.GetDistance(sp), false, zone);
 
-                float rot = RNG_DEC(float, -3.14f, 3.14f, 2);
+                float rot = ZoneManager::GetRandomRotation();
                 auto enemy = zoneManager->CreateEnemy(zone, spawn
                     ->GetEnemyType(), spawn->GetID(), 0, sp.x, sp.y, rot);
                 if(enemy)

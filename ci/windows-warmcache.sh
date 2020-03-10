@@ -22,6 +22,14 @@ if [ "$PLATFORM" != "win32" ]; then
     fi
 fi
 
+# WiX Toolset
+if [ "$PLATFORM" != "win32" ]; then
+    echo "Downloading WiX Toolset"
+    if [ ! -f "wix311.exe" ]; then
+        curl -Lo "wix311.exe" "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311.exe"
+    fi
+fi
+
 # External dependencies for Windows
 echo "Downloading the external dependencies"
 if [ ! -f "external-0.1.1-${PLATFORM}.zip" ]; then

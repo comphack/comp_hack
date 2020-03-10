@@ -20,7 +20,9 @@ powershell Install-WindowsFeature Net-Framework-Core
 echo "Installed .NET 3.5"
 
 echo "Installing WiX"
-cinst -y wixtoolset
+cp "${CACHE_DIR}/wix311.exe" wix311.exe
+powershell -Command "Start-Process wix311.exe -Wait -ArgumentList '/q'"
+rm -f wix311.exe
 set PATH="C:/Program Files (x86)/WiX Toolset v3.11/bin:${PATH}"
 echo "Installed WiX"
 

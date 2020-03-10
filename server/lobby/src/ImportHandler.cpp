@@ -37,8 +37,6 @@
 
 using namespace lobby;
 
-#define MAX_PAYLOAD (5 * 1024 * 1024) // 5 MiB
-
 ImportHandler::ImportHandler(
     const std::shared_ptr<objects::LobbyConfig>& config,
     const std::shared_ptr<lobby::LobbyServer>& server) :
@@ -92,7 +90,7 @@ bool ImportHandler::handlePost(CivetServer *pServer,
     }
 
     // Make sure the post request is not too large.
-    if(MAX_PAYLOAD < postContentLength)
+    if((size_t)(mConfig->GetImportMaxPayload() * 1024) < postContentLength)
     {
         LogWebAPIErrorMsg(libcomp::String("API payload size of %1 bytes "
             "rejected.\n").Arg(postContentLength));

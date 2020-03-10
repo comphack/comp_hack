@@ -68,7 +68,15 @@ class World;
 class ApiSession
 {
 public:
-    virtual ~ApiSession() { }
+    ApiSession()
+    {
+        requestLock = new std::mutex;
+    }
+
+    virtual ~ApiSession()
+    {
+        delete requestLock;
+    }
 
     void Reset();
 
@@ -76,7 +84,7 @@ public:
     libcomp::String challenge;
     libcomp::String clientAddress;
     std::shared_ptr<objects::Account> account;
-    std::mutex requestLock;
+    std::mutex* requestLock;
 };
 
 class WebGameApiSession : public ApiSession

@@ -3824,8 +3824,11 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                     break;
                 }
 
+                // Use the spot only if a location was not selected as a
+                // location being set at this point means either no spot
+                // exists or the spot has a SpawnArea redefined
                 float x = 0.f, y = 0.f, rot = 0.f;
-                if(useSpotID)
+                if(useSpotID && !location)
                 {
                     // Get a random point in the polygon
                     Point p = GetRandomSpotPoint(spot->Definition);
@@ -3972,6 +3975,9 @@ bool ZoneManager::SelectSpotAndLocation(bool useSpotID, uint32_t& spotID,
     std::shared_ptr<objects::ServerZone>& zoneDef,
     std::list<std::shared_ptr<objects::SpawnLocation>>& locations)
 {
+    spot = nullptr;
+    location = nullptr;
+
     if(useSpotID)
     {
         if(!spotID)

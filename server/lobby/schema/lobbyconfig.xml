@@ -21,6 +21,7 @@
         <member type="bool" name="AllowImport" default="true"/>
         <member type="bool" name="ImportStripUserLevel" default="true"/>
         <member type="bool" name="ImportStripCP" default="true"/>
+        <member type="s32" name="ImportMaxPayload" default="5120" min="0"/>
         <member type="u8" name="ImportWorld" default="0"/>
         <member type="s32" name="MaxClients" default="0"/>
     </object>

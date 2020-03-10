@@ -185,14 +185,18 @@ public:
         uint8_t errorCode = 13, int8_t activationID = -1);
 
     /**
-     * Determine if the specified skill is locked from use on the supplied entity.
+     * Determine if the specified skill is locked from use on the supplied
+     * entity.
      * @param source Entity that is attempting to use the skill
      * @param skillData Pointer to the skill's definition
+     * @param activationObjectID Optional ID of the object used as the
+     *  activation target. If not specified, context specific checks will fail.
      * @param ctx Special execution state for the skill
      * @return true if the skill is restricted from being used
      */
     bool SkillRestricted(const std::shared_ptr<ActiveEntityState> source,
         const std::shared_ptr<objects::MiSkillData>& skillData,
+        int64_t activationObjectID = 0,
         std::shared_ptr<SkillExecutionContext> ctx = nullptr);
 
     /**

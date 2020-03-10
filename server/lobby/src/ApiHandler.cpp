@@ -2196,7 +2196,7 @@ bool ApiHandler::handlePost(CivetServer *pServer,
     }
 
     // Lock the mutex while processing the request
-    session->requestLock.lock();
+    session->requestLock->lock();
 
     if(!it->second(*this, obj, response, session))
     {
@@ -2206,7 +2206,7 @@ bool ApiHandler::handlePost(CivetServer *pServer,
         return true;
     }
 
-    session->requestLock.unlock();
+    session->requestLock->unlock();
 
     JsonBox::Value responseValue(response);
     responseValue.writeToStream(ss);

@@ -632,6 +632,17 @@ bool ChatManager::GMCommand_Announce(const std::shared_ptr<
     auto server = mServer.lock();
     server->SendSystemMessage(client, message, color, true);
 
+    // Print to the console too
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHAT);
+    p.WriteU16Little((uint16_t)ChatType_t::CHAT_SELF);
+    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+        "", true); // Not used
+    p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+        message, true);
+
+    server->GetManagerConnection()->BroadcastPacketToClients(p);
+
     return true;
 }
 

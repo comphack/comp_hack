@@ -372,7 +372,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     }
 
     // Check additional restrictions
-    if(SkillRestricted(source, def, ctx))
+    if(SkillRestricted(source, def, activationObjectID, ctx))
     {
         SendFailure(source, skillID, client,
             (uint8_t)SkillErrorCodes_t::GENERIC);
@@ -754,7 +754,8 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     uint16_t functionID = skillData->GetDamage()->GetFunctionID();
     uint8_t skillCategory = skillData->GetCommon()->GetCategory()->GetMainCategory();
 
-    if(skillCategory == 0 || SkillRestricted(source, skillData, ctx))
+    if(skillCategory == 0 || SkillRestricted(source, skillData,
+        activated->GetActivationObjectID(), ctx))
     {
         SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
@@ -1077,34 +1078,57 @@ void SkillManager::SendFailure(const std::shared_ptr<ActiveEntityState> source,
 bool SkillManager::SkillRestricted(
     const std::shared_ptr<ActiveEntityState> source,
     const std::shared_ptr<objects::MiSkillData>& skillData,
-    std::shared_ptr<SkillExecutionContext> ctx)
+    int64_t activationObjectID, std::shared_ptr<SkillExecutionContext> ctx)
 {
     bool playerEntity = source->GetEntityType() == EntityType_t::CHARACTER ||
         source->GetEntityType() == EntityType_t::PARTNER_DEMON;
     if(playerEntity && (!ctx || !ctx->IgnoreAvailable))
     {
         // Player entities need to have proper availability to the skill
+        bool available = true;
         switch(skillData->GetBasic()->GetFamily())
         {
         case 0:     // Normal
         case 1:     // Magic
         case 3:     // Special
             // Normal availability required
-            if(!source->CurrentSkillsContains(skillData->GetCommon()->GetID()))
-            {
-                // Ignore special function IDs
-                if(skillData->GetDamage()->GetFunctionID() !=
-                    SVR_CONST.SKILL_CAMEO &&
-                    skillData->GetDamage()->GetFunctionID() !=
-                    SVR_CONST.SKILL_DEMON_FUSION)
-                {
-                    return true;
-                }
-            }
+            available = source->CurrentSkillsContains(skillData->GetCommon()
+                ->GetID());
             break;
         case 5:     // Fusion (should be prepared elsewhere)
         default:    // Handle item skills etc via their cost
             break;
+        }
+
+        if(!available)
+        {
+            // If not otherwise available, check to see if it is the use skill
+            // from an item that is the activation target
+            bool isUseSkill = false;
+            if(activationObjectID > 0)
+            {
+                auto state = ClientState::GetEntityClientState(source
+                    ->GetEntityID());
+                if(state)
+                {
+                    auto item = std::dynamic_pointer_cast<objects::Item>(
+                        libcomp::PersistentObject::GetObjectByUUID(
+                            state->GetObjectUUID(activationObjectID)));
+                    if(item)
+                    {
+                        auto itemDef = mServer.lock()->GetDefinitionManager()
+                            ->GetItemData(item->GetType());
+
+                        isUseSkill = itemDef && itemDef->GetPossession()
+                            ->GetUseSkill() == skillData->GetCommon()->GetID();
+                    }
+                }
+            }
+
+            if(!isUseSkill)
+            {
+                return true;
+            }
         }
     }
 

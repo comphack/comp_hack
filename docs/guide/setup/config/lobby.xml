@@ -215,6 +215,19 @@
 </section><!-- ImportStripCP -->
 
 <section>
+<title>ImportMaxPayload</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 5120</para>
+<para>Sets the maximum payload size (in kilobytes) for an account import request.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="ImportMaxPayload">1024</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- ImportMaxPayload -->
+
+<section>
 <title>ImportWorld</title>
 <para><emphasis role="strong">Type:</emphasis> integer</para>
 <para><emphasis role="strong">Default:</emphasis> 0</para>

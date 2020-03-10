@@ -63,7 +63,7 @@ bool Login::WebLogin(const libcomp::String& username,
         username.Length() + password.Length() + clientVersion.Length()).Arg(
         username).Arg(password).Arg(clientVersion);
 
-    std::regex replyRegEx("^HTTP\\/1.1 200 OK\\r\\n"
+    static const std::regex replyRegEx("^HTTP\\/1.1 200 OK\\r\\n"
         "Content-Type: text\\/html; charset=UTF-8\\r\\n"
         "Content-Length: ([0-9]+)\\r\\nConnection: close\\r\\n\\r\\n"
         "<html><head><meta http-equiv=\"content-type\" "

@@ -58,7 +58,7 @@ std::unordered_map<libcomp::String, FileData*> ParseFileList(
 
     std::list<libcomp::String> lines = libcomp::String(&data[0], data.size()).Split("\n");
 
-    std::regex fileMatcher("FILE : (.+),([0-9a-fA-F]{32}),([0-9]+),"
+    static const std::regex fileMatcher("FILE : (.+),([0-9a-fA-F]{32}),([0-9]+),"
         "([0-9a-fA-F]{32}),([0-9]+)");
 
     // Parse each line of the hashlist.dat file.
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
         files = ParseFileList(hashlist);
     }
 
-    std::regex compressedRx("^.+\\.compressed$");
+    static const std::regex compressedRx("^.+\\.compressed$");
 
     // Find each file in the overlay and handle it.
     for(auto filePath : RecursiveEntryList(overlay))

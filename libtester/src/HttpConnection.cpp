@@ -68,9 +68,10 @@ void HttpConnection::PacketReceived(libcomp::Packet& packet)
     {
         std::smatch match;
 
+        static const std::regex contentExpr("Content-Length: ([0-9]+)");
+
         // Check for the content length.
-        if(std::regex_search(mRequest, match,
-            std::regex("Content-Length: ([0-9]+)")))
+        if(std::regex_search(mRequest, match, contentExpr))
         {
             bool ok = false;
             size_t contentLength = libcomp::String("%1").Arg(

@@ -145,9 +145,11 @@ static bool NoWebAuthParse(libcomp::ManagerPacket *pPacketManager,
         machineUUID = hash.Mid(129);
         hash = hash.Left(128);
 
+        static const std::regex uuidExpr("^[0-9a-f]{8}\\"
+            "-[0-9a-f]{4}\\-[0-9a-f]{4}\\-[0-9a-f]{4}\\-[0-9a-f]{12}$");
+
         // Check for the UUID format.
-        if(!std::regex_match(machineUUID.ToUtf8(), std::regex("^[0-9a-f]{8}\\"
-            "-[0-9a-f]{4}\\-[0-9a-f]{4}\\-[0-9a-f]{4}\\-[0-9a-f]{12}$")))
+        if(!std::regex_match(machineUUID.ToUtf8(), uuidExpr))
         {
             return LoginAuthError(connection,
                 ErrorCodes_t::NOT_AUTHORIZED);

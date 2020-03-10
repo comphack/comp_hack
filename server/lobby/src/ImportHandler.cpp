@@ -37,7 +37,7 @@
 
 using namespace lobby;
 
-#define MAX_PAYLOAD (1 * 1024 * 1024) // 1 MiB
+#define MAX_PAYLOAD (5 * 1024 * 1024) // 5 MiB
 
 ImportHandler::ImportHandler(
     const std::shared_ptr<objects::LobbyConfig>& config,
@@ -94,6 +94,9 @@ bool ImportHandler::handlePost(CivetServer *pServer,
     // Make sure the post request is not too large.
     if(MAX_PAYLOAD < postContentLength)
     {
+        LogWebAPIErrorMsg(libcomp::String("API payload size of %1 bytes "
+            "rejected.\n").Arg(postContentLength));
+
         mg_printf(pConnection, "HTTP/1.1 413 Payload Too Large\r\n"
             "Connection: close\r\n\r\n");
 

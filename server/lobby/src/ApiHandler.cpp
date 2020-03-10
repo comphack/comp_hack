@@ -2035,6 +2035,9 @@ bool ApiHandler::handlePost(CivetServer *pServer,
     // Make sure the post request is not too large.
     if(MAX_PAYLOAD < postContentLength)
     {
+        LogWebAPIErrorMsg(libcomp::String("API payload size of %1 bytes "
+            "rejected.\n").Arg(postContentLength));
+
         mg_printf(pConnection, "HTTP/1.1 413 Payload Too Large\r\n"
             "Connection: close\r\n\r\n");
 

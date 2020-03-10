@@ -465,7 +465,7 @@ bool ChatManager::HandleGMand(const std::shared_ptr<
 
     std::smatch match;
     std::string input = message.C();
-    std::regex toFind("@([^\\s]+)(.*)");
+    static const std::regex toFind("@([^\\s]+)(.*)");
     if(std::regex_match(input, match, toFind))
     {
         if(state->GetUserLevel() == 0 && "@version" != message &&

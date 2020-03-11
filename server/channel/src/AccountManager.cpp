@@ -1326,7 +1326,7 @@ bool AccountManager::InitializeCharacter(libcomp::ObjectReference<
         bool exists = false;
         for(auto qPair : character->GetQuests())
         {
-            if(qPair.second->GetUUID() == quest->GetUUID())
+            if(qPair.second.GetUUID() == quest->GetUUID())
             {
                 exists = true;
                 break;

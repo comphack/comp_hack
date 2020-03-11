@@ -1100,6 +1100,15 @@ bool SkillManager::SkillRestricted(
             break;
         }
 
+        if(!available && source->GetEntityType() == EntityType_t::CHARACTER)
+        {
+            // Allow if its a digitalized demon skill
+            auto cState = std::dynamic_pointer_cast<CharacterState>(source);
+            auto dgState = cState ? cState->GetDigitalizeState() : nullptr;
+            available = dgState && dgState->ActiveSkillsContains(
+                skillData->GetCommon()->GetID());
+        }
+
         if(!available)
         {
             // If not otherwise available, check to see if it is the use skill

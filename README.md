@@ -1,7 +1,7 @@
 # COMP\_hack #
 
 [![AGPL License](http://img.shields.io/badge/license-AGPL-brightgreen.svg)](https://opensource.org/licenses/AGPL-3.0)
-[![Latest Release](https://img.shields.io/github/downloads/comphack/comp_hack/v4.9.0-nauthiz/total.svg)](https://github.com/comphack/comp_hack/releases/tag/v4.9.0-nauthiz)
+[![Latest Release](https://img.shields.io/github/downloads/comphack/comp_hack/v4.10.0-ingwaz/total.svg)](https://github.com/comphack/comp_hack/releases/tag/v4.10.0-ingwaz)
 [![Discord Chat](https://img.shields.io/discord/322024695266541579.svg)](http://discord.gg/9jXeKcJ)
 
 [![Build Status](https://travis-ci.com/comphack/comp_hack.svg?branch=develop)](https://travis-ci.com/comphack/comp_hack)
@@ -22,8 +22,8 @@
 | [Laguz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-laguz)     | ■ ■ ■ ■ ■ ■ ■ ■ |
 | [Ansuz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-ansuz)     | ■ ■ ■ ■ ■ ■ ■ ■ |
 | [Nauthiz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-nauthiz) | ■ ■ ■ ■ ■ ■ ■ ■ |
-| [Ingwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-ingwaz)   | ■ ■ ■ ■ ■ ■ ■ □ |
-| [Sigel](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-sigel)     | □ □ □ □ □ □ □ □ |
+| [Ingwaz](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-ingwaz)   | ■ ■ ■ ■ ■ ■ ■ ■ |
+| [Sigel](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-sigel)     | ■ ■ ■ ■ ■ ■ ■ □ |
 | [Wyrd](https://github.com/comphack/comp_hack/wiki/Roadmap#cerberus-wyrd)       | □ □ □ □ □ □ □ □ |
 
 The is server software to revive an MMO that has been shutdown (SMT: IMAGINE). It's a complete re-implementation of the server from scratch and fully open source. The best place for documentation is the [Definitive Guide](https://comphack.github.io/guide/) so be sure to check it out.

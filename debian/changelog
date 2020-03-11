@@ -1,3 +1,15 @@
+comphack (4.10.0) xenial; urgency=low
+
+  * Estoma is now properly broken (as designed)
+  * More AI customization
+  * AI follow target support
+  * Ally NPC creation support for event actions
+  * Added skill availability checks for player entities
+  * Properly enforcing line of sight upon skill execution (includes one way barriers)
+  * Misc performance improvements
+
+ -- COMP Omega <compomega@tutanota.com>  Wed, 11 Mar 2020 17:30:03 -0600
+
 comphack (4.9.0) xenial; urgency=low
 
   * Digitalize stat calculation made more accurate

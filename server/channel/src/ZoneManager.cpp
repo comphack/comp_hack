@@ -3012,7 +3012,7 @@ void ZoneManager::HandleSpecialInstancePopulate(
                     auto obj = base ? base->GetBoundObject() : nullptr;
 
                     uint64_t reset = base->GetResetTime();
-                    float timeLeft = now < reset ? 0.f
+                    float timeLeft = reset < now ? 0.f
                         : (float)((double)(reset - now) / 1000000.0);
 
                     libcomp::Packet p;

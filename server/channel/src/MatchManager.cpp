@@ -2241,14 +2241,14 @@ bool MatchManager::ToggleDiasporaBase(const std::shared_ptr<Zone>& zone,
 
                 resetTime = (float)duration;
 
+                uint64_t reset = ChannelServer::GetServerTime() +
+                    (uint64_t)((uint64_t)duration * 1000000ULL);
+                base->SetResetTime(reset);
+
                 // Don't bother actually scheduling the reset time if it is longer
                 // than the entire match
                 if(duration <= (uint32_t)variant->GetTimePoints(1))
                 {
-                    uint64_t reset = ChannelServer::GetServerTime() +
-                        (uint64_t)((uint64_t)duration * 1000000ULL);
-                    base->SetResetTime(reset);
-
                     mServer.lock()->GetTimerManager()->ScheduleEventIn(
                         (int)duration, []
                         (MatchManager* pMatchManager, int32_t pBaseID,

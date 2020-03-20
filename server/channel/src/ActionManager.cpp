@@ -3340,7 +3340,13 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
     auto firstClient = zConnections.size() > 0 ? zConnections.front()
         : nullptr;
 
-    auto zoneSpots = zone->GetDynamicMap()->Spots;
+    std::unordered_map<uint32_t, std::shared_ptr<ZoneSpotShape>> zoneSpots;
+
+    auto dynamicMap = zone->GetDynamicMap();
+    if(dynamicMap)
+    {
+        zoneSpots = dynamicMap->Spots;
+    }
 
     uint32_t bossGroupID = ctx.Options.GroupID;
     if(act->GetBossGroupID())
@@ -3381,13 +3387,27 @@ bool ActionManager::CreateLoot(ActionContext& ctx)
         float rot = loc->GetRotation();
 
         // If a spot is specified, get a random point within it
-        auto spotIter = zoneSpots.find(loc->GetSpotID());
-        if(spotIter != zoneSpots.end())
+        if(loc->GetSpotID())
         {
-            Point p = zoneManager->GetRandomSpotPoint(spotIter->second
-                ->Definition);
-            x = p.x;
-            y = p.y;
+            auto spotIter = zoneSpots.find(loc->GetSpotID());
+            if(spotIter != zoneSpots.end())
+            {
+                Point p = zoneManager->GetRandomSpotPoint(spotIter->second
+                    ->Definition);
+                x = p.x;
+                y = p.y;
+            }
+            else
+            {
+                LogActionManagerError([zone, loc]()
+                {
+                    return libcomp::String("Attempted to create loot in zone"
+                        " %1 at an invalid spot: %2\n")
+                        .Arg(zone->GetDefinitionID()).Arg(loc->GetSpotID());
+                });
+
+                return false;
+            }
         }
 
         lState->SetCurrentX(x);

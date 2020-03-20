@@ -11099,7 +11099,8 @@ bool SkillManager::MinionSpawn(
 
     if(ProcessSkillResult(activated, ctx))
     {
-        auto zoneManager = mServer.lock()->GetZoneManager();
+        auto server = mServer.lock();
+        auto zoneManager = server->GetZoneManager();
 
         uint32_t sgID = libcomp::Randomizer::GetEntry(slg->GetGroupIDs());
 
@@ -11120,6 +11121,13 @@ bool SkillManager::MinionSpawn(
             ? source->GetEnemyBase()->GetSpawnSpotID() : 0;
         uint32_t spotID = sourceSpotID && slg->SpotIDsContains(sourceSpotID)
             ? sourceSpotID : libcomp::Randomizer::GetEntry(slg->GetSpotIDs());
+
+        // If no spot currently selected, default to the summoner's spot
+        // regardless
+        if(!spotID)
+        {
+            spotID = sourceSpotID;
+        }
 
         std::list<std::shared_ptr<ActiveEntityState>> enemies;
         for(auto& spawnPair : spawnGroup->GetSpawns())
@@ -11164,8 +11172,18 @@ bool SkillManager::MinionSpawn(
             }
         }
 
-        std::list<std::shared_ptr<objects::Action>> empty;
-        zoneManager->AddEnemiesToZone(enemies, zone, true, true, empty);
+        auto defeatActions = spawnGroup->GetDefeatActions();
+        zoneManager->AddEnemiesToZone(enemies, zone, true, true,
+            defeatActions);
+
+        if(spawnGroup->SpawnActionsCount() > 0)
+        {
+            ActionOptions options;
+            options.GroupID = spawnGroup->GetID();
+
+            server->GetActionManager()->PerformActions(nullptr,
+                spawnGroup->GetSpawnActions(), 0, zone, options);
+        }
     }
 
     return true;

@@ -578,7 +578,15 @@ bool ActiveEntityState::UpdatePendingCombatants(int32_t entityID,
 
 void ActiveEntityState::ExpireStatusTimes(uint64_t now)
 {
-    auto statusTimes = GetStatusTimes();
+    std::unordered_map<uint8_t, uint64_t> statusTimes;
+    std::unordered_map<uint32_t, uint64_t> cooldowns;
+    {
+        std::lock_guard<std::mutex> lock(mFieldLock);
+
+        statusTimes = GetStatusTimes();
+        cooldowns = GetSkillCooldowns();
+    }
+
     for(auto& pair : statusTimes)
     {
         if(pair.second != 0 && pair.second <= now)
@@ -587,7 +595,6 @@ void ActiveEntityState::ExpireStatusTimes(uint64_t now)
         }
     }
 
-    auto cooldowns = GetSkillCooldowns();
     for(auto& pair : cooldowns)
     {
         if(pair.second <= now)

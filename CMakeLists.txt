@@ -436,7 +436,22 @@ ADD_COMPILER_FLAGS(AUTO -Wno-inconsistent-missing-override)
 
 # When using gcc/clang/mingw, make sure everything defined is linked into
 # the application or library.
-ADD_EXE_LINKER_FLAGS(AUTO -Wl,--no-undefined)
+IF(NOT APPLE)
+    ADD_EXE_LINKER_FLAGS(AUTO -Wl,--no-undefined)
+ENDIF(NOT APPLE)
+
+# Ignore warnings about unknown attributes (GSL issue) on macosX.
+IF(APPLE)
+    ADD_COMPILER_FLAGS(AUTO -Wno-unknown-attributes)
+ENDIF(APPLE)
+
+# Link to the needed frameworks on macOSX
+IF(APPLE)
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework Foundation")
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework IOKit")
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework ApplicationServices")
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -liconv")
+ENDIF(APPLE)
 
 # Code coverage flags.
 IF(COVERALLS)
@@ -447,13 +462,13 @@ ENDIF(COVERALLS)
 # Place all executables in the same directory.
 SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
-IF(NOT WIN32 AND NOT BSD)
+IF(NOT WIN32 AND NOT BSD AND NOT APPLE)
     FIND_PACKAGE(Systemd QUIET)
 
     IF(SYSTEMD_FOUND)
         ADD_COMPILER_FLAGS(AUTO ${SYSTEMD_DEFINITIONS} -DHAVE_SYSTEMD=1)
     ENDIF(SYSTEMD_FOUND)
-ENDIF(NOT WIN32 AND NOT BSD)
+ENDIF(NOT WIN32 AND NOT BSD AND NOT APPLE)
 
 # Add in the build of libobjgen and comp_objgen.
 IF(USE_PREBUILT_LIBCOMP)
@@ -907,7 +922,10 @@ ENDIF(NOT UPDATER_ONLY)
 
 # Windows does not have the server spawning code.
 IF(NOT WIN32 AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
-    ADD_SUBDIRECTORY(libtester)
+    IF(NOT APPLE)
+        ADD_SUBDIRECTORY(libtester)
+    ENDIF(NOT APPLE)
+
     ADD_SUBDIRECTORY(client)
 ENDIF(NOT WIN32 AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
 

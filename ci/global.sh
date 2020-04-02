@@ -8,7 +8,7 @@ export DOXYGEN_EXTERNAL_RELEASE=external-25
 
 export OPENSSL_VERSION=1_1_1c
 
-export EXTERNAL_RELEASE=external-38
+export EXTERNAL_RELEASE=external-41
 export EXTERNAL_VERSION=0.1.1
 
 export LINUX_NINJA_VERSION=1.7.1

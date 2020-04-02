@@ -68,8 +68,9 @@ ELSE(TINYXML2_FOUND)
         )
     ELSE()
         SET(TINYXML2_URL
-            URL https://github.com/comphack/tinyxml2/archive/comp_hack-20180424.zip
-            URL_HASH SHA1=c0825970d84f2418ff8704624b020e65d02bc5f3
+            URL https://github.com/comphack/tinyxml2/archive/comp_hack-20200318.zip
+            URL_HASH SHA1=bccb54ff37d0076424da4a28a302515eef2f3981
+
         )
     ENDIF()
 

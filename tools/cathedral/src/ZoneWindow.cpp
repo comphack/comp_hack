@@ -612,7 +612,7 @@ std::shared_ptr<objects::ServerZone> ZoneWindow::LoadZoneFromFile(
     const libcomp::String& path)
 {
     tinyxml2::XMLDocument doc;
-    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+    if(tinyxml2::XML_SUCCESS != doc.LoadFile(path.C()))
     {
         LogGeneralError([&]()
         {
@@ -1468,7 +1468,7 @@ void ZoneWindow::Refresh()
 bool ZoneWindow::LoadZonePartials(const libcomp::String& path)
 {
     tinyxml2::XMLDocument doc;
-    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+    if(tinyxml2::XML_SUCCESS != doc.LoadFile(path.C()))
     {
         LogGeneralError([&]()
         {
@@ -1602,7 +1602,7 @@ void ZoneWindow::SavePartials(const std::set<uint32_t>& partialIDs)
         auto path = filePair.first;
 
         tinyxml2::XMLDocument doc;
-        if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+        if(tinyxml2::XML_SUCCESS != doc.LoadFile(path.C()))
         {
             LogGeneralError([&]()
             {

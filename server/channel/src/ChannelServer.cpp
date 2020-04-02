@@ -1212,9 +1212,9 @@ void ChannelServer::StartGameTick()
         libcomp::MessageQueue<libcomp::Message::Message*>> queue,
         volatile bool *pTickRunning)
     {
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__APPLE__)
         pthread_setname_np(pthread_self(), "tick");
-#endif // !defined(_WIN32)
+#endif // !defined(_WIN32) && !defined(__APPLE__)
 
         const static int TICK_DELTA = 100;
         auto tickDelta = std::chrono::milliseconds(TICK_DELTA);

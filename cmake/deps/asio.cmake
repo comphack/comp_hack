@@ -37,8 +37,8 @@ ELSE(USE_EXTERNAL_BINARIES)
         )
     ELSE()
         SET(ASIO_URL
-            URL https://github.com/comphack/asio/archive/comp_hack-20161214.zip
-            URL_HASH SHA1=454d619fca0f4bf68fb5b346a05e905e1054ea01
+            URL https://github.com/comphack/asio/archive/comp_hack-20200402.zip
+            URL_HASH SHA1=26d1af5e88ae4e0e93f64d614cd5f59ba13a024d
         )
     ENDIF()
 

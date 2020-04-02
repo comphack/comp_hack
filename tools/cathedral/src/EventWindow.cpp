@@ -1678,7 +1678,7 @@ void EventWindow::ChangeTreeBranchIDs()
 bool EventWindow::LoadFileFromPath(const libcomp::String& path)
 {
     tinyxml2::XMLDocument doc;
-    if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+    if(tinyxml2::XML_SUCCESS != doc.LoadFile(path.C()))
     {
         LogGeneralError([&]()
         {
@@ -1899,7 +1899,7 @@ void EventWindow::SaveFiles(const std::list<libcomp::String>& paths)
         }
 
         tinyxml2::XMLDocument doc;
-        if(tinyxml2::XML_NO_ERROR != doc.LoadFile(path.C()))
+        if(tinyxml2::XML_SUCCESS != doc.LoadFile(path.C()))
         {
             LogGeneralError([&]()
             {

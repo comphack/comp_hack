@@ -433,7 +433,7 @@ int main(int argc, char *argv[])
     {
         tinyxml2::XMLDocument doc;
 
-        if(tinyxml2::XML_NO_ERROR != doc.LoadFile(szInPath))
+        if(tinyxml2::XML_SUCCESS != doc.LoadFile(szInPath))
         {
             std::cerr << "Failed to parse file: " << szInPath << std::endl;
 

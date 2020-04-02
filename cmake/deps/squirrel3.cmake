@@ -67,8 +67,8 @@ ELSE(USE_EXTERNAL_BINARIES)
         )
     ELSE()
         SET(SQUIRREL_URL
-            URL https://github.com/comphack/squirrel3/archive/comp_hack-20180424.zip
-            URL_HASH SHA1=e93edb4d4d6efdc45afa6f51e36d1971934e676d
+            URL https://github.com/comphack/squirrel3/archive/comp_hack-20200402.zip
+            URL_HASH SHA1=d14c0d79738ce773edfcb2a67cdfd699cf665d3a
         )
     ENDIF()
 

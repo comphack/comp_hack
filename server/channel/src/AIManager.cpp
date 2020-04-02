@@ -1916,11 +1916,43 @@ void AIManager::Wander(const std::shared_ptr<ActiveEntityState>& eState,
         }
         else if(spotID)
         {
-            // Wander using spot
-            auto spot = zone->GetDynamicMap()->Spots[spotID];
-            dest = zoneManager->GetRandomSpotPoint(spot->Definition);
+            // Wander using spot, clear if somehow set invalid (via script etc)
+            bool error = false;
 
-            wanderBack &= !zoneManager->PointInPolygon(source, spot->Vertices);
+            auto dynamicMap = zone->GetDynamicMap();
+            if(dynamicMap)
+            {
+                auto spotIter = dynamicMap->Spots.find(spotID);
+                if(spotIter != dynamicMap->Spots.end())
+                {
+                    auto spot = spotIter->second;
+                    dest = zoneManager->GetRandomSpotPoint(spot->Definition);
+
+                    wanderBack &= !zoneManager->PointInPolygon(source,
+                        spot->Vertices);
+                }
+                else
+                {
+                    error = true;
+                }
+            }
+            else
+            {
+                error = true;
+            }
+
+            if(error)
+            {
+                LogAIManagerDebug([eState, zone]()
+                {
+                    return libcomp::String("Clearing invalid spot in zone"
+                        " %1 on AI controlled entity: %2\n")
+                        .Arg(zone->GetDefinitionID())
+                        .Arg(eState->GetEntityLabel());
+                });
+
+                eBase->SetSpawnSpotID(0);
+            }
         }
         else
         {

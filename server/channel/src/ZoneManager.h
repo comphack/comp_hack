@@ -1104,7 +1104,8 @@ private:
      * @param dynamicMap Dynamic map data for the zone.
      * @param zoneDef Definition for the zone.
      * @param locations Spawn locations.
-     * @returns true if the spot was found; false on error.
+     * @returns true if the spot was found; false on error. Upon error the
+     *  spotID is NOT cleared so it can be used for error reporting.
      * @note This is called by @ref UpdateSpawnGroups.
      */
     bool SelectSpotAndLocation(bool useSpotID, uint32_t& spotID,

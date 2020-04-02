@@ -3210,6 +3210,17 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateAlly(
             y = p.y;
             rot = spotIter->second->GetRotation();
         }
+        else
+        {
+            LogZoneManagerError([zone, spotID]()
+            {
+                return libcomp::String("Attempted to create an ally in zone"
+                    " %1 in an invalid spot: %2\n")
+                    .Arg(zone->GetDefinitionID()).Arg(spotID);
+            });
+
+            return nullptr;
+        }
     }
 
     auto eState = CreateEnemy(zone, demonID, nullptr, x, y, rot, true);
@@ -3259,6 +3270,17 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
             x = p.x;
             y = p.y;
             rot = spotIter->second->GetRotation();
+        }
+        else
+        {
+            LogZoneManagerError([zone, spotID]()
+            {
+                return libcomp::String("Attempted to create an enemy in zone"
+                    " %1 in an invalid spot: %2\n")
+                    .Arg(zone->GetDefinitionID()).Arg(spotID);
+            });
+
+            return nullptr;
         }
     }
 
@@ -3735,7 +3757,11 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
 
         if(spotID)
         {
+            // Add the spot to the set and clear it for the selection logic
+            // below
             spotIDs.insert(spotID);
+
+            spotID = 0;
         }
 
         bool useSpotID = dynamicMap && spotIDs.size() > 0;
@@ -3793,7 +3819,7 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
         if(!isSpread && !SelectSpotAndLocation(useSpotID, spotID, spotIDs,
             spot, location, dynamicMap, zoneDef, locations))
         {
-            LogZoneManagerError([&]()
+            LogZoneManagerError([sgID, spotID, zone]()
             {
                 return libcomp::String("Failed to spawn group %1 at"
                     " unknown spot %2 in zone %3\n")
@@ -3813,12 +3839,14 @@ bool ZoneManager::UpdateSpawnGroups(const std::shared_ptr<Zone>& zone,
                 if(isSpread && !SelectSpotAndLocation(useSpotID, spotID,
                     spotIDs, spot, location, dynamicMap, zoneDef, locations))
                 {
-                    LogZoneManagerError([&]()
+                    LogZoneManagerError([sgID, spotID, zone]()
                     {
                         return libcomp::String("Failed to spawn group %1 at"
                             " unknown spot %2 in zone %3\n").Arg(sgID)
                             .Arg(spotID).Arg(zone->GetDefinitionID());
                     });
+
+                    spotID = 0;
 
                     locationFailed = true;
                     break;
@@ -7772,6 +7800,16 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
         if(it != mDynamicMaps.end())
         {
             zone->SetDynamicMap(it->second);
+        }
+        else
+        {
+            LogZoneManagerWarning([zoneID, dynamicMapID]()
+            {
+                return libcomp::String("Creating zone %1 with invalid dynamic"
+                    " map ID %2. Zone will still be usable but most spot"
+                    " functionality will be disabled.\n")
+                    .Arg(zoneID).Arg(dynamicMapID);
+            });
         }
     }
 

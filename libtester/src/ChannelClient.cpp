@@ -237,8 +237,8 @@ bool ChannelClient::Say(const libcomp::String& msg)
 bool ChannelClient::ActivateSkill(int32_t entityID, uint32_t skillID,
     uint32_t targetType, int64_t demonID)
 {
-    printf("ActivateSkill(%d, %u, %u, %lld)\n", entityID, skillID,
-        targetType, demonID);
+    // printf("ActivateSkill(%d, %u, %u, %lld)\n", entityID, skillID,
+    //     targetType, demonID);
 
     double waitTime;
 
@@ -270,8 +270,8 @@ bool ChannelClient::ActivateSkill(int32_t entityID, uint32_t skillID,
 bool ChannelClient::ExecuteSkill(int32_t entityID, int8_t activationID,
     int64_t demonID)
 {
-    printf("ExecuteSkill(%d, %d, %lld)\n", entityID,
-        (int)mActivationID, demonID);
+    // printf("ExecuteSkill(%d, %d, %lld)\n", entityID,
+    //     (int)mActivationID, demonID);
 
     libcomp::Packet p;
     p.WritePacketCode(ClientToChannelPacketCode_t::PACKET_SKILL_EXECUTE);

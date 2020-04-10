@@ -20,6 +20,9 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.2.3)
 # Option to build the dream (if the folder is there).
 OPTION(BUILD_DREAM "Build the dream." ON)
 
+# Our custom cmake modules.
+SET(COMP_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
 # Include our custom cmake modules.
 SET(CMAKE_MODULE_PATH
     ${COMP_MODULE_PATH}
@@ -93,9 +96,6 @@ ENDIF()
 
 # Print the CMake version for debugging.
 MESSAGE("-- CMake version: ${CMAKE_VERSION}")
-
-# Our custom cmake modules.
-SET(COMP_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 # Option to build only the updater.
 OPTION(UPDATER_ONLY "Build only the updater." OFF)

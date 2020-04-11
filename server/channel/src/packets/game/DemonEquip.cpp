@@ -214,10 +214,28 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
 
         for(size_t i = 0; i < 4; i++)
         {
-            // Skip the slot being equipped to
-            if((int8_t)i == demonSlot) continue;
-
             uint32_t skillID = growth->GetTraits(i);
+            if((int8_t)i == demonSlot)
+            {
+                // Make sure we're not covering a fixed trait
+                auto equipData = definitionManager->GetDevilEquipmentData(
+                    skillID);
+                if(equipData && equipData->GetFixed())
+                {
+                    LogDemonError([&]()
+                    {
+                        return libcomp::String("DemonEquip attempted on"
+                            " fixed demon trait: %1\n")
+                            .Arg(state->GetAccountUID().ToString());
+                    });
+
+                    success = false;
+                    break;
+                }
+
+                // Skip the slot being equipped to otherwise
+                continue;
+            }
 
             auto item = demon->GetEquippedItems(i).Get();
             if(item)
@@ -241,19 +259,6 @@ bool Parsers::DemonEquip::Parse(libcomp::ManagerPacket *pPacketManager,
                     ->GetDevilEquipmentData(skillID);
                 if(equipData)
                 {
-                    if(i == (size_t)demonSlot && equipData->GetFixed())
-                    {
-                        LogDemonError([&]()
-                        {
-                            return libcomp::String("DemonEquip attempted on"
-                                " fixed demon trait: %1\n")
-                                .Arg(state->GetAccountUID().ToString());
-                        });
-
-                        success = false;
-                        break;
-                    }
-
                     for(auto exGroup : equipData->GetExclusionGroup())
                     {
                         if(exGroup && exclusionGroups.find(exGroup) !=

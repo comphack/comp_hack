@@ -36,12 +36,15 @@
 #include <Account.h>
 #include <Character.h>
 #include <Item.h>
+#include <MiItemBasicData.h>
+#include <MiItemData.h>
 #include <PlayerExchangeSession.h>
 
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "ClientState.h"
+#include "DefinitionManager.h"
 #include "ManagerConnection.h"
 
 using namespace channel;
@@ -58,16 +61,19 @@ bool Parsers::TradeAddItem::Parse(libcomp::ManagerPacket *pPacketManager,
     int64_t itemID = p.ReadS64Little();
     int32_t slot = p.ReadS32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
     auto characterManager = server->GetCharacterManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto exchangeSession = state->GetExchangeSession();
 
     auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
+        libcomp::PersistentObject::GetObjectByUUID(state
+            ->GetObjectUUID(itemID)));
 
     bool cancel = false;
     if(!item || slot >= 30)
@@ -77,10 +83,24 @@ bool Parsers::TradeAddItem::Parse(libcomp::ManagerPacket *pPacketManager,
         cancel = true;
     }
 
-    auto otherCState = exchangeSession ? std::dynamic_pointer_cast<CharacterState>(
-        exchangeSession->GetOtherCharacterState()) : nullptr;
-    auto otherClient = otherCState ? server->GetManagerConnection()->GetEntityClient(
-        otherCState->GetEntityID(), false) : nullptr;
+    auto itemDef = item ? server->GetDefinitionManager()->GetItemData(
+        item->GetType()) : nullptr;
+    if(itemDef && (itemDef->GetBasic()->GetFlags() & 0x0001) == 0)
+    {
+        LogTradeError([item, state]()
+        {
+            return libcomp::String("Player attempted to add non-trade"
+                " item type %1 to a trade: %2\n").Arg(item->GetType())
+                .Arg(state->GetAccountUID().ToString());
+        });
+
+        cancel = true;
+    }
+
+    auto otherCState = exchangeSession ? std::dynamic_pointer_cast<
+        CharacterState>(exchangeSession->GetOtherCharacterState()) : nullptr;
+    auto otherClient = otherCState ? server->GetManagerConnection()->
+        GetEntityClient(otherCState->GetEntityID(), false) : nullptr;
 
     if(!otherClient)
     {
@@ -109,11 +129,12 @@ bool Parsers::TradeAddItem::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             if(items[i].Get() == item)
             {
-                LogTradeDebug([&]()
+                auto accountUID = state->GetAccountUID();
+                LogTradeDebug([accountUID]()
                 {
                     return libcomp::String("Player attempted to add a trade"
                         " item more than once: %1\n")
-                        .Arg(state->GetAccountUID().ToString());
+                        .Arg(accountUID.ToString());
                 });
 
                 error = true;

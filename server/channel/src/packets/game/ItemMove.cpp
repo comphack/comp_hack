@@ -45,6 +45,7 @@
 #include "ChannelServer.h"
 #include "ChannelClientConnection.h"
 #include "CharacterManager.h"
+#include "DefinitionManager.h"
 
 using namespace channel;
 
@@ -80,6 +81,7 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
     auto destBox = characterManager->GetItemBox(state, destType, destBoxID);
     size_t sourceSlot = item ? (size_t)item->GetBoxSlot() : 0;
 
+    auto character = state->GetCharacterState()->GetEntity();
     auto otherItem = destBox
         ? destBox->GetItems((size_t)destSlot).Get() : nullptr;
 
@@ -107,6 +109,17 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             fail = true;
         }
+        else if(destBox != character->GetItemBoxes(0).Get())
+        {
+            // Fail if we attempt to move from the inventory when it cannot
+            // be stored
+            auto itemDef = server->GetDefinitionManager()->GetItemData(item
+                ->GetType());
+            if(!itemDef || (itemDef->GetBasic()->GetFlags() & 0x0010) == 0)
+            {
+                fail = true;
+            }
+        }
     }
 
     if(fail)
@@ -123,8 +136,6 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
 
         return true;
     }
-
-    auto character = state->GetCharacterState()->GetEntity();
 
     bool sameBox = destBox == sourceBox;
     if(!sameBox)

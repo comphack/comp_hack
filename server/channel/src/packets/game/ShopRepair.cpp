@@ -107,7 +107,17 @@ bool Parsers::ShopRepair::Parse(libcomp::ManagerPacket *pPacketManager,
     auto itemData = item ? definitionManager->GetItemData(item->GetType()) : nullptr;
 
     bool success = false;
-    if(shop && itemData && item->GetItemBox() == inventory->GetUUID())
+    if(!itemData || (itemData->GetBasic()->GetFlags() & 0x0080) == 0)
+    {
+        auto accountUID = state->GetAccountUID();
+        LogItemError([item, accountUID]()
+        {
+            return libcomp::String("Player attempted to repair irreparable"
+                " item type %1: %2\n")
+                .Arg(item->GetType()).Arg(accountUID.ToString());
+        });
+    }
+    else if(shop && item->GetItemBox() == inventory->GetUUID())
     {
         bool kreuzRepair = false;
 

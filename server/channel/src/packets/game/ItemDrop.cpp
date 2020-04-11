@@ -45,6 +45,7 @@
 #include "ChannelServer.h"
 #include "ChannelClientConnection.h"
 #include "CharacterManager.h"
+#include "DefinitionManager.h"
 
 using namespace channel;
 
@@ -57,14 +58,15 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
 
     auto uuid = state->GetObjectUUID(itemID);
 
-    std::shared_ptr<objects::Item> item;
-    std::shared_ptr<objects::ItemBox> itemBox;
+    auto item = std::dynamic_pointer_cast<objects::Item>(
+        libcomp::PersistentObject::GetObjectByUUID(uuid));
+    auto itemDef = item ? server->GetDefinitionManager()->GetItemData(
+        item->GetType()) : nullptr;
+    auto itemBox = item ? std::dynamic_pointer_cast<objects::ItemBox>(
+        libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()))
+        : nullptr;
 
-    if(!uuid.IsNull() &&
-        (item = std::dynamic_pointer_cast<objects::Item>(
-            libcomp::PersistentObject::GetObjectByUUID(uuid))) &&
-        (itemBox = std::dynamic_pointer_cast<objects::ItemBox>(
-            libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()))))
+    if(itemDef && (itemDef->GetBasic()->GetFlags() & 0x0008) != 0 && itemBox)
     {
         int8_t slot = item->GetBoxSlot();
 

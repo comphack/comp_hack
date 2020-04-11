@@ -40,10 +40,12 @@
 
 // object Includes
 #include <Item.h>
+#include <MiCategoryData.h>
 #include <MiDCategoryData.h>
 #include <MiDevilData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
+#include <MiSkillItemStatusCommonData.h>
 #include <MiUseRestrictionsData.h>
 
 // channel Includes
@@ -99,6 +101,7 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
         (mainItem == basicItem && mainItem == specialItem);
 
     auto equipType = objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE;
+    auto subCategory = 0;
 
     uint32_t cost = 0;
     bool includesCPItem = false;
@@ -111,6 +114,8 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
         if(mainDef)
         {
             equipType = mainDef->GetBasic()->GetEquipType();
+            subCategory = mainDef->GetCommon()->GetCategory()
+                ->GetSubCategory();
         }
 
         // Check if any item is not specified or is spirit fusion disabled
@@ -144,7 +149,11 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
             error = true;
         }
         else if(equipType != basicDef->GetBasic()->GetEquipType() ||
-            equipType != specialDef->GetBasic()->GetEquipType())
+            equipType != specialDef->GetBasic()->GetEquipType() ||
+            subCategory != basicDef->GetCommon()->GetCategory()
+                ->GetSubCategory() ||
+            subCategory != specialDef->GetCommon()->GetCategory()
+                ->GetSubCategory())
         {
             LogItemError([&]()
             {

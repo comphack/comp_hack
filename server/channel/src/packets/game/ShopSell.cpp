@@ -143,6 +143,19 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
         }
 
         auto def = definitionManager->GetItemData(item->GetType());
+        if(!def || (def->GetBasic()->GetFlags() & 0x0004) == 0)
+        {
+            auto accountUID = state->GetAccountUID();
+            LogItemError([item, accountUID]()
+            {
+                return libcomp::String("Player attempted to sell non-sellable"
+                    " item type %1: %2\n")
+                    .Arg(item->GetType()).Arg(accountUID.ToString());
+            });
+
+            SendShopSaleReply(client, shopID, -2, false);
+            return;
+        }
 
         int32_t sellPrice = def->GetBasic()->GetSellPrice();
 

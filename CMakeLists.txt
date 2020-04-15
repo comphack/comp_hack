@@ -29,14 +29,14 @@ SET(CMAKE_MODULE_PATH
     ${CMAKE_SOURCE_DIR}/coveralls-cmake/cmake
 )
 
-IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
     SET(CMAKE_MODULE_PATH
         ${CMAKE_MODULE_PATH}
         ${CMAKE_SOURCE_DIR}/dream/cmake
     )
 
     INCLUDE(${CMAKE_SOURCE_DIR}/dream/cmake/init.cmake)
-ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
+ENDIF(EXISTS "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
 
 # Do not build objects while linking to reduce memory usage.
 OPTION(LIMIT_LINK_JOBS "Limit number of parallel link jobs." OFF)
@@ -338,9 +338,9 @@ ENDIF()
 
 INCLUDE(${COMP_MODULE_PATH}/external.cmake)
 
-IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
     INCLUDE(${CMAKE_SOURCE_DIR}/dream/cmake/external.cmake)
-ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
+ENDIF(EXISTS "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
 
 # PDB not found for library.
 ADD_LINKER_FLAGS(AUTO /ignore:4099)
@@ -874,9 +874,9 @@ ENDMACRO(OBJGEN_XML outfiles xml)
 
 # If the dream code exists in the "dream" directory and BUILD_DREAM is set,
 # build the dream application as well.
-IF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
+IF(EXISTS "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
     ADD_SUBDIRECTORY(dream)
-ENDIF(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
+ENDIF(EXISTS "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM AND NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
 
 # Macro to replace the packet source files with a single source file to build.
 MACRO(COMBINE_PACKETS listvar)

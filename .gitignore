@@ -13,5 +13,5 @@ binaries/
 tests/config\.nut
 
 # Build the dream.
-dream/
-tools/sandman/
+dream
+tools/sandman

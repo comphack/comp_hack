@@ -33,10 +33,11 @@
 #include <ManagerPacket.h>
 
 // object Includes
-#include <Demon.h>
 #include <Item.h>
 #include <MiItemData.h>
+#include <MiItemPvPData.h>
 #include <MiUseRestrictionsData.h>
+#include <PvPData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -53,8 +54,10 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
     auto state = client->GetClientState();
     auto skillManager = server->GetSkillManager();
 
@@ -114,24 +117,61 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
                 }
                 else
                 {
-                    // If its level restricted, also fail the skill (applies
+                    // If its use restricted, also fail the skill (applies
                     // to equipping too)
                     auto definitionManager = server->GetDefinitionManager();
-                    auto itemDef = definitionManager->GetItemData(item->GetType());
-                    uint8_t lvlLimit = itemDef
-                        ? itemDef->GetRestriction()->GetLevel() : 0;
-                    if(lvlLimit)
+                    auto itemDef = definitionManager->GetItemData(item
+                        ->GetType());
+                    auto restr = itemDef ? itemDef->GetRestriction() : nullptr;
+                    if(restr)
                     {
-                        if(lvlLimit > 100)
+                        if(restr->GetLevel())
                         {
-                            // Level must be less than or equal to limit - 100
-                            valid = source->GetLevel() <= (int8_t)(lvlLimit - 100);
+                            if(restr->GetLevel() > 100)
+                            {
+                                // Level must be less than or equal to
+                                // limit - 100
+                                valid &= source->GetLevel() <= (int8_t)(
+                                    restr->GetLevel() - 100);
+                            }
+                            else
+                            {
+                                // Level must be greater than or equal to limit
+                                valid &= source->GetLevel() >= (int8_t)restr
+                                    ->GetLevel();
+                            }
                         }
-                        else
+
+                        switch(restr->GetAlignment())
                         {
-                            // Level must be greater than or equal to limit
-                            valid = source->GetLevel() >= (int8_t)lvlLimit;
+                        case objects::MiUseRestrictionsData::Alignment_t::LAW:
+                            valid &= source->GetLNCType() == LNC_LAW;
+                            break;
+                        case objects::MiUseRestrictionsData::Alignment_t::
+                            NEUTRAL:
+                            valid &= source->GetLNCType() == LNC_NEUTRAL;
+                            break;
+                        case objects::MiUseRestrictionsData::Alignment_t::CHAOS:
+                            valid &= source->GetLNCType() == LNC_CHAOS;
+                            break;
+                        default:
+                            break;
                         }
+
+                        // Restrict gender if not "any"
+                        if(restr->GetGender() != 2)
+                        {
+                            valid &= source->GetGender() == restr->GetGender();
+                        }
+                    }
+
+                    auto pvp = itemDef ? itemDef->GetPvp() : nullptr;
+                    if(pvp && pvp->GetGPRequirement() > 0)
+                    {
+                        auto pvpData = state->GetCharacterState()->GetEntity()
+                            ->GetPvPData().Get();
+                        valid &= pvpData && pvpData->GetGP() >=
+                            pvp->GetGPRequirement();
                     }
                 }
 

@@ -5572,6 +5572,36 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
             {
                 return false;
             }
+            else if(isTarot && (itemData->GetBasic()->GetFlags() & 0x0100) == 0 &&
+                inputItem->GetTarot() != ENCHANT_ENABLE_EFFECT)
+            {
+                auto accountUID = synthState->GetAccountUID();
+                LogItemError([inputItem, accountUID]()
+                {
+                    return libcomp::String("Player attempted to tarot fuse"
+                        " disabled item %1 (type %2): %3\n")
+                        .Arg(inputItem->GetUUID().ToString())
+                        .Arg(inputItem->GetType())
+                        .Arg(accountUID.ToString());
+                });
+
+                return false;
+            }
+            else if(isSoul && (itemData->GetBasic()->GetFlags() & 0x0200) == 0 &&
+                inputItem->GetSoul() != ENCHANT_ENABLE_EFFECT)
+            {
+                auto accountUID = synthState->GetAccountUID();
+                LogItemError([inputItem, accountUID]()
+                {
+                    return libcomp::String("Player attempted to soul fuse"
+                        " disabled item %1 (type %2): %3\n")
+                        .Arg(inputItem->GetUUID().ToString())
+                        .Arg(inputItem->GetType())
+                        .Arg(accountUID.ToString());
+                });
+
+                return false;
+            }
 
             if(effectID)
             {

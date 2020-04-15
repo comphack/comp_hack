@@ -35,10 +35,13 @@
 // objects Includes
 #include <Item.h>
 #include <ItemBox.h>
+#include <MiItemBasicData.h>
+#include <MiItemData.h>
 
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "DefinitionManager.h"
 
 using namespace channel;
 
@@ -71,10 +74,14 @@ bool Parsers::BazaarItemAdd::Parse(libcomp::ManagerPacket *pPacketManager,
     int8_t oldSlot = item ? item->GetBoxSlot() : -1;
     auto box = std::dynamic_pointer_cast<objects::ItemBox>(
         libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
+    auto itemDef = item ? server->GetDefinitionManager()->GetItemData(
+        item->GetType())
+        : nullptr;
 
     auto dbChanges = libcomp::DatabaseChangeSet::Create();
     auto bState = state->GetBazaarState();
-    if(bState && bState->AddItem(state, slot, itemID, price, dbChanges))
+    if(itemDef && (itemDef->GetBasic()->GetFlags() & 0x0002) != 0 &&
+        bState && bState->AddItem(state, slot, itemID, price, dbChanges))
     {
         // Unequip if its equipped
         server->GetCharacterManager()->UnequipItem(client, item);

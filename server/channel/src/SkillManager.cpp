@@ -95,11 +95,13 @@
 #include <MiNPCBasicData.h>
 #include <MiPossessionData.h>
 #include <MiRentalData.h>
+#include <MiRestrictionData.h>
 #include <MiSItemData.h>
 #include <MiSkillBasicData.h>
 #include <MiSkillCharasticData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
+#include <MiSkillPvPData.h>
 #include <MiSkillSpecialParams.h>
 #include <MiStatusData.h>
 #include <MiStatusBasicData.h>
@@ -1159,25 +1161,122 @@ bool SkillManager::SkillRestricted(
         return true;
     }
 
-    // Player entities can by restricted by bases in the zone
     auto zone = source->GetZone();
-    if(zone && playerEntity)
+    if(zone)
     {
-        auto restricted = zone->GetBaseRestrictedActionTypes();
-        if(restricted.size() > 0)
+        // Player entities can by restricted by bases in the zone
+        if(playerEntity)
         {
-            int8_t actionType = (int8_t)skillData->GetBasic()->GetActionType();
-            if(restricted.find(actionType) != restricted.end())
+            auto restricted = zone->GetBaseRestrictedActionTypes();
+            if(restricted.size() > 0)
+            {
+                int8_t actionType = (int8_t)skillData->GetBasic()
+                    ->GetActionType();
+                if(restricted.find(actionType) != restricted.end())
+                {
+                    return true;
+                }
+
+                // Check if an item skill is being used
+                if(restricted.find(-1) != restricted.end() &&
+                    (skillData->GetBasic()->GetFamily() == 2 ||
+                    skillData->GetBasic()->GetFamily() == 6))
+                {
+                    return true;
+                }
+            }
+        }
+
+        // Make sure we're not PvP restricted
+        switch(skillData->GetPvp()->GetPVPRestriction())
+        {
+        case objects::MiSkillPvPData::PVPRestriction_t::PVP_ONLY:
+            if(zone && zone->GetInstanceType() != InstanceType_t::PVP)
             {
                 return true;
             }
-
-            // Check if an item skill is being used
-            if(restricted.find(-1) != restricted.end() &&
-                (skillData->GetBasic()->GetFamily() == 2 ||
-                skillData->GetBasic()->GetFamily() == 6))
+            break;
+        case objects::MiSkillPvPData::PVPRestriction_t::PVP_RESTRICTED:
+            if(zone && zone->GetInstanceType() == InstanceType_t::PVP)
             {
                 return true;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    auto restr = skillData->GetCondition()->GetRestriction();
+    if(source->GetEntityType() == EntityType_t::CHARACTER)
+    {
+        // Check character specific restrictions
+        auto cState = std::dynamic_pointer_cast<CharacterState>(source);
+
+        // Verify if the weapon type is valid
+        auto weapon = cState->GetEntity()->GetEquippedItems(
+            (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON);
+        auto weaponDef = weapon ? mServer.lock()->GetDefinitionManager()
+            ->GetItemData(weapon->GetType()) : nullptr;
+        if(weapon && !weaponDef)
+        {
+            // Sanity check, not a problem to solve here
+            return true;
+        }
+
+        // "No weapon" counts as close range
+        bool longRange = weaponDef && weaponDef->GetBasic()->GetWeaponType()
+            == objects::MiItemBasicData::WeaponType_t::LONG_RANGE;
+
+        // Check normal and digi restriction (no special logic in case they
+        // somehow have a digi only skill when not digi'd)
+        if(restr->GetWeaponType() != objects::MiRestrictionData::
+            WeaponType_t::NONE &&
+            (longRange != (restr->GetWeaponType() == objects::
+                MiRestrictionData::WeaponType_t::LONG_RANGE)))
+        {
+            return true;
+        }
+        else if(restr->GetDigitizeWeaponType() != objects::MiRestrictionData::
+            DigitizeWeaponType_t::NONE &&
+            (longRange != (restr->GetDigitizeWeaponType() == objects::
+                MiRestrictionData::DigitizeWeaponType_t::LONG_RANGE)))
+        {
+            return true;
+        }
+
+        // Check LNC restrictions
+        if(restr->GetLNC() != objects::MiRestrictionData::LNC_t::ALL)
+        {
+            auto lType = restr->GetLNC();
+            switch(cState->GetLNCType())
+            {
+            case LNC_LAW:
+                if(lType != objects::MiRestrictionData::LNC_t::LAW &&
+                    lType != objects::MiRestrictionData::LNC_t::NEUTRAL_LAW &&
+                    lType != objects::MiRestrictionData::LNC_t::CHAOS_LAW)
+                {
+                    return true;
+                }
+                break;
+            case LNC_NEUTRAL:
+                if(lType != objects::MiRestrictionData::LNC_t::NEUTRAL &&
+                    lType != objects::MiRestrictionData::LNC_t::NEUTRAL_LAW &&
+                    lType != objects::MiRestrictionData::LNC_t::CHAOS_NEUTRAL)
+                {
+                    return true;
+                }
+                break;
+            case LNC_CHAOS:
+                if(lType != objects::MiRestrictionData::LNC_t::CHAOS &&
+                    lType != objects::MiRestrictionData::LNC_t::CHAOS_LAW &&
+                    lType != objects::MiRestrictionData::LNC_t::CHAOS_NEUTRAL)
+                {
+                    return true;
+                }
+                break;
+            default:
+                break;
             }
         }
     }

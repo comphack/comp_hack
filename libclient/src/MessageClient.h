@@ -1,12 +1,12 @@
 /**
- * @file libcomp/src/MessageClient.h
- * @ingroup libcomp
+ * @file libclient/src/MessageClient.h
+ * @ingroup libclient
  *
- * @author HACKfrost
+ * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Base message class for connection based messages.
+ * @brief Base message class for client messages.
  *
- * This file is part of the COMP_hack Library (libcomp).
+ * This file is part of the COMP_hack Client Library (libclient).
  *
  * Copyright (C) 2012-2020 COMP_hack Team <compomega@tutanota.com>
  *
@@ -26,8 +26,8 @@
 
 #include "Message.h"
 
-#ifndef LIBCOMP_SRC_MESSAGECLIENT_H
-#define LIBCOMP_SRC_MESSAGECLIENT_H
+#ifndef LIBCLIENT_SRC_MESSAGECLIENT_H
+#define LIBCLIENT_SRC_MESSAGECLIENT_H
 
 namespace libcomp
 {
@@ -85,4 +85,4 @@ public:
 
 } // namespace libcomp
 
-#endif // LIBCOMP_SRC_MESSAGECLIENT_H
+#endif // LIBCLIENT_SRC_MESSAGECLIENT_H

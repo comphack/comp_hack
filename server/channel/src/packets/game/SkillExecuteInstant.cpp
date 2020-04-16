@@ -95,20 +95,32 @@ bool Parsers::SkillExecuteInstant::Parse(libcomp::ManagerPacket *pPacketManager,
         case ACTIVATION_NOTARGET:
             //Nothing special to do
             break;
-        case ACTIVATION_DEMON:
-            targetObjectID = p.ReadS64Little();
+        case ACTIVATION_DEMON:  /// @todo: rename in libcomp
+            {
+                targetObjectID = p.ReadS64Little();
+
+                // Can be an item when not a use skill
+                auto item = std::dynamic_pointer_cast<objects::Item>(
+                    libcomp::PersistentObject::GetObjectByUUID(
+                        state->GetObjectUUID(targetObjectID)));
+                if(item && !skillManager->ValidateActivationItem(source, item,
+                    skillID))
+                {
+                    skillManager->SendFailure(source, skillID, client,
+                        (uint8_t)SkillErrorCodes_t::GENERIC);
+                    return true;
+                }
+            }
             break;
         case ACTIVATION_ITEM:
             {
                 targetObjectID = p.ReadS64Little();
+
                 auto item = std::dynamic_pointer_cast<objects::Item>(
                     libcomp::PersistentObject::GetObjectByUUID(
                         state->GetObjectUUID(targetObjectID)));
-
-                // If the item is invalid or it is an expired rental,
-                // fail the skill
-                if(!item || (item->GetRentalExpiration() > 0 &&
-                    item->GetRentalExpiration() < (uint32_t)std::time(0)))
+                if(!skillManager->ValidateActivationItem(source, item,
+                    skillID))
                 {
                     skillManager->SendFailure(source, skillID, client,
                         (uint8_t)SkillErrorCodes_t::ITEM_USE);

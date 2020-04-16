@@ -89,6 +89,7 @@
 #include <MiGuardianSpecialData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
+#include <MiItemPvPData.h>
 #include <MiKnockBackData.h>
 #include <MiNegotiationDamageData.h>
 #include <MiNegotiationData.h>
@@ -108,9 +109,11 @@
 #include <MiSummonData.h>
 #include <MiTargetData.h>
 #include <MiUnionData.h>
+#include <MiUseRestrictionsData.h>
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
 #include <Party.h>
+#include <PvPData.h>
 #include <PvPInstanceStats.h>
 #include <PvPPlayerStats.h>
 #include <ServerZone.h>
@@ -218,6 +221,7 @@ public:
     std::unordered_map<int32_t, uint16_t> OffenseValues;
     bool IsItemSkill = false;
     bool IsProjectile = false;
+    bool CanNRA = true;
     uint8_t Nulled = 0;
     uint8_t Reflected = 0;
     bool Absorbed = false;
@@ -1532,7 +1536,8 @@ int8_t SkillManager::ValidateSkillTarget(
         break;
     case objects::MiTargetData::Type_t::PLAYER:
         targetInvalid = !sourceState ||
-            sourceState->GetCharacterState() != target;
+            (sourceState->GetCharacterState() != target &&
+            sourceState->GetDemonState() != target);
         break;
     default:
         break;
@@ -1560,6 +1565,88 @@ int8_t SkillManager::ValidateSkillTarget(
     }
 
     return -1;
+}
+
+bool SkillManager::ValidateActivationItem(
+    const std::shared_ptr<ActiveEntityState> source,
+    const std::shared_ptr<objects::Item>& item, uint32_t skillID)
+{
+    if(!item || (item->GetRentalExpiration() > 0 &&
+        item->GetRentalExpiration() < (uint32_t)std::time(0)))
+    {
+        // Check if the item is invalid or it is an expired rental
+        return false;
+    }
+    else
+    {
+        // Check if its use restricted (applies to equipping too)
+        bool valid = true;
+
+        auto definitionManager = mServer.lock()->GetDefinitionManager();
+        auto itemDef = definitionManager->GetItemData(item->GetType());
+        if(!itemDef)
+        {
+            return false;
+        }
+
+        auto restr = itemDef->GetRestriction();
+        if(restr->GetLevel())
+        {
+            if(restr->GetLevel() > 100)
+            {
+                // Level must be less than or equal to limit - 100
+                valid &= source->GetLevel() <= (int8_t)(
+                    restr->GetLevel() - 100);
+            }
+            else
+            {
+                // Level must be greater than or equal to limit
+                valid &= source->GetLevel() >= (int8_t)restr->GetLevel();
+            }
+        }
+
+        switch(restr->GetAlignment())
+        {
+        case objects::MiUseRestrictionsData::Alignment_t::LAW:
+            valid &= source->GetLNCType() == LNC_LAW;
+            break;
+        case objects::MiUseRestrictionsData::Alignment_t::
+            NEUTRAL:
+            valid &= source->GetLNCType() == LNC_NEUTRAL;
+            break;
+        case objects::MiUseRestrictionsData::Alignment_t::CHAOS:
+            valid &= source->GetLNCType() == LNC_CHAOS;
+            break;
+        default:
+            break;
+        }
+
+        // Restrict gender if not "any"
+        if(restr->GetGender() != 2)
+        {
+            valid &= source->GetGender() == restr->GetGender();
+        }
+
+        auto pvp = itemDef->GetPvp();
+        if(pvp->GetGPRequirement() > 0)
+        {
+            auto state = ClientState::GetEntityClientState(source
+                ->GetEntityID());
+            if(state)
+            {
+                auto pvpData = state->GetCharacterState()->GetEntity()
+                    ->GetPvPData().Get();
+                valid &= pvpData && pvpData->GetGP() >=
+                    pvp->GetGPRequirement();
+            }
+            else
+            {
+                valid = false;
+            }
+        }
+
+        return valid;
+    }
 }
 
 bool SkillManager::SkillHasMoreUses(
@@ -4717,6 +4804,12 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
         skillData->GetTarget()->GetType() != objects::MiTargetData::Type_t::NONE;
     skill->FunctionID = skillData->GetDamage()->GetFunctionID();
 
+    // Non-combat skills cannot be NRA'd meaning NRA_HEAL was (apparently)
+    // never implemented originally
+    skill->CanNRA = skillData->GetBasic()->GetCombatSkill() &&
+        (!skill->FunctionID ||
+            skill->FunctionID != SVR_CONST.SKILL_ZONE_TARGET_ALL);
+
     if(skill->FunctionID &&
         (skill->FunctionID == SVR_CONST.SKILL_ABS_DAMAGE ||
         skill->FunctionID == SVR_CONST.SKILL_ZONE_TARGET_ALL))
@@ -5942,7 +6035,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
                 continue;
             }
 
-            if(nraStatusNull)
+            if(nraStatusNull && affinity)
             {
                 // Optional server setting to nullify status effects with
                 // an affinity type that the target could potentially NRA
@@ -5971,10 +6064,6 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
         // Hard 100% success rates cannot be adjusted, only avoided entirely
         if(maxRates.find(effectID) == maxRates.end())
         {
-            // Add affinity boost/2
-            successRate += (double)GetAffinityBoost(source, sourceCalc,
-                (CorrectTbl)(affinity + BOOST_OFFSET)) / 2.0;
-
             // Boost for certain epertise
             if((pSkill->ExpertiseType == EXPERTISE_CHAIN_COTW ||
                 pSkill->ExpertiseType == EXPERTISE_CHAIN_M_BULLET) &&
@@ -5984,15 +6073,23 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
                 successRate += (double)(pSkill->ExpertiseRankBoost / 2);
             }
 
-            if(successRate > 0.f && canResist)
+            // Apply affinity based adjustments
+            if(affinity)
             {
-                // Multiply by 100% + -resistance
-                CorrectTbl resistCorrectType = (CorrectTbl)(affinity +
-                    RES_OFFSET);
+                // Add affinity boost/2
+                successRate += (double)GetAffinityBoost(source, sourceCalc,
+                    (CorrectTbl)(affinity + BOOST_OFFSET)) / 2.0;
 
-                double resist = (double)(eState->GetCorrectValue(
-                    resistCorrectType, targetCalc) * 0.01);
-                successRate *= (1.0 + resist * -1.0);
+                if(successRate > 0.f && canResist)
+                {
+                    // Multiply by 100% + -resistance
+                    CorrectTbl resistCorrectType = (CorrectTbl)(affinity +
+                        RES_OFFSET);
+
+                    double resist = (double)(eState->GetCorrectValue(
+                        resistCorrectType, targetCalc) * 0.01);
+                    successRate *= (1.0 + resist * -1.0);
+                }
             }
 
             if(successRate < 0.f)
@@ -6129,8 +6226,8 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
     auto zConnections = zone->GetConnectionList();
 
     auto sourceDevilData = source->GetDevilData();
-    uint32_t sourceDemonType = sourceDevilData
-        ? sourceDevilData->GetBasic()->GetID() : 0;
+    uint32_t sourceDemonBaseType = sourceDevilData
+        ? sourceDevilData->GetUnionData()->GetBaseDemonID() : 0;
 
     // Familiarity is reduced from death or same demon kills and is dependent
     // upon familiarity type
@@ -6242,10 +6339,10 @@ void SkillManager::HandleKills(std::shared_ptr<ActiveEntityState> source,
                     entity->GetEntityID(), adjust));
             }
 
-            if(entity != source && sourceDemonType == demonData->GetBasic()
-                ->GetID())
+            if(entity != source && sourceDemonBaseType == demonData
+                ->GetUnionData()->GetBaseDemonID())
             {
-                // Same demon type killed
+                // Same (base) demon type killed
                 int32_t adjust = (int32_t)sourceDemonFType->GetKillTypeMatch();
                 adjusts.push_back(std::pair<int32_t, int32_t>(
                     source->GetEntityID(), adjust));
@@ -8423,8 +8520,8 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         || formula == objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT;
     bool isSimpleDamage = formula == objects::MiBattleDamageData::Formula_t::DMG_NORMAL_SIMPLE;
 
-    uint16_t mod1 = damageData->GetModifier1();
-    uint16_t mod2 = damageData->GetModifier2();
+    uint16_t baseMod1 = damageData->GetModifier1();
+    uint16_t baseMod2 = damageData->GetModifier2();
 
     float mod1Multiplier = 1.f;
     float mod2Multiplier = 1.f;
@@ -8484,12 +8581,12 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
             double levelMod = (double)source->GetLevel() / 100.0;
 
             int32_t mod = (int32_t)(levelMod * (double)statSum *
-                ((double)mod1 / 20.0));
-            mod1 = (uint16_t)(mod > 1000 ? 1000 : mod);
+                ((double)baseMod1 / 20.0));
+            baseMod1 = (uint16_t)(mod > 1000 ? 1000 : mod);
 
             mod = (int32_t)(levelMod * (double)statSum *
-                ((double)mod2 / 20.0));
-            mod2 = (uint16_t)(mod > 1000 ? 1000 : mod);
+                ((double)baseMod2 / 20.0));
+            baseMod2 = (uint16_t)(mod > 1000 ? 1000 : mod);
         }
         else if(skill.FunctionID == SVR_CONST.SKILL_HP_DEPENDENT)
         {
@@ -8530,6 +8627,9 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
     for(SkillTargetResult& target : skill.Targets)
     {
         if(target.HitAvoided) continue;
+
+        uint16_t mod1 = baseMod1;
+        uint16_t mod2 = baseMod2;
 
         auto targetState = GetCalculatedState(target.EntityState, pSkill, true,
             source);
@@ -8765,10 +8865,9 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
             float aoeReduction = (float)damageData->GetAoeReduction();
             if(mod1)
             {
-                if(!target.PrimaryTarget && damageData->GetAoeReduction() &&
-                    aoeReduction > 0)
+                if(!target.PrimaryTarget && aoeReduction > 0)
                 {
-                    target.Damage1 = (uint16_t)((float)target.Damage1 *
+                    target.Damage1 = (int32_t)((float)target.Damage1 *
                         (float)(1.f - (0.01f * aoeReduction)));
                 }
 
@@ -8780,10 +8879,9 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
 
             if(mod2)
             {
-                if(!target.PrimaryTarget && damageData->GetAoeReduction() &&
-                    aoeReduction > 0)
+                if(!target.PrimaryTarget && aoeReduction > 0)
                 {
-                    target.Damage2 = (uint16_t)((float)target.Damage2 *
+                    target.Damage2 = (int32_t)((float)target.Damage2 *
                         (float)(1.f - (0.01f * aoeReduction)));
                 }
 
@@ -9483,11 +9581,9 @@ uint8_t SkillManager::GetNRAResult(SkillTargetResult& target,
     ProcessingSkill& skill, uint8_t effectiveAffinity,
     uint8_t& resultAffinity, bool effectiveOnly, bool reduceShields)
 {
-    resultAffinity = 0;
-    if(!skill.Definition->GetBasic()->GetCombatSkill())
+    resultAffinity = 0; 
+    if(!skill.CanNRA)
     {
-        // Non-combat skills cannot be NRA'd meaning NRA_HEAL was (apparently)
-        // never implemented originally
         return 0;
     }
 
@@ -11251,6 +11347,7 @@ bool SkillManager::MinionSpawn(
                 {
                     auto eBase = enemy->GetEnemyBase();
                     eBase->SetSpawnGroupID(sgID);
+                    eBase->SetSpawnLocationGroupID(slg->GetID());
                     eBase->SetSummonerID(source->GetEntityID());
                     enemies.push_back(enemy);
 

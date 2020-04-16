@@ -28,17 +28,21 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 
 // object Includes
 #include <Item.h>
+#include <MiItemBasicData.h>
+#include <MiItemData.h>
 #include <PlayerExchangeSession.h>
 
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "DefinitionManager.h"
 #include "ManagerConnection.h"
 
 using namespace channel;
@@ -56,9 +60,11 @@ bool Parsers::EntrustRewardUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t rewardType = p.ReadS32Little();
     int32_t offset = p.ReadS32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
     auto characterManager = server->GetCharacterManager();
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto exchangeSession = state->GetExchangeSession();
@@ -71,9 +77,20 @@ bool Parsers::EntrustRewardUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
     auto item = itemID != -1 ? std::dynamic_pointer_cast<objects::Item>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)))
         : nullptr;
+    auto itemDef = item ? server->GetDefinitionManager()->GetItemData(
+        item->GetType()) : nullptr;
 
     bool success = false;
-    if((itemID == -1 || item) && otherClient)
+    if(item && (!itemDef || (itemDef->GetBasic()->GetFlags() & 0x0001) == 0))
+    {
+        LogTradeError([item, state]()
+        {
+            return libcomp::String("Player attempted to add non-trade"
+                " item type %1 to an entrust reward: %2\n")
+                .Arg(item->GetType()).Arg(state->GetAccountUID().ToString());
+        });
+    }
+    else if((itemID == -1 || item) && otherClient)
     {
         // Add to slots 10 to 21
         exchangeSession->SetItems((size_t)(10 + rewardType * 4 + offset), item);

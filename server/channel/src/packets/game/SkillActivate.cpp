@@ -34,10 +34,6 @@
 
 // object Includes
 #include <Item.h>
-#include <MiItemData.h>
-#include <MiItemPvPData.h>
-#include <MiUseRestrictionsData.h>
-#include <PvPData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -97,85 +93,32 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
         case ACTIVATION_NOTARGET:
             //Nothing special to do
             break;
-        case ACTIVATION_DEMON:
-            activationObjectID = p.ReadS64Little();
+        case ACTIVATION_DEMON:  /// @todo: rename in libcomp
+            {
+                activationObjectID = p.ReadS64Little();
+
+                // Can be an item when not a use skill
+                auto item = std::dynamic_pointer_cast<objects::Item>(
+                    libcomp::PersistentObject::GetObjectByUUID(
+                        state->GetObjectUUID(activationObjectID)));
+                if(item && !skillManager->ValidateActivationItem(source, item,
+                    skillID))
+                {
+                    skillManager->SendFailure(source, skillID, client,
+                        (uint8_t)SkillErrorCodes_t::GENERIC);
+                    return true;
+                }
+            }
             break;
         case ACTIVATION_ITEM:
             {
                 activationObjectID = p.ReadS64Little();
+
                 auto item = std::dynamic_pointer_cast<objects::Item>(
                     libcomp::PersistentObject::GetObjectByUUID(
                         state->GetObjectUUID(activationObjectID)));
-
-                bool valid = true;
-                if(!item || (item->GetRentalExpiration() > 0 &&
-                    item->GetRentalExpiration() < (uint32_t)std::time(0)))
-                {
-                    // If the item is invalid or it is an expired rental,
-                    // fail the skill
-                    valid = false;
-                }
-                else
-                {
-                    // If its use restricted, also fail the skill (applies
-                    // to equipping too)
-                    auto definitionManager = server->GetDefinitionManager();
-                    auto itemDef = definitionManager->GetItemData(item
-                        ->GetType());
-                    auto restr = itemDef ? itemDef->GetRestriction() : nullptr;
-                    if(restr)
-                    {
-                        if(restr->GetLevel())
-                        {
-                            if(restr->GetLevel() > 100)
-                            {
-                                // Level must be less than or equal to
-                                // limit - 100
-                                valid &= source->GetLevel() <= (int8_t)(
-                                    restr->GetLevel() - 100);
-                            }
-                            else
-                            {
-                                // Level must be greater than or equal to limit
-                                valid &= source->GetLevel() >= (int8_t)restr
-                                    ->GetLevel();
-                            }
-                        }
-
-                        switch(restr->GetAlignment())
-                        {
-                        case objects::MiUseRestrictionsData::Alignment_t::LAW:
-                            valid &= source->GetLNCType() == LNC_LAW;
-                            break;
-                        case objects::MiUseRestrictionsData::Alignment_t::
-                            NEUTRAL:
-                            valid &= source->GetLNCType() == LNC_NEUTRAL;
-                            break;
-                        case objects::MiUseRestrictionsData::Alignment_t::CHAOS:
-                            valid &= source->GetLNCType() == LNC_CHAOS;
-                            break;
-                        default:
-                            break;
-                        }
-
-                        // Restrict gender if not "any"
-                        if(restr->GetGender() != 2)
-                        {
-                            valid &= source->GetGender() == restr->GetGender();
-                        }
-                    }
-
-                    auto pvp = itemDef ? itemDef->GetPvp() : nullptr;
-                    if(pvp && pvp->GetGPRequirement() > 0)
-                    {
-                        auto pvpData = state->GetCharacterState()->GetEntity()
-                            ->GetPvPData().Get();
-                        valid &= pvpData && pvpData->GetGP() >=
-                            pvp->GetGPRequirement();
-                    }
-                }
-
-                if(!valid)
+                if(!skillManager->ValidateActivationItem(source, item,
+                    skillID))
                 {
                     skillManager->SendFailure(source, skillID, client,
                         (uint8_t)SkillErrorCodes_t::ITEM_USE);

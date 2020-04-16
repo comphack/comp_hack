@@ -34,12 +34,15 @@
 
 // object Includes
 #include <Item.h>
+#include <MiItemBasicData.h>
+#include <MiItemData.h>
 #include <PlayerExchangeSession.h>
 #include <TriFusionHostSession.h>
 
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "DefinitionManager.h"
 #include "ManagerConnection.h"
 
 using namespace channel;
@@ -57,11 +60,13 @@ bool Parsers::TriFusionRewardUpdate::Parse(libcomp::ManagerPacket *pPacketManage
     int32_t participantID = p.ReadS32Little();
     int8_t slotID = p.ReadS8();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
     auto characterManager = server->GetCharacterManager();
     auto managerConnection = server->GetManagerConnection();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto exchangeSession = state->GetExchangeSession();
@@ -69,12 +74,26 @@ bool Parsers::TriFusionRewardUpdate::Parse(libcomp::ManagerPacket *pPacketManage
         exchangeSession);
 
     auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
+        libcomp::PersistentObject::GetObjectByUUID(state
+            ->GetObjectUUID(itemID)));
+    auto itemDef = item ? server->GetDefinitionManager()->GetItemData(
+        item->GetType()) : nullptr;
 
     std::set<int32_t> participantIDs;
 
     bool failure = exchangeSession == nullptr || item == nullptr;
-    if(!tfSession && exchangeSession)
+    if(item && (!itemDef || (itemDef->GetBasic()->GetFlags() & 0x0001) == 0))
+    {
+        LogTradeError([item, state]()
+        {
+            return libcomp::String("Player attempted to add non-trade"
+                " item type %1 to a trifusion reward: %2\n")
+                .Arg(item->GetType()).Arg(state->GetAccountUID().ToString());
+        });
+
+        failure = true;
+    }
+    else if(!tfSession && exchangeSession)
     {
         // Guest cancelled
         auto otherCState = std::dynamic_pointer_cast<

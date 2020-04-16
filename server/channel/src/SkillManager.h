@@ -234,15 +234,14 @@ public:
 
     /**
      * Determine if the skill activation item supplied is valid for a specific
-     * skill and source entity
+     * source entity
      * @param source Entity that is attempting to use the skill
      * @param item Pointer to the item used for skill activation
-     * @param skillID ID of the skill being used
      * @return true if it is valid, false if it is not
      */
     bool ValidateActivationItem(
         const std::shared_ptr<ActiveEntityState> source,
-        const std::shared_ptr<objects::Item>& item, uint32_t skillID);
+        const std::shared_ptr<objects::Item>& item);
 
     /**
      * Determine if a skill has more uses pending

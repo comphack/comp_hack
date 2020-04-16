@@ -101,8 +101,7 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
                 auto item = std::dynamic_pointer_cast<objects::Item>(
                     libcomp::PersistentObject::GetObjectByUUID(
                         state->GetObjectUUID(activationObjectID)));
-                if(item && !skillManager->ValidateActivationItem(source, item,
-                    skillID))
+                if(item && !skillManager->ValidateActivationItem(source, item))
                 {
                     skillManager->SendFailure(source, skillID, client,
                         (uint8_t)SkillErrorCodes_t::GENERIC);
@@ -117,8 +116,7 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
                 auto item = std::dynamic_pointer_cast<objects::Item>(
                     libcomp::PersistentObject::GetObjectByUUID(
                         state->GetObjectUUID(activationObjectID)));
-                if(!skillManager->ValidateActivationItem(source, item,
-                    skillID))
+                if(!skillManager->ValidateActivationItem(source, item))
                 {
                     skillManager->SendFailure(source, skillID, client,
                         (uint8_t)SkillErrorCodes_t::ITEM_USE);

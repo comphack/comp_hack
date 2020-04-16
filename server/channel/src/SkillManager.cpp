@@ -1569,7 +1569,7 @@ int8_t SkillManager::ValidateSkillTarget(
 
 bool SkillManager::ValidateActivationItem(
     const std::shared_ptr<ActiveEntityState> source,
-    const std::shared_ptr<objects::Item>& item, uint32_t skillID)
+    const std::shared_ptr<objects::Item>& item)
 {
     if(!item || (item->GetRentalExpiration() > 0 &&
         item->GetRentalExpiration() < (uint32_t)std::time(0)))

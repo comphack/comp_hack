@@ -80,7 +80,7 @@ bool Parsers::BazaarItemAdd::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto dbChanges = libcomp::DatabaseChangeSet::Create();
     auto bState = state->GetBazaarState();
-    if(itemDef && (itemDef->GetBasic()->GetFlags() & 0x0002) != 0 &&
+    if(itemDef && (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_BAZAAR) != 0 &&
         bState && bState->AddItem(state, slot, itemID, price, dbChanges))
     {
         // Unequip if its equipped

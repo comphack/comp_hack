@@ -27,6 +27,7 @@
 #include "AccountManager.h"
 
 // libcomp Includes
+#include <Constants.h>
 #include <Crypto.h>
 #include <Log.h>
 #include <PacketCodes.h>
@@ -167,24 +168,25 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
     // Get the relative day offset
     const static int32_t timeAdjust = (std::dynamic_pointer_cast<
         objects::WorldConfig>(server->GetConfig())->GetWorldSharedConfig()
-        ->GetTimeOffset() * 60) % 86400;
+        ->GetTimeOffset() * 60) % DAY_SEC;
 
     // Get the relative beginning of today
     time_t now = std::time(0);
-    uint32_t today = (uint32_t)(now / 86400 * 86400);
+    uint32_t today = (uint32_t)(now / DAY_SEC * DAY_SEC);
     if(timeAdjust)
     {
         // If the actual day differs, adjust accordingly
-        uint32_t adjustToday = (uint32_t)((now + timeAdjust) / 86400 * 86400);
+        uint32_t adjustToday = (uint32_t)((now + timeAdjust) / DAY_SEC *
+            DAY_SEC);
         if(adjustToday > today)
         {
             // Add a day (so we don't check midnight for "yesterday")
-            today = (uint32_t)(today + 86400);
+            today = (uint32_t)(today + DAY_SEC);
         }
         else if(adjustToday < today)
         {
             // Subtract a day (so we don't check midnight for "tomorrow")
-            today = (uint32_t)(today - 86400);
+            today = (uint32_t)(today - DAY_SEC);
         }
 
         today = (uint32_t)((int32_t)today - timeAdjust);

@@ -107,7 +107,7 @@ bool Parsers::ShopRepair::Parse(libcomp::ManagerPacket *pPacketManager,
     auto itemData = item ? definitionManager->GetItemData(item->GetType()) : nullptr;
 
     bool success = false;
-    if(!itemData || (itemData->GetBasic()->GetFlags() & 0x0080) == 0)
+    if(!itemData || (itemData->GetBasic()->GetFlags() & ITEM_FLAG_REPAIR) == 0)
     {
         auto accountUID = state->GetAccountUID();
         LogItemError([item, accountUID]()

@@ -93,9 +93,9 @@ bool Parsers::ItemExchange::Parse(libcomp::ManagerPacket *pPacketManager,
     {
         responseCode = -2;  // Cannot be used here
     }
-    else if(itemDef->GetCommon()->GetCategory()->GetSubCategory() == 67)
+    else if(itemDef->GetCommon()->GetCategory()->GetSubCategory() ==
+        ITEM_SUBCATEGORY_EXCHANGE_ITEM)
     {
-        // Get items
         std::list<std::shared_ptr<objects::Item>> inserts;
         for(auto obj : optionDef->GetItems())
         {
@@ -131,9 +131,9 @@ bool Parsers::ItemExchange::Parse(libcomp::ManagerPacket *pPacketManager,
             responseCode = -1;  // Not enough space
         }
     }
-    else if(itemDef->GetCommon()->GetCategory()->GetSubCategory() == 68)
+    else if(itemDef->GetCommon()->GetCategory()->GetSubCategory() ==
+        ITEM_SUBCATEGORY_EXCHANGE_DEMON)
     {
-        // Get demon(s)
         auto cState = state->GetCharacterState();
         auto character = cState->GetEntity();
         auto progress = character->GetProgress().Get();

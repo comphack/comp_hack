@@ -260,7 +260,8 @@ bool ZoneGeometryLoader::LoadZoneQMP(
         auto spots = definitionManager->GetSpotData(dynamicMapID);
         for(auto spotPair : spots)
         {
-            if(spotPair.second->GetType() == 3)
+            if(spotPair.second->GetType() ==
+                objects::MiSpotData::Type_t::ZONE_IN_POINT)
             {
                 zoneInPoints.push_back(Point(spotPair.second->GetCenterX(),
                     spotPair.second->GetCenterY()));

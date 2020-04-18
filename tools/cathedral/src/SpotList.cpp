@@ -176,8 +176,9 @@ QString SpotList::GetObjectName(const std::shared_ptr<
         }
 
         // Client only definition
-        return QString("%1 [%2]%3%4%5").arg(typeTxt).arg(spotDef->GetType())
-            .arg(defined ? " [Defined]" : "").arg(spawned ? " [Spawned]" : "")
+        return QString("%1 [%2]%3%4%5").arg(typeTxt)
+            .arg((uint8_t)spotDef->GetType()).arg(defined ? " [Defined]" : "")
+            .arg(spawned ? " [Spawned]" : "")
             .arg(occupied ? " [Occupied]" : "");
     }
     else if(spot)
@@ -215,7 +216,7 @@ void SpotList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
             ->GetRotation()));
         prop->width->setText(QString::number((double)spotDef->GetSpanX()));
         prop->height->setText(QString::number((double)spotDef->GetSpanY()));
-        prop->type->setCurrentIndex(spotDef->GetType());
+        prop->type->setCurrentIndex((uint8_t)spotDef->GetType());
         prop->chkEnabled->setChecked(spotDef->GetEnabled());
         prop->lblArguments->setText(QString("Arguments: (%1, %2, %3, %4)")
             .arg(spotDef->GetArgs(0)).arg(spotDef->GetArgs(1))
@@ -234,11 +235,11 @@ void SpotList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
         // Only certain types will trigger actions for the server
         switch(spotDef->GetType())
         {
-        case 2:
-        case 5:
-        case 9:
-        case 11:
-        case 16:
+        case objects::MiSpotData::Type_t::NPC_STATE_TRIGGER:
+        case objects::MiSpotData::Type_t::SPAWN_TRIGGER:
+        case objects::MiSpotData::Type_t::START_EVENT:
+        case objects::MiSpotData::Type_t::ZONE_CHANGE:
+        case objects::MiSpotData::Type_t::ZONE_IN_EVENT:
             actionTrigger = true;
             break;
         default:

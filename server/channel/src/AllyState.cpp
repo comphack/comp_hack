@@ -27,6 +27,7 @@
 #include "AllyState.h"
 
 // libcomp Includes
+#include <Constants.h>
 #include <ScriptEngine.h>
 
 // objects Includes
@@ -114,7 +115,7 @@ int8_t AllyState::GetGender()
         return (int8_t)demonData->GetBasic()->GetGender();
     }
 
-    return 2;   // None
+    return GENDER_NA;
 }
 
 std::shared_ptr<AllyState> AllyState::Cast(

@@ -85,7 +85,7 @@ bool Parsers::TradeAddItem::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto itemDef = item ? server->GetDefinitionManager()->GetItemData(
         item->GetType()) : nullptr;
-    if(itemDef && (itemDef->GetBasic()->GetFlags() & 0x0001) == 0)
+    if(itemDef && (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0)
     {
         LogTradeError([item, state]()
         {

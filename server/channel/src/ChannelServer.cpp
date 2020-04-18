@@ -27,6 +27,7 @@
 #include "ChannelServer.h"
 
 // libcomp Includes
+#include <Constants.h>
 #include <DefinitionManager.h>
 #include <Log.h>
 #include <ManagerSystem.h>
@@ -1301,7 +1302,7 @@ int32_t ChannelServer::GetPAttributeDeadline()
     int systemSeconds = clock.SystemSec;
 
     // Get the system time for midnight of the next Monday
-    int32_t deadlineDelta = ((7 - systemDay) * 86400) +
+    int32_t deadlineDelta = ((7 - systemDay) * DAY_SEC) +
         ((23 - systemHour) * 3600) +
         ((59 - systemMinutes) * 60) + systemSeconds;
     int32_t deadline = (int32_t)clock.SystemTime + deadlineDelta;
@@ -1342,7 +1343,7 @@ void ChannelServer::ScheduleRecurringActions()
 
     // Schedule the demon quest reset for next midnight
     uint32_t next = GetTimeUntilMidnight();
-    mTimerManager.ScheduleEventIn((int)(next ? next : 86400), []
+    mTimerManager.ScheduleEventIn((int)(next ? next : DAY_SEC), []
         (ChannelServer* pServer)
         {
             pServer->HandleDemonQuestReset();
@@ -1464,7 +1465,7 @@ void ChannelServer::HandleDemonQuestReset()
 
     // Reset timer to run again (24 hours from now if still midnight)
     uint32_t next = GetTimeUntilMidnight();
-    mTimerManager.ScheduleEventIn((int)(next ? next : 86400), []
+    mTimerManager.ScheduleEventIn((int)(next ? next : DAY_SEC), []
         (ChannelServer* pServer)
         {
             pServer->HandleDemonQuestReset();
@@ -1554,7 +1555,7 @@ void ChannelServer::RecalcNextWorldEventTime()
                 int32_t sysTimeSum2 = t.SystemHour * 3600 +
                     t.SystemMin * 60;
                 min = (uint32_t)(sysTimeSum > sysTimeSum2
-                    ? (86400 - sysTimeSum + sysTimeSum2)
+                    ? (DAY_SEC - sysTimeSum + sysTimeSum2)
                     : (sysTimeSum2 - sysTimeSum));
             }
             else if(inPhase && t.Hour != -1)

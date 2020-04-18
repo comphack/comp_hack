@@ -99,7 +99,7 @@ bool Parsers::Enchant::Parse(libcomp::ManagerPacket *pPacketManager,
         {
             // If the item cannot be traded, error here
             auto itemData = definitionManager->GetItemData(reward->GetType());
-            if((itemData->GetBasic()->GetFlags() & 0x01) == 0)
+            if((itemData->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0)
             {
                 responseCode = EntrustErrorCodes_t::NONTRADE_ITEMS;
                 break;

@@ -495,7 +495,7 @@ int8_t DemonState::GetGender()
         return (int8_t)demonData->GetBasic()->GetGender();
     }
 
-    return 2;   // None
+    return GENDER_NA;
 }
 
 bool DemonState::HasSpecialTDamage()

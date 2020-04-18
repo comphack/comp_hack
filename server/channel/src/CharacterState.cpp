@@ -293,13 +293,13 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
                 switch(skillData->GetCommon()->GetCategory()
                     ->GetMainCategory())
                 {
-                case 0:
+                case SKILL_CATEGORY_PASSIVE:
                     if(skillPassives)
                     {
                         mDigitalizeState->InsertPassiveSkills(skillID);
                     }
                     break;
-                case 1:
+                case SKILL_CATEGORY_ACTIVE:
                     if(skillActives)
                     {
                         mDigitalizeState->InsertActiveSkills(skillID);
@@ -653,7 +653,7 @@ bool CharacterState::UpdateQuestState(
         // Only quest types 0 and 1 apply bonuses (client SHOULD check
         // the bonus enabled flag but some others are enabled)
         auto questData = definitionManager->GetQuestData(completedQuestID);
-        if(!questData || questData->GetType() > 1)
+        if(!questData || (uint8_t)questData->GetType() > 1)
         {
             return false;
         }
@@ -672,7 +672,7 @@ bool CharacterState::UpdateQuestState(
                 if((qBlock & (0x01 << i)) != 0)
                 {
                     auto questData = definitionManager->GetQuestData(questID);
-                    if(questData && questData->GetType() <= 1)
+                    if(questData && (uint8_t)questData->GetType() <= 1)
                     {
                         questBonusCount++;
                     }
@@ -1138,7 +1138,7 @@ uint8_t CharacterState::GetLNCType()
 int8_t CharacterState::GetGender()
 {
     auto entity = GetEntity();
-    return entity ? (int8_t)entity->GetGender() : 2;
+    return entity ? (int8_t)entity->GetGender() : GENDER_NA;
 }
 
 std::shared_ptr<CharacterState> CharacterState::Cast(

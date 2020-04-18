@@ -115,7 +115,8 @@ bool Parsers::ItemMove::Parse(libcomp::ManagerPacket *pPacketManager,
             // be stored
             auto itemDef = server->GetDefinitionManager()->GetItemData(item
                 ->GetType());
-            if(!itemDef || (itemDef->GetBasic()->GetFlags() & 0x0010) == 0)
+            if(!itemDef ||
+                (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_STORE) == 0)
             {
                 fail = true;
             }

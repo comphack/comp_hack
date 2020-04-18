@@ -120,9 +120,9 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
 
         // Check if any item is not specified or is spirit fusion disabled
         if(!mainDef || !basicDef || !specialDef ||
-            ((mainDef->GetBasic()->GetFlags() & 0x0800) != 0) ||
-            ((basicDef->GetBasic()->GetFlags() & 0x0800) != 0) ||
-            ((specialDef->GetBasic()->GetFlags() & 0x0800) != 0))
+            ((mainDef->GetBasic()->GetFlags() & ITEM_FLAG_FUSE) != 0) ||
+            ((basicDef->GetBasic()->GetFlags() & ITEM_FLAG_FUSE) != 0) ||
+            ((specialDef->GetBasic()->GetFlags() & ITEM_FLAG_FUSE) != 0))
         {
             LogItemError([&]()
             {
@@ -195,7 +195,7 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
             uint32_t costSum = 0;
             for(auto& itemDef : { mainDef, basicDef, specialDef })
             {
-                if(characterManager->IsCPItem(itemDef))
+                if(CharacterManager::IsCPItem(itemDef))
                 {
                     costSum = (uint32_t)(costSum + 100000);
                     includesCPItem = true;
@@ -339,9 +339,9 @@ bool Parsers::EquipmentSpiritFuse::Parse(libcomp::ManagerPacket *pPacketManager,
             {
                 // CP spirit fusion crystals boost success by 100%
                 auto itemData = definitionManager->GetItemData(effectItem);
-                if(itemData &&
-                    ((itemData->GetBasic()->GetFlags() & 0x1000) != 0) &&
-                    characterManager->IsCPItem(itemData))
+                if(itemData && CharacterManager::IsCPItem(itemData) &&
+                    ((itemData->GetBasic()
+                        ->GetFlags() & ITEM_FLAG_CRYSTAL) != 0))
                 {
                     successRate = successRate + 100.0;
                 }

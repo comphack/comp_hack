@@ -92,7 +92,7 @@ bool Parsers::ItemPrice::Parse(libcomp::ManagerPacket *pPacketManager,
         // Price starts at 100 times the normal purchase price if it were
         // to show up in stores and gets modified by various aspects
         int32_t basePrice = itemData->GetBasic()->GetBuyPrice();
-        if(server->GetCharacterManager()->IsCPItem(itemData))
+        if(CharacterManager::IsCPItem(itemData))
         {
             // CP items default to 100,000 just like Spirit Fusion adjustments
             basePrice = 100000;

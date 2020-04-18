@@ -148,7 +148,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
     // Initially it was thought that the CP cost on MiShopProductData indicated
     // if the item had a CP cost or not but there are entries that sell for CP
     // in the UI with a cost of zero here so use the flag on the item instead
-    bool cpPurchase = characterManager->IsCPItem(def);
+    bool cpPurchase = CharacterManager::IsCPItem(def);
 
     int32_t price = 0;
     std::set<uint32_t> trendOffset;
@@ -182,7 +182,7 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
                     p->GetProductID());
                 auto def2 = p2
                     ? definitionManager->GetItemData(p2->GetItem()) : nullptr;
-                if(!characterManager->IsCPItem(def2))
+                if(!CharacterManager::IsCPItem(def2))
                 {
                     trendOffset.insert(p->GetProductID());
                 }

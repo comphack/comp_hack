@@ -116,7 +116,7 @@ void HandleCultureItem(const std::shared_ptr<ChannelServer> server,
         }
         else
         {
-            if(characterManager->IsCPItem(itemData))
+            if(CharacterManager::IsCPItem(itemData))
             {
                 // Base point value is fixed
                 points = 200000;
@@ -187,8 +187,8 @@ void HandleCultureItem(const std::shared_ptr<ChannelServer> server,
 
             bool sameType = itemData->GetBasic()->GetEquipType() ==
                 cItemData->GetBasic()->GetEquipType();
-            bool sameGender = itemData->GetRestriction()->GetGender() == 2 ||
-                cItemData->GetRestriction()->GetGender() == 2 ||
+            bool sameGender = itemData->GetRestriction()->GetGender() == GENDER_NA ||
+                cItemData->GetRestriction()->GetGender() == GENDER_NA ||
                 itemData->GetRestriction()->GetGender() ==
                 cItemData->GetRestriction()->GetGender();
 

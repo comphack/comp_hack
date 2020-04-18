@@ -1236,7 +1236,7 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
         {
             uint8_t category = skillData->GetCommon()->GetCategory()
                 ->GetMainCategory();
-            if(category != 0 &&
+            if(category != SKILL_CATEGORY_PASSIVE &&
                 !eState->ActiveSwitchSkillsContains(skillID))
             {
                 // Skip non-passive, non-switch active skills

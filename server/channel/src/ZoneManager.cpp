@@ -290,7 +290,8 @@ void ZoneManager::LoadGeometry()
                         shape->Boundaries[1] = Point(xVals.back(), yVals.back());
 
                         dMap->Spots[spotPair.first] = shape;
-                        dMap->SpotTypes[spotPair.second->GetType()].push_back(shape);
+                        dMap->SpotTypes[(uint8_t)spotPair.second->GetType()]
+                            .push_back(shape);
                     }
 
                     mDynamicMaps[dynamicMapID] = dMap;
@@ -694,12 +695,12 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         return false;
     }
 
-    // Both player characters and demons start with a 20s AI ignore delay
+    // Both player characters and demons start with an AI ignore delay
     // upon entering the first zone on the channel
     if(!currentZone)
     {
         uint64_t delay = ChannelServer::GetServerTime() +
-            (uint64_t)20000000ULL;
+            (uint64_t)AI_ZONE_IN_IGNORE;
         cState->SetStatusTimes(STATUS_IGNORE, delay);
         dState->SetStatusTimes(STATUS_IGNORE, delay);
     }
@@ -769,8 +770,10 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
                 auto spotIter = dynamicMap->Spots.find(spotPair.first);
 
                 // Filter valid zone-in spots only
-                if((spot->GetType() == 3 || spot->GetType() == 16) &&
-                    spotIter != dynamicMap->Spots.end())
+                if((spot->GetType() == objects::MiSpotData::Type_t::
+                    ZONE_IN_POINT ||
+                    spot->GetType() == objects::MiSpotData::Type_t::
+                    DIASPORA_ZONE_IN) && spotIter != dynamicMap->Spots.end())
                 {
                     if(PointInPolygon(Point(xCoord, yCoord),
                         spotIter->second->Vertices))
@@ -1904,8 +1907,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
 
     for(auto npcState : zone->GetNPCs())
     {
-        // If an NPC's state is not 1, do not show it right now
-        if(npcState->GetEntity()->GetState() == 1)
+        if(npcState->GetEntity()->GetState() == HNPC_STATE_SHOW)
         {
             ShowNPC(zone, { client }, npcState, true);
         }
@@ -1913,8 +1915,7 @@ bool ZoneManager::SendPopulateZoneData(const std::shared_ptr<
 
     for(auto objState : zone->GetServerObjects())
     {
-        // If an NPC's state is not 255, show it now
-        if(objState->GetEntity()->GetState() != 255)
+        if(objState->GetEntity()->GetState() != ONPC_STATE_HIDE)
         {
             ShowObject(zone, { client }, objState, true);
         }
@@ -6649,8 +6650,7 @@ Point ZoneManager::GetRandomSpotPoint(
 
 float ZoneManager::GetRandomRotation()
 {
-    /// @todo: replace with pi constant
-    return RNG_DEC(float, -3.14f, 3.14f, 2);
+    return (float)RNG_DEC(double, -PI, PI, 2);
 }
 
 Point ZoneManager::GetLinearPoint(float sourceX, float sourceY,
@@ -8184,7 +8184,7 @@ void ZoneManager::AddPvPBases(const std::shared_ptr<Zone>& zone,
     for(auto& pair : server->GetDefinitionManager()->GetSpotData(
         def->GetDynamicMapID()))
     {
-        if(pair.second->GetType() == variant->GetBaseSpotType())
+        if((uint8_t)pair.second->GetType() == variant->GetBaseSpotType())
         {
             validSpotIDs.insert(pair.first);
         }
@@ -8634,7 +8634,7 @@ bool ZoneManager::IsGeometryDisabled(const std::shared_ptr<
 {
     // Two open states and one hidden state
     return obj->GetState() == 2 || obj->GetState() == 3 ||
-        obj->GetState() == 255;
+        obj->GetState() == ONPC_STATE_HIDE;
 }
 
 bool ZoneManager::RegisterTimeRestrictions(const std::shared_ptr<Zone>& zone,

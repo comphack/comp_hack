@@ -98,7 +98,7 @@ bool Parsers::EquipmentSpiritDefuse::Parse(libcomp::ManagerPacket *pPacketManage
         {
             if(itemDef)
             {
-                if(characterManager->IsCPItem(itemDef))
+                if(CharacterManager::IsCPItem(itemDef))
                 {
                     costSum = (uint32_t)(costSum + 100000);
                 }
@@ -222,7 +222,7 @@ bool Parsers::EquipmentSpiritDefuse::Parse(libcomp::ManagerPacket *pPacketManage
         for(auto& pair : results)
         {
             auto itemDef = definitionManager->GetItemData(pair.first);
-            if((itemDef->GetBasic()->GetFlags() & 0x1000) != 0)
+            if((itemDef->GetBasic()->GetFlags() & ITEM_FLAG_CRYSTAL) != 0)
             {
                 // Separating crystals can't fail
                 pair.second = true;
@@ -236,7 +236,7 @@ bool Parsers::EquipmentSpiritDefuse::Parse(libcomp::ManagerPacket *pPacketManage
             if(chainBoost > 1.0 || expBoost > 1.0)
             {
                 // CP boosts success
-                double cpBoost = characterManager->IsCPItem(itemDef)
+                double cpBoost = CharacterManager::IsCPItem(itemDef)
                     ? 1.2 : 1.0;
 
                 successRate = successRate + (chainBoost + expBoost) *

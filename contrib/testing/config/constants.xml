@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <constants>
     <!-- Primitive types -->
+    <constant name="DIGITALIZE_COOLDOWN">10800</constant>
     <constant name="DIGITALIZE_STAT_RATES">10,30</constant>
     <constant name="ELEMENTAL_1_FLAEMIS">581</constant>
     <constant name="ELEMENTAL_2_AQUANS">582</constant>
@@ -14,6 +15,7 @@
     <constant name="ITEM_BALM_OF_LIFE_DEMON">43001</constant>
     <constant name="ITEM_KREUZ">12198</constant>
     <constant name="ITEM_RBLOODSTONE">12203</constant>
+    <constant name="MAX_MOVE_INCREASE_SUM">50</constant>
     <constant name="MENU_BARTER">808</constant>
     <constant name="MENU_BAZAAR">360</constant>
     <constant name="MENU_COMP_SHOP">531</constant>

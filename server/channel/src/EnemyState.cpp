@@ -27,6 +27,7 @@
 #include "EnemyState.h"
 
 // libcomp Includes
+#include <Constants.h>
 #include <ScriptEngine.h>
 
 // objects Includes
@@ -133,7 +134,7 @@ int8_t EnemyState::GetGender()
         return (int8_t)demonData->GetBasic()->GetGender();
     }
 
-    return 2;   // None
+    return GENDER_NA;
 }
 
 std::shared_ptr<EnemyState> EnemyState::Cast(

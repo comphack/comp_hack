@@ -609,7 +609,8 @@ bool AIManager::QueueUseSkillCommand(
         return false;
     }
 
-    bool instantUse = skillData->GetBasic()->GetActivationType() == 6;
+    bool instantUse = skillData->GetBasic()->GetActivationType() ==
+        SkillActivationType_t::INSTANT;
 
     // Allow non-AI controlled entity if instantly using skill
     auto aiState = eState ? eState->GetAIState() : nullptr;
@@ -1582,10 +1583,10 @@ bool AIManager::UpdateEnemyState(
             return false;
         }
 
-        // If a skill has been charged but for less than 15s, do not decide
-        // to do something else by default (ex: rapid/counter)
+        // If a skill has been charged but for less than the max wait time, do
+        // not decide to do something else by default (ex: rapid/counter)
         skillActivationWait = now <
-            (activated->GetChargedTime() + 15000000ULL);
+            (activated->GetChargedTime() + (uint64_t)AI_MAX_CHARGE_WAIT);
 
         bool cancelAndReset = false;
         if(!CanRetrySkill(eState, activated))
@@ -1608,8 +1609,8 @@ bool AIManager::UpdateEnemyState(
             return false;
         }
         else if(activated->GetSkillData()->GetBasic()
-            ->GetActivationType() == 5 && target &&
-            aiState->GetDefensiveDistance() > 0.f)
+            ->GetActivationType() == SkillActivationType_t::ON_HIT &&
+            target && aiState->GetDefensiveDistance() > 0.f)
         {
             // If we have a skill waiting on being hit, either circle the
             // target or just wait
@@ -2507,7 +2508,7 @@ bool AIManager::SkillIsValid(
 {
     // Active skills only
     auto category = skillData->GetCommon()->GetCategory();
-    if(category->GetMainCategory() != 1)
+    if(category->GetMainCategory() != SKILL_CATEGORY_ACTIVE)
     {
         return false;
     }
@@ -2515,8 +2516,9 @@ bool AIManager::SkillIsValid(
     auto basic = skillData->GetBasic();
 
     // Ignore invalid family types (items, fusion)
-    if(basic->GetFamily() == 2 || basic->GetFamily() == 5 ||
-        basic->GetFamily() == 6)
+    if(basic->GetFamily() == SkillFamily_t::DEMON_SOLO ||
+        basic->GetFamily() == SkillFamily_t::FUSION ||
+        basic->GetFamily() == SkillFamily_t::ITEM)
     {
         return false;
     }

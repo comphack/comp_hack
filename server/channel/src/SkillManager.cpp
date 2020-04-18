@@ -211,7 +211,7 @@ public:
     uint8_t BaseAffinity = 0;
     uint8_t EffectiveAffinity = 0;
     uint8_t WeaponAffinity = 0;
-    uint8_t EffectiveDependencyType = 0;
+    SkillDependencyType_t EffectiveDependencyType = (SkillDependencyType_t)0;
     uint8_t ExpertiseType = 0;
     uint8_t ExpertiseRankBoost = 0;
     uint8_t KnowledgeRank = 0;
@@ -360,10 +360,11 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     auto now = ChannelServer::GetServerTime();
     auto client = server->GetManagerConnection()->GetEntityClient(
         source->GetEntityID());
+    auto skillBasic = def->GetBasic();
 
     // Check for cooldown first
     source->ExpireStatusTimes(now);
-    if(source->GetSkillCooldowns(def->GetBasic()->GetCooldownID()))
+    if(source->GetSkillCooldowns(skillBasic->GetCooldownID()))
     {
         SendFailure(source, skillID, client,
             (uint8_t)SkillErrorCodes_t::COOLING_DOWN);
@@ -408,7 +409,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         return false;
     }
 
-    uint8_t activationType = def->GetBasic()->GetActivationType();
+    SkillActivationType_t activationType = skillBasic->GetActivationType();
 
     auto cast = def->GetCast();
     auto castBasic = cast->GetBasic();
@@ -418,7 +419,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     // despite this making them look weird from player entities when
     // a charge time is still on the data. Having a charge time on
     // these is incredibly rare and probably not intentional.
-    bool autoUse = activationType == 6;
+    bool autoUse = activationType == SkillActivationType_t::INSTANT;
 
     auto activated = source->GetActivatedAbility();
     if(activated && !autoUse)
@@ -491,11 +492,11 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
     // Stack adjust is affected by 2 sources if not an item skill or just
     // explicit item including adjustments if it is an item skill
-    // (Ignore activation type special (3) and toggle (4))
+    // (Ignore activation type special and toggle)
     uint8_t maxStacks = castBasic->GetUseCount();
-    if((castBasic->GetAdjustRestrictions() & 0x01) == 0 && !fusionSkill &&
-        def->GetBasic()->GetActivationType() != 3 &&
-        def->GetBasic()->GetActivationType() != 4)
+    if((castBasic->GetAdjustRestrictions() & SKILL_FIXED_STACK) == 0 &&
+        !fusionSkill && activationType != SkillActivationType_t::SPECIAL &&
+        activationType != SkillActivationType_t::ON_TOGGLE)
     {
         maxStacks = (uint8_t)(maxStacks +
             tokuseiManager->GetAspectSum(source,
@@ -503,12 +504,14 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
             (!pSkill->IsItemSkill ? tokuseiManager->GetAspectSum(source,
                 TokuseiAspectType::SKILL_STACK_ADJUST, calcState) : 0));
     }
+
     activated->SetMaxUseCount(maxStacks);
 
     uint64_t chargedTime = 0;
 
     bool executeNow = autoUse || (defaultChargeTime == 0 &&
-        (activationType == 3 || activationType == 4));
+        (activationType == SkillActivationType_t::SPECIAL ||
+            activationType == SkillActivationType_t::ON_TOGGLE));
 
     // If the skill is not an autoUse, activate it and calculate
     // movement speed
@@ -530,7 +533,7 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
             executeNow = false;
         }
         else if(chargeTime > 0 && !fusionSkill &&
-            (castBasic->GetAdjustRestrictions() & 0x04) == 0)
+            (castBasic->GetAdjustRestrictions() & SKILL_FIXED_CHARGE) == 0)
         {
             int16_t chargeAdjust = (int16_t)(source->GetCorrectValue(
                 CorrectTbl::CHANT_TIME, calcState) -
@@ -602,7 +605,8 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
 
         source->SetStatusTimes(STATUS_CHARGING, chargedTime);
 
-        if(activationType == 3 || activationType == 4)
+        if(activationType == SkillActivationType_t::SPECIAL ||
+            activationType == SkillActivationType_t::ON_TOGGLE)
         {
             // Special/toggle activation skills with a charge time execute
             // automatically when the charge time completes
@@ -760,8 +764,8 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     uint16_t functionID = skillData->GetDamage()->GetFunctionID();
     uint8_t skillCategory = skillData->GetCommon()->GetCategory()->GetMainCategory();
 
-    if(skillCategory == 0 || SkillRestricted(source, skillData,
-        activated->GetActivationObjectID(), ctx))
+    if(skillCategory == SKILL_CATEGORY_PASSIVE || SkillRestricted(
+        source, skillData, activated->GetActivationObjectID(), ctx))
     {
         SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
         return false;
@@ -833,7 +837,8 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     // Stop skills that are demon only instance restricted when not in one
     // as well as non-restricted skills used by an invalid player entity
     bool demonOnlyInst = zone->GetInstanceType() == InstanceType_t::DEMON_ONLY;
-    bool instRestrict = skillData->GetBasic()->GetFamily() == 6;
+    bool instRestrict = skillData->GetBasic()->GetFamily() ==
+        SkillFamily_t::DEMON_SOLO;
     if((instRestrict && !demonOnlyInst) ||
         (!instRestrict && demonOnlyInst && client &&
             source->GetEntityType() != EntityType_t::PARTNER_DEMON))
@@ -924,19 +929,15 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     {
         switch(skillCategory)
         {
-        case 1:
-            // Active
+        case SKILL_CATEGORY_ACTIVE:
             return ExecuteNormalSkill(client, activated, ctx);
-        case 2:
-            // Switch
+        case SKILL_CATEGORY_SWITCH:
             return ToggleSwitchSkill(client, activated, ctx);
-        case 0:
-            // Passive, shouldn't happen
+        case SKILL_CATEGORY_PASSIVE:
         default:
             SendFailure(activated, client,
                 (uint8_t)SkillErrorCodes_t::GENERIC_USE);
             return false;
-            break;
         }
     }
 
@@ -949,7 +950,8 @@ bool SkillManager::ExecuteSkill(std::shared_ptr<ActiveEntityState> source,
     else
     {
         // Skip finalization if performing an instant activation
-        if(skillData->GetBasic()->GetActivationType() != 6)
+        if(skillData->GetBasic()->GetActivationType() !=
+            SkillActivationType_t::INSTANT)
         {
             // Clear skill first as it can affect movement speed
             source->SetActivatedAbility(nullptr);
@@ -977,7 +979,8 @@ bool SkillManager::CancelSkill(const std::shared_ptr<ActiveEntityState> source,
         auto functionID = skillData->GetDamage()->GetFunctionID();
         auto fIter = mSkillFunctions.find(functionID);
         if(fIter != mSkillFunctions.end() &&
-            skillData->GetBasic()->GetActivationType() == 4)
+            skillData->GetBasic()->GetActivationType() ==
+            SkillActivationType_t::ON_TOGGLE)
         {
             auto ctx = std::make_shared<SkillExecutionContext>();
             auto client = mServer.lock()->GetManagerConnection()
@@ -1182,9 +1185,10 @@ bool SkillManager::SkillRestricted(
                 }
 
                 // Check if an item skill is being used
+                auto family = skillData->GetBasic()->GetFamily();
                 if(restricted.find(-1) != restricted.end() &&
-                    (skillData->GetBasic()->GetFamily() == 2 ||
-                    skillData->GetBasic()->GetFamily() == 6))
+                    (family == SkillFamily_t::ITEM ||
+                        family == SkillFamily_t::DEMON_SOLO))
                 {
                     return true;
                 }
@@ -1421,7 +1425,7 @@ int8_t SkillManager::ValidateSkillTarget(
             return (int8_t)SkillErrorCodes_t::TALK_INVALID_STATE;
         }
 
-        if((spawn->GetTalkResults() & 0x01) == 0)
+        if((spawn->GetTalkResults() & SPAWN_TALK_RESULT_JOIN) == 0)
         {
             // If an enemy can't join, fail if auto-join skill
             auto talkDamage = skillData->GetDamage()
@@ -1621,8 +1625,7 @@ bool SkillManager::ValidateActivationItem(
             break;
         }
 
-        // Restrict gender if not "any"
-        if(restr->GetGender() != 2)
+        if(restr->GetGender() != GENDER_NA)
         {
             valid &= source->GetGender() == restr->GetGender();
         }
@@ -2361,7 +2364,8 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
         ->GetMainCategory();
 
     // Skip invalid skill category or deactivating a switch skill
-    if(skillCategory != 1 && (skillCategory != 2 ||
+    if(skillCategory != SKILL_CATEGORY_ACTIVE &&
+        (skillCategory != SKILL_CATEGORY_SWITCH ||
         source->ActiveSwitchSkillsContains(pSkill->SkillID)))
     {
         return true;
@@ -2539,10 +2543,12 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
             auto category = itemData->GetCommon()->GetCategory();
 
             bool isRental = itemData->GetRental()->GetRental() != 0;
-            bool isGeneric = category->GetMainCategory() == 1 &&
-                category->GetSubCategory() == 60;
-            bool isDemonInstItem = category->GetMainCategory() == 1 &&
-                category->GetSubCategory() == 81;
+            bool isActive = category->GetMainCategory() ==
+                ITEM_CATEGORY_ACTIVE;
+            bool isGeneric = isActive && category->GetSubCategory() ==
+                ITEM_SUBCATEGORY_GENERIC;
+            bool isDemonInstItem = isActive && category->GetSubCategory() ==
+                ITEM_SUBCATEGORY_DEMON_SOLO;
             if(!isRental && (isGeneric || isDemonInstItem))
             {
                 itemCosts[item->GetType()] = 1;
@@ -3147,7 +3153,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 // included on either side (ex: 20 would mean 20% of a full
                 // radian on both sides is included and 100 would behave like
                 // a source radius AoE)
-                float maxRotOffset = (float)aoeRange * 0.001f * 3.14f;
+                float maxRotOffset = (float)(aoeRange * 0.001 * PI);
 
                 effectiveTargets = ZoneManager::GetEntitiesInFoV(
                     potentialTargets, srcPoint.x, srcPoint.y, sourceRot,
@@ -4619,9 +4625,9 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         {
             revived.insert(eState);
 
-            // Set AI ignore for 5s
+            // Set AI ignore
             target.EntityState->SetStatusTimes(STATUS_IGNORE,
-                now + (uint64_t)5000000ULL);
+                now + (uint64_t)AI_REVIVE_IGNORE);
         }
         else if((target.Flags1 & FLAG1_LETHAL) != 0)
         {
@@ -4798,8 +4804,9 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
     skill->CurrentZone = source->GetZone();
     skill->InPvP = skill->CurrentZone &&
         skill->CurrentZone->GetInstanceType() == InstanceType_t::PVP;
-    skill->IsItemSkill = skillData->GetBasic()->GetFamily() == 2 ||
-        skillData->GetBasic()->GetFamily() == 6;
+    skill->IsItemSkill =
+        skillData->GetBasic()->GetFamily() == SkillFamily_t::ITEM ||
+        skillData->GetBasic()->GetFamily() == SkillFamily_t::DEMON_SOLO;
     skill->IsProjectile = skillData->GetDischarge()->GetProjectileSpeed() &&
         skillData->GetTarget()->GetType() != objects::MiTargetData::Type_t::NONE;
     skill->FunctionID = skillData->GetDamage()->GetFunctionID();
@@ -4843,7 +4850,8 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
     }
 
     // Calculate effective dependency and affinity types if "weapon" is specified
-    if(skill->EffectiveDependencyType == 4 || skill->BaseAffinity == 1)
+    if(skill->EffectiveDependencyType == SkillDependencyType_t::WEAPON ||
+        skill->BaseAffinity == 1)
     {
         auto weapon = cSource ? cSource->GetEntity()->GetEquippedItems((size_t)
             objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON).Get() : nullptr;
@@ -4851,12 +4859,12 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
 
         if(weaponDef)
         {
-            if(skill->EffectiveDependencyType == 4)
+            if(skill->EffectiveDependencyType == SkillDependencyType_t::WEAPON)
             {
                 switch(weaponDef->GetBasic()->GetWeaponType())
                 {
                 case objects::MiItemBasicData::WeaponType_t::LONG_RANGE:
-                    skill->EffectiveDependencyType = 1;
+                    skill->EffectiveDependencyType = SkillDependencyType_t::LNGR;
                     break;
                 case objects::MiItemBasicData::WeaponType_t::CLOSE_RANGE:
                 default:
@@ -4912,9 +4920,9 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
             skill->EffectiveAffinity = (uint8_t)CorrectTbl::RES_STRIKE - RES_OFFSET;
         }
 
-        if(skill->EffectiveDependencyType == 4)
+        if(skill->EffectiveDependencyType == SkillDependencyType_t::WEAPON)
         {
-            skill->EffectiveDependencyType = 0;
+            skill->EffectiveDependencyType = SkillDependencyType_t::CLSR;
         }
     }
 
@@ -4923,15 +4931,15 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
         // Set the knowledge rank for critical and durability adjustment
         switch(skill->EffectiveDependencyType)
         {
-        case 0:
-        case 9:
-        case 12:
+        case SkillDependencyType_t::CLSR:
+        case SkillDependencyType_t::CLSR_LNGR_SPELL:
+        case SkillDependencyType_t::CLSR_SPELL:
             skill->KnowledgeRank = cSource->GetExpertiseRank(
                 EXPERTISE_WEAPON_KNOWLEDGE);
             break;
-        case 1:
-        case 6:
-        case 10:
+        case SkillDependencyType_t::LNGR:
+        case SkillDependencyType_t::LNGR_CLSR_SPELL:
+        case SkillDependencyType_t::LNGR_SPELL:
             skill->KnowledgeRank = cSource->GetExpertiseRank(
                 EXPERTISE_GUN_KNOWLEDGE);
             break;
@@ -5038,7 +5046,8 @@ std::shared_ptr<objects::CalculatedEntityState> SkillManager::GetCalculatedState
         if(useSkillContext)
         {
             // Filter invalid skills out
-            if(contextSkill->GetCommon()->GetCategory()->GetMainCategory() != 1)
+            if(contextSkill->GetCommon()->GetCategory()->GetMainCategory() !=
+                SKILL_CATEGORY_ACTIVE)
             {
                 // Active only
                 contextSkill = nullptr;
@@ -5222,22 +5231,22 @@ int8_t SkillManager::EvaluateTokuseiSkillCondition(
         // Current skill is magic, physical or misc
         switch(skill.EffectiveDependencyType)
         {
-        case 2:
-        case 3:
-        case 7:
-        case 8:
-        case 11:
+        case SkillDependencyType_t::SPELL:
+        case SkillDependencyType_t::SPELL_CLSR:
+        case SkillDependencyType_t::SPELL_CLSR_LNGR:
+        case SkillDependencyType_t::SPELL_LNGR:
+        case SkillDependencyType_t::SUPPORT:
             // Magic
             return (1 == condition->GetValue()) == !negate ? 1 : 0;
-        case 0:
-        case 1:
-        case 6:
-        case 9:
-        case 10:
-        case 12:
+        case SkillDependencyType_t::CLSR:
+        case SkillDependencyType_t::CLSR_LNGR_SPELL:
+        case SkillDependencyType_t::CLSR_SPELL:
+        case SkillDependencyType_t::LNGR:
+        case SkillDependencyType_t::LNGR_CLSR_SPELL:
+        case SkillDependencyType_t::LNGR_SPELL:
             // Physical
             return (2 == condition->GetValue()) == !negate ? 1 : 0;
-        case 5:
+        case SkillDependencyType_t::NONE:
         default:
             // Misc
             return (3 == condition->GetValue()) == !negate ? 1 : 0;
@@ -5455,46 +5464,46 @@ uint16_t SkillManager::CalculateOffenseValue(
     uint16_t off = 0;
     switch(skill.EffectiveDependencyType)
     {
-    case 0:
+    case SkillDependencyType_t::CLSR:
         off = (uint16_t)clsr;
         break;
-    case 1:
+    case SkillDependencyType_t::LNGR:
         off = (uint16_t)lngr;
         break;
-    case 2:
+    case SkillDependencyType_t::SPELL:
         off = (uint16_t)spell;
         break;
-    case 3:
+    case SkillDependencyType_t::SUPPORT:
         off = (uint16_t)support;
         break;
-    case 6:
+    case SkillDependencyType_t::LNGR_SPELL:
         off = (uint16_t)(lngr + spell / 2);
         break;
-    case 7:
+    case SkillDependencyType_t::SPELL_CLSR:
         off = (uint16_t)(spell + clsr / 2);
         break;
-    case 8:
+    case SkillDependencyType_t::SPELL_LNGR:
         off = (uint16_t)(spell + lngr / 2);
         break;
-    case 9:
+    case SkillDependencyType_t::CLSR_LNGR_SPELL:
         off = (uint16_t)(clsr + lngr + spell);
         break;
-    case 10:
+    case SkillDependencyType_t::LNGR_CLSR_SPELL:
         off = (uint16_t)(lngr + clsr + spell);
         break;
-    case 11:
+    case SkillDependencyType_t::SPELL_CLSR_LNGR:
         off = (uint16_t)(spell + clsr + lngr);
         break;
-    case 12:
+    case SkillDependencyType_t::CLSR_SPELL:
         off = (uint16_t)(clsr + spell / 2);
         break;
-    case 5:
+    case SkillDependencyType_t::NONE:
     default:
-        LogSkillManagerError([&]()
+        LogSkillManagerError([skill]()
         {
             return libcomp::String("Invalid dependency type for"
                 " damage calculation encountered: %1\n")
-                .Arg(skill.EffectiveDependencyType);
+                .Arg((uint8_t)skill.EffectiveDependencyType);
         });
 
         return false;
@@ -5506,7 +5515,7 @@ uint16_t SkillManager::CalculateOffenseValue(
         // of the original skill used, min for invalid dependency type
         uint16_t counterOff = 0;
         if(skill.ExecutionContext->CounteredSkill
-            ->EffectiveDependencyType == 5)
+            ->EffectiveDependencyType == SkillDependencyType_t::NONE)
         {
             counterOff = 1;
         }
@@ -6055,8 +6064,10 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
             ->GetSubCategory();
 
         // Only certain types of status effects can be resisted
-        bool canResist = !isRemove && statusCategory != 1 &&
-            statusSubCategory != 3 && statusSubCategory != 4;
+        bool canResist = !isRemove &&
+            statusCategory != STATUS_CATEGORY_GOOD &&
+            statusSubCategory != STATUS_SUBCATEGORY_BUFF &&
+            statusSubCategory != STATUS_SUBCATEGORY_DEBUFF;
 
         // Effect can be added (or removed), determine success rate
         double successRate = statusPair.second;
@@ -7497,7 +7508,7 @@ void SkillManager::UpdatePvPStats(const std::shared_ptr<
                 auto effect = definitionManager->GetStatusData(change.Type);
                 switch(effect->GetCommon()->GetCategory()->GetMainCategory())
                 {
-                case 0: // Bad status
+                case STATUS_CATEGORY_BAD:
                     if(bStatus.find(entityID) != bStatus.end())
                     {
                         bStatus[entityID]++;
@@ -7507,7 +7518,7 @@ void SkillManager::UpdatePvPStats(const std::shared_ptr<
                         bStatus[entityID] = 1;
                     }
                     break;
-                case 1: // Good status
+                case STATUS_CATEGORY_GOOD:
                     gStatus++;
                     break;
                 default:
@@ -7793,13 +7804,13 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
         else
         {
             uint8_t talkResults = spawn ? spawn->GetTalkResults() : 3;
-            if((talkResults & 0x01) == 0)
+            if((talkResults & SPAWN_TALK_RESULT_JOIN) == 0)
             {
                 canJoin = false;
                 maxVal -= 2;
             }
 
-            if((talkResults & 0x02) == 0)
+            if((talkResults & SPAWN_TALK_RESULT_GIFT) == 0)
             {
                 canGift = false;
                 maxVal -= 2;
@@ -10159,7 +10170,7 @@ bool SkillManager::SetSkillCompleteState(const std::shared_ptr<
         {
             // Adjust cooldown time if supported by the skill
             if((pSkill->Definition->GetCast()->GetBasic()
-                ->GetAdjustRestrictions() & 0x02) == 0)
+                ->GetAdjustRestrictions() & SKILL_FIXED_COOLDOWN) == 0)
             {
                 auto calcState = GetCalculatedState(source, pSkill, false,
                     nullptr);
@@ -11996,8 +12007,10 @@ bool SkillManager::Spawn(
 
     // Zone independent spawns are restricted to fields and dungeons
     auto zoneData = definitionManager->GetZoneData(zone->GetDefinitionID());
-    if(!zoneData || (zoneData->GetBasic()->GetType() != 2 &&
-        zoneData->GetBasic()->GetType() != 4))
+    if(!zoneData || (zoneData->GetBasic()->GetType() !=
+        objects::MiZoneBasicData::Type_t::FIELD &&
+        zoneData->GetBasic()->GetType() !=
+        objects::MiZoneBasicData::Type_t::DUNGEON))
     {
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::NOTHING_HAPPENED_HERE);

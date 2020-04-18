@@ -93,7 +93,7 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
         case ACTIVATION_NOTARGET:
             //Nothing special to do
             break;
-        case ACTIVATION_DEMON:  /// @todo: rename in libcomp
+        case ACTIVATION_OBJECT:
             {
                 activationObjectID = p.ReadS64Little();
 

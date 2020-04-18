@@ -28,6 +28,7 @@
 #define SERVER_CHANNEL_SRC_AISTATE_H
 
 // libcomp Includes
+#include <Constants.h>
 #include <ScriptEngine.h>
 
 // object Includes
@@ -44,32 +45,18 @@ class MiSkillData;
 namespace channel
 {
 
-/// AI despawn timeout in microseconds
-const uint32_t AI_DESPAWN_TIMEOUT = 300000000;
-
-/// AI skill type for close ranged attacks
-const uint16_t AI_SKILL_TYPE_CLSR = 0x01;
-
-/// AI skill type for long ranged attacks
-const uint16_t AI_SKILL_TYPE_LNGR = 0x02;
-
-/// AI skill type for defensive skills
-const uint16_t AI_SKILL_TYPE_DEF = 0x04;
-
-/// AI skill type for healing skills
-const uint16_t AI_SKILL_TYPE_HEAL = 0x08;
-
-/// AI skill type for support skills
-const uint16_t AI_SKILL_TYPE_SUPPORT = 0x10;
-
 /// AI skill type mask for enemy affecting skills
-const uint16_t AI_SKILL_TYPES_ENEMY = 0x03;
+const uint16_t AI_SKILL_TYPES_ENEMY = (uint16_t)(
+    AI_SKILL_TYPE_CLSR | AI_SKILL_TYPE_LNGR);
 
 /// AI skill type mask for ally affecting skills
-const uint16_t AI_SKILL_TYPES_ALLY = 0x1C;
+const uint16_t AI_SKILL_TYPES_ALLY = (uint16_t)(
+    AI_SKILL_TYPE_DEF | AI_SKILL_TYPE_HEAL |
+    AI_SKILL_TYPE_SUPPORT);
 
 /// AI skill type mask for all skills
-const uint16_t AI_SKILL_TYPES_ALL = 0x1F;
+const uint16_t AI_SKILL_TYPES_ALL = (uint16_t)(
+    AI_SKILL_TYPES_ENEMY | AI_SKILL_TYPES_ALLY);
 
 typedef std::pair<
     std::shared_ptr<objects::MiSkillData>, uint16_t> AISkillWeight_t;

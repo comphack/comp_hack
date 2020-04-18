@@ -82,7 +82,8 @@ bool Parsers::TriFusionRewardUpdate::Parse(libcomp::ManagerPacket *pPacketManage
     std::set<int32_t> participantIDs;
 
     bool failure = exchangeSession == nullptr || item == nullptr;
-    if(item && (!itemDef || (itemDef->GetBasic()->GetFlags() & 0x0001) == 0))
+    if(item &&
+        (!itemDef || (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0))
     {
         LogTradeError([item, state]()
         {

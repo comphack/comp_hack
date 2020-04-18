@@ -98,8 +98,9 @@ bool Parsers::Warp::Parse(libcomp::ManagerPacket *pPacketManager,
         // Warp is valid if the item was consumed or the skill wasn't an item skill
         auto warpDef = definitionManager->GetWarpPointData(warpPointID);
         auto skillData = activatedAbility->GetSkillData();
-        if(warpDef && (item || (skillData->GetBasic()->GetFamily() != 2 &&
-            skillData->GetBasic()->GetFamily() != 6)))
+        if (warpDef && (item ||
+            (skillData->GetBasic()->GetFamily() != SkillFamily_t::ITEM &&
+            skillData->GetBasic()->GetFamily() != SkillFamily_t::DEMON_SOLO)))
         {
             uint32_t zoneID = warpDef->GetZoneID();
 

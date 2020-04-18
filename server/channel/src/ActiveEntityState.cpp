@@ -311,13 +311,13 @@ bool ActiveEntityState::SameFaction(std::shared_ptr<ActiveEntityState> other,
 
 float ActiveEntityState::CorrectRotation(float rot)
 {
-    if(rot > 3.14f)
+    if(rot > PI)
     {
-        return rot - 6.28f;
+        return rot - (float)(PI * 2);
     }
-    else if(rot < -3.14f)
+    else if(rot < -PI)
     {
-        return -rot - 3.14f;
+        return -rot - (float)PI;
     }
 
     return rot;
@@ -489,8 +489,8 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now)
             {
                 // Bump both origin and destination by 3.14 to range from
                 // 0-+6.28 instead of -3.14-+3.14 for simpler math
-                originRot += 3.14f;
-                destRot += 3.14f;
+                originRot = (float)(originRot + PI);
+                destRot = (float)(destRot + PI);
 
                 float newRot = (float)(originRot + (prog * (destRot - originRot)));
 
@@ -2094,7 +2094,7 @@ void ActiveEntityState::ActivateStatusEffect(
     if(damage->GetHPDamage() || damage->GetMPDamage())
     {
         // Ignore if the damage applies as part of the skill only
-        if(common->GetCategory()->GetMainCategory() != 2)
+        if(common->GetCategory()->GetMainCategory() != STATUS_CATEGORY_STUN)
         {
             mTimeDamageEffects.insert(effectType);
         }
@@ -2336,7 +2336,7 @@ uint8_t ActiveEntityState::GetLNCType()
 
 int8_t ActiveEntityState::GetGender()
 {
-    return 2;   // None
+    return GENDER_NA;
 }
 
 std::shared_ptr<objects::EntityStats> ActiveEntityState::GetCoreStats()
@@ -2946,12 +2946,18 @@ void ActiveEntityState::AdjustStats(
     {
         for(CorrectTbl tblID : { CorrectTbl::MOVE1, CorrectTbl::MOVE2 })
         {
-            // Default to 50% faster than default run speed
-            int16_t maxSpeed = 50;
+            int16_t maxSpeed = 0;
             auto moveIter = maxPercents.find(tblID);
             if(moveIter != maxPercents.end())
             {
                 maxSpeed = (int16_t)moveIter->second;
+            }
+
+            // Floor at max increase from default run speed
+            const static uint16_t MAX_SUM = SVR_CONST.MAX_MOVE_INCREASE_SUM;
+            if(maxSpeed < MAX_SUM)
+            {
+                maxSpeed = MAX_SUM;
             }
 
             maxSpeed = (int16_t)ceil((double)STAT_DEFAULT_SPEED *
@@ -3109,12 +3115,10 @@ void ActiveEntityState::ApplySkillCorrectTbls(
         bool include = false;
         switch(common->GetCategory()->GetMainCategory())
         {
-        case 0:
-            // Passive
+        case SKILL_CATEGORY_PASSIVE:
             include = true;
             break;
-        case 2:
-            // Switch
+        case SKILL_CATEGORY_SWITCH:
             include = ActiveSwitchSkillsContains(skillID);
             break;
         default:

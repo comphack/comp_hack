@@ -189,7 +189,8 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
                             ->GetItemData(item->GetType());
                         if(subMode == 1)
                         {
-                            if((itemData->GetBasic()->GetFlags() & 0x0200) == 0)
+                            if((itemData->GetBasic()
+                                ->GetFlags() & ITEM_FLAG_SOUL) == 0)
                             {
                                 // Reset to "enabled"
                                 item->SetSoul(ENCHANT_ENABLE_EFFECT);
@@ -201,7 +202,8 @@ bool Parsers::EquipmentModEdit::Parse(libcomp::ManagerPacket *pPacketManager,
                         }
                         else
                         {
-                            if((itemData->GetBasic()->GetFlags() & 0x0100) == 0)
+                            if((itemData->GetBasic()
+                                ->GetFlags() & ITEM_FLAG_TAROT) == 0)
                             {
                                 // Reset to "enabled"
                                 item->SetTarot(ENCHANT_ENABLE_EFFECT);

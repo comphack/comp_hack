@@ -143,7 +143,7 @@ void HandleShopSale(const std::shared_ptr<ChannelServer> server,
         }
 
         auto def = definitionManager->GetItemData(item->GetType());
-        if(!def || (def->GetBasic()->GetFlags() & 0x0004) == 0)
+        if(!def || (def->GetBasic()->GetFlags() & ITEM_FLAG_SELL) == 0)
         {
             auto accountUID = state->GetAccountUID();
             LogItemError([item, accountUID]()

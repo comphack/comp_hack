@@ -81,7 +81,8 @@ bool Parsers::EntrustRewardUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
         item->GetType()) : nullptr;
 
     bool success = false;
-    if(item && (!itemDef || (itemDef->GetBasic()->GetFlags() & 0x0001) == 0))
+    if(item && (!itemDef ||
+        (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0))
     {
         LogTradeError([item, state]()
         {

@@ -206,7 +206,7 @@ bool Parsers::SearchEntryRegister::Parse(libcomp::ManagerPacket *pPacketManager,
                 entry->SetTextData(SEARCH_IDX_COMMENT, comment);
 
                 // Expires after 10 days if not cancelled before
-                entry->SetExpirationTime((uint32_t)(entry->GetPostTime() + 864000));
+                entry->SetExpirationTime((uint32_t)(entry->GetPostTime() + DAY_SEC));
 
                 success = true;
             }

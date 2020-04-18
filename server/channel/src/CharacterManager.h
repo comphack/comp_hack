@@ -630,7 +630,7 @@ public:
      * @return true if the definition belongs to a CP item, false if
      *  it does not
      */
-    bool IsCPItem(const std::shared_ptr<objects::MiItemData>& itemData) const;
+    static bool IsCPItem(const std::shared_ptr<objects::MiItemData>& itemData);
 
     /**
      * End the current exchange session for the client with various outcome

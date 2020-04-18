@@ -1137,8 +1137,11 @@ bool ActionManager::AddRemoveItems(ActionContext& ctx)
                     auto itemData = definitionManager->GetItemData(pair.first);
                     auto categoryData = itemData
                         ? itemData->GetCommon()->GetCategory() : nullptr;
-                    if(!categoryData || categoryData->GetMainCategory() != 1 ||
-                        categoryData->GetSubCategory() != 64)
+                    if(!categoryData ||
+                        categoryData->GetMainCategory() !=
+                        ITEM_CATEGORY_ACTIVE ||
+                        categoryData->GetSubCategory() !=
+                        ITEM_SUBCATEGORY_ELEMENT)
                     {
                         LogActionManagerError([&]()
                         {
@@ -2146,7 +2149,7 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
         auto npcState = std::dynamic_pointer_cast<NPCState>(oNPCState);
         if(npcState)
         {
-            if(act->GetState() == 1)
+            if(act->GetState() == HNPC_STATE_SHOW)
             {
                 zoneManager->ShowNPC(ctx.CurrentZone, clients, npcState,
                     false);
@@ -2165,12 +2168,12 @@ bool ActionManager::SetNPCState(ActionContext& ctx)
                 zoneManager->UpdateGeometryElement(ctx.CurrentZone, oNPC);
             }
 
-            if(act->GetState() == 255)
+            if(act->GetState() == ONPC_STATE_HIDE)
             {
                 zoneManager->RemoveEntities(clients,
                     { oNPCState->GetEntityID() });
             }
-            else if(from == 255)
+            else if(from == ONPC_STATE_HIDE)
             {
                 auto objState = std::dynamic_pointer_cast<ServerObjectState>(
                     oNPCState);

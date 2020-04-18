@@ -713,7 +713,7 @@ void ZoneWindow::LoadZoneFile()
     std::set<uint8_t> spotTypes = { 0 };
     for(auto spotDef : definitions->GetSpotData(zone->GetDynamicMapID()))
     {
-        spotTypes.insert(spotDef.second->GetType());
+        spotTypes.insert((uint8_t)spotDef.second->GetType());
     }
 
     // Duplicate the values from the SpotProperties dropdown
@@ -2362,7 +2362,8 @@ void ZoneWindow::DrawMap()
     {
         auto spotDef = spotPair.second;
         if(highlight.find(spotDef) == highlight.end() &&
-            showSpotTypes.find(spotDef->GetType()) != showSpotTypes.end())
+            showSpotTypes.find((uint8_t)spotDef->GetType()) !=
+            showSpotTypes.end())
         {
             DrawSpot(spotDef, false, painter);
         }
@@ -2568,7 +2569,7 @@ void ZoneWindow::DrawSpot(const std::shared_ptr<objects::MiSpotData>& spotDef,
 
     painter.drawText(QPoint(Scale(points[3].first),
         Scale(points[3].second) + 10), libcomp::String("[%1] %2")
-        .Arg(spotDef->GetType()).Arg(spotDef->GetID()).C());
+        .Arg((uint8_t)spotDef->GetType()).Arg(spotDef->GetID()).C());
 }
 
 int32_t ZoneWindow::Scale(int32_t point)

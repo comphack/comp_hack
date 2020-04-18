@@ -1188,10 +1188,10 @@ void CharacterManager::ReviveCharacter(std::shared_ptr<
 
                 if(!newZoneID)
                 {
-                    // If no warp is involved, add 20s AI ignore
+                    // If no warp is involved, add AI ignore
                     eState->SetStatusTimes(STATUS_IGNORE,
                         ChannelServer::GetServerTime() +
-                        (uint64_t)20000000ULL);
+                        (uint64_t)AI_ZONE_IN_IGNORE);
                 }
             }
         }
@@ -3600,9 +3600,10 @@ bool CharacterManager::UpdateDurability(const std::shared_ptr<
     return updated;
 }
 
-bool CharacterManager::IsCPItem(const std::shared_ptr<objects::MiItemData>& itemData) const
+bool CharacterManager::IsCPItem(const std::shared_ptr<
+    objects::MiItemData>& itemData)
 {
-    return itemData && (itemData->GetBasic()->GetFlags() & 0x40) != 0;
+    return itemData && (itemData->GetBasic()->GetFlags() & ITEM_FLAG_CP) != 0;
 }
 
 void CharacterManager::EndExchange(const std::shared_ptr<
@@ -3823,7 +3824,8 @@ std::shared_ptr<objects::Demon> CharacterManager::GenerateDemon(
         auto skillData = skillID
             ? definitionManager->GetSkillData(skillID) : nullptr;
         if(skillData &&
-            skillData->GetCommon()->GetCategory()->GetMainCategory() != 2)
+            skillData->GetCommon()->GetCategory()->GetMainCategory() !=
+            SKILL_CATEGORY_SWITCH)
         {
             // Switch skills were never supported by the client when sent
             // from partner demons so only add if it is not a switch skill
@@ -4211,8 +4213,8 @@ bool CharacterManager::MitamaDemon(const std::shared_ptr<
 bool CharacterManager::IsMitamaDemon(const std::shared_ptr<
     objects::MiDevilData>& devilData)
 {
-    return devilData &&
-        (devilData->GetUnionData()->GetFusionOptions() & 0x08) != 0;
+    return devilData && (devilData->GetUnionData()
+        ->GetFusionOptions() & FUSION_OPTION_MITAMA) != 0;
 }
 
 void CharacterManager::ApplyTDamageSpecial(const std::shared_ptr<
@@ -5142,7 +5144,8 @@ void CharacterManager::UpdateExpertise(const std::shared_ptr<
 
         return;
     }
-    else if(skill->GetCommon()->GetCategory()->GetMainCategory() == 2)
+    else if(skill->GetCommon()->GetCategory()->GetMainCategory() ==
+        SKILL_CATEGORY_SWITCH)
     {
         // Switch skills should never grant expertise
         return;
@@ -5374,8 +5377,9 @@ int32_t CharacterManager::GetMaxExpertisePoints(const std::shared_ptr<
 {
     auto stats = character->GetCoreStats();
 
-    int32_t maxPoints = 1700000 + (int32_t)(floorl((float)stats->GetLevel() * 0.1) *
-        1000 * 100) + ((int32_t)character->GetExpertiseExtension() * 1000 * 100);
+    int32_t maxPoints = MIN_EXPERTISE_POINTS +
+        (int32_t)(floorl((float)stats->GetLevel() * 0.1) * 1000 * 100) +
+        ((int32_t)character->GetExpertiseExtension() * 1000 * 100);
 
     if(stats->GetLevel() == 99)
     {
@@ -5444,7 +5448,8 @@ bool CharacterManager::LearnSkill(const std::shared_ptr<
     auto dState = state->GetDemonState();
     if(eState == dState)
     {
-        if(def->GetCommon()->GetCategory()->GetMainCategory() == 2)
+        if(def->GetCommon()->GetCategory()->GetMainCategory() ==
+            SKILL_CATEGORY_SWITCH)
         {
             // Switch skills are not supported on partner demons
             return false;
@@ -5572,7 +5577,8 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
             {
                 return false;
             }
-            else if(isTarot && (itemData->GetBasic()->GetFlags() & 0x0100) == 0 &&
+            else if(isTarot &&
+                (itemData->GetBasic()->GetFlags() & ITEM_FLAG_TAROT) == 0 &&
                 inputItem->GetTarot() != ENCHANT_ENABLE_EFFECT)
             {
                 auto accountUID = synthState->GetAccountUID();
@@ -5587,7 +5593,8 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
 
                 return false;
             }
-            else if(isSoul && (itemData->GetBasic()->GetFlags() & 0x0200) == 0 &&
+            else if(isSoul &&
+                (itemData->GetBasic()->GetFlags() & ITEM_FLAG_SOUL) == 0 &&
                 inputItem->GetSoul() != ENCHANT_ENABLE_EFFECT)
             {
                 auto accountUID = synthState->GetAccountUID();
@@ -6039,7 +6046,7 @@ bool CharacterManager::AddTitle(const std::shared_ptr<
     auto progress = character->GetProgress().Get();
 
     bool updated = false;
-    if(titleID < 1024)
+    if(titleID < MAX_SPECIAL_TITLE)
     {
         // Special title
 
@@ -7216,7 +7223,7 @@ bool CharacterManager::DigitalizeEnd(const std::shared_ptr<
     if(demon && dgState->GetTimeLimited())
     {
         // Add cooldown to demon (in seconds)
-        time = 10800;
+        time = (int32_t)SVR_CONST.DIGITALIZE_COOLDOWN;
         time -= dgState->GetCooldownReduction();
         if(time > 0)
         {
@@ -7587,10 +7594,12 @@ void CharacterManager::AdjustDemonBaseStats(const std::shared_ptr<
             int32_t fVal = demon->GetForceValues(i);
 
             // Only apply if at least one point has been achieved
-            if(fVal >= 100000)
+            if(fVal >= DEMON_FORCE_PRECISION)
             {
-                CorrectTbl tblID = (CorrectTbl)libcomp::DEMON_FORCE_CONVERSION[i];
-                stats[tblID] = (int32_t)(stats[tblID] + fVal / 100000);
+                CorrectTbl tblID = (CorrectTbl)libcomp::
+                    DEMON_FORCE_CONVERSION[i];
+                stats[tblID] = (int32_t)(stats[tblID] +
+                    fVal / DEMON_FORCE_PRECISION);
             }
         }
     }

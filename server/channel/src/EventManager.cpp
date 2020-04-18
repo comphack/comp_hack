@@ -694,9 +694,10 @@ bool EventManager::UpdateQuest(const std::shared_ptr<ChannelClientConnection>& c
     else if(!quest)
     {
         // Starting a quest
-        if(!forceUpdate && completed && questData->GetType() != 1)
+        if(!forceUpdate && completed &&
+            questData->GetType() != objects::MiQuestData::Type_t::REPEATABLE)
         {
-            LogEventManagerError([&]()
+            LogEventManagerError([questID]()
             {
                 return libcomp::String("Already completed non-repeatable "
                     "quest '%1' cannot be started again\n").Arg(questID);
@@ -1227,7 +1228,8 @@ bool EventManager::EvaluateQuestCondition(EventContext& ctx,
             uint8_t indexVal = progress->GetCompletedQuests(index);
             bool completed = (shiftVal & indexVal) != 0;
 
-            return quest == nullptr && (!completed || questData->GetType() == 1)
+            return quest == nullptr && (!completed ||
+                questData->GetType() == objects::MiQuestData::Type_t::REPEATABLE)
                 && EvaluateQuestConditions(ctx, questID);
         }
     case objects::EventCondition::Type_t::QUEST_PHASE:
@@ -2608,7 +2610,7 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
         else
         {
             // Active quest count compares to [value 1] (and [value 2])
-            // Ignores act quests (type 2)
+            // Ignores episode quests
             auto character = client->GetClientState()->GetCharacterState()
                 ->GetEntity();
             auto questMap = character->GetQuests();
@@ -2619,7 +2621,8 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
             {
                 auto quest = definitionManager->GetQuestData(
                     (uint32_t)qPair.first);
-                if(quest && quest->GetType() != 2)
+                if(quest &&
+                    quest->GetType() != objects::MiQuestData::Type_t::EPISODE)
                 {
                     count++;
                 }
@@ -3068,7 +3071,7 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
                     if(spawn->GetValidDemonQuestTarget())
                     {
                         bool canJoin = spawn->GetTalkResist() < 100 &&
-                            (spawn->GetTalkResults() & 0x01) != 0 &&
+                            (spawn->GetTalkResults() & SPAWN_TALK_RESULT_JOIN) != 0 &&
                             spawn->GetLevel() <= cLevel;
                         if(spawn->GetLevel() && (isKill || canJoin))
                         {

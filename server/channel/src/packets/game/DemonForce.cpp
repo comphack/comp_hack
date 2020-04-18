@@ -27,6 +27,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <Constants.h>
 #include <DefinitionManager.h>
 #include <Log.h>
 #include <ManagerPacket.h>
@@ -187,7 +188,7 @@ bool Parsers::DemonForce::Parse(libcomp::ManagerPacket *pPacketManager,
         bool resultExists = false;
 
         // Items typically apply normal caps, cap at 1000 points just in case
-        const int32_t rMax = 100000000;
+        const int32_t rMax = 1000 * DEMON_FORCE_PRECISION;
         for(auto result : dfData->GetResults())
         {
             // Make sure its a value effect index
@@ -210,7 +211,8 @@ bool Parsers::DemonForce::Parse(libcomp::ManagerPacket *pPacketManager,
                         boosted[rType] = points + result->GetPoints();
                     }
 
-                    statRaised |= (boosted[rType] / 100000) != (points / 100000);
+                    statRaised |= (boosted[rType] / DEMON_FORCE_PRECISION) !=
+                        (points / DEMON_FORCE_PRECISION);
                 }
 
                 resultExists = true;

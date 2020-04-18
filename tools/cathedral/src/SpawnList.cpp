@@ -43,6 +43,7 @@
 #include <Spawn.h>
 
 // libcomp Includes
+#include <Constants.h>
 #include <Log.h>
 #include <PacketCodes.h>
 
@@ -154,8 +155,10 @@ void SpawnList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
         prop->inheritDrops->setChecked(spawn->GetInheritDrops());
 
         prop->talkResist->setValue((int32_t)spawn->GetTalkResist());
-        prop->canJoin->setChecked((spawn->GetTalkResults() & 0x01) != 0);
-        prop->canGift->setChecked((spawn->GetTalkResults() & 0x02) != 0);
+        prop->canJoin->setChecked((
+            spawn->GetTalkResults() & SPAWN_TALK_RESULT_JOIN) != 0);
+        prop->canGift->setChecked((
+            spawn->GetTalkResults() & SPAWN_TALK_RESULT_GIFT) != 0);
 
         if(prop->canGift->isChecked())
         {
@@ -221,8 +224,8 @@ void SpawnList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
         spawn->SetTalkResist((uint8_t)prop->talkResist->value());
 
         spawn->SetTalkResults((uint8_t)(
-            prop->canJoin->isChecked() ? 0x01 : 0x00 |
-            prop->canGift->isChecked() ? 0x02 : 0x00));
+            prop->canJoin->isChecked() ? SPAWN_TALK_RESULT_JOIN : 0x00 |
+            prop->canGift->isChecked() ? SPAWN_TALK_RESULT_GIFT : 0x00));
 
         auto gifts = prop->gifts->GetObjectList<objects::ItemDrop>();
         spawn->SetGifts(gifts);

@@ -30,6 +30,9 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 
+// objgen Includes
+#include <MiSkillBasicData.h>
+
 namespace objects
 {
 class ActivatedAbility;
@@ -42,6 +45,11 @@ class TokuseiSkillCondition;
 
 namespace channel
 {
+
+typedef objects::MiSkillBasicData::ActionType_t SkillActionType_t;
+typedef objects::MiSkillBasicData::ActivationType_t SkillActivationType_t;
+typedef objects::MiSkillBasicData::DependencyType_t SkillDependencyType_t;
+typedef objects::MiSkillBasicData::Family_t SkillFamily_t;
 
 class ProcessingSkill;
 class SkillTargetResult;

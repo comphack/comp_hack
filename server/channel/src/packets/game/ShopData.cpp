@@ -69,7 +69,6 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
 
     auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
         ->GetServer());
-    auto characterManager = server->GetCharacterManager();
     auto definitionManager = server->GetDefinitionManager();
     auto serverDataManager = server->GetServerDataManager();
 
@@ -217,7 +216,7 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
 
                 uint8_t pTrend = 0;
                 if(trendAdjust > 0.f && !product->GetTrendDisabled() &&
-                    !characterManager->IsCPItem(def))
+                    !CharacterManager::IsCPItem(def))
                 {
                     std::uniform_int_distribution<uint32_t> dis(0, 1000);
                     trend = (uint8_t)(dis(rand) % 3);

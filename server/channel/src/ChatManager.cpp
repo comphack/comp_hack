@@ -2197,13 +2197,15 @@ bool ChatManager::GMCommand_Homepoint(const std::shared_ptr<
     for(auto spotPair : spots)
     {
         // Take the first zone-in point found
-        if(spotPair.second->GetType() == 3)
+        if(spotPair.second->GetType() ==
+            objects::MiSpotData::Type_t::ZONE_IN_POINT)
         {
             character->SetHomepointZone(zoneDef->GetID());
             character->SetHomepointSpotID(spotPair.first);
 
             libcomp::Packet p;
-            p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_HOMEPOINT_UPDATE);
+            p.WritePacketCode(
+                ChannelToClientPacketCode_t::PACKET_EVENT_HOMEPOINT_UPDATE);
             p.WriteS32Little((int32_t)zoneDef->GetID());
             p.WriteFloat(spotPair.second->GetCenterX());
             p.WriteFloat(spotPair.second->GetCenterY());

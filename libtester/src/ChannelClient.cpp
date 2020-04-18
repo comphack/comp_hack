@@ -307,7 +307,7 @@ bool ChannelClient::SummonDemon(int64_t demonID)
     const uint32_t SKILL_SUMMON_DEMON = 5704;
 
     ASSERT_TRUE_OR_RETURN(ActivateSkill(mEntityID,
-        SKILL_SUMMON_DEMON, ACTIVATION_DEMON, demonID));
+        SKILL_SUMMON_DEMON, ACTIVATION_OBJECT, demonID));
 
     /// This skill auto-executes
     /*ASSERT_TRUE_OR_RETURN(ExecuteSkill(mEntityID,

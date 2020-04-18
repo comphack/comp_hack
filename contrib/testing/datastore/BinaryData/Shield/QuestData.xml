@@ -1,10 +1,10 @@
 <objects>
     <object name="MiQuestData">
         <member name="ID">1</member>
-        <member name="type">0</member>
+        <member name="type">NORMAL</member>
         <member name="groupID">0</member>
-        <member name="episodeType">0</member>
-        <member name="bonusEnabled">1</member>
+        <member name="episodeType">NONE</member>
+        <member name="bonusEnabled">true</member>
         <member name="conditionsExist">1</member>
         <member name="conditions">
             <element>

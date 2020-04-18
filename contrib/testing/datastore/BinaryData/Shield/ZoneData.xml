@@ -4,7 +4,7 @@
             <object name="MiZoneBasicData">
                 <member name="id">1</member>
                 <member name="name"><![CDATA[Test Zone]]></member>
-                <member name="type">5</member>
+                <member name="type">PUBLIC</member>
                 <member name="flags">0</member>
                 <member name="parentID">0</member>
                 <member name="startingSpot">0</member>

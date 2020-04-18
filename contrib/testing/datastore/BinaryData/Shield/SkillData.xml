@@ -23,12 +23,12 @@
         </member>
         <member name="basic">
             <object name="MiSkillBasicData">
-                <member name="dependencyType">5</member>
+                <member name="dependencyType">NONE</member>
                 <member name="actionType">SUPPORT</member>
                 <member name="combatSkill">false</member>
                 <member name="defensible">0</member>
-                <member name="family">0</member>
-                <member name="activationType">0</member>
+                <member name="family">NORMAL</member>
+                <member name="activationType">NONE</member>
                 <member name="basic7">1</member>
                 <member name="cooldownID">2</member>
             </object>

@@ -2954,7 +2954,8 @@ void ActiveEntityState::AdjustStats(
             }
 
             // Floor at max increase from default run speed
-            const static uint16_t MAX_SUM = SVR_CONST.MAX_MOVE_INCREASE_SUM;
+            const static int16_t MAX_SUM = (int16_t)
+                SVR_CONST.MAX_MOVE_INCREASE_SUM;
             if(maxSpeed < MAX_SUM)
             {
                 maxSpeed = MAX_SUM;

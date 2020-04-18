@@ -1097,14 +1097,14 @@ bool SkillManager::SkillRestricted(
         bool available = true;
         switch(skillData->GetBasic()->GetFamily())
         {
-        case 0:     // Normal
-        case 1:     // Magic
-        case 3:     // Special
+        case SkillFamily_t::NORMAL:
+        case SkillFamily_t::MAGIC:
+        case SkillFamily_t::SPECIAL:
             // Normal availability required
             available = source->CurrentSkillsContains(skillData->GetCommon()
                 ->GetID());
             break;
-        case 5:     // Fusion (should be prepared elsewhere)
+        case SkillFamily_t::FUSION: // Should be prepared elsewhere
         default:    // Handle item skills etc via their cost
             break;
         }
@@ -1291,9 +1291,9 @@ bool SkillManager::SkillRestricted(
 
     switch(skillData->GetBasic()->GetFamily())
     {
-    case 0: // Non-magic skill
+    case SkillFamily_t::NORMAL:
         return source->StatusRestrictSpecialCount() > 0;
-    case 1: // Magic
+    case SkillFamily_t::MAGIC:
         return source->StatusRestrictMagicCount() > 0;
     default:
         return false;
@@ -9242,30 +9242,30 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         uint8_t rateBoostIdx = 0;
         switch(skill.EffectiveDependencyType)
         {
-        case 0:
-        case 9:
-        case 12:
+        case SkillDependencyType_t::CLSR:
+        case SkillDependencyType_t::CLSR_LNGR_SPELL:
+        case SkillDependencyType_t::CLSR_SPELL:
             def = (uint16_t)targetState->GetCorrectTbl((size_t)CorrectTbl::PDEF);
             rateBoostIdx = (uint8_t)CorrectTbl::RATE_CLSR;
             break;
-        case 1:
-        case 6:
-        case 10:
+        case SkillDependencyType_t::LNGR:
+        case SkillDependencyType_t::LNGR_CLSR_SPELL:
+        case SkillDependencyType_t::LNGR_SPELL:
             def = (uint16_t)targetState->GetCorrectTbl((size_t)CorrectTbl::PDEF);
             rateBoostIdx = (uint8_t)CorrectTbl::RATE_LNGR;
             break;
-        case 2:
-        case 7:
-        case 8:
-        case 11:
+        case SkillDependencyType_t::SPELL:
+        case SkillDependencyType_t::SPELL_CLSR:
+        case SkillDependencyType_t::SPELL_CLSR_LNGR:
+        case SkillDependencyType_t::SPELL_LNGR:
             def = (uint16_t)targetState->GetCorrectTbl((size_t)CorrectTbl::MDEF);
             rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
             break;
-        case 3:
+        case SkillDependencyType_t::SUPPORT:
             def = (uint16_t)targetState->GetCorrectTbl((size_t)CorrectTbl::MDEF);
             rateBoostIdx = (uint8_t)CorrectTbl::RATE_SUPPORT;
             break;
-        case 5:
+        case SkillDependencyType_t::NONE:
         default:
             break;
         }
@@ -9515,12 +9515,12 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill,
             {
                 switch(skill.EffectiveDependencyType)
                 {
-                case 0:
-                case 1:
-                case 6:
-                case 9:
-                case 10:
-                case 12:
+                case SkillDependencyType_t::CLSR:
+                case SkillDependencyType_t::CLSR_LNGR_SPELL:
+                case SkillDependencyType_t::CLSR_SPELL:
+                case SkillDependencyType_t::LNGR:
+                case SkillDependencyType_t::LNGR_CLSR_SPELL:
+                case SkillDependencyType_t::LNGR_SPELL:
                     target.HitNull = 1; // Physical null
                     break;
                 default:
@@ -9543,12 +9543,12 @@ bool SkillManager::SetNRA(SkillTargetResult& target, ProcessingSkill& skill,
     case NRA_REFLECT:
         switch(skill.EffectiveDependencyType)
         {
-        case 0:
-        case 1:
-        case 6:
-        case 9:
-        case 10:
-        case 12:
+        case SkillDependencyType_t::CLSR:
+        case SkillDependencyType_t::CLSR_LNGR_SPELL:
+        case SkillDependencyType_t::CLSR_SPELL:
+        case SkillDependencyType_t::LNGR:
+        case SkillDependencyType_t::LNGR_CLSR_SPELL:
+        case SkillDependencyType_t::LNGR_SPELL:
             target.HitReflect = 1;  // Physical reflect
             break;
         default:
@@ -9608,22 +9608,22 @@ uint8_t SkillManager::GetNRAResult(SkillTargetResult& target,
             // Gather based on dependency type and base affinity if not almighty
             switch(skill.EffectiveDependencyType)
             {
-            case 0:
-            case 1:
-            case 6:
-            case 9:
-            case 10:
-            case 12:
+            case SkillDependencyType_t::CLSR:
+            case SkillDependencyType_t::CLSR_LNGR_SPELL:
+            case SkillDependencyType_t::CLSR_SPELL:
+            case SkillDependencyType_t::LNGR:
+            case SkillDependencyType_t::LNGR_CLSR_SPELL:
+            case SkillDependencyType_t::LNGR_SPELL:
                 affinities.push_back(CorrectTbl::NRA_PHYS);
                 break;
-            case 2:
-            case 3:
-            case 7:
-            case 8:
-            case 11:
+            case SkillDependencyType_t::SPELL:
+            case SkillDependencyType_t::SPELL_CLSR:
+            case SkillDependencyType_t::SPELL_CLSR_LNGR:
+            case SkillDependencyType_t::SPELL_LNGR:
+            case SkillDependencyType_t::SUPPORT:
                 affinities.push_back(CorrectTbl::NRA_MAGIC);
                 break;
-            case 5:
+            case SkillDependencyType_t::NONE:
             default:
                 break;
             }

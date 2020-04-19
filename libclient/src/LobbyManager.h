@@ -35,6 +35,7 @@
 namespace packets
 {
     class PacketLobbyWorldList;
+    class PacketLobbyCharacterList;
 } // namespace packets
 
 namespace logic
@@ -83,13 +84,19 @@ namespace logic
         bool HandlePacketLobbyWorldList(libcomp::ReadOnlyPacket &p);
 
         /**
+         * Handle the incoming character list
+         * @returns true if the packet was parsed correctly; false otherwise.
+         */
+        bool HandlePacketLobbyCharacterList(libcomp::ReadOnlyPacket &p);
+
+        /**
          * Process a packet message.
          * @param pMessage Packet message to process.
          */
         bool ProcessPacketMessage(const libcomp::Message::Packet *pMessage);
 
         /// Pointer to the LogicWorker.
-        /// LogicWorker *mLogicWorker;
+        LogicWorker *mLogicWorker;
 
         /// Message queue for the LogicWorker.
         std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
@@ -97,6 +104,9 @@ namespace logic
 
         /// List of the worlds and channels.
         std::shared_ptr<packets::PacketLobbyWorldList> mWorldList;
+
+        ///List of the characters.
+        std::shared_ptr<packets::PacketLobbyCharacterList> mCharacterList;
     };
 
 } // namespace logic

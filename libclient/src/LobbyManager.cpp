@@ -38,6 +38,13 @@
 #include <PacketLobbyWorldList.h>
 #include <PacketLobbyWorldListChannelEntry.h>
 #include <PacketLobbyWorldListEntry.h>
+#include <PacketLobbyCharacterList.h>
+#include <PacketLobbyCharacterListEntry.h>
+#include <PacketLobbyCharacterListEquippedVAEntry.h>
+
+//logic messages
+#include <MessageCharacterList.h>
+#include <MessageConnected.h>
 
 using namespace logic;
 
@@ -47,7 +54,7 @@ LobbyManager::LobbyManager(LogicWorker *pLogicWorker,
     const std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
         &messageQueue) :
     libcomp::Manager(),
-    /*mLogicWorker(pLogicWorker),*/ mMessageQueue(messageQueue)
+    mLogicWorker(pLogicWorker), mMessageQueue(messageQueue)
 {
     (void)pLogicWorker;
 }
@@ -86,11 +93,68 @@ bool LobbyManager::ProcessPacketMessage(
     {
         case to_underlying(LobbyToClientPacketCode_t::PACKET_WORLD_LIST):
             return HandlePacketLobbyWorldList(p);
+        case to_underlying(LobbyToClientPacketCode_t::PACKET_CHARACTER_LIST):
+            return HandlePacketLobbyCharacterList(p);
         default:
             break;
     }
 
     return false;
+}
+bool LobbyManager::HandlePacketLobbyCharacterList(libcomp::ReadOnlyPacket &p) {
+    auto obj = std::make_shared<packets::PacketLobbyCharacterList>();
+    
+    if(!obj->LoadPacket(p, false) || p.Left())
+    {
+        return false;
+    }
+
+    bool changed = !mCharacterList || obj->CharactersCount() != mCharacterList->CharactersCount();
+
+    if(!changed)
+    {
+        auto originalList = mCharacterList->GetCharacters();
+        auto originalIterator = originalList.begin();
+
+        for(auto character : obj->GetCharacters())
+        {
+            auto original = *originalIterator;
+            changed |= original->GetCharacterID() != character->GetCharacterID() ||
+                original->GetName() != character->GetName() ||
+                original->GetWorldID() != character->GetWorldID() ||
+                original->GetKillTime() != character->GetKillTime();
+
+                if(changed)
+            {
+                break;
+            }
+            originalIterator++;
+        }
+
+    }
+
+    mCharacterList = obj;
+
+
+    if(changed)
+    {
+        std::stringstream ss;
+        auto characterObjClone = std::make_shared<packets::PacketLobbyCharacterList>();
+        if(obj->Save(ss))
+        {
+            if(characterObjClone->Load(ss))
+            {
+                mLogicWorker->SendToGame(new MessageCharacterList(characterObjClone));
+            }
+        }
+       
+    }
+    else
+    {
+        /// @todo Send an update for latency
+    }
+
+    return true;
 }
 
 bool LobbyManager::HandlePacketLobbyWorldList(libcomp::ReadOnlyPacket &p)

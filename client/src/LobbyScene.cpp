@@ -26,6 +26,9 @@
 
 #include "LobbyScene.h"
 
+// utility Includes
+#include <time.h>
+
 // libcomp Includes
 #include <EnumUtils.h>
 #include <ErrorCodes.h>
@@ -36,6 +39,11 @@
 
 // logic Messages
 #include <MessageConnectionInfo.h>
+#include <MessageCharacterList.h>
+
+// packet Includes
+#include <PacketLobbyCharacterList.h>
+#include <PacketLobbyCharacterListEntry.h>
 
 using namespace game;
 
@@ -56,13 +64,40 @@ bool LobbyScene::ProcessClientMessage(
 {
     switch(to_underlying(pMessage->GetMessageClientType()))
     {
-        // case to_underlying(MessageClientType::CONNECTED_TO_LOBBY):
-        //     return HandleConnectedToLobby(pMessage);
+        case to_underlying(MessageClientType::CHARACTER_LIST_UPDATE):
+            return HandleCharacterListUpdate(pMessage);
         default:
             break;
     }
 
     return false;
+}
+bool LobbyScene::HandleCharacterListUpdate(const libcomp::Message::MessageClient *pMessage)
+{   
+    const logic::MessageCharacterList *pCharListData =
+        reinterpret_cast<const logic::MessageCharacterList *>(pMessage);
+    auto characterPayload = pCharListData->GetPayload();
+    auto characterList = characterPayload->GetCharacters();
+    time_t lastLoginTime = characterPayload->GetLastLogin();
+    for (auto character : characterList) {
+        QString characterEntry;
+        QString characterName = QString::fromStdString(character->GetName().ToUtf8());
+        QString characterLevel = QString::number(character->GetLevel());
+        characterEntry.append(characterName);
+        characterEntry.append(QString::fromStdString(" Lv "));
+        characterEntry.append(characterLevel);
+        ui.characterList->addItem(characterEntry);
+    }
+    QString characterCountStr = QString::number(characterPayload->CharactersCount());
+    characterCountStr.append(QString::fromStdString("/20"));
+    QString lastLoginStr = QString::fromStdString("Last Login: ");
+    lastLoginStr.append(!lastLoginTime ? QString::fromStdString("----/ --/ -- --:--") : ctime(&lastLoginTime));
+    
+    ui.ticketCount->setText(QString::number(characterPayload->GetTicketCount()));
+    ui.characterCount->setText(characterCountStr);
+    ui.lastLogin->setText(lastLoginStr);
+    
+    return true;
 }
 
 void LobbyScene::closeEvent(QCloseEvent *pEvent)

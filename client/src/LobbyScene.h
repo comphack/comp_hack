@@ -65,6 +65,12 @@ public:
     bool ProcessClientMessage(
         const libcomp::Message::MessageClient *pMessage);
 
+    /**
+     * Handle Character List Update message.
+     * @param pMessage Client message to process.
+     */
+    bool HandleCharacterListUpdate(const libcomp::Message::MessageClient *pMessage);
+
 protected:
     /**
      * Handle a close event on the scene.

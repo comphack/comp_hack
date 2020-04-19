@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="PacketLobbyCharacterListEquippedVAEntry" persistent="false" namespace="packets">
+        <member type="s8" name="isEquippedVA"/>
+        <member type="u32" name="EquippedVA"/>
+    </object>
+    <object name="PacketLobbyCharacterListEntry" persistent="false" namespace="packets">
+        <member type="u8" name="CharacterID"/>
+        <member type="u8" name="WorldID"/>
+        <member type="string" name="Name" lensz="2" encoding="cp932"/>
+        <member type="u8" name="Gender"/>
+        <member type="u32" name="KillTime"/>
+        <member type="u32" name="PlayOpeningMovie"/>
+        <member type="s8" name="LastChannelUsed"/>
+        <member type="s8" name="Level"/>
+        <member type="u8" name="SkinType"/>
+        <member type="u8" name="HairType"/>
+        <member type="u8" name="EyeType"/>
+        <member type="u8" name="FaceType"/>
+        <member type="u8" name="HairColor"/>
+        <member type="u8" name="RightEyeColor"/>
+        <member type="u8" name="LeftEyeColor"/>
+        <member type="u8" name="Unknown"/>
+        <member type="u8" name="Unknown1"/>
+        <member type="array" name="EquippedItems" size="15">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="EquippedVA" lensz="4">
+            <element type="PacketLobbyCharacterListEquippedVAEntry*" namespace="packets"/>
+        </member>
+    </object>
+   <object name="PacketLobbyCharacterList" persistent="false" namespace="packets">
+        <member type="u32" name="LastLogin"/>
+        <member type="u8" name="TicketCount"/>
+        <member type="list" name="Characters" lensz="1">
+            <element type="PacketLobbyCharacterListEntry*" namespace="packets"/>
+        </member>
+    </object>
+</objgen>

@@ -147,11 +147,6 @@ bool LobbyManager::HandlePacketLobbyCharacterList(libcomp::ReadOnlyPacket &p) {
                 mLogicWorker->SendToGame(new MessageCharacterList(characterObjClone));
             }
         }
-       
-    }
-    else
-    {
-        /// @todo Send an update for latency
     }
 
     return true;

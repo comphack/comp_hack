@@ -1,3 +1,15 @@
+comphack (4.11.0) xenial; urgency=low
+
+  * Pentalpha fixes and reward rework (with new settings)
+  * Global bazaar cost/time settings
+  * Fixing Diaspora base relog bug
+  * Fixing double NRA shield use upon target reflect
+  * Fixing issue with characters being deleted while in a clan
+  * Fixing issues with max speed calculation
+  * More missed item/skill restrictions
+
+ -- COMP Omega <compomega@tutanota.com>  Tue, 28 Apr 2020 13:12:06 -0600
+
 comphack (4.10.0) xenial; urgency=low
 
   * Estoma is now properly broken (as designed)

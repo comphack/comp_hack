@@ -59,13 +59,13 @@ SET(VERSION_YEAR  2019)
 SET(VERSION_MAJOR 4)
 
 # Minor release (1 = SP1).
-SET(VERSION_MINOR 10)
+SET(VERSION_MINOR 11)
 
 # Patch version (a hotfix).
-SET(VERSION_PATCH 99)
+SET(VERSION_PATCH 0)
 
 # Codename for the version.
-SET(VERSION_CODENAME "Sigel (Unstable)")
+SET(VERSION_CODENAME "Sigel")
 
 #
 # END OF VERSION CONSTANTS

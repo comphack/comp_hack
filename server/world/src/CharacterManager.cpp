@@ -951,8 +951,7 @@ std::shared_ptr<objects::ClanInfo> CharacterManager::GetClan(const libobjgen::UU
         return clanInfo;
     }
 
-    // Both the clan and members should have been loaded already, do not load them
-    // if they haven't been
+    // The clan should have been loaded already
     auto clan = std::dynamic_pointer_cast<objects::Clan>(
         libcomp::PersistentObject::GetObjectByUUID(uuid));
     if(clan)
@@ -963,18 +962,19 @@ std::shared_ptr<objects::ClanInfo> CharacterManager::GetClan(const libobjgen::UU
             clanID = ++mMaxClanID;
         }
 
-        // Load the members and ensure all characters in the clan have
-        // a world CID
+        // Load the members to ensure all characters in the clan have
+        // a world CID and clan ID set
+        auto db = mServer.lock()->GetWorldDatabase();
         for(auto member : clan->GetMembers())
         {
-            if(member.Get())
+            if(member.Get(db))
             {
-                auto character = member->GetCharacter();
+                auto cLogin = GetCharacterLogin(member->GetCharacter());
+                if(!cLogin->GetClanID())
+                {
+                    cLogin->SetClanID(clanID);
+                }
 
-                auto cLogin = std::make_shared<objects::CharacterLogin>();
-                cLogin->SetCharacter(character);
-                cLogin->SetClanID(clanID);
-                cLogin = RegisterCharacter(cLogin);
                 clanInfo->SetMemberMap(cLogin->GetWorldCID(), member);
             }
         }

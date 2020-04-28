@@ -1117,8 +1117,8 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
 
                 if(state->GetZoneInSpotID())
                 {
-                    GetSpotPosition(state->GetZoneInSpotID(), zone
-                        ->GetDynamicMapID(), x, y, rot);
+                    GetSpotPosition(zone->GetDynamicMapID(),
+                        state->GetZoneInSpotID(), x, y, rot);
                 }
 
                 // Make sure nothing incorrect updates it later
@@ -1773,6 +1773,24 @@ bool ZoneManager::MoveToInstance(
                 LogZoneManagerWarningMsg("Failed to find the PvP instance "
                     "starting spot. Using the starting coordinates instead.\n");
             }
+            else if(state->GetChannelLogin())
+            {
+                // Check to see if this is a reconnect
+                auto character = state->GetCharacterState()->GetEntity();
+                auto channelLogin = state->GetChannelLogin();
+
+                auto instZone = instance->GetZone(channelLogin->GetToZoneID(),
+                    channelLogin->GetToDynamicMapID());
+                if(instZone &&
+                    instZone->GetDefinitionID() == character->GetLogoutZone())
+                {
+                    zone = instZone;
+                    zoneDef = zone->GetDefinition();
+                    x = character->GetLogoutX();
+                    y = character->GetLogoutY();
+                    rot = character->GetLogoutRotation();
+                }
+            }
 
             // No need to print the recovery message if no one has entered yet
             if(instance->GetAccessTimeOut() && instance->GetAccessed())
@@ -1784,8 +1802,8 @@ bool ZoneManager::MoveToInstance(
                 });
             }
 
-            return EnterZone(client, zoneDef->GetID(),
-                zoneDef->GetDynamicMapID(), x, y, rot);
+            return EnterZone(client, zone->GetDefinitionID(),
+                zone->GetDynamicMapID(), x, y, rot);
         }
     }
     else

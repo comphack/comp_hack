@@ -421,6 +421,12 @@ bool ChatManager::SendTellMessage(const std::shared_ptr<
     auto cState = state->GetCharacterState();
     auto character = cState->GetEntity();
 
+    LogChatManagerInfo([character, targetName, message]()
+    {
+        return libcomp::String("[Tell]:  %1 >> %2: %3\n")
+            .Arg(character->GetName()).Arg(targetName).Arg(message);
+    });
+
     // Relay a packet by target name
     libcomp::Packet relay;
     relay.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);

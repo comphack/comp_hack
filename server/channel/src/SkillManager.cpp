@@ -3021,6 +3021,12 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
             pSkill->Reflected = selfTarget.HitReflect;
             pSkill->Absorbed = selfTarget.HitAbsorb;
             pSkill->NRAAffinity = selfTarget.NRAAffinity;
+
+            // Check guard/dodge and add to target list now so NRA is
+            // not calculated twice below
+            ApplySecondaryCounter(source, selfTarget, pSkill);
+
+            skill.Targets.push_back(selfTarget);
         }
     }
 
@@ -3448,30 +3454,7 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
                 aoeReflect++;
             }
 
-            if(!target.HitNull && !target.HitAbsorb && !target.HitReflect &&
-                skill.Definition->GetBasic()->GetCombatSkill())
-            {
-                // Check if the target dodges or guards the skill. Counters
-                // only apply for the primary target and are handled earlier.
-                auto tActivated = target.EntityState->GetActivatedAbility();
-                if(tActivated && target.EntityState != source)
-                {
-                    auto tSkillData = tActivated->GetSkillData();
-                    switch(tSkillData->GetBasic()->GetActionType())
-                    {
-                    case objects::MiSkillBasicData::ActionType_t::GUARD:
-                        HandleGuard(source, target, pSkill);
-                        break;
-                    case objects::MiSkillBasicData::ActionType_t::DODGE:
-                        HandleDodge(source, target, pSkill);
-                        break;
-                    default:
-                        // Cancellations occur based on knockback or damage
-                        // later
-                        break;
-                    }
-                }
-            }
+            ApplySecondaryCounter(source, target, pSkill);
         }
 
         skill.Targets.push_back(target);
@@ -5585,6 +5568,36 @@ bool SkillManager::ApplyPrimaryCounter(
     }
 
     return false;
+}
+
+void SkillManager::ApplySecondaryCounter(const std::shared_ptr<
+    ActiveEntityState>& source, SkillTargetResult& target,
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+{
+    if(!target.HitNull && !target.HitAbsorb && !target.HitReflect &&
+        pSkill->Definition->GetBasic()->GetCombatSkill())
+    {
+        // Check if the target dodges or guards the skill. Counters
+        // only apply for the primary target and are handled earlier.
+        auto tActivated = target.EntityState->GetActivatedAbility();
+        if(tActivated && target.EntityState != pSkill->EffectiveSource)
+        {
+            auto tSkillData = tActivated->GetSkillData();
+            switch(tSkillData->GetBasic()->GetActionType())
+            {
+            case objects::MiSkillBasicData::ActionType_t::GUARD:
+                HandleGuard(source, target, pSkill);
+                break;
+            case objects::MiSkillBasicData::ActionType_t::DODGE:
+                HandleDodge(source, target, pSkill);
+                break;
+            default:
+                // Cancellations occur based on knockback or damage
+                // later
+                break;
+            }
+        }
+    }
 }
 
 bool SkillManager::HandleGuard(const std::shared_ptr<ActiveEntityState>& source,

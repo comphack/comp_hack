@@ -536,9 +536,9 @@ private:
         const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
-     * Determine how the primary reacts to being hit by a skill by either
-     * guarding, dodging or countering. This assumes NRA has already been
-     * applied. Upon success a target for the entity will be added to the
+     * Determine how the primary target reacts to being hit by a skill by
+     * either guarding, dodging or countering. This assumes NRA has already
+     * been applied. Upon success a target for the entity will be added to the
      * skill's targets list.
      * @param source Pointer to the state of the source entity
      * @param pSkill Current skill processing state
@@ -548,6 +548,18 @@ private:
      */
     bool ApplyPrimaryCounter(const std::shared_ptr<ActiveEntityState>& source,
         const std::shared_ptr<channel::ProcessingSkill>& pSkill, bool guard);
+
+    /**
+     * Determine how non-primary targets react to being hit by a skill by
+     * either guarding or dodging. Countering cannot occur at this point.
+     * This assumes NRA has already been applied.
+     * @param source Pointer to the state of the source entity
+     * @param target Skill targeted entity
+     * @param pSkill Skill processing state of the skill
+     */
+    void ApplySecondaryCounter(const std::shared_ptr<
+        ActiveEntityState>& source, SkillTargetResult& target,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
      * Execute or cancel the guard skill currently being used by the

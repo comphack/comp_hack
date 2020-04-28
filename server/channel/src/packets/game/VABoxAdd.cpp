@@ -28,6 +28,7 @@
 #include "Packets.h"
 
 // libcomp Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <ManagerPacket.h>
 #include <Packet.h>
@@ -36,6 +37,9 @@
 
 // object Includes
 #include <Item.h>
+#include <MiItemBasicData.h>
+#include <MiItemData.h>
+#include <MiUseRestrictionsData.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -67,9 +71,21 @@ bool Parsers::VABoxAdd::Parse(libcomp::ManagerPacket *pPacketManager,
     auto item = std::dynamic_pointer_cast<objects::Item>(
         libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
 
+    auto itemDef = item ? server->GetDefinitionManager()
+        ->GetItemData(item->GetType()) : nullptr;
+
     int8_t slot = -1;
 
-    bool failure = item == nullptr;
+    bool failure = item == nullptr || itemDef == nullptr ||
+        itemDef->GetBasic()->GetEquipType() ==
+            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE;
+    if(!failure)
+    {
+        auto restr = itemDef->GetRestriction();
+        failure = restr->GetGender() != GENDER_NA &&
+            cState->GetGender() != restr->GetGender();
+    }
+
     if(!failure)
     {
         for(size_t i = 0; i < 50; i++)

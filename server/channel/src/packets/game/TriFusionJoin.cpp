@@ -127,7 +127,7 @@ bool Parsers::TriFusionJoin::Parse(libcomp::ManagerPacket *pPacketManager,
                 }
             }
 
-            auto exp = pCState->GetEntity()->GetExpertises(17);
+            auto exp = pCState->GetEntity()->GetExpertises(EXPERTISE_FUSION);
 
             libcomp::Packet notify;
             notify.WritePacketCode(

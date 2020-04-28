@@ -38,6 +38,7 @@
 #include <EventInstance.h>
 #include <EventState.h>
 #include <ServerZone.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -76,7 +77,14 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
     auto bazaar = currentEvent && zone
         ? zone->GetBazaar(currentEvent->GetSourceEntityID()) : nullptr;
 
-    bool success = marketID != 0 && bazaar;
+    // Check the cost from world setting, otherwise zone definition
+    uint32_t actualCost = server->GetWorldSharedConfig()->GetBazaarMarketCost();
+    if(!actualCost)
+    {
+        actualCost = zone->GetDefinition()->GetBazaarMarketCost();
+    }
+
+    bool success = marketID != 0 && bazaar && maccaCost == (int32_t)actualCost;
     if(success)
     {
         if(bazaarData && bazaarData->GetMarketID() == marketID &&
@@ -103,7 +111,16 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_OPEN);
     if(success)
     {
-        uint32_t timeLeft = (uint32_t)(zone->GetDefinition()->GetBazaarMarketTime() * 60);
+        // Market time uses world setting, otherwise zone definition
+        uint32_t timeLeft = server->GetWorldSharedConfig()->GetBazaarMarketTime();
+        if(!timeLeft)
+        {
+            timeLeft = zone->GetDefinition()->GetBazaarMarketTime();
+        }
+
+        // Convert to seconds
+        timeLeft = (uint32_t)(timeLeft * 60);
+
         uint32_t timestamp = (uint32_t)time(0);
         uint32_t expirationTime = (uint32_t)(timestamp + (uint32_t)timeLeft);
 

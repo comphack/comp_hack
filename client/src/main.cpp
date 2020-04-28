@@ -269,5 +269,10 @@ int main(int argc, char *argv[])
         }
     }*/
 
+#ifndef EXOTIC_PLATFORM
+    // Stop the logger
+    delete libcomp::Log::GetSingletonPtr();
+#endif // !EXOTIC_PLATFORM
+
     return gReturnCode;
 }

@@ -34,6 +34,7 @@
 
 // object Includes
 #include <ServerZone.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -50,8 +51,12 @@ bool Parsers::BazaarState::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
+        ->GetServer());
+    auto sharedConfig = server->GetWorldSharedConfig();
+
+    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
+        connection);
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto zone = cState->GetZone();
@@ -59,9 +64,36 @@ bool Parsers::BazaarState::Parse(libcomp::ManagerPacket *pPacketManager,
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_STATE);
-    reply.WriteS32Little(zoneDef ? (int32_t)zoneDef->GetBazaarMarketTime() : 0);
-    reply.WriteS32Little(zoneDef ? (int32_t)zoneDef->GetBazaarMarketCost() : 0);
-    reply.WriteS32Little(zoneDef ? 0 : -1);
+
+    if(!zoneDef)
+    {
+        reply.WriteS32Little(0);
+        reply.WriteS32Little(0);
+        reply.WriteS32Little(-1);   // Error
+    }
+    else
+    {
+        // World settings for market time and cost override zone
+        if(sharedConfig->GetBazaarMarketTime())
+        {
+            reply.WriteS32Little((int32_t)sharedConfig->GetBazaarMarketTime());
+        }
+        else
+        {
+            reply.WriteS32Little((int32_t)zoneDef->GetBazaarMarketTime());
+        }
+
+        if(sharedConfig->GetBazaarMarketCost())
+        {
+            reply.WriteS32Little((int32_t)sharedConfig->GetBazaarMarketCost());
+        }
+        else
+        {
+            reply.WriteS32Little((int32_t)zoneDef->GetBazaarMarketCost());
+        }
+
+        reply.WriteS32Little(0);    // No error
+    }
 
     connection->SendPacket(reply);
 

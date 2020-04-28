@@ -229,7 +229,7 @@
 
 <section>
 <title>LevelUpBonusMax</title>
-<para><emphasis role="strong">Type:</emphasis> int</para>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
 <para><emphasis role="strong">Default:</emphasis> 1</para>
 <para>Number of times per level up bonus points can be gained for a character. Bonus points are gained in pairs of 2 so a value of 4 can result in 0, 2, 4, 6 or 8 points per level. For each bonus the LevelUpBonusChance setting is checked again.</para>
 
@@ -252,6 +252,45 @@
 </section><!-- Example -->
 
 </section><!-- EnabledDemonQuests -->
+
+<section>
+<title>BazaarMarketCost</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 0</para>
+<para>Overrides bazaar market costs (in macca) for all zones where bazaars exist if not set to zero.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="BazaarMarketCost">1000</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- BazaarMarketCost -->
+
+<section>
+<title>BazaarMarketTime</title>
+<para><emphasis role="strong">Type:</emphasis> integer</para>
+<para><emphasis role="strong">Default:</emphasis> 0</para>
+<para>Overrides bazaar market times (in minutes) for all zones where bazaars exist if not set to zero.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="BazaarMarketTime">30</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- BazaarMarketTime -->
+
+<section>
+<title>CritDefenseReduction</title>
+<para><emphasis role="strong">Type:</emphasis> float</para>
+<para><emphasis role="strong">Default:</emphasis> 1.0</para>
+<para>Designates what percentage of the defensive stat factored into damage formulas is ignored when a critical hit or higher occurs. Values must be between 0.0 and 1.0.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="CritDefenseReduction">0.5</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- CritDefenseReduction -->
 
 <section>
 <title>LevelCap</title>
@@ -317,6 +356,32 @@
 </section><!-- Example -->
 
 </section><!-- PvPGhosts -->
+
+<section>
+<title>PentalphaPayoutAll</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>Determines if everyone should be paid cowrie from participating in a Pentalpha match as opposed to just the rank 1 team(s). Teams below 1st place are reduced by 10% per rank.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="PentalphaPayoutAll">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- PentalphaPayoutAll -->
+
+<section>
+<title>PentalphaMinMaxPayout</title>
+<para><emphasis role="strong">Type:</emphasis> array of two integers</para>
+<para><emphasis role="strong">Default:</emphasis> -1</para>
+<para>Set of two values that specify the minimum and maximum base cowrie payout values respectively upon paying a Pentalpha match. Negative values default to limits of 100 min, 2000 max.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="PentalphaMinMaxPayout"><element>10</element><element>300</element></member>]]></para>
+</section><!-- Example -->
+
+</section><!-- PentalphaMinMaxPayout -->
 
 <section>
 <title>DailyGPLoss</title>

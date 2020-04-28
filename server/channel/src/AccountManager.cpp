@@ -442,6 +442,9 @@ void AccountManager::Logout(const std::shared_ptr<
             });
         }
 
+        account->SetLastLogout((uint32_t)std::time(0));
+        server->GetLobbyDatabase()->QueueUpdate(account, account->GetUUID());
+
         LogAccountManagerDebug([&]()
         {
             return libcomp::String("Logged out user: '%1'\n")

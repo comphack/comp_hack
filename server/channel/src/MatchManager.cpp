@@ -4003,7 +4003,7 @@ std::shared_ptr<objects::PentalphaEntry> MatchManager::LoadPentalphaData(
     std::shared_ptr<objects::PentalphaEntry> result;
     for(uint8_t i = 0; i < 2; i++)
     {
-        if((idxFlags & (1 >> i)) == 0) continue;
+        if((idxFlags & (1 << i)) == 0) continue;
 
         auto entry = state->GetPentalphaData(i).Get();
         auto match = GetPentalphaMatch(i == 1);

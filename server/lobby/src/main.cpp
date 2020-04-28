@@ -189,7 +189,12 @@ int main(int argc, const char *argv[])
     // Complete the shutdown process.
     libcomp::Shutdown::Complete();
 
-    LogGeneralInfoMsg("\rBye!\n");
+    LogGeneralInfoMsg("Bye!\n");
+
+#ifndef EXOTIC_PLATFORM
+    // Stop the logger
+    delete libcomp::Log::GetSingletonPtr();
+#endif // !EXOTIC_PLATFORM
 
     return returnCode;
 }

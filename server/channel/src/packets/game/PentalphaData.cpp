@@ -60,7 +60,8 @@ bool Parsers::PentalphaData::Parse(libcomp::ManagerPacket *pPacketManager,
         connection);
     auto state = client->GetClientState();
     auto character = state->GetCharacterState()->GetEntity();
-    auto progress = character ? character->GetProgress().Get() : nullptr;
+    auto progress = character ? character->GetProgress()
+        .Get(server->GetWorldDatabase()) : nullptr;
 
     auto entry = matchManager->LoadPentalphaData(client);
     auto previousEntry = state->GetPentalphaData(1).Get();

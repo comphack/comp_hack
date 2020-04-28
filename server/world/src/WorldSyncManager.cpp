@@ -2046,19 +2046,28 @@ bool WorldSyncManager::EndMatch(const std::shared_ptr<
         }
     }
 
+    // Calculate base gain from how much 1st place won by
     double cowrieGain = pointsFirst > 0
-        ? ((double)(pointsFirst - pointsSecond) / (double)pointsFirst) * 10.0
+        ? ((double)(pointsFirst - pointsSecond) / (double)pointsFirst)
         : 0.0;
 
-    // Apply limits
-    if(cowrieGain < 100.0)
+    auto sharedConfig = std::dynamic_pointer_cast<objects::WorldConfig>(
+        mServer.lock()->GetConfig())->GetWorldSharedConfig();
+
+    bool payoutAll = sharedConfig->GetPentalphaPayoutAll();
+    auto payoutRange = sharedConfig->GetPentalphaMinMaxPayout();
+
+    if(payoutRange[1] >= 0 && payoutRange[0] > payoutRange[1])
     {
-        cowrieGain = 100.0;
+        // Invalid, reset both min and max
+        payoutRange[0] = payoutRange[1] = -1;
     }
-    else if(cowrieGain > 2000.0)
-    {
-        cowrieGain = 2000.0;
-    }
+
+    // Calculate gain from range
+    int32_t min = payoutRange[0] >= 0 ? payoutRange[0] : 100;
+    int32_t max = payoutRange[1] >= 0 ? payoutRange[1] : 2000;
+
+    cowrieGain = (double)min + (double)(max - min) * cowrieGain;
 
     auto entries = objects::PentalphaEntry::LoadPentalphaEntryListByMatch(
         db, match->GetUUID());
@@ -2066,7 +2075,7 @@ bool WorldSyncManager::EndMatch(const std::shared_ptr<
     int32_t winningBethel = 0;
     for(auto entry : entries)
     {
-        if(match->GetRankings(entry->GetTeam()) == 1)
+        if(match->GetRankings((uint8_t)(entry->GetTeam() - 1)) == 1)
         {
             winningBethel += entry->GetBethel();
         }
@@ -2079,9 +2088,10 @@ bool WorldSyncManager::EndMatch(const std::shared_ptr<
     {
         if(!entry->GetActive()) continue;
 
-        if(match->GetRankings(entry->GetTeam()) == 1)
+        uint8_t rank = match->GetRankings((uint8_t)(entry->GetTeam() - 1));
+        if(rank == 1 || payoutAll)
         {
-            // Player was on winning team
+            // Player was on winning team or all teams being paid
             auto progress = objects::CharacterProgress::
                 LoadCharacterProgressByCharacter(db, entry->GetCharacter());
             if(!progress)
@@ -2094,6 +2104,13 @@ bool WorldSyncManager::EndMatch(const std::shared_ptr<
             {
                 cowrieGained = (int32_t)(cowrieGain * (1.0 +
                     (double)entry->GetBethel() / (double)winningBethel));
+
+                if(rank != 1)
+                {
+                    // Reduce by 10% per rank
+                    cowrieGained = (int32_t)((double)cowrieGained *
+                        (1.0 - ((double)(rank - 1) * 0.1)));
+                }
             }
 
             entry->SetCowrie(cowrieGained);

@@ -127,8 +127,8 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WritePacketCode(
         LobbyToClientPacketCode_t::PACKET_CHARACTER_LIST);
 
-    // Time of last login.
-    reply.WriteU32Little(account->GetLastLogin());
+    // Time of last logout.
+    reply.WriteU32Little(account->GetLastLogout());
 
     // Number of character tickets.
     reply.WriteU8(account->GetTicketCount());

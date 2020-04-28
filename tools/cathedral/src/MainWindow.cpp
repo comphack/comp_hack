@@ -133,6 +133,9 @@ MainWindow::~MainWindow()
     }
 
     mObjectSelectors.clear();
+
+    // Stop the logger
+    delete libcomp::Log::GetSingletonPtr();
 }
 
 bool MainWindow::Init()

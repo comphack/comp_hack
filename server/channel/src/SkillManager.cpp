@@ -9300,7 +9300,20 @@ int32_t SkillManager::CalculateDamage_Normal(const std::shared_ptr<
         calc = calc + (float)skill.ExpertiseRankBoost * 0.5f;
 
         // Subtract the enemy defense, unless its a critical or limit break
-        calc = calc - (float)(critLevel > 0 ? 0 : def);
+        if(critLevel > 0)
+        {
+            const static float reduction = mServer.lock()
+                ->GetWorldSharedConfig()->GetCritDefenseReduction();
+            if(reduction != 1.f)
+            {
+                // Non-full reduction on crit
+                calc = calc - (float)def * (1.f - reduction);
+            }
+        }
+        else
+        {
+            calc = calc - (float)def;
+        }
 
         if(calc > 0.f)
         {

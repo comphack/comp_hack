@@ -79,12 +79,12 @@
 <context>
     <name>LanguageSelection</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_LanguageSelection.h" line="81"/>
+        <location filename="../../../build64/tools/updater/ui_LanguageSelection.h" line="81"/>
         <source>Language Selection</source>
         <translation>Выбор языка</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_LanguageSelection.h" line="82"/>
+        <location filename="../../../build64/tools/updater/ui_LanguageSelection.h" line="82"/>
         <source>Please select a language:</source>
         <translation>Пожалуйста выберите язык:</translation>
     </message>
@@ -126,87 +126,87 @@
 <context>
     <name>Options</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="213"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="213"/>
         <source>Shin Megami Tensei IMAGINE - Game Option Configuration</source>
         <translation>Shin Megami Tensei IMAGINE - Настройка</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="214"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="214"/>
         <source>Mode:</source>
         <translation>Режим:</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="215"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="215"/>
         <source>Window</source>
         <translation>Оконный режим</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="216"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="216"/>
         <source>Full Screen</source>
         <translation>Полноэкранный режим</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="218"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="218"/>
         <source>Video Card:</source>
         <translation>Видеоадптер:</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="219"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="219"/>
         <source>Screen Size:</source>
         <translation>Размер экрана:</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="220"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="220"/>
         <source>Chat Text Size:</source>
         <translation>Размер шрифта в чате:</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="221"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="221"/>
         <source>Preset</source>
         <translation>Разрешение</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="222"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="222"/>
         <source>Custom</source>
         <translation>Другое</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="223"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="223"/>
         <source>x</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="224"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="224"/>
         <source>Small (12pt)</source>
         <translation>Маленький (12pt)</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="225"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="225"/>
         <source>Medium (14pt)</source>
         <translation>Средний (14pt)</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="226"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="226"/>
         <source>Large (16pt)</source>
         <translation>Большой (16pt)</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="227"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="227"/>
         <source>Small (12pt no antialiasing)</source>
         <translation>Маленький (12pt без сглаж.)</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="228"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="228"/>
         <source>Medium (14pt no antialiasing)</source>
         <translation>Средний (14pt без сглаж.)</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="229"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="229"/>
         <source>Large (16pt no antialiasing)</source>
         <translation>Большой (16pt без сглаж.)</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="231"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="231"/>
         <source>Language:</source>
         <translation>Язык:</translation>
     </message>
@@ -272,42 +272,42 @@
 <context>
     <name>Updater</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="168"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="168"/>
         <source>COMP_hack Updater v1.0</source>
         <translation>Лаунчер COMP_hack v1.0</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="171"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="171"/>
         <source>Please wait...</source>
         <translation>Подождите, пожалуйста...</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="172"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="172"/>
         <source>Screenshots</source>
         <translation>Скриншоты</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="175"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="175"/>
         <source>Retry</source>
         <translation>Повторить</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="176"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="176"/>
         <source>Full Check</source>
         <translation>Полная проверка</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="173"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="173"/>
         <source>Diagnostics</source>
         <translation>Диагностика</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="174"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="174"/>
         <source>Settings</source>
         <translation>Настройки</translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="177"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="177"/>
         <source>PLAY GAME</source>
         <translation>ИГРАТЬ</translation>
     </message>

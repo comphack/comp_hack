@@ -105,8 +105,10 @@ QMap<QString, FileData*> Downloader::parseFileList(const QByteArray& d)
 
 Downloader::Downloader(const QString& url, QObject *p) : QObject(p),
     mTotalFiles(0), mCurrentReq(0), mHaveVersion(false), mCurrentFile(0),
-    mActiveRetries(0)
+    mActiveRetries(0), mLog("ImagineUpdate.log")
 {
+    mLog.open(QIODevice::WriteOnly);
+
     mURL = url;
     mBare = false;
     mKill = false;
@@ -165,6 +167,8 @@ void Downloader::startUpdate()
 {
     mConnection = new QNetworkAccessManager;
 
+    log(tr("Starting update"));
+
     if(mUseClassic)
     {
         startDownload(tr("%1/hashlist.dat").arg(mURL));
@@ -182,8 +186,14 @@ void Downloader::requestError(QNetworkReply::NetworkError code)
     // If there was a timeout, try again before reporting the error.
     if(mActiveRetries && QNetworkReply::TimeoutError == mCurrentReq->error())
     {
+        log(tr("Download timeout: will retry download"));
+
         startDownload(mActiveURL, mActivePath);
         return;
+    }
+    else if(QNetworkReply::TimeoutError == mCurrentReq->error())
+    {
+        log(tr("Download timeout: giving up"));
     }
 
     auto errorString = mCurrentReq->errorString();
@@ -220,6 +230,8 @@ void Downloader::requestReadyRead()
 
     mFileHash->addData(data);
     mData.append(data);
+
+    log(tr("Read %1 bytes of data").arg(data.size()));
 
     emit downloadProgressChanged(mData.size());
 }
@@ -314,6 +326,13 @@ void Downloader::requestFinished()
     mFileHash->addData(data);
     mData.append(data);
 
+    if(!data.isEmpty())
+    {
+        log(tr("Read %1 bytes of data").arg(data.size()));
+    }
+
+    log(tr("Download finished"));
+
     QString checksum = mFileHash->result().toHex();
     mFileHash->reset();
 
@@ -334,10 +353,14 @@ void Downloader::requestFinished()
 
             if(mLastVersion.size() > 20 && mServerVersion == mLastVersion)
             {
+                log(tr("Checking version: up-to-date"));
+
                 emit updateFinished();
 
                 return;
             }
+
+            log(tr("Checking version: update required"));
 
             // Now download the hashlist
             startDownload(QString("%1/hashlist.dat.compressed").arg(mURL));
@@ -483,6 +506,8 @@ void Downloader::requestFinished()
 
 void Downloader::expressFinish(const QString& msg)
 {
+    log(msg);
+
     QFile last("ImagineUpdate2.dat");
     if(mSaveFiles)
         last.open(QIODevice::WriteOnly | QIODevice::Append);
@@ -640,6 +665,8 @@ void Downloader::advanceToNextFile()
         std::cout << "Done!" << std::endl;
 #endif // COMP_HACK_HEADLESS
 
+        log(tr("Update finished"));
+
         if(mSaveFiles && !mUseClassic)
         {
             QFile ver("ImagineUpdate2.ver");
@@ -654,6 +681,8 @@ void Downloader::advanceToNextFile()
 
 void Downloader::startDownload(const QString& url, const QString& path)
 {
+    log(tr("Starting download of %1").arg(url));
+
     mStatusCode = 0;
 
     if(mActiveURL == url || mActivePath == path)
@@ -693,4 +722,10 @@ void Downloader::startDownload(const QString& url, const QString& path)
 void Downloader::setURL(const QString& url)
 {
     mURL = url;
+}
+
+void Downloader::log(const QString& msg)
+{
+    mLog.write(tr("%1: %2\n").arg(QDateTime::currentDateTime()
+        .toString(Qt::ISODate)).arg(msg).toLocal8Bit());
 }

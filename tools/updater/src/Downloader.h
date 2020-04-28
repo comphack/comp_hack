@@ -28,6 +28,7 @@
 #define TOOLS_UPDATER_SRC_DOWNLOADER_H
 
 #include <PushIgnore.h>
+#include <QFile>
 #include <QMap>
 #include <QList>
 #include <QObject>
@@ -94,6 +95,7 @@ protected:
         int in_size, int chunk_size) const;
     QMap<QString, FileData*> parseFileList(const QByteArray& d);
     bool checkFile(const FileData *info);
+    void log(const QString& msg);
 
     int mStatusCode;
     int mTotalFiles;
@@ -125,6 +127,8 @@ protected:
     QString mActiveURL;
     QString mActivePath;
     int mActiveRetries;
+
+    QFile mLog;
 };
 
 #endif // TOOLS_UPDATER_SRC_DOWNLOADER_H

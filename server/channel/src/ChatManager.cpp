@@ -1419,8 +1419,9 @@ bool ChatManager::GMCommand_ExpertiseExtend(const std::shared_ptr<
 
     std::list<libcomp::String> argsCopy = args;
 
-    uint8_t val = 1;
-    if(argsCopy.size() != 0 && !GetIntegerArg<uint8_t>(val, argsCopy))
+    int8_t val = 1;
+    if((argsCopy.size() != 0 && !GetIntegerArg<int8_t>(val, argsCopy)) ||
+        val < -1)
     {
         return false;
     }
@@ -1431,8 +1432,17 @@ bool ChatManager::GMCommand_ExpertiseExtend(const std::shared_ptr<
 
     if(character)
     {
-        int8_t newVal = (int8_t)((character->GetExpertiseExtension() + val) > 127
-            ? 127 : (character->GetExpertiseExtension() + val));
+        int8_t newVal = 0;
+        if(val == -1)
+        {
+            // No cap
+            newVal = val;
+        }
+        else
+        {
+            newVal = (int8_t)((character->GetExpertiseExtension() + val) > 127
+                ? 127 : (character->GetExpertiseExtension() + val));
+        }
 
         if(newVal != character->GetExpertiseExtension())
         {

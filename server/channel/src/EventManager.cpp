@@ -1014,8 +1014,13 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
                 }
                 else
                 {
-                    LogEventManagerErrorMsg("Attempted to set zone character"
-                        " flags with no associated client: %1\n");
+                    auto eventID = ctx.EventInstance->GetEvent()->GetID();
+                    LogEventManagerError([eventID]()
+                    {
+                        return libcomp::String("Attempted to check zone"
+                            " character flags with no associated client: %1\n")
+                            .Arg(eventID);
+                    });
 
                     return false;
                 }
@@ -1031,8 +1036,13 @@ bool EventManager::EvaluateEventCondition(EventContext& ctx, const std::shared_p
                 }
                 else
                 {
-                    LogEventManagerErrorMsg("Attempted to set zone instance "
-                        "character flags with no associated client: %1\n");
+                    auto eventID = ctx.EventInstance->GetEvent()->GetID();
+                    LogEventManagerError([eventID]()
+                    {
+                        return libcomp::String("Attempted to check zone"
+                            " instance character flags with no associated"
+                            " client: %1\n").Arg(eventID);
+                    });
 
                     return false;
                 }
@@ -1712,6 +1722,11 @@ bool EventManager::EvaluateCondition(EventContext& ctx,
 
             int32_t maxTotalPoints = server->GetCharacterManager()
                 ->GetMaxExpertisePoints(character);
+            if(maxTotalPoints < 0)
+            {
+                // No (functional) limit
+                maxTotalPoints = std::numeric_limits<int32_t>::max();
+            }
 
             int32_t totalUsed = 0;
             for(size_t i = 0; i < (size_t)(EXPERTISE_COUNT - 1); i++)

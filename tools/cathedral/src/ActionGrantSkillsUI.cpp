@@ -111,7 +111,7 @@ std::shared_ptr<objects::Action> ActionGrantSkills::Save() const
         mAction->InsertSkillIDs(skillID);
     }
 
-    mAction->SetExpertiseMax((uint8_t)prop->expertiseMax->value());
+    mAction->SetExpertiseMax((int8_t)prop->expertiseMax->value());
     mAction->SetExpertiseSet(prop->expertiseSet->isChecked());
 
     mAction->ClearExpertisePoints();

@@ -963,7 +963,8 @@ public:
      * Get the maximum number of expertise points available to the
      * supplied characater.
      * @param character Pointer to the character
-     * @return Maximum expertise points available to the character
+     * @return Maximum expertise points available to the character, negated
+     *  normal maximum expertise when no cap exists
      */
     int32_t GetMaxExpertisePoints(const std::shared_ptr<
         objects::Character>& character);
@@ -1439,14 +1440,20 @@ public:
         const std::shared_ptr<objects::EntityStats>& cs);
 
     /**
-     * Calculate the dependent stats (ex: max HP, close range damage) for a character
-     * or demon and update the values of a correct table map.
+     * Calculate the dependent stats (ex: max HP, close range damage) for a
+     * character or demon and update the values of a correct table map.
      * @param stats Reference to a correct table map
      * @param level Current level of the character or demon
      * @param isDemon true if the entity is a demon, false if it is character
+     * @param mode Flag mask indicating which stats should be calculated.
+     *  Options include:
+     *  0x01) HP/MP
+     *  0x02) CLSR/LNGR/SPELL/SUPPORT/PDEF/MDEF
+     *  0x04) CHANT_TIME/COOLDOWN_TIME
+     *  Defaults to all
      */
     static void CalculateDependentStats(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
-        int8_t level, bool isDemon);
+        int8_t level, bool isDemon, uint8_t mode = 0x07);
 
     /**
      * Correct a map of calculated stat values to not exceed the maximum or

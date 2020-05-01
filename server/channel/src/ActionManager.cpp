@@ -1869,6 +1869,42 @@ bool ActionManager::GrantSkills(ActionContext& ctx)
                     act->GetSkillPoints());
             }
 
+            if(act->GetExpertiseMax())
+            {
+                int8_t val = act->GetExpertiseMax();
+
+                int16_t newVal = 0;
+                if(val == -1)
+                {
+                    // No cap
+                    newVal = val;
+                }
+                else if(character->GetExpertiseExtension() < 0)
+                {
+                    // Removing no cap
+                    newVal = val;
+                }
+                else
+                {
+                    newVal = (int16_t)(
+                        character->GetExpertiseExtension() + val);
+                }
+
+                if(newVal > 127)
+                {
+                    newVal = 127;
+                }
+
+                if((int8_t)newVal != character->GetExpertiseExtension())
+                {
+                    character->SetExpertiseExtension((int8_t)newVal);
+
+                    characterManager->SendExpertiseExtension(ctx.Client);
+                    server->GetWorldDatabase()->QueueUpdate(character,
+                        state->GetAccountUID());
+                }
+            }
+
             if(act->ExpertisePointsCount() > 0)
             {
                 bool expSet = act->GetExpertiseSet();
@@ -1894,27 +1930,6 @@ bool ActionManager::GrantSkills(ActionContext& ctx)
 
                 characterManager->UpdateExpertisePoints(ctx.Client, expPoints);
             }
-
-            if(act->GetExpertiseMax() > 0)
-            {
-                uint8_t val = act->GetExpertiseMax();
-
-                int16_t newVal = (int16_t)(
-                    character->GetExpertiseExtension() + val);
-                if(newVal > 127)
-                {
-                    newVal = 127;
-                }
-
-                if((int8_t)newVal != character->GetExpertiseExtension())
-                {
-                    character->SetExpertiseExtension((int8_t)newVal);
-
-                    characterManager->SendExpertiseExtension(ctx.Client);
-                    server->GetWorldDatabase()->QueueUpdate(character,
-                        state->GetAccountUID());
-                }
-            }
         }
         break;
     case objects::ActionGrantSkills::TargetType_t::PARTNER:
@@ -1935,7 +1950,7 @@ bool ActionManager::GrantSkills(ActionContext& ctx)
             return false;
         }
 
-        if(act->GetExpertiseMax() > 0)
+        if(act->GetExpertiseMax())
         {
             LogActionManagerErrorMsg("Attempted to extend max expertise for a "
                 "partner demon\n");

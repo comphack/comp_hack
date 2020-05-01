@@ -279,7 +279,9 @@ void CharacterManager::SendCharacterData(const std::shared_ptr<
 
     reply.WriteS8(c && c->GetSupportDisplay() ? 10 : 0);
     reply.WriteS8(0);   // Unknown
-    reply.WriteS8(c->GetExpertiseExtension());
+    reply.WriteS8(c->GetExpertiseExtension() < 0
+        ? (int8_t)(GetMaxExpertisePoints(c) / 100000)
+        : c->GetExpertiseExtension());
 
     reply.WriteS32((int32_t)c->EquippedVACount());
     for(uint8_t i = 0; i <= MAX_VA_INDEX; i++)
@@ -5281,7 +5283,8 @@ void CharacterManager::UpdateExpertisePoints(const std::shared_ptr<
             if(expPoints == maxPoints) continue;
 
             // Don't exceed the max total points
-            if((currentPoints + adjust) > maxTotalPoints)
+            if(maxTotalPoints >= 0 &&
+                (currentPoints + adjust) > maxTotalPoints)
             {
                 adjust = maxTotalPoints - currentPoints;
             }
@@ -5378,14 +5381,22 @@ int32_t CharacterManager::GetMaxExpertisePoints(const std::shared_ptr<
     auto stats = character->GetCoreStats();
 
     int32_t maxPoints = MIN_EXPERTISE_POINTS +
-        (int32_t)(floorl((float)stats->GetLevel() * 0.1) * 1000 * 100) +
-        ((int32_t)character->GetExpertiseExtension() * 1000 * 100);
+        (int32_t)(floorl((float)stats->GetLevel() * 0.1) * 1000 * 100);
 
     if(stats->GetLevel() == 99)
     {
         // Level 99 awards a bonus 1000.00 points available
         maxPoints = maxPoints + 100000;
     }
+
+    int8_t extension = character->GetExpertiseExtension();
+    if(extension < 0)
+    {
+        // Signifies no cap
+        return -maxPoints;
+    }
+
+    maxPoints = maxPoints + ((int32_t)extension * 1000 * 100);
 
     return maxPoints;
 }
@@ -5400,8 +5411,11 @@ void CharacterManager::SendExpertiseExtension(const std::shared_ptr<
     if(character)
     {
         libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EXPERTISE_EXTENSION);
-        p.WriteS8(character->GetExpertiseExtension());
+        p.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_EXPERTISE_EXTENSION);
+        p.WriteS8(character->GetExpertiseExtension() < 0
+            ? (int8_t)(GetMaxExpertisePoints(character) / 100000)
+            : character->GetExpertiseExtension());
 
         client->SendPacket(p);
     }
@@ -7964,67 +7978,113 @@ libcomp::EnumMap<CorrectTbl, int32_t> CharacterManager::GetCharacterBaseStats(
 }
 
 void CharacterManager::CalculateDependentStats(
-    libcomp::EnumMap<CorrectTbl, int32_t>& stats, int8_t level, bool isDemon)
+    libcomp::EnumMap<CorrectTbl, int32_t>& stats, int8_t level, bool isDemon,
+    uint8_t mode)
 {
     /// @todo: fix: close but not quite right
     libcomp::EnumMap<CorrectTbl, int32_t> adjusted;
-    if(isDemon)
-    {
-        // Round up each part
-        adjusted[CorrectTbl::HP_MAX] = (int32_t)(stats[CorrectTbl::HP_MAX] +
-            (int32_t)ceill(stats[CorrectTbl::HP_MAX] * 0.03 * level) +
-            (int32_t)ceill(stats[CorrectTbl::STR] * 0.3) +
-            (int32_t)ceill(((stats[CorrectTbl::HP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::VIT]));
-        adjusted[CorrectTbl::MP_MAX] = (int32_t)(stats[CorrectTbl::MP_MAX] +
-            (int32_t)ceill(stats[CorrectTbl::MP_MAX] * 0.03 * level) +
-            (int32_t)ceill(stats[CorrectTbl::MAGIC] * 0.3) +
-            (int32_t)ceill(((stats[CorrectTbl::MP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::INT]));
 
-        // Round the result, adjusting by 0.5
-        adjusted[CorrectTbl::CLSR] = (int32_t)(stats[CorrectTbl::CLSR] +
-            (int32_t)roundl((stats[CorrectTbl::STR] * 0.5) + 0.5 + (level * 0.1)));
-        adjusted[CorrectTbl::LNGR] = (int32_t)(stats[CorrectTbl::LNGR] +
-            (int32_t)roundl((stats[CorrectTbl::SPEED] * 0.5) + 0.5 + (level * 0.1)));
-        adjusted[CorrectTbl::SPELL] = (int32_t)(stats[CorrectTbl::SPELL] +
-            (int32_t)roundl((stats[CorrectTbl::MAGIC] * 0.5) + 0.5 + (level * 0.1)));
-        adjusted[CorrectTbl::SUPPORT] = (int32_t)(stats[CorrectTbl::SUPPORT] +
-            (int32_t)roundl((stats[CorrectTbl::INT] * 0.5) + 0.5 + (level * 0.1)));
-        adjusted[CorrectTbl::PDEF] = (int32_t)(stats[CorrectTbl::PDEF] +
-            (int32_t)roundl((stats[CorrectTbl::VIT] * 0.1) + 0.5 + (level * 0.1)));
-        adjusted[CorrectTbl::MDEF] = (int32_t)(stats[CorrectTbl::MDEF] +
-            (int32_t)roundl((stats[CorrectTbl::INT] * 0.1) + 0.5 + (level * 0.1)));
+    if(mode & 0x01)
+    {
+        if(isDemon)
+        {
+            // Round up each part
+            adjusted[CorrectTbl::HP_MAX] = (int32_t)(
+                stats[CorrectTbl::HP_MAX] +
+                (int32_t)ceill(stats[CorrectTbl::HP_MAX] * 0.03 * level) +
+                (int32_t)ceill(stats[CorrectTbl::STR] * 0.3) +
+                (int32_t)ceill(((stats[CorrectTbl::HP_MAX] * 0.01) + 0.5) *
+                    stats[CorrectTbl::VIT]));
+            adjusted[CorrectTbl::MP_MAX] = (int32_t)(
+                stats[CorrectTbl::MP_MAX] +
+                (int32_t)ceill(stats[CorrectTbl::MP_MAX] * 0.03 * level) +
+                (int32_t)ceill(stats[CorrectTbl::MAGIC] * 0.3) +
+                (int32_t)ceill(((stats[CorrectTbl::MP_MAX] * 0.01) + 0.5) *
+                    stats[CorrectTbl::INT]));
+        }
+        else
+        {
+            // Round each part
+            adjusted[CorrectTbl::HP_MAX] = (int32_t)(
+                stats[CorrectTbl::HP_MAX] +
+                (int32_t)roundl(stats[CorrectTbl::HP_MAX] * 0.03 * level) +
+                (int32_t)roundl(stats[CorrectTbl::STR] * 0.3) +
+                (int32_t)roundl(((stats[CorrectTbl::HP_MAX] * 0.01) + 0.5) *
+                    stats[CorrectTbl::VIT]));
+            adjusted[CorrectTbl::MP_MAX] = (int32_t)(
+                stats[CorrectTbl::MP_MAX] +
+                (int32_t)roundl(stats[CorrectTbl::MP_MAX] * 0.03 * level) +
+                (int32_t)roundl(stats[CorrectTbl::MAGIC] * 0.3) +
+                (int32_t)roundl(((stats[CorrectTbl::MP_MAX] * 0.01) + 0.5) *
+                    stats[CorrectTbl::INT]));
+        }
     }
-    else
-    {
-        // Round each part
-        adjusted[CorrectTbl::HP_MAX] = (int32_t)(stats[CorrectTbl::HP_MAX] +
-            (int32_t)roundl(stats[CorrectTbl::HP_MAX] * 0.03 * level) +
-            (int32_t)roundl(stats[CorrectTbl::STR] * 0.3) +
-            (int32_t)roundl(((stats[CorrectTbl::HP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::VIT]));
-        adjusted[CorrectTbl::MP_MAX] = (int32_t)(stats[CorrectTbl::MP_MAX] +
-            (int32_t)roundl(stats[CorrectTbl::MP_MAX] * 0.03 * level) +
-            (int32_t)roundl(stats[CorrectTbl::MAGIC] * 0.3) +
-            (int32_t)roundl(((stats[CorrectTbl::MP_MAX] * 0.01) + 0.5) * stats[CorrectTbl::INT]));
 
-        // Round the results down
-        adjusted[CorrectTbl::CLSR] = (int32_t)(stats[CorrectTbl::CLSR] +
-            (int32_t)floorl((stats[CorrectTbl::STR] * 0.5) + (level * 0.1)));
-        adjusted[CorrectTbl::LNGR] = (int32_t)(stats[CorrectTbl::LNGR] +
-            (int32_t)floorl((stats[CorrectTbl::SPEED] * 0.5) + (level * 0.1)));
-        adjusted[CorrectTbl::SPELL] = (int32_t)(stats[CorrectTbl::SPELL] +
-            (int32_t)floorl((stats[CorrectTbl::MAGIC] * 0.5) + (level * 0.1)));
-        adjusted[CorrectTbl::SUPPORT] = (int32_t)(stats[CorrectTbl::SUPPORT] +
-            (int32_t)floorl((stats[CorrectTbl::INT] * 0.5) + (level * 0.1)));
-        adjusted[CorrectTbl::PDEF] = (int32_t)(stats[CorrectTbl::PDEF] +
-            (int32_t)floorl((stats[CorrectTbl::VIT] * 0.1) + (level * 0.1)));
-        adjusted[CorrectTbl::MDEF] = (int32_t)(stats[CorrectTbl::MDEF] +
-            (int32_t)floorl((stats[CorrectTbl::INT] * 0.1) + (level * 0.1)));
+    if(mode & 0x02)
+    {
+        if(isDemon)
+        {
+            // Round the result, adjusting by 0.5
+            adjusted[CorrectTbl::CLSR] = (int32_t)(
+                stats[CorrectTbl::CLSR] +
+                (int32_t)roundl((stats[CorrectTbl::STR] * 0.5) + 0.5 +
+                (level * 0.1)));
+            adjusted[CorrectTbl::LNGR] = (int32_t)(
+                stats[CorrectTbl::LNGR] +
+                (int32_t)roundl((stats[CorrectTbl::SPEED] * 0.5) + 0.5 +
+                (level * 0.1)));
+            adjusted[CorrectTbl::SPELL] = (int32_t)(
+                stats[CorrectTbl::SPELL] +
+                (int32_t)roundl((stats[CorrectTbl::MAGIC] * 0.5) + 0.5 +
+                (level * 0.1)));
+            adjusted[CorrectTbl::SUPPORT] = (int32_t)(
+                stats[CorrectTbl::SUPPORT] +
+                (int32_t)roundl((stats[CorrectTbl::INT] * 0.5) + 0.5 +
+                (level * 0.1)));
+            adjusted[CorrectTbl::PDEF] = (int32_t)(
+                stats[CorrectTbl::PDEF] +
+                (int32_t)roundl((stats[CorrectTbl::VIT] * 0.1) + 0.5 +
+                (level * 0.1)));
+            adjusted[CorrectTbl::MDEF] = (int32_t)(
+                stats[CorrectTbl::MDEF] +
+                (int32_t)roundl((stats[CorrectTbl::INT] * 0.1) + 0.5 +
+                (level * 0.1)));
+        }
+        else
+        {
+            // Round the results down
+            adjusted[CorrectTbl::CLSR] = (int32_t)(
+                stats[CorrectTbl::CLSR] +
+                (int32_t)floorl((stats[CorrectTbl::STR] * 0.5) +
+                (level * 0.1)));
+            adjusted[CorrectTbl::LNGR] = (int32_t)(
+                stats[CorrectTbl::LNGR] +
+                (int32_t)floorl((stats[CorrectTbl::SPEED] * 0.5) +
+                (level * 0.1)));
+            adjusted[CorrectTbl::SPELL] = (int32_t)(
+                stats[CorrectTbl::SPELL] +
+                (int32_t)floorl((stats[CorrectTbl::MAGIC] * 0.5) +
+                (level * 0.1)));
+            adjusted[CorrectTbl::SUPPORT] = (int32_t)(
+                stats[CorrectTbl::SUPPORT] +
+                (int32_t)floorl((stats[CorrectTbl::INT] * 0.5) +
+                (level * 0.1)));
+            adjusted[CorrectTbl::PDEF] = (int32_t)(
+                stats[CorrectTbl::PDEF] +
+                (int32_t)floorl((stats[CorrectTbl::VIT] * 0.1) +
+                (level * 0.1)));
+            adjusted[CorrectTbl::MDEF] = (int32_t)(
+                stats[CorrectTbl::MDEF] +
+                (int32_t)floorl((stats[CorrectTbl::INT] * 0.1) +
+                (level * 0.1)));
+        }
     }
 
     for(auto pair : adjusted)
     {
-        // Since any negative value used for a calculation here is not valid, any result
-        // in a negative value should be treated as an overflow and be set to max
+        // Since any negative value used for a calculation here is not valid,
+        // any result in a negative value should be treated as an overflow and
+        // be set to max
         if(pair.second < 0)
         {
             stats[pair.first] = std::numeric_limits<int32_t>::max();
@@ -8035,15 +8095,20 @@ void CharacterManager::CalculateDependentStats(
         }
     }
 
-    // Calculate incant/cooldown time decrease adjustments
-    int32_t chantAdjust = (int32_t)(stats[CorrectTbl::CHANT_TIME] -
-        (int32_t)floor(2.5 * floor(stats[CorrectTbl::INT] * 0.1) +
-            1.5 * floor(stats[CorrectTbl::SPEED] * 0.1)));
-    int32_t coolAdjust = (int32_t)(stats[CorrectTbl::COOLDOWN_TIME] -
-        (int32_t)floor(2.5 * floor(stats[CorrectTbl::VIT] * 0.1) +
-            1.5 * floor(stats[CorrectTbl::SPEED] * 0.1)));
-    stats[CorrectTbl::CHANT_TIME] = (int32_t)(chantAdjust < 0 ? 0 : chantAdjust);
-    stats[CorrectTbl::COOLDOWN_TIME] = (int32_t)(coolAdjust < 5 ? 5 : coolAdjust);
+    if(mode & 0x04)
+    {
+        // Calculate incant/cooldown time decrease adjustments
+        int32_t chantAdjust = (int32_t)(stats[CorrectTbl::CHANT_TIME] -
+            (int32_t)floor(2.5 * floor(stats[CorrectTbl::INT] * 0.1) +
+                1.5 * floor(stats[CorrectTbl::SPEED] * 0.1)));
+        int32_t coolAdjust = (int32_t)(stats[CorrectTbl::COOLDOWN_TIME] -
+            (int32_t)floor(2.5 * floor(stats[CorrectTbl::VIT] * 0.1) +
+                1.5 * floor(stats[CorrectTbl::SPEED] * 0.1)));
+        stats[CorrectTbl::CHANT_TIME] = (int32_t)(
+            chantAdjust < 0 ? 0 : chantAdjust);
+        stats[CorrectTbl::COOLDOWN_TIME] = (int32_t)(
+            coolAdjust < 5 ? 5 : coolAdjust);
+    }
 }
 
 void CharacterManager::AdjustStatBounds(libcomp::EnumMap<CorrectTbl, int32_t>& stats,

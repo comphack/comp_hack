@@ -328,6 +328,7 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
     auto demonStats = CharacterManager::GetDemonBaseStats(devilData,
         definitionManager, demon->GetGrowthType(), demonLvl);
 
+    // Adjust stats to get base value
     CharacterManager::AdjustDemonBaseStats(demon, demonStats, true, true);
 
     // Get mitama default stats
@@ -335,14 +336,24 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
         1, GetEntityID(), mitamaSet);
 
     // Calculate HP/MP values
-    CharacterManager::CalculateDependentStats(demonStats, demonLvl, true);
+    CharacterManager::CalculateDependentStats(demonStats, demonLvl, true,
+        0x01);
 
     // Get mitama summoned stats
     CharacterManager::AdjustMitamaStats(demon, demonStats, definitionManager,
         2, GetEntityID(), mitamaSet);
 
     // Add base stats and HP/MP
-    for(uint8_t i = (size_t)CorrectTbl::STR; i <= (uint8_t)CorrectTbl::MP_MAX; i++)
+    for(uint8_t i = (size_t)CorrectTbl::STR; i <= (uint8_t)CorrectTbl::MP_MAX;
+        i++)
+    {
+        mDigitalizeState->SetCorrectValues(i, (int16_t)(
+            (double)statRate * 0.01 * (double)demonStats[(CorrectTbl)i]));
+    }
+
+    // Add non-calculated derived stats
+    for(uint8_t i = (size_t)CorrectTbl::CLSR;
+        i <= (uint8_t)CorrectTbl::SUPPORT; i++)
     {
         mDigitalizeState->SetCorrectValues(i, (int16_t)(
             (double)statRate * 0.01 * (double)demonStats[(CorrectTbl)i]));

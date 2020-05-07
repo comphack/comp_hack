@@ -143,6 +143,15 @@ bool ChannelServer::Initialize()
         return false;
     }
 
+    if(conf->GetVerifyServerData())
+    {
+        LogGeneralDebugMsg("Verifying server data integrity...\n");
+        if(!mServerDataManager->VerifyDataIntegrity(mDefinitionManager))
+        {
+            return false;
+        }
+    }
+
     mManagerConnection = std::make_shared<ManagerConnection>(self);
 
     auto internalPacketManager = std::make_shared<libcomp::ManagerPacket>(self);

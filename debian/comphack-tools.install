@@ -7,3 +7,4 @@ usr/bin/comp_objgen
 usr/bin/comp_patcher
 usr/bin/comp_rehash
 usr/bin/comp_updater_headless
+usr/bin/comp_verify

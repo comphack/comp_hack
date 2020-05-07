@@ -17,5 +17,6 @@
         </member>
         <member type="WorldSharedConfig*" name="WorldSharedConfig"/>
         <member type="bool" name="PerfMonitorEnabled" default="false"/>
+        <member type="bool" name="VerifyServerData" default="false"/>
     </object>
 </objgen>

@@ -87,6 +87,7 @@
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
+#include <ServerDataManager.h>
 
 class EventTreeItem : public QTreeWidgetItem
 {
@@ -1096,7 +1097,8 @@ void EventWindow::FindNextAction()
         if(pa)
         {
             auto actions = pa->GetActions();
-            for(auto action : GetAllActions(actions))
+            for(auto action : libcomp::ServerDataManager::GetAllActions(
+                actions))
             {
                 if(action->GetActionType() == actionType)
                 {
@@ -2825,7 +2827,7 @@ bool EventWindow::ChangeActionEventIDs(const std::unordered_map<
     const std::list<std::shared_ptr<objects::Action>>& actions)
 {
     bool updated = false;
-    for(auto action : GetAllActions(actions))
+    for(auto action : libcomp::ServerDataManager::GetAllActions(actions))
     {
         switch(action->GetActionType())
         {
@@ -2859,55 +2861,6 @@ bool EventWindow::ChangeActionEventIDs(const std::unordered_map<
     }
 
     return updated;
-}
-
-std::list<std::shared_ptr<objects::Action>> EventWindow::GetAllActions(
-    const std::list<std::shared_ptr<objects::Action>>& actions)
-{
-    std::list<std::shared_ptr<objects::Action>> allActions;
-
-    auto currentActions = actions;
-
-    std::list<std::shared_ptr<objects::Action>> newActions;
-    while(currentActions.size() > 0)
-    {
-        // Actions can't nest forever so loop until we're done
-        for(auto action : currentActions)
-        {
-            allActions.push_back(action);
-
-            switch(action->GetActionType())
-            {
-            case objects::Action::ActionType_t::DELAY:
-                {
-                    auto act = std::dynamic_pointer_cast<
-                        objects::ActionDelay>(action);
-                    for(auto act2 : act->GetActions())
-                    {
-                        newActions.push_back(act2);
-                    }
-                }
-                break;
-            case objects::Action::ActionType_t::SPAWN:
-                {
-                    auto act = std::dynamic_pointer_cast<
-                        objects::ActionSpawn>(action);
-                    for(auto act2 : act->GetDefeatActions())
-                    {
-                        newActions.push_back(act2);
-                    }
-                }
-                break;
-            default:
-                break;
-            }
-        }
-
-        currentActions = newActions;
-        newActions.clear();
-    }
-
-    return allActions;
 }
 
 libcomp::String EventWindow::GetCommonEventPrefix(

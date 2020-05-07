@@ -137,9 +137,6 @@ private:
         libcomp::String>& idMap, const std::list<std::shared_ptr<
         objects::Action>>& actions);
 
-    std::list<std::shared_ptr<objects::Action>> GetAllActions(
-        const std::list<std::shared_ptr<objects::Action>>& actions);
-
     libcomp::String GetCommonEventPrefix(
         const std::shared_ptr<EventFile>& file);
     libcomp::String GetEventTypePrefix(const libcomp::String& prefix,

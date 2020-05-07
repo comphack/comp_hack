@@ -123,4 +123,17 @@
 
 </section><!-- PerfMonitorEnabled -->
 
+<section>
+<title>VerifyServerData</title>
+<para><emphasis role="strong">Type:</emphasis> boolean</para>
+<para><emphasis role="strong">Default:</emphasis> false</para>
+<para>Enables server data verification upon startup, stopping the server if an issue is found.</para>
+
+<section>
+<title>Example</title>
+<para><![CDATA[<member name="VerifyServerData">true</member>]]></para>
+</section><!-- Example -->
+
+</section><!-- VerifyServerData -->
+
 </section>

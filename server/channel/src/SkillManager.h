@@ -33,6 +33,11 @@
 // objgen Includes
 #include <MiSkillBasicData.h>
 
+namespace libcomp
+{
+class ScriptEngine;
+}
+
 namespace objects
 {
 class ActivatedAbility;
@@ -52,6 +57,7 @@ typedef objects::MiSkillBasicData::DependencyType_t SkillDependencyType_t;
 typedef objects::MiSkillBasicData::Family_t SkillFamily_t;
 
 class ProcessingSkill;
+class SkillLogicSettings;
 class SkillTargetResult;
 
 class ActiveEntityState;
@@ -372,6 +378,11 @@ public:
     bool FunctionIDMapped(uint16_t functionID);
 
 private:
+    /**
+     * Load scripts bound to function IDs. Only used once during startup.
+     */
+    void LoadScripts();
+
     /**
      * Notify the client that a skill failed activation or execution.
      * @param activated Pointer to the activated ability instance
@@ -1333,6 +1344,42 @@ private:
         const std::shared_ptr<ChannelClientConnection>& client);
 
     /**
+     * Run applicable script validations for an executing or activating skill
+     * and stop execution if they do not pass.
+     * @param pSkill Current skill processing state
+     * @param execution If true, execution is being checked. If false,
+     *  activation is being checked.
+     * @return true if validation succeeded or does not apply
+     */
+    bool CheckScriptValidation(
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+        bool execution);
+
+    /**
+     * Run applicable script cost adjustments.
+     * @param pSkill Current skill processing state
+     * @return false if an error occurred or the cost is unpayable
+     */
+    bool AdjustScriptCosts(
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+    /**
+     * Run applicable script pre-actions during execution.
+     * @param pSkill Current skill processing state
+     * @return false if an error occurred or the skill should fizzle
+     */
+    bool ExecuteScriptPreActions(
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+    /**
+     * Run applicable script post-actions during execution.
+     * @param pSkill Current skill processing state
+     * @return false if an error occurred
+     */
+    bool ExecuteScriptPostActions(
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+    /**
      * Give a demon present to the player character as the result of a familiarity
      * adjusting skill.
      * @param client Pointer to the client connection
@@ -1433,6 +1480,16 @@ private:
         const std::shared_ptr<objects::ActivatedAbility>&,
         const std::shared_ptr<SkillExecutionContext>&,
         const std::shared_ptr<ChannelClientConnection>&)>> mSkillEffectFunctions;
+
+    /// Map of skill function IDs to prepared scripts to be executed during
+    /// one of several points during skill processing.
+    std::unordered_map<uint16_t,
+        std::shared_ptr<libcomp::ScriptEngine>> mSkillLogicScripts;
+
+    /// Map of skill function IDs to script specified settings signifying
+    /// special logic to apply to the associated skills.
+    std::unordered_map<uint16_t,
+        std::shared_ptr<SkillLogicSettings>> mSkillLogicSettings;
 };
 
 } // namespace channel

@@ -48,6 +48,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "EventManager.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -190,6 +191,35 @@ void SendClientReadyData(std::shared_ptr<ChannelServer> server,
                         " for character %1 was not valid for this channel.\n")
                         .Arg(character->GetUUID().ToString());
                 });
+            }
+            else if(character->GetLogoutInstance())
+            {
+                // Fire ToLobby event if one exists and adjust starting zone
+                // if moved. Do not perform login checks againg, instead let
+                // the zone manager handle channel switching as needed.
+                auto instDef = serverDataManager->GetZoneInstanceData(
+                    character->GetLogoutInstance());
+                if(instDef && !instDef->GetToLobbyEventID().IsEmpty())
+                {
+                    auto logoutZoneID = character->GetLogoutZone();
+
+                    EventOptions options;
+                    options.AutoOnly = true;
+
+                    if(server->GetEventManager()->HandleEvent(client, instDef
+                        ->GetToLobbyEventID(), 0, nullptr, options) &&
+                        character->GetLogoutZone() != logoutZoneID)
+                    {
+                        zoneID = character->GetLogoutZone();
+                        dynamicMapID = 0;
+                        x = character->GetLogoutX();
+                        y = character->GetLogoutY();
+                        rot = character->GetLogoutRotation();
+
+                        // Reset instance so we don't loop
+                        character->SetLogoutInstance(0);
+                    }
+                }
             }
 
             if(!zoneManager->EnterZone(client, zoneID, dynamicMapID, x, y, rot))

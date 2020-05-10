@@ -13,6 +13,7 @@
         <member type="u32" name="ZoneInSpotID"/>
         <member type="u64" name="LogoutTimer"/>
         <member type="u64" name="ZoneInTime"/>
+        <member type="u64" name="SoundDelayTime"/>
         <member type="AccountLogin*" name="AccountLogin"/>
         <member type="ChannelLogin*" name="ChannelLogin"
             nulldefault="true"/>

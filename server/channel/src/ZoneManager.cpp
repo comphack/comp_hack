@@ -894,6 +894,7 @@ bool ZoneManager::EnterZone(const std::shared_ptr<ChannelClientConnection>& clie
         // location in case of a disconnect without saving
         auto character = cState->GetEntity();
         character->SetLogoutZone(zoneID);
+        character->SetLogoutInstance(0);
         character->SetLogoutX(cState->GetCurrentX());
         character->SetLogoutY(cState->GetCurrentY());
         character->SetLogoutRotation(cState->GetCurrentRotation());
@@ -4173,6 +4174,8 @@ bool ZoneManager::MoveToZoneChannel(
     if(character)
     {
         character->SetLogoutZone(zoneID);
+        character->SetLogoutInstance(toInstance
+            ? toInstance->GetInstanceID() : 0);
         character->SetLogoutX(x);
         character->SetLogoutY(y);
         character->SetLogoutRotation(rot);
@@ -7676,9 +7679,25 @@ bool ZoneManager::GetLoginZone(
         }
         else if(!zoneData->GetGlobal() || zoneData->GetRestricted())
         {
-            // Determine which public zone to go to instead, defaulting
-            // to the lobby matching the group ID
-            uint32_t publicID = zoneData->GetGroupID();
+            // Determine which public zone to go to instead, defaulting to the
+            // lobby on the last instance, then the one matching the group ID
+            uint32_t publicID = 0;
+            if(character->GetLogoutInstance())
+            {
+                auto instDef = serverDataManager->GetZoneInstanceData(
+                    character->GetLogoutInstance());
+                if(instDef &&
+                    serverDataManager->GetZoneData(instDef->GetLobbyID(), 0))
+                {
+                    publicID = instDef->GetLobbyID();
+                }
+            }
+
+            if(!publicID)
+            {
+                publicID = zoneData->GetGroupID();
+            }
+
             if(!publicID && character->GetPreviousZone())
             {
                 // If there is no group for the zone, return to

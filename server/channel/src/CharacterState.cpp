@@ -109,6 +109,8 @@ namespace libcomp
                     &CharacterState::ActionCooldownActive)
                 .Func("RefreshActionCooldowns",
                     &CharacterState::RefreshActionCooldowns)
+                .Func("GetReunionPoints",
+                    &CharacterState::GetReunionPoints)
                 .StaticFunc("Cast", &CharacterState::Cast);
 
             Bind<CharacterState>("CharacterState", binding);
@@ -863,6 +865,19 @@ void CharacterState::RefreshActionCooldowns(bool accountLevel, uint32_t time)
             }
         }
     }
+}
+
+uint32_t CharacterState::GetReunionPoints(bool mitama)
+{
+    auto state = ClientState::GetEntityClientState(GetEntityID());
+    auto awd = state ? state->GetAccountWorldData().Get() : nullptr;
+    if(awd)
+    {
+        return mitama
+            ? awd->GetMitamaReunionPoints() : awd->GetReunionPoints();
+    }
+
+    return 0;
 }
 
 bool CharacterState::RecalcDisabledSkills(

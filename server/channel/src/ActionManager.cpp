@@ -2065,10 +2065,33 @@ bool ActionManager::PlaySoundEffect(ActionContext& ctx)
         return false;
     }
 
+    int32_t delay = act->GetDelay();
+    if(act->GetWaitTime())
+    {
+        // Check current delay for the client and adjust packet delay
+        // accordingly
+        auto now = ChannelServer::GetServerTime();
+        auto state = ctx.Client->GetClientState();
+
+        ServerTime startFrom = now;
+        if(state->GetSoundDelayTime() && now < state->GetSoundDelayTime())
+        {
+            startFrom = state->GetSoundDelayTime();
+        }
+
+        // Set new client delay time
+        state->SetSoundDelayTime((uint64_t)(startFrom +
+            ((uint64_t)(act->GetWaitTime() + delay) * (uint64_t)10000ULL)));
+
+        // Adjust delay by client delay, converted to milliseconds
+        delay += (int32_t)((startFrom - now) / 10000ULL);
+    }
+
     libcomp::Packet p;
-    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SOUND_EFFECT);
+    p.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SOUND_EFFECT);
     p.WriteS32Little(act->GetSoundID());
-    p.WriteS32Little(act->GetDelay());
+    p.WriteS32Little(delay);
 
     ctx.Client->SendPacket(p);
 
@@ -3613,6 +3636,7 @@ bool ActionManager::RunScript(ActionContext& ctx)
         auto engine = std::make_shared<libcomp::ScriptEngine>();
 
         // Bind some defaults
+        engine->Using<AllyState>();
         engine->Using<ChannelServer>();
         engine->Using<CharacterState>();
         engine->Using<DemonState>();

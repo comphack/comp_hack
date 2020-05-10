@@ -42,6 +42,7 @@
 #include <ServerConstants.h>
 
 // object Includes
+#include <AccountWorldData.h>
 #include <Character.h>
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
@@ -104,13 +105,45 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
     mDefinitionManager->LoadData<objects::MiShopProductData>(server
         ->GetDataStore());
 
+    auto serverDataManager =  new libcomp::ServerDataManager;
+    bool scriptsLoaded = false;
+
+    LogWebAPIDebugMsg("Loading web apps...\n");
+
+    for(auto serverScript : serverDataManager->LoadScripts(server
+        ->GetDataStore(), "/webapps", scriptsLoaded, false))
+    {
+        if(serverScript->Type.ToLower() == "webapp")
+        {
+            mAppDefinitions[serverScript->Name.ToLower()] = serverScript;
+        }
+    }
+
+    if(!scriptsLoaded)
+    {
+        LogWebAPIError([&]()
+        {
+            return libcomp::String("API handler failed after loading %1"
+                " web app(s)\n").Arg(mAppDefinitions.size());
+        });
+    }
+    else if(mAppDefinitions.size() == 0)
+    {
+        LogWebAPIDebugMsg("No web apps found\n");
+    }
+    else
+    {
+        LogWebAPIDebug([&]()
+        {
+            return libcomp::String("API handler successfully loaded %1"
+                " web app(s)\n").Arg(mAppDefinitions.size());
+        });
+    }
+
     LogWebAPIDebugMsg("Loading web games...\n");
 
-    auto serverDataManager =  new libcomp::ServerDataManager;
-
-    bool gamesLoaded = false;
     for(auto serverScript : serverDataManager->LoadScripts(server
-        ->GetDataStore(), "/webgames", gamesLoaded, false))
+        ->GetDataStore(), "/webgames", scriptsLoaded, false))
     {
         if(serverScript->Type.ToLower() == "webgame")
         {
@@ -118,7 +151,7 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
         }
     }
 
-    if(!gamesLoaded)
+    if(!scriptsLoaded)
     {
         LogWebAPIError([&]()
         {
@@ -1578,6 +1611,131 @@ bool ApiHandler::Admin_DeletePromo(const JsonBox::Object& request,
     return true;
 }
 
+bool ApiHandler::WebApp_Request(const libcomp::String& appName,
+    const libcomp::String& method, const JsonBox::Object& request,
+    JsonBox::Object& response, const std::shared_ptr<ApiSession>& session)
+{
+    // Build the web app and hit the method every time. No state is stored.
+    auto appIter = mAppDefinitions.find(appName);
+    if(appIter == mAppDefinitions.end())
+    {
+        return false;
+    }
+
+    auto app = std::make_shared<libcomp::ScriptEngine>();
+    app->Using<libcomp::Randomizer>();
+    app->Using<objects::Account>();
+    app->Using<objects::AccountWorldData>();
+    app->Using<objects::Character>();
+    app->Using<objects::PostItem>();
+
+    if(!app->Eval(appIter->second->Source, appIter->second->Name))
+    {
+        response["error"] = "App could not be started";
+        return true;
+    }
+
+    auto vm = app->GetVM();
+    {
+        Sqrat::Class<ApiSession,
+            Sqrat::NoConstructor<ApiSession>> sBinding(vm, "ApiSession");
+        Sqrat::RootTable(vm).Bind("ApiSession", sBinding);
+
+        Sqrat::Class<JsonBox::Object,
+            Sqrat::NoConstructor<JsonBox::Object>> oBinding(vm, "JsonObject");
+        Sqrat::RootTable(vm).Bind("JsonObject", oBinding);
+
+        Sqrat::Class<ApiHandler,
+            Sqrat::NoConstructor<ApiHandler>> apiBinding(vm, "ApiHandler");
+        apiBinding
+            .Func("SetResponse", &ApiHandler::Script_SetResponse)
+            .Func("GetWorldDatabase",
+                &ApiHandler::WebAppScript_GetWorldDatabase);
+        Sqrat::RootTable(vm).Bind("ApiHandler", apiBinding);
+    }
+
+    // Call the start function first then write standard response values
+    Sqrat::Function p(Sqrat::RootTable(vm), "prepare");
+    if(!p.IsNull())
+    {
+        auto result = !p.IsNull() ? p.Evaluate<int>(this, session,
+            session->account, method, &response) : 0;
+        if(!result || (*result != 0))
+        {
+            if(response.find("error") == response.end())
+            {
+                response["error"] = "Unknown error encountered while starting"
+                    " web app";
+            }
+
+            return true;
+        }
+    }
+    else
+    {
+        response["error"] = "Failed to prepare web app";
+        return true;
+    }
+
+    int8_t worldID = -1;
+    mServer->GetAccountManager()->IsLoggedIn(session->account->GetUsername(),
+        worldID);
+
+    Sqrat::Function f(Sqrat::RootTable(vm), method.C());
+    if(!f.IsNull())
+    {
+        Sqrat::Table sqTable(vm);
+        for(auto& rPair : request)
+        {
+            // Forward everything but the system params
+            if(rPair.first != "sessionid" && rPair.first != "username")
+            {
+                libcomp::String val;
+                if(rPair.second.isInteger())
+                {
+                    val = libcomp::String("%1").Arg(rPair.second.getInteger());
+                }
+                else
+                {
+                    val = libcomp::String(rPair.second.getString());
+                }
+
+                sqTable.SetValue<libcomp::String>(rPair.first.c_str(),
+                    val);
+            }
+        }
+
+        // Handle custom parameters just like webgames
+        auto result = !f.IsNull() ? f.Evaluate<int>(this, session,
+            session->account, worldID, sqTable, &response) : 0;
+        if(!result || (*result != 0))
+        {
+            response["error"] = "Unknown error encountered";
+            return true;
+        }
+    }
+    else
+    {
+        response["error"] = libcomp::String("Invalid web app method"
+            " supplied: %1").Arg(method).C();
+        return true;
+    }
+
+    if(response.find("error") == response.end())
+    {
+        response["error"] = "Success";
+    }
+
+    return true;
+}
+
+std::shared_ptr<libcomp::Database> ApiHandler::WebAppScript_GetWorldDatabase(
+    uint8_t worldID)
+{
+    auto world = mServer->GetWorldByID(worldID);
+    return world ? world->GetWorldDatabase() : nullptr;
+}
+
 bool ApiHandler::WebGame_GetCoins(const JsonBox::Object& request,
     JsonBox::Object& response,
     const std::shared_ptr<ApiSession>& session)
@@ -1664,7 +1822,7 @@ bool ApiHandler::WebGame_Start(const JsonBox::Object& request,
             .Func("GetCoins", &ApiHandler::WebGameScript_GetCoins)
             .Func("GetDatabase", &ApiHandler::WebGameScript_GetDatabase)
             .Func("GetSystemTime", &ApiHandler::WebGameScript_GetSystemTime)
-            .Func("SetResponse", &ApiHandler::WebGameScript_SetResponse)
+            .Func("SetResponse", &ApiHandler::Script_SetResponse)
             .Func("UpdateCoins", &ApiHandler::WebGameScript_UpdateCoins);
         Sqrat::RootTable(vm).Bind("ApiHandler", apiBinding);
     }
@@ -1863,7 +2021,7 @@ int64_t ApiHandler::WebGameScript_GetSystemTime()
     }
 }
 
-void ApiHandler::WebGameScript_SetResponse(JsonBox::Object* response,
+void ApiHandler::Script_SetResponse(JsonBox::Object* response,
     const libcomp::String& key, const libcomp::String& value)
 {
     if(response)
@@ -2138,18 +2296,24 @@ bool ApiHandler::handlePost(CivetServer *pServer,
         if(!session_username.IsEmpty())
         {
             // Normal API sessions are stored per username
-            auto sessionIterator = mSessions.find(session_username);
-
-            if(sessionIterator != mSessions.end())
             {
-                session = sessionIterator->second;
-            }
-            else
-            {
-                session = std::make_shared<ApiSession>();
-                session->clientAddress = clientAddress;
+                mSessionLock.lock();
 
-                mSessions[session_username] = session;
+                auto sessionIterator = mSessions.find(session_username);
+
+                if(sessionIterator != mSessions.end())
+                {
+                    session = sessionIterator->second;
+                }
+                else
+                {
+                    session = std::make_shared<ApiSession>();
+                    session->clientAddress = clientAddress;
+
+                    mSessions[session_username] = session;
+                }
+
+                mSessionLock.unlock();
             }
 
             if("/auth/get_challenge" == method || "/account/register" == method ||
@@ -2185,28 +2349,64 @@ bool ApiHandler::handlePost(CivetServer *pServer,
         return true;
     }
 
-    auto it = mParsers.find(method);
-
-    if(it == mParsers.end())
+    if(method.Left(8) == "/webapp/")
     {
-        mg_printf(pConnection, "HTTP/1.1 404 Not Found\r\n"
-            "Connection: close\r\n\r\n");
+        // Break out app name and internal method to send to handler
+        bool badRequest = false;
 
-        return true;
+        auto parts = method.Right(method.Length() - 8).Split("/");
+        if(parts.size() == 2)
+        {
+            auto app = parts.front();
+            auto appMethod = parts.back();
+
+            session->requestLock->lock();
+
+            if(!WebApp_Request(app, appMethod, obj, response, session))
+            {
+                badRequest = true;
+            }
+
+            session->requestLock->unlock();
+        }
+        else
+        {
+            badRequest = true;
+        }
+
+        if(badRequest)
+        {
+            mg_printf(pConnection, "HTTP/1.1 400 Bad Request\r\n"
+                "Connection: close\r\n\r\n");
+
+            return true;
+        }
     }
-
-    // Lock the mutex while processing the request
-    session->requestLock->lock();
-
-    if(!it->second(*this, obj, response, session))
+    else
     {
-        mg_printf(pConnection, "HTTP/1.1 400 Bad Request\r\n"
-            "Connection: close\r\n\r\n");
+        auto it = mParsers.find(method);
 
-        return true;
+        if(it == mParsers.end())
+        {
+            mg_printf(pConnection, "HTTP/1.1 404 Not Found\r\n"
+                "Connection: close\r\n\r\n");
+
+            return true;
+        }
+
+        // Lock the mutex while processing the request
+        session->requestLock->lock();
+
+        if(!it->second(*this, obj, response, session))
+        {
+            mg_printf(pConnection, "HTTP/1.1 400 Bad Request\r\n"
+                "Connection: close\r\n\r\n");
+
+            return true;
+        }
+
+        session->requestLock->unlock();
     }
-
-    session->requestLock->unlock();
 
     JsonBox::Value responseValue(response);
     responseValue.writeToStream(ss);

@@ -220,6 +220,15 @@ public:
     void RefreshActionCooldowns(bool accountLevel, uint32_t time = 0);
 
     /**
+     * Retrieve the reunion point count from the character's associated
+     * AccountWorldData.
+     * @param mitama If true, mitama points are retrieved. If false, non-mitama
+     *  reunion points are retrieved.
+     * @return Reunion point count associated to the character
+     */
+    uint32_t GetReunionPoints(bool mitama);
+
+    /**
      * Recalculate the set of skills available to the character that are currently
      * disabled.
      * @param definitionManager Pointer to the DefinitionManager to use when

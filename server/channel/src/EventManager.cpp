@@ -458,8 +458,13 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
         case objects::Event::EventType_t::OPEN_MENU:
             if(responseID == -1)
             {
-                // Allow next events
-                current->SetIndex(1);
+                // Next event should be "use next" option but only if it exists
+                auto menu = std::dynamic_pointer_cast<objects::EventOpenMenu>(
+                    event);
+                if(menu && !menu->GetUseNext().IsEmpty())
+                {
+                    current->SetIndex(1);
+                }
             }
             else if(responseID != 0)
             {
@@ -4236,7 +4241,18 @@ void EventManager::HandleNext(EventContext& ctx)
             });
     }
 
-    if(iState->BranchesCount() > 0)
+    if(event->GetEventType() == objects::Event::EventType_t::OPEN_MENU &&
+        ctx.EventInstance->GetIndex() == 1)
+    {
+        // Next event is "use next" path (should have already been checked)
+        auto menu = std::dynamic_pointer_cast<objects::EventOpenMenu>(event);
+        if(menu)
+        {
+            nextEventID = menu->GetUseNext();
+            queueEventID = "";
+        }
+    }
+    else if(iState->BranchesCount() > 0)
     {
         libcomp::String branchScriptID = iState->GetBranchScriptID();
         if(!branchScriptID.IsEmpty())
@@ -4349,12 +4365,9 @@ void EventManager::HandleNext(EventContext& ctx)
         }
     }
 
-    // If there is no next event (or event is menu which does not support
-    // normal "next" progression) either repeat previous or process next
+    // If there is no next event either repeat previous or process next
     // queued event
-    if(nextEventID.IsEmpty() ||
-        (event->GetEventType() == objects::Event::EventType_t::OPEN_MENU &&
-            ctx.EventInstance->GetIndex() == 0))
+    if(nextEventID.IsEmpty())
     {
         if(!ctx.AutoOnly)
         {

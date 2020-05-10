@@ -71,6 +71,7 @@ void ActionPlaySoundEffect::Load(const std::shared_ptr<objects::Action>& act)
 
     prop->sound->SetValue((uint32_t)mAction->GetSoundID());
     prop->delay->setValue(mAction->GetDelay());
+    prop->waitTime->setValue(mAction->GetWaitTime());
 }
 
 std::shared_ptr<objects::Action> ActionPlaySoundEffect::Save() const
@@ -84,6 +85,7 @@ std::shared_ptr<objects::Action> ActionPlaySoundEffect::Save() const
 
     mAction->SetSoundID((int32_t)prop->sound->GetValue());
     mAction->SetDelay(prop->delay->value());
+    mAction->SetWaitTime(prop->waitTime->value());
 
     return mAction;
 }

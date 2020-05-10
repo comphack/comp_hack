@@ -208,6 +208,8 @@ public:
     std::shared_ptr<objects::MiSkillData> Definition;
     std::shared_ptr<objects::ActivatedAbility> Activated;
     SkillExecutionContext* ExecutionContext = 0;
+    uint16_t Modifier1 = 0;
+    uint16_t Modifier2 = 0;
     uint8_t BaseAffinity = 0;
     uint8_t EffectiveAffinity = 0;
     uint8_t WeaponAffinity = 0;
@@ -215,7 +217,6 @@ public:
     uint8_t ExpertiseType = 0;
     uint8_t ExpertiseRankBoost = 0;
     uint8_t KnowledgeRank = 0;
-    uint16_t OffenseValue = 0;
     int32_t AbsoluteDamage = 0;
     int16_t ChargeReduce = 0;
     std::unordered_map<int32_t, uint16_t> OffenseValues;
@@ -242,6 +243,17 @@ public:
         std::shared_ptr<objects::CalculatedEntityState>> SourceCalcStates;
     std::unordered_map<int32_t,
         std::shared_ptr<objects::CalculatedEntityState>> TargetCalcStates;
+};
+
+class channel::SkillLogicSettings
+{
+public:
+    uint16_t FunctionID = 0;
+    bool HasActivationValidation = false;
+    bool HasExecutionValidation = false;
+    bool HasCostAdjustment = false;
+    bool HasPreAction = false;
+    bool HasPostAction = false;
 };
 
 class channel::SkillTargetResult
@@ -338,10 +350,205 @@ SkillManager::SkillManager(const std::weak_ptr<ChannelServer>& server)
 
     // Make sure anything not set is not pulled in to the mapping
     mSkillFunctions.erase(0);
+
+    LoadScripts();
 }
 
 SkillManager::~SkillManager()
 {
+}
+
+void SkillManager::LoadScripts()
+{
+    // Load all skill logic scripts
+    auto server = mServer.lock();
+    auto serverDataManager = server->GetServerDataManager();
+    bool scriptsLoaded = false;
+
+    LogSkillManagerDebugMsg("Loading custom skill logic...\n");
+
+    std::list<std::shared_ptr<libcomp::ServerScript>> scriptDefs;
+    for(auto serverScript : serverDataManager->LoadScripts(server
+        ->GetDataStore(), "/skills", scriptsLoaded, false))
+    {
+        if(serverScript->Type.ToLower() == "skilllogic")
+        {
+            scriptDefs.push_back(serverScript);
+        }
+    }
+
+    if(!scriptsLoaded)
+    {
+        LogSkillManagerError([scriptDefs]()
+        {
+            return libcomp::String("API handler failed after loading %1"
+                " custom skill logic script(s)\n")
+                .Arg(scriptDefs.size());
+        });
+    }
+    else if(scriptDefs.size() == 0)
+    {
+        LogSkillManagerDebugMsg("No custom skill logic found\n");
+        return;
+    }
+    else
+    {
+        LogSkillManagerDebug([scriptDefs]()
+        {
+            return libcomp::String("API handler successfully loaded %1"
+                " custom skill logic script(s)\n")
+                .Arg(scriptDefs.size());
+        });
+    }
+
+    // Prepare scripts and load settings
+    for(auto def : scriptDefs)
+    {
+        auto script = std::make_shared<libcomp::ScriptEngine>();
+
+        if(!script->Eval(def->Source))
+        {
+            LogSkillManagerError([def]()
+            {
+                return libcomp::String("Failed to prepare skill logic"
+                    " script: %1\n").Arg(def->Name);
+            });
+
+            continue;
+        }
+
+        auto settings = std::make_shared<SkillLogicSettings>();
+
+        auto vm = script->GetVM();
+        {
+            Sqrat::Class<SkillLogicSettings,
+                Sqrat::NoConstructor<SkillLogicSettings>> sBinding(vm,
+                    "SkillLogicSettings");
+            sBinding
+                .Var("FunctionID", &SkillLogicSettings::FunctionID)
+                .Var("HasActivationValidation",
+                    &SkillLogicSettings::HasActivationValidation)
+                .Var("HasExecutionValidation",
+                    &SkillLogicSettings::HasExecutionValidation)
+                .Var("HasCostAdjustment",
+                    &SkillLogicSettings::HasCostAdjustment)
+                .Var("HasPreAction", &SkillLogicSettings::HasPreAction)
+                .Var("HasPostAction", &SkillLogicSettings::HasPostAction);
+            Sqrat::RootTable(vm).Bind("SkillLogicSettings", sBinding);
+        }
+
+        bool invalid = false;
+
+        Sqrat::Function f(Sqrat::RootTable(vm), "prepare");
+        if(!f.IsNull())
+        {
+            auto result = f.Evaluate<int>(settings);
+            if(!result || (*result != 0) || !settings->FunctionID)
+            {
+                // Unknownw error or no function ID specified
+                invalid = true;
+            }
+            else if(settings->HasActivationValidation && (Sqrat::Function(
+                Sqrat::RootTable(vm), "validateActivation")).IsNull())
+            {
+                // No activation validate function
+                invalid = true;
+            }
+            else if(settings->HasExecutionValidation && (Sqrat::Function(
+                Sqrat::RootTable(vm), "validateExecution")).IsNull())
+            {
+                // No execution validate function
+                invalid = true;
+            }
+            else if(settings->HasCostAdjustment && (Sqrat::Function(
+                Sqrat::RootTable(vm), "adjustCost")).IsNull())
+            {
+                // No cost adjustment function
+                invalid = true;
+            }
+            else if(settings->HasPreAction &&
+                (Sqrat::Function(Sqrat::RootTable(vm), "preAction")).IsNull())
+            {
+                // No pre-action function
+                invalid = true;
+            }
+            else if(settings->HasPostAction &&
+                (Sqrat::Function(Sqrat::RootTable(vm), "postAction")).IsNull())
+            {
+                // No post-action function
+                invalid = true;
+            }
+        }
+        else
+        {
+            // No prepare function, should be caught by ServerDataManager
+            invalid = true;
+        }
+
+        if(invalid)
+        {
+            LogSkillManagerError([def]()
+            {
+                return libcomp::String("Failed to load skill logic"
+                    " settings from script: %1\n").Arg(def->Name);
+            });
+        }
+        else
+        {
+            // Bind more and store script
+            Sqrat::Class<ProcessingSkill,
+                Sqrat::NoConstructor<ProcessingSkill>> sBinding(vm,
+                    "ProcessingSkill");
+            sBinding
+                // Modifiable vars should be prepared at the very latest
+                // during preaction
+                .Var("Modifier1", &ProcessingSkill::Modifier1)
+                .Var("Modifier2", &ProcessingSkill::Modifier2)
+                // Remaining vars are not modifiable and should be used for
+                // logic only
+                .ConstVar("Activated", &ProcessingSkill::Activated)
+                .ConstVar("EffectiveSource", &ProcessingSkill::EffectiveSource)
+                .ConstVar("PrimaryTarget", &ProcessingSkill::PrimaryTarget)
+                .ConstVar("SourceExecutionState",
+                    &ProcessingSkill::SourceExecutionState)
+                .ConstVar("Nulled", &ProcessingSkill::Nulled)
+                .ConstVar("Reflected", &ProcessingSkill::Reflected)
+                .ConstVar("Absorbed", &ProcessingSkill::Absorbed)
+                .ConstVar("InPvP", &ProcessingSkill::InPvP);
+            Sqrat::RootTable(vm).Bind("ProcessingSkill", sBinding);
+
+            Sqrat::Class<SkillTargetResult,
+                Sqrat::NoConstructor<SkillTargetResult>> tBinding(vm,
+                    "SkillTargetResult");
+            tBinding
+                .ConstVar("EntityState", &SkillTargetResult::EntityState)
+                .ConstVar("Damage1", &SkillTargetResult::Damage1)
+                .ConstVar("Damage1Type", &SkillTargetResult::Damage1Type)
+                .ConstVar("Damage2", &SkillTargetResult::Damage2)
+                .ConstVar("Damage2Type", &SkillTargetResult::Damage2Type)
+                .ConstVar("Flags1", &SkillTargetResult::Flags1)
+                .ConstVar("Flags2", &SkillTargetResult::Flags2)
+                .ConstVar("TalkFlags", &SkillTargetResult::TalkFlags)
+                .ConstVar("PursuitDamage", &SkillTargetResult::PursuitDamage)
+                .ConstVar("TechnicalDamage", &SkillTargetResult::TechnicalDamage)
+                .ConstVar("HitNull", &SkillTargetResult::HitNull)
+                .ConstVar("HitReflect", &SkillTargetResult::HitReflect)
+                .ConstVar("HitAbsorb", &SkillTargetResult::HitAbsorb);
+            Sqrat::RootTable(vm).Bind("SkillTargetResult", tBinding);
+
+            script->Using<AllyState>();
+            script->Using<objects::CalculatedEntityState>();
+            script->Using<ChannelServer>();
+            script->Using<CharacterState>();
+            script->Using<DemonState>();
+            script->Using<EnemyState>();
+            script->Using<Zone>();
+            script->Using<libcomp::Randomizer>();
+
+            mSkillLogicScripts[settings->FunctionID] = script;
+            mSkillLogicSettings[settings->FunctionID] = settings;
+        }
+    }
 }
 
 bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source,
@@ -474,6 +681,14 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
     activated->SetActivationTargetType(targetType);
     activated->SetActivationTime(now);
 
+    auto pSkill = GetProcessingSkill(activated, nullptr);
+    if(!CheckScriptValidation(pSkill, false))
+    {
+        SendFailure(source, skillID, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC);
+        return false;
+    }
+
     if(autoUse)
     {
         // Instant activations are technically not activated
@@ -484,7 +699,6 @@ bool SkillManager::ActivateSkill(const std::shared_ptr<ActiveEntityState> source
         activated->SetActivationID(source->GetNextActivatedAbilityID());
     }
 
-    auto pSkill = GetProcessingSkill(activated, nullptr);
     auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
 
     // Fusion skills have special adjustment restrictions
@@ -2556,16 +2770,38 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
         }
     }
 
+    // Set costs now in case the script uses them
+    activated->SetHPCost(hpCost);
+    activated->SetMPCost(mpCost);
+    activated->SetBulletCost(bulletCost);
+    activated->SetItemCosts(itemCosts);
+
+    if(!AdjustScriptCosts(pSkill))
+    {
+        // Clear costs
+        activated->SetHPCost(0);
+        activated->SetMPCost(0);
+        activated->SetBulletCost(0);
+        activated->ClearItemCosts();
+
+        SendFailure(activated, client,
+            (uint8_t)SkillErrorCodes_t::GENERIC);
+        return false;
+    }
+
+    hpCost = activated->GetHPCost();
+    mpCost = activated->GetMPCost();
+
     // Determine if the payment is possible
     auto sourceStats = source->GetCoreStats();
     bool canPay = sourceStats &&
         ((hpCost == 0) || hpCost < sourceStats->GetHP()) &&
         ((mpCost == 0) || mpCost <= sourceStats->GetMP());
-    if(itemCosts.size() > 0 || bulletCost > 0)
+    if(activated->ItemCostsCount() > 0 || activated->GetBulletCost() > 0)
     {
         if(client && character)
         {
-            for(auto itemCost : itemCosts)
+            for(auto itemCost : activated->GetItemCosts())
             {
                 uint32_t itemCount = characterManager->GetExistingItemCount(
                     character, itemCost.first);
@@ -2576,7 +2812,7 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
                 }
             }
 
-            if(bulletCost > 0)
+            if(activated->GetBulletCost() > 0)
             {
                 auto bullets = character->GetEquippedItems((size_t)
                     objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
@@ -2587,14 +2823,15 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
                     // be paid.
                     if(bullets->GetRentalExpiration() > (uint32_t)std::time(0))
                     {
-                        bulletCost = 0;
+                        activated->SetBulletCost(0);
                     }
                     else
                     {
                         canPay = false;
                     }
                 }
-                else if(!bullets || bullets->GetStackSize() < bulletCost)
+                else if(!bullets ||
+                    bullets->GetStackSize() < activated->GetBulletCost())
                 {
                     canPay = false;
                 }
@@ -2615,16 +2852,16 @@ bool SkillManager::DetermineCosts(std::shared_ptr<ActiveEntityState> source,
     // Handle costs that can't be paid as expected errors
     if(!canPay)
     {
+        // Clear costs
+        activated->SetHPCost(0);
+        activated->SetMPCost(0);
+        activated->SetBulletCost(0);
+        activated->ClearItemCosts();
+
         SendFailure(activated, client,
             (uint8_t)SkillErrorCodes_t::GENERIC_COST);
         return false;
     }
-
-    // Costs valid, set on the skill
-    activated->SetHPCost(hpCost);
-    activated->SetMPCost(mpCost);
-    activated->SetBulletCost(bulletCost);
-    activated->SetItemCosts(itemCosts);
 
     return true;
 }
@@ -2893,6 +3130,12 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     auto pSkill = GetProcessingSkill(activated, ctx);
     auto zone = pSkill->CurrentZone;
     if(!zone || activated->GetCancelled())
+    {
+        Fizzle(ctx);
+        return false;
+    }
+
+    if(!ExecuteScriptPreActions(pSkill))
     {
         Fizzle(ctx);
         return false;
@@ -3522,13 +3765,15 @@ bool SkillManager::ProcessSkillResult(std::shared_ptr<objects::ActivatedAbility>
     return true;
 }
 
-void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill>& pSkill,
+void SkillManager::ProcessSkillResultFinal(
+    const std::shared_ptr<ProcessingSkill>& pSkill,
     std::shared_ptr<SkillExecutionContext> ctx)
 {
     ProcessingSkill& skill = *pSkill.get();
 
     auto activated = skill.Activated;
-    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated->GetSourceEntity());
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(activated
+        ->GetSourceEntity());
     auto zone = skill.CurrentZone;
 
     auto server = mServer.lock();
@@ -3732,8 +3977,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             }
             else if((battleDamage->GetFormula()
                 == objects::MiBattleDamageData::Formula_t::DMG_NORMAL &&
-                battleDamage->GetModifier1() == 0 &&
-                battleDamage->GetModifier2() == 0) ||
+                skill.Modifier1 == 0 && skill.Modifier2 == 0) ||
                 (!hpMpSet && hpDamage > 0) || (hpMpSet && hpDamage != -1))
             {
                 // Also perform knockback if there is normal damage but no
@@ -3947,7 +4191,7 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
         {
             bool nonDamaging = battleDamage->GetFormula()
                 == objects::MiBattleDamageData::Formula_t::NONE ||
-                battleDamage->GetModifier1() == 0;
+                skill.Modifier1 == 0;
             bool calcHitstun = false;
             if(hpAdjustedSum < 0)
             {
@@ -4760,6 +5004,9 @@ void SkillManager::ProcessSkillResultFinal(const std::shared_ptr<ProcessingSkill
             zoneManager->UpdateTrackedTeam(team);
         }
     }
+
+    // Nothing to fail at this point, just execute post actions
+    ExecuteScriptPostActions(pSkill);
 }
 
 std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
@@ -4781,6 +5028,8 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
     skill->SkillID = skillData->GetCommon()->GetID();
     skill->Definition = skillData;
     skill->Activated = activated;
+    skill->Modifier1 = skillData->GetDamage()->GetBattleDamage()->GetModifier1();
+    skill->Modifier2 = skillData->GetDamage()->GetBattleDamage()->GetModifier2();
     skill->BaseAffinity = skill->EffectiveAffinity = skillData->GetCommon()->GetAffinity();
     skill->EffectiveDependencyType = skillData->GetBasic()->GetDependencyType();
     skill->EffectiveSource = source;
@@ -8544,8 +8793,8 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         || formula == objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT;
     bool isSimpleDamage = formula == objects::MiBattleDamageData::Formula_t::DMG_NORMAL_SIMPLE;
 
-    uint16_t baseMod1 = damageData->GetModifier1();
-    uint16_t baseMod2 = damageData->GetModifier2();
+    uint16_t baseMod1 = skill.Modifier1;
+    uint16_t baseMod2 = skill.Modifier2;
 
     float mod1Multiplier = 1.f;
     float mod2Multiplier = 1.f;
@@ -8732,12 +8981,12 @@ bool SkillManager::CalculateDamage(const std::shared_ptr<ActiveEntityState>& sou
         }
 
         // Floor modifiers at 1
-        if(!mod1 && damageData->GetModifier1())
+        if(!mod1 && skill.Modifier1)
         {
             mod1 = 1;
         }
 
-        if(!mod2 && damageData->GetModifier2())
+        if(!mod2 && skill.Modifier2)
         {
             mod2 = 1;
         }
@@ -12593,6 +12842,206 @@ bool SkillManager::XPUp(
             (uint8_t)SkillErrorCodes_t::GENERIC_USE);
         return false;
     }
+}
+
+bool SkillManager::CheckScriptValidation(
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+    bool execution)
+{
+    if(!pSkill->FunctionID)
+    {
+        // Nothing to do
+        return true;
+    }
+
+    auto settingsIter = mSkillLogicSettings.find(pSkill->FunctionID);
+    if(settingsIter == mSkillLogicSettings.end() ||
+        (execution && !settingsIter->second->HasExecutionValidation) ||
+        (!execution && !settingsIter->second->HasActivationValidation))
+    {
+        return true;
+    }
+
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(pSkill
+        ->Activated->GetSourceEntity());
+    auto state = source ? ClientState::GetEntityClientState(
+        source->GetEntityID()) : nullptr;
+
+    Sqrat::Function f(Sqrat::RootTable(
+        mSkillLogicScripts[pSkill->FunctionID]->GetVM()), execution
+        ? "validateExecution" : "validateActivation");
+    auto result = !f.IsNull()
+        ? f.Evaluate<int32_t>(
+            source,
+            state ? state->GetCharacterState() : nullptr,
+            state ? state->GetDemonState() : nullptr,
+            pSkill,
+            pSkill->CurrentZone) : 0;
+
+    // Print error if validation was not successful (0) and not a normal
+    // error (1)
+    if(!result || (*result != 0 && *result != 1))
+    {
+        LogSkillManagerError([source, pSkill, execution]()
+        {
+            return libcomp::String("Script validation failed for %1 when"
+                " %2 skill: %3.\n").Arg(source->GetEntityLabel())
+                .Arg(execution ? "executing" : "activating")
+                .Arg(pSkill->SkillID);
+        });
+    }
+
+    return result && *result == 0;
+}
+
+bool SkillManager::AdjustScriptCosts(
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+{
+    if(!pSkill->FunctionID)
+    {
+        // Nothing to do
+        return true;
+    }
+
+    auto settingsIter = mSkillLogicSettings.find(pSkill->FunctionID);
+    if(settingsIter == mSkillLogicSettings.end() ||
+        !settingsIter->second->HasCostAdjustment)
+    {
+        return true;
+    }
+
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(pSkill
+        ->Activated->GetSourceEntity());
+    auto state = source ? ClientState::GetEntityClientState(
+        source->GetEntityID()) : nullptr;
+
+    Sqrat::Function f(Sqrat::RootTable(
+        mSkillLogicScripts[pSkill->FunctionID]->GetVM()), "adjustCost");
+    auto result = !f.IsNull()
+        ? f.Evaluate<int32_t>(
+            source,
+            state ? state->GetCharacterState() : nullptr,
+            state ? state->GetDemonState() : nullptr,
+            pSkill,
+            pSkill->CurrentZone) : 0;
+
+    // Print error if cost calculation was not successful (0) and not deemed
+    // unpayable (1)
+    if(!result || (*result != 0 && *result != 1))
+    {
+        LogSkillManagerError([source, pSkill]()
+        {
+            return libcomp::String("Script cost adjustment failed for %1"
+                " when using skill: %2.\n").Arg(source->GetEntityLabel())
+                .Arg(pSkill->SkillID);
+        });
+    }
+
+    return result && *result == 0;
+}
+
+bool SkillManager::ExecuteScriptPreActions(
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+{
+    if(!pSkill->FunctionID)
+    {
+        // Nothing to do
+        return true;
+    }
+
+    auto settingsIter = mSkillLogicSettings.find(pSkill->FunctionID);
+    if(settingsIter == mSkillLogicSettings.end() ||
+        !settingsIter->second->HasPreAction)
+    {
+        return true;
+    }
+
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(pSkill
+        ->Activated->GetSourceEntity());
+    auto state = source ? ClientState::GetEntityClientState(
+        source->GetEntityID()) : nullptr;
+
+    Sqrat::Function f(Sqrat::RootTable(
+        mSkillLogicScripts[pSkill->FunctionID]->GetVM()), "preAction");
+    auto result = !f.IsNull()
+        ? f.Evaluate<int32_t>(
+            source,
+            state ? state->GetCharacterState() : nullptr,
+            state ? state->GetDemonState() : nullptr,
+            pSkill,
+            pSkill->CurrentZone,
+            mServer.lock()) : 0;
+
+    // Print error if cost calculation was not successful (0) and not requested
+    // to fizzle (1)
+    if(!result || (*result != 0 && *result != 1))
+    {
+        LogSkillManagerError([source, pSkill]()
+        {
+            return libcomp::String("Script pre-action failed for %1 when"
+                " using skill: %2.\n").Arg(source->GetEntityLabel())
+                .Arg(pSkill->SkillID);
+        });
+    }
+
+    return result && *result == 0;
+}
+
+bool SkillManager::ExecuteScriptPostActions(
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill)
+{
+    if(!pSkill->FunctionID)
+    {
+        // Nothing to do
+        return true;
+    }
+
+    auto settingsIter = mSkillLogicSettings.find(pSkill->FunctionID);
+    if(settingsIter == mSkillLogicSettings.end() ||
+        !settingsIter->second->HasPostAction)
+    {
+        return true;
+    }
+
+    auto source = std::dynamic_pointer_cast<ActiveEntityState>(pSkill
+        ->Activated->GetSourceEntity());
+    auto state = source ? ClientState::GetEntityClientState(
+        source->GetEntityID()) : nullptr;
+
+    auto vm = mSkillLogicScripts[pSkill->FunctionID]->GetVM();
+    Sqrat::Array directTargets(vm);
+    //std::list<SkillTargetResult*> directTargets;
+    for(auto& target : pSkill->Targets)
+    {
+        if(!target.IndirectTarget)
+        {
+            directTargets.Append(&target);
+        }
+    }
+
+    Sqrat::Function f(Sqrat::RootTable(vm), "postAction");
+    auto result = !f.IsNull()
+        ? f.Evaluate<int32_t>(
+            source,
+            state ? state->GetCharacterState() : nullptr,
+            state ? state->GetDemonState() : nullptr,
+            pSkill,
+            pSkill->CurrentZone,
+            directTargets,
+            mServer.lock()) : 0;
+
+    // Print error if post-action was not successful (0)
+    if(!result || *result != 0)
+    {
+        LogSkillManagerError([source, pSkill]()
+        {
+            return libcomp::String("Script post-action failed for %1 when"
+                " using skill: %2.\n").Arg(source->GetEntityLabel())
+                .Arg(pSkill->SkillID);
+        });
+    }
+
+    return result && *result == 0;
 }
 
 void SkillManager::GiveDemonPresent(

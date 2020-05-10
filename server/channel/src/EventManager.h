@@ -166,7 +166,7 @@ public:
      * React to a response based on the current event of a client
      * @param client Pointer to the client sending the response
      * @param responseID Value representing the player's response contextual
-     *  to the current event type (or -1 for a menu "next" enable flag)
+     *  to the current event type (or -1 for a menu "use next" path)
      * @param objectID Optional object ID selected as part of the client
      *  response
      * @return true on success, false on failure

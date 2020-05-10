@@ -1323,6 +1323,12 @@ void EventWindow::Reorganize()
             }
         }
 
+        auto menu = std::dynamic_pointer_cast<objects::EventOpenMenu>(e);
+        if(menu)
+        {
+            eventSet.push_back(menu->GetUseNext());
+        }
+
         for(auto b : e->GetBranches())
         {
             eventSet.push_back(b->GetNext());
@@ -2697,7 +2703,11 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
         break;
     case objects::Event::EventType_t::OPEN_MENU:
         {
+            auto menu = std::dynamic_pointer_cast<objects::EventOpenMenu>(e);
+
             item->setText(1, "Open Menu");
+
+            AddEventToTree(menu->GetUseNext(), item, file, seen);
         }
         break;
     case objects::Event::EventType_t::PLAY_SCENE:
@@ -2762,6 +2772,18 @@ void EventWindow::ChangeEventIDs(const std::unordered_map<libcomp::String,
                     if(iter != idMap.end())
                     {
                         iTime->SetStartActions(iter->second);
+                        update = true;
+                    }
+                }
+                break;
+            case objects::Event::EventType_t::OPEN_MENU:
+                {
+                    auto menu = std::dynamic_pointer_cast<
+                        objects::EventOpenMenu>(e);
+                    auto iter = idMap.find(menu->GetUseNext());
+                    if(iter != idMap.end())
+                    {
+                        menu->SetUseNext(iter->second);
                         update = true;
                     }
                 }

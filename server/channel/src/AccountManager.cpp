@@ -397,7 +397,8 @@ void AccountManager::Logout(const std::shared_ptr<
     auto zone = cState->GetZone();
     if(nullptr != zone)
     {
-        character->SetLogoutZone(zone->GetDefinition()->GetID());
+        character->SetLogoutZone(zone->GetDefinitionID());
+        character->SetLogoutInstance(zone->GetInstanceID());
         character->SetLogoutX(cState->GetCurrentX());
         character->SetLogoutY(cState->GetCurrentY());
         character->SetLogoutRotation(cState->GetCurrentRotation());
@@ -500,6 +501,7 @@ std::shared_ptr<objects::ChannelLogin> AccountManager::PrepareChannelChange(
             if(character)
             {
                 character->SetLogoutZone(zoneID);
+                character->SetLogoutInstance(zone->GetInstanceID());
                 character->SetLogoutX(cState->GetCurrentX());
                 character->SetLogoutY(cState->GetCurrentY());
                 character->SetLogoutRotation(cState->GetCurrentRotation());

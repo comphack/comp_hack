@@ -167,6 +167,13 @@ protected:
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
 
+    bool WebApp_Request(const libcomp::String& appName,
+        const libcomp::String& method, const JsonBox::Object& request,
+        JsonBox::Object& response, const std::shared_ptr<ApiSession>& session);
+
+    std::shared_ptr<libcomp::Database> WebAppScript_GetWorldDatabase(
+        uint8_t worldID);
+
     bool WebGame_GetCoins(const JsonBox::Object& request,
         JsonBox::Object& response,
         const std::shared_ptr<ApiSession>& session);
@@ -181,10 +188,11 @@ protected:
     std::shared_ptr<libcomp::Database> WebGameScript_GetDatabase(
         const std::shared_ptr<ApiSession>& session, bool worldDB);
     int64_t WebGameScript_GetSystemTime();
-    void WebGameScript_SetResponse(JsonBox::Object* response,
-        const libcomp::String& key, const libcomp::String& value);
     bool WebGameScript_UpdateCoins(const std::shared_ptr<ApiSession>& session,
         int64_t coins, bool adjust);
+
+    void Script_SetResponse(JsonBox::Object* response,
+        const libcomp::String& key, const libcomp::String& value);
 
 private:
     std::shared_ptr<objects::Account> GetAccount(
@@ -212,10 +220,15 @@ private:
     std::shared_ptr<lobby::LobbyServer> mServer;
 
     std::unordered_map<libcomp::String,
+        std::shared_ptr<libcomp::ServerScript>> mAppDefinitions;
+
+    std::unordered_map<libcomp::String,
         std::shared_ptr<libcomp::ServerScript>> mGameDefinitions;
 
     AccountManager *mAccountManager;
     libcomp::DefinitionManager *mDefinitionManager;
+
+    std::mutex mSessionLock;
 };
 
 } // namespace lobby

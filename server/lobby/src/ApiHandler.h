@@ -171,6 +171,7 @@ protected:
         const libcomp::String& method, const JsonBox::Object& request,
         JsonBox::Object& response, const std::shared_ptr<ApiSession>& session);
 
+    std::shared_ptr<libcomp::Database> WebAppScript_GetLobbyDatabase();
     std::shared_ptr<libcomp::Database> WebAppScript_GetWorldDatabase(
         uint8_t worldID);
 
@@ -191,6 +192,7 @@ protected:
     bool WebGameScript_UpdateCoins(const std::shared_ptr<ApiSession>& session,
         int64_t coins, bool adjust);
 
+    uint32_t Script_GetTimestamp();
     void Script_SetResponse(JsonBox::Object* response,
         const libcomp::String& key, const libcomp::String& value);
 

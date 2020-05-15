@@ -49,6 +49,7 @@
 #include <MiShopProductData.h>
 #include <PostItem.h>
 #include <Promo.h>
+#include <PromoExchange.h>
 #include <WebGameSession.h>
 
 // lobby Includes
@@ -1628,6 +1629,8 @@ bool ApiHandler::WebApp_Request(const libcomp::String& appName,
     app->Using<objects::AccountWorldData>();
     app->Using<objects::Character>();
     app->Using<objects::PostItem>();
+    app->Using<objects::Promo>();
+    app->Using<objects::PromoExchange>();
 
     if(!app->Eval(appIter->second->Source, appIter->second->Name))
     {
@@ -1649,6 +1652,9 @@ bool ApiHandler::WebApp_Request(const libcomp::String& appName,
             Sqrat::NoConstructor<ApiHandler>> apiBinding(vm, "ApiHandler");
         apiBinding
             .Func("SetResponse", &ApiHandler::Script_SetResponse)
+            .Func("GetTimestamp", &ApiHandler::Script_GetTimestamp)
+            .Func("GetLobbyDatabase",
+                &ApiHandler::WebAppScript_GetLobbyDatabase)
             .Func("GetWorldDatabase",
                 &ApiHandler::WebAppScript_GetWorldDatabase);
         Sqrat::RootTable(vm).Bind("ApiHandler", apiBinding);
@@ -1727,6 +1733,11 @@ bool ApiHandler::WebApp_Request(const libcomp::String& appName,
     }
 
     return true;
+}
+
+std::shared_ptr<libcomp::Database> ApiHandler::WebAppScript_GetLobbyDatabase()
+{
+    return mServer->GetMainDatabase();
 }
 
 std::shared_ptr<libcomp::Database> ApiHandler::WebAppScript_GetWorldDatabase(
@@ -1822,6 +1833,7 @@ bool ApiHandler::WebGame_Start(const JsonBox::Object& request,
             .Func("GetCoins", &ApiHandler::WebGameScript_GetCoins)
             .Func("GetDatabase", &ApiHandler::WebGameScript_GetDatabase)
             .Func("GetSystemTime", &ApiHandler::WebGameScript_GetSystemTime)
+            .Func("GetTimestamp", &ApiHandler::Script_GetTimestamp)
             .Func("SetResponse", &ApiHandler::Script_SetResponse)
             .Func("UpdateCoins", &ApiHandler::WebGameScript_UpdateCoins);
         Sqrat::RootTable(vm).Bind("ApiHandler", apiBinding);
@@ -2019,6 +2031,11 @@ int64_t ApiHandler::WebGameScript_GetSystemTime()
         return (int64_t)std::chrono::time_point_cast<
             std::chrono::microseconds>(now).time_since_epoch().count();
     }
+}
+
+uint32_t ApiHandler::Script_GetTimestamp()
+{
+    return (uint32_t)std::time(0);
 }
 
 void ApiHandler::Script_SetResponse(JsonBox::Object* response,

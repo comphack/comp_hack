@@ -46,19 +46,16 @@
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="lblUnknown">
+      <widget class="QLabel" name="lblEventLock">
        <property name="text">
-        <string>Unknown:</string>
+        <string>Event Lock:</string>
        </property>
       </widget>
      </item>
      <item row="1" column="1">
-      <widget class="QSpinBox" name="unknown">
-       <property name="minimum">
-        <number>-128</number>
-       </property>
-       <property name="maximum">
-        <number>127</number>
+      <widget class="QCheckBox" name="eventLock">
+       <property name="text">
+        <string/>
        </property>
       </widget>
      </item>

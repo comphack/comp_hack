@@ -83,8 +83,6 @@ void Event::Load(const std::shared_ptr<objects::Event>& e)
     ui->eventID->setText(qs(e->GetID()));
     ui->next->SetEvent(e->GetNext());
     ui->queueNext->SetEvent(e->GetQueueNext());
-    ui->pop->setChecked(e->GetPop());
-    ui->popNext->setChecked(e->GetPopNext());
     ui->skipInvalid->setChecked(e->GetSkipInvalid());
     ui->branchScript->SetScriptID(e->GetBranchScriptID());
     ui->transformScript->SetScriptID(e->GetTransformScriptID());
@@ -108,8 +106,6 @@ void Event::Load(const std::shared_ptr<objects::Event>& e)
     // If any non-base values are set, display the base values section
     if(!ui->layoutBaseBody->isVisible() &&
         (!e->GetQueueNext().IsEmpty() ||
-            e->GetPop() ||
-            e->GetPopNext() ||
             e->GetSkipInvalid() ||
             !e->GetTransformScriptID().IsEmpty()))
     {
@@ -127,8 +123,6 @@ std::shared_ptr<objects::Event> Event::Save() const
     mEventBase->SetID(cs(ui->eventID->text()));
     mEventBase->SetNext(ui->next->GetEvent());
     mEventBase->SetQueueNext(ui->queueNext->GetEvent());
-    mEventBase->SetPop(ui->pop->isChecked());
-    mEventBase->SetPopNext(ui->popNext->isChecked());
     mEventBase->SetSkipInvalid(ui->skipInvalid->isChecked());
 
     mEventBase->SetBranchScriptID(ui->branchScript->GetScriptID());

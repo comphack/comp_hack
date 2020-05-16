@@ -67,7 +67,7 @@ void EventPlayScene::Load(const std::shared_ptr<objects::Event>& e)
     }
 
     prop->scene->setValue(mEvent->GetSceneID());
-    prop->unknown->setValue(mEvent->GetUnknown());
+    prop->eventLock->setChecked(mEvent->GetEventLock());
 }
 
 std::shared_ptr<objects::Event> EventPlayScene::Save() const
@@ -80,7 +80,7 @@ std::shared_ptr<objects::Event> EventPlayScene::Save() const
     Event::Save();
 
     mEvent->SetSceneID(prop->scene->value());
-    mEvent->SetUnknown((int8_t)prop->unknown->value());
+    mEvent->SetEventLock(prop->eventLock->isChecked());
 
     return mEvent;
 }

@@ -11371,6 +11371,10 @@ bool SkillManager::FamiliarityUpItem(
             fPoints = (int32_t)ceill(
                 floorl((float)(maxFamiliarity - currentVal) *
                     deltaPercent * 0.01f) - 1);
+            if(fPoints < 0)
+            {
+                fPoints = 0;
+            }
         }
 
         if(minIncrease && fPoints < minIncrease)

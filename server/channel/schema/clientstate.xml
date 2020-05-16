@@ -48,9 +48,6 @@
     </object>
     <object name="EventState" persistent="false">
         <member type="EventInstance*" name="Current" nulldefault="true"/>
-        <member type="list" name="Previous">
-            <element type="EventInstance*"/>
-        </member>
         <member type="list" name="Queued">
             <element type="EventInstance*"/>
         </member>

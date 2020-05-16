@@ -66,7 +66,7 @@ public:
      * @param demonID2 ID of the second demon being fused
      * @param costItemType Optional cost item type used to pay for the fusion,
      *  defaults to macca
-     * @return true if the fusion succeeded, false if it did not
+     * @return true if the fusion did not fail, false if it did
      */
     bool HandleFusion(const std::shared_ptr<
         ChannelClientConnection>& client, int64_t demonID1, int64_t demonID2,
@@ -80,7 +80,7 @@ public:
      * @param demonID3 ID of the third demon being fused
      * @param soloFusion true if a solo fusion is being performed, false
      *  if it is a normal party based tri-fusion
-     * @return true if the fusion succeeded, false if it did not
+     * @return true if the fusion did not fail, false if it did
      */
     bool HandleTriFusion(const std::shared_ptr<
         ChannelClientConnection>& client, int64_t demonID1, int64_t demonID2,
@@ -134,6 +134,7 @@ private:
      * @param resultDemon Output parameter to return the resulting demon in
      * @return Error code associated to the reason why any failure may have
      *  ocurred:
+     *  2 = Fusion mistake
      *  1 = Normal failure
      *  0 = No failure
      *  -1 = Generic/criteria error
@@ -145,6 +146,57 @@ private:
         ChannelClientConnection>& client, int64_t demonID1, int64_t demonID2,
         int64_t demonID3, uint32_t costItemType,
         std::shared_ptr<objects::Demon>& resultDemon);
+
+    /**
+     * Calculate the resulting demon based upon the supplied demon IDs
+     * @param client Pointer to the client performing the fusion
+     * @param demonID1 ID of the first demon being fused
+     * @param demonID2 ID of the second demon being fused
+     * @param demonID3 ID of the third demon being fused
+     * @param specialFusion Output parameter designating if the result is from
+     *  a predefined special fusion
+     * @return Type ID of the demon that would be fused
+     */
+    uint32_t GetResultDemon(const std::shared_ptr<
+        ChannelClientConnection>& client, int64_t demonID1, int64_t demonID2,
+        int64_t demonID3, bool& specialFusion);
+
+    /**
+     * Calculate the resulting mistake demon based upon the supplied demon
+     * types and potential outcome already determined. Should be ignored
+     * for mitama fusions.
+     * @param demonType1 Type ID of the first demon being fused
+     * @param demonType2 Type ID of the second demon being fused
+     * @param demonType3 Type ID of the third demon being fused
+     * @param targetType Demon type of normal fusion result
+     * @param success If true, potential outcome would be a success
+     * @param specialFusion Fusion mode is either special two-way or trifusion
+     *  solo
+     * @param specialTarget Normal fusion result is a predefined special fusion
+     * @param successRate Fusion sucess rate checked to determine the result
+     * @return Type ID of a mistake outcome
+     */
+    uint32_t GetMistakeResultType(uint32_t demonType1, uint32_t demonType2,
+        uint32_t demonType3, uint32_t targetType, bool success,
+        bool specialFusion, bool specialTarget, double successRate);
+    
+    /**
+     * Utility function to check if any or all match set entries are present
+     * when checking special fusion criteria. If one of each required type is
+     * found, it checks to make sure there is a valid combination available 
+     * which is vital when fusing two of the same type or a variant and a
+     * specific demon with the same base type.
+     * @param matches Array of distinct "match indexes" compared to the
+     *  criteria for a match determined by the executing code. For example
+     *  index 0 with values 1 and 2 means the first input demon matches
+     *  criteria 1 and 2.
+     * @param triFusion If true, trifusion is being checked, otherwise two-way
+     * @param any If false, all match criteria must be accounted for. If true,
+     *  only one match must exist.
+     * @return true if the types match
+     */
+    static bool TypesMatch(const std::array<std::set<uint8_t>, 3>& matches,
+        bool triFusion, bool any);
 
     /**
      * Sum up and average the demon levels supplied and optionally

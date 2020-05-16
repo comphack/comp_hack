@@ -4275,6 +4275,11 @@ void CharacterManager::UpdateFamiliarity(const std::shared_ptr<
     channel::ChannelClientConnection>& client, int32_t familiarity,
     bool isAdjust, bool sendPacket)
 {
+    if(isAdjust && !familiarity)
+    {
+        return;
+    }
+
     auto state = client->GetClientState();
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();

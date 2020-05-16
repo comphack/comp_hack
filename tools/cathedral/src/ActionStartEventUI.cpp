@@ -47,6 +47,10 @@ ActionStartEvent::ActionStartEvent(ActionList *pList, MainWindow *pMainWindow,
     prop = new Ui::ActionStartEvent;
     prop->setupUi(pWidget);
 
+    prop->eventTransformScriptParams->Setup(
+        DynamicItemType_t::PRIMITIVE_STRING, nullptr);
+    prop->eventTransformScriptParams->SetAddText("Add Param");
+
     ui->actionTitle->setText(tr("<b>Start Event</b>"));
     ui->layoutMain->addWidget(pWidget);
 
@@ -73,6 +77,11 @@ void ActionStartEvent::Load(const std::shared_ptr<objects::Action>& act)
     prop->allowInterrupt->setCurrentIndex(to_underlying(
         mAction->GetAllowInterrupt()));
     prop->autoOnly->setChecked(mAction->GetAutoOnly());
+
+    for(auto param : mAction->GetEventTransformScriptParams())
+    {
+        prop->eventTransformScriptParams->AddString(param);
+    }
 }
 
 std::shared_ptr<objects::Action> ActionStartEvent::Save() const
@@ -88,6 +97,9 @@ std::shared_ptr<objects::Action> ActionStartEvent::Save() const
     mAction->SetAllowInterrupt((objects::ActionStartEvent::AllowInterrupt_t)
         prop->allowInterrupt->currentIndex());
     mAction->SetAutoOnly(prop->autoOnly->isChecked());
+
+    mAction->SetEventTransformScriptParams(
+        prop->eventTransformScriptParams->GetStringList());
 
     return mAction;
 }

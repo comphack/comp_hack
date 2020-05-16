@@ -33,6 +33,7 @@
 #include <PacketCodes.h>
 #include <Randomizer.h>
 #include <ServerConstants.h>
+#include <ServerDataManager.h>
 
 // Standard C++11 Includes
 #include <math.h>
@@ -43,6 +44,7 @@
 #include <CharacterProgress.h>
 #include <Demon.h>
 #include <DemonBox.h>
+#include <FusionMistake.h>
 #include <InheritedSkill.h>
 #include <Item.h>
 #include <ItemBox.h>
@@ -86,12 +88,12 @@ bool FusionManager::HandleFusion(
 
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FUSION);
-    reply.WriteS32Little(result == 0 ? 0 : 1);
+    reply.WriteS32Little((result != 0 && result != 2) ? 1 : result);
     reply.WriteU32Little(resultDemon ? resultDemon->GetType() : 0);
 
     client->SendPacket(reply);
 
-    return result == 0;
+    return result == 0 || result == 2;
 }
 
 bool FusionManager::HandleTriFusion(
@@ -142,7 +144,7 @@ bool FusionManager::HandleTriFusion(
     {
         libcomp::Packet reply;
         reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRIFUSION_SOLO);
-        reply.WriteS8(result == 0 ? 0 : 1);
+        reply.WriteS8((result != 0 && result != 2) ? 1 : result);
         reply.WriteU32Little(resultDemon ? resultDemon->GetType() : 0);
 
         client->SendPacket(reply);
@@ -179,8 +181,17 @@ bool FusionManager::HandleTriFusion(
 
         libcomp::Packet notify;
         notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRIFUSION);
-        notify.WriteS8(result == 0 ? 0 : 1);
-        notify.WriteU32Little(result == 0 ? resultDemon->GetType() : 0);
+        if(result == 0 || result == 2)
+        {
+            notify.WriteS8(result);
+            notify.WriteU32Little(resultDemon->GetType());
+        }
+        else
+        {
+            notify.WriteS8(1);  // Failure
+            notify.WriteU32Little(0);
+        }
+
         notify.WriteU32Little(static_cast<uint32_t>(-1));   // Unknown
 
         ChannelClientConnection::BroadcastPacket(pClients, notify);
@@ -417,6 +428,16 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
     ChannelClientConnection>& client, int64_t demonID1, int64_t demonID2,
     int64_t demonID3)
 {
+    bool specialFusion = false;
+    return GetResultDemon(client, demonID1, demonID2, demonID3, specialFusion);
+}
+
+uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
+    ChannelClientConnection>& client, int64_t demonID1, int64_t demonID2,
+    int64_t demonID3, bool& specialFusion)
+{
+    specialFusion = false;
+
     bool triFusion = demonID3 > 0;
 
     auto state = client->GetClientState();
@@ -539,40 +560,7 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
             }
         }
 
-        if(match)
-        {
-            // If one of each required type is found, check to make sure
-            // there is a valid combination available (vital when fusing
-            // two of the same type or a variant and a specific demon with
-            // the same base type)
-            match = false;
-            for(uint8_t m1 : matches[0])
-            {
-                for(uint8_t m2 : matches[1])
-                {
-                    if(triFusion)
-                    {
-                        for(uint8_t m3 : matches[2])
-                        {
-                            if(m1 != m2 && m1 != m3 && m2 != m3)
-                            {
-                                match = true;
-                                break;
-                            }
-                        }
-
-                        if(match) break;
-                    }
-                    else if(m1 != m2)
-                    {
-                        match = true;
-                        break;
-                    }
-                }
-
-                if(match) break;
-            }
-        }
+        match = match && FusionManager::TypesMatch(matches, triFusion, false);
 
         if(match && special->GetPluginID() > 0)
         {
@@ -589,6 +577,7 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
 
         if(match)
         {
+            specialFusion = true;
             return special->GetResultID();
         }
     }
@@ -1126,6 +1115,346 @@ uint32_t FusionManager::GetResultDemon(const std::shared_ptr<
     return 0;
 }
 
+uint32_t FusionManager::GetMistakeResultType(uint32_t demonType1,
+    uint32_t demonType2, uint32_t demonType3, uint32_t targetType,
+    bool success, bool specialFusion, bool specialTarget, double successRate)
+{
+    auto server = mServer.lock();
+    bool triFusion = demonType3 != 0;
+
+    // Gather mistake definitions using base result first
+    std::list<std::shared_ptr<objects::FusionMistake>> mistakeDefs;
+    for(auto& pair : server->GetServerDataManager()->GetFusionMistakeData())
+    {
+        auto m = pair.second;
+
+        // Stop if special target and not enabled
+        if(m->GetNoSpecialTarget() && specialTarget) continue;
+
+        // Make sure the fusion mode is enabled
+        if((!specialFusion && !triFusion && m->GetTwoWayEnabled()) ||
+            (specialFusion && !triFusion && m->GetTwoWaySpecialEnabled()) ||
+            (!specialFusion && triFusion && m->GetTrifusionEnabled()) ||
+            (specialFusion && triFusion && m->GetTrifusionSoloEnabled()))
+        {
+            // Check success/failure outcome
+            if(success)
+            {
+                if(successRate >= 100.0 && m->GetOnMaxSuccess())
+                {
+                    // Max success
+                    mistakeDefs.push_back(m);
+                }
+                else if(successRate < 100.0 && m->GetOnSuccess())
+                {
+                    // Normal success (no max)
+                    mistakeDefs.push_back(m);
+                }
+            }
+            else
+            {
+                if(successRate <= 0.0 && m->GetOnZeroFailure())
+                {
+                    // Zero failure
+                    mistakeDefs.push_back(m);
+                }
+                else if(successRate > 0.0 && m->GetOnFailure())
+                {
+                    // Normal failure (no zero)
+                    mistakeDefs.push_back(m);
+                }
+            }
+        }
+    }
+
+    if(mistakeDefs.size() == 0)
+    {
+        return 0;
+    }
+
+    // Potential mistakes exist, filter down to just applicable
+    auto definitionManager = server->GetDefinitionManager();
+    auto targetDef = definitionManager->GetDevilData(targetType);
+    auto targetLevel = targetDef->GetGrowth()->GetBaseLevel();
+
+    std::array<std::shared_ptr<objects::MiDevilData>, 3> sourceDefs;
+    sourceDefs[0] = definitionManager->GetDevilData(demonType1);
+    sourceDefs[1] = definitionManager->GetDevilData(demonType2);
+    sourceDefs[2] = definitionManager->GetDevilData(demonType3);
+
+    mistakeDefs.remove_if([&](
+        const std::shared_ptr<objects::FusionMistake>& m)
+        {
+            if(!triFusion &&
+                (m->SourceTypesCount() >= 3 || m->SourceRaceIDsCount() >= 3))
+            {
+                // Too many specified for current fusion
+                return true;
+            }
+
+            if(m->SourceTypesCount() > 0)
+            {
+                // Check for any/all source types
+                std::array<std::set<uint8_t>, 3> matches;
+                for(size_t i = 0; i < 3; i++)
+                {
+                    auto def = sourceDefs[i];
+                    if(def)
+                    {
+                        for(uint8_t k = 0; k < 3; k++)
+                        {
+                            std::set<uint32_t> types;
+                            types.insert(def->GetBasic()->GetID());
+                            types.insert(def->GetUnionData()
+                                ->GetBaseDemonID());
+                            if(types.find(m->GetSourceTypes(k)) != types.end())
+                            {
+                                matches[i].insert(k);
+                            }
+                        }
+                    }
+                }
+
+                return !FusionManager::TypesMatch(matches, triFusion,
+                    m->GetSourceAny());
+            }
+
+            if(m->SourceRaceIDsCount() > 0 &&
+                (!m->GetSourceAny() || m->SourceTypesCount() == 0))
+            {
+                // Check for any/all source races (ignore anything that already
+                // passed a source type check with SourceAny enabled)
+                std::array<std::set<uint8_t>, 3> matches;
+                for(size_t i = 0; i < 3; i++)
+                {
+                    auto def = sourceDefs[i];
+                    if(def)
+                    {
+                        for(uint8_t k = 0; k < 3; k++)
+                        {
+                            if(m->GetSourceRaceIDs(k) ==
+                                (uint8_t)def->GetCategory()->GetRace())
+                            {
+                                matches[i].insert(k);
+                            }
+                        }
+                    }
+                }
+
+                return !FusionManager::TypesMatch(matches, triFusion,
+                    m->GetSourceAny());
+            }
+
+            return false;
+        });
+
+    mistakeDefs.remove_if([targetDef](
+        const std::shared_ptr<objects::FusionMistake>& m)
+        {
+            // Target (base) type not contained
+            return m->TargetTypesCount() > 0 &&
+                !m->TargetTypesContains(targetDef->GetBasic()->GetID()) &&
+                !m->TargetTypesContains(targetDef->GetUnionData()
+                    ->GetBaseDemonID());
+        });
+
+    mistakeDefs.remove_if([targetDef, targetLevel](
+        const std::shared_ptr<objects::FusionMistake>& m)
+        {
+            if(m->TargetRaceIDsCount() > 0 && !m->TargetRaceIDsContains(
+                (uint8_t)targetDef->GetCategory()->GetRace()))
+            {
+                // Target race not contained
+                return true;
+            }
+            else if(m->GetTargetLevelMin() &&
+                m->GetTargetLevelMin() > targetLevel)
+            {
+                // Target level too low
+                return true;
+            }
+            else if(m->GetTargetLevelMax() &&
+                m->GetTargetLevelMax() < targetLevel)
+            {
+                // Target level too high
+                return true;
+            }
+
+            return false;
+        });
+
+    // Remove all definitions that don't have a valid result
+    std::unordered_map<uint32_t, std::set<uint32_t>> validTypes;
+    for(auto mistakeDef : mistakeDefs)
+    {
+        validTypes[mistakeDef->GetID()] = mistakeDef->GetResultTypes();
+
+        for(uint8_t raceID : mistakeDef->GetResultRaceIDs())
+        {
+            auto fusionRanges = definitionManager->GetFusionRanges(raceID);
+            if(mistakeDef->GetResultLevelRange())
+            {
+                // Take the entire fusion range and filter further down based
+                // upon level.
+                for(auto& pair : fusionRanges)
+                {
+                    validTypes[mistakeDef->GetID()].insert(pair.second);
+                }
+            }
+            else
+            {
+                // Use target level to check fusion ranges just like normal
+                // two way fusion. Adjusted level sum cannot necessarily be
+                // determined again here due to normal result demon logic.
+                if(fusionRanges.size() == 0) continue;
+
+                uint32_t resultID = fusionRanges.front().second;
+                for(auto& pair : fusionRanges)
+                {
+                    resultID = pair.second;
+
+                    if(pair.first >= targetLevel)
+                    {
+                        break;
+                    }
+                }
+
+                // Add the valid range type
+                validTypes[mistakeDef->GetID()].insert(resultID);
+            }
+
+            if(mistakeDef->GetResultLevelRange())
+            {
+                // Filter down explicit types based on the result level delta
+                // compared to the normal target level.
+                int32_t delta = (int32_t)mistakeDef->GetResultLevelRange();
+
+                std::set<uint32_t> keep;
+                for(uint32_t type : validTypes[mistakeDef->GetID()])
+                {
+                    auto def = definitionManager->GetDevilData(type);
+                    if(abs((int32_t)def->GetGrowth()->GetBaseLevel() -
+                        (int32_t)targetLevel) <= delta)
+                    {
+                        keep.insert(type);
+                    }
+                }
+
+                validTypes[mistakeDef->GetID()] = keep;
+            }
+        }
+
+        // The target type doesn't count as a mistake
+        validTypes[mistakeDef->GetID()].erase(targetType);
+    }
+
+    mistakeDefs.remove_if([&validTypes](
+        const std::shared_ptr<objects::FusionMistake>& m)
+        {
+            // Filtered results yield no valid options
+            return validTypes[m->GetID()].size() == 0;
+        });
+
+    auto worldClock = server->GetWorldClockTime();
+    mistakeDefs.remove_if([worldClock](
+        const std::shared_ptr<objects::FusionMistake>& m)
+        {
+            // Active rate is 0%
+            float moonRate = m->GetMoonRates((size_t)worldClock.MoonPhase);
+            return moonRate == 0.f ||
+                (moonRate < 0.f && m->GetBaseRate() == 0.f);
+        });
+
+    if(mistakeDefs.size() == 0)
+    {
+        return 0;
+    }
+
+    // Final set determined, get max rate to determine if one hits
+    float maxRate = 0.f;
+    float rateSum = 0.f;
+    std::list<float> allRates;
+    for(auto& mistakeDef : mistakeDefs)
+    {
+        float moonRate = mistakeDef->GetMoonRates(
+            (size_t)worldClock.MoonPhase);
+        float rate = moonRate >= 0.f ? moonRate : mistakeDef->GetBaseRate();
+        if(maxRate < rate)
+        {
+            maxRate = rate;
+        }
+
+        rateSum = rateSum + rate;
+        allRates.push_back(rate);
+    }
+
+    if(RNG_DEC(float, 0.01f, 100.f, 2) <= maxRate)
+    {
+        // Mistakes were made. Use rateSum and allRates as "weights" to pull
+        // the final record, then retrieve a random result from it.
+        float hit = RNG_DEC(float, 0.01f, rateSum, 2);
+        for(auto& mistakeDef : mistakeDefs)
+        {
+            float rate = allRates.front();
+            allRates.pop_back();
+
+            if(hit <= rate)
+            {
+                return libcomp::Randomizer::GetEntry(
+                    validTypes[mistakeDef->GetID()]);
+            }
+
+            hit -= rate;
+        }
+    }
+
+    return 0;
+}
+
+bool FusionManager::TypesMatch(const std::array<std::set<uint8_t>, 3>& matches,
+    bool triFusion, bool any)
+{
+    if(any)
+    {
+        // Check for any match found
+        return matches[0].size() > 0 ||
+            matches[1].size() > 0 ||
+            matches[2].size() > 0;
+    }
+    else
+    {
+        // Check for full match
+        bool match = false;
+        for(uint8_t m1 : matches[0])
+        {
+            for(uint8_t m2 : matches[1])
+            {
+                if(triFusion)
+                {
+                    for(uint8_t m3 : matches[2])
+                    {
+                        if(m1 != m2 && m1 != m3 && m2 != m3)
+                        {
+                            match = true;
+                            break;
+                        }
+                    }
+
+                    if(match) break;
+                }
+                else if(m1 != m2)
+                {
+                    match = true;
+                    break;
+                }
+            }
+
+            if(match) break;
+        }
+
+        return match;
+    }
+}
 
 void FusionManager::EndExchange(const std::shared_ptr<
     channel::ChannelClientConnection>& client)
@@ -1240,8 +1569,9 @@ int8_t FusionManager::ProcessFusion(
         return -1;
     }
 
+    bool specialResult = false;
     uint32_t resultDemonType = GetResultDemon(client, demonID1, demonID2,
-        demonID3);
+        demonID3, specialResult);
     if(resultDemonType == 0)
     {
         return -2;
@@ -1480,10 +1810,70 @@ int8_t FusionManager::ProcessFusion(
     }
 
     // Fusion is ready to be attempted, check for normal failure
+    bool failed = false;
     if(successRate <= 0.0 || (successRate < 100.0 &&
         RNG(uint16_t, 1, 10000) > (uint16_t)(successRate * 100.0)))
     {
-        // Update expertise for failure
+        failed = true;
+    }
+
+    // Result determined and costs paid, check for fusion mistakes (not
+    // supported for mitama fusion)
+    bool mistake = false;
+    if(!mitamaFusion)
+    {
+        bool specialFusion = costItemType == SVR_CONST.ITEM_KREUZ;
+
+        uint32_t mistakeType = GetMistakeResultType(demon1->GetType(),
+            demon2->GetType(), demon3 ? demon3->GetType() : 0, resultDemonType,
+            !failed, specialFusion, specialResult, successRate);
+        if(mistakeType)
+        {
+            if(demon3)
+            {
+                LogFusionManagerDebug([&]()
+                {
+                    return libcomp::String("Tri-fusion %1 for result %2"
+                        " (%3 x %4 x %5) with success rate %6 resulted in"
+                        " fusion mistake to type %7 for character: %8\n")
+                        .Arg(failed ? "failure" : "success")
+                        .Arg(resultDemonType)
+                        .Arg(demon1->GetType())
+                        .Arg(demon2->GetType())
+                        .Arg(demon3->GetType())
+                        .Arg(successRate)
+                        .Arg(mistakeType)
+                        .Arg(cState->GetEntityUUID().ToString());
+                });
+            }
+            else
+            {
+                LogFusionManagerDebug([&]()
+                {
+                    return libcomp::String("Fusion %1 for result %2"
+                        " (%3 x %4) with success rate %5 resulted in"
+                        " fusion mistake to type %6 for character: %7\n")
+                        .Arg(failed ? "failure" : "success")
+                        .Arg(resultDemonType)
+                        .Arg(demon1->GetType())
+                        .Arg(demon2->GetType())
+                        .Arg(successRate)
+                        .Arg(mistakeType)
+                        .Arg(cState->GetEntityUUID().ToString());
+                });
+            }
+
+            resultDemonType = mistakeType;
+            demonData = definitionManager->GetDevilData(resultDemonType);
+
+            failed = false;
+            mistake = true;
+        }
+    }
+
+    if(failed)
+    {
+        // Update expertise for failure and quit
         std::list<std::pair<uint8_t, int32_t>> expPoints;
 
         int32_t ePoints = characterManager->CalculateExpertiseGain(cState,
@@ -1530,32 +1920,35 @@ int8_t FusionManager::ProcessFusion(
     }
 
     // Fusion success past this point, create the demon and update all old data
-    if(demon3)
+    if(!mistake)
     {
-        LogFusionManagerDebug([&]()
+        if(demon3)
         {
-            return libcomp::String("Tri-fusion succeeded with result %1"
-                " (%2 x %3 x %4) with success rate %5 for character: %6\n")
-                .Arg(resultDemonType)
-                .Arg(demon1->GetType())
-                .Arg(demon2->GetType())
-                .Arg(demon3->GetType())
-                .Arg(successRate)
-                .Arg(cState->GetEntityUUID().ToString());
-        });
-    }
-    else
-    {
-        LogFusionManagerDebug([&]()
+            LogFusionManagerDebug([&]()
+            {
+                return libcomp::String("Tri-fusion succeeded with result %1"
+                    " (%2 x %3 x %4) with success rate %5 for character: %6\n")
+                    .Arg(resultDemonType)
+                    .Arg(demon1->GetType())
+                    .Arg(demon2->GetType())
+                    .Arg(demon3->GetType())
+                    .Arg(successRate)
+                    .Arg(cState->GetEntityUUID().ToString());
+            });
+        }
+        else
         {
-            return libcomp::String("Fusion succeeded with result %1"
-                " (%2 x %3) with success rate %4 for character: %5\n")
-                .Arg(resultDemonType)
-                .Arg(demon1->GetType())
-                .Arg(demon2->GetType())
-                .Arg(successRate)
-                .Arg(cState->GetEntityUUID().ToString());
-        });
+            LogFusionManagerDebug([&]()
+            {
+                return libcomp::String("Fusion succeeded with result %1"
+                    " (%2 x %3) with success rate %4 for character: %5\n")
+                    .Arg(resultDemonType)
+                    .Arg(demon1->GetType())
+                    .Arg(demon2->GetType())
+                    .Arg(successRate)
+                    .Arg(cState->GetEntityUUID().ToString());
+            });
+        }
     }
 
     // Calculate familiarity, store demons in the COMP and determine first
@@ -1777,7 +2170,7 @@ int8_t FusionManager::ProcessFusion(
 
     characterManager->UpdateExpertisePoints(client, expPoints);
 
-    return 0;
+    return mistake ? 2 : 0;
 }
 
 int8_t FusionManager::GetAdjustedLevelSum(uint8_t level1, uint8_t level2,

@@ -113,8 +113,8 @@ bool Parsers::ShopRepair::Parse(libcomp::ManagerPacket *pPacketManager,
         LogItemError([item, accountUID]()
         {
             return libcomp::String("Player attempted to repair irreparable"
-                " item type %1: %2\n")
-                .Arg(item->GetType()).Arg(accountUID.ToString());
+                " item type %1: %2\n").Arg(item ? item->GetType() : 0)
+                .Arg(accountUID.ToString());
         });
     }
     else if(shop && item->GetItemBox() == inventory->GetUUID())

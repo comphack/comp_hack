@@ -75,6 +75,7 @@
 #include <EventInstance.h>
 #include <EventState.h>
 #include <InstanceAccess.h>
+#include <Item.h>
 #include <Loot.h>
 #include <LootBox.h>
 #include <Match.h>
@@ -748,6 +749,7 @@ bool ActionManager::StartEvent(ActionContext& ctx)
     options.ActionGroupID = ctx.Options.GroupID;
     options.AutoOnly = ctx.Options.AutoEventsOnly || act->GetAutoOnly();
     options.NoInterrupt = ctx.Options.NoEventInterrupt;
+    options.TransformScriptParams = act->GetEventTransformScriptParams();
 
     switch(act->GetAllowInterrupt())
     {
@@ -2049,7 +2051,7 @@ bool ActionManager::PlayBGM(ActionContext& ctx)
         p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_BGM);
         p.WriteS32Little(act->GetMusicID());
         p.WriteS32Little(act->GetFadeInDelay());
-        p.WriteS32Little(act->GetUnknown());
+        p.WriteS32Little(act->GetFadeOutDelay());
     }
 
     ctx.Client->SendPacket(p);
@@ -2695,6 +2697,45 @@ bool ActionManager::UpdatePoints(ActionContext& ctx)
 
             mServer.lock()->GetWorldDatabase()->QueueUpdate(awd,
                 state->GetAccountUID());
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::FAMILIARITY:
+        {
+            auto dState = ctx.Client->GetClientState()->GetDemonState();
+            if(!dState->GetEntity())
+            {
+                return false;
+            }
+
+            mServer.lock()->GetCharacterManager()->UpdateFamiliarity(
+                ctx.Client, (int32_t)act->GetValue(), !act->GetIsSet());
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::DURABILITY:
+        {
+            auto cState = ctx.Client->GetClientState()->GetCharacterState();
+            auto character = cState->GetEntity();
+            if(!character)
+            {
+                // Fail if there is no character, not if there's no item or it
+                // won't actually update
+                return false;
+            }
+
+            auto equip = character->GetEquippedItems(
+                (size_t)act->GetModifier()).Get();
+            if(equip)
+            {
+                mServer.lock()->GetCharacterManager()->UpdateDurability(
+                    ctx.Client, equip, (int32_t)act->GetValue(),
+                    !act->GetIsSet());
+            }
+        }
+        break;
+    case objects::ActionUpdatePoints::PointType_t::FUSION_GAUGE:
+        {
+            mServer.lock()->GetCharacterManager()->UpdateFusionGauge(
+                ctx.Client, (int32_t)act->GetValue(), !act->GetIsSet());
         }
         break;
     default:

@@ -274,11 +274,6 @@ bool EventManager::RequestMenu(const std::shared_ptr<
     if(allowInsert)
     {
         // Process directly
-        if(current)
-        {
-            eState->AppendPrevious(instance);
-        }
-
         EventContext ctx2;
         ctx2.Client = client;
         ctx2.EventInstance = instance;
@@ -411,7 +406,6 @@ bool EventManager::HandleResponse(const std::shared_ptr<ChannelClientConnection>
                         }
                     }
 
-                    eState->AppendPrevious(current);
                     eState->SetCurrent(nullptr);
 
                     auto next = branch ? branch->GetNext() : e->GetNext();
@@ -4113,7 +4107,10 @@ bool EventManager::HandleEvent(EventContext& ctx)
     if(conditions.size() > 0 && !EvaluateEventConditions(ctx, conditions))
     {
         handled = true;
-        EndEvent(client);
+        if(!ctx.AutoOnly)
+        {
+            EndEvent(client);
+        }
     }
     else
     {
@@ -4365,39 +4362,20 @@ void EventManager::HandleNext(EventContext& ctx)
         }
     }
 
-    // If there is no next event either repeat previous or process next
-    // queued event
+    // If there is no next event process queued event or end
     if(nextEventID.IsEmpty())
     {
         if(!ctx.AutoOnly)
         {
             if(eState)
             {
-                auto previous = eState->PreviousCount() > 0
-                    ? eState->GetPrevious().back() : nullptr;
-                if(previous != nullptr &&
-                    (iState->GetPop() || iState->GetPopNext()))
-                {
-                    // Return to pop event
-                    eState->RemovePrevious(eState->PreviousCount() - 1);
-                    eState->SetCurrent(previous);
-
-                    ctx.EventInstance = previous;
-                    eState->SetCurrent(previous);
-
-                    if(HandleEvent(ctx))
-                    {
-                        return;
-                    }
-                }
-                else if(eState->QueuedCount() > 0)
+                if(eState->QueuedCount() > 0)
                 {
                     // Process the first queued event
                     auto queued = eState->GetQueued(0);
                     eState->RemoveQueued(0);
 
-                    // Push current onto previous and replace
-                    eState->AppendPrevious(ctx.EventInstance);
+                    // Replace current
                     eState->SetCurrent(queued);
 
                     HandleEvent(ctx.Client, queued);
@@ -4413,8 +4391,7 @@ void EventManager::HandleNext(EventContext& ctx)
     {
         if(eState && !ctx.AutoOnly)
         {
-            // Push current onto previous
-            eState->AppendPrevious(ctx.EventInstance);
+            // Remove current
             eState->SetCurrent(nullptr);
         }
 
@@ -4579,7 +4556,7 @@ bool EventManager::PlayScene(EventContext& ctx)
     libcomp::Packet p;
     p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EVENT_PLAY_SCENE);
     p.WriteS32Little(e->GetSceneID());
-    p.WriteS8(e->GetUnknown());
+    p.WriteS8(e->GetEventLock() ? 1 : 0);
 
     ctx.Client->SendPacket(p);
 
@@ -4822,7 +4799,6 @@ bool EventManager::EndEvent(const std::shared_ptr<ChannelClientConnection>& clie
         auto eState = state->GetEventState();
 
         eState->SetCurrent(nullptr);
-        eState->ClearPrevious();
         eState->ClearQueued();
         eState->SetITimeID(0);
 

@@ -315,7 +315,6 @@ std::shared_ptr<XmlTemplateObject> XmlHandler::GetTemplateObject(
     if(objType == "EventBase")
     {
         obj = std::make_shared<objects::EventBase>();
-        lesserMember = "popNext";
         dropObjectIdentifier = true;
     }
     else if(objType == "EventChoice")

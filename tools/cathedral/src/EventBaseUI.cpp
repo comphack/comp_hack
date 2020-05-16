@@ -74,8 +74,6 @@ void EventBase::Load(const std::shared_ptr<objects::EventBase>& e)
 
     ui->next->SetEvent(e->GetNext());
     ui->queueNext->SetEvent(e->GetQueueNext());
-    ui->pop->setChecked(e->GetPop());
-    ui->popNext->setChecked(e->GetPopNext());
 
     for(auto condition : e->GetConditions())
     {
@@ -86,8 +84,6 @@ void EventBase::Load(const std::shared_ptr<objects::EventBase>& e)
     // (skip invalid is assumed to have already been set)
     if(!ui->layoutBaseBody->isVisible() &&
         (!e->GetQueueNext().IsEmpty() ||
-            e->GetPop() ||
-            e->GetPopNext() ||
             ui->skipInvalid->isChecked()))
     {
         ToggleBaseDisplay();
@@ -103,8 +99,6 @@ std::shared_ptr<objects::EventBase> EventBase::Save() const
 
     mEventBase->SetNext(ui->next->GetEvent());
     mEventBase->SetQueueNext(ui->queueNext->GetEvent());
-    mEventBase->SetPop(ui->pop->isChecked());
-    mEventBase->SetPopNext(ui->popNext->isChecked());
 
     auto conditions = ui->conditions->GetObjectList<objects::EventCondition>();
     mEventBase->SetConditions(conditions);

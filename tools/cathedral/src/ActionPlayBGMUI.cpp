@@ -75,7 +75,7 @@ void ActionPlayBGM::Load(const std::shared_ptr<objects::Action>& act)
     prop->isStop->setChecked(mAction->GetIsStop());
     prop->music->SetValueSigned(mAction->GetMusicID());
     prop->fadeInDelay->setValue(mAction->GetFadeInDelay());
-    prop->unknown->setValue(mAction->GetUnknown());
+    prop->fadeOutDelay->setValue(mAction->GetFadeOutDelay());
 }
 
 std::shared_ptr<objects::Action> ActionPlayBGM::Save() const
@@ -90,7 +90,7 @@ std::shared_ptr<objects::Action> ActionPlayBGM::Save() const
     mAction->SetIsStop(prop->isStop->isChecked());
     mAction->SetMusicID(prop->music->GetValueSigned());
     mAction->SetFadeInDelay(prop->fadeInDelay->value());
-    mAction->SetUnknown(prop->unknown->value());
+    mAction->SetFadeOutDelay(prop->fadeOutDelay->value());
 
     return mAction;
 }

@@ -223,6 +223,10 @@ IF(WIN32)
             "${CMAKE_SOURCE_DIR}/contrib/webroot"
             DESTINATION /
             COMPONENT webroot)
+
+        INSTALL(DIRECTORY DESTINATION datastore)
+        INSTALL(DIRECTORY DESTINATION database)
+        INSTALL(DIRECTORY DESTINATION logs)
     ENDIF(NOT CHANNEL_ONLY)
 ELSE()
     SET(COMP_INSTALL_DIR "bin")

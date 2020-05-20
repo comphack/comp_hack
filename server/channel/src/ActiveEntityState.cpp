@@ -44,6 +44,7 @@
 #include <Clan.h>
 #include <Demon.h>
 #include <Enemy.h>
+#include <EnemyExtension.h>
 #include <Item.h>
 #include <MiCancelData.h>
 #include <MiCategoryData.h>
@@ -2321,6 +2322,59 @@ uint8_t ActiveEntityState::RecalculateStats(libcomp::DefinitionManager* definiti
     return 0;
 }
 
+bool ActiveEntityState::CopyToEnemy(
+    const std::shared_ptr<ActiveEntityState>& eState,
+    libcomp::DefinitionManager* definitionManager)
+{
+    (void)definitionManager;
+
+    auto eBase = eState ? eState->GetEnemyBase() : nullptr;
+    auto cs = GetCoreStats();
+    if(!eBase || !cs)
+    {
+        return false;
+    }
+
+    // Get/create enemy extension and set the stats and skills
+    auto extension = eBase->GetExtension();
+    if(!extension)
+    {
+        extension = std::make_shared<objects::EnemyExtension>();
+        eBase->SetExtension(extension);
+    }
+
+    extension->ClearStatBoosts();
+
+    auto devilData = GetDevilData();
+    if(devilData)
+    {
+        auto battleData = devilData->GetBattleData();
+        libcomp::EnumMap<CorrectTbl, int32_t> stats;
+
+        for(size_t i = 0; i < 126; i++)
+        {
+            CorrectTbl tblID = (CorrectTbl)i;
+            stats[tblID] = battleData->GetCorrect((size_t)i);
+        }
+
+        extension->SetOverrideStats(true);
+
+        for(auto& cPair : stats)
+        {
+            extension->SetCorrectTbl((size_t)cPair.first,
+                (int16_t)cPair.second);
+        }
+    }
+
+    extension->SetNoDefaultSkills(true);
+    extension->SetAddedSkills(GetCurrentSkills());
+
+    eBase->GetCoreStats()->SetLevel(cs->GetLevel());
+    eState->ClearAdditionalTokusei();
+
+    return true;
+}
+
 std::set<uint32_t> ActiveEntityState::GetAllSkills(
     libcomp::DefinitionManager* definitionManager, bool includeTokusei)
 {
@@ -2891,8 +2945,13 @@ void ActiveEntityState::AdjustStats(
                     if(GetEntityType() == EntityType_t::ALLY ||
                         GetEntityType() == EntityType_t::ENEMY)
                     {
-                        stats[CorrectTbl::HP_MAX] = stats[CorrectTbl::HP_MAX] +
-                            GetDevilData()->GetBattleData()->GetEnemyHP(0);
+                        auto extension = GetEnemyBase()->GetExtension();
+                        if(!extension || !extension->GetOverrideStats())
+                        {
+                            stats[CorrectTbl::HP_MAX] =
+                                stats[CorrectTbl::HP_MAX] +
+                                GetDevilData()->GetBattleData()->GetEnemyHP(0);
+                        }
                     }
                     break;
                 case CorrectTbl::MP_MAX:
@@ -3139,6 +3198,7 @@ void ActiveEntityState::ApplySkillCorrectTbls(
 uint8_t ActiveEntityState::RecalculateDemonStats(
     libcomp::DefinitionManager* definitionManager,
     libcomp::EnumMap<CorrectTbl, int32_t>& stats,
+    std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
     std::shared_ptr<objects::MiSkillData> contextSkill)
 {
@@ -3155,12 +3215,11 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
         }
     }
 
-    std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
-    GetAdditionalCorrectTbls(definitionManager, calcState, correctTbls,
+    GetAdditionalCorrectTbls(definitionManager, calcState, adjustments,
         contextSkill);
 
     UpdateNRAChances(stats, calcState);
-    AdjustStats(correctTbls, stats, calcState, true);
+    AdjustStats(adjustments, stats, calcState, true);
 
     CharacterManager::CalculateDependentStats(stats,
         GetCoreStats()->GetLevel(), true);
@@ -3171,7 +3230,7 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
         result = CompareAndResetStats(stats, true);
     }
 
-    AdjustStats(correctTbls, stats, calcState, false);
+    AdjustStats(adjustments, stats, calcState, false);
 
     if(selfState)
     {
@@ -3242,22 +3301,39 @@ uint8_t ActiveEntityState::RecalculateEnemyStats(
     auto battleData = devilData->GetBattleData();
 
     libcomp::EnumMap<CorrectTbl, int32_t> stats;
-    for(size_t i = 0; i < 126; i++)
+    std::list<std::shared_ptr<objects::MiCorrectTbl>> adjustments;
+
+    auto eBase = GetEnemyBase();
+    auto extension = eBase ? eBase->GetExtension() : nullptr;
+    if(extension && extension->GetOverrideStats())
     {
-        CorrectTbl tblID = (CorrectTbl)i;
-        stats[tblID] = battleData->GetCorrect((size_t)i);
+        for(size_t i = 0; i < 126; i++)
+        {
+            CorrectTbl tblID = (CorrectTbl)i;
+            stats[tblID] = extension->GetCorrectTbl((size_t)i);
+        }
+
+        adjustments = extension->GetStatBoosts();
+    }
+    else
+    {
+        for(size_t i = 0; i < 126; i++)
+        {
+            CorrectTbl tblID = (CorrectTbl)i;
+            stats[tblID] = battleData->GetCorrect((size_t)i);
+        }
+
+        // Non-dependent stats will not change from growth calculation
+        stats[CorrectTbl::STR] = cs->GetSTR();
+        stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
+        stats[CorrectTbl::VIT] = cs->GetVIT();
+        stats[CorrectTbl::INT] = cs->GetINTEL();
+        stats[CorrectTbl::SPEED] = cs->GetSPEED();
+        stats[CorrectTbl::LUCK] = cs->GetLUCK();
     }
 
-    // Non-dependent stats will not change from growth calculation
-    stats[CorrectTbl::STR] = cs->GetSTR();
-    stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
-    stats[CorrectTbl::VIT] = cs->GetVIT();
-    stats[CorrectTbl::INT] = cs->GetINTEL();
-    stats[CorrectTbl::SPEED] = cs->GetSPEED();
-    stats[CorrectTbl::LUCK] = cs->GetLUCK();
-
-    return RecalculateDemonStats(definitionManager, stats, calcState,
-        contextSkill);
+    return RecalculateDemonStats(definitionManager, stats, adjustments,
+        calcState, contextSkill);
 }
 
 std::set<uint32_t> ActiveEntityState::GetAllEnemySkills(
@@ -3265,26 +3341,36 @@ std::set<uint32_t> ActiveEntityState::GetAllEnemySkills(
 {
     std::set<uint32_t> skillIDs;
 
-    auto demonData = GetDevilData();
-
-    auto growth = demonData->GetGrowth();
-    for(auto skillSet : { growth->GetSkills(),
-        growth->GetEnemyOnlySkills() })
+    auto eBase = GetEnemyBase();
+    auto extension = eBase ? eBase->GetExtension() : nullptr;
+    if(extension)
     {
-        for(uint32_t skillID : skillSet)
-        {
-            if(skillID)
-            {
-                skillIDs.insert(skillID);
-            }
-        }
+        skillIDs = extension->GetAddedSkills();
     }
 
-    for(uint32_t traitID : growth->GetTraits())
+    if(!extension || !extension->GetNoDefaultSkills())
     {
-        if(traitID)
+        auto demonData = GetDevilData();
+
+        auto growth = demonData->GetGrowth();
+        for(auto skillSet : { growth->GetSkills(),
+            growth->GetEnemyOnlySkills() })
         {
-            skillIDs.insert(traitID);
+            for(uint32_t skillID : skillSet)
+            {
+                if(skillID)
+                {
+                    skillIDs.insert(skillID);
+                }
+            }
+        }
+
+        for(uint32_t traitID : growth->GetTraits())
+        {
+            if(traitID)
+            {
+                skillIDs.insert(traitID);
+            }
         }
     }
 

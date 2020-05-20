@@ -37,6 +37,7 @@
 #include <CalculatedEntityState.h>
 #include <Character.h>
 #include <DemonBox.h>
+#include <EnemyExtension.h>
 #include <InheritedSkill.h>
 #include <MiDCategoryData.h>
 #include <MiDevilBookData.h>
@@ -365,6 +366,46 @@ int16_t DemonState::UpdateLearningSkill(const std::shared_ptr<
     return progress;
 }
 
+bool DemonState::GetBaseStats(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
+    libcomp::DefinitionManager* definitionManager, bool readOnly)
+{
+    auto entity = GetEntity();
+    auto cs = GetCoreStats();
+    auto devilData = GetDevilData();
+    if(!entity || !cs || !devilData || !definitionManager)
+    {
+        return false;
+    }
+
+    stats = CharacterManager::GetDemonBaseStats(devilData);
+
+    // Non-dependent stats will not change from growth calculation
+    stats[CorrectTbl::STR] = cs->GetSTR();
+    stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
+    stats[CorrectTbl::VIT] = cs->GetVIT();
+    stats[CorrectTbl::INT] = cs->GetINTEL();
+    stats[CorrectTbl::SPEED] = cs->GetSPEED();
+    stats[CorrectTbl::LUCK] = cs->GetLUCK();
+
+    // Set character gained bonuses
+    for(auto& pair : mCharacterBonuses)
+    {
+        stats[pair.first] = (int16_t)(stats[pair.first] + pair.second);
+    }
+
+    CharacterManager::AdjustDemonBaseStats(entity, stats, false, readOnly);
+
+    CharacterManager::AdjustMitamaStats(entity, stats, definitionManager,
+        2, GetEntityID());
+
+    auto levelRate = definitionManager->GetDevilLVUpRateData(
+        devilData->GetGrowth()->GetGrowthType());
+    CharacterManager::FamiliarityBoostStats(entity->GetFamiliarity(), stats,
+        levelRate);
+
+    return true;
+}
+
 const libobjgen::UUID DemonState::GetEntityUUID()
 {
     auto entity = GetEntity();
@@ -400,42 +441,44 @@ uint8_t DemonState::RecalculateStats(
         }
     }
 
-    auto entity = GetEntity();
-    auto cs = GetCoreStats();
-    auto devilData = GetDevilData();
-    if(!entity || !cs || !devilData)
+    libcomp::EnumMap<CorrectTbl, int32_t> stats;
+    if(!GetBaseStats(stats, definitionManager, false))
     {
         return true;
     }
 
-    auto stats = CharacterManager::GetDemonBaseStats(devilData);
+    std::list<std::shared_ptr<objects::MiCorrectTbl>> adjustments;
+    return RecalculateDemonStats(definitionManager, stats, adjustments,
+        calcState, contextSkill);
+}
 
-    // Non-dependent stats will not change from growth calculation
-    stats[CorrectTbl::STR] = cs->GetSTR();
-    stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
-    stats[CorrectTbl::VIT] = cs->GetVIT();
-    stats[CorrectTbl::INT] = cs->GetINTEL();
-    stats[CorrectTbl::SPEED] = cs->GetSPEED();
-    stats[CorrectTbl::LUCK] = cs->GetLUCK();
-
-    // Set character gained bonuses
-    for(auto& pair : mCharacterBonuses)
+bool DemonState::CopyToEnemy(
+    const std::shared_ptr<ActiveEntityState>& eState,
+    libcomp::DefinitionManager* definitionManager)
+{
+    if(!ActiveEntityState::CopyToEnemy(eState, definitionManager))
     {
-        stats[pair.first] = (int16_t)(stats[pair.first] + pair.second);
+        return false;
     }
 
-    CharacterManager::AdjustDemonBaseStats(entity, stats, false);
+    auto eBase = eState->GetEnemyBase();
+    auto extension = eBase->GetExtension();
 
-    CharacterManager::AdjustMitamaStats(entity, stats, definitionManager,
-        2, GetEntityID());
+    libcomp::EnumMap<CorrectTbl, int32_t> stats;
+    GetBaseStats(stats, definitionManager, true);
 
-    auto levelRate = definitionManager->GetDevilLVUpRateData(
-        devilData->GetGrowth()->GetGrowthType());
-    CharacterManager::FamiliarityBoostStats(entity->GetFamiliarity(), stats,
-        levelRate);
+    for(auto& cPair : stats)
+    {
+        extension->SetCorrectTbl((size_t)cPair.first, (int16_t)cPair.second);
+    }
 
-    return RecalculateDemonStats(definitionManager, stats, calcState,
-        contextSkill);
+    // Non-character bonus tokusei are kept
+    for(int32_t tokuseiID : GetDemonTokuseiIDs())
+    {
+        eState->SetAdditionalTokusei(tokuseiID, 1);
+    }
+
+    return true;
 }
 
 std::set<uint32_t> DemonState::GetAllSkills(

@@ -477,8 +477,11 @@ public:
      * Expire and inactivate bazaar markets and culture machines that are no
      * longer active in the specified zone
      * @param zone Pointer to a zone
+     * @param expireBefore System time to expire rentals before. If not
+     *  specified, the current system time will be used.
      */
-    void ExpireRentals(const std::shared_ptr<Zone>& zone);
+    void ExpireRentals(const std::shared_ptr<Zone>& zone,
+        uint32_t expireBefore = 0);
 
     /**
      * Send a packet to every connection in the zone or all but the client specified
@@ -562,6 +565,30 @@ public:
     std::shared_ptr<ActiveEntityState> CreateEnemy(
         const std::shared_ptr<Zone>& zone, uint32_t demonID, uint32_t spawnID,
         uint32_t spotID, float x, float y, float rot);
+
+    /**
+     * Copy the current skills and stats from one entity onto an enemy or ally
+     * and recalculate their stats. This must be done before adding it to a
+     * zone.
+     * @param eState Enemy or Ally state to copy to
+     * @param copyState Entity state to copy from
+     * @return false if an error occurred
+     */
+    bool CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
+        const std::shared_ptr<ActiveEntityState>& copyState);
+
+    /**
+     * Copy the skills and stats from a demon onto an enemy or ally and
+     * recalculate their stats. This must be done before adding it to a zone.
+     * @param eState Enemy or Ally state to copy to
+     * @param copyDemon Demon to copy from
+     * @param copyEntityID Optional entity ID to use to mimic boosts that only
+     *  affect the entity being copied
+     * @return false if an error occurred
+     */
+    bool CopyDemon(const std::shared_ptr<ActiveEntityState>& eState,
+        const std::shared_ptr<objects::Demon>& copyDemon,
+        int32_t copyEntityID = 0);
 
     /**
      * Add enemies (or allies) already created in the zone, prepare AI and

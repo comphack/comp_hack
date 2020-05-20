@@ -72,6 +72,7 @@
 #include "ManagerConnection.h"
 #include "ServerConstants.h"
 #include "Zone.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 
@@ -143,6 +144,24 @@ bool TokuseiManager::Initialize()
             {
                 // Keep track of movement decay tokusei
                 mMoveDecayTokusei.insert(tPair.first);
+            }
+            else if(aspect->GetType() == TokuseiAspectType::TRIGGER_EXPIRED)
+            {
+                if(aspect->GetValue() == 0)
+                {
+                    LogTokuseiManagerError([tPair]()
+                    {
+                        return libcomp::String("Tokusei encountered with"
+                            " expiration triggered effect assigned to no"
+                            " trigger value: %1\n").Arg(tPair.first);
+                    });
+
+                    return false;
+                }
+
+                // Keep track of expiration trigger tokusei
+                mExpirationTriggeredTokusei[tPair.first].insert(
+                    aspect->GetValue());
             }
         }
 
@@ -223,7 +242,8 @@ bool TokuseiManager::Initialize()
                     aspect->GetType() == TokuseiAspectType::SOUL_POINT_RATE ||
                     aspect->GetType() == TokuseiAspectType::EQUIP_MOVE_DECAY ||
                     aspect->GetType() == TokuseiAspectType::EQUIP_DECAY_XP ||
-                    aspect->GetType() == TokuseiAspectType::SKILL_LOCK)
+                    aspect->GetType() == TokuseiAspectType::SKILL_LOCK ||
+                    aspect->GetType() == TokuseiAspectType::TRIGGER_EXPIRED)
                 {
                     invalidSkillAdjust = true;
                     break;
@@ -838,6 +858,7 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
     // Now that all tokusei have been calculated, compare and add them to their
     // respective entities
     std::list<std::shared_ptr<ActiveEntityState>> updatedEntities;
+    std::unordered_map<int32_t, std::set<int32_t>> expirationTriggers;
     for(auto eState : entities)
     {
         bool updated = false;
@@ -875,6 +896,21 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
         {
             auto& effective = newMaps[eState->GetEntityID()][false];
             auto& skillPending = newMaps[eState->GetEntityID()][true];
+
+            // Before applying changes, see if expiration triggers were removed
+            for(auto& ePair : mExpirationTriggeredTokusei)
+            {
+                if(calcState->EffectiveTokuseiKeyExists(ePair.first) &&
+                    effective.find(ePair.first) == effective.end())
+                {
+                    for(int32_t expireTrigger : ePair.second)
+                    {
+                        expirationTriggers[eState->GetEntityID()]
+                            .insert(expireTrigger);
+                    }
+                }
+            }
+
             calcState->SetEffectiveTokusei(effective);
             calcState->SetPendingSkillTokusei(skillPending);
 
@@ -940,16 +976,45 @@ std::unordered_map<int32_t, bool> TokuseiManager::Recalculate(const std::list<st
         }
     }
 
-    if(recalcStats)
+    if(recalcStats || expirationTriggers.size() > 0)
     {
-        auto characterManager = mServer.lock()->GetCharacterManager();
-        auto connectionManager = mServer.lock()->GetManagerConnection();
+        auto server = mServer.lock();
+        auto connectionManager = server->GetManagerConnection();
         for(auto eState : updatedEntities)
         {
-            if(ignoreStatRecalc.find(eState->GetEntityID()) == ignoreStatRecalc.end())
+            auto expireIter = expirationTriggers.find(eState->GetEntityID());
+            bool expired = expireIter != expirationTriggers.end();
+            bool ignoreStats = ignoreStatRecalc.find(
+                eState->GetEntityID()) != ignoreStatRecalc.end();
+            if(!expired && ignoreStats) continue;
+
+            auto client = connectionManager->GetEntityClient(eState
+                ->GetEntityID());
+            if(expired)
             {
-                auto client = connectionManager->GetEntityClient(eState->GetEntityID());
-                characterManager->RecalculateStats(eState, client);
+                // Trigger expiration actions for the entity
+                auto zone = eState->GetZone();
+
+                auto triggers = server->GetZoneManager()->GetZoneTriggers(
+                    zone, ZoneTrigger_t::ON_TOKUSEI_EXPIRED);
+                triggers.remove_if([expireIter](
+                    const std::shared_ptr<objects::ServerZoneTrigger>& t)
+                    {
+                        return expireIter->second.find(t->GetValue()) ==
+                            expireIter->second.end();
+                    });
+
+                if(triggers.size() > 0)
+                {
+                    server->GetZoneManager()->HandleZoneTriggers(zone,
+                        triggers, eState, client);
+                }
+            }
+
+            if(recalcStats && !ignoreStats)
+            {
+                server->GetCharacterManager()->RecalculateStats(eState,
+                    client);
 
                 result[eState->GetEntityID()] = true;
             }

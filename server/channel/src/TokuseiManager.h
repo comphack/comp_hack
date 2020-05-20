@@ -341,6 +341,10 @@ private:
     bool Compare(int32_t value1, int32_t value2, std::shared_ptr<
         objects::TokuseiCondition> condition, bool numericCompare) const;
 
+    /// Map of all tokusei with at least one expiration triggered aspect
+    /// mapped to the aspect values to fire triggers on
+    std::unordered_map<int32_t, std::set<int32_t>> mExpirationTriggeredTokusei;
+
     /// Quick access mapping of constant status effect IDs to their source tokusei IDs
     std::unordered_map<uint32_t, std::set<int32_t>> mStatusEffectTokusei;
 

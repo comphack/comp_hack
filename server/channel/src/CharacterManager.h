@@ -45,6 +45,7 @@ class Packet;
 namespace objects
 {
 class Character;
+class CultureData;
 class Demon;
 class DropSet;
 class EntityStats;
@@ -57,6 +58,7 @@ class MiDevilLVUpRateData;
 class MiMitamaReunionSetBonusData;
 class MiItemData;
 class PostItem;
+class ServerCultureMachineSet;
 }
 
 typedef objects::MiCorrectTbl::ID_t CorrectTbl;
@@ -480,6 +482,17 @@ public:
         std::list<std::shared_ptr<objects::Item>>& insertItems,
         std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems,
         bool notifyClient = true);
+
+    /**
+     * Expire the supplied culture machine related character data, whether
+     * its full duration has passed or not.
+     * @param cData Pointer to the culture data to expire
+     * @param update If true, the data will be deactivated in the database. If
+     *  false, the calling code must update the database.
+     * @return Pointer to the culture machine it was associated to when active
+     */
+    std::shared_ptr<objects::ServerCultureMachineSet> CultureExpire(
+        const std::shared_ptr<objects::CultureData>& cData, bool update);
 
     /**
      * Retrieve the item associated to the client character's CultureData

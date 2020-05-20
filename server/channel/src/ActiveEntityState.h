@@ -223,6 +223,16 @@ public:
         std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
 
     /**
+     * Copy the current skills and stats from the entity onto an enemy or ally.
+     * @param eState Enemy or Ally state to copy to
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how effects and items interact with the entity
+     * @return false if an error occurred
+     */
+    virtual bool CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
+        libcomp::DefinitionManager* definitionManager);
+
+    /**
      * Check if the entity has the supplied skill learned and not currently
      * disabled.
      * @param skillID ID of the skill to check
@@ -938,6 +948,8 @@ protected:
      * @param stats Map of correct table IDs to calculated stats to set on the
      *  entity. The values already in the map should be pre-dependent stat
      *  calculated values.
+     * @param adjustments List of adjustments to correct table values without
+     *  standard adjustments added
      * @param calcState Override CalculatedEntityState to use instead of the
      *  entity's default
      * @param contextSkill Contextual skill to apply adjustments from.
@@ -949,6 +961,7 @@ protected:
      */
     uint8_t RecalculateDemonStats(libcomp::DefinitionManager* definitionManager,
         libcomp::EnumMap<CorrectTbl, int32_t>& stats,
+        std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
         std::shared_ptr<objects::CalculatedEntityState> calcState,
         std::shared_ptr<objects::MiSkillData> contextSkill);
 

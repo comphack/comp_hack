@@ -74,6 +74,19 @@ public:
         objects::BazaarData>& data);
 
     /**
+     * Reserves a market ID while attempting to rent out a bazaar market. If
+     * the location is already taken or is already reserved, this will fail.
+     * This should be called to reserve the spot when an open request is
+     * received and called to clear the same reservation when the open request
+     * completes, successful or not.
+     * @param marketID ID of the market to reserve
+     * @param clear If true, the reservation will be cleared. This should only
+     *  be set when the market was previously reserved successfully.
+     * @return true if the update was successful
+     */
+    bool ReserveMarket(uint32_t marketID, bool clear);
+
+    /**
      * Add an item to the supplied client account's bazaar market. This is thread
      * safe and ensures the add is valid before anything is modified.
      * @param state Pointer to the client state
@@ -167,6 +180,9 @@ private:
     /// open market
     std::unordered_map<uint32_t,
         std::shared_ptr<objects::BazaarData>> mCurrentMarkets;
+
+    /// Set of reserved market IDs
+    std::set<uint32_t> mReservations;
 
     /// Lock for shared resources
     std::mutex mLock;

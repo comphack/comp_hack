@@ -2686,6 +2686,59 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
     return true;
 }
 
+std::shared_ptr<objects::ServerCultureMachineSet>
+    CharacterManager::CultureExpire(const std::shared_ptr<
+        objects::CultureData>& cData, bool update)
+{
+    if(!cData)
+    {
+        return nullptr;
+    }
+
+    auto server = mServer.lock();
+    auto zoneManager = server->GetZoneManager();
+
+    auto zoneData = server->GetServerDataManager()
+        ->GetZoneData(cData->GetZone(), 0);
+    auto zone = zoneData ? zoneManager->GetGlobalZone(
+        zoneData->GetID(), zoneData->GetDynamicMapID())
+        : nullptr;
+    std::shared_ptr<objects::ServerCultureMachineSet> cmDef;
+    if(zone)
+    {
+        bool matchFound = false;
+        for(auto& pair : zone->GetCultureMachines())
+        {
+            auto cmState = pair.second;
+            if(cmState->GetMachineID() == cData->GetMachineID())
+            {
+                cmDef = cmState->GetEntity();
+            }
+
+            if(cmState->GetRentalData() == cData)
+            {
+                cmState->SetRentalData(nullptr);
+                zoneManager->SendCultureMachineData(zone, cmState);
+                matchFound = true;
+            }
+        }
+
+        if(matchFound)
+        {
+            // Reset the expirations
+            zoneManager->ExpireRentals(zone);
+        }
+    }
+
+    if(update)
+    {
+        cData->SetActive(false);
+        server->GetWorldDatabase()->QueueUpdate(cData);
+    }
+
+    return cmDef;
+}
+
 bool CharacterManager::CultureItemPickup(const std::shared_ptr<
     channel::ChannelClientConnection>& client)
 {
@@ -2702,39 +2755,8 @@ bool CharacterManager::CultureItemPickup(const std::shared_ptr<
         // Expire machine if still active in the zone (it shouldn't be)
         auto server = mServer.lock();
         auto definitionManager = server->GetDefinitionManager();
-        auto zoneManager = server->GetZoneManager();
 
-        auto zoneData = server->GetServerDataManager()
-            ->GetZoneData(cData->GetZone(), 0);
-        auto zone = zoneData ? zoneManager->GetGlobalZone(
-            zoneData->GetID(), zoneData->GetDynamicMapID())
-            : nullptr;
-        std::shared_ptr<objects::ServerCultureMachineSet> cmDef;
-        if(zone)
-        {
-            bool matchFound = false;
-            for(auto& pair : zone->GetCultureMachines())
-            {
-                auto cmState = pair.second;
-                if(cmState->GetMachineID() == cData->GetMachineID())
-                {
-                    cmDef = cmState->GetEntity();
-                }
-
-                if(cmState->GetRentalData() == cData)
-                {
-                    cmState->SetRentalData(nullptr);
-                    zoneManager->SendCultureMachineData(zone, cmState);
-                    matchFound = true;
-                }
-            }
-
-            if(matchFound)
-            {
-                // Reset the expirations
-                zoneManager->ExpireRentals(zone);
-            }
-        }
+        auto cmDef = CultureExpire(cData, false);
 
         // Add slots, move the item to the inventory and set the culture
         // data as inactive

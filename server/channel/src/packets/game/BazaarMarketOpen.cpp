@@ -84,7 +84,9 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
         actualCost = zone->GetDefinition()->GetBazaarMarketCost();
     }
 
-    bool success = marketID != 0 && bazaar && maccaCost == (int32_t)actualCost;
+    bool reserved = bazaar && bazaar->ReserveMarket(marketID, false);
+    bool success = reserved && marketID != 0 && bazaar &&
+        maccaCost == (int32_t)actualCost;
     if(success)
     {
         if(bazaarData && bazaarData->GetMarketID() == marketID &&
@@ -163,6 +165,10 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
             });
 
             client->Kill();
+
+            // Roll back the reservation
+            bazaar->ReserveMarket(marketID, true);
+
             return true;
         }
 
@@ -191,6 +197,12 @@ bool Parsers::BazaarMarketOpen::Parse(libcomp::ManagerPacket *pPacketManager,
     }
 
     connection->SendPacket(reply);
+
+    // Lastly clear the reservation
+    if(reserved)
+    {
+        bazaar->ReserveMarket(marketID, true);
+    }
 
     return true;
 }

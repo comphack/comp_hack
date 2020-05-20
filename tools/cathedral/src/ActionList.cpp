@@ -200,7 +200,7 @@ void ActionList::Load(const std::list<std::shared_ptr<
                 AddAction(act, new ActionRunScript(this, mMainWindow));
                 break;
             default:
-                /// @todo Error out here.
+                // If we manage to get here, just don't add it
                 break;
         }
     }

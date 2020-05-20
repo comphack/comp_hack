@@ -65,7 +65,34 @@ void BazaarState::SetCurrentMarket(uint32_t marketID, const std::shared_ptr<
     if(GetEntity()->MarketIDsContains(marketID))
     {
         mCurrentMarkets[marketID] = data;
+
+        // Clear reservation just in case
+        mReservations.erase(marketID);
     }
+}
+
+bool BazaarState::ReserveMarket(uint32_t marketID, bool clear)
+{
+    std::lock_guard<std::mutex> lock(mLock);
+    if(clear)
+    {
+        // Always clear
+        mReservations.erase(marketID);
+    }
+    else
+    {
+        auto it = mCurrentMarkets.find(marketID);
+        if(mReservations.find(marketID) != mReservations.end() ||
+            (it != mCurrentMarkets.end() && it->second != nullptr) ||
+            !GetEntity()->MarketIDsContains(marketID))
+        {
+            return false;
+        }
+
+        mReservations.insert(marketID);
+    }
+
+    return true;
 }
 
 bool BazaarState::AddItem(channel::ClientState* state, int8_t slot, int64_t itemID,

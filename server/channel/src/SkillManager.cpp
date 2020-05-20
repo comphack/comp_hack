@@ -5581,6 +5581,18 @@ int8_t SkillManager::EvaluateTokuseiSkillCondition(
             return otherState->IsLNCType((uint8_t)condition->GetValue(),
                 false) == !negate ? 1 : 0;
         }
+    case TokuseiSkillConditionType::ENEMY_STATUS_ACTIVE:
+        // Enemy's has status of the specified type
+        if(!otherState)
+        {
+            // Target required
+            return -1;
+        }
+        else
+        {
+            return otherState->StatusEffectActive(
+                (uint32_t)condition->GetValue()) == !negate ? 1 : 0;
+        }
     case TokuseiSkillConditionType::ENEMY_TOKUSEI:
         // Enemy has a tokusei matching the specified type (tokusei cannot be
         // skill granted like the one being checked)
@@ -6222,11 +6234,31 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(const std::shared_ptr<
     auto eState = target.EntityState;
     auto sourceCalc = GetCalculatedState(source, pSkill, false, eState);
 
+    // Add tokusei status effects
+    for(auto addStatus : mServer.lock()->GetTokuseiManager()->GetAspectMap(
+        source, TokuseiAspectType::STATUS_ADD, sourceCalc))
+    {
+        uint32_t effectID = (uint32_t)addStatus.first;
+        if(addStatus.second >= 100)
+        {
+            maxRates.insert(effectID);
+        }
+
+        if(addStatusMap.find(effectID) != addStatusMap.end())
+        {
+            addStatusMap[effectID] += addStatus.second;
+        }
+        else
+        {
+            addStatusMap[effectID] = addStatus.second;
+        }
+    }
+
     // If a knockback occurred, add bonus knockback status effects from tokusei
     if((target.Flags1 & FLAG1_KNOCKBACK) != 0)
     {
-        for(auto addStatus : mServer.lock()->GetTokuseiManager()->GetAspectMap(source,
-            TokuseiAspectType::KNOCKBACK_STATUS_ADD, sourceCalc))
+        for(auto addStatus : mServer.lock()->GetTokuseiManager()->GetAspectMap(
+            source, TokuseiAspectType::KNOCKBACK_STATUS_ADD, sourceCalc))
         {
             uint32_t effectID = (uint32_t)addStatus.first;
             if(addStatus.second >= 100)

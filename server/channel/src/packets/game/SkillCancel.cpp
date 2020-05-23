@@ -53,7 +53,8 @@ bool Parsers::SkillCancel::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t sourceEntityID = p.ReadS32Little();
     int8_t activationID = p.ReadS8();
 
-    auto source = state->GetEntityState(sourceEntityID);
+    // Load the player entity and let the processer handle it not being ready
+    auto source = state->GetEntityState(sourceEntityID, false);
     if(!source)
     {
         LogSkillManagerError([&]()

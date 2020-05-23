@@ -72,7 +72,9 @@ class SkillExecutionContext
 friend class SkillManager;
 
 public:
-    /// If specified, the availability of the requested skill will be ignored
+    /// If specified, the availability of the requested skill will be ignored,
+    /// including if a non-living source tries to use an instant activation
+    /// (ex: death triggers).
     bool IgnoreAvailable = false;
 
 protected:
@@ -463,6 +465,16 @@ private:
      */
     void ProcessSkillResultFinal(const std::shared_ptr<channel::ProcessingSkill>& pSkill,
         std::shared_ptr<SkillExecutionContext> ctx);
+
+    /**
+     * Prepare an executing fusion skill by setting the fusion demons that will
+     * be used for damage calculation.
+     * @param source Pointer to the state of the source entity
+     * @param pSkill Current skill processing state
+     * @return true if the skill was prepared successfully, false if it was not
+     */
+    bool ProcessFusionExecution(std::shared_ptr<ActiveEntityState> source,
+        const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
     /**
      * Get a processing skill set with default values from the supplied
@@ -872,6 +884,21 @@ private:
      */
     int32_t CalculateDamage_MaxPercent(uint16_t mod, uint8_t& damageType,
         int32_t max);
+
+    /**
+     * Adjust skill damage or healing using skill rates from the source
+     * and target entities
+     * @param source Pointer to the entity that activated the skill
+     * @param target Pointer to the entity that will receive damage
+     * @param pSkill Pointer to the current skill processing state
+     * @param isHeal true if healing "damage" should be applied instead
+     * @param adjustPower If true, adjuste tokusei EFFECT_POWER as well
+     * @return Raw calculated damage or healing (no cap applied)
+     */
+    int32_t AdjustDamageRates(int32_t damage, const std::shared_ptr<
+        ActiveEntityState>& source, const std::shared_ptr<
+        ActiveEntityState>& target, const std::shared_ptr<
+        channel::ProcessingSkill>& pSkill, bool isHeal, bool adjustPower);
 
     /**
      * Get the skill target that hits the source entity or create it if it does

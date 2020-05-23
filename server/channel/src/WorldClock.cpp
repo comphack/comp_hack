@@ -28,6 +28,7 @@
 #include "WorldClock.h"
 
 // libcomp Includes
+#include <Constants.h>
 #include <CString.h>
 #include <ScriptEngine.h>
 
@@ -46,7 +47,10 @@ namespace libcomp
                 .Var("Hour", &WorldClockTime::Hour)
                 .Var("Min", &WorldClockTime::Min)
                 .Var("SystemHour", &WorldClockTime::SystemHour)
-                .Var("SystemMin", &WorldClockTime::SystemMin);
+                .Var("SystemMin", &WorldClockTime::SystemMin)
+                .StaticFunc("GetCycleOffset", &WorldClockTime::GetCycleOffset)
+                .StaticFunc("ToLastMoonPhaseTime",
+                    &WorldClockTime::ToLastMoonPhaseTime);
 
             Bind<WorldClockTime>("WorldClockTime", binding);
         }
@@ -115,10 +119,69 @@ size_t WorldClockTime::Hash() const
     return (size_t)(sysPart + moonPart + timePart);
 }
 
+uint32_t WorldClockTime::GetCycleOffset(uint32_t systemTime,
+    uint32_t gameOffset)
+{
+    // Every 4 days, 15 full moon cycles will elapse and the same game time
+    // will occur on the same time offset.
+    return (uint32_t)((systemTime + gameOffset - BASE_WORLD_TIME) % 345600);
+}
+
+uint32_t WorldClockTime::ToLastMoonPhaseTime(uint32_t systemTime,
+    uint32_t gameOffset)
+{
+    uint32_t cycleOffset = GetCycleOffset(systemTime, gameOffset);
+
+    // Get the number of seconds from cycle start for the calculated phase.
+    // This differs from normal moon phase calculation in the sense that we
+    // want to preserve number of sub-cycles (ex: second new moon is the 17th
+    // occurence within the main cycle).
+    uint8_t calcCyclePhase = (uint8_t)(cycleOffset / 1440);
+    uint32_t phaseOffset = (uint32_t)(calcCyclePhase * 1440);
+
+    // Calculate the last beginning of a cycle and add the offset
+    return (uint32_t)((systemTime + gameOffset) - cycleOffset + phaseOffset);
+}
+
 WorldClock::WorldClock() :
     WeekDay(-1), Month(-1), Day(-1), SystemSec(-1), SystemTime(0),
     GameOffset(0), CycleOffset(0)
 {
+}
+
+WorldClock::WorldClock(time_t systemTime, uint32_t gameOffset,
+    int32_t serverOffset)
+{
+    // Set standard GMT system time and game offset
+    SystemTime = (uint32_t)systemTime;
+    GameOffset = gameOffset;
+
+    // Adjust based on the server offset for the rest of the calculations
+    if(serverOffset)
+    {
+        systemTime = (systemTime + serverOffset);
+    }
+
+    tm* t = gmtime(&systemTime);
+
+    WeekDay = (int8_t)(t->tm_wday + 1);
+    Month = (int8_t)(t->tm_mon + 1);
+    Day = (int8_t)t->tm_mday;
+    SystemHour = (int8_t)t->tm_hour;
+    SystemMin = (int8_t)t->tm_min;
+    SystemSec = (int8_t)t->tm_sec;
+
+    // Get the cycle offset and calculate the game relative times
+    CycleOffset = GetCycleOffset(SystemTime, GameOffset);
+
+    // 24 minutes = 1 game phase (16 total)
+    MoonPhase = (int8_t)((CycleOffset / 1440) % 16);
+
+    // 2 minutes = 1 game hour
+    Hour = (int8_t)((CycleOffset / 120) % 24);
+
+    // 2 seconds = 1 game minute
+    Min = (int8_t)((CycleOffset / 2) % 60);
 }
 
 bool WorldClock::IsNight() const

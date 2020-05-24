@@ -1728,6 +1728,13 @@ bool Zone::Collides(const Line& path, Point& point,
         GetDisabledBarriers());
 }
 
+bool Zone::Collides(const Line& path, Point& point,
+    Line& surface) const
+{
+    std::shared_ptr<ZoneShape> shape;
+    return Collides(path, point, surface, shape);
+}
+
 bool Zone::Collides(const Line& path, Point& point) const
 {
     Line surface;

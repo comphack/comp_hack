@@ -1050,9 +1050,11 @@ public:
      * it collides with the nearest zone geometry point
      * @param src Source point
      * @param collidePoint Point where the path collides with geometry
+     * @param collideLine Line the path collides with geometry
      * @return Adjusted linear destination point
      */
-    Point CollisionAdjust(const Point& src, const Point& collidePoint);
+    Point CollisionAdjust(const Point& src, const Point& collidePoint,
+        const Line& collideLine);
 
     /**
      * Calculate the shortest path between the supplied source and destination
@@ -1074,6 +1076,15 @@ public:
      * @return Shortest distance between the point and line
      */
     static float GetPointToLineDistance(const Line& line, const Point& point);
+
+    /**
+     * Determine the point on a line segment that is closest to another
+     * supplied point
+     * @param line Line segment to get the nearest point from
+     * @param point Point to get the nearest point for
+     * @return Point on the line segment that is nearest
+     */
+    static Point GetNearestPoint(const Line& line, const Point& point);
 
     /**
      * Determine if the specified point is within a polygon defined by vertices

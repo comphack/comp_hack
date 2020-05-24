@@ -6770,9 +6770,12 @@ Point ZoneManager::GetRandomSpotPoint(
         Line centerLine(center, transformed);
 
         Point collision;
-        if(geometry && geometry->Collides(centerLine, collision))
+        Line collideLine;
+        std::shared_ptr<ZoneShape> outShape;
+        if(geometry && geometry->Collides(centerLine, collision, collideLine,
+            outShape))
         {
-            transformed = CollisionAdjust(center, collision);
+            transformed = CollisionAdjust(center, collision, collideLine);
         }
     }
 
@@ -6820,9 +6823,10 @@ Point ZoneManager::GetLinearPoint(float sourceX, float sourceY,
         Point src(sourceX, sourceY);
 
         Point collidePoint;
-        if(zone->Collides(Line(src, dest), collidePoint))
+        Line collideLine;
+        if(zone->Collides(Line(src, dest), collidePoint, collideLine))
         {
-            dest = CollisionAdjust(src, collidePoint);
+            dest = CollisionAdjust(src, collidePoint, collideLine);
         }
     }
 
@@ -6976,11 +6980,10 @@ uint8_t ZoneManager::CorrectClientPosition(const std::shared_ptr<
         Line path(Point(src.x, src.y), Point(dest.x, dest.y));
 
         Point collidePoint;
-        Line outSurface;
-        std::shared_ptr<ZoneShape> outShape;
-        if(zone->Collides(path, collidePoint, outSurface, outShape))
+        Line collideLine;
+        if(zone->Collides(path, collidePoint, collideLine))
         {
-            dest = CollisionAdjust(src, collidePoint);
+            dest = CollisionAdjust(src, collidePoint, collideLine);
             result = 0x02;
         }
     }
@@ -6988,7 +6991,8 @@ uint8_t ZoneManager::CorrectClientPosition(const std::shared_ptr<
     return result;
 }
 
-Point ZoneManager::CollisionAdjust(const Point& src, const Point& collidePoint)
+Point ZoneManager::CollisionAdjust(const Point& src, const Point& collidePoint,
+    const Line& collideLine)
 {
     // Back off by 10 units. Typically the client stops you when you approach
     // 10 units from any geometry. Functionally you will not get "stuck" until
@@ -6996,18 +7000,15 @@ Point ZoneManager::CollisionAdjust(const Point& src, const Point& collidePoint)
     Point adjusted = GetLinearPoint(collidePoint.x, collidePoint.y, src.x,
         src.y, 10.f, false);
 
-    // Make sure we're at least 1 full unit away from the collision point and
-    // pray that the zone geometry doesn't get TOO close to another line
-    if(std::fabs(adjusted.x - collidePoint.x) < 1.f)
+    // If the points approach the colliding line at an acute angle, its
+    // possible the adjusted point is still too close to the geometry. If this
+    // occurs, move it the minimum distance off the line's nearest point to
+    // avoid client rounding causing the player to get stuck.
+    Point nearest = GetNearestPoint(collideLine, adjusted);
+    if(nearest.GetDistance(adjusted) < 1.f)
     {
-        adjusted.x = collidePoint.x +
-            (adjusted.x < collidePoint.x ? -1.f : 1.f);
-    }
-
-    if(std::fabs(adjusted.y - collidePoint.y) < 1.f)
-    {
-        adjusted.y = collidePoint.y +
-            (adjusted.y < collidePoint.y ? -1.f : 1.f);
+        adjusted = GetLinearPoint(adjusted.x, adjusted.y, nearest.x, nearest.y,
+            1.f, true);
     }
 
     return adjusted;
@@ -7293,6 +7294,12 @@ std::list<uint32_t> ZoneManager::GetShortestPath(
 
 float ZoneManager::GetPointToLineDistance(const Line& line, const Point& point)
 {
+    auto nearest = GetNearestPoint(line, point);
+    return point.GetDistance(nearest);
+}
+
+Point ZoneManager::GetNearestPoint(const Line& line, const Point& point)
+{
     float xDiff = line.second.x - line.first.x;
     float yDiff = line.second.y - line.first.y;
 
@@ -7300,22 +7307,22 @@ float ZoneManager::GetPointToLineDistance(const Line& line, const Point& point)
         (point.y - line.first.y) * yDiff) /
         (xDiff * xDiff + yDiff * yDiff);
 
-    Point nearest;
     if(calc < 0.f)
     {
-        nearest = line.first;
+        return line.first;
     }
     else if(calc > 1.f)
     {
-        nearest = line.second;
+        return line.second;
     }
     else
     {
+        Point nearest;
         nearest.x = line.first.x + calc * xDiff;
         nearest.y = line.first.y + calc * yDiff;
-    }
 
-    return point.GetDistance(nearest);
+        return nearest;
+    }
 }
 
 bool ZoneManager::PointInPolygon(const Point& p, const std::list<

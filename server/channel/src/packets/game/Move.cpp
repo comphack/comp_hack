@@ -184,17 +184,24 @@ bool Parsers::Move::Parse(libcomp::ManagerPacket *pPacketManager,
     // and kind of irrelavent so mark it right away
     eState->SetCurrentRotation(destRot);
 
-    if(positionCorrected)
+    bool clientVisible = eState->IsClientVisible();
+    if(clientVisible || positionCorrected)
     {
-        // Sending the move response back to the player can still be
-        // forced through, warp back to the corrected point
-        zoneManager->Warp(client, eState, destX, destY, destRot);
-    }
+        // Relay to appropriate clients depending on state
+        std::list<std::shared_ptr<ChannelClientConnection>> zConnections;
+        if(clientVisible)
+        {
+            // If the entity is still visible to others, relay the movement
+            // including the requestor if position was corrected
+            zConnections = zoneManager->GetZoneConnections(client,
+                positionCorrected);
+        }
+        else
+        {
+            // Just send to the requestor
+            zConnections.push_back(client);
+        }
 
-    // If the entity is still visible to others, relay info
-    if(eState->IsClientVisible())
-    {
-        auto zConnections = zoneManager->GetZoneConnections(client, false);
         if(zConnections.size() > 0)
         {
             libcomp::Packet notify;

@@ -181,18 +181,24 @@ const uint16_t FLAG2_BARRIER = 1 << 7;
 const uint16_t FLAG2_INTENSIVE_BREAK = 1 << 8;
 const uint16_t FLAG2_INSTANT_DEATH = 1 << 9;
 
-const uint8_t TALK_RESPONSE_1 = 1;
-//const uint8_t TALK_RESPONSE_2 = 2;
-//const uint8_t TALK_RESPONSE_3 = 3;
-const uint8_t TALK_RESPONSE_4 = 4;
-const uint8_t TALK_JOIN = 5;
-const uint8_t TALK_GIVE_ITEM = 6;
-//const uint8_t TALK_STOP = 7;
-const uint8_t TALK_LEAVE = 8;
+const uint8_t TALK_SUCCESS_LVL1 = 0;
+const uint8_t TALK_SUCCESS_LVL2 = 1;
+const uint8_t TALK_SUCCESS_LVL3 = 2;
+const uint8_t TALK_SUCCESS_LVL4 = 3;
+const uint8_t TALK_FAIL = 4;
+const uint8_t TALK_JOIN_1 = 5;
+const uint8_t TALK_GIVE_ITEM_1 = 6;
+const uint8_t TALK_DONE_1 = 7;
+const uint8_t TALK_LEAVE_1 = 8;
 const uint8_t TALK_JOIN_2 = 9;
 const uint8_t TALK_GIVE_ITEM_2 = 10;
-const uint8_t TALK_REJECT = 13;
-//const uint8_t TALK_THREATENED = 14;
+const uint8_t TALK_DONE_2 = 11;
+const uint8_t TALK_LEAVE_2 = 12;
+const uint8_t TALK_FOFF_1 = 13;
+const uint8_t TALK_FOFF_2 = 14;
+// Unused
+//const uint8_t TALK_LOW_LEVEL_1 = 15;
+//const uint8_t TALK_LOW_LEVEL_2 = 16;
 
 const uint8_t RES_OFFSET = (uint8_t)CorrectTbl::RES_DEFAULT;
 const uint8_t BOOST_OFFSET = (uint8_t)CorrectTbl::BOOST_DEFAULT;
@@ -8063,26 +8069,21 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
         return false;
     }
 
-    auto talkPoints = eState->GetTalkPoints(source->GetEntityID());
+    bool exists = false;
+    auto talkPoints = eState->GetTalkPoints(source->GetEntityID(), exists);
     auto demonData = eState->GetDevilData();
     auto negData = demonData->GetNegotiation();
-    uint8_t affThreshold = (uint8_t)(100 - negData->GetAffabilityThreshold());
-    uint8_t fearThreshold = (uint8_t)(100 - negData->GetFearThreshold());
+    int8_t affThreshold = (int8_t)(100 - negData->GetAffabilityThreshold());
+    int8_t fearThreshold = (int8_t)(100 - negData->GetFearThreshold());
 
     if(talkPoints.first >= affThreshold ||
         talkPoints.second >= fearThreshold)
     {
-        // Nothing left to do
+        // Done but not at zero, print the message and move on
+        target.TalkFlags = talkPoints.first >= affThreshold
+            ? TALK_DONE_1 : TALK_DONE_2;
         return false;
     }
-
-    // No points in anything but still primary talk skill means
-    // the skill will always result in a join
-    bool isTalkAction = IsTalkSkill(pSkill->Definition, true);
-    bool avoided = (target.Flags1 & FLAG1_GUARDED) != 0 ||
-        (target.Flags1 & FLAG1_DODGED);
-    bool autoJoin = isTalkAction && !talkAffSuccess && !avoided &&
-        !talkAffFailure && !talkFearSuccess && !talkFearFailure;
 
     int32_t talkType = 0;
     int8_t expID = 0;
@@ -8103,6 +8104,23 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
     default:
         return false;
     }
+
+    if(exists &&
+        (talkPoints.first + (int8_t)negData->GetAffabilityThreshold()) == 0 &&
+        (talkPoints.second + (int8_t)negData->GetFearThreshold()) == 0)
+    {
+        // Locked in a negative result state
+        target.TalkFlags = talkType != 2 ? TALK_FOFF_1 : TALK_FOFF_2;
+        return false;
+    }
+
+    // No points in anything but still primary talk skill means
+    // the skill will always result in a join
+    bool isTalkAction = IsTalkSkill(pSkill->Definition, true);
+    bool avoided = (target.Flags1 & FLAG1_GUARDED) != 0 ||
+        (target.Flags1 & FLAG1_DODGED);
+    bool autoJoin = isTalkAction && !talkAffSuccess && !avoided &&
+        !talkAffFailure && !talkFearSuccess && !talkFearFailure;
 
     bool success = false;
     if(autoJoin)
@@ -8146,28 +8164,79 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
         int16_t fear = (int16_t)(talkPoints.second +
             (success ? talkFearSuccess : talkFearFailure));
 
-        talkPoints.first = aff < 0 ? 0 : (uint8_t)aff;
-        talkPoints.second = fear < 0 ? 0 : (uint8_t)fear;
+        // Don't let the sums drop below 0 or go over the threshold
+        if(aff > affThreshold)
+        {
+            talkPoints.first = affThreshold;
+        }
+        else if(aff < (int16_t)(-negData->GetAffabilityThreshold()))
+        {
+            talkPoints.first = (int8_t)(-negData->GetAffabilityThreshold());
+        }
+        else
+        {
+            talkPoints.first = (int8_t)aff;
+        }
+
+        if(fear > fearThreshold)
+        {
+            talkPoints.second = fearThreshold;
+        }
+        else if(fear < (int16_t)(-negData->GetFearThreshold()))
+        {
+            talkPoints.second = (int8_t)(-negData->GetFearThreshold());
+        }
+        else
+        {
+            talkPoints.second = (int8_t)fear;
+        }
 
         if(!isTalkAction)
         {
             // Non-talk skills can never hit the threshold
             if(talkPoints.first >= affThreshold)
             {
-                talkPoints.first = (uint8_t)(affThreshold - 1);
+                talkPoints.first = (int8_t)(affThreshold - 1);
             }
 
             if(talkPoints.second >= fearThreshold)
             {
-                talkPoints.second = (uint8_t)(fearThreshold - 1);
+                talkPoints.second = (int8_t)(fearThreshold - 1);
             }
         }
+
+        LogSkillManagerDebug([source, target, success, talkPoints,
+            affThreshold, fearThreshold, pSkill]()
+        {
+            return libcomp::String("%1 talk points became %2/%3 (max %4/%5)"
+                " from skill %6 %7 when used by %8.\n")
+                .Arg(target.EntityState->GetEntityLabel())
+                .Arg(talkPoints.first)
+                .Arg(talkPoints.second)
+                .Arg(affThreshold)
+                .Arg(fearThreshold)
+                .Arg(pSkill->SkillID)
+                .Arg(success ? "success" : "failure")
+                .Arg(source->GetEntityLabel());
+        });
     }
 
     eState->SetTalkPoints(source->GetEntityID(), talkPoints);
 
-    if(talkPoints.first >= affThreshold ||
-        talkPoints.second >= fearThreshold)
+    if((talkPoints.first + (int8_t)negData->GetAffabilityThreshold()) == 0 &&
+        (talkPoints.second + (int8_t)negData->GetFearThreshold()) == 0)
+    {
+        // Points hit 0/0, the enemy is now locked in a negative state
+        target.TalkFlags = expID == EXPERTISE_INTIMIDATE
+            ? TALK_FOFF_2 : TALK_FOFF_1;
+        target.TalkDone = true;
+
+        return true;
+    }
+
+    bool affPass = talkPoints.first >= affThreshold;
+    bool fearPass = talkPoints.second >= fearThreshold;
+    if(affPass || fearPass)
     {
         // Determine which outcomes are valid and randomly
         // select one
@@ -8179,7 +8248,7 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
         if(autoJoin)
         {
             minVal = 1;
-            maxVal = 2;
+            maxVal = 1;
         }
         else
         {
@@ -8217,39 +8286,71 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
         switch(outcome)
         {
         case 1:
-            target.TalkFlags = TALK_JOIN;
-            break;
         case 2:
-            target.TalkFlags = TALK_JOIN_2;
+            target.TalkFlags = affPass ? TALK_JOIN_1 : TALK_JOIN_2;
             break;
         case 3:
-            target.TalkFlags = TALK_GIVE_ITEM;
-            break;
         case 4:
-            target.TalkFlags = TALK_GIVE_ITEM_2;
+            target.TalkFlags = affPass ? TALK_GIVE_ITEM_1 : TALK_GIVE_ITEM_2;
             break;
         case 5:
-            target.TalkFlags = TALK_REJECT;
+            target.TalkFlags = affPass ? TALK_DONE_1 : TALK_DONE_2;
             break;
         case 6:
         default:
-            target.TalkFlags = TALK_LEAVE;
             break;
         }
 
-        if((target.TalkFlags == TALK_GIVE_ITEM ||
-            target.TalkFlags == TALK_GIVE_ITEM) &&
+        if((target.TalkFlags == TALK_GIVE_ITEM_1 ||
+            target.TalkFlags == TALK_GIVE_ITEM_2) &&
             (!spawn || spawn->GiftsCount() == 0))
         {
-            // No gifts mapped, leave instead
-            target.TalkFlags = TALK_LEAVE;
+            // No gifts mapped, default instead
+            target.TalkFlags = 0;
+        }
+
+        if(target.TalkFlags == 0)
+        {
+            // If all else fails, leave
+            target.TalkFlags = affPass ? TALK_LEAVE_1 : TALK_LEAVE_2;
         }
 
         target.TalkDone = true;
     }
     else
     {
-        target.TalkFlags = (success ? TALK_RESPONSE_1 : TALK_RESPONSE_4);
+        if(success)
+        {
+            // Reseponse is based on the max value between the two point
+            // types
+            int32_t currentAff = (int32_t)negData->GetAffabilityThreshold() +
+                (int32_t)talkPoints.first;
+            int32_t currentFear = (int32_t)negData->GetFearThreshold() +
+                (int32_t)talkPoints.second;
+
+            int32_t currentVal = currentAff >= currentFear
+                ? currentAff : currentFear;
+            if(currentVal < 30)
+            {
+                target.TalkFlags = TALK_SUCCESS_LVL1;
+            }
+            else if(currentVal < 60)
+            {
+                target.TalkFlags = TALK_SUCCESS_LVL2;
+            }
+            else if(currentVal < 90)
+            {
+                target.TalkFlags = TALK_SUCCESS_LVL3;
+            }
+            else
+            {
+                target.TalkFlags = TALK_SUCCESS_LVL4;
+            }
+        }
+        else
+        {
+            target.TalkFlags = TALK_FAIL;
+        }
     }
 
     // If the target is AI controlled, update aggro
@@ -8284,20 +8385,21 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
     std::unordered_map<int32_t, std::list<int32_t>> removedEnemies;
     for(auto pair : talkDone)
     {
-        if(pair.second != TALK_REJECT)
+        if(pair.second != TALK_DONE_1 && pair.second != TALK_DONE_2)
         {
             int32_t removeMode = 0;
             switch(pair.second)
             {
-            case TALK_JOIN:
+            case TALK_JOIN_1:
             case TALK_JOIN_2:
                 removeMode = 5;
                 break;
-            case TALK_GIVE_ITEM:
+            case TALK_GIVE_ITEM_1:
             case TALK_GIVE_ITEM_2:
                 removeMode = 6;
                 break;
-            case TALK_LEAVE:
+            case TALK_LEAVE_1:
+            case TALK_LEAVE_2:
                 removeMode = 8;
                 break;
             default:
@@ -8350,14 +8452,14 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
     for(auto pair : talkDone)
     {
         auto eState = std::dynamic_pointer_cast<EnemyState>(pair.first);
-        if(pair.second != TALK_LEAVE && pair.second != TALK_REJECT)
+        if(pair.second != TALK_DONE_1 && pair.second != TALK_DONE_2)
         {
             auto enemy = eState->GetEntity();
 
             std::shared_ptr<objects::LootBox> lBox;
             switch(pair.second)
             {
-            case TALK_JOIN:
+            case TALK_JOIN_1:
             case TALK_JOIN_2:
                 {
                     lBox = std::make_shared<objects::LootBox>();
@@ -8379,7 +8481,7 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
                     }
                 }
                 break;
-            case TALK_GIVE_ITEM:
+            case TALK_GIVE_ITEM_1:
             case TALK_GIVE_ITEM_2:
                 {
                     lBox = std::make_shared<objects::LootBox>();
@@ -8410,7 +8512,7 @@ void SkillManager::HandleNegotiations(const std::shared_ptr<ActiveEntityState> s
             }
         }
 
-        if(fType && pair.second != TALK_REJECT)
+        if(fType)
         {
             fGain = fGain + (int32_t)fType->GetTalkSuccess();
         }
@@ -8678,8 +8780,7 @@ void SkillManager::HandleDurabilityDamage(const std::shared_ptr<ActiveEntityStat
         int32_t durabilityLoss = weaponDamage * 2;
         if(knowledgeRank)
         {
-            // Decrease damage by a maximum of approximately 30%
-            /// @todo: close but not quite right
+            // Decrease damage more for lower values
             durabilityLoss = (int32_t)floor(pow(knowledgeRank, 2) / 450.0 -
                 (0.4275 * knowledgeRank) + (double)durabilityLoss);
         }
@@ -8727,10 +8828,10 @@ void SkillManager::HandleDurabilityDamage(const std::shared_ptr<ActiveEntityStat
         int32_t durabilityLoss = (int32_t)armorDamage;
         if(defRank)
         {
-            // Decrease damage to a maximum of approximately 60%
-            /// @todo: needs more research
-            durabilityLoss = (int32_t)ceil(((double)durabilityLoss - 1.0) *
-                (1.0 + ((0.002 * pow(defRank, 2)) - (0.215 * defRank)) / 10.0));
+            // Decrease damage more for lower values
+            double adjust = defRank / 25000.0;
+            durabilityLoss = (int32_t)ceil((double)durabilityLoss *
+                (1.0 - (adjust + (0.12 * defRank)) / 10.0));
         }
 
         if(durabilityLoss <= 0)

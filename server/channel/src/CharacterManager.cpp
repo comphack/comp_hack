@@ -859,7 +859,7 @@ uint8_t CharacterManager::RecalculateStats(
                 state && state->GetPartyID())
             {
                 libcomp::Packet request;
-                if(std::dynamic_pointer_cast<CharacterState>(eState))
+                if(eState->GetEntityType() == EntityType_t::CHARACTER)
                 {
                     state->GetPartyCharacterPacket(request);
                 }
@@ -4907,11 +4907,28 @@ bool CharacterManager::UpdateExperience(const std::shared_ptr<
 
         server->GetTokuseiManager()->Recalculate(eState, true,
             std::set<int32_t>{ eState->GetEntityID() });
-        RecalculateStats(eState, client, false);
+        uint8_t recalcResult = RecalculateStats(eState, client, false);
         if(eState->IsAlive())
         {
             stats->SetHP(eState->GetMaxHP());
             stats->SetMP(eState->GetMaxMP());
+
+            if((recalcResult & ENTITY_CALC_STAT_WORLD) && state->GetPartyID())
+            {
+                // Send new HP/MP (why was this not in the levelup packet?)
+                libcomp::Packet p;
+                if(eState->GetEntityType() == EntityType_t::CHARACTER)
+                {
+                    state->GetPartyCharacterPacket(p);
+                }
+                else
+                {
+                    state->GetPartyDemonPacket(p);
+                }
+
+                server->GetManagerConnection()
+                    ->GetWorldConnection()->SendPacket(p);
+            }
         }
 
         if(eState == dState)

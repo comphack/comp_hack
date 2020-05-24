@@ -56,10 +56,12 @@ public:
      * the enemy contextual to the supplied player character entity ID
      * @param entityID ID of the player character entity talking to the
      *  enemy
+     * @param exists true if there are points associated to the entity,
+     *  false if there are not
      * @return Current affability and fear points associated to
      *  the player character
      */
-    std::pair<uint8_t, uint8_t> GetTalkPoints(int32_t entityID);
+    std::pair<int8_t, int8_t> GetTalkPoints(int32_t entityID, bool& exists);
 
     /**
      * Set the current negotiation point value associated to the
@@ -68,7 +70,7 @@ public:
      * @param points Current affability and fear points associated to
      *  the player character
      */
-    void SetTalkPoints(int32_t entityID, const std::pair<uint8_t, uint8_t>& points);
+    void SetTalkPoints(int32_t entityID, const std::pair<int8_t, int8_t>& points);
 
     virtual std::shared_ptr<objects::EnemyBase> GetEnemyBase() const;
 
@@ -96,7 +98,7 @@ private:
     /// related points: affability then fear. If either of these
     /// exceeds the demon's set threshold, negotiation will end.
     std::unordered_map<int32_t,
-        std::pair<uint8_t, uint8_t>> mTalkPoints;
+        std::pair<int8_t, int8_t>> mTalkPoints;
 };
 
 } // namespace channel

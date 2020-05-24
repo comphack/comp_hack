@@ -755,6 +755,17 @@ public:
         Line& surface, std::shared_ptr<ZoneShape>& shape) const;
 
     /**
+     * Determines if the supplied path collides with anything in the zone's
+     * geometry
+     * @param path Line representing a path
+     * @param point Output parameter to set where the intersection occurs
+     * @param surface Output parameter to return the first line to be
+     *  intersected by the path
+     * @return true if the line collides, false if it does not
+     */
+    bool Collides(const Line& path, Point& point, Line& surface) const;
+
+    /**
      * Determines if the supplied path collides with anythin in the zone's
      * geometry
      * @param path Line representing a path

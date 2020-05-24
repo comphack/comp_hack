@@ -421,7 +421,7 @@ void AIManager::CombatSkillHit(
             }
         }
 
-        if(!eState->SameFaction(source))
+        if(eState->IsAlive() && !eState->SameFaction(source))
         {
             // If the entity's current target is not the source of this skill,
             // there is a chance they will target them now (20% chance by
@@ -1112,6 +1112,16 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             {
                 aiState->QueueCommand(cmd);
             }
+        }
+
+        auto activated = eState->GetActivatedAbility();
+        if(activated &&
+            (aiState->GetPreviousStatus() == AIStatus_t::AGGRO ||
+                aiState->GetPreviousStatus() == AIStatus_t::COMBAT))
+        {
+            // Leftover combat skill, cancel it now
+            mServer.lock()->GetSkillManager()->CancelSkill(eState,
+                activated->GetActivationID());
         }
 
         aiState->ResetStatusChanged();

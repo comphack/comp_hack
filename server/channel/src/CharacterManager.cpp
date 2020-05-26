@@ -6580,6 +6580,8 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
         }
     }
 
+    std::list<std::shared_ptr<objects::StatusEffect>> compEffects;
+
     auto definitionManager = mServer.lock()->GetDefinitionManager();
     for(auto demon : cState->GetEntity()->GetCOMP()->GetDemons())
     {
@@ -6587,13 +6589,14 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
 
         auto effects = demon->GetStatusEffects();
 
-        std::set<size_t> cancelled;
+        std::set<uint32_t> cancelled;
         for(auto effect : effects)
         {
             auto cancel = definitionManager->
                 GetStatusData(effect->GetEffect())->GetCancel();
             if(cancel->GetCancelTypes() & cancelFlags)
             {
+                compEffects.push_back(effect.Get());
                 cancelled.insert(effect->GetEffect());
             }
         }
@@ -6635,6 +6638,19 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
         }
 
         client->FlushOutgoing();
+    }
+
+    if(compEffects.size() > 0)
+    {
+        // Queue updates for status effects removed from inactive demons
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(
+            state->GetAccountUID());
+        for(auto effect : compEffects)
+        {
+            dbChanges->Delete(effect);
+        }
+
+        mServer.lock()->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
 }
 

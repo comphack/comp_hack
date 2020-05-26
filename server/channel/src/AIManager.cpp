@@ -102,7 +102,9 @@ namespace libcomp
                 .Func("UseDiasporaQuake", &AIManager::UseDiasporaQuake)
                 .Func("Chase", &AIManager::Chase)
                 .Func("Circle", &AIManager::Circle)
-                .Func("Retreat", &AIManager::Retreat);
+                .Func("ClearCommands", &AIManager::ClearCommands)
+                .Func("Retreat", &AIManager::Retreat)
+                .Func("Warp", &AIManager::Warp);
 
             Bind<AIManager>("AIManager", binding);
         }
@@ -762,6 +764,19 @@ void AIManager::UpdateAggro(const std::shared_ptr<ActiveEntityState>& eState,
     }
 }
 
+bool AIManager::ClearCommands(const std::shared_ptr<ActiveEntityState>& eState)
+{
+    auto aiState = eState ? eState->GetAIState() : nullptr;
+    if(!aiState)
+    {
+        return false;
+    }
+
+    aiState->ClearCommands();
+
+    return true;
+}
+
 bool AIManager::UseDiasporaQuake(const std::shared_ptr<
     ActiveEntityState>& source, uint32_t skillID, float delay)
 {
@@ -842,6 +857,28 @@ bool AIManager::UseDiasporaQuake(const std::shared_ptr<
                     ACTIVATION_NOTARGET);
             }
         }, server, source, skillID);
+
+    return true;
+}
+
+bool AIManager::Warp(const std::shared_ptr<ActiveEntityState>& eState,
+    uint32_t spotID, float x, float y, float rot)
+{
+    auto zone = eState ? eState->GetZone() : nullptr;
+    auto aiState = eState ? eState->GetAIState() : nullptr;
+    if(!zone || !aiState)
+    {
+        return false;
+    }
+
+    auto zoneManager = mServer.lock()->GetZoneManager();
+    if(spotID && !zoneManager->GetSpotPosition(zone->GetDynamicMapID(),
+        spotID, x, y, rot))
+    {
+        return false;
+    }
+
+    zoneManager->Warp(nullptr, eState, x, y, rot);
 
     return true;
 }

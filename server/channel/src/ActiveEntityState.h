@@ -825,13 +825,16 @@ protected:
      * @param definitionManager Pointer to the DefinitionManager to use when
      *  determining how the effect behaves
      * @param now Current system timestamp to use when activating the effect
-     * @param timeOnly true if only the time will be registered, should only be
-     *  used if the expiration is being updated
+     * @param mode Activation mode for what to register. Modes include:
+     *  1) Only the time will be registered, should only be used if the
+     *     expiration is being updated
+     *  2) Check if the effect is already registered and register if it is not
+     *  All other values will fully register the effect.
      */
     void ActivateStatusEffect(
         const std::shared_ptr<objects::StatusEffect>& effect,
         libcomp::DefinitionManager* definitionManager, uint32_t now,
-        bool timeOnly);
+        uint8_t mode);
 
     /**
      * Determine if the supplied status effect type can cause the entity to

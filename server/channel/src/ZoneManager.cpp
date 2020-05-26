@@ -42,6 +42,7 @@
 #include <AccountWorldData.h>
 #include <ActionSpawn.h>
 #include <ActionStartEvent.h>
+#include <ActivatedAbility.h>
 #include <Ally.h>
 #include <ChannelLogin.h>
 #include <CharacterLogin.h>
@@ -1017,6 +1018,18 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
     auto worldCID = state->GetWorldCID();
+
+    // Cancel any active skills
+    for(auto eState : { std::dynamic_pointer_cast<ActiveEntityState>(cState),
+        std::dynamic_pointer_cast<ActiveEntityState>(dState) })
+    {
+        auto activated = eState->GetActivatedAbility();
+        if(activated)
+        {
+            server->GetSkillManager()->CancelSkill(eState,
+                activated->GetActivationID());
+        }
+    }
 
     // Lock entity interactions in the zone
     state->SetZoneInTime(0);
@@ -4856,7 +4869,16 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
     RelativeTimeMap timeMap;
     timeMap[p.Size()] = timestamp;
 
-    auto connections = GetZoneConnections(client, true);
+    std::list<std::shared_ptr<ChannelClientConnection>> connections;
+    if(client)
+    {
+        connections = GetZoneConnections(client, true);
+    }
+    else if(eState->GetZone())
+    {
+        connections = eState->GetZone()->GetConnectionList();
+    }
+
     ChannelClientConnection::SendRelativeTimePacket(connections, p, timeMap);
 }
 

@@ -1306,7 +1306,8 @@ std::set<uint32_t> ActiveEntityState::AddStatusEffects(const StatusEffectChanges
                 uint32_t modEffectType = effect->GetEffect();
                 if(activateEffect)
                 {
-                    ActivateStatusEffect(effect, definitionManager, now, !add);
+                    ActivateStatusEffect(effect, definitionManager, now,
+                        add ? 0 : 1);
                 }
 
                 // If changes are being queued or an effect other than the one
@@ -1454,7 +1455,7 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
         // Set status effect expirations
         for(auto pair : mStatusEffects)
         {
-            ActivateStatusEffect(pair.second, definitionManager, now, false);
+            ActivateStatusEffect(pair.second, definitionManager, now, 2);
         }
 
         RegisterNextEffectTime();
@@ -1468,17 +1469,16 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
             mCurrentZone->SetNextStatusEffectTime(0, GetEntityID());
         }
 
-        // Gather non-system times to unregister as they will be registered
-        // again when reactivated. If we don't do this, the delay between
-        // deactivation and reactivation needs to round to the same second
-        // or the status will be double expired.
-        std::set<uint32_t> nonSystemTimes;
+        // Update expirations but leave next effect times until reactivated.
+        // Originally it was thought that pausing these during zone change
+        // actions etc didn't matter and would result in a more "fair" time
+        // but certain effects with very visible timers such as digitalize
+        // have proven this not to be game standard behavior.
         for(auto pair : mNextEffectTimes)
         {
             // Skip system times
             if(pair.first <= 3) continue;
 
-            nonSystemTimes.insert(pair.first);
             for(auto effectType : pair.second)
             {
                 auto it = mStatusEffects.find(effectType);
@@ -1497,11 +1497,6 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
 
                 effect->SetExpiration(exp);
             }
-        }
-
-        for(uint32_t time : nonSystemTimes)
-        {
-            mNextEffectTimes.erase(time);
         }
     }
 }
@@ -1973,10 +1968,11 @@ void ActiveEntityState::RemoveStatusEffects(const std::set<uint32_t>& effectType
 
 void ActiveEntityState::ActivateStatusEffect(
     const std::shared_ptr<objects::StatusEffect>& effect,
-    libcomp::DefinitionManager* definitionManager, uint32_t now, bool timeOnly)
+    libcomp::DefinitionManager* definitionManager, uint32_t now, uint8_t mode)
 {
     auto effectType = effect->GetEffect();
 
+    bool timeOnly = mode == 1;
     if(timeOnly)
     {
         // Remove the current expiration
@@ -1986,6 +1982,17 @@ void ActiveEntityState::ActivateStatusEffect(
             if(pair.first > 3)
             {
                 pair.second.erase(effectType);
+            }
+        }
+    }
+    else if(mode == 2)
+    {
+        // Check for registration and quit if found
+        for(auto& pair : mNextEffectTimes)
+        {
+            if(pair.second.find(effectType) != pair.second.end())
+            {
+                return;
             }
         }
     }

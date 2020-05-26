@@ -158,7 +158,7 @@ bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& ch
         {
             auto dBook = dbPair.second;
             if(cShiftValues.find(dBook->GetShiftValue()) !=
-                cShiftValues.end() && dBook->GetUnk1() &&
+                cShiftValues.end() && dBook->GetGroupID() &&
                 compendiumEntries.find(dBook->GetEntryID()) ==
                 compendiumEntries.end())
             {

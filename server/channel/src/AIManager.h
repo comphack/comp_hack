@@ -197,6 +197,13 @@ public:
         int32_t targetID);
 
     /**
+     * Clear all commands assigned to an AI controlled entity
+     * @param eState Pointer to the entity state
+     * @return true if any commands were removed
+     */
+    bool ClearCommands(const std::shared_ptr<ActiveEntityState>& eState);
+
+    /**
      * Begin using a Diaspora quake skill from the supplied source entity.
      * Notifications will be sent to players in the zone that the skill
      * has started and another when it hits.
@@ -208,6 +215,19 @@ public:
      */
     bool UseDiasporaQuake(const std::shared_ptr<ActiveEntityState>& source,
         uint32_t skillID, float delay);
+
+    /**
+     * Warp an AI controlled entity to a different point in the same zone
+     * @param eState Pointer to the entity state
+     * @param spotID Spot ID in the zone
+     * @param x x coordinate to use if no spot ID specified
+     * @param y y coordinate to use if no spot ID specified
+     * @param rot Rotation to use if no spot ID specified
+     * @param clearCommands If true, all current commands will be cleared
+     * @return true if the entity was warped
+     */
+    bool Warp(const std::shared_ptr<ActiveEntityState>& eState,
+        uint32_t spotID, float x, float y, float rot);
 
     /**
      * Create a move command that chases a specified target in the same

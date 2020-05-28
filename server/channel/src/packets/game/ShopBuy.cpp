@@ -212,14 +212,10 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
         // Apply trend adjustment
         if(trendAdjust > 0.f)
         {
-            // Snap the trend time to the last one before supplied
-            uint32_t trendTime = (uint32_t)(clientTrendTime -
-                (clientTrendTime % 300));
-
             // Seed the (repeatable) random number generators for trend
             // calculation
             std::mt19937 rand;
-            rand.seed(trendTime);
+            rand.seed((uint32_t)clientTrendTime);
 
             std::uniform_int_distribution<uint32_t> dis(0, 1000);
             for(size_t i = 0; i < trendOffset.size(); i++)
@@ -423,12 +419,25 @@ void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
             server->GetChannelSyncManager()->SyncRecordUpdate(account,
                 "Account");
 
-            LogItemDebug([productID, price, account]()
+            if(!gifteeName.IsEmpty())
             {
-                return libcomp::String("Shop product %1 purchased for %2 CP by"
-                    " player: %3\n").Arg(productID).Arg(price)
-                    .Arg(account->GetUUID().ToString());
-            });
+                LogItemDebug([productID, price, gifteeName, account]()
+                {
+                    return libcomp::String("Shop product %1 purchased for %2"
+                        " CP as a gift for '%3' by player: %4\n")
+                        .Arg(productID).Arg(price).Arg(gifteeName)
+                        .Arg(account->GetUUID().ToString());
+                });
+            }
+            else
+            {
+                LogItemDebug([productID, price, account]()
+                {
+                    return libcomp::String("Shop product %1 purchased for %2"
+                        " CP by player: %3\n").Arg(productID).Arg(price)
+                        .Arg(account->GetUUID().ToString());
+                });
+            }
         }
     }
 

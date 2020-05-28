@@ -54,7 +54,8 @@ bool Parsers::SkillExecute::Parse(libcomp::ManagerPacket *pPacketManager,
     int8_t activationID = p.ReadS8();
     int64_t targetObjectID = p.Size() == 9 ? (int64_t)p.ReadS32Little() : p.ReadS64Little();
 
-    auto source = state->GetEntityState(sourceEntityID);
+    // Load the player entity and let the processer handle it not being ready
+    auto source = state->GetEntityState(sourceEntityID, false);
     if(!source)
     {
         LogSkillManagerError([&]()

@@ -65,20 +65,24 @@ EnemyState::EnemyState()
 {
 }
 
-std::pair<uint8_t, uint8_t> EnemyState::GetTalkPoints(int32_t entityID)
+std::pair<int8_t, int8_t> EnemyState::GetTalkPoints(int32_t entityID,
+    bool& exists)
 {
+    exists = true;
+
     std::lock_guard<std::mutex> lock(mLock);
     auto it = mTalkPoints.find(entityID);
     if(it == mTalkPoints.end())
     {
-        mTalkPoints[entityID] = std::pair<uint8_t, uint8_t>(0, 0);
+        mTalkPoints[entityID] = std::pair<int8_t, int8_t>(0, 0);
+        exists = false;
     }
 
     return mTalkPoints[entityID];
 }
 
 void EnemyState::SetTalkPoints(int32_t entityID,
-    const std::pair<uint8_t, uint8_t>& points)
+    const std::pair<int8_t, int8_t>& points)
 {
     std::lock_guard<std::mutex> lock(mLock);
     mTalkPoints[entityID] = points;

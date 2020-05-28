@@ -1496,7 +1496,6 @@
     <constant name="GM_CMD_LVL_INSTANCE">200</constant>
     <constant name="GM_CMD_LVL_ITEM">250</constant>
     <constant name="GM_CMD_LVL_KICK">400</constant>
-    <constant name="GM_CMD_LVL_KILL">500</constant>
     <constant name="GM_CMD_LVL_LEVEL_UP">250</constant>
     <constant name="GM_CMD_LVL_LNC">1</constant>
     <constant name="GM_CMD_LVL_MAP">1</constant>

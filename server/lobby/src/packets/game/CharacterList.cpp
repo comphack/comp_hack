@@ -180,8 +180,7 @@ bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
 
         auto level = stats->GetLevel();
 
-        // Total play time? (0 shows opening cutscene)
-        /// @todo: verify/implement properly
+        // "Initialized" (0 shows opening cutscene)
         reply.WriteU32Little(level == -1 && config->GetPlayOpeningMovie()
             ? 0 : 1);
 

@@ -72,7 +72,7 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
         return false;
     }
 
-    auto source = state->GetEntityState(sourceEntityID);
+    auto source = state->GetEntityState(sourceEntityID, false);
     if(!source)
     {
         LogSkillManagerError([&]()
@@ -83,6 +83,12 @@ bool Parsers::SkillActivate::Parse(libcomp::ManagerPacket *pPacketManager,
         });
 
         client->Close();
+        return true;
+    }
+    else if(!source->Ready(true))
+    {
+        // Entity is not currently active, send generic failure
+        skillManager->SendFailure(source, skillID, client);
         return true;
     }
 

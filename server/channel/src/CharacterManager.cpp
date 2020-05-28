@@ -859,7 +859,7 @@ uint8_t CharacterManager::RecalculateStats(
                 state && state->GetPartyID())
             {
                 libcomp::Packet request;
-                if(std::dynamic_pointer_cast<CharacterState>(eState))
+                if(eState->GetEntityType() == EntityType_t::CHARACTER)
                 {
                     state->GetPartyCharacterPacket(request);
                 }
@@ -2686,6 +2686,59 @@ bool CharacterManager::UpdateItems(const std::shared_ptr<
     return true;
 }
 
+std::shared_ptr<objects::ServerCultureMachineSet>
+    CharacterManager::CultureExpire(const std::shared_ptr<
+        objects::CultureData>& cData, bool update)
+{
+    if(!cData)
+    {
+        return nullptr;
+    }
+
+    auto server = mServer.lock();
+    auto zoneManager = server->GetZoneManager();
+
+    auto zoneData = server->GetServerDataManager()
+        ->GetZoneData(cData->GetZone(), 0);
+    auto zone = zoneData ? zoneManager->GetGlobalZone(
+        zoneData->GetID(), zoneData->GetDynamicMapID())
+        : nullptr;
+    std::shared_ptr<objects::ServerCultureMachineSet> cmDef;
+    if(zone)
+    {
+        bool matchFound = false;
+        for(auto& pair : zone->GetCultureMachines())
+        {
+            auto cmState = pair.second;
+            if(cmState->GetMachineID() == cData->GetMachineID())
+            {
+                cmDef = cmState->GetEntity();
+            }
+
+            if(cmState->GetRentalData() == cData)
+            {
+                cmState->SetRentalData(nullptr);
+                zoneManager->SendCultureMachineData(zone, cmState);
+                matchFound = true;
+            }
+        }
+
+        if(matchFound)
+        {
+            // Reset the expirations
+            zoneManager->ExpireRentals(zone);
+        }
+    }
+
+    if(update)
+    {
+        cData->SetActive(false);
+        server->GetWorldDatabase()->QueueUpdate(cData);
+    }
+
+    return cmDef;
+}
+
 bool CharacterManager::CultureItemPickup(const std::shared_ptr<
     channel::ChannelClientConnection>& client)
 {
@@ -2702,39 +2755,8 @@ bool CharacterManager::CultureItemPickup(const std::shared_ptr<
         // Expire machine if still active in the zone (it shouldn't be)
         auto server = mServer.lock();
         auto definitionManager = server->GetDefinitionManager();
-        auto zoneManager = server->GetZoneManager();
 
-        auto zoneData = server->GetServerDataManager()
-            ->GetZoneData(cData->GetZone(), 0);
-        auto zone = zoneData ? zoneManager->GetGlobalZone(
-            zoneData->GetID(), zoneData->GetDynamicMapID())
-            : nullptr;
-        std::shared_ptr<objects::ServerCultureMachineSet> cmDef;
-        if(zone)
-        {
-            bool matchFound = false;
-            for(auto& pair : zone->GetCultureMachines())
-            {
-                auto cmState = pair.second;
-                if(cmState->GetMachineID() == cData->GetMachineID())
-                {
-                    cmDef = cmState->GetEntity();
-                }
-
-                if(cmState->GetRentalData() == cData)
-                {
-                    cmState->SetRentalData(nullptr);
-                    zoneManager->SendCultureMachineData(zone, cmState);
-                    matchFound = true;
-                }
-            }
-
-            if(matchFound)
-            {
-                // Reset the expirations
-                zoneManager->ExpireRentals(zone);
-            }
-        }
+        auto cmDef = CultureExpire(cData, false);
 
         // Add slots, move the item to the inventory and set the culture
         // data as inactive
@@ -4885,11 +4907,28 @@ bool CharacterManager::UpdateExperience(const std::shared_ptr<
 
         server->GetTokuseiManager()->Recalculate(eState, true,
             std::set<int32_t>{ eState->GetEntityID() });
-        RecalculateStats(eState, client, false);
+        uint8_t recalcResult = RecalculateStats(eState, client, false);
         if(eState->IsAlive())
         {
             stats->SetHP(eState->GetMaxHP());
             stats->SetMP(eState->GetMaxMP());
+
+            if((recalcResult & ENTITY_CALC_STAT_WORLD) && state->GetPartyID())
+            {
+                // Send new HP/MP (why was this not in the levelup packet?)
+                libcomp::Packet p;
+                if(eState->GetEntityType() == EntityType_t::CHARACTER)
+                {
+                    state->GetPartyCharacterPacket(p);
+                }
+                else
+                {
+                    state->GetPartyDemonPacket(p);
+                }
+
+                server->GetManagerConnection()
+                    ->GetWorldConnection()->SendPacket(p);
+            }
         }
 
         if(eState == dState)
@@ -6541,6 +6580,8 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
         }
     }
 
+    std::list<std::shared_ptr<objects::StatusEffect>> compEffects;
+
     auto definitionManager = mServer.lock()->GetDefinitionManager();
     for(auto demon : cState->GetEntity()->GetCOMP()->GetDemons())
     {
@@ -6548,13 +6589,14 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
 
         auto effects = demon->GetStatusEffects();
 
-        std::set<size_t> cancelled;
+        std::set<uint32_t> cancelled;
         for(auto effect : effects)
         {
             auto cancel = definitionManager->
                 GetStatusData(effect->GetEffect())->GetCancel();
             if(cancel->GetCancelTypes() & cancelFlags)
             {
+                compEffects.push_back(effect.Get());
                 cancelled.insert(effect->GetEffect());
             }
         }
@@ -6596,6 +6638,19 @@ void CharacterManager::CancelStatusEffects(const std::shared_ptr<
         }
 
         client->FlushOutgoing();
+    }
+
+    if(compEffects.size() > 0)
+    {
+        // Queue updates for status effects removed from inactive demons
+        auto dbChanges = libcomp::DatabaseChangeSet::Create(
+            state->GetAccountUID());
+        for(auto effect : compEffects)
+        {
+            dbChanges->Delete(effect);
+        }
+
+        mServer.lock()->GetWorldDatabase()->QueueChangeSet(dbChanges);
     }
 }
 

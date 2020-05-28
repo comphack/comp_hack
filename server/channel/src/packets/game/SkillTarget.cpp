@@ -58,7 +58,8 @@ bool Parsers::SkillTarget::Parse(libcomp::ManagerPacket *pPacketManager,
     int32_t sourceEntityID = p.ReadS32Little();
     int64_t targetObjectID = p.Size() == 8 ? (int64_t)p.ReadS32Little() : p.ReadS64Little();
 
-    auto source = state->GetEntityState(sourceEntityID);
+    // Load the player entity and let the processer handle it not being ready
+    auto source = state->GetEntityState(sourceEntityID, false);
     if(!source)
     {
         LogSkillManagerErrorMsg("Invalid skill source sent from client for "

@@ -44,6 +44,7 @@
 #include <CharacterLogin.h>
 #include <CharacterProgress.h>
 #include <Clan.h>
+#include <CultureData.h>
 #include <Event.h>
 #include <EventCounter.h>
 #include <EventInstance.h>
@@ -119,7 +120,6 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
     mGMands["instance"] = &ChatManager::GMCommand_Instance;
     mGMands["item"] = &ChatManager::GMCommand_Item;
     mGMands["kick"] = &ChatManager::GMCommand_Kick;
-    mGMands["kill"] = &ChatManager::GMCommand_Kill;
     mGMands["levelup"] = &ChatManager::GMCommand_LevelUp;
     mGMands["license"] = &ChatManager::GMCommand_License;
     mGMands["lnc"] = &ChatManager::GMCommand_LNC;
@@ -722,6 +722,68 @@ bool ChatManager::GMCommand_Ban(const std::shared_ptr<
 
         server->GetManagerConnection()->GetWorldConnection()
             ->SendPacket(p);
+    }
+
+    // Now clean up rentals for all characters on this server which will
+    // all be loaded already if part of this channel
+    auto characters = objects::Character::LoadCharacterListByAccount(
+        server->GetWorldDatabase(), targetAccount->GetUUID());
+    for(auto c : characters)
+    {
+        auto cData = c->GetCultureData().Get();
+        if(cData && cData->GetActive())
+        {
+            server->GetCharacterManager()->CultureExpire(cData, true);
+
+            SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+                "Culture data expired for %1.").Arg(c->GetName()));
+        }
+    }
+
+    auto bazaarData = objects::BazaarData::LoadBazaarDataByAccount(
+        server->GetWorldDatabase(), targetAccount->GetUUID());
+    if(bazaarData &&
+        bazaarData->GetState() == objects::BazaarData::State_t::BAZAAR_ACTIVE)
+    {
+        auto zoneData = server->GetServerDataManager()
+            ->GetZoneData(bazaarData->GetZone(), 0);
+        auto zone = zoneData ? server->GetZoneManager()->GetGlobalZone(
+            zoneData->GetID(), zoneData->GetDynamicMapID())
+            : nullptr;
+        std::shared_ptr<BazaarState> bState;
+        if(zone)
+        {
+            for(auto b : zone->GetBazaars())
+            {
+                if(bazaarData == b->GetCurrentMarket(bazaarData
+                    ->GetMarketID()))
+                {
+                    bState = b;
+                    break;
+                }
+            }
+        }
+
+        if(bState)
+        {
+            bazaarData->SetState(
+                objects::BazaarData::State_t::BAZAAR_INACTIVE);
+            bState->SetCurrentMarket(bazaarData->GetMarketID(), nullptr);
+
+            SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+                "Bazaar expired in zone %1.").Arg(zone->GetDefinitionID()));
+
+            server->GetZoneManager()->SendBazaarMarketData(zone, bState,
+                bazaarData->GetMarketID());
+
+            server->GetWorldDatabase()->QueueUpdate(bazaarData,
+                targetAccount->GetUUID());
+        }
+        else
+        {
+            SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
+                "Bazaar in zone %1 cannot be expired.").Arg(zone->GetID()));
+        }
     }
 
     return true;
@@ -1847,7 +1909,10 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "Bans the account which owns the character NAME. If the",
             "account is not on the channel, remove them with options",
             "1 (request current channel, default), 2 (request any",
-            "channel) or 3 (remove from world/lobby, USE AT OWN RISK)."
+            "channel) or 3 (remove from world/lobby, USE AT OWN RISK).",
+            "Upon success, all open postings belonging to the account",
+            "related to the current channel will be immediately closed.",
+            "Can be used repeatedly for multi-channel setups."
         } },
         { "bethel",{
             "@bethel INDEX AMOUNT",
@@ -1979,11 +2044,6 @@ bool ChatManager::GMCommand_Help(const std::shared_ptr<
             "options 1 (request current channel, default), 2 (request",
             "any channel) or 3 (remove from world/lobby, USE AT OWN",
             "RISK)."
-        } },
-        { "kill", {
-            "@kill [NAME]",
-            "Kills the character with the given NAME or your player",
-            "if no NAME is specified."
         } },
         { "levelup", {
             "@levelup LEVEL [DEMON]",
@@ -2473,105 +2533,6 @@ bool ChatManager::GMCommand_Kick(const std::shared_ptr<
 
         mServer.lock()->GetManagerConnection()->GetWorldConnection()
             ->SendPacket(p);
-    }
-
-    return true;
-}
-
-bool ChatManager::GMCommand_Kill(const std::shared_ptr<
-    channel::ChannelClientConnection>& client,
-    const std::list<libcomp::String>& args)
-{
-    if(!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_KILL))
-    {
-        return true;
-    }
-
-    std::list<libcomp::String> argsCopy = args;
-
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto targetState = state;
-    auto targetCState = cState;
-
-    auto server = mServer.lock();
-    auto characterManager = server->GetCharacterManager();
-    auto zoneManager = server->GetZoneManager();
-
-    libcomp::String name;
-
-    if(GetStringArg(name, argsCopy))
-    {
-        targetCState = nullptr;
-
-        for(auto zConnection : zoneManager->GetZoneConnections(client, true))
-        {
-            auto zCharState = zConnection->GetClientState()->
-                GetCharacterState();
-
-            if(zCharState->GetEntity()->GetName() == name)
-            {
-                targetState = zConnection->GetClientState();
-                targetCState = zCharState;
-                break;
-            }
-        }
-
-        if(!targetCState)
-        {
-            return SendChatMessage(client, ChatType_t::CHAT_SELF, libcomp::String(
-                "Invalid character name supplied for the current zone: %1").Arg(name));
-        }
-    }
-
-    if(targetCState->SetHPMP(0, -1, false, true))
-    {
-        // Send a generic non-combat damage skill report to kill the target
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_REPORTS);
-        reply.WriteS32Little(cState->GetEntityID());
-        reply.WriteU32Little(10);   // Any valid skill ID
-        reply.WriteS8(-1);          // No activation ID
-        reply.WriteU32Little(1);    // Number of targets
-        reply.WriteS32Little(targetCState->GetEntityID());
-        reply.WriteS32Little(MAX_PLAYER_HP_MP); // Damage 1
-        reply.WriteU8(0);           // Damage 1 type (generic)
-        reply.WriteS32Little(0);    // Damage 2
-        reply.WriteU8(2);           // Damage 2 type (none)
-        reply.WriteU16Little(1);    // Lethal flag
-        reply.WriteBlank(48);
-
-        zoneManager->BroadcastPacket(client, reply);
-
-        // Cancel any pending skill
-        auto activated = targetCState->GetActivatedAbility();
-        if(activated)
-        {
-            server->GetSkillManager()->CancelSkill(targetCState,
-                activated->GetActivationID());
-        }
-
-        std::set<std::shared_ptr<ActiveEntityState>> entities;
-        entities.insert(targetCState);
-        characterManager->UpdateWorldDisplayState(entities);
-
-        zoneManager->UpdateTrackedZone(targetState->GetZone(),
-            targetState->GetTeam());
-
-        auto tokuseiManager = server->GetTokuseiManager();
-        tokuseiManager->Recalculate(targetCState,
-            std::set<TokuseiConditionType> { TokuseiConditionType::CURRENT_HP });
-
-        auto entityClient = server->GetManagerConnection()->GetEntityClient(
-            targetCState->GetEntityID());
-        zoneManager->TriggerZoneActions(targetCState->GetZone(),
-            { targetCState }, ZoneTrigger_t::ON_DEATH, entityClient);
-
-        // Recalculate (if we haven't already) if dead tokusei are disabled
-        if(tokuseiManager->DeadTokuseiDisabled())
-        {
-            tokuseiManager->Recalculate(targetCState, true);
-        }
     }
 
     return true;

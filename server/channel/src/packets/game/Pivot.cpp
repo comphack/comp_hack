@@ -58,7 +58,7 @@ bool Parsers::Pivot::Parse(libcomp::ManagerPacket *pPacketManager,
         connection);
     auto state = client->GetClientState();
 
-    auto eState = state->GetEntityState(entityID);
+    auto eState = state->GetEntityState(entityID, false);
     if(!eState)
     {
         LogGeneralError([&]()

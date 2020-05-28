@@ -40,11 +40,13 @@
 #include <DigitalizeState.h>
 #include <EnchantSetData.h>
 #include <EnchantSpecialData.h>
+#include <EnemyExtension.h>
 #include <EventCounter.h>
 #include <Expertise.h>
 #include <Item.h>
 #include <MiCategoryData.h>
 #include <MiConditionData.h>
+#include <MiDamageData.h>
 #include <MiDCategoryData.h>
 #include <MiDevilBoostExtraData.h>
 #include <MiDevilCrystalData.h>
@@ -68,6 +70,7 @@
 #include <MiQuestData.h>
 #include <MiRestrictionData.h>
 #include <MiSItemData.h>
+#include <MiSkillBasicData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSpecialConditionData.h>
@@ -392,6 +395,50 @@ uint8_t CharacterState::GetDigitalizeAbilityLevel()
 
     // Digitalize not unlocked
     return 0;
+}
+
+bool CharacterState::GetEquipmentStats(
+    libcomp::DefinitionManager* definitionManager,
+    std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
+    std::list<std::shared_ptr<objects::MiCorrectTbl>>& nraAdjustments)
+{
+    auto c = GetEntity();
+    if(!c)
+    {
+        return false;
+    }
+
+    // Keep track of the current system time for expired equipment
+    uint32_t now = (uint32_t)std::time(0);
+
+    for(size_t i = 0; i < 15; i++)
+    {
+        bool bullets = i ==
+            (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS;
+
+        auto equip = c->GetEquippedItems(i).Get();
+        if(equip && (equip->GetDurability() > 0 || bullets) &&
+            (!equip->GetRentalExpiration() || now < equip->GetRentalExpiration()))
+        {
+            uint32_t basicEffect = equip->GetBasicEffect();
+            auto itemData = definitionManager->GetItemData(
+                basicEffect ? basicEffect : equip->GetType());
+            for(auto ct : itemData->GetCommon()->GetCorrectTbl())
+            {
+                if((uint8_t)ct->GetID() >= (uint8_t)CorrectTbl::NRA_WEAPON &&
+                    (uint8_t)ct->GetID() <= (uint8_t)CorrectTbl::NRA_MAGIC)
+                {
+                    nraAdjustments.push_back(ct);
+                }
+                else
+                {
+                    adjustments.push_back(ct);
+                }
+            }
+        }
+    }
+
+    return true;
 }
 
 void CharacterState::RecalcEquipState(
@@ -1016,38 +1063,10 @@ uint8_t CharacterState::RecalculateStats(
         }
     }
 
-    // Keep track of the current system time for expired equipment
-    uint32_t now = (uint32_t)std::time(0);
-
     // Calculate based on adjustments
     std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
     std::list<std::shared_ptr<objects::MiCorrectTbl>> nraTbls;
-    for(size_t i = 0; i < 15; i++)
-    {
-        bool bullets = i ==
-            (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS;
-
-        auto equip = c->GetEquippedItems(i).Get();
-        if(equip && (equip->GetDurability() > 0 || bullets) &&
-            (!equip->GetRentalExpiration() || now < equip->GetRentalExpiration()))
-        {
-            uint32_t basicEffect = equip->GetBasicEffect();
-            auto itemData = definitionManager->GetItemData(
-                basicEffect ? basicEffect : equip->GetType());
-            for(auto ct : itemData->GetCommon()->GetCorrectTbl())
-            {
-                if((uint8_t)ct->GetID() >= (uint8_t)CorrectTbl::NRA_WEAPON &&
-                    (uint8_t)ct->GetID() <= (uint8_t)CorrectTbl::NRA_MAGIC)
-                {
-                    nraTbls.push_back(ct);
-                }
-                else
-                {
-                    correctTbls.push_back(ct);
-                }
-            }
-        }
-    }
+    GetEquipmentStats(definitionManager, correctTbls, nraTbls);
 
     if(dgState)
     {
@@ -1115,6 +1134,104 @@ uint8_t CharacterState::RecalculateStats(
 
         return result;
     }
+}
+
+bool CharacterState::CopyToEnemy(
+    const std::shared_ptr<ActiveEntityState>& eState,
+    libcomp::DefinitionManager* definitionManager)
+{
+    if(!ActiveEntityState::CopyToEnemy(eState, definitionManager))
+    {
+        return false;
+    }
+
+    auto eBase = eState->GetEnemyBase();
+    auto extension = eBase->GetExtension();
+
+    auto stats = CharacterManager::GetCharacterBaseStats(GetCoreStats());
+
+    std::list<std::shared_ptr<objects::MiCorrectTbl>> correctTbls;
+    std::list<std::shared_ptr<objects::MiCorrectTbl>> nraTbls;
+    GetEquipmentStats(definitionManager, correctTbls, nraTbls);
+
+    // Convert equipment NRA format to standard format
+    for(auto nraTbl : nraTbls)
+    {
+        auto stdTbl = std::make_shared<objects::MiCorrectTbl>();
+        stdTbl->SetID(nraTbl->GetID());
+        stdTbl->SetType((uint8_t)(nraTbl->GetType() + 2));
+        stdTbl->SetValue(nraTbl->GetValue());
+
+        correctTbls.push_back(stdTbl);
+    }
+
+    // Store equipment bonus direct stats in standard format
+    for(auto& pair : mEquipFuseBonuses)
+    {
+        auto stdTbl = std::make_shared<objects::MiCorrectTbl>();
+        stdTbl->SetID(pair.first);
+        stdTbl->SetType(0);  // Standard numeric
+        stdTbl->SetValue(pair.second);
+
+        correctTbls.push_back(stdTbl);
+    }
+
+    // Base implementation will fail to set stats for character as they
+    // will not have a DevilData record
+    extension->SetOverrideStats(true);
+
+    extension->SetStatBoosts(correctTbls);
+
+    for(auto& cPair : stats)
+    {
+        extension->SetCorrectTbl((size_t)cPair.first, (int16_t)cPair.second);
+    }
+
+    // Non-character bonus tokusei are kept
+    for(int32_t tokuseiID : GetEquipmentTokuseiIDs())
+    {
+        eState->SetAdditionalTokusei(tokuseiID, 1);
+    }
+
+    // Filter out switch skills and active "none" dependency skills that are
+    // not defensive as those are all player specific utility skills
+    auto skillIDs = extension->GetAddedSkills();
+    for(uint32_t skillID : extension->GetAddedSkills())
+    {
+        auto skillData = definitionManager->GetSkillData(skillID);
+        auto basicData = skillData ? skillData->GetBasic() : nullptr;
+        if(!skillData ||
+            skillData->GetCommon()->GetCategory()->GetMainCategory() == 2)
+        {
+            // Ignore invalid or switch
+            skillIDs.erase(skillID);
+        }
+        else if(skillData->GetDamage()->GetFunctionID() && 
+            !basicData->GetCombatSkill())
+        {
+            // Ignore non-combat FIDs
+            skillIDs.erase(skillID);
+        }
+        else if(basicData->GetDependencyType() ==
+            objects::MiSkillBasicData::DependencyType_t::NONE)
+        {
+            switch(basicData->GetActionType())
+            {
+            case objects::MiSkillBasicData::ActionType_t::GUARD:
+            case objects::MiSkillBasicData::ActionType_t::COUNTER:
+            case objects::MiSkillBasicData::ActionType_t::DODGE:
+                break;
+            default:
+                // Ignore non-defensive
+                skillIDs.erase(skillID);
+                break;
+            }
+        }
+    }
+
+    extension->SetAddedSkills(skillIDs);
+
+    return true;
 }
 
 std::set<uint32_t> CharacterState::GetAllSkills(

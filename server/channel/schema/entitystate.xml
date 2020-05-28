@@ -22,7 +22,7 @@
         <member type="float" name="CurrentRotation"/>
     </object>
     <object name="CalculatedEntityState" scriptenabled="true" persistent="false">
-        <member type="array" name="CorrectTbl" size="128">
+        <member type="array" name="CorrectTbl" size="126">
             <element type="s16"/>
         </member>
         <member type="map" name="NullChances">
@@ -138,9 +138,6 @@
         <member type="u64" name="CombatTimeOut"/>
 
         <member type="set" name="CurrentSkills">
-            <element type="u32"/>
-        </member>
-        <member type="set" name="AddedSkills">
             <element type="u32"/>
         </member>
         <member type="set" name="DisabledSkills">

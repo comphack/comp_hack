@@ -42,6 +42,7 @@
 #include <AccountWorldData.h>
 #include <ActionSpawn.h>
 #include <ActionStartEvent.h>
+#include <ActivatedAbility.h>
 #include <Ally.h>
 #include <ChannelLogin.h>
 #include <CharacterLogin.h>
@@ -50,6 +51,7 @@
 #include <DiasporaBase.h>
 #include <DigitalizeState.h>
 #include <Enemy.h>
+#include <EnemyExtension.h>
 #include <EntityStats.h>
 #include <InstanceAccess.h>
 #include <Item.h>
@@ -136,6 +138,8 @@ namespace libcomp
                 .Func("GetGlobalZone", &ZoneManager::GetGlobalZone)
                 .Func("GetExistingZone", &ZoneManager::GetExistingZone)
                 .Func("GetInstanceStartingZone", &ZoneManager::GetInstanceStartingZone)
+                .Func("CopyToEnemy", &ZoneManager::CopyToEnemy)
+                .Func("CopyDemon", &ZoneManager::CopyDemon)
                 .Func("CreateAlly", &ZoneManager::CreateAlly)
                 .Func<std::shared_ptr<ActiveEntityState>(ZoneManager::*)(
                     const std::shared_ptr<Zone>&, uint32_t, uint32_t, uint32_t,
@@ -1014,6 +1018,18 @@ void ZoneManager::LeaveZone(const std::shared_ptr<ChannelClientConnection>& clie
     auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
     auto worldCID = state->GetWorldCID();
+
+    // Cancel any active skills
+    for(auto eState : { std::dynamic_pointer_cast<ActiveEntityState>(cState),
+        std::dynamic_pointer_cast<ActiveEntityState>(dState) })
+    {
+        auto activated = eState->GetActivatedAbility();
+        if(activated)
+        {
+            server->GetSkillManager()->CancelSkill(eState,
+                activated->GetActivationID());
+        }
+    }
 
     // Lock entity interactions in the zone
     state->SetZoneInTime(0);
@@ -2441,12 +2457,18 @@ void ZoneManager::SendCultureMachineData(const std::shared_ptr<Zone>& zone,
     BroadcastPacket(zone, p);
 }
 
-void ZoneManager::ExpireRentals(const std::shared_ptr<Zone>& zone)
+void ZoneManager::ExpireRentals(const std::shared_ptr<Zone>& zone,
+    uint32_t expireBefore)
 {
     auto server = mServer.lock();
     auto managerConnection = server->GetManagerConnection();
 
-    uint32_t now = (uint32_t)std::time(0);
+    bool expireNow = expireBefore == 0;
+    if(expireNow)
+    {
+        expireBefore = (uint32_t)std::time(0);
+    }
+
     uint32_t currentExpiration = zone->GetNextRentalExpiration();
 
     auto machines = zone->GetCultureMachines();
@@ -2458,7 +2480,7 @@ void ZoneManager::ExpireRentals(const std::shared_ptr<Zone>& zone)
         for(uint32_t marketID : bState->GetEntity()->GetMarketIDs())
         {
             auto market = bState->GetCurrentMarket(marketID);
-            if(market && market->GetExpiration() <= now)
+            if(market && market->GetExpiration() <= expireBefore)
             {
                 bState->SetCurrentMarket(marketID, nullptr);
 
@@ -2490,7 +2512,7 @@ void ZoneManager::ExpireRentals(const std::shared_ptr<Zone>& zone)
     {
         auto cmState = cmPair.second;
         auto rental = cmState->GetRentalData();
-        if(rental && rental->GetExpiration() <= now)
+        if(rental && rental->GetExpiration() <= expireBefore)
         {
             cmState->SetRentalData(nullptr);
 
@@ -2524,6 +2546,26 @@ void ZoneManager::ExpireRentals(const std::shared_ptr<Zone>& zone)
 
     if(rMachines.size() > 0 || rMarkets.size() > 0)
     {
+        if(rMachines.size() > 0)
+        {
+            LogZoneManagerDebug([rMachines, zone]()
+            {
+                return libcomp::String("%1 culture machine rental(s) expired"
+                    " in %2s\n").Arg(rMachines.size())
+                    .Arg(zone->GetDefinitionID());
+            });
+        }
+
+        if(rMarkets.size() > 0)
+        {
+            LogZoneManagerDebug([rMarkets, zone]()
+            {
+                return libcomp::String("%1 bazaar market rental(s) expired in"
+                    " %2s\n").Arg(rMarkets.size())
+                    .Arg(zone->GetDefinitionID());
+            });
+        }
+
         auto dbChanges = libcomp::DatabaseChangeSet::Create();
         for(auto machine : rMachines)
         {
@@ -2544,16 +2586,17 @@ void ZoneManager::ExpireRentals(const std::shared_ptr<Zone>& zone)
     if(nextExpiration != 0 && nextExpiration != currentExpiration)
     {
         // If the next run is sooner than what is scheduled, schedule again
+        uint32_t now = expireNow ? expireBefore : (uint32_t)std::time(0);
         ServerTime nextTime = ChannelServer::GetServerTime() +
             ((uint64_t)(nextExpiration - now) * 1000000ULL);
 
         server->ScheduleWork(nextTime, [](ZoneManager* zoneManager,
-            const std::shared_ptr<Zone> pZone)
+            const std::shared_ptr<Zone> pZone, uint32_t pSynch)
             {
-                zoneManager->ExpireRentals(pZone);
-            }, this, zone);
+                zoneManager->ExpireRentals(pZone, pSynch);
+            }, this, zone, nextExpiration);
 
-        LogZoneManagerDebug([&]()
+        LogZoneManagerDebug([zone, nextExpiration, now]()
         {
             return libcomp::String("Scheduling zone rental expirations for"
                 " %1 in %2s\n").Arg(zone->GetDefinitionID())
@@ -3311,6 +3354,86 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
     }
 
     return eState;
+}
+
+bool ZoneManager::CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
+    const std::shared_ptr<ActiveEntityState>& copyState)
+{
+    auto eBase = eState ? eState->GetEnemyBase() : nullptr;
+    if(!eBase || !copyState ||
+        eState->GetDisplayState() >= ActiveDisplayState_t::ACTIVE)
+    {
+        return false;
+    }
+
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+    if(!copyState->CopyToEnemy(eState, definitionManager))
+    {
+        return false;
+    }
+    
+    // Copy successful, set core stats recalculate the new state
+    auto cs = eBase->GetCoreStats();
+    auto extension = eBase->GetExtension();
+
+    cs->SetMaxHP(extension->GetCorrectTbl((size_t)CorrectTbl::HP_MAX));
+    cs->SetMaxMP(extension->GetCorrectTbl((size_t)CorrectTbl::MP_MAX));
+    cs->SetHP(extension->GetCorrectTbl((size_t)CorrectTbl::HP_MAX));
+    cs->SetMP(extension->GetCorrectTbl((size_t)CorrectTbl::MP_MAX));
+    cs->SetSTR(extension->GetCorrectTbl((size_t)CorrectTbl::STR));
+    cs->SetMAGIC(extension->GetCorrectTbl((size_t)CorrectTbl::MAGIC));
+    cs->SetVIT(extension->GetCorrectTbl((size_t)CorrectTbl::VIT));
+    cs->SetINTEL(extension->GetCorrectTbl((size_t)CorrectTbl::INT));
+    cs->SetSPEED(extension->GetCorrectTbl((size_t)CorrectTbl::SPEED));
+    cs->SetLUCK(extension->GetCorrectTbl((size_t)CorrectTbl::LUCK));
+    cs->SetLNGR(extension->GetCorrectTbl((size_t)CorrectTbl::LNGR));
+    cs->SetSPELL(extension->GetCorrectTbl((size_t)CorrectTbl::SPELL));
+    cs->SetSUPPORT(extension->GetCorrectTbl((size_t)CorrectTbl::SUPPORT));
+    cs->SetPDEF(extension->GetCorrectTbl((size_t)CorrectTbl::PDEF));
+    cs->SetMDEF(extension->GetCorrectTbl((size_t)CorrectTbl::MDEF));
+
+    mServer.lock()->GetTokuseiManager()->Recalculate(eState, false);
+
+    eState->RecalculateStats(definitionManager);
+
+    return true;
+}
+
+bool ZoneManager::CopyDemon(const std::shared_ptr<ActiveEntityState>& eState,
+    const std::shared_ptr<objects::Demon>& copyDemon, int32_t copyEntityID)
+{
+    auto eBase = eState ? eState->GetEnemyBase() : nullptr;
+    if(!eBase || eState->GetDisplayState() >= ActiveDisplayState_t::ACTIVE)
+    {
+        return false;
+    }
+
+    // Create a new demon state and calculate as if they belonged to the
+    // character still. Ignore shared state bonuses though as those do not
+    // actually activate on the enemy.
+    auto server = mServer.lock();
+    auto definitionManager = server->GetDefinitionManager();
+
+    auto copyState = std::make_shared<DemonState>();
+    copyState->SetEntity(copyDemon, definitionManager);
+    copyState->SetEntityID(copyEntityID);
+
+    copyState->SetCurrentSkills(copyState->GetAllSkills(definitionManager,
+        false));
+
+    copyState->UpdateDemonState(definitionManager);
+
+    // Recalculate effects to get the correct skills and tokusei boosts but
+    // remove the entity ID temporarily so they do not recalculate as the
+    // character's demon.
+    copyState->SetEntityID(0);
+
+    server->GetTokuseiManager()->Recalculate(copyState, false);
+
+    copyState->SetEntityID(copyEntityID);
+
+    return CopyToEnemy(eState, copyState);
 }
 
 bool ZoneManager::AddEnemiesToZone(
@@ -4746,7 +4869,16 @@ void ZoneManager::Warp(const std::shared_ptr<ChannelClientConnection>& client,
     RelativeTimeMap timeMap;
     timeMap[p.Size()] = timestamp;
 
-    auto connections = GetZoneConnections(client, true);
+    std::list<std::shared_ptr<ChannelClientConnection>> connections;
+    if(client)
+    {
+        connections = GetZoneConnections(client, true);
+    }
+    else if(eState->GetZone())
+    {
+        connections = eState->GetZone()->GetConnectionList();
+    }
+
     ChannelClientConnection::SendRelativeTimePacket(connections, p, timeMap);
 }
 
@@ -6660,9 +6792,12 @@ Point ZoneManager::GetRandomSpotPoint(
         Line centerLine(center, transformed);
 
         Point collision;
-        if(geometry && geometry->Collides(centerLine, collision))
+        Line collideLine;
+        std::shared_ptr<ZoneShape> outShape;
+        if(geometry && geometry->Collides(centerLine, collision, collideLine,
+            outShape))
         {
-            transformed = CollisionAdjust(center, collision);
+            transformed = CollisionAdjust(center, collision, collideLine);
         }
     }
 
@@ -6710,9 +6845,10 @@ Point ZoneManager::GetLinearPoint(float sourceX, float sourceY,
         Point src(sourceX, sourceY);
 
         Point collidePoint;
-        if(zone->Collides(Line(src, dest), collidePoint))
+        Line collideLine;
+        if(zone->Collides(Line(src, dest), collidePoint, collideLine))
         {
-            dest = CollisionAdjust(src, collidePoint);
+            dest = CollisionAdjust(src, collidePoint, collideLine);
         }
     }
 
@@ -6866,11 +7002,10 @@ uint8_t ZoneManager::CorrectClientPosition(const std::shared_ptr<
         Line path(Point(src.x, src.y), Point(dest.x, dest.y));
 
         Point collidePoint;
-        Line outSurface;
-        std::shared_ptr<ZoneShape> outShape;
-        if(zone->Collides(path, collidePoint, outSurface, outShape))
+        Line collideLine;
+        if(zone->Collides(path, collidePoint, collideLine))
         {
-            dest = CollisionAdjust(src, collidePoint);
+            dest = CollisionAdjust(src, collidePoint, collideLine);
             result = 0x02;
         }
     }
@@ -6878,7 +7013,8 @@ uint8_t ZoneManager::CorrectClientPosition(const std::shared_ptr<
     return result;
 }
 
-Point ZoneManager::CollisionAdjust(const Point& src, const Point& collidePoint)
+Point ZoneManager::CollisionAdjust(const Point& src, const Point& collidePoint,
+    const Line& collideLine)
 {
     // Back off by 10 units. Typically the client stops you when you approach
     // 10 units from any geometry. Functionally you will not get "stuck" until
@@ -6886,18 +7022,15 @@ Point ZoneManager::CollisionAdjust(const Point& src, const Point& collidePoint)
     Point adjusted = GetLinearPoint(collidePoint.x, collidePoint.y, src.x,
         src.y, 10.f, false);
 
-    // Make sure we're at least 1 full unit away from the collision point and
-    // pray that the zone geometry doesn't get TOO close to another line
-    if(std::fabs(adjusted.x - collidePoint.x) < 1.f)
+    // If the points approach the colliding line at an acute angle, its
+    // possible the adjusted point is still too close to the geometry. If this
+    // occurs, move it the minimum distance off the line's nearest point to
+    // avoid client rounding causing the player to get stuck.
+    Point nearest = GetNearestPoint(collideLine, adjusted);
+    if(nearest.GetDistance(adjusted) < 1.f)
     {
-        adjusted.x = collidePoint.x +
-            (adjusted.x < collidePoint.x ? -1.f : 1.f);
-    }
-
-    if(std::fabs(adjusted.y - collidePoint.y) < 1.f)
-    {
-        adjusted.y = collidePoint.y +
-            (adjusted.y < collidePoint.y ? -1.f : 1.f);
+        adjusted = GetLinearPoint(adjusted.x, adjusted.y, nearest.x, nearest.y,
+            1.f, true);
     }
 
     return adjusted;
@@ -7183,6 +7316,12 @@ std::list<uint32_t> ZoneManager::GetShortestPath(
 
 float ZoneManager::GetPointToLineDistance(const Line& line, const Point& point)
 {
+    auto nearest = GetNearestPoint(line, point);
+    return point.GetDistance(nearest);
+}
+
+Point ZoneManager::GetNearestPoint(const Line& line, const Point& point)
+{
     float xDiff = line.second.x - line.first.x;
     float yDiff = line.second.y - line.first.y;
 
@@ -7190,22 +7329,22 @@ float ZoneManager::GetPointToLineDistance(const Line& line, const Point& point)
         (point.y - line.first.y) * yDiff) /
         (xDiff * xDiff + yDiff * yDiff);
 
-    Point nearest;
     if(calc < 0.f)
     {
-        nearest = line.first;
+        return line.first;
     }
     else if(calc > 1.f)
     {
-        nearest = line.second;
+        return line.second;
     }
     else
     {
+        Point nearest;
         nearest.x = line.first.x + calc * xDiff;
         nearest.y = line.first.y + calc * yDiff;
-    }
 
-    return point.GetDistance(nearest);
+        return nearest;
+    }
 }
 
 bool ZoneManager::PointInPolygon(const Point& p, const std::list<
@@ -8149,16 +8288,13 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
             zone->AppendFlagSetTriggers(trigger);
             zone->InsertFlagSetKeys(trigger->GetValue());
             break;
-        case objects::ServerZoneTrigger::Trigger_t::ON_ACTION_DELAY:
-            zone->AppendActionDelayTriggers(trigger);
-            zone->InsertActionDelayKeys(trigger->GetValue());
-            break;
         case objects::ServerZoneTrigger::Trigger_t::ON_PHASE:
         case objects::ServerZoneTrigger::Trigger_t::ON_PVP_START:
         case objects::ServerZoneTrigger::Trigger_t::ON_PVP_BASE_CAPTURE:
         case objects::ServerZoneTrigger::Trigger_t::ON_PVP_COMPLETE:
         case objects::ServerZoneTrigger::Trigger_t::ON_DIASPORA_BASE_CAPTURE:
         case objects::ServerZoneTrigger::Trigger_t::ON_DIASPORA_BASE_RESET:
+        case objects::ServerZoneTrigger::Trigger_t::ON_TOKUSEI_EXPIRED:
         case objects::ServerZoneTrigger::Trigger_t::ON_UB_TICK:
         case objects::ServerZoneTrigger::Trigger_t::ON_UB_GAUGE_OVER:
         case objects::ServerZoneTrigger::Trigger_t::ON_UB_GAUGE_UNDER:

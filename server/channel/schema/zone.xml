@@ -24,12 +24,6 @@
         <member type="set" name="FlagSetKeys">
             <element type="s32"/>
         </member>
-        <member type="list" name="ActionDelayTriggers">
-            <element type="ServerZoneTrigger*"/>
-        </member>
-        <member type="set" name="ActionDelayKeys">
-            <element type="s32"/>
-        </member>
         <member type="list" name="TimeTriggers">
             <element type="ServerZoneTrigger*"/>
         </member>

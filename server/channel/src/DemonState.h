@@ -128,11 +128,25 @@ public:
     int16_t UpdateLearningSkill(const std::shared_ptr<
         objects::InheritedSkill>& iSkill, uint16_t points);
 
+    /**
+     * Gather the base pre-adjustment stats of the current entity
+     * @param stats Output map to assign base stats to
+     * @param definitionManager Pointer to the definition manager to use
+     *  for calculating stats
+     * @param readOnly If true, do not update the entity directly
+     * @return true if the stats were retrieved, false if they were not
+     */
+    bool GetBaseStats(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
+        libcomp::DefinitionManager* definitionManager, bool readOnly);
+
     virtual const libobjgen::UUID GetEntityUUID();
 
     virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
         std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr,
         std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
+
+    virtual bool CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
+        libcomp::DefinitionManager* definitionManager);
 
     virtual std::set<uint32_t> GetAllSkills(
         libcomp::DefinitionManager* definitionManager, bool includeTokusei);

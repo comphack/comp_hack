@@ -847,45 +847,9 @@ const WorldClock ChannelServer::GetWorldClockTime()
     bool eventPassed = mWorldClock.SystemTime < mNextEventTime &&
         mNextEventTime <= (uint32_t)systemTime;
 
-    // Set the GMT system time
-    WorldClock newClock;
-    newClock.SystemTime = (uint32_t)systemTime;
-
-    // Adjust the time offset to get relative real time values
-    int32_t offset = GetServerTimeOffset();
-    if(offset)
-    {
-        systemTime = (systemTime + offset);
-    }
-
-    tm* t = gmtime(&systemTime);
-
-    newClock.WeekDay = (int8_t)(t->tm_wday + 1);
-    newClock.Month = (int8_t)(t->tm_mon + 1);
-    newClock.Day = (int8_t)t->tm_mday;
-    newClock.SystemHour = (int8_t)t->tm_hour;
-    newClock.SystemMin = (int8_t)t->tm_min;
-    newClock.SystemSec = (int8_t)t->tm_sec;
-
-    // Now calculate the game relative times
-    newClock.GameOffset = mWorldClock.GameOffset;
-
-    // Every 4 days, 15 full moon cycles will elapse and the same game time
-    // will occur on the same time offset.
-    newClock.CycleOffset = (uint32_t)((newClock.SystemTime +
-        newClock.GameOffset - BASE_WORLD_TIME) % 345600);
-
-    // 24 minutes = 1 game phase (16 total)
-    newClock.MoonPhase = (int8_t)((newClock.CycleOffset / 1440) % 16);
-
-    // 2 minutes = 1 game hour
-    newClock.Hour = (int8_t)((newClock.CycleOffset / 120) % 24);
-
-    // 2 seconds = 1 game minute
-    newClock.Min = (int8_t)((newClock.CycleOffset / 2) % 60);
-
     // Replace the old clock values
-    mWorldClock = newClock;
+    mWorldClock = WorldClock(systemTime, mWorldClock.GameOffset,
+        GetServerTimeOffset());
 
     if(eventPassed || mNextEventTime == 0)
     {
@@ -893,7 +857,7 @@ const WorldClock ChannelServer::GetWorldClockTime()
         RecalcNextWorldEventTime();
     }
 
-    return newClock;
+    return mWorldClock;
 }
 
 void ChannelServer::SetTimeOffset(uint32_t offset)

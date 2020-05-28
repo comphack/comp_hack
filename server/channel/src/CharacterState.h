@@ -128,6 +128,19 @@ public:
     uint8_t GetDigitalizeAbilityLevel();
 
     /**
+     * Gather equipment stats associated to the character
+     * @param definitionManager Pointer to the definition manager to use
+     *  for gathering item definitions
+     * @param adjustments Output list of non-NRA adjustments
+     * @param nraAdjustments Output list of NRA adjustments which have
+     *  a unique format from every other source
+     * @return true if the stats were retrieved, false if they were not
+     */
+    bool GetEquipmentStats(libcomp::DefinitionManager* definitionManager,
+        std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
+        std::list<std::shared_ptr<objects::MiCorrectTbl>>& nraAdjustments);
+
+    /**
      * Determine the tokusei effects gained for the character based upon
      * their current equipment
      * @param definitionManager Pointer to the definition manager to use
@@ -243,6 +256,9 @@ public:
     virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
         std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr,
         std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
+
+    virtual bool CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
+        libcomp::DefinitionManager* definitionManager);
 
     virtual std::set<uint32_t> GetAllSkills(
         libcomp::DefinitionManager* definitionManager, bool includeTokusei);

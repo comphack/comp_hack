@@ -3558,21 +3558,6 @@ bool ActionManager::Delay(ActionContext& ctx)
                         actionManager->PerformActions(client,
                             pAct->GetActions(), pSourceEntityID, pZone,
                             options);
-
-                        // Fire action delay triggers
-                        if(pAct->GetDelayID() &&
-                            pZone->ActionDelayKeysContains(pAct->GetDelayID()))
-                        {
-                            for(auto trigger : pZone->GetActionDelayTriggers())
-                            {
-                                if(trigger->GetValue() == pAct->GetDelayID())
-                                {
-                                    actionManager->PerformActions(client,
-                                        trigger->GetActions(), pSourceEntityID,
-                                        pZone);
-                                }
-                            }
-                        }
                     }
                 }, server, act, ctx.CurrentZone, ctx.SourceEntityID, worldCID,
                     ctx.Options.GroupID);

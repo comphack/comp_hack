@@ -92,11 +92,6 @@
        </item>
        <item>
         <property name="text">
-         <string>On Action Delay</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
          <string>On Phase</string>
         </property>
        </item>
@@ -123,6 +118,11 @@
        <item>
         <property name="text">
          <string>On Diaspora Base Reset</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>On Tokusei Expired</string>
         </property>
        </item>
        <item>

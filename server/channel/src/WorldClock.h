@@ -95,6 +95,27 @@ public:
      * @return Hash representation of the time
      */
     size_t Hash() const;
+
+    /**
+     * Calculate the complete moon phase cycle offset based on the supplied
+     * system time and configured game offset.
+     * @param systemTime System time
+     * @param gameOffset System configured offset in seconds
+     * @return Complete moon phase cycle offset for the supplied times
+     */
+    static uint32_t GetCycleOffset(uint32_t systemTime, uint32_t gameOffset);
+
+    /**
+     * Calculate the moon phase relative time most recently passed by the
+     * supplied system time and offset. Used for calculating moon based RNG.
+     * System time can be adjusted by server offset or not.
+     * @param systemTime System time past the moon phase time to calculate
+     * @param gameOffset System configured offset in seconds set on each world
+     *  clock calculation
+     * @return Last moon phase system time
+     */
+    static uint32_t ToLastMoonPhaseTime(uint32_t systemTime,
+        uint32_t gameOffset);
 };
 
 /**
@@ -109,6 +130,15 @@ public:
      * Construct a new clock with default un-set values
      */
     WorldClock();
+
+    /**
+     * Construct a new clock based off a system time and game offset
+     * @param systemTime System time
+     * @param gameOffset System configured offset in seconds
+     * @param serverOffset Server adjusted offset in seconds
+     */
+    WorldClock(time_t systemTime, uint32_t gameOffset,
+        int32_t serverOffset);
 
     /**
      * Determine if the game time recorded is considered night which

@@ -214,7 +214,7 @@ bool AccountManager::ChannelLogin(std::shared_ptr<objects::AccountLogin> login)
         // previous login (since the channel sets them while playing too)
         auto progress = character->LoadProgress(worldDB);
         if(!character->GetCOMP().IsNull() && progress &&
-            progress->GetDemonQuestResetTime() < lastLogin)
+            progress->GetDemonQuestResetTime() <= lastLogin)
         {
             if(character->LoadCOMP(worldDB))
             {

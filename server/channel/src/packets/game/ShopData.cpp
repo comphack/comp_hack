@@ -114,9 +114,10 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
     // 0x40: Product is only visible during moon phases matching extra bytes
     // 0x80: Apparently unsupported (needs 2 additional bytes)
 
-    // Trends reset every 5 minutes based on the server system time
-    uint32_t trendTime = server->GetWorldClockTime().SystemTime;
-    trendTime = trendTime - (trendTime % 300);
+    // Pull the trend time based on the moon phase
+    auto worldClock = server->GetWorldClockTime();
+    uint32_t trendTime = WorldClockTime::ToLastMoonPhaseTime(
+        worldClock.SystemTime, worldClock.GameOffset);
 
     float trendAdjust = shopData->GetTrendAdjustment();
     if(shopData->GetType() == objects::ServerShop::Type_t::COMP_SHOP)
@@ -132,7 +133,9 @@ bool Parsers::ShopData::Parse(libcomp::ManagerPacket *pPacketManager,
     if(trendAdjust > 0.f)
     {
         rand.seed(trendTime);
-        pRand.seed((uint32_t)(trendTime - 300));
+
+        // Previous trend is one moon phase earlier
+        pRand.seed(trendTime - 1440);
     }
 
     libcomp::Packet reply;

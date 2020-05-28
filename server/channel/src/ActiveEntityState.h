@@ -223,6 +223,16 @@ public:
         std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
 
     /**
+     * Copy the current skills and stats from the entity onto an enemy or ally.
+     * @param eState Enemy or Ally state to copy to
+     * @param definitionManager Pointer to the DefinitionManager to use when
+     *  determining how effects and items interact with the entity
+     * @return false if an error occurred
+     */
+    virtual bool CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
+        libcomp::DefinitionManager* definitionManager);
+
+    /**
      * Check if the entity has the supplied skill learned and not currently
      * disabled.
      * @param skillID ID of the skill to check
@@ -815,13 +825,16 @@ protected:
      * @param definitionManager Pointer to the DefinitionManager to use when
      *  determining how the effect behaves
      * @param now Current system timestamp to use when activating the effect
-     * @param timeOnly true if only the time will be registered, should only be
-     *  used if the expiration is being updated
+     * @param mode Activation mode for what to register. Modes include:
+     *  1) Only the time will be registered, should only be used if the
+     *     expiration is being updated
+     *  2) Check if the effect is already registered and register if it is not
+     *  All other values will fully register the effect.
      */
     void ActivateStatusEffect(
         const std::shared_ptr<objects::StatusEffect>& effect,
         libcomp::DefinitionManager* definitionManager, uint32_t now,
-        bool timeOnly);
+        uint8_t mode);
 
     /**
      * Determine if the supplied status effect type can cause the entity to
@@ -938,6 +951,8 @@ protected:
      * @param stats Map of correct table IDs to calculated stats to set on the
      *  entity. The values already in the map should be pre-dependent stat
      *  calculated values.
+     * @param adjustments List of adjustments to correct table values without
+     *  standard adjustments added
      * @param calcState Override CalculatedEntityState to use instead of the
      *  entity's default
      * @param contextSkill Contextual skill to apply adjustments from.
@@ -949,6 +964,7 @@ protected:
      */
     uint8_t RecalculateDemonStats(libcomp::DefinitionManager* definitionManager,
         libcomp::EnumMap<CorrectTbl, int32_t>& stats,
+        std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
         std::shared_ptr<objects::CalculatedEntityState> calcState,
         std::shared_ptr<objects::MiSkillData> contextSkill);
 

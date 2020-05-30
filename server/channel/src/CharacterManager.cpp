@@ -5637,7 +5637,7 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
             }
             else if(isTarot &&
                 (itemData->GetBasic()->GetFlags() & ITEM_FLAG_TAROT) == 0 &&
-                inputItem->GetTarot() != ENCHANT_ENABLE_EFFECT)
+                inputItem->GetTarot() == 0)
             {
                 auto accountUID = synthState->GetAccountUID();
                 LogItemError([inputItem, accountUID]()
@@ -5653,7 +5653,7 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
             }
             else if(isSoul &&
                 (itemData->GetBasic()->GetFlags() & ITEM_FLAG_SOUL) == 0 &&
-                inputItem->GetSoul() != ENCHANT_ENABLE_EFFECT)
+                inputItem->GetSoul() == 0)
             {
                 auto accountUID = synthState->GetAccountUID();
                 LogItemError([inputItem, accountUID]()

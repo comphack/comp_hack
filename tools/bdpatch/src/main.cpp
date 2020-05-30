@@ -31,6 +31,7 @@
 
 // libcomp Includes
 #include <BinaryDataSet.h>
+#include <Constants.h>
 #include <Log.h>
 #include <Object.h>
 
@@ -158,11 +159,27 @@
 #include <MiWarpPointData.h>
 #include <MiZoneBasicData.h>
 #include <MiZoneData.h>
+#include <QmpFile.h>
 
 // tinyxml2 Includes
 #include <PushIgnore.h>
 #include <tinyxml2.h>
 #include <PopIgnore.h>
+
+class ManualBinaryDataSet : public libcomp::BinaryDataSet
+{
+public:
+    ManualBinaryDataSet(
+        std::function<std::shared_ptr<libcomp::Object>()> alloc,
+        std::function<uint32_t(const std::shared_ptr<libcomp::Object>&)> map) :
+        libcomp::BinaryDataSet(alloc, map) { }
+    virtual ~ManualBinaryDataSet() { }
+
+    void AddRecord(std::shared_ptr<libcomp::Object> obj)
+    {
+        mObjects.push_back(obj);
+    }
+};
 
 int Usage(const char *szAppName, const std::map<std::string,
     std::pair<std::string, std::function<libcomp::BinaryDataSet*(void)>>>& binaryTypes)
@@ -185,6 +202,9 @@ int Usage(const char *szAppName, const std::map<std::string,
     std::cerr << std::endl;
     std::cerr << "Mode 'save' will take the input XML file and "
         << "write the output BinaryData file." << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "Mode 'flatten' will take the input BinaryData file and "
+        << "write the output text file." << std::endl;
 
     return EXIT_FAILURE;
 }
@@ -230,6 +250,26 @@ int Usage(const char *szAppName, const std::map<std::string,
         static uint32_t nextID = 0; \
 \
         return new libcomp::BinaryDataSet( \
+            []() \
+            { \
+                return std::make_shared<objects::objname>(); \
+            }, \
+\
+            [](const std::shared_ptr<libcomp::Object>& obj) \
+            { \
+                (void)obj; \
+\
+                return nextID++; \
+            } \
+        ); \
+    });
+
+#define ADD_TYPE_MAN(desc, key, objname) \
+    binaryTypes[key] = std::make_pair(desc, []() \
+    { \
+        static uint32_t nextID = 0; \
+\
+        return new ManualBinaryDataSet( \
             []() \
             { \
                 return std::make_shared<objects::objname>(); \
@@ -349,6 +389,7 @@ int main(int argc, char *argv[])
     ADD_TYPE_SEQ("  cpolygonmovie         Format for CPolygonMoveData.sbin", "cpolygonmovie", MiCPolygonMovieData);
     ADD_TYPE_SEQ("  modexteffect          Format for ModificationExtEffectData.sbin", "modexteffect", MiModificationExtEffectData);
     ADD_TYPE_SEQ("  urafieldtower         Format for UraFieldTowerData.sbin", "urafieldtower", MiUraFieldTowerData);
+    ADD_TYPE_MAN("  qmp                   Format for misc qmp files", "qmp", QmpFile);
 
     if(5 != argc)
     {
@@ -381,16 +422,49 @@ int main(int argc, char *argv[])
         return Usage(argv[0], binaryTypes);
     }
 
-    if("load" == mode)
+    if("qmp" == bdType && ("load" == mode || "flatten" == mode))
     {
+        // Manually load single record
         std::ifstream file;
         file.open(szInPath, std::ifstream::binary);
 
-        if(!pSet->Load(file))
+        // Read and discard magic
+        uint32_t magic;
+        file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+
+        if(magic != QMP_FORMAT_MAGIC)
         {
-            std::cerr << "Failed to load file: " << szInPath << std::endl;
+            std::cerr << "File magic invlalid for Qmp file: " << szInPath
+                << std::endl;
 
             return EXIT_FAILURE;
+        }
+
+        auto qmp = std::make_shared<objects::QmpFile>();
+        if(!qmp->Load(file))
+        {
+            std::cerr << "Failed to load Qmp file: " << szInPath
+                << std::endl;
+
+            return EXIT_FAILURE;
+        }
+
+        ((ManualBinaryDataSet*)pSet)->AddRecord(qmp);
+    }
+
+    if("load" == mode)
+    {
+        if("qmp" != bdType)
+        {
+            std::ifstream file;
+            file.open(szInPath, std::ifstream::binary);
+
+            if(!pSet->Load(file))
+            {
+                std::cerr << "Failed to load file: " << szInPath << std::endl;
+
+                return EXIT_FAILURE;
+            }
         }
 
         std::ofstream out;
@@ -407,14 +481,17 @@ int main(int argc, char *argv[])
     }
     else if("flatten" == mode)
     {
-        std::ifstream file;
-        file.open(szInPath, std::ifstream::binary);
-
-        if(!pSet->Load(file))
+        if("qmp" != bdType)
         {
-            std::cerr << "Failed to load file: " << szInPath << std::endl;
+            std::ifstream file;
+            file.open(szInPath, std::ifstream::binary);
 
-            return EXIT_FAILURE;
+            if(!pSet->Load(file))
+            {
+                std::cerr << "Failed to load file: " << szInPath << std::endl;
+
+                return EXIT_FAILURE;
+            }
         }
 
         std::ofstream out;
@@ -450,11 +527,32 @@ int main(int argc, char *argv[])
         std::ofstream out;
         out.open(szOutPath, std::ofstream::binary);
 
-        if(!pSet->Save(out))
+        if("qmp" == bdType)
         {
-            std::cerr << "Failed to save file: " << szOutPath << std::endl;
+            // Write magic
+            uint32_t magic = QMP_FORMAT_MAGIC;
+            out.write(reinterpret_cast<char*>(&magic), sizeof(uint32_t));
 
-            return EXIT_FAILURE;
+            // Write (single) entry manually
+            for(auto obj : pSet->GetObjects())
+            {
+                if(!obj->Save(out) || !out.good())
+                {
+                    std::cerr << "Failed to save QMP file: " << szOutPath <<
+                        std::endl;
+
+                    return EXIT_FAILURE;
+                }
+            }
+        }
+        else
+        {
+            if(!pSet->Save(out))
+            {
+                std::cerr << "Failed to save file: " << szOutPath << std::endl;
+
+                return EXIT_FAILURE;
+            }
         }
     }
 

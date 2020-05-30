@@ -1,3 +1,16 @@
+comphack (4.12.0) xenial; urgency=low
+
+  * Negotiation "progress" accuracy adjustments
+  * Custom skill logic scripts
+  * Configurable fusion mistakes
+  * Demon/character stat and skill copying to enemies or allies
+  * Scripted server side web apps
+  * Added verification channel setting and standalone tool for extended content runtime checking
+  * Many more accurate field names for client object structures
+  * Fixes for some stubborn longtime bugs
+
+ -- COMP Omega <compomega@tutanota.com>  Sat, 30 May 2020 12:40:15 -0600
+
 comphack (4.11.0.1) xenial; urgency=low
 
   * Corrected PPA build error with tinyxml2.

@@ -3066,6 +3066,8 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
         {
             bool isKill = dQuest->GetType() ==
                 objects::DemonQuest::Type_t::KILL;
+            bool ignoreSelf = isKill || dQuest->GetType() ==
+                objects::DemonQuest::Type_t::CONTRACT;
             int8_t cLevel = character->GetCoreStats()->GetLevel();
             auto worldClock = server->GetWorldClockTime();
 
@@ -3137,7 +3139,7 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
                     for(uint32_t enemyType : pair.second)
                     {
                         // Exclude demons of the same type if kill quest
-                        if(!isKill || definitionManager->GetDevilData(
+                        if(!ignoreSelf || definitionManager->GetDevilData(
                             enemyType)->GetUnionData()->GetBaseDemonID() !=
                             demonData->GetUnionData()->GetBaseDemonID())
                         {
@@ -3253,25 +3255,38 @@ std::shared_ptr<objects::DemonQuest> EventManager::GenerateDemonQuest(
         dQuest->SetTargets(libcomp::Randomizer::GetEntry(demons), 1);
         break;
     case objects::DemonQuest::Type_t::FUSE:
-        // Demon from fusion ranges of a random race (closest level)
+        // Demon from fusion ranges of a random race
         {
-            uint8_t fuseRace = FUSION_RACE_MAP[0][RNG(uint16_t, 0, 33)];
+            uint32_t baseDemonID = demonData->GetUnionData()->GetBaseDemonID();
 
-            auto fRange = definitionManager->GetFusionRanges(fuseRace);
-
-            std::pair<uint8_t, uint32_t> result(0, 0);
-            for(auto& pair : fRange)
+            std::set<uint8_t> races;
+            for(uint8_t race : FUSION_RACE_MAP[0])
             {
-                if(!result.first ||
-                    abs(lvl - pair.first) < abs(lvl - result.first))
+                races.insert(race);
+            }
+
+            // Loop through and find a race within the fusion ranges
+            std::pair<uint8_t, uint32_t> result(0, 0);
+            while(races.size() > 0 && !result.second)
+            {
+                uint8_t fuseRace = libcomp::Randomizer::GetEntry(races);
+                races.erase(fuseRace);
+
+                auto fRange = definitionManager->GetFusionRanges(fuseRace);
+
+                for(auto& pair : fRange)
                 {
-                    result = pair;
+                    // Get the entry with the closest level, exclude self
+                    if(pair.second != baseDemonID && (!result.first ||
+                        abs(lvl - pair.first) < abs(lvl - result.first)))
+                    {
+                        result = pair;
+                    }
                 }
             }
 
-            // Use found demon or default to self if none was found
-            dQuest->SetTargets(result.second ? result.second
-                : demonData->GetUnionData()->GetBaseDemonID(), 1);
+            // Use range valid demon or default to base type (possible or not)
+            dQuest->SetTargets(result.second ? result.second : baseDemonID, 1);
         }
         break;
     case objects::DemonQuest::Type_t::ITEM:

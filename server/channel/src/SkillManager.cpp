@@ -3944,6 +3944,7 @@ void SkillManager::ProcessSkillResultFinal(
 
     bool doTalk = IsTalkSkill(skill.Definition, false) &&
         source->StatusRestrictTalkCount() == 0;
+    bool primaryTalk = doTalk && IsTalkSkill(skill.Definition, true);
     uint64_t now = ChannelServer::GetServerTime();
     source->RefreshCurrentPosition(now);
 
@@ -4318,7 +4319,15 @@ void SkillManager::ProcessSkillResultFinal(
         if(doTalk && !targetKilled &&
             target.EntityState->GetEntityType() == EntityType_t::ENEMY)
         {
-            if(ApplyNegotiationDamage(source, target, pSkill))
+            bool entityTalkDone = ApplyNegotiationDamage(source, target,
+                pSkill);
+            if(!primaryTalk)
+            {
+                // Results are adjusted but conversation can't "end" and
+                // nothing displays to the player
+                target.TalkFlags = 0;
+            }
+            else if(entityTalkDone)
             {
                 talkDone.push_back(std::make_pair(target.EntityState,
                     target.TalkFlags));
@@ -8102,7 +8111,8 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
         expID = EXPERTISE_TAUNT;
         break;
     default:
-        return false;
+        // Can continue but no rate adjustments will apply
+        break;
     }
 
     if(exists &&
@@ -8135,7 +8145,7 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
             ? (double)(100 - spawn->GetTalkResist()) : 0.0;
 
         auto calcState = GetCalculatedState(source, pSkill, false, eState);
-        if(talkSuccess != 0.0)
+        if(talkSuccess != 0.0 && talkType)
         {
             auto adjust = mServer.lock()->GetTokuseiManager()
                 ->GetAspectMap(source, TokuseiAspectType::TALK_RATE,
@@ -8303,7 +8313,9 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
 
         if((target.TalkFlags == TALK_GIVE_ITEM_1 ||
             target.TalkFlags == TALK_GIVE_ITEM_2) &&
-            (!spawn || spawn->GiftsCount() == 0))
+            (!spawn ||
+                (spawn->GiftsCount() == 0 &&
+                spawn->GiftSetIDsCount() == 0)))
         {
             // No gifts mapped, default instead
             target.TalkFlags = 0;
@@ -9925,63 +9937,63 @@ int32_t SkillManager::AdjustDamageRates(int32_t damage,
 
     auto tokuseiManager = mServer.lock()->GetTokuseiManager();
 
-    uint8_t rateBoostIdx = 0;
-    switch(pSkill->EffectiveDependencyType)
-    {
-    case SkillDependencyType_t::CLSR:
-    case SkillDependencyType_t::CLSR_LNGR_SPELL:
-    case SkillDependencyType_t::CLSR_SPELL:
-        rateBoostIdx = (uint8_t)CorrectTbl::RATE_CLSR;
-        break;
-    case SkillDependencyType_t::LNGR:
-    case SkillDependencyType_t::LNGR_CLSR_SPELL:
-    case SkillDependencyType_t::LNGR_SPELL:
-        rateBoostIdx = (uint8_t)CorrectTbl::RATE_LNGR;
-        break;
-    case SkillDependencyType_t::SPELL:
-    case SkillDependencyType_t::SPELL_CLSR:
-    case SkillDependencyType_t::SPELL_CLSR_LNGR:
-    case SkillDependencyType_t::SPELL_LNGR:
-        rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
-        break;
-    case SkillDependencyType_t::SUPPORT:
-        rateBoostIdx = (uint8_t)CorrectTbl::RATE_SUPPORT;
-        break;
-    case SkillDependencyType_t::NONE:
-    default:
-        break;
-    }
-
     // Get source rate boost and target rate defense boost
     int32_t dependencyDealt = 100;
     int32_t dependencyTaken = 100;
-    if(rateBoostIdx != 0)
-    {
-        if(source != target)
-        {
-            dependencyDealt = (int32_t)calcState->GetCorrectTbl(
-                (size_t)rateBoostIdx);
-        }
-
-        // Apply offset to get defensive value
-        dependencyTaken = (int32_t)targetState->GetCorrectTbl((size_t)(
-            rateBoostIdx + ((uint8_t)CorrectTbl::RATE_CLSR_TAKEN -
-                (uint8_t)CorrectTbl::RATE_CLSR)));
-    }
-
-    // Include heal if effective heal applies
     if(isHeal)
     {
+        // Heal uses its own rates when it applies
         if(source != target)
         {
-            dependencyDealt = (int32_t)((double)dependencyDealt *
-                ((double)calcState->GetCorrectTbl((size_t)
-                    CorrectTbl::RATE_HEAL) * 0.01));
+            dependencyDealt = (int32_t)calcState->GetCorrectTbl((size_t)
+                    CorrectTbl::RATE_HEAL);
         }
 
-        dependencyTaken = (int32_t)((double)dependencyTaken *
-            ((double)targetState->GetCorrectTbl((size_t)
-                CorrectTbl::RATE_HEAL_TAKEN) * 0.01));
+        dependencyTaken = (int32_t)targetState->GetCorrectTbl((size_t)
+                CorrectTbl::RATE_HEAL_TAKEN);
+    }
+    else
+    {
+        uint8_t rateBoostIdx = 0;
+        switch(pSkill->EffectiveDependencyType)
+        {
+        case SkillDependencyType_t::CLSR:
+        case SkillDependencyType_t::CLSR_LNGR_SPELL:
+        case SkillDependencyType_t::CLSR_SPELL:
+            rateBoostIdx = (uint8_t)CorrectTbl::RATE_CLSR;
+            break;
+        case SkillDependencyType_t::LNGR:
+        case SkillDependencyType_t::LNGR_CLSR_SPELL:
+        case SkillDependencyType_t::LNGR_SPELL:
+            rateBoostIdx = (uint8_t)CorrectTbl::RATE_LNGR;
+            break;
+        case SkillDependencyType_t::SPELL:
+        case SkillDependencyType_t::SPELL_CLSR:
+        case SkillDependencyType_t::SPELL_CLSR_LNGR:
+        case SkillDependencyType_t::SPELL_LNGR:
+            rateBoostIdx = (uint8_t)CorrectTbl::RATE_SPELL;
+            break;
+        case SkillDependencyType_t::SUPPORT:
+            rateBoostIdx = (uint8_t)CorrectTbl::RATE_SUPPORT;
+            break;
+        case SkillDependencyType_t::NONE:
+        default:
+            break;
+        }
+
+        if(rateBoostIdx != 0)
+        {
+            if(source != target)
+            {
+                dependencyDealt = (int32_t)calcState->GetCorrectTbl(
+                    (size_t)rateBoostIdx);
+            }
+
+            // Apply offset to get defensive value
+            dependencyTaken = (int32_t)targetState->GetCorrectTbl((size_t)(
+                rateBoostIdx + ((uint8_t)CorrectTbl::RATE_CLSR_TAKEN -
+                    (uint8_t)CorrectTbl::RATE_CLSR)));
+        }
     }
 
     // Adjust dependency limits

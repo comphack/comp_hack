@@ -2660,6 +2660,7 @@ const std::set<CorrectTbl> FORCE_NUMERIC =
         CorrectTbl::RES_WORD,
         CorrectTbl::RES_SPECIAL,
         CorrectTbl::RES_SUICIDE,
+        CorrectTbl::COOLDOWN_TIME,
         CorrectTbl::RATE_XP,
         CorrectTbl::RATE_MAG,
         CorrectTbl::RATE_MACCA,
@@ -2701,7 +2702,8 @@ const std::set<CorrectTbl> FORCE_NUMERIC =
         CorrectTbl::RATE_PC,
         CorrectTbl::RATE_DEMON,
         CorrectTbl::RATE_PC_TAKEN,
-        CorrectTbl::RATE_DEMON_TAKEN
+        CorrectTbl::RATE_DEMON_TAKEN,
+        CorrectTbl::CHANT_TIME
     };
 
 void ActiveEntityState::AdjustStats(

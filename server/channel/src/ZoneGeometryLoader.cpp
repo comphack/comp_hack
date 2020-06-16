@@ -137,6 +137,24 @@ bool ZoneGeometryLoader::LoadZoneQMP(
             Line l(Point((float)qmpLine->GetX1(), (float)qmpLine->GetY1()),
                 Point((float)qmpLine->GetX2(), (float)qmpLine->GetY2()));
             lineMap[qmpLine->GetElementID()].push_back(l);
+
+            // If the file is malformed, we can still load but with a wonky
+            // element using default values
+            if(elementMap.find(qmpLine->GetElementID()) == elementMap.end())
+            {
+                LogZoneManagerWarning([qmpLine, filename]()
+                {
+                    return libcomp::String("Generating dummy QMP element %1"
+                        " for file: %2\n").Arg(qmpLine->GetElementID())
+                        .Arg(filename);
+                });
+
+                auto qmpElem = std::make_shared<objects::QmpElement>();
+                qmpElem->SetID(qmpLine->GetElementID());
+
+                geometry->Elements.push_back(qmpElem);
+                elementMap[qmpLine->GetElementID()] = qmpElem;
+            }
         }
 
         for(auto navPoint : qmpBoundary->GetNavPoints())

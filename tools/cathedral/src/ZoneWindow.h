@@ -41,7 +41,10 @@ namespace objects
 class Action;
 class MiSpotData;
 class MiZoneData;
+class QmpBoundary;
+class QmpBoundaryLine;
 class QmpFile;
+class QmpNavPoint;
 class ServerNPC;
 class ServerObject;
 class ServerZone;
@@ -100,8 +103,11 @@ protected:
 protected slots:
     void LoadPartialDirectory();
     void LoadPartialFile();
+    void LoadQmpFile();
     void SaveFile();
     void SaveAllFiles();
+    void SaveQmpFile();
+    void ResetQmpFile();
     void ApplyPartials();
 
     void AddNPC();
@@ -114,8 +120,13 @@ protected slots:
 
     void ZoneViewUpdated();
     void SelectListObject();
+    void GeometrySelectionChanged();
     void MainTabChanged();
     void SpawnTabChanged();
+
+    void ResetBoundaries(bool redraw = true, bool optimize = true);
+    void ResetNavPoints();
+    void ToggleBoundaryDivide();
 
     void NPCMoved(std::shared_ptr<libcomp::Object> obj,
         bool up);
@@ -135,6 +146,20 @@ private:
     void ResetAppliedPartials(std::set<uint32_t> newPartials = {});
     void RebuildCurrentZoneDisplay();
     void UpdateMergedZone(bool redraw);
+
+    void ResetQmpFileLines();
+
+    void RebuildBoundariesTree();
+    QTreeWidgetItem* GetBoundaryNode(std::shared_ptr<
+        objects::QmpBoundary> boundary, uint32_t id, QTreeWidgetItem* parent);
+    QPushButton* GetBoundaryActionButton(std::shared_ptr<
+        objects::QmpBoundary> boundary);
+
+    std::shared_ptr<objects::QmpBoundary> GetBoundary(uint32_t id);
+    void DivideBoundary(uint32_t boundaryID);
+    void MergeBoundary(std::shared_ptr<objects::QmpBoundary> boundary);
+
+    void RebuildNavPointTable();
 
     bool LoadMapFromZone();
 
@@ -159,9 +184,18 @@ private:
         QPainter& painter);
     void DrawSpot(const std::shared_ptr<objects::MiSpotData>& spotDef,
         bool selected, QPainter& painter);
+    void DrawNavPoint(const std::shared_ptr<objects::QmpNavPoint>& navPoint,
+        bool selected, QPainter& painter);
 
     int32_t Scale(int32_t point);
     int32_t Scale(float point);
+
+    QPointF GetNavPointLocation(QPointF p1, QPointF vert, QPointF p2,
+        bool& valid);
+
+    std::list<QPointF> GetLineNavPointLocations(QPointF p1, QPointF p2);
+
+    QPointF RotatePoint(QPointF p, QPointF origin, double radians);
 
     MainWindow *mMainWindow;
 
@@ -176,6 +210,8 @@ private:
     std::shared_ptr<MergedZone> mMergedZone;
     std::shared_ptr<objects::MiZoneData> mZoneData;
     std::shared_ptr<objects::QmpFile> mQmpFile;
+    bool mExternalQmpFile;
+    std::list<std::shared_ptr<objects::QmpBoundaryLine>> mFileLines;
     std::set<std::string> mHiddenPoints;
 
     std::set<uint32_t> mSelectedPartials;

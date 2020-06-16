@@ -61,6 +61,7 @@
 #include <QmpBoundaryLine.h>
 #include <QmpElement.h>
 #include <QmpFile.h>
+#include <QmpNavPoint.h>
 #include <ServerNPC.h>
 #include <ServerObject.h>
 #include <ServerZone.h>
@@ -78,6 +79,7 @@
 #include <map>
 
 // libcomp Includes
+#include <Constants.h>
 #include <Log.h>
 #include <ServerDataManager.h>
 
@@ -85,8 +87,11 @@ const QColor COLOR_SELECTED = Qt::red;
 const QColor COLOR_PLAYER = Qt::magenta;
 const QColor COLOR_NPC = Qt::darkRed;
 const QColor COLOR_OBJECT = Qt::blue;
-const QColor COLOR_SPAWN_LOC = Qt::darkMagenta;
+const QColor COLOR_SPAWN_LOC = Qt::green;
 const QColor COLOR_SPOT = Qt::darkGreen;
+
+const QColor COLOR_BOUNDARY = Qt::darkMagenta;
+const QColor COLOR_NAVPOINT = Qt::darkBlue;
 
 // Barrier colors
 const QColor COLOR_GENERIC = Qt::black;
@@ -94,9 +99,20 @@ const QColor COLOR_1WAY = Qt::darkGray;
 const QColor COLOR_TOGGLE1 = Qt::darkYellow;
 const QColor COLOR_TOGGLE2 = Qt::darkCyan;
 
+// Custom comparator for QPointF hashing
+struct QPointFHash
+{
+   bool operator() (const QPointF& lhs, const QPointF& rhs) const
+   {
+       return lhs.x() < rhs.x() ||
+           (lhs.x() == rhs.x() && lhs.y() < rhs.y());
+   }
+};
+
+
 ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     : QMainWindow(p), mMainWindow(pMainWindow), mOffsetX(0), mOffsetY(0),
-    mDragging(false)
+    mDragging(false), mExternalQmpFile(false)
 {
     ui.setupUi(this);
 
@@ -139,6 +155,10 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
         SLOT(ShowToggled(bool)));
     connect(ui.actionShowObjects, SIGNAL(toggled(bool)), this,
         SLOT(ShowToggled(bool)));
+    connect(ui.actionShowBoundaries, SIGNAL(toggled(bool)), this,
+        SLOT(ShowToggled(bool)));
+    connect(ui.actionShowNavPoints, SIGNAL(toggled(bool)), this,
+        SLOT(ShowToggled(bool)));
 
     connect(ui.addNPC, SIGNAL(clicked()), this, SLOT(AddNPC()));
     connect(ui.addObject, SIGNAL(clicked()), this, SLOT(AddObject()));
@@ -147,10 +167,17 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     connect(ui.removeNPC, SIGNAL(clicked()), this, SLOT(RemoveNPC()));
     connect(ui.removeObject, SIGNAL(clicked()), this, SLOT(RemoveObject()));
     connect(ui.removeSpawn, SIGNAL(clicked()), this, SLOT(RemoveSpawn()));
+    connect(ui.btnQmpReset, SIGNAL(clicked()), this, SLOT(ResetQmpFile()));
+    connect(ui.btnQmpResetBoundaries, SIGNAL(clicked()), this,
+        SLOT(ResetBoundaries()));
+    connect(ui.btnQmpResetNavPoints, SIGNAL(clicked()), this,
+        SLOT(ResetNavPoints()));
 
     connect(ui.actionLoad, SIGNAL(triggered()), this, SLOT(LoadZoneFile()));
+    connect(ui.actionLoadQmp, SIGNAL(triggered()), this, SLOT(LoadQmpFile()));
     connect(ui.actionSave, SIGNAL(triggered()), this, SLOT(SaveFile()));
     connect(ui.actionSaveAll, SIGNAL(triggered()), this, SLOT(SaveAllFiles()));
+    connect(ui.actionSaveQmp, SIGNAL(triggered()), this, SLOT(SaveQmpFile()));
 
     connect(ui.actionPartialsLoadFile, SIGNAL(triggered()), this,
         SLOT(LoadPartialFile()));
@@ -186,6 +213,13 @@ ZoneWindow::ZoneWindow(MainWindow *pMainWindow, QWidget *p)
     connect(ui.tabSpawnTypes, SIGNAL(currentChanged(int)), this,
         SLOT(SpawnTabChanged()));
     connect(ui.zoomSlider, SIGNAL(valueChanged(int)), this, SLOT(Zoom()));
+
+    connect(ui.treeBoundaries->selectionModel(), SIGNAL(selectionChanged(
+        const QItemSelection&, const QItemSelection&)),
+        this, SLOT(GeometrySelectionChanged()));
+    connect(ui.tblNavPoints->selectionModel(), SIGNAL(selectionChanged(
+        const QItemSelection&, const QItemSelection&)),
+        this, SLOT(GeometrySelectionChanged()));
 
     // Override the standard scroll behavior for the map scroll area
     ui.mapScrollArea->installEventFilter(this);
@@ -708,6 +742,14 @@ void ZoneWindow::LoadZoneFile()
     ui.actionShowObjects->setChecked(true);
     ui.actionShowObjects->blockSignals(false);
 
+    ui.actionShowBoundaries->blockSignals(true);
+    ui.actionShowBoundaries->setChecked(false);
+    ui.actionShowBoundaries->blockSignals(false);
+
+    ui.actionShowNavPoints->blockSignals(true);
+    ui.actionShowNavPoints->setChecked(false);
+    ui.actionShowNavPoints->blockSignals(false);
+
     auto definitions = mMainWindow->GetDefinitions();
 
     std::set<uint8_t> spotTypes = { 0 };
@@ -855,6 +897,77 @@ void ZoneWindow::LoadPartialFile()
     }
 }
 
+void ZoneWindow::LoadQmpFile()
+{
+    QString qPath = QFileDialog::getOpenFileName(this,
+        tr("Load QMP XML"), mMainWindow->GetDialogDirectory(),
+        tr("QMP XML (*.xml)"));
+    if(qPath.isEmpty())
+    {
+        return;
+    }
+
+    mMainWindow->SetDialogDirectory(qPath, true);
+
+    SaveProperties();
+
+    libcomp::String path = cs(qPath);
+
+    tinyxml2::XMLDocument doc;
+    if(tinyxml2::XML_SUCCESS != doc.LoadFile(path.C()))
+    {
+        LogGeneralError([path]()
+        {
+            return libcomp::String("Failed to parse file: %1\n").Arg(path);
+        });
+
+        return;
+    }
+
+    auto rootElem = doc.RootElement();
+    if(!rootElem)
+    {
+        LogGeneralError([path]()
+        {
+            return libcomp::String("No root element in file: %1\n").Arg(path);
+        });
+
+        return;
+    }
+
+    std::list<std::shared_ptr<objects::ServerZonePartial>> partials;
+
+    auto objNode = rootElem->FirstChildElement("object");
+    if(objNode)
+    {
+        auto qmp = std::make_shared<objects::QmpFile>();
+        if(!qmp->Load(doc, *objNode))
+        {
+            LogGeneralError([path]()
+            {
+                return libcomp::String("Failed to load QMP file definition"
+                    " from: %1\n").Arg(path);
+            });
+
+            return;
+        }
+
+        mQmpFile = qmp;
+    }
+
+    ResetQmpFileLines();
+
+    ui.lblCurrentQmpFile->setText(qPath);
+
+    mExternalQmpFile = true;
+    ui.btnQmpReset->setEnabled(true);
+
+    RebuildBoundariesTree();
+    RebuildNavPointTable();
+
+    DrawMap();
+}
+
 void ZoneWindow::SaveFile()
 {
     // Save off all properties first
@@ -904,6 +1017,83 @@ void ZoneWindow::SaveAllFiles()
     }
 
     SavePartials(partialIDs);
+}
+
+void ZoneWindow::SaveQmpFile()
+{
+    if(!mQmpFile)
+    {
+        QMessageBox err;
+        err.setText("No QMP file loaded. Nothing will be saved.");
+        err.exec();
+
+        return;
+    }
+
+    QString qPath = QFileDialog::getSaveFileName(this, tr("Save QMP XML"),
+        mMainWindow->GetDialogDirectory(), tr("QMP XML (*.xml)"));
+    if(qPath.isEmpty())
+    {
+        return;
+    }
+
+    mMainWindow->SetDialogDirectory(qPath, true);
+
+    SaveProperties();
+
+    tinyxml2::XMLDocument doc;
+
+    auto rootElem = doc.NewElement("objects");
+    doc.InsertEndChild(rootElem);
+
+    mQmpFile->Save(doc, *rootElem);
+
+    libcomp::String path = cs(qPath);
+
+    doc.SaveFile(path.C());
+
+    mExternalQmpFile = true;
+    ui.btnQmpReset->setEnabled(true);
+
+    ui.lblCurrentQmpFile->setText(qPath);
+
+    LogGeneralDebug([path]()
+    {
+        return libcomp::String("Saved QMP file '%1'\n").Arg(path);
+    });
+}
+
+void ZoneWindow::ResetQmpFile()
+{
+    if(mZoneData)
+    {
+        auto definitions = mMainWindow->GetDefinitions();
+        mQmpFile = definitions->LoadQmpFile(mZoneData->GetFile()->GetQmpFile(),
+            &*mMainWindow->GetDatastore());
+    }
+
+    if(!mQmpFile)
+    {
+        LogGeneralError([&]()
+        {
+            return libcomp::String("Failed to load QMP file: %1\n")
+                .Arg(mZoneData->GetFile()->GetQmpFile());
+        });
+    }
+    else
+    {
+        ResetQmpFileLines();
+
+        mExternalQmpFile = false;
+        ui.btnQmpReset->setEnabled(false);
+
+        ui.lblCurrentQmpFile->setText("[Use Zone]");
+
+        RebuildBoundariesTree();
+        RebuildNavPointTable();
+
+        DrawMap();
+    }
 }
 
 void ZoneWindow::ApplyPartials()
@@ -1306,6 +1496,19 @@ void ZoneWindow::SelectListObject()
     DrawMap();
 }
 
+void ZoneWindow::GeometrySelectionChanged()
+{
+    // Only redraw if showing
+    auto s = sender();
+    if((s == ui.tblNavPoints->selectionModel() &&
+        ui.actionShowNavPoints->isChecked()) ||
+        (s == ui.treeBoundaries->selectionModel() &&
+            ui.actionShowBoundaries->isChecked()))
+    {
+        DrawMap();
+    }
+}
+
 void ZoneWindow::MainTabChanged()
 {
     mMainWindow->CloseSelectors(this);
@@ -1333,6 +1536,387 @@ void ZoneWindow::SpawnTabChanged()
         ui.removeSpawn->setText("Remove Spawn");
         break;
     }
+
+    DrawMap();
+}
+
+void ZoneWindow::ResetBoundaries(bool redraw, bool optimize)
+{
+    // Create boundary 1 if its not there
+    auto boundary1 = GetBoundary(1);
+    if(!boundary1)
+    {
+        boundary1 = std::make_shared<objects::QmpBoundary>();
+        boundary1->SetID(1);
+        mQmpFile->PrependBoundaries(boundary1);
+    }
+
+    // Store all nav points and clear all lines as we have those stored in
+    // file order already. Also determine which boundaries are currently
+    // divided to regen below.
+    std::set<uint32_t> divided;
+    std::list<std::shared_ptr<objects::QmpNavPoint>> navPoints;
+    for(auto& boundary : mQmpFile->GetBoundaries())
+    {
+        for(auto& navPoint : boundary->GetNavPoints())
+        {
+            navPoints.push_back(navPoint);
+        }
+
+        boundary->ClearNavPoints();
+        boundary->ClearLines();
+
+        if(boundary->GetQuadrants(0) || boundary->GetQuadrants(1) ||
+            boundary->GetQuadrants(2) || boundary->GetQuadrants(3))
+        {
+            divided.insert(boundary->GetID());
+        }
+    }
+
+    navPoints.sort([](const std::shared_ptr<objects::QmpNavPoint>& a,
+        const std::shared_ptr<objects::QmpNavPoint>& b)
+        {
+            return a->GetPointID() < b->GetPointID();
+        });
+
+    // Put all lines and nav points on boundary 1 and remove the rest
+    boundary1->SetNavPoints(navPoints);
+    boundary1->SetLines(mFileLines);
+
+    mQmpFile->ClearBoundaries();
+    mQmpFile->AppendBoundaries(boundary1);
+
+    // Resize boundary 1 as needed and cascade down to lower boundaries
+    if(mFileLines.size() > 0)
+    {
+        int32_t xMin = 0;
+        int32_t xMax = 0;
+        int32_t yMin = 0;
+        int32_t yMax = 0;
+
+        bool first = true;
+        for(auto& line : mFileLines)
+        {
+            if(first)
+            {
+                xMin = xMax = line->GetX1();
+                yMin = yMax = line->GetY1();
+            }
+
+            for(int32_t x : { line->GetX1(), line->GetX2() })
+            {
+                if(xMin > x) xMin = x;
+                if(xMax < x) xMax = x;
+            }
+
+            for(int32_t y : { line->GetY1(), line->GetY2() })
+            {
+                if(yMin > y) yMin = y;
+                if(yMax < y) yMax = y;
+            }
+
+            first = false;
+        }
+
+        // Set the size from the outer bounds + 100 units
+        boundary1->SetSize(((xMax - xMin) >= (yMax - yMin)
+            ? (xMax - xMin) : (yMax - yMin)) + 200);
+
+        // Determine the center point
+        boundary1->SetCenterX(xMin + (xMax - xMin) / 2);
+        boundary1->SetCenterY(yMin + (yMax - yMin) / 2);
+    }
+    else
+    {
+        // Nothing we really can do until there is geometry
+    }
+
+    // Now split quads
+    for(uint32_t boundaryID : divided)
+    {
+        DivideBoundary(boundaryID);
+    }
+
+    if(optimize)
+    {
+        // Keep dividing until soft limit for lines is passed for each boundary
+        // (or they are not larger than 1000 units)
+        bool repeat = false;
+        do
+        {
+            divided.clear();
+
+            for(auto& boundary : mQmpFile->GetBoundaries())
+            {
+                if(boundary->LinesCount() > 50 && boundary->GetSize() > 1000 &&
+                    !boundary->GetQuadrants(0))
+                {
+                    divided.insert(boundary->GetID());
+                }
+            }
+
+            for(uint32_t boundaryID : divided)
+            {
+                DivideBoundary(boundaryID);
+            }
+
+            repeat = divided.size() > 0;
+        } while(repeat);
+    }
+
+    if(redraw)
+    {
+        RebuildBoundariesTree();
+
+        DrawMap();
+    }
+}
+
+void ZoneWindow::ResetNavPoints()
+{
+    if(!mQmpFile)
+    {
+        return;
+    }
+   
+    // Clear all existing nav points
+    for(auto& boundary : mQmpFile->GetBoundaries())
+    {
+        boundary->ClearNavPoints();
+    }
+
+    std::map<int32_t, std::set<int32_t>> newPointMap;
+    std::list<std::pair<int32_t, int32_t>> newPoints;
+
+    // Identify points that only exist once that do not form an enclosed shape
+    std::map<QPointF, int32_t, QPointFHash> pointCounts;
+    for(auto& boundary : mQmpFile->GetBoundaries())
+    {
+        for(auto& line : boundary->GetLines())
+        {
+            QPointF p1(line->GetX1(), line->GetY1());
+            QPointF p2(line->GetX2(), line->GetY2());
+
+            if(pointCounts.find(p1) == pointCounts.end())
+            {
+                pointCounts[p1] = 1;
+            }
+            else
+            {
+                pointCounts[p1]++;
+            }
+
+            if(pointCounts.find(p2) == pointCounts.end())
+            {
+                pointCounts[p2] = 1;
+            }
+            else
+            {
+                pointCounts[p2]++;
+            }
+        }
+    }
+
+    // Keep track of end points to source points so lines can be traced back
+    std::map<QPointF, std::set<QPointF, QPointFHash>, QPointFHash> lineMap;
+    for(auto& boundary : mQmpFile->GetBoundaries())
+    {
+        for(auto& line : boundary->GetLines())
+        {
+            if(line->GetX1() == line->GetX2() &&
+                line->GetY1() == line->GetY2())
+            {
+                // Why?
+                continue;
+            }
+
+            std::array<QPointF, 2> points = { {
+                QPointF(line->GetX1(), line->GetY1()),
+                QPointF(line->GetX2(), line->GetY2()) } };
+            for(size_t i = 0; i < 2; i++)
+            {
+                QPointF p1 = points[i == 0 ? 0 : 1];
+                QPointF p2 = points[i == 1 ? 0 : 1];
+
+                std::list<QPointF> rawPoints;
+                if(pointCounts[p1] == 1)
+                {
+                    // Calculate "corner" points off the line
+                    for(auto& point : GetLineNavPointLocations(p2, p1))
+                    {
+                        rawPoints.push_back(point);
+                    }
+                }
+                else
+                {
+                    auto& m = lineMap[p1];
+                    if(m.size() > 0)
+                    {
+                        for(auto& point : m)
+                        {
+                            // Make sure they're not the same line somehow
+                            if(p2 != point)
+                            {
+                                bool valid = false;
+                                auto p = GetNavPointLocation(p2, p1, point,
+                                    valid);
+                                if(valid)
+                                {
+                                    rawPoints.push_back(p);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                for(auto& rawPoint : rawPoints)
+                {
+                    int32_t x = (int32_t)round(rawPoint.x());
+                    int32_t y = (int32_t)round(rawPoint.y());
+
+                    if(newPointMap[x].find(y) == newPointMap[x].end())
+                    {
+                        newPointMap[x].insert(y);
+                        newPoints.push_back(std::make_pair(x, y));
+                    }
+                }
+
+                lineMap[p1].insert(p2);
+            }
+        }
+    }
+
+    // Determine which elements can be toggled and gather all lines not in
+    // that set
+    std::set<uint32_t> toggleElems;
+    for(auto& elem : mQmpFile->GetElements())
+    {
+        if(elem->GetType() != objects::QmpElement::Type_t::NORMAL)
+        {
+            toggleElems.insert(elem->GetID());
+        }
+    }
+
+    std::list<QLineF> lines;
+    for(auto& boundary : mQmpFile->GetBoundaries())
+    {
+        for(auto& line : boundary->GetLines())
+        {
+            if(toggleElems.find(line->GetElementID()) == toggleElems.end())
+            {
+                lines.push_back(QLineF(line->GetX1(), line->GetY1(),
+                    line->GetX2(), line->GetY2()));
+            }
+        }
+    }
+
+    // Now add the points to boundary 1
+    auto boundary1 = GetBoundary(1);
+    if(!boundary1)
+    {
+        ResetBoundaries(false, false);
+
+        boundary1 = GetBoundary(1);
+    }
+
+    int32_t pointID = 0;
+    for(auto& pointDef : newPoints)
+    {
+        int32_t x = pointDef.first;
+        int32_t y = pointDef.second;
+
+        auto navPoint = std::make_shared<objects::QmpNavPoint>();
+        navPoint->SetPointID((uint32_t)++pointID);
+        navPoint->SetX(x);
+        navPoint->SetY(y);
+
+        boundary1->AppendNavPoints(navPoint);
+    }
+
+    // Calculate the distances
+    std::map<uint32_t, std::set<uint32_t>> measured;
+    for(auto& point1 : boundary1->GetNavPoints())
+    {
+        auto& mSet = measured[point1->GetPointID()];
+        for(auto& point2 : boundary1->GetNavPoints())
+        {
+            // Skip same point and already measured points
+            if(point1 == point2 ||
+                mSet.find(point2->GetPointID()) != mSet.end())
+            {
+                continue;
+            }
+
+            QPointF collision;
+            bool collides = false;
+
+            QLineF path(point1->GetX(), point1->GetY(),
+                point2->GetX(), point2->GetY());
+            for(auto& line : lines)
+            {
+                if(path.intersect(line, &collision) ==
+                    QLineF::IntersectType::BoundedIntersection)
+                {
+                    collides = true;
+                    break;
+                }
+            }
+
+            if(!collides)
+            {
+                point1->SetDistances(point2->GetPointID(),
+                    (float)path.length());
+                point2->SetDistances(point1->GetPointID(),
+                    (float)path.length());
+            }
+
+            mSet.insert(point2->GetPointID());
+            measured[point2->GetPointID()].insert(point1->GetPointID());
+        }
+    }
+
+    // Remove all nav points with no distances to other points
+    auto points = boundary1->GetNavPoints();
+    points.remove_if([](
+        const std::shared_ptr<objects::QmpNavPoint>& p)
+        {
+            return p->DistancesCount() == 0;
+        });
+
+    boundary1->SetNavPoints(points);
+
+    RebuildNavPointTable();
+
+    // Lastly reset the boundaries and their contents
+    ResetBoundaries(true, false);
+}
+
+void ZoneWindow::ToggleBoundaryDivide()
+{
+    QPushButton* src = qobject_cast<QPushButton*>(sender());
+
+    uint32_t boundaryID = (uint32_t)src->property("val").toInt();
+
+    auto boundary = GetBoundary(boundaryID);
+    if(!boundary)
+    {
+        return;
+    }
+
+    if(boundary->GetQuadrants(0) || boundary->GetQuadrants(1) ||
+        boundary->GetQuadrants(2) || boundary->GetQuadrants(3))
+    {
+        // Merge
+        MergeBoundary(boundary);
+    }
+    else
+    {
+        // Divide
+        DivideBoundary(boundaryID);
+    }
+
+    RebuildBoundariesTree();
+    RebuildNavPointTable();
 
     DrawMap();
 }
@@ -1908,6 +2492,392 @@ void ZoneWindow::UpdateMergedZone(bool redraw)
     }
 }
 
+void ZoneWindow::ResetQmpFileLines()
+{
+    mFileLines.clear();
+    for(auto& boundary : mQmpFile->GetBoundaries())
+    {
+        for(auto& line : boundary->GetLines())
+        {
+            mFileLines.push_back(line);
+        }
+    }
+}
+
+void ZoneWindow::RebuildBoundariesTree()
+{
+    ui.treeBoundaries->clear();
+
+    if(!mQmpFile) return;
+
+    std::map<uint32_t, std::shared_ptr<objects::QmpBoundary>> boundaryMap;
+    std::map<uint32_t, uint32_t> parentMap;
+    for(auto boundary : mQmpFile->GetBoundaries())
+    {
+        // Ignore ID zero
+        if(boundary->GetID())
+        {
+            boundaryMap[boundary->GetID()] = boundary;
+            for(uint32_t quad : boundary->GetQuadrants())
+            {
+                if(quad)
+                {
+                    parentMap[quad] = boundary->GetID();
+                }
+            }
+
+            if(parentMap.find(boundary->GetID()) == parentMap.end())
+            {
+                parentMap[boundary->GetID()] = 0;
+            }
+        }
+    }
+
+    // Write top level
+    std::map<uint32_t, QTreeWidgetItem*> nodes;
+    for(auto& pair : parentMap)
+    {
+        if(pair.second == 0)
+        {
+            auto boundary = boundaryMap[pair.first];
+
+            QTreeWidgetItem* item = GetBoundaryNode(boundary, pair.first,
+                nullptr);
+            QPushButton* btn = GetBoundaryActionButton(boundary);
+
+            ui.treeBoundaries->addTopLevelItem(item);
+
+            if(btn)
+            {
+                ui.treeBoundaries->setItemWidget(item, 6, btn);
+            }
+
+            nodes[pair.first] = item;
+        }
+    }
+
+    // Now write child nodes (should be in order but loop in case its not
+    // upon loading)
+    bool updated = false;
+    do
+    {
+        updated = false;
+
+        for(auto& pair : parentMap)
+        {
+            if(nodes.find(pair.first) == nodes.end() &&
+                nodes.find(pair.second) != nodes.end())
+            {
+                auto boundary = boundaryMap[pair.first];
+
+                auto parent = nodes[pair.second];
+
+                QTreeWidgetItem* item = GetBoundaryNode(boundary, pair.first,
+                    parent);
+                QPushButton* btn = GetBoundaryActionButton(boundary);
+
+                if(btn)
+                {
+                    ui.treeBoundaries->setItemWidget(item, 6, btn);
+                }
+
+                nodes[boundary->GetID()] = item;
+
+                updated = true;
+            }
+        }
+    } while (updated);
+
+    ui.treeBoundaries->expandAll();
+    ui.treeBoundaries->resizeColumnToContents(0);
+    ui.treeBoundaries->resizeColumnToContents(1);
+    ui.treeBoundaries->resizeColumnToContents(2);
+    ui.treeBoundaries->resizeColumnToContents(3);
+    ui.treeBoundaries->resizeColumnToContents(4);
+    ui.treeBoundaries->resizeColumnToContents(5);
+}
+
+QTreeWidgetItem* ZoneWindow::GetBoundaryNode(std::shared_ptr<
+    objects::QmpBoundary> boundary, uint32_t id, QTreeWidgetItem* parent)
+{
+    QTreeWidgetItem* item = new QTreeWidgetItem(parent);
+
+    item->setText(0, libcomp::String("%1").Arg(id).C());
+
+    if(boundary)
+    {
+        item->setText(1, libcomp::String("%1")
+            .Arg(boundary->GetSize()).C());
+
+        item->setText(2, libcomp::String("(%1, %2)")
+            .Arg(boundary->GetCenterX()).Arg(boundary->GetCenterY()).C());
+
+        int32_t span = boundary->GetSize() / 2;
+        int32_t x1 = boundary->GetCenterX() - span;
+        int32_t y1 = boundary->GetCenterY() + span;
+        int32_t x2 = boundary->GetCenterX() + span;
+        int32_t y2 = boundary->GetCenterY() - span;
+
+        item->setText(3, libcomp::String("(%1, %2)->(%3, %4)")
+            .Arg(x1).Arg(y1).Arg(x2).Arg(y2).C());
+
+        item->setText(4, libcomp::String("%1")
+            .Arg(boundary->LinesCount()).C());
+        item->setText(5, libcomp::String("%1")
+            .Arg(boundary->NavPointsCount()).C());
+
+        if(boundary->LinesCount() > 50)
+        {
+            item->setTextColor(4, QColor(Qt::red));
+        }
+    }
+    else
+    {
+        item->setTextColor(0, QColor(Qt::red));
+    }
+
+    return item;
+}
+
+QPushButton* ZoneWindow::GetBoundaryActionButton(std::shared_ptr<
+    objects::QmpBoundary> boundary)
+{
+    if(!boundary)
+    {
+        return nullptr;
+    }
+
+    QPushButton* actionBtn = nullptr;
+    if(boundary->GetQuadrants(0) || boundary->GetQuadrants(1) ||
+        boundary->GetQuadrants(2) || boundary->GetQuadrants(3))
+    {
+        // Add merge button
+        actionBtn = new QPushButton("Merge");
+    }
+    else if(boundary->GetSize() > 1000)
+    {
+        // Add divide button (stop allowing when it gets pretty small)
+        actionBtn = new QPushButton("Divide");
+    }
+
+    if(actionBtn)
+    {
+        actionBtn->setFixedWidth(50);
+        actionBtn->setProperty("val", QVariant(boundary->GetID()));
+
+        connect(actionBtn, SIGNAL(clicked()), this,
+            SLOT(ToggleBoundaryDivide()));
+    }
+
+    return actionBtn;
+}
+
+std::shared_ptr<objects::QmpBoundary> ZoneWindow::GetBoundary(uint32_t id)
+{
+    if(mQmpFile)
+    {
+        for(auto b : mQmpFile->GetBoundaries())
+        {
+            if(b->GetID() == id)
+            {
+                return b;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+void ZoneWindow::DivideBoundary(uint32_t boundaryID)
+{
+    auto boundary = GetBoundary(boundaryID);
+    if(!boundary)
+    {
+        return;
+    }
+
+    uint32_t min = 1;
+    int32_t depth = 0;
+    while(min > boundaryID)
+    {
+        min = (uint32_t)(min + std::pow(4, depth++));
+    }
+
+    uint32_t offset = (uint32_t)(boundaryID - min);
+    uint32_t firstID = (uint32_t)(min + (offset * 4) + 1);
+    int32_t step = boundary->GetSize() / 4;
+
+    for(size_t i = 0; i < 4; i++)
+    {
+        uint32_t newID = (uint32_t)(firstID + i);
+
+        auto q = std::make_shared<objects::QmpBoundary>();
+        q->SetID(newID);
+        q->SetSize(boundary->GetSize() / 2);
+
+        int32_t xOffset = (i % 2) == 0 ? -step : step;
+        int32_t yOffset = (i < 2) == 0 ? -step : step;
+
+        q->SetCenterX(boundary->GetCenterX() + xOffset);
+        q->SetCenterY(boundary->GetCenterY() + yOffset);
+
+        boundary->SetQuadrants(i, newID);
+        mQmpFile->AppendBoundaries(q);
+
+        // Determine which lines and nav points to move down
+        QRect bounds(q->GetCenterX() - q->GetSize() / 2,
+            q->GetCenterY() - q->GetSize() / 2, q->GetSize(),
+            q->GetSize());
+
+        bool updated = false;
+        for(auto& line : boundary->GetLines())
+        {
+            if(bounds.contains(line->GetX1(), line->GetY1()) &&
+                bounds.contains(line->GetX2(), line->GetY2()))
+            {
+                q->AppendLines(line);
+                updated = true;
+            }
+        }
+
+        for(auto& navPoint : boundary->GetNavPoints())
+        {
+            if(bounds.contains(navPoint->GetX(), navPoint->GetY()))
+            {
+                q->AppendNavPoints(navPoint);
+                updated = true;
+            }
+        }
+
+        if(updated)
+        {
+            // Remove lines and nav points moved down
+            auto lines = boundary->GetLines();
+            lines.remove_if([q](
+                const std::shared_ptr<objects::QmpBoundaryLine>& l)
+                {
+                    for(auto l2 : q->GetLines())
+                    {
+                        if(l2 == l) return true;
+                    }
+
+                    return false;
+                });
+
+            boundary->SetLines(lines);
+
+            auto navPoints = boundary->GetNavPoints();
+            navPoints.remove_if([q](
+                const std::shared_ptr<objects::QmpNavPoint>& p)
+                {
+                    for(auto p2 : q->GetNavPoints())
+                    {
+                        if(p2 == p) return true;
+                    }
+
+                    return false;
+                });
+
+            boundary->SetNavPoints(navPoints);
+        }
+    }
+
+    auto boundaries = mQmpFile->GetBoundaries();
+    boundaries.sort([](const std::shared_ptr<objects::QmpBoundary>& a,
+        const std::shared_ptr<objects::QmpBoundary>& b)
+        {
+            return a->GetID() < b->GetID();
+        });
+
+    mQmpFile->SetBoundaries(boundaries);
+}
+
+void ZoneWindow::MergeBoundary(std::shared_ptr<objects::QmpBoundary> boundary)
+{
+    if(boundary &&
+        (boundary->GetQuadrants(0) || boundary->GetQuadrants(1) ||
+        boundary->GetQuadrants(2) || boundary->GetQuadrants(3)))
+    {
+        for(uint32_t qID : boundary->GetQuadrants())
+        {
+            auto q = GetBoundary(qID);
+            if(q && qID)
+            {
+                MergeBoundary(q);
+
+                // Move all lines and nav points into the parent
+                for(auto& l : q->GetLines())
+                {
+                    boundary->AppendLines(l);
+                }
+
+                for(auto& navPoint : q->GetNavPoints())
+                {
+                    boundary->AppendNavPoints(navPoint);
+                }
+            }
+        }
+
+        auto boundaries = mQmpFile->GetBoundaries();
+        boundaries.remove_if([boundary](
+            const std::shared_ptr<objects::QmpBoundary>& b)
+            {
+                return b->GetID() &&
+                    (b->GetID() == boundary->GetQuadrants(0) || 
+                        b->GetID() == boundary->GetQuadrants(1) || 
+                        b->GetID() == boundary->GetQuadrants(2) || 
+                        b->GetID() == boundary->GetQuadrants(3));
+            });
+
+        mQmpFile->SetBoundaries(boundaries);
+
+        boundary->SetQuadrants(0, 0);
+        boundary->SetQuadrants(1, 0);
+        boundary->SetQuadrants(2, 0);
+        boundary->SetQuadrants(3, 0);
+    }
+}
+
+void ZoneWindow::RebuildNavPointTable()
+{
+    ui.tblNavPoints->setRowCount(0);
+
+    if(!mQmpFile) return;
+
+    std::map<uint32_t, std::shared_ptr<objects::QmpNavPoint>> navMap;
+    std::map<uint32_t, uint32_t> boundaryMap;
+    for(auto& boundary : mQmpFile->GetBoundaries())
+    {
+        for(auto& navPoint : boundary->GetNavPoints())
+        {
+            navMap[navPoint->GetPointID()] = navPoint;
+            boundaryMap[navPoint->GetPointID()] = boundary->GetID();
+        }
+    }
+
+    ui.tblNavPoints->setRowCount((int)navMap.size());
+
+    int idx = 0;
+    for(auto& pair : navMap)
+    {
+        auto navPoint = pair.second;
+
+        ui.tblNavPoints->setItem(idx, 0, new QTableWidgetItem(
+            QString::number(pair.first)));
+        ui.tblNavPoints->setItem(idx, 1, new QTableWidgetItem(
+            libcomp::String("(%1, %2)").Arg(navPoint->GetX())
+            .Arg(navPoint->GetY()).C()));
+        ui.tblNavPoints->setItem(idx, 2, new QTableWidgetItem(
+            QString::number(navPoint->DistancesCount())));
+        ui.tblNavPoints->setItem(idx, 3, new QTableWidgetItem(
+            QString::number(boundaryMap[pair.first])));
+
+        idx++;
+    }
+
+    ui.tblNavPoints->resizeColumnsToContents();
+}
+
 bool ZoneWindow::LoadMapFromZone()
 {
     mMainWindow->CloseSelectors(this);
@@ -1940,6 +2910,13 @@ bool ZoneWindow::LoadMapFromZone()
         return false;
     }
 
+    ResetQmpFileLines();
+
+    mExternalQmpFile = false;
+    ui.btnQmpReset->setEnabled(false);
+
+    ui.lblCurrentQmpFile->setText("[Use Zone]");
+
     BindNPCs();
     BindObjects();
 
@@ -1947,6 +2924,9 @@ bool ZoneWindow::LoadMapFromZone()
 
     BindSpawns();
     BindSpots();
+
+    RebuildBoundariesTree();
+    RebuildNavPointTable();
 
     DrawMap();
 
@@ -2231,6 +3211,117 @@ void ZoneWindow::DrawMap()
     QPicture pic;
     QPainter painter(&pic);
 
+    // Keep track of what is selected to draw on top of everything else
+    std::set<std::shared_ptr<libcomp::Object>> highlight;
+
+    // Draw boundaries and AI nav points first
+    if(ui.actionShowBoundaries->isChecked())
+    {
+        std::set<uint32_t> selectedRows;
+        if(ui.tabs->currentWidget() == ui.tabGeometry)
+        {
+            for(auto item : ui.treeBoundaries->selectedItems())
+            {
+                selectedRows.insert((uint32_t)item->data(0, Qt::DisplayRole)
+                    .toInt());
+            }
+        }
+
+        auto boundaries = mQmpFile->GetBoundaries();
+        if(selectedRows.size() > 0)
+        {
+            // Move selected to the end of the list so they paint on top
+            auto selected = boundaries;
+            selected.remove_if([selectedRows](
+                const std::shared_ptr<objects::QmpBoundary>& b)
+                {
+                    return selectedRows.find(b->GetID()) == selectedRows.end();
+                });
+
+            boundaries.remove_if([selectedRows](
+                const std::shared_ptr<objects::QmpBoundary>& b)
+                {
+                    return selectedRows.find(b->GetID()) != selectedRows.end();
+                });
+
+            for(auto& b : selected)
+            {
+                boundaries.push_back(b);
+            }
+        }
+
+        painter.setPen(QPen(COLOR_BOUNDARY, 1, Qt::DashLine));
+        painter.setBrush(QBrush(COLOR_BOUNDARY));
+
+        for(auto boundary : boundaries)
+        {
+            bool isSelected = selectedRows.find(boundary->GetID()) !=
+                selectedRows.end();
+            if(isSelected)
+            {
+                painter.setPen(QPen(COLOR_SELECTED));
+                painter.setBrush(QBrush(COLOR_SELECTED));
+            }
+
+            int32_t span = boundary->GetSize() / 2;
+            int32_t x1 = Scale(boundary->GetCenterX() + span);
+            int32_t y1 = Scale(-(boundary->GetCenterY() - span));
+            int32_t x2 = Scale(boundary->GetCenterX() - span);
+            int32_t y2 = Scale(-(boundary->GetCenterY() + span));
+
+            painter.drawLine(x1, y1, x2, y1);
+            painter.drawLine(x2, y1, x2, y2);
+            painter.drawLine(x2, y2, x1, y2);
+            painter.drawLine(x1, y2, x1, y1);
+
+            // Write ID in the center
+            painter.drawText(QPoint(Scale(boundary->GetCenterX()),
+                Scale(-boundary->GetCenterY())),
+                libcomp::String("%1").Arg(boundary->GetID()).C());
+
+            if(isSelected)
+            {
+                painter.setPen(QPen(COLOR_BOUNDARY, 1, Qt::DashLine));
+                painter.setBrush(QBrush(COLOR_BOUNDARY));
+            }
+        }
+    }
+
+    if(ui.actionShowNavPoints->isChecked())
+    {
+        std::set<uint32_t> selectedRows;
+        if(ui.tabs->currentWidget() == ui.tabGeometry)
+        {
+            auto selected = ui.tblNavPoints->selectedItems();
+            for(auto s : selected)
+            {
+                auto w = ui.tblNavPoints->item(s->row(), 0);
+                if(w)
+                {
+                    selectedRows.insert((uint32_t)w->text().toInt());
+                }
+            }
+        }
+
+        std::list<std::shared_ptr<objects::QmpNavPoint>> navPoints;
+        for(auto boundary : mQmpFile->GetBoundaries())
+        {
+            for(auto p : boundary->GetNavPoints())
+            {
+                bool isSelected = selectedRows.find(p->GetPointID()) !=
+                    selectedRows.end();
+                if(!isSelected)
+                {
+                    DrawNavPoint(p, false, painter);
+                }
+                else
+                {
+                    highlight.insert(p);
+                }
+            }
+        }
+    }
+
     // Draw geometry
     std::unordered_map<uint32_t, uint8_t> elems;
     for(auto elem : mQmpFile->GetElements())
@@ -2273,7 +3364,6 @@ void ZoneWindow::DrawMap()
     auto definitions = mMainWindow->GetDefinitions();
     auto spots = definitions->GetSpotData(zone->GetDynamicMapID());
 
-    std::set<std::shared_ptr<libcomp::Object>> highlight;
     switch(ui.tabs->currentIndex())
     {
     case 1: // NPCs
@@ -2407,6 +3497,7 @@ void ZoneWindow::DrawMap()
         auto obj = std::dynamic_pointer_cast<objects::ServerObject>(h);
         auto spot = std::dynamic_pointer_cast<objects::MiSpotData>(h);
         auto loc = std::dynamic_pointer_cast<objects::SpawnLocation>(h);
+        auto navPoint = std::dynamic_pointer_cast<objects::QmpNavPoint>(h);
         if(npc)
         {
             DrawNPC(npc, true, painter);
@@ -2422,6 +3513,10 @@ void ZoneWindow::DrawMap()
         else if(loc)
         {
             DrawSpawnLocation(loc, painter);
+        }
+        else if(navPoint)
+        {
+            DrawNavPoint(navPoint, true, painter);
         }
     }
 
@@ -2572,6 +3667,46 @@ void ZoneWindow::DrawSpot(const std::shared_ptr<objects::MiSpotData>& spotDef,
         .Arg((uint8_t)spotDef->GetType()).Arg(spotDef->GetID()).C());
 }
 
+void ZoneWindow::DrawNavPoint(const std::shared_ptr<
+    objects::QmpNavPoint>& navPoint, bool selected, QPainter& painter)
+{
+    if(selected)
+    {
+        painter.setPen(QPen(COLOR_SELECTED));
+        painter.setBrush(QBrush(COLOR_SELECTED));
+    }
+    else
+    {
+        painter.setPen(QPen(COLOR_NAVPOINT));
+        painter.setBrush(QBrush(COLOR_NAVPOINT));
+    }
+
+    painter.drawEllipse(QPoint(Scale(navPoint->GetX()),
+        Scale(-navPoint->GetY())), 3, 3);
+
+    painter.drawText(QPoint(Scale(navPoint->GetX()) + 5,
+        Scale(-navPoint->GetY())),
+        libcomp::String("%1").Arg(navPoint->GetPointID()).C());
+
+    if(selected && navPoint->DistancesCount() > 0)
+    {
+        // Draw distances
+        for(auto& boundary : mQmpFile->GetBoundaries())
+        {
+            for(auto& other : boundary->GetNavPoints())
+            {
+                if(navPoint->DistancesKeyExists(other->GetPointID()))
+                {
+                    painter.drawLine(QLine(Scale(navPoint->GetX()),
+                        Scale(-navPoint->GetY()),
+                        Scale(other->GetX()),
+                        Scale(-other->GetY())));
+                }
+            }
+        }
+    }
+}
+
 int32_t ZoneWindow::Scale(int32_t point)
 {
     return (int32_t)(point / ui.zoomSlider->value());
@@ -2580,4 +3715,167 @@ int32_t ZoneWindow::Scale(int32_t point)
 int32_t ZoneWindow::Scale(float point)
 {
     return (int32_t)(point / (float)ui.zoomSlider->value());
+}
+
+QPointF ZoneWindow::GetNavPointLocation(QPointF p1, QPointF vert, QPointF p2,
+    bool& valid)
+{
+    if((p1.x() == p2.x() && p2.x() == vert.x()) ||
+        (p1.y() == p2.y() && p1.y() == vert.y()) ||
+        p1 == vert || p2 == vert)
+    {
+        // Point, or vertical/horizontal line, no reason to add a nav point
+        valid = false;
+        return QPointF();
+    }
+
+    // First place a point the set distance from the vertex along point 1
+    QPointF p = vert;
+    double distance = 50.0;
+
+    if(p1.x() != vert.x())
+    {
+        double slope = (p1.y() - vert.y()) / (p1.x() - vert.x());
+        double denom = std::sqrt(1.0 + std::pow(slope, 2));
+
+        double xOffset = distance / denom;
+        double yOffset = fabs((slope * distance) / denom);
+
+        p.setX(p1.x() <= vert.x()
+            ? (vert.x() - xOffset) : (vert.x() + xOffset));
+        p.setY(p1.y() <= vert.y()
+            ? (vert.y() - yOffset) : (vert.y() + yOffset));
+    }
+    else
+    {
+        p.setY(p1.y() <= vert.y()
+            ? (vert.y() - distance) : (vert.y() + distance));
+    }
+
+    // Next calculate the angle created by the three points
+    auto cProd = (p2.x() - vert.x()) * (vert.y() - p1.y()) -
+        (p2.y() - vert.y()) * (vert.x() - p1.x());
+    auto dProd = (p2.x() - vert.x()) * (vert.x() - p1.x()) +
+        (p2.y() - vert.y()) * (vert.y() - p1.y());
+    double radians = atan2(cProd, dProd);
+
+    if(radians == PI)
+    {
+        // Straight line
+        valid = false;
+        return QPointF();
+    }
+
+    // Finally rotate the point around the vertex so it "extends" the corner
+    valid = true;
+
+    if(radians < 0.0)
+    {
+        // Obtuse angle
+        radians = PI / 2.0 - radians / 2.0;
+    }
+    else
+    {
+        // Acute angle
+        radians = PI * 1.5 - radians / 2.0;
+    }
+
+    return RotatePoint(p, vert, radians);
+}
+
+std::list<QPointF> ZoneWindow::GetLineNavPointLocations(QPointF p1, QPointF p2)
+{
+    std::list<QPointF> points;
+
+    if(p1 == p2)
+    {
+        // Coordinates are single point, ignore
+        return points;
+    }
+
+    double distance = 50.0;
+    if(p1.x() == p2.x())
+    {
+        if(p2.y() > p1.y())
+        {
+            // Up
+            points.push_back(QPointF(p2.x() - distance, p2.y() + distance));
+            points.push_back(QPointF(p2.x() + distance, p2.y() + distance));
+        }
+        else
+        {
+            // Down
+            points.push_back(QPointF(p2.x() + distance, p2.y() - distance));
+            points.push_back(QPointF(p2.x() - distance, p2.y() - distance));
+        }
+
+        return points;
+    }
+    else if(p1.y() == p2.y())
+    {
+        if(p2.x() > p1.x())
+        {
+            // Right
+            points.push_back(QPointF(p2.x() + distance, p2.y() + distance));
+            points.push_back(QPointF(p2.x() + distance, p2.y() - distance));
+        }
+        else
+        {
+            // Left
+            points.push_back(QPointF(p2.x() - distance, p2.y() - distance));
+            points.push_back(QPointF(p2.x() - distance, p2.y() + distance));
+        }
+
+        return points;
+    }
+
+    // Extend 50 units and move 50 units "left/right" using slope
+    double slope = (p2.y() - p1.y()) / (p2.x() - p1.x());
+    double denom = std::sqrt(1.0 + std::pow(slope, 2));
+
+    double xOffset = distance / denom;
+    double yOffset = fabs((slope * distance) / denom);
+
+    // Get the perpendicular slope to calculate the second transforms
+    double pSlope = -1.0 / slope;
+    denom = std::sqrt(1.0 + std::pow(pSlope, 2));
+
+    double xOffset2 = distance / denom;
+    double yOffset2 = fabs((pSlope * distance) / denom);
+
+    if(p2.x() > p1.x())
+    {
+        // Right
+        double pY1 = slope > 0.0 ? (p2.y() + yOffset + yOffset2)
+            : (p2.y() - yOffset - yOffset2);
+        double pY2 = slope > 0.0 ? (p2.y() + yOffset - yOffset2)
+            : (p2.y() - yOffset + yOffset2);
+
+        points.push_back(QPointF(p2.x() + xOffset - xOffset2, pY1));
+        points.push_back(QPointF(p2.x() + xOffset + xOffset2, pY2));
+    }
+    else
+    {
+        // Left
+        double pY1 = slope > 0.0 ? (p2.y() - yOffset + yOffset2)
+            : (p2.y() + yOffset - yOffset2);
+        double pY2 = slope > 0.0 ? (p2.y() - yOffset - yOffset2)
+            : (p2.y() + yOffset + yOffset2);
+
+        points.push_back(QPointF(p2.x() - xOffset - xOffset2, pY1));
+        points.push_back(QPointF(p2.x() - xOffset + xOffset2, pY2));
+    }
+
+    return points;
+}
+
+
+QPointF ZoneWindow::RotatePoint(QPointF p, QPointF origin, double radians)
+{
+    double xDelta = p.x() - origin.x();
+    double yDelta = p.y() - origin.y();
+
+    return QPointF(
+        ((xDelta * cos(radians)) - (yDelta * sin(radians))) + origin.x(),
+        ((xDelta * sin(radians)) + (yDelta * cos(radians))) + origin.y());
 }

@@ -905,6 +905,193 @@
          </item>
         </layout>
        </widget>
+       <widget class="QWidget" name="tabGeometry">
+        <attribute name="title">
+         <string>Geometry</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="tabPathingLayout">
+         <item>
+          <layout class="QFormLayout" name="formPathing">
+           <item row="0" column="0">
+            <widget class="QLabel" name="lblQmpFile">
+             <property name="text">
+              <string>QMP File:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <layout class="QHBoxLayout" name="layoutQmpFile">
+             <item>
+              <widget class="QLabel" name="lblCurrentQmpFile">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>[Use Zone]</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnQmpReset">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Reset</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="grpBoundaries">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="title">
+            <string>Boundaries</string>
+           </property>
+           <layout class="QVBoxLayout" name="layoutBoundaries">
+            <item>
+             <widget class="QTreeWidget" name="treeBoundaries">
+              <property name="alternatingRowColors">
+               <bool>true</bool>
+              </property>
+              <column>
+               <property name="text">
+                <string>ID</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Size</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Center</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Dimensions</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Lines</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Nav Points</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Action</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="grpNavPoints">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="title">
+            <string>Nav Points</string>
+           </property>
+           <layout class="QVBoxLayout" name="layoutNavPoints">
+            <item>
+             <widget class="QTableWidget" name="tblNavPoints">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="editTriggers">
+               <set>QAbstractItemView::NoEditTriggers</set>
+              </property>
+              <column>
+               <property name="text">
+                <string>ID</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Point</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Connections</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Boundary</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="layoutQmpControls">
+           <item>
+            <widget class="QPushButton" name="btnQmpResetBoundaries">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="text">
+              <string>Reset Boundaries</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btnQmpResetNavPoints">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="text">
+              <string>Reset Nav Points</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="spacerQmpControls">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
       </widget>
      </widget>
     </item>
@@ -926,6 +1113,9 @@
     <addaction name="actionLoad"/>
     <addaction name="actionSave"/>
     <addaction name="actionSaveAll"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoadQmp"/>
+    <addaction name="actionSaveQmp"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -940,6 +1130,8 @@
     <addaction name="separator"/>
     <addaction name="actionShowNPCs"/>
     <addaction name="actionShowObjects"/>
+    <addaction name="actionShowBoundaries"/>
+    <addaction name="actionShowNavPoints"/>
     <addaction name="menuShowSpots"/>
    </widget>
    <widget class="QMenu" name="menuPartials">
@@ -1027,6 +1219,38 @@
    </property>
    <property name="text">
     <string>Show Objects</string>
+   </property>
+  </action>
+  <action name="actionShowBoundaries">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Boundaries</string>
+   </property>
+  </action>
+  <action name="actionShowNavPoints">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Nav Points</string>
+   </property>
+  </action>
+  <action name="actionLoadQmp">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Load QMP File</string>
+   </property>
+  </action>
+  <action name="actionSaveQmp">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Save QMP File</string>
    </property>
   </action>
  </widget>

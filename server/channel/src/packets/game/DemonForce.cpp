@@ -48,6 +48,7 @@
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "TokuseiManager.h"
+#include "ZoneManager.h"
 
 using namespace channel;
 
@@ -86,6 +87,7 @@ bool Parsers::DemonForce::Parse(libcomp::ManagerPacket *pPacketManager,
     auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
         connection);
     auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
     auto dState = state->GetDemonState();
     auto devilData = dState->GetDevilData();
     auto demon = dState->GetEntity();
@@ -336,9 +338,9 @@ bool Parsers::DemonForce::Parse(libcomp::ManagerPacket *pPacketManager,
             libcomp::Packet notify;
             notify.WritePacketCode(
                 ChannelToClientPacketCode_t::PACKET_DEMON_FORCE_GAUGE);
-            notify.WriteS32Little(dState->GetEntityID());
+            notify.WriteS32Little(cState->GetEntityID());
 
-            client->QueuePacket(notify);
+            server->GetZoneManager()->BroadcastPacket(client, notify, true);
         }
     }
 

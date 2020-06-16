@@ -2075,35 +2075,69 @@ void TokuseiManager::RecalcTimedTokusei(WorldClock& clock)
             bool setActive = true;
             bool isActive = tPair.second;
 
+            // Compare singular (and) and option group (or) conditions and
+            // only return true if the entire clause evaluates to true
+            std::unordered_map<uint8_t, bool> optionGroups;
+
             auto tokusei = definitionManager->GetTokuseiData(tPair.first);
             for(auto condition : tokusei->GetConditions())
             {
-                switch(condition->GetType())
+                bool result = false;
+
+                // If the option group has already had a condition pass, skip it
+                uint8_t optionGroupID = condition->GetOptionGroupID();
+                if(optionGroupID != 0)
                 {
-                case TokuseiConditionType::GAME_TIME:
-                    // The current game time matches the specified time and
-                    // comparison
+                    if(optionGroups.find(optionGroupID) == optionGroups.end())
                     {
-                        setActive &= Compare((int32_t)(clock.Hour * 100 +
-                            (int32_t)clock.Min), condition, true);
+                        optionGroups[optionGroupID] = false;
                     }
-                    break;
-                case TokuseiConditionType::MOON_PHASE:
-                    // The current moon phase matches the specified phase and
-                    // comparison
+                    else
                     {
-                        setActive &= Compare((int32_t)clock.MoonPhase,
-                            condition, true);
+                        result = optionGroups[optionGroupID];
                     }
-                    break;
-                default:
-                    break;
                 }
 
-                if(!setActive)
+                if(!result)
                 {
-                    break;
+                    switch(condition->GetType())
+                    {
+                    case TokuseiConditionType::GAME_TIME:
+                        // The current game time matches the specified time and
+                        // comparison
+                        {
+                            result = Compare((int32_t)(clock.Hour * 100 +
+                                (int32_t)clock.Min), condition, true);
+                        }
+                        break;
+                    case TokuseiConditionType::MOON_PHASE:
+                        // The current moon phase matches the specified phase
+                        // and comparison
+                        {
+                            result = Compare((int32_t)clock.MoonPhase,
+                                condition, true);
+                        }
+                        break;
+                    default:
+                        break;
+                    }
+
+                    if(optionGroupID != 0)
+                    {
+                        optionGroups[optionGroupID] |= result;
+                    }
+                    else if(!result)
+                    {
+                        // Non-option group failed, end here
+                        setActive = false;
+                        break;
+                    }
                 }
+            }
+
+            for(auto pair : optionGroups)
+            {
+                setActive &= pair.second;
             }
 
             if(isActive != setActive)

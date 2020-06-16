@@ -72,8 +72,8 @@ bool Parsers::BazaarItemAdd::Parse(libcomp::ManagerPacket *pPacketManager,
     reply.WriteS32Little(price);
 
     int8_t oldSlot = item ? item->GetBoxSlot() : -1;
-    auto box = std::dynamic_pointer_cast<objects::ItemBox>(
-        libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
+    auto box = item ? std::dynamic_pointer_cast<objects::ItemBox>(
+        libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox())) : nullptr;
     auto itemDef = item ? server->GetDefinitionManager()->GetItemData(
         item->GetType())
         : nullptr;

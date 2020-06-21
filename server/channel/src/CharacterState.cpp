@@ -1105,7 +1105,7 @@ uint8_t CharacterState::RecalculateStats(
 
     AdjustStats(correctTbls, stats, calcState, false);
 
-    if(GetStatusTimes(STATUS_RESTING))
+    if(StatusTimesKeyExists(STATUS_RESTING))
     {
         // Apply (originally busted) Medical Sciences bonus of 10% more
         // regen per class

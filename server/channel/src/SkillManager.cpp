@@ -8239,9 +8239,8 @@ bool SkillManager::ApplyNegotiationDamage(const std::shared_ptr<
         // Points hit 0/0, the enemy is now locked in a negative state
         target.TalkFlags = expID == EXPERTISE_INTIMIDATE
             ? TALK_FOFF_2 : TALK_FOFF_1;
-        target.TalkDone = true;
 
-        return true;
+        return false;
     }
 
     bool affPass = talkPoints.first >= affThreshold;

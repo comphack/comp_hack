@@ -1072,7 +1072,8 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
 
     eState->ExpireStatusTimes(now);
 
-    bool canAct = !eState->GetStatusTimes(STATUS_RESTING) && eState->CanAct();
+    bool canAct = !eState->StatusTimesKeyExists(STATUS_RESTING) &&
+        eState->CanAct();
     bool noTargetState = aiState->IsIdle() || aiState->IsFollowing();
 
     // If no target exists and the next target time has passed, search now
@@ -1081,7 +1082,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
         (!aiState->GetNextTargetTime() || aiState->GetNextTargetTime() <= now))
     {
         // If still in the ignore state, fail to target until it expires
-        auto newTarget = !eState->GetStatusTimes(STATUS_IGNORE)
+        auto newTarget = !eState->StatusTimesKeyExists(STATUS_IGNORE)
             ? Retarget(eState, now, isNight) : nullptr;
         if(newTarget)
         {
@@ -1093,7 +1094,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
             aiState->ClearCommands();
 
             if(current && current->GetType() == AICommandType_t::NONE &&
-                eState->GetStatusTimes(STATUS_WAITING))
+                eState->StatusTimesKeyExists(STATUS_WAITING))
             {
                 aiState->QueueCommand(current);
             }
@@ -1109,7 +1110,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
     }
 
     // If the entity cannot act or is waiting, stop if moving and quit here
-    if(!canAct || eState->GetStatusTimes(STATUS_WAITING))
+    if(!canAct || eState->StatusTimesKeyExists(STATUS_WAITING))
     {
         if(eState->IsMoving() && !eState->GetStatusTimes(STATUS_KNOCKBACK))
         {
@@ -1244,6 +1245,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                 eState->SetStatusTimes(STATUS_WAITING, statusTime);
 
                 if(cmd->GetIgnoredDelay() &&
+                    eState->GetStatusTimes(STATUS_IGNORE) &&
                     eState->GetStatusTimes(STATUS_IGNORE) < statusTime)
                 {
                     eState->SetStatusTimes(STATUS_IGNORE, statusTime);
@@ -1877,7 +1879,7 @@ bool AIManager::Follow(const std::shared_ptr<ActiveEntityState>& eState,
 
         return true;
     }
-    else if(eState->GetStatusTimes(STATUS_WAITING))
+    else if(eState->StatusTimesKeyExists(STATUS_WAITING))
     {
         // Keep waiting
         return true;
@@ -2200,7 +2202,7 @@ std::shared_ptr<ActiveEntityState> AIManager::Retarget(
                     entity->ExpireStatusTimes(now);
                     return eState->SameFaction(entity) ||
                         (castingOnly && !entity->GetStatusTimes(STATUS_CHARGING)) ||
-                        entity->GetStatusTimes(STATUS_IGNORE) ||
+                        entity->StatusTimesKeyExists(STATUS_IGNORE) ||
                         !entity->Ready() || entity->GetAIIgnored() ||
                         !entity->IsAlive();
                 });

@@ -1,3 +1,14 @@
+comphack (4.12.1) xenial; urgency=low
+
+  * QMP and pathing generation support
+  * Added missing timed tokusei condition logic
+  * Fixed invalid negotiation outcomes
+  * Demon quests will "default to self" less
+  * Incantation/cooldown/heal rate corrections
+  * Tarot/soul availability after SI corrected
+
+ -- COMP Omega <compomega@tutanota.com>  Sat, 27 Jun 2020 16:49:20 -0600
+
 comphack (4.12.0.1) xenial; urgency=low
 
   * Corrected PPA build error.

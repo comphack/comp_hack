@@ -1,7 +1,7 @@
 # COMP\_hack #
 
 [![AGPL License](http://img.shields.io/badge/license-AGPL-brightgreen.svg)](https://opensource.org/licenses/AGPL-3.0)
-[![Latest Release](https://img.shields.io/github/downloads/comphack/comp_hack/v4.12.0-wyrd/total.svg)](https://github.com/comphack/comp_hack/releases/tag/v4.12.0-wyrd)
+[![Latest Release](https://img.shields.io/github/downloads/comphack/comp_hack/v4.12.1-wyrd/total.svg)](https://github.com/comphack/comp_hack/releases/tag/v4.12.1-wyrd)
 [![Discord Chat](https://img.shields.io/discord/322024695266541579.svg)](http://discord.gg/9jXeKcJ)
 
 [![Build Status](https://travis-ci.com/comphack/comp_hack.svg?branch=develop)](https://travis-ci.com/comphack/comp_hack)

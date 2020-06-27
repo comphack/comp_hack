@@ -5629,7 +5629,9 @@ bool CharacterManager::GetSynthOutcome(ClientState* synthState,
         {
             auto enchantData = definitionManager->GetEnchantDataByItemID(
                 crystal->GetType());
-            auto itemData = definitionManager->GetItemData(inputItem->GetType());
+            auto itemData = definitionManager->GetItemData(
+                inputItem->GetBasicEffect() ? inputItem->GetBasicEffect()
+                : inputItem->GetType());
             if(!enchantData || !itemData || !effectID ||
                 inputItem->GetDurability() == 0)
             {

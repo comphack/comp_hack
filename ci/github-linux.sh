@@ -48,11 +48,10 @@ echo "Running build"
 cmake --build . --target git-version
 cmake --build .
 cmake --build . --target doc
-cmake --build . --target guide
 # cmake --build . --target test
 # cmake --build . --target coveralls
 # cmake --build . --target package
 
 echo "Publish the documentation on the GitHub page"
 cp -R ../contrib/pages ../pages
-cp -R api guide ../pages/
+cp -R api ../pages/

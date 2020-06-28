@@ -943,10 +943,6 @@ GET_PROPERTY(targets GLOBAL PROPERTY DOC_TARGETS)
 ADD_CUSTOM_TARGET(doc ALL DEPENDS ${targets})
 SET_TARGET_PROPERTIES(doc PROPERTIES FOLDER "SpecialTargets")
 
-IF(NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
-    ADD_SUBDIRECTORY(docs)
-ENDIF(NOT UPDATER_ONLY AND NOT CHANNEL_ONLY)
-
 # On Linux system, install the icons where they can be found. These are used
 # for the application menu launcher icons.
 IF(NOT WIN32)

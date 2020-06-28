@@ -7,10 +7,11 @@
 [![Build Status](https://travis-ci.com/comphack/comp_hack.svg?branch=develop)](https://travis-ci.com/comphack/comp_hack)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/9671/badge.svg)](https://scan.coverity.com/projects/comphack-comp_hack)
 [![Coverage Status](https://coveralls.io/repos/github/comphack/comp_hack/badge.svg?branch=develop)](https://coveralls.io/github/comphack/comp_hack?branch=develop)
+[![Documentation Status](https://readthedocs.org/projects/comp-hack/badge/?version=latest)](https://comp-hack.readthedocs.io/en/latest/?badge=latest)
 
 ## 真・女神転生IMAGINE Private Server ##
 
-The is server software to revive an MMO that has been shutdown (SMT: IMAGINE). It's a complete re-implementation of the server from scratch and fully open source. The best place for documentation is the [Definitive Guide](https://comphack.github.io/guide/) so be sure to check it out.
+The is server software to revive an MMO that has been shutdown (SMT: IMAGINE). It's a complete re-implementation of the server from scratch and fully open source. The best place for documentation is the [Definitive Guide](https://comp-hack.readthedocs.io/en/latest/) so be sure to check it out.
 
 ### Building on Linux ###
 
@@ -35,7 +36,7 @@ cmake -DNO_WARNINGS=ON ..
 make
 ```
 
-See the [Definitive Guide](https://comphack.github.io/guide/ch04s02.html) for more information on the build system options and how to setup the server.
+See the [Definitive Guide](https://comp-hack.readthedocs.io/en/latest/chapters/hacking.html#build-system) for more information on the build system options and how to setup the server.
 
 ### Building on Windows ###
 
@@ -58,4 +59,4 @@ If you do not wish to contribute to the project, download from the [Releases](ht
 
 Edit the _vsbuild_x86.bat_ and _vsbuild_x64.bat_ batch files to point to your install of Qt. Run the desired script and you should see a _build32_ or _build64_ folder. Inside the folder should be a comp_hack.sln solution file. Open the solution and build as normal.
 
-See the [Definitive Guide](https://comphack.github.io/guide/ch04s02.html) for more information on the build system options and how to setup the server.
+See the [Definitive Guide](https://comp-hack.readthedocs.io/en/latest/chapters/hacking.html#build-system) for more information on the build system options and how to setup the server.

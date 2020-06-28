@@ -73,7 +73,6 @@ echo "Running build"
 cmake --build . --target git-version
 cmake --build .
 cmake --build . --target doc
-cmake --build . --target guide
 # cmake --build . --target test
 # cmake --build . --target coveralls
 # cmake --build . --target package
@@ -87,7 +86,7 @@ cmake --build . --target guide
 
 echo "Publish the documentation on the GitHub page"
 cp -R ../contrib/pages ../pages
-cp -R api guide ../pages/
+cp -R api ../pages/
 find "${ROOT_DIR}/pages" -type d
 
 # Change back to the root.

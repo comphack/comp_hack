@@ -59,6 +59,15 @@ enum class MessageClientType : int32_t
     CONNECTED_TO_LOBBY = 2000,
     /// Now connected to the channel
     CONNECTED_TO_CHANNEL,
+
+    //
+    // LobbyManager related requests
+    //
+
+    //
+    // LobbyManager related events
+    //
+    CHARACTER_LIST_UPDATE,
 };
 
 /**

@@ -4,4 +4,7 @@
         <member type="s32" name="ResponseCode"/>
         <member type="string" name="SID" lensz="2"/>
     </object>
+    <object name="PacketChannelAuthReply" persistent="false" namespace="packets">
+        <member type="s32" name="ResponseCode"/>
+    </object>
 </objgen>

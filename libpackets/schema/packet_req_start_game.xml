@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="PacketLobbyRequestStartGame" persistent="false" namespace="packets">
+        <member type="u16" name="PacketCode"/>
+        <member type="u8" name="CharacterID"/>
+        <member type="u8" name="Unknown"/>
+    </object>
+</objgen>

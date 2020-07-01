@@ -25,6 +25,7 @@ SET(${PROJECT_NAME}_SRCS
     src/LogicWorker.cpp
 
     # Managers
+    src/AmalaManager.cpp
     src/ConnectionManager.cpp
     src/LobbyManager.cpp
 )
@@ -35,12 +36,16 @@ SET(${PROJECT_NAME}_HDRS
     src/MessageClient.h
 
     # Managers
+    src/AmalaManager.h
     src/ConnectionManager.h
     src/LobbyManager.h
 
     # Messages
+    src/MessageClient.h
+    src/MessageCharacterList.h
     src/MessageConnected.h
     src/MessageConnectionInfo.h
+    src/MessageStartGame.h
 )
 
 ADD_LIBRARY(client STATIC ${${PROJECT_NAME}_SRCS}

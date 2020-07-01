@@ -7,4 +7,7 @@
     <include path="packet_auth_reply.xml"/>
     <include path="packet_worldlist.xml"/>
     <include path="packet_characterlist.xml"/>
+    <include path="packet_req_start_game.xml"/>
+    <include path="packet_start_game.xml"/>
+    <include path="packet_account_dump.xml"/>
 </objgen>

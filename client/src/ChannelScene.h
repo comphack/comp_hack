@@ -1,10 +1,10 @@
 /**
- * @file client/src/LobbyScene.h
+ * @file client/src/ChannelScene.h
  * @ingroup client
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Lobby scene.
+ * @brief Channel scene.
  *
  * This file is part of the COMP_hack Test Client (client).
  *
@@ -24,21 +24,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCLIENT_SRC_LOBBYSCENE_H
-#define LIBCLIENT_SRC_LOBBYSCENE_H
+#ifndef LIBCLIENT_SRC_CHANNELSCENE_H
+#define LIBCLIENT_SRC_CHANNELSCENE_H
 
 // Qt Includes
-#include "ui_LobbyScene.h"
+#include "ui_ChannelScene.h"
 
 // libclient Includes
 #include <ClientManager.h>
-
-namespace packets
-{
-
-class PacketLobbyCharacterList;
-
-} // namespace packets
 
 namespace game
 {
@@ -46,24 +39,24 @@ namespace game
 class GameWorker;
 
 /**
- * Scene to present the user with the lobby (character list).
+ * Scene to present the user with the channel.
  */
-class LobbyScene : public QWidget, public logic::ClientManager
+class ChannelScene : public QWidget, public logic::ClientManager
 {
     Q_OBJECT
 
 public:
     /**
-     * Construct the lobby scene.
+     * Construct the channel scene.
      * @param pWorker The GameWorker for the UI.
      * @param pParent Parent Qt widget for the dialog.
      */
-    LobbyScene(GameWorker *pWorker, QWidget *pParent = nullptr);
+    ChannelScene(GameWorker *pWorker, QWidget *pParent = nullptr);
 
     /**
      * Cleanup the scene.
      */
-    ~LobbyScene() override;
+    ~ChannelScene() override;
 
     /**
      * Process a client message.
@@ -81,39 +74,24 @@ protected:
 
 private slots:
     /**
-     * Update the UI after selecting a character.
+     * Backup the account.
      */
-    void selectionChanged();
-
-    /**
-     * Start game button was clicked.
-     */
-    void startGame();
+    void backupAccount();
 
 private:
     /**
-     * Handle Character List Update message.
+     * Handle account dump status message.
      * @param pMessage Client message to process.
      */
-    bool HandleCharacterListUpdate(const libcomp::Message::MessageClient *pMessage);
-
-    /**
-     * Handle the authentication reply.
-     * @param pMessage Client message to process.
-     */
-    bool HandleConnectedToChannel(
-        const libcomp::Message::MessageClient *pMessage);
+    bool HandleAccountDumpStatus(const libcomp::Message::MessageClient *pMessage);
 
     /// Pointer to the GameWorker.
     GameWorker *mGameWorker;
 
-    /// Character list data.
-    std::shared_ptr<packets::PacketLobbyCharacterList> mCharacterList;
-
     /// UI for this scene.
-    Ui::LobbyScene ui;
+    Ui::ChannelScene ui;
 };
 
 } // namespace game
 
-#endif // LIBCLIENT_SRC_LOBBYSCENE_H
+#endif // LIBCLIENT_SRC_CHANNELSCENE_H

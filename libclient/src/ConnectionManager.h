@@ -27,6 +27,9 @@
 #ifndef LIBCLIENT_SRC_CONNECTIONMANAGER_H
 #define LIBCLIENT_SRC_CONNECTIONMANAGER_H
 
+// libobjgen Includes
+#include <UUID.h>
+
 // libcomp Includes
 #include <ConnectionMessage.h>
 #include <EncryptedConnection.h>
@@ -139,7 +142,7 @@ namespace logic
          * @param obj Object to be packetized.
          * @return true if the object could be packetized; false otherwise.
          */
-        bool SendObject(std::shared_ptr<libcomp::Object> &obj);
+        bool SendObject(const std::shared_ptr<libcomp::Object> &obj);
 
         /**
          * Packetize and queue objects and then send all queued packets to the
@@ -206,6 +209,18 @@ namespace logic
         bool HandlePacketLobbyAuth(libcomp::ReadOnlyPacket &p);
 
         /**
+         * Handle the incoming login reply.
+         * @returns true if the packet was parsed correctly; false otherwise.
+         */
+        bool HandlePacketChannelLogin(libcomp::ReadOnlyPacket &p);
+
+        /**
+         * Handle the incoming auth reply.
+         * @returns true if the packet was parsed correctly; false otherwise.
+         */
+        bool HandlePacketChannelAuth(libcomp::ReadOnlyPacket &p);
+
+        /**
          * Setup a new connection.
          * @param conn Connection to setup.
          * @param connectionID ID for the connection.
@@ -262,6 +277,12 @@ namespace logic
 
         /// Client version for authentication.
         uint32_t mClientVersion;
+
+        /// Session key passed from the lobby.
+        uint32_t mSessionKey;
+
+        /// UUID of the machine the client is connecting from.
+        libobjgen::UUID mMachineUUID;
     };
 
 } // namespace logic

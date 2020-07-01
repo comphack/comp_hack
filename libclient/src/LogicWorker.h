@@ -37,6 +37,7 @@ namespace logic
     //
     // Forward declaration of managers.
     //
+    class AmalaManager;
     class ConnectionManager;
     class LobbyManager;
 
@@ -57,11 +58,19 @@ namespace logic
         virtual ~LogicWorker();
 
         /**
-         * Sent a message to the GameWorker message queue.
+         * Send a message to the GameWorker message queue.
          * @param pMessage Message to send to the GameWorker.
          * @returns true if the message was sent; false otherwise.
          */
         bool SendToGame(libcomp::Message::Message *pMessage);
+
+
+        /**
+         * Send a message to the LogicWorker message queue.
+         * @param pMessage Message to send to the LogicWorker.
+         * @returns true if the message was sent; false otherwise.
+         */
+        bool SendToLogic(libcomp::Message::Message *pMessage);
 
         /**
          * Set the message queue for the GameWorker. This message queue is used
@@ -97,12 +106,19 @@ namespace logic
         void SendPackets(const std::list<libcomp::ReadOnlyPacket *> &packets);
 
         /**
+         * Queue a packet and then send all queued packets to the remote host.
+         * @param commandCode Command code of the packet.
+         * @note This packet has no data, just a command code.
+         */
+        void SendBlankPacket(uint16_t commandCode);
+
+        /**
          * Packetize and queue an object and then send all queued packets to the
          *   remote host.
          * @param obj Object to be packetized.
          * @return true if the object could be packetized; false otherwise.
          */
-        bool SendObject(std::shared_ptr<libcomp::Object> &obj);
+        bool SendObject(const std::shared_ptr<libcomp::Object> &obj);
 
         /**
          * Packetize and queue objects and then send all queued packets to the
@@ -114,6 +130,9 @@ namespace logic
             const std::list<std::shared_ptr<libcomp::Object>> &objs);
 
     private:
+        /// Manager for the custom amala network packets.
+        AmalaManager *mAmalaManager;
+
         /// Manager for the client connection.
         ConnectionManager *mConnectionManager;
 

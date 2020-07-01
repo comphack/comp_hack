@@ -35,12 +35,14 @@ MESSAGE("** Configuring ${PROJECT_NAME} **")
 SET(${PROJECT_NAME}_SRCS
     src/main.cpp
 
+    src/ChannelScene.cpp
     src/GameWorker.cpp
     src/LobbyScene.cpp
     src/LoginDialog.cpp
 )
 
 SET(${PROJECT_NAME}_HDRS
+    src/ChannelScene.h
     src/GameWorker.h
     src/LobbyScene.h
     src/LoginDialog.h
@@ -52,6 +54,7 @@ SET(${PROJECT_NAME}_RCC
 qt5_add_resources(${PROJECT_NAME}_RCC_SRCS ${${PROJECT_NAME}_RCC})
 
 SET(${PROJECT_NAME}_UIS
+    ui/ChannelScene.ui
     ui/LobbyScene.ui
     ui/LoginDialog.ui
 )

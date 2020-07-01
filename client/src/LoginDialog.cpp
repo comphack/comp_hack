@@ -168,11 +168,13 @@ void LoginDialog::Login()
         return;
     }
 
+    auto machineUUID = libobjgen::UUID::Random();
+
     // Forward the request to the logic thread.
     mGameWorker->SendToLogic(new logic::MessageConnectToLobby(
         username.toUtf8().constData(), password.toUtf8().constData(),
         (uint32_t)clientVersion, connectionID.toUtf8().constData(),
-        host.toUtf8().constData(), (uint16_t)port));
+        host.toUtf8().constData(), (uint16_t)port, machineUUID));
 }
 
 void LoginDialog::HaveDNS()
@@ -203,11 +205,13 @@ void LoginDialog::HaveDNS()
 
     QString host = records.first().value().toString();
 
+    auto machineUUID = libobjgen::UUID::Random();
+
     // Forward the request to the logic thread.
     mGameWorker->SendToLogic(new logic::MessageConnectToLobby(
         username.toUtf8().constData(), password.toUtf8().constData(),
         (uint32_t)clientVersion, connectionID.toUtf8().constData(),
-        host.toUtf8().constData(), (uint16_t)port));
+        host.toUtf8().constData(), (uint16_t)port, machineUUID));
 }
 
 bool LoginDialog::ProcessClientMessage(

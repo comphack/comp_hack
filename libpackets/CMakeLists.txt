@@ -31,6 +31,9 @@ SET(${PROJECT_NAME}_SCHEMA
     schema/packet_auth_reply.xml
     schema/packet_worldlist.xml
     schema/packet_characterlist.xml
+    schema/packet_req_start_game.xml
+    schema/packet_start_game.xml
+    schema/packet_account_dump.xml
 )
 
 SOURCE_GROUP("objgen" ${CMAKE_CURRENT_BINARY_DIR}/objgen/*)
@@ -66,6 +69,22 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     PacketLobbyCharacterListEntry.cpp
     PacketLobbyCharacterListEquippedVAEntry.h
     PacketLobbyCharacterListEquippedVAEntry.cpp
+    PacketLobbyRequestStartGame.h
+    PacketLobbyRequestStartGame.cpp
+    PacketLobbyStartGame.h
+    PacketLobbyStartGame.cpp
+    PacketChannelLogin.cpp
+    PacketChannelLogin.h
+    PacketChannelLoginReply.cpp
+    PacketChannelLoginReply.h
+    PacketChannelAuth.cpp
+    PacketChannelAuth.h
+    PacketChannelAuthReply.cpp
+    PacketChannelAuthReply.h
+    PacketChannelAmalaAccountDumpHeader.cpp
+    PacketChannelAmalaAccountDumpHeader.h
+    PacketChannelAmalaAccountDumpPart.cpp
+    PacketChannelAmalaAccountDumpPart.h
 )
 
 ADD_LIBRARY(packets STATIC ${${PROJECT_NAME}_STRUCTS})

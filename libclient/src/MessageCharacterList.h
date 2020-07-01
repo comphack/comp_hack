@@ -70,10 +70,11 @@ namespace logic
         }
         
         /**
-         * Getter for mPacket containing character list data
-         * @return Pointer with ownership of CharacterList packet
+         * Getter for packet object containing character list data.
+         * @return Packet object containing character list data.
          */
-        std::shared_ptr<packets::PacketLobbyCharacterList> GetPayload() const {
+        std::shared_ptr<packets::PacketLobbyCharacterList> GetPayload() const
+        {
             return mPayload;
         }
 
@@ -83,9 +84,7 @@ namespace logic
          */
         libcomp::String Dump() const override
         {
-            return libcomp::String(
-                "Message: Character List Update Request\n"
-                );
+            return "Message: Character List Update Request\n";
         }
 
     private:

@@ -43,6 +43,10 @@
 #include <PacketCodes.h>
 
 // packets Includes
+#include <PacketChannelAuth.h>
+#include <PacketChannelAuthReply.h>
+#include <PacketChannelLogin.h>
+#include <PacketChannelLoginReply.h>
 #include <PacketLobbyAuth.h>
 #include <PacketLobbyAuthReply.h>
 #include <PacketLobbyLogin.h>
@@ -63,7 +67,7 @@ ConnectionManager::ConnectionManager(LogicWorker *pLogicWorker,
         &messageQueue) :
     libcomp::Manager(),
     mLogicWorker(pLogicWorker), mMessageQueue(messageQueue),
-    mClientVersion(1666)
+    mClientVersion(1666), mSessionKey(0), mMachineUUID(NULLUUID)
 {
 }
 
@@ -119,6 +123,10 @@ bool ConnectionManager::ProcessPacketMessage(
             return HandlePacketLobbyLogin(p);
         case to_underlying(LobbyToClientPacketCode_t::PACKET_AUTH):
             return HandlePacketLobbyAuth(p);
+        case to_underlying(ChannelToClientPacketCode_t::PACKET_LOGIN):
+            return HandlePacketChannelLogin(p);
+        case to_underlying(ChannelToClientPacketCode_t::PACKET_AUTH):
+            return HandlePacketChannelAuth(p);
         default:
             break;
     }
@@ -183,6 +191,7 @@ bool ConnectionManager::ProcessClientMessage(
             mUsername = pInfo->GetUsername();
             mPassword = pInfo->GetPassword();
             mClientVersion = pInfo->GetClientVersion();
+            mMachineUUID = pInfo->GetMachineUUID();
 
             /// @todo Handle if this fails.
             if(!ConnectLobby(pInfo->GetConnectionID(), pInfo->GetHost(),
@@ -197,6 +206,7 @@ bool ConnectionManager::ProcessClientMessage(
         {
             const MessageConnectToChannel *pInfo =
                 reinterpret_cast<const MessageConnectToChannel *>(pMessage);
+            mSessionKey = pInfo->GetSessionKey();
 
             /// @todo Handle if this fails.
             if(!ConnectChannel(pInfo->GetConnectionID(), pInfo->GetHost(),
@@ -337,7 +347,7 @@ void ConnectionManager::SendPackets(
     }
 }
 
-bool ConnectionManager::SendObject(std::shared_ptr<libcomp::Object> &obj)
+bool ConnectionManager::SendObject(const std::shared_ptr<libcomp::Object> &obj)
 {
     if(mActiveConnection)
     {
@@ -411,8 +421,13 @@ void ConnectionManager::AuthenticateLobby()
 
 void ConnectionManager::AuthenticateChannel()
 {
-    // mLogicWorker->SendToGame(new MessageConnectedToChannel(
-    //     mActiveConnection->GetName()));
+    // Send the login packet and await the response.
+    packets::PacketChannelLogin p;
+    p.SetPacketCode(to_underlying(ClientToChannelPacketCode_t::PACKET_LOGIN));
+    p.SetUsername(mUsername);
+    p.SetSessionKey(mSessionKey);
+
+    mActiveConnection->SendObject(p);
 }
 
 bool ConnectionManager::HandlePacketLobbyLogin(libcomp::ReadOnlyPacket &p)
@@ -446,7 +461,16 @@ bool ConnectionManager::HandlePacketLobbyLogin(libcomp::ReadOnlyPacket &p)
         packets::PacketLobbyAuth reply;
         reply.SetPacketCode(
             to_underlying(ClientToLobbyPacketCode_t::PACKET_AUTH));
-        reply.SetHash(hash);
+
+        if(mMachineUUID.IsNull())
+        {
+            reply.SetHash(hash);
+        }
+        else
+        {
+            reply.SetHash(libcomp::String("%1/%2").Arg(hash).Arg(
+                mMachineUUID.ToString()));
+        }
 
         mActiveConnection->SendObject(reply);
     }
@@ -512,6 +536,72 @@ bool ConnectionManager::HandlePacketLobbyAuth(libcomp::ReadOnlyPacket &p)
         CloseConnection();
         mLogicWorker->SendToGame(
             new MessageConnectedToLobby(connectionID, errorCode));
+    }
+
+    return true;
+}
+
+bool ConnectionManager::HandlePacketChannelLogin(libcomp::ReadOnlyPacket &p)
+{
+    packets::PacketChannelLoginReply obj;
+
+    if(!obj.LoadPacket(p) || p.Left())
+    {
+        return false;
+    }
+
+    ErrorCodes_t errorCode = (ErrorCodes_t)obj.GetResponseCode();
+
+    if(1 == to_underlying(errorCode))
+    {
+        // Send the auth packet and await the response.
+        packets::PacketChannelAuth reply;
+        reply.SetPacketCode(
+            to_underlying(ClientToChannelPacketCode_t::PACKET_AUTH));
+        reply.SetHash("0000000000000000000000000000000000000000");
+
+        mActiveConnection->SendObject(reply);
+    }
+    else
+    {
+        // Save this before closing the connection.
+        auto connectionID = mActiveConnection->GetName();
+
+        // An error occurred so close the connection and pass it along.
+        CloseConnection();
+        mLogicWorker->SendToGame(
+            new MessageConnectedToChannel(connectionID, errorCode));
+    }
+
+    return true;
+}
+
+bool ConnectionManager::HandlePacketChannelAuth(libcomp::ReadOnlyPacket &p)
+{
+    packets::PacketChannelAuthReply obj;
+
+    if(!obj.LoadPacket(p) || p.Left())
+    {
+        return false;
+    }
+
+    ErrorCodes_t errorCode = (ErrorCodes_t)obj.GetResponseCode();
+
+    if(ErrorCodes_t::SUCCESS == errorCode)
+    {
+        // Notify the game we are connected and authenticated.
+        mLogicWorker->SendToGame(new MessageConnectedToChannel(
+            mActiveConnection->GetName(), errorCode));
+    }
+    else
+    {
+        // Save this before closing the connection.
+        auto connectionID = mActiveConnection->GetName();
+
+        // An error occurred so close the connection and pass it along.
+        CloseConnection();
+        mLogicWorker->SendToGame(
+            new MessageConnectedToChannel(connectionID, errorCode));
     }
 
     return true;

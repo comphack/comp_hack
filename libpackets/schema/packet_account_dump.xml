@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="PacketChannelAmalaAccountDumpHeader" persistent="false" namespace="packets">
+        <member type="u32" name="DumpSize"/>
+        <member type="u32" name="PartCount"/>
+        <member type="string" name="SHA1" lensz="2"/>
+        <member type="string" name="AccountName" lensz="2"/>
+    </object>
+    <object name="PacketChannelAmalaAccountDumpPart" persistent="false" namespace="packets">
+        <member type="u32" name="PartNumber"/>
+        <member type="list" name="PartData">
+            <element type="s8"/>
+        </member>
+    </object>
+</objgen>

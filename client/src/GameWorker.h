@@ -46,6 +46,7 @@ namespace game
 //
 // Forward declaration of managers / game components.
 //
+class ChannelScene;
 class LobbyScene;
 class LoginDialog;
 
@@ -113,6 +114,12 @@ public:
         libcomp::Message::Message*> *pMessageQueue) override;
 
     /**
+     * Get the channel scene.
+     * @returns Pointer to the channel scene.
+     */
+    ChannelScene* GetChannelScene() const;
+
+    /**
      * Get the login dialog.
      * @returns Pointer to the login dialog.
      */
@@ -167,12 +174,25 @@ private:
     /// List of pointers to client message handlers.
     std::set<logic::ClientManager*> mClientManagers;
 
+    /// Channel scene.
+    ChannelScene *mChannelScene;
+
     /// Login dialog.
     LoginDialog *mLoginDialog;
 
     /// Lobby scene.
     LobbyScene *mLobbyScene;
 };
+
+static inline QString qs(const libcomp::String& s)
+{
+    return QString::fromUtf8(s.C());
+}
+
+static inline libcomp::String cs(const QString& s)
+{
+    return libcomp::String(s.toUtf8().constData());
+}
 
 } // namespace game
 

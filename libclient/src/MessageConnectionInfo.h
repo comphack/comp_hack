@@ -27,6 +27,9 @@
 #ifndef LIBCLIENT_SRC_MESSAGECONNECTIONINFO_H
 #define LIBCLIENT_SRC_MESSAGECONNECTIONINFO_H
 
+// libobjgen Includes
+#include <UUID.h>
+
 // libcomp Includes
 #include <CString.h>
 #include <MessageClient.h>
@@ -99,13 +102,16 @@ public:
      * @param connectionID ID for the connection.
      * @param host Host to connect to.
      * @param port Port on the host to connect to.
+     * @param machineUUID UUID of the machine the client is connecting from.
      */
     MessageConnectToLobby(const libcomp::String& username,
         const libcomp::String& password, uint32_t clientVersion = 1666,
         const libcomp::String& connectionID = "lobby",
-        const libcomp::String& host = "127.0.0.1", uint16_t port = 10666) :
+        const libcomp::String& host = "127.0.0.1", uint16_t port = 10666,
+        const libobjgen::UUID& machineUUID = NULLUUID) :
         MessageConnectionInfo(connectionID, host, port), mUsername(username),
-        mPassword(password), mClientVersion(clientVersion) { }
+        mPassword(password), mClientVersion(clientVersion),
+        mMachineUUID(machineUUID) { }
 
     /**
      * Cleanup the message.
@@ -129,6 +135,12 @@ public:
      * @returns Client version for authentication.
      */
     uint32_t GetClientVersion() const { return mClientVersion; }
+
+    /**
+     * Get the UUID of the machine the client is connecting from.
+     * @returns UUID of the machine the client is connecting from.
+     */
+    libobjgen::UUID GetMachineUUID() const { return mMachineUUID; }
 
     /**
      * Get the specific client message type.
@@ -158,6 +170,9 @@ private:
 
     /// Client version for authentication.
     uint32_t mClientVersion;
+
+    /// UUID of the machine the client is connecting from.
+    libobjgen::UUID mMachineUUID;
 };
 
 /**
@@ -168,18 +183,27 @@ class MessageConnectToChannel : public MessageConnectionInfo
 public:
     /**
      * Create the message.
+     * @param sesisonKey Session key passed from the lobby.
      * @param connectionID ID for the connection.
      * @param host Host to connect to.
      * @param port Port on the host to connect to.
      */
-    MessageConnectToChannel(const libcomp::String& connectionID = "channel",
+    MessageConnectToChannel(uint32_t sessionKey,
+        const libcomp::String& connectionID = "channel",
         const libcomp::String& host = "127.0.0.1", uint16_t port = 14666) :
-        MessageConnectionInfo(connectionID, host, port) { }
+        MessageConnectionInfo(connectionID, host, port),
+        mSessionKey(sessionKey) { }
 
     /**
      * Cleanup the message.
      */
     ~MessageConnectToChannel() override { }
+
+    /**
+     * Get the session key passed from the lobby.
+     * @returns Session key passed from the lobby.
+     */
+    uint32_t GetSessionKey() const { return mSessionKey; }
 
     /**
      * Get the specific client message type.
@@ -196,8 +220,13 @@ public:
     libcomp::String Dump() const override
     {
         return libcomp::String("Message: Connect to channel server\n"
-            "ID: %1\nServer: %2:%3").Arg(mConnectionID).Arg(mHost).Arg(mPort);
+            "ID: %1\nServer: %2:%3\nSession Key: %4").Arg(mConnectionID)
+            .Arg(mHost).Arg(mPort).Arg(mSessionKey);
     }
+
+private:
+    /// Session key passed from the lobby.
+    uint32_t mSessionKey;
 };
 
 /**

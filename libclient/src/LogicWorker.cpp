@@ -27,6 +27,7 @@
 #include "LogicWorker.h"
 
 // Managers
+#include "AmalaManager.h"
 #include "ConnectionManager.h"
 #include "LobbyManager.h"
 
@@ -35,21 +36,26 @@ using namespace logic;
 LogicWorker::LogicWorker() : libcomp::Worker()
 {
     // Construct the managers.
+    auto amalaManager =
+        std::make_shared<AmalaManager>(this, GetMessageQueue());
     auto connectionManager =
         std::make_shared<ConnectionManager>(this, GetMessageQueue());
     auto lobbyManager = std::make_shared<LobbyManager>(this, GetMessageQueue());
 
     // Save pointers to the managers.
+    mAmalaManager = amalaManager.get();
     mConnectionManager = connectionManager.get();
     mLobbyManager = lobbyManager.get();
 
     // Add the managers so they may process the queue.
+    AddManager(amalaManager);
     AddManager(connectionManager);
     AddManager(lobbyManager);
 }
 
 LogicWorker::~LogicWorker()
 {
+    mAmalaManager = nullptr;
     mConnectionManager = nullptr;
     mLobbyManager = nullptr;
 }
@@ -59,6 +65,22 @@ bool LogicWorker::SendToGame(libcomp::Message::Message *pMessage)
     if(mGameMessageQueue)
     {
         mGameMessageQueue->Enqueue(pMessage);
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool LogicWorker::SendToLogic(libcomp::Message::Message *pMessage)
+{
+    auto pMessageQueue = GetMessageQueue();
+
+    if(pMessageQueue)
+    {
+        pMessageQueue->Enqueue(pMessage);
 
         return true;
     }
@@ -96,7 +118,15 @@ void LogicWorker::SendPackets(
     mConnectionManager->SendPackets(packets);
 }
 
-bool LogicWorker::SendObject(std::shared_ptr<libcomp::Object> &obj)
+void LogicWorker::SendBlankPacket(uint16_t commandCode)
+{
+    libcomp::Packet p;
+    p.WriteU16Little(commandCode);
+
+    mConnectionManager->SendPacket(p);
+}
+
+bool LogicWorker::SendObject(const std::shared_ptr<libcomp::Object> &obj)
 {
     return mConnectionManager->SendObject(obj);
 }

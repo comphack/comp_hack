@@ -5,4 +5,7 @@
         <member type="u32" name="Challenge"/>
         <member type="string" name="Salt" lensz="2"/>
     </object>
+    <object name="PacketChannelLoginReply" persistent="false" namespace="packets">
+        <member type="s32" name="ResponseCode"/>
+    </object>
 </objgen>

@@ -1,10 +1,10 @@
 /**
- * @file libcomp/src/LobbyManager.h
+ * @file libcomp/src/AmalaManager.h
  * @ingroup libcomp
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
- * @brief Manages the active lobby client connection.
+ * @brief Manages the custom amala network packets.
  *
  * This file is part of the COMP_hack Client Library (libclient).
  *
@@ -24,8 +24,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBCLIENT_SRC_LOBBYMANAGER_H
-#define LIBCLIENT_SRC_LOBBYMANAGER_H
+#ifndef LIBCLIENT_SRC_AMALAMANAGER_H
+#define LIBCLIENT_SRC_AMALAMANAGER_H
 
 // libcomp Includes
 #include <Manager.h>
@@ -44,12 +44,6 @@ class MessageClient;
 
 } // namespace libcomp
 
-namespace packets
-{
-    class PacketLobbyWorldList;
-    class PacketLobbyCharacterList;
-} // namespace packets
-
 namespace logic
 {
     class LogicWorker;
@@ -57,14 +51,14 @@ namespace logic
     /**
      * Worker for client<==>server interaction.
      */
-    class LobbyManager : public libcomp::Manager
+    class AmalaManager : public libcomp::Manager
     {
     public:
         /**
          * Create a new worker.
          * @param messageQueue Message queue of the LogicWorker.
          */
-        explicit LobbyManager(LogicWorker *pLogicWorker,
+        explicit AmalaManager(LogicWorker *pLogicWorker,
             const std::weak_ptr<
                 libcomp::MessageQueue<libcomp::Message::Message *>>
                 &messageQueue);
@@ -72,7 +66,7 @@ namespace logic
         /**
          * Cleanup the worker.
          */
-        virtual ~LobbyManager();
+        virtual ~AmalaManager();
 
         /**
          * Get the different types of messages handled by the manager.
@@ -97,22 +91,16 @@ namespace logic
 
     private:
         /**
-         * Handle the incoming world list packet.
+         * Handle the incoming account dump.
          * @returns true if the packet was parsed correctly; false otherwise.
          */
-        bool HandlePacketLobbyWorldList(libcomp::ReadOnlyPacket &p);
+        bool HandlePacketChannelAmalaAccountDumpHeader(libcomp::ReadOnlyPacket &p);
 
         /**
-         * Handle the incoming character list packet.
+         * Handle the incoming account dump.
          * @returns true if the packet was parsed correctly; false otherwise.
          */
-        bool HandlePacketLobbyCharacterList(libcomp::ReadOnlyPacket &p);
-
-        /**
-         * Handle the incoming start game packet.
-         * @returns true if the packet was parsed correctly; false otherwise.
-         */
-        bool HandlePacketLobbyStartGame(libcomp::ReadOnlyPacket &p);
+        bool HandlePacketChannelAmalaAccountDumpPart(libcomp::ReadOnlyPacket &p);
 
         /**
          * Process a packet message.
@@ -127,13 +115,25 @@ namespace logic
         std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
             mMessageQueue;
 
-        /// List of the worlds and channels.
-        std::shared_ptr<packets::PacketLobbyWorldList> mWorldList;
+        /// Account dump SHA1 hash.
+        libcomp::String mAccountDumpSHA1;
 
-        ///List of the characters.
-        std::shared_ptr<packets::PacketLobbyCharacterList> mCharacterList;
+        /// Account dump account name.
+        libcomp::String mAccountDumpName;
+
+        /// Account dump SHA1 hash.
+        std::vector<char> mAccountDump;
+
+        /// Size of the account dump.
+        uint32_t mAccountDumpSize;
+
+        /// Number of parts.
+        uint32_t mAccountDumpPartCount;
+
+        /// Account dump file path.
+        libcomp::String mAccountDumpPath;
     };
 
 } // namespace logic
 
-#endif // LIBCLIENT_SRC_LOBBYMANAGER_H
+#endif // LIBCLIENT_SRC_AMALAMANAGER_H

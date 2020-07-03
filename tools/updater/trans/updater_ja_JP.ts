@@ -398,7 +398,7 @@
     </message>
     <message>
         <location filename="../src/Updater.cpp" line="431"/>
-        <location filename="../src/Updater.cpp" line="556"/>
+        <location filename="../src/Updater.cpp" line="565"/>
         <source>Updater Error</source>
         <translation type="unfinished"></translation>
     </message>
@@ -408,12 +408,12 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="487"/>
+        <location filename="../src/Updater.cpp" line="496"/>
         <source>Recheck Files</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Updater.cpp" line="488"/>
+        <location filename="../src/Updater.cpp" line="497"/>
         <source>Are you sure you wish to recheck all files? This can take a very long time to complete.</source>
         <translation type="unfinished"></translation>
     </message>

@@ -435,11 +435,20 @@ void Updater::startGame()
         }
     }
 
-#ifdef Q_OS_WIN32
-    QProcess::startDetached("ImagineClient.exe");
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    env.insert("HACKFROST", "dualwield");
+
+    QProcess proc;
+    proc.setProcessEnvironment(env);
+
+#ifndef Q_OS_WIN32
+    proc.setProgram("ImagineClient.exe");
 #else
-    QProcess::startDetached("env WINEPREFIX=\"/home/erikku/.wine\" wine ImagineClient.exe");
+    proc.setProgram("wine");
+    proc.setArguments(QStringList() << "ImagineClient.exe");
 #endif // Q_OS_WIN32
+
+    proc.startDetached();
 
     qApp->quit();
 }

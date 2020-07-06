@@ -207,7 +207,7 @@ bool Parsers::TeamInvite::Parse(libcomp::ManagerPacket *pPacketManager,
             reply.WriteS8(targetError);
             reply.WriteString16Little(state->GetClientStringEncoding(),
                 targetName, true);
-            reply.WriteS8(team->GetType());
+            reply.WriteS8(team ? team->GetType() : -1);
 
             client->QueuePacket(reply);
         }

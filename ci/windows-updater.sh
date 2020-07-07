@@ -48,5 +48,5 @@ mv comp_hack-*.zip "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
     dropbox_setup
-    dropbox_upload comp_hack "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
+    dropbox_upload updater "comp_hack-${TRAVIS_COMMIT}-${PLATFORM}.zip"
 fi

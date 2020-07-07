@@ -29,6 +29,7 @@
 // libcomp Includes
 #include <Constants.h>
 #include <DefinitionManager.h>
+#include <Log.h>
 #include <Randomizer.h>
 #include <ServerConstants.h>
 
@@ -535,7 +536,7 @@ bool ActiveEntityState::UpdatePendingCombatants(int32_t entityID,
                     RemovePendingCombatants(pair.first);
                 }
             }
-            
+
         }
 
         if(!PendingCombatantsCount())
@@ -806,7 +807,7 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
         }
 
         result |= !canOverflow && newHP != startingHP;
-        
+
         if(!canOverflow)
         {
             hpAdjusted = (int32_t)(newHP - startingHP);
@@ -814,12 +815,12 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
 
         cs->SetHP(newHP);
     }
-    
+
     if(mp >= 0)
     {
         auto newMP = mp > maxMP ? maxMP : mp;
         result |= !canOverflow && newMP != startingMP;
-        
+
         if(!canOverflow)
         {
             mpAdjusted = (int32_t)(newMP - startingMP);
@@ -1463,7 +1464,7 @@ void ActiveEntityState::SetStatusEffectsActive(bool activate,
     else
     {
         mTimeDamageEffects.clear();
-        
+
         if(mCurrentZone)
         {
             mCurrentZone->SetNextStatusEffectTime(0, GetEntityID());
@@ -1615,10 +1616,27 @@ uint8_t ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
                     for(auto effectType : mTimeDamageEffects)
                     {
                         auto se = mStatusEffectDefs[effectType];
-                        auto damage = se->GetEffect()->GetDamage();
 
-                        hpTDamage = (int32_t)(hpTDamage + damage->GetHPDamage());
-                        mpTDamage = (int32_t)(mpTDamage + damage->GetMPDamage());
+                        if(se)
+                        {
+                            auto damage = se->GetEffect()->GetDamage();
+
+                            hpTDamage = (int32_t)(hpTDamage +
+                                damage->GetHPDamage());
+                            mpTDamage = (int32_t)(mpTDamage +
+                                damage->GetMPDamage());
+                        }
+                        else
+                        {
+                            LogCharacterManagerError([&]()
+                            {
+                                return libcomp::String(
+                                    "%1: Failed to get effect %2 "
+                                    "in ActiveEntityState::PopEffectTicks\n")
+                                    .Arg(GetEntityLabel())
+                                    .Arg(effectType);
+                            });
+                        }
                     }
                 }
 
@@ -1732,7 +1750,7 @@ std::list<std::pair<std::shared_ptr<objects::StatusEffect>, uint32_t>>
             nextTimes[effectType] = pair.first;
         }
     }
-    
+
     for(auto pair : mStatusEffects)
     {
         uint32_t exp = pair.second->GetExpiration();
@@ -2244,6 +2262,19 @@ uint32_t ActiveEntityState::GetCurrentExpiration(
     if(exp > 0)
     {
         auto se = mStatusEffectDefs[effect->GetEffect()];
+
+        if(!se)
+        {
+            LogCharacterManagerError([&]()
+            {
+                return libcomp::String("%1: Failed to get effect %2 "
+                    "in ActiveEntityState::GetCurrentExpiration")
+                    .Arg(GetEntityLabel()).Arg(effect->GetEffect());
+            });
+
+            return 0;
+        }
+
         auto cancel = se->GetCancel();
         switch(cancel->GetDurationType())
         {
@@ -2558,7 +2589,7 @@ void ActiveEntityStateImp<objects::Enemy>::SetEntity(
 {
     std::lock_guard<std::mutex> lock(mLock);
     mEntity = entity;
-    
+
     if(entity)
     {
         mAlive = entity->GetCoreStats()->GetHP() > 0;
@@ -3046,7 +3077,7 @@ void ActiveEntityState::UpdateNRAChances(libcomp::EnumMap<CorrectTbl, int32_t>& 
     std::unordered_map<int16_t, int16_t> mNullMap;
     std::unordered_map<int16_t, int16_t> mReflectMap;
     std::unordered_map<int16_t, int16_t> mAbsorbMap;
-    
+
     // Set from base
     for(uint8_t x = (uint8_t)CorrectTbl::NRA_WEAPON;
         x <= (uint8_t)CorrectTbl::NRA_MAGIC; x++)

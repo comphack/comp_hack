@@ -161,6 +161,10 @@
 #include <MiZoneData.h>
 #include <QmpFile.h>
 
+#ifdef DREAM_OBJGEN_INCLUDE_A
+#include DREAM_OBJGEN_INCLUDE_A
+#endif // DREAM_OBJGEN_INCLUDE_A
+
 // tinyxml2 Includes
 #include <PushIgnore.h>
 #include <tinyxml2.h>
@@ -390,6 +394,10 @@ int main(int argc, char *argv[])
     ADD_TYPE_SEQ("  modexteffect          Format for ModificationExtEffectData.sbin", "modexteffect", MiModificationExtEffectData);
     ADD_TYPE_SEQ("  urafieldtower         Format for UraFieldTowerData.sbin", "urafieldtower", MiUraFieldTowerData);
     ADD_TYPE_MAN("  qmp                   Format for misc qmp files", "qmp", QmpFile);
+
+#ifdef DREAM_OBJGEN_INCLUDE_B
+#include DREAM_OBJGEN_INCLUDE_B
+#endif // DREAM_OBJGEN_INCLUDE_B
 
     if(5 != argc)
     {

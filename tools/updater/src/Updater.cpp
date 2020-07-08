@@ -441,7 +441,7 @@ void Updater::startGame()
     QProcess proc;
     proc.setProcessEnvironment(env);
 
-#ifndef Q_OS_WIN32
+#ifdef Q_OS_WIN32
     proc.setProgram("ImagineClient.exe");
 #else
     proc.setProgram("wine");

@@ -1320,6 +1320,9 @@ bool SkillManager::SkillRestricted(
     const std::shared_ptr<objects::MiSkillData>& skillData,
     int64_t activationObjectID, std::shared_ptr<SkillExecutionContext> ctx)
 {
+    // Digitize skills have a different weapon restricton
+    bool isDigiSkill = false;
+
     bool playerEntity = source->GetEntityType() == EntityType_t::CHARACTER ||
         source->GetEntityType() == EntityType_t::PARTNER_DEMON;
     if(playerEntity && (!ctx || !ctx->IgnoreAvailable))
@@ -1345,7 +1348,7 @@ bool SkillManager::SkillRestricted(
             // Allow if its a digitalized demon skill
             auto cState = std::dynamic_pointer_cast<CharacterState>(source);
             auto dgState = cState ? cState->GetDigitalizeState() : nullptr;
-            available = dgState && dgState->ActiveSkillsContains(
+            isDigiSkill = available = dgState && dgState->ActiveSkillsContains(
                 skillData->GetCommon()->GetID());
         }
 
@@ -1467,19 +1470,19 @@ bool SkillManager::SkillRestricted(
         bool longRange = weaponDef && weaponDef->GetBasic()->GetWeaponType()
             == objects::MiItemBasicData::WeaponType_t::LONG_RANGE;
 
-        // Check normal and digi restriction (no special logic in case they
-        // somehow have a digi only skill when not digi'd)
-        if(restr->GetWeaponType() != objects::MiRestrictionData::
-            WeaponType_t::NONE &&
-            (longRange != (restr->GetWeaponType() == objects::
-                MiRestrictionData::WeaponType_t::LONG_RANGE)))
+        // Check digi or normal restriction depending on if the skill
+        // was obtained through digi or not.
+        if(isDigiSkill && restr->GetDigitizeWeaponType() !=
+            objects::MiRestrictionData::DigitizeWeaponType_t::NONE &&
+            (longRange != (restr->GetDigitizeWeaponType() == objects::
+                MiRestrictionData::DigitizeWeaponType_t::LONG_RANGE)))
         {
             return true;
         }
-        else if(restr->GetDigitizeWeaponType() != objects::MiRestrictionData::
-            DigitizeWeaponType_t::NONE &&
-            (longRange != (restr->GetDigitizeWeaponType() == objects::
-                MiRestrictionData::DigitizeWeaponType_t::LONG_RANGE)))
+        else if(!isDigiSkill && restr->GetWeaponType() !=
+            objects::MiRestrictionData::WeaponType_t::NONE &&
+            (longRange != (restr->GetWeaponType() == objects::
+                MiRestrictionData::WeaponType_t::LONG_RANGE)))
         {
             return true;
         }

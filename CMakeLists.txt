@@ -976,6 +976,9 @@ IF(NOT WIN32)
         DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/systemd/system)
     INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/contrib/webroot
         DESTINATION ${CMAKE_INSTALL_LOCALSTATEDIR}/lib/comp_hack)
+    INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/datastore
+        DESTINATION ${CMAKE_INSTALL_LOCALSTATEDIR}/lib/comp_hack
+        PATTERN ".git*" EXCLUDE)
     INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/contrib/nixconfig/
         DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/comp_hack)
     INSTALL(FILES ${CMAKE_SOURCE_DIR}/contrib/testing/config/constants.xml

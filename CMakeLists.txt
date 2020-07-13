@@ -219,8 +219,7 @@ IF(WIN32)
             "${CMAKE_SOURCE_DIR}/contrib/winconfig/setup.xml"
             "${CMAKE_SOURCE_DIR}/contrib/winconfig/newcharacter.xml"
             "${CMAKE_SOURCE_DIR}/contrib/testing/config/constants.xml"
-            DESTINATION config
-            COMPONENT config)
+            DESTINATION config COMPONENT config)
 
         INSTALL(DIRECTORY
             "${CMAKE_SOURCE_DIR}/contrib/webroot"
@@ -229,17 +228,28 @@ IF(WIN32)
         INSTALL(DIRECTORY "${CMAKE_SOURCE_DIR}/datastore/"
             DESTINATION datastore COMPONENT datastore
             PATTERN ".git*" EXCLUDE)
-        INSTALL(FILES "${CMAKE_SOURCE_DIR}/contrib/.keep"
-            DESTINATION database)
-        INSTALL(FILES "${CMAKE_SOURCE_DIR}/contrib/.keep"
-            DESTINATION logs)
+        INSTALL(FILES "${CMAKE_SOURCE_DIR}/contrib/KEEP"
+            DESTINATION database COMPONENT config)
+        INSTALL(FILES "${CMAKE_SOURCE_DIR}/contrib/KEEP"
+            DESTINATION logs COMPONENT config)
 
-        SET_PROPERTY(INSTALL config PROPERTY
-            CMAKE_WIX_ACL "[LoginUser]=GenericAll")
-            SET_PROPERTY(INSTALL database PROPERTY
-            CMAKE_WIX_ACL "[SERVICEACCOUNT]=GenericAll")
+        SET_PROPERTY(INSTALL config/lobby.xml PROPERTY
+            CPACK_WIX_ACL "Everyone=GenericAll")
+        SET_PROPERTY(INSTALL config/channel.xml PROPERTY
+            CPACK_WIX_ACL "Everyone=GenericAll")
+        SET_PROPERTY(INSTALL config/world.xml PROPERTY
+            CPACK_WIX_ACL "Everyone=GenericAll")
+        SET_PROPERTY(INSTALL config/setup.xml PROPERTY
+            CPACK_WIX_ACL "Everyone=GenericAll")
+        SET_PROPERTY(INSTALL config/newcharacter.xml PROPERTY
+            CPACK_WIX_ACL "Everyone=GenericAll")
+        SET_PROPERTY(INSTALL config/constants.xml PROPERTY
+            CPACK_WIX_ACL "Everyone=GenericAll")
+
+        SET_PROPERTY(INSTALL database PROPERTY
+            CPACK_WIX_ACL "Everyone=GenericAll")
         SET_PROPERTY(INSTALL logs PROPERTY
-            CMAKE_WIX_ACL "[SERVICEACCOUNT]=GenericAll")
+            CPACK_WIX_ACL "Everyone=GenericAll")
     ENDIF(NOT CHANNEL_ONLY)
 ELSE()
     SET(COMP_INSTALL_DIR "bin")

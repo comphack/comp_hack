@@ -126,7 +126,7 @@ SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
 SET(CPACK_PACKAGE_VERSION_MAJOR ${VERSION_MAJOR})
 SET(CPACK_PACKAGE_VERSION_MINOR ${VERSION_MINOR})
 SET(CPACK_PACKAGE_VERSION_PATCH ${VERSION_PATCH})
-SET(CPACK_COMPONENTS_ALL runtime lobby world channel tools config webroot docs)
+SET(CPACK_COMPONENTS_ALL runtime lobby world channel tools config webroot datastore docs)
 
 SET(CPACK_COMPONENT_RUNTIME_DISPLAY_NAME "C++ Runtime Library")
 SET(CPACK_COMPONENT_RUNTIME_DESCRIPTION "Runtime library needed by the software.")
@@ -144,6 +144,9 @@ SET(CPACK_COMPONENT_CONFIG_DESCRIPTION "Example configuration files to get up an
 SET(CPACK_COMPONENT_WEBROOT_DISPLAY_NAME "API Website Files")
 SET(CPACK_COMPONENT_WEBROOT_DESCRIPTION "Website files for the internal API (in the lobby). This includes the example account manager site.")
 SET(CPACK_COMPONENT_WEBROOT_DEPENDS lobby)
+SET(CPACK_COMPONENT_DATASTORE_DISPLAY_NAME "Server Content")
+SET(CPACK_COMPONENT_DATASTORE_DESCRIPTION "Server-side content (datastore) that implements all vanilla content.")
+SET(CPACK_COMPONENT_DATASTORE_DEPENDS channel)
 SET(CPACK_COMPONENT_DOCS_DISPLAY_NAME "Documentation")
 SET(CPACK_COMPONENT_DOCS_DESCRIPTION "Documentation for the server.")
 
@@ -221,12 +224,22 @@ IF(WIN32)
 
         INSTALL(DIRECTORY
             "${CMAKE_SOURCE_DIR}/contrib/webroot"
-            DESTINATION /
-            COMPONENT webroot)
+            DESTINATION / COMPONENT webroot)
 
-        INSTALL(DIRECTORY DESTINATION datastore)
-        INSTALL(DIRECTORY DESTINATION database)
-        INSTALL(DIRECTORY DESTINATION logs)
+        INSTALL(DIRECTORY "${CMAKE_SOURCE_DIR}/datastore/"
+            DESTINATION datastore COMPONENT datastore
+            PATTERN ".git*" EXCLUDE)
+        INSTALL(FILES "${CMAKE_SOURCE_DIR}/contrib/.keep"
+            DESTINATION database)
+        INSTALL(FILES "${CMAKE_SOURCE_DIR}/contrib/.keep"
+            DESTINATION logs)
+
+        SET_PROPERTY(INSTALL config PROPERTY
+            CMAKE_WIX_ACL "[LoginUser]=GenericAll")
+            SET_PROPERTY(INSTALL database PROPERTY
+            CMAKE_WIX_ACL "[SERVICEACCOUNT]=GenericAll")
+        SET_PROPERTY(INSTALL logs PROPERTY
+            CMAKE_WIX_ACL "[SERVICEACCOUNT]=GenericAll")
     ENDIF(NOT CHANNEL_ONLY)
 ELSE()
     SET(COMP_INSTALL_DIR "bin")

@@ -1471,7 +1471,8 @@ bool SkillManager::SkillRestricted(
             == objects::MiItemBasicData::WeaponType_t::LONG_RANGE;
 
         // Check digi or normal restriction depending on if the skill
-        // was obtained through digi or not.
+        // was obtained through digi or not. Digi skills consider both
+        // digi and normal restrictions.
         if(isDigiSkill && restr->GetDigitizeWeaponType() !=
             objects::MiRestrictionData::DigitizeWeaponType_t::NONE &&
             (longRange != (restr->GetDigitizeWeaponType() == objects::
@@ -1479,7 +1480,7 @@ bool SkillManager::SkillRestricted(
         {
             return true;
         }
-        else if(!isDigiSkill && restr->GetWeaponType() !=
+        else if(restr->GetWeaponType() !=
             objects::MiRestrictionData::WeaponType_t::NONE &&
             (longRange != (restr->GetWeaponType() == objects::
                 MiRestrictionData::WeaponType_t::LONG_RANGE)))

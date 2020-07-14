@@ -5058,9 +5058,9 @@ bool CharacterManager::UpdateExperience(const std::shared_ptr<
 
             int32_t points = 0;
             int32_t bonusCount = 0;
-            for(int8_t lvl = startingLevel; lvl < level; lvl++)
+            for(int8_t lvl = (int8_t)(startingLevel + 1); lvl <= level; lvl++)
             {
-                points = points + (int32_t)(floorl((float)lvl / 5) + 2);
+                points = points + (int32_t)((lvl / 5) + 2);
 
                 if(bonusChance > 0.f)
                 {

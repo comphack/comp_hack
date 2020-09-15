@@ -26,12 +26,18 @@
 #include "ChannelConnection.h"
 
 #include <Crypto.h>
-#include <PopIgnore.h>
+
+// Ignore warnings
 #include <PushIgnore.h>
 
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
+
+// Standard C++ Includes
 #include <iostream>
 
 #include "LoggerServer.h"

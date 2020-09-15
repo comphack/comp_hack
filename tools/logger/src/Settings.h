@@ -25,12 +25,16 @@
 #ifndef TOOLS_LOGGER_SRC_SETTINGS_H
 #define TOOLS_LOGGER_SRC_SETTINGS_H
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QDialog>
 
 #include "ui_Settings.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class LoggerServer;
 

@@ -51,10 +51,10 @@
 #include "XmlHandler.h"
 #include "ZoneWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QCheckBox>
 #include <QDir>
 #include <QDirIterator>
@@ -71,6 +71,9 @@
 #include <QTextEdit>
 
 #include "ui_FindEventAction.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // object Includes
 #include <Event.h>

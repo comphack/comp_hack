@@ -24,7 +24,7 @@
 
 #include "MainWindow.h"
 
-#include <PopIgnore.h>
+// Ignore Warnings
 #include <PushIgnore.h>
 
 #include <QActionGroup>
@@ -41,6 +41,9 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTextEdit>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #include "Filter.h"
 #include "OpenMulti.h"

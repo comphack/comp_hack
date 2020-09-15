@@ -27,11 +27,14 @@
 // objects Includes
 #include <SpawnLocation.h>
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_SpawnLocation.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 SpawnLocation::SpawnLocation(QWidget* pParent) : QWidget(pParent) {
   prop = new Ui::SpawnLocation;

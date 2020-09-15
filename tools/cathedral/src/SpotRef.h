@@ -25,11 +25,14 @@
 #ifndef TOOLS_CATHEDRAL_SRC_SPOTREF_H
 #define TOOLS_CATHEDRAL_SRC_SPOTREF_H
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QWidget>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include <CString.h>

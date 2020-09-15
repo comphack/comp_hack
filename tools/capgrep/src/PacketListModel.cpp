@@ -24,7 +24,7 @@
 
 #include "PacketListModel.h"
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
 #include <QBrush>
@@ -32,6 +32,9 @@
 #include <QDomDocument>
 #include <QDomElement>
 #include <QFile>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #include "PacketData.h"
 

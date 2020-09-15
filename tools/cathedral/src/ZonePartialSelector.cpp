@@ -28,11 +28,14 @@
 #include "MainWindow.h"
 #include "ZoneWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_ZonePartialSelector.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // object Includes
 #include <ServerZone.h>

@@ -26,9 +26,10 @@
 
 #include "Updater.h"
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QApplication>
 #include <QDate>
 #include <QDir>
@@ -38,6 +39,11 @@
 #include <QProcess>
 #include <QSettings>
 #include <QStringList>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
+
+// Standard C++ Includes
 #include <iostream>
 
 #include "Downloader.h"

@@ -24,15 +24,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <PushIgnore.h>
 #ifdef COMP_HACK_HEADLESS
+
+// Ignore warnings
+#include <PushIgnore.h>
+
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QSettings>
 
-#include "Downloader.h"
-#else  // COMP_HACK_HEADLESS
+// Stop ignoring warnings
 #include <PopIgnore.h>
+
+#include "Downloader.h"
+
+#else  // COMP_HACK_HEADLESS
+
+// Ignore warnings
+#include <PushIgnore.h>
 
 #include <QApplication>
 #include <QFile>
@@ -50,6 +59,9 @@ Q_IMPORT_PLUGIN(qgif)
 #ifdef Q_OS_WIN32
 #include <windows.h>
 #endif  // Q_OS_WIN32
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #include "LanguageSelection.h"
 #include "Updater.h"

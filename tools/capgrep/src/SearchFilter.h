@@ -25,13 +25,17 @@
 #ifndef TOOLS_CAPGREP_SRC_SEARCHFILTER_H
 #define TOOLS_CAPGREP_SRC_SEARCHFILTER_H
 
-#include <PopIgnore.h>
-#include <PushIgnore.h>
 #include <stdint.h>
+
+// Ignore warnings
+#include <PushIgnore.h>
 
 #include <QByteArray>
 #include <QSortFilterProxyModel>
 #include <QString>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class SearchFilter : public QSortFilterProxyModel {
   Q_OBJECT

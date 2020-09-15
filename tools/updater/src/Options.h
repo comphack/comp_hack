@@ -27,18 +27,26 @@
 #ifndef TOOLS_UPDATER_SRC_OPTIONS_H
 #define TOOLS_UPDATER_SRC_OPTIONS_H
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
 #include <QDialog>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #include "ui_Options.h"
 
 #ifdef Q_OS_WIN32
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
+
+// DirectX Includes
 #include <d3d9.h>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class Options : public QDialog {
   Q_OBJECT

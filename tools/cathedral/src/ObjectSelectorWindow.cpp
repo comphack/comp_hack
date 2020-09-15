@@ -31,11 +31,14 @@
 #include "ObjectSelectorBase.h"
 #include "ObjectSelectorList.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QCloseEvent>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #include "ui_ObjectSelectorWindow.h"
 

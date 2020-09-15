@@ -27,13 +27,16 @@
 // objects Includes
 #include <ObjectPosition.h>
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QLineEdit>
 
 #include "ui_ObjectPosition.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 ObjectPosition::ObjectPosition(QWidget *pParent)
     : QWidget(pParent), mMainWindow(nullptr) {

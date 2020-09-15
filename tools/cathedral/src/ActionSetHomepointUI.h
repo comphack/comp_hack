@@ -31,11 +31,14 @@
 // objects Includes
 #include <ActionSetHomepoint.h>
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QWidget>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 namespace Ui {
 

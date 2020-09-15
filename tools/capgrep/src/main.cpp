@@ -24,12 +24,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <PopIgnore.h>
+#include "MainWindow.h"
+
+// Ignore warnings
 #include <PushIgnore.h>
 
 #include <QApplication>
 
-#include "MainWindow.h"
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 /**
  * This is the main function for the packet analysis application. This

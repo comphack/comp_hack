@@ -26,16 +26,22 @@
 #ifndef TOOLS_LOGGER_SRC_WEBAUTHCONNECTION_H
 #define TOOLS_LOGGER_SRC_WEBAUTHCONNECTION_H
 
-#include <PopIgnore.h>
-#include <PushIgnore.h>
+// Standard C Includes
 #include <stdint.h>
 
+// Ignore warnings
+#include <PushIgnore.h>
+
+// Qt Includes
 #include <QByteArray>
 #include <QSslError>
 #include <QSslSocket>
 #include <QStringList>
 #include <QTcpSocket>
 #include <QThread>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class LoggerServer;
 

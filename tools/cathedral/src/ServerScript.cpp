@@ -27,11 +27,14 @@
 // Cathedral Includes
 #include "MainWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include "ui_ServerScript.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 ServerScript::ServerScript(QWidget* pParent) : QWidget(pParent) {
   ui = new Ui::ServerScript;

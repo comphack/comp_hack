@@ -30,12 +30,15 @@
 #include "DynamicList.h"
 #include "MainWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_DropSetProperties.h"
 #include "ui_ObjectList.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // objects Includes
 #include <ItemDrop.h>

@@ -35,11 +35,14 @@
 #include <ServerZone.h>
 #include <ServerZoneSpot.h>
 
-// Standard C++14 Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Standard C++14 Includes
 #include <gsl/gsl>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // channel Includes
 #include "ActionManager.h"

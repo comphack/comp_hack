@@ -25,13 +25,17 @@
 #ifndef TOOLS_CAPGREP_SRC_MAINWINDOW_H
 #define TOOLS_CAPGREP_SRC_MAINWINDOW_H
 
-#include <PopIgnore.h>
-#include <PushIgnore.h>
 #include <stdint.h>
+
+// Ignore warnings
+#include <PushIgnore.h>
 
 #include <QFile>
 #include <QHash>
 #include <QList>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #include "Find.h"
 #include "Packet.h"

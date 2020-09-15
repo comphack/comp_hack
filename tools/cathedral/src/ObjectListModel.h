@@ -25,11 +25,14 @@
 #ifndef TOOLS_CATHEDRAL_SRC_OBJECTLISTMODEL_H
 #define TOOLS_CATHEDRAL_SRC_OBJECTLISTMODEL_H
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QAbstractListModel>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // objects Includes
 #include <Object.h>

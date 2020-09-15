@@ -38,10 +38,10 @@
 #include "SpotRef.h"
 #include "ZoneTriggerUI.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QSpinBox>
@@ -49,6 +49,9 @@
 
 #include "ui_DynamicList.h"
 #include "ui_DynamicListItem.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // objects Includes
 #include <EventBase.h>

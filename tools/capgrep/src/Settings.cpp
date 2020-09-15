@@ -24,12 +24,17 @@
 
 #include "Settings.h"
 
-#include <PopIgnore.h>
-#include <PushIgnore.h>
+// Standard C Includes
 #include <stdint.h>
+
+// Ignore warnings
+#include <PushIgnore.h>
 
 #include <QFile>
 #include <QSettings>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 Settings::Settings(QWidget *p) : QDialog(p) {
   ui.setupUi(this);

@@ -26,11 +26,14 @@
 #ifndef TOOLS_CATHEDRAL_SRC_DROPSETWINDOW_H
 #define TOOLS_CATHEDRAL_SRC_DROPSETWINDOW_H
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_DropSetWindow.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // object Includes
 #include <DropSet.h>

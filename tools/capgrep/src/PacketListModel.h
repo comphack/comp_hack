@@ -25,12 +25,17 @@
 #ifndef TOOLS_CAPGREP_SRC_PACKETLISTMODEL_H
 #define TOOLS_CAPGREP_SRC_PACKETLISTMODEL_H
 
-#include <PopIgnore.h>
-#include <PushIgnore.h>
+// Standard C Includes
 #include <stdint.h>
+
+// Ignore warnings
+#include <PushIgnore.h>
 
 #include <QAbstractListModel>
 #include <QIcon>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // Forward Declaration
 class PacketData;

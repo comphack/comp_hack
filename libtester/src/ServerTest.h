@@ -27,9 +27,14 @@
 #ifndef LIBTESTER_SRC_SERVERTEST_H
 #define LIBTESTER_SRC_SERVERTEST_H
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
+
+// Google Test Includes
 #include <gtest/gtest.h>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include <DayCare.h>

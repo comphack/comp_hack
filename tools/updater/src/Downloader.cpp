@@ -26,9 +26,10 @@
 
 #include "Downloader.h"
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -39,6 +40,9 @@
 #include <QNetworkRequest>
 #include <QRegExp>
 #include <QUrl>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #if defined(COMP_HACK_HEADLESS) || defined(Q_OS_UNIX)
 #define COMP_HACK_LOGSTDOUT

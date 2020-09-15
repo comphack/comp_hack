@@ -28,11 +28,14 @@
 #include "EventWindow.h"
 #include "MainWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QLineEdit>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #include "ui_EventRef.h"
 

@@ -28,15 +28,22 @@
 
 #include <CString.h>
 #include <Packet.h>
-#include <PopIgnore.h>
+
+// Ignore warnings
 #include <PushIgnore.h>
+
+// OpenSSL Includes
 #include <openssl/blowfish.h>
 
+// Qt Includes
 #include <QByteArray>
 #include <QFile>
 #include <QList>
 #include <QTcpSocket>
 #include <QThread>
+
+// Stop ignoring includes
+#include <PopIgnore.h>
 
 class LoggerServer;
 

@@ -28,12 +28,15 @@
 // Cathedral Includes
 #include "EventBaseUI.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QGroupBox>
 #include <QWidget>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // objects Includes
 #include <EventChoice.h>

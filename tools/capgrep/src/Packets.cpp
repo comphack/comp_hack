@@ -28,14 +28,17 @@
 #include "PacketData.h"
 #include "PacketListModel.h"
 
-// Qt Libraries
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Libraries
 #include <QApplication>
 #include <QClipboard>
 #include <QMessageBox>
 #include <QStringList>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #define tr(s) QObject::trUtf8(s)
 

@@ -25,11 +25,14 @@
 #ifndef TOOLS_CATHEDRAL_SRC_MAINWINDOW_H
 #define TOOLS_CATHEDRAL_SRC_MAINWINDOW_H
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QMainWindow>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include <BinaryDataSet.h>

@@ -31,13 +31,16 @@
 #include "MainWindow.h"
 #include "ObjectSelectorWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QLineEdit>
 
 #include "ui_ObjectSelector.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 ObjectSelector::ObjectSelector(QWidget *pParent)
     : ObjectSelectorBase(pParent), mServerData(false) {

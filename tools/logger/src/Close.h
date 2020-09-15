@@ -25,10 +25,14 @@
 #ifndef TOOLS_LOGGER_SRC_CLOSE_H
 #define TOOLS_LOGGER_SRC_CLOSE_H
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_Close.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 /**
  * This dialog notifies the user that any clients will be disconnected when the

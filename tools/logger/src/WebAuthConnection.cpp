@@ -25,21 +25,31 @@
 
 #include "WebAuthConnection.h"
 
-#include <PopIgnore.h>
+#include "LoggerServer.h"
+
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QDateTime>
 #include <QRegExp>
 #include <QUrl>
 #include <iostream>
 
-#include "LoggerServer.h"
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #ifndef COMP_LOGGER_HEADLESS
+
+// Ignore warnings
 #include <PopIgnore.h>
+
+// Qt Includes
+#include <QMessageBox>
+
+// Stop ignoring warnings
 #include <PushIgnore.h>
 
-#include <QMessageBox>
 #endif  // COMP_LOGGER_HEADLESS
 
 WebAuthConnection::WebAuthConnection(LoggerServer* server,

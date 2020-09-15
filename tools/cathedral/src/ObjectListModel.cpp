@@ -27,10 +27,6 @@
 // Cathedral Includes
 #include "ObjectList.h"
 
-// Qt Includes
-#include <PopIgnore.h>
-#include <PushIgnore.h>
-
 // libcomp Includes
 #include <Log.h>
 

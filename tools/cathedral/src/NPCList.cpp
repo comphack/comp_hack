@@ -28,12 +28,15 @@
 #include "MainWindow.h"
 #include "SpotList.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_NPCProperties.h"
 #include "ui_ObjectList.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>

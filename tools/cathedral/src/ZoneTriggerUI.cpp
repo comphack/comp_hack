@@ -27,11 +27,14 @@
 // objects Includes
 #include <ServerZoneTrigger.h>
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_ZoneTrigger.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include <PacketCodes.h>

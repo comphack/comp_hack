@@ -24,11 +24,15 @@
 
 #include "Close.h"
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QApplication>
 #include <QSettings>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 Close::Close(QWidget *p) : QDialog(p) {
   // Setup the UI.

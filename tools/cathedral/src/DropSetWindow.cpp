@@ -32,16 +32,19 @@
 #include "MainWindow.h"
 #include "XmlHandler.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QCloseEvent>
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QSettings>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // object Includes
 #include <ItemDrop.h>

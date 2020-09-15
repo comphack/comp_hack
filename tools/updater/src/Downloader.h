@@ -27,9 +27,10 @@
 #ifndef TOOLS_UPDATER_SRC_DOWNLOADER_H
 #define TOOLS_UPDATER_SRC_DOWNLOADER_H
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QCryptographicHash>
 #include <QFile>
 #include <QList>
@@ -38,6 +39,9 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class QNetworkAccessManager;
 

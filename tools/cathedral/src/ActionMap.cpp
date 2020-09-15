@@ -28,11 +28,14 @@
 #include "ActionMapItem.h"
 #include "MainWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_ActionMap.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>

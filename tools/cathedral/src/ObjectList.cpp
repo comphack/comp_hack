@@ -28,13 +28,16 @@
 #include "MainWindow.h"
 #include "ObjectListModel.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QSortFilterProxyModel>
 
 #include "ui_ObjectList.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>

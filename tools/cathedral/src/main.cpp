@@ -24,11 +24,14 @@
 
 #include "MainWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QApplication>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 int main(int argc, char *argv[]) {
   QApplication app(argc, argv);

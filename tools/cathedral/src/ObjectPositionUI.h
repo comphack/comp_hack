@@ -25,11 +25,14 @@
 #ifndef TOOLS_CATHEDRAL_SRC_OBJECTPOSITIONUI_H
 #define TOOLS_CATHEDRAL_SRC_OBJECTPOSITIONUI_H
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QWidget>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // Standard C++11 Includes
 #include <memory>

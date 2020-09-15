@@ -31,11 +31,10 @@
 #include "XmlHandler.h"
 #include "ZonePartialSelector.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
-#include <ui_SpotProperties.h>
 
+// Qt Includes
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QIODevice>
@@ -48,6 +47,11 @@
 #include <QSettings>
 #include <QShortcut>
 #include <QToolTip>
+
+#include "ui_SpotProperties.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // object Includes
 #include <MiCTitleData.h>

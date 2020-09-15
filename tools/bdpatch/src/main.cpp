@@ -164,10 +164,14 @@
 #include DREAM_OBJGEN_INCLUDE_A
 #endif  // DREAM_OBJGEN_INCLUDE_A
 
-// tinyxml2 Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
+
+// tinyxml2 Includes
 #include <tinyxml2.h>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class ManualBinaryDataSet : public libcomp::BinaryDataSet {
  public:

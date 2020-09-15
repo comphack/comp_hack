@@ -37,11 +37,14 @@
 #include <Event.h>
 #include <EventCondition.h>
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_FindRefWindow.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 namespace objects {
 

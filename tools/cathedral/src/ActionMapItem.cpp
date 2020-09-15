@@ -27,13 +27,16 @@
 // Cathedral Includes
 #include "ActionMap.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QLineEdit>
 
 #include "ui_ActionMapItem.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>

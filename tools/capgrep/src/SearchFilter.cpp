@@ -25,14 +25,18 @@
 #include "SearchFilter.h"
 
 #include <Convert.h>
-#include <PopIgnore.h>
-#include <PushIgnore.h>
-
-#include <QSettings>
 
 #include "PacketData.h"
 #include "PacketListFilter.h"
 #include "PacketListModel.h"
+
+// Ignore warnings
+#include <PushIgnore.h>
+
+#include <QSettings>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 SearchFilter::SearchFilter(QObject* p)
     : QSortFilterProxyModel(p), mSearchType(SearchType_None), mCommand(0) {}

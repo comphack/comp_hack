@@ -26,9 +26,14 @@
 
 #include "TestClient.h"
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
+
+// Google Test Includes
 #include <gtest/gtest.h>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>

@@ -29,12 +29,15 @@
 #include "MainWindow.h"
 #include "ObjectSelectorWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QLineEdit>
 #include <QMessageBox>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #include "ui_ObjectSelector.h"
 

@@ -25,11 +25,14 @@
 #ifndef TOOLS_CATHEDRAL_SRC_ZONEPARTIALSELECTOR_H
 #define TOOLS_CATHEDRAL_SRC_ZONEPARTIALSELECTOR_H
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QDialog>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // C++11 Standard Includes
 #include <set>

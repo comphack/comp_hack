@@ -25,14 +25,21 @@
 #ifndef TOOLS_CAPGREP_SRC_PACKETDATA_H
 #define TOOLS_CAPGREP_SRC_PACKETDATA_H
 
+// libcomp Includes
 #include <Packet.h>
-#include <PopIgnore.h>
-#include <PushIgnore.h>
+
+// Standard C Incldues
 #include <stdint.h>
+
+// Ignore warnings
+#include <PushIgnore.h>
 
 #include <QByteArray>
 #include <QMetaType>
 #include <QString>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class PacketData;
 

@@ -27,9 +27,14 @@
 #ifndef TOOLS_UPDATER_SRC_UPDATERWEBENGINEVIEW_H
 #define TOOLS_UPDATER_SRC_UPDATERWEBENGINEVIEW_H
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
+
+// Qt Includes
 #include <QWebEngineView.h>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class UpdaterWebEngineView : public QWebEngineView {
   Q_OBJECT

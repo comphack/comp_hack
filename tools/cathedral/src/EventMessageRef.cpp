@@ -31,11 +31,14 @@
 // objects Includes
 #include <MiCEventMessageData.h>
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_EventMessageRef.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 EventMessageRef::EventMessageRef(QWidget *pParent)
     : ObjectSelectorBase(pParent) {

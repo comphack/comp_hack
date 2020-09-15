@@ -28,16 +28,19 @@
 #include "EventWindow.h"
 #include "MainWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QFileDialog>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QSettings>
 
 #include "ui_SettingsWindow.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 SettingsWindow::SettingsWindow(MainWindow* pMainWindow, bool initializing,
                                QWidget* pParent)

@@ -27,14 +27,17 @@
 // Cathedral Includes
 #include "MainWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionZoneChange.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // object Includes
 #include <ObjectPosition.h>

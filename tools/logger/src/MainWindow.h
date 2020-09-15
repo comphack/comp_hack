@@ -25,11 +25,16 @@
 #ifndef TOOLS_LOGGER_SRC_MAINWINDOW_H
 #define TOOLS_LOGGER_SRC_MAINWINDOW_H
 
-#include <PopIgnore.h>
-#include <PushIgnore.h>
+// Standard C Includes
 #include <stdint.h>
 
+// Ignore warnings
+#include <PushIgnore.h>
+
 #include "ui_MainWindow.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class LoggerServer;
 class QTcpSocket;

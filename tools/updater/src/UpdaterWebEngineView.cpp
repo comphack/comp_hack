@@ -26,9 +26,14 @@
 
 #include "UpdaterWebEngineView.h"
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
+
+// Qt Includes
 #include <QDesktopServices.h>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 UpdaterWebEngineView::UpdaterWebEngineView(QWidget* pParent)
     : QWebEngineView(pParent) {}

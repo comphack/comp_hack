@@ -65,10 +65,10 @@
 #include <ServerNPC.h>
 #include <ServerZoneSpot.h>
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QCloseEvent>
 #include <QDir>
 #include <QFileDialog>
@@ -77,6 +77,9 @@
 #include <QTextStream>
 
 #include "ui_MainWindow.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Exception.h>

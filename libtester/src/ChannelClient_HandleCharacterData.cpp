@@ -4,10 +4,14 @@
 #include <Expertise.h>
 #include <StatusEffect.h>
 
-// Google Test Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
+
+// Google Test Includes
 #include <gtest/gtest.h>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 using namespace libtester;
 

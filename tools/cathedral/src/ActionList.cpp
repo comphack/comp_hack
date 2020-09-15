@@ -74,14 +74,17 @@
 #include <ActionUpdateZoneFlags.h>
 #include <ActionZoneChange.h>
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QAction>
 #include <QMenu>
 
 #include "ui_ActionList.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>

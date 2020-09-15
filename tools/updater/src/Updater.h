@@ -27,13 +27,17 @@
 #ifndef TOOLS_UPDATER_SRC_UPDATER_H
 #define TOOLS_UPDATER_SRC_UPDATER_H
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QMap>
 #include <QThread>
 
 #include "ui_Updater.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class Downloader;
 

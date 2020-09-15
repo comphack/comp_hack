@@ -24,13 +24,16 @@
 
 #include "HexView.h"
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
 #include <QScrollArea>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 HexView::HexView(QWidget *p) : QWidget(p), mSelectionActive(false) {
   // Left Top Right Bottom

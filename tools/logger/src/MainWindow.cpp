@@ -24,11 +24,18 @@
 
 #include "MainWindow.h"
 
+#include "Close.h"
+#include "LoggerServer.h"
+#include "Settings.h"
+
+// libcomp Includes
 #include <Crypto.h>
 #include <PEFile.h>
-#include <PopIgnore.h>
+
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QApplication>
 #include <QDir>
 #include <QMessageBox>
@@ -38,10 +45,10 @@
 #include <QTcpSocket>
 #include <QTimer>
 
-#include "Close.h"
-#include "LoggerServer.h"
-#include "Settings.h"
 #include "ui_About.h"
+
+// Stop ignoring includes
+#include <PopIgnore.h>
 
 MainWindow::MainWindow(const QString &capturePath, QWidget *p)
     : QMainWindow(p), mCapturePath(capturePath) {

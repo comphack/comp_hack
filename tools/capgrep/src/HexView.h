@@ -25,7 +25,7 @@
 #ifndef TOOLS_CAPGREP_SRC_HEXVIEW_H
 #define TOOLS_CAPGREP_SRC_HEXVIEW_H
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
 #include <QBrush>
@@ -33,6 +33,9 @@
 #include <QFont>
 #include <QPen>
 #include <QWidget>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 /**
  * Current state while rendering the @ref HexView. This state changes as each

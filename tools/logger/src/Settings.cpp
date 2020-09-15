@@ -24,17 +24,21 @@
 
 #include "Settings.h"
 
-#include <PopIgnore.h>
+#include "LoggerServer.h"
+#include "MainWindow.h"
+
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QDir>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QSettings>
 
-#include "LoggerServer.h"
-#include "MainWindow.h"
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 Settings::Settings(LoggerServer *server, QWidget *p)
     : QDialog(p), mServer(server) {

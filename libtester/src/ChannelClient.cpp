@@ -26,9 +26,14 @@
 
 #include "ChannelClient.h"
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
+
+// Google Test Includes
 #include <gtest/gtest.h>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // libtester Includes
 #include <LobbyClient.h>

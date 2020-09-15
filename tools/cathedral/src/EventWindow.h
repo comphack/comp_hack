@@ -25,13 +25,16 @@
 #ifndef TOOLS_CATHEDRAL_SRC_EVENTWINDOW_H
 #define TOOLS_CATHEDRAL_SRC_EVENTWINDOW_H
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QWidget>
 
 #include "ui_EventWindow.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // objects Includes
 #include <CString.h>

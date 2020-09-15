@@ -24,7 +24,13 @@
 
 #include "PacketListFilter.h"
 
+// Ignore warnings
+#include <PushIgnore.h>
+
 #include <QSettings>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #include "PacketData.h"
 #include "PacketListModel.h"

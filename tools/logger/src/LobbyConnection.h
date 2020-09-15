@@ -26,14 +26,22 @@
 #ifndef TOOLS_LOGGER_SRC_LOBBYCONNECTION_H
 #define TOOLS_LOGGER_SRC_LOBBYCONNECTION_H
 
+// libcomp Includes
 #include <Packet.h>
-#include <PopIgnore.h>
+
+// Ignore warnings
 #include <PushIgnore.h>
+
+// OpenSSL Includes
 #include <openssl/blowfish.h>
 
+// Qt Includes
 #include <QFile>
 #include <QTcpSocket>
 #include <QThread>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class LoggerServer;
 

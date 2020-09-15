@@ -27,11 +27,14 @@
 // objects Includes
 #include <SpawnRestriction.h>
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_SpawnRestriction.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 SpawnRestriction::SpawnRestriction(QWidget* pParent) : QWidget(pParent) {
   prop = new Ui::SpawnRestriction;

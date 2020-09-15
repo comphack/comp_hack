@@ -30,14 +30,17 @@
 #include "MainWindow.h"
 #include "ZoneWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QCloseEvent>
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QMessageBox>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // objects Includes
 #include <ActionAddRemoveItems.h>

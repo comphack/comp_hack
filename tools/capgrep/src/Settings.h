@@ -25,10 +25,13 @@
 #ifndef TOOLS_CAPGREP_SRC_SETTINGS_H
 #define TOOLS_CAPGREP_SRC_SETTINGS_H
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
 #include "ui_Settings.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 /**
  * Settings dialog to configure capgrep.

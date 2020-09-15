@@ -43,12 +43,15 @@
 // Standard C++11 Includes
 #include <vector>
 
+// Ignore warnings
+#include "PushIgnore.h"
+
 // VFS Includes
 #include <ttvfs/ttvfs.h>
 #include <ttvfs/ttvfs_zip.h>
 
+// Stop ignoring warnings
 #include "PopIgnore.h"
-#include "PushIgnore.h"
 
 namespace lobby {
 

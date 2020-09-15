@@ -25,11 +25,14 @@
 #ifndef TOOLS_CAPGREP_SRC_OPENMULTI_H
 #define TOOLS_CAPGREP_SRC_OPENMULTI_H
 
+// Ignore warnings
 #include <PopIgnore.h>
-#include <PushIgnore.h>
 
 #include <QDialog>
 #include <QList>
+
+// Stop ignoring warnings
+#include <PushIgnore.h>
 
 #include "ui_OpenMulti.h"
 

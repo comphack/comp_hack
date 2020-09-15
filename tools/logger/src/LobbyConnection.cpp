@@ -25,20 +25,37 @@
 
 #include "LobbyConnection.h"
 
+#include "LoggerServer.h"
+
+// libcomp Includes
 #include <Crypto.h>
-#include <PopIgnore.h>
+
+// Ignore warnings
 #include <PushIgnore.h>
 
+// Qt Includes
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <iostream>
 
-#include "LoggerServer.h"
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #ifdef Q_OS_WIN32
-#include <wincrypt.h>
+
+// Ignore warnings
+#include <PushIgnore.h>
+
+// Windows Includes
 #include <windows.h>
+
+// Windows Crypto Includes
+#include <wincrypt.h>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
+
 #endif  // Q_OS_WIN32
 
 // Connection magic sent by the client to the server requesting to start the

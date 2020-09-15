@@ -26,11 +26,14 @@
 #ifndef TOOLS_CATHEDRAL_SRC_ZONEWINDOW_H
 #define TOOLS_CATHEDRAL_SRC_ZONEWINDOW_H
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_ZoneWindow.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // C++11 Standard Includes
 #include <memory>

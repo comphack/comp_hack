@@ -25,14 +25,20 @@
 #ifndef TOOLS_LOGGER_SRC_LOGGERSERVER_H
 #define TOOLS_LOGGER_SRC_LOGGERSERVER_H
 
-#include <PopIgnore.h>
-#include <PushIgnore.h>
+// Standard C Includes
 #include <stdint.h>
 
+// Ignore warnings
+#include <PushIgnore.h>
+
+// Qt Includes
 #include <QMap>
 #include <QObject>
 #include <QString>
 #include <QTcpServer>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 class LoggerServer;
 

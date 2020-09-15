@@ -24,12 +24,21 @@
 
 #include "LoggerServer.h"
 
-#include <QSettings>
-#include <iostream>
-
 #include "ChannelConnection.h"
 #include "LobbyConnection.h"
 #include "WebAuthConnection.h"
+
+// Standard C++ Includes
+#include <iostream>
+
+// Ignore warnings
+#include <PushIgnore.h>
+
+// Qt Includes
+#include <QSettings>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // Default client versions.
 #define CLIENT_VERSION_US (1769)

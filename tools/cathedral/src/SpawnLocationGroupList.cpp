@@ -30,12 +30,15 @@
 #include "MainWindow.h"
 #include "ZoneWindow.h"
 
-// Qt Includes
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
+// UI Includes
 #include "ui_ObjectList.h"
 #include "ui_SpawnLocationGroup.h"
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 // objects Includes
 #include <SpawnLocationGroup.h>

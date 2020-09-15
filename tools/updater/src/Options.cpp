@@ -30,7 +30,7 @@
 
 #ifdef Q_OS_WIN32
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
 #include <QDir>
@@ -38,6 +38,9 @@
 #include <QLibraryInfo>
 #include <QMessageBox>
 #include <QTranslator>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 typedef IDirect3D9 *(WINAPI *D3DC9)(UINT);
 

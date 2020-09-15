@@ -24,7 +24,7 @@
 
 #include "OpenMulti.h"
 
-#include <PopIgnore.h>
+// Ignore warnings
 #include <PushIgnore.h>
 
 #include <QComboBox>
@@ -33,6 +33,9 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSettings>
+
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 OpenMulti::OpenMulti(QWidget *p) : QDialog(p) {
   ui.setupUi(this);

@@ -22,9 +22,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "LoggerServer.h"
+
+// Standard C++ Includes
+#include <iostream>
+
+// Ignore warnings
 #include <PushIgnore.h>
+
+// zlib Includes
 #include <zlib.h>
 
+// Qt Includes
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
@@ -34,19 +43,24 @@
 #include <QSettings>
 #include <QString>
 #include <QTranslator>
-#include <iostream>
 
-#include "LoggerServer.h"
+// Stop ignoring warnings
+#include <PopIgnore.h>
 
 #ifndef COMP_LOGGER_HEADLESS
-#include <PopIgnore.h>
-
-#include <QApplication>
 
 #include "MainWindow.h"
-#else  // COMP_LOGGER_HEADLESS
+
+// Ignore warnings
+#include <PushIgnore.h>
+
+// Qt Includes
+#include <QApplication>
+
+// Stop ignoring warnings
 #include <PopIgnore.h>
-#endif  // COMP_LOGGER_HEADLESS
+
+#endif  // !COMP_LOGGER_HEADLESS
 
 /**
  * This is the main function for the packet logging application. There are two

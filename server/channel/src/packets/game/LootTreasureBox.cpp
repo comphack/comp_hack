@@ -42,50 +42,47 @@
 
 using namespace channel;
 
-bool Parsers::LootTreasureBox::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::LootTreasureBox::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
 
-    int32_t entityID = p.ReadS32Little();
-    int32_t lootEntityID = p.ReadS32Little();
+  int32_t entityID = p.ReadS32Little();
+  int32_t lootEntityID = p.ReadS32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
 
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto zone = cState->GetZone();
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto zone = cState->GetZone();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_TREASURE_BOX);
-    reply.WriteS32Little(entityID);
-    reply.WriteS32Little(lootEntityID);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_TREASURE_BOX);
+  reply.WriteS32Little(entityID);
+  reply.WriteS32Little(lootEntityID);
 
-    auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
-    auto lBox = lState ? lState->GetEntity() : nullptr;
-    if(lBox && ((lBox->ValidLooterIDsCount() == 0 &&
-        lBox->GetType() != objects::LootBox::Type_t::BOSS_BOX) ||
-        lBox->ValidLooterIDsContains(state->GetWorldCID())))
-    {
-        reply.WriteS8(0);   // Success
+  auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
+  auto lBox = lState ? lState->GetEntity() : nullptr;
+  if (lBox && ((lBox->ValidLooterIDsCount() == 0 &&
+                lBox->GetType() != objects::LootBox::Type_t::BOSS_BOX) ||
+               lBox->ValidLooterIDsContains(state->GetWorldCID()))) {
+    reply.WriteS8(0);  // Success
 
-        client->QueuePacket(reply);
+    client->QueuePacket(reply);
 
-        std::list<std::shared_ptr<ChannelClientConnection>> clients = { client };
-        characterManager->SendLootItemData(clients, lState);
-    }
-    else
-    {
-        reply.WriteS8(-1);   // Failure
+    std::list<std::shared_ptr<ChannelClientConnection>> clients = {client};
+    characterManager->SendLootItemData(clients, lState);
+  } else {
+    reply.WriteS8(-1);  // Failure
 
-        client->SendPacket(reply);
-    }
+    client->SendPacket(reply);
+  }
 
-    return true;
+  return true;
 }

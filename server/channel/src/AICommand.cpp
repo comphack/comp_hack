@@ -38,212 +38,152 @@
 
 using namespace channel;
 
-AICommand::AICommand() : mType(AICommandType_t::NONE), mStartTime(0),
-    mDelay(0), mTargetEntityID(-1), mIgnoredDelay(false)
-{
+AICommand::AICommand()
+    : mType(AICommandType_t::NONE),
+      mStartTime(0),
+      mDelay(0),
+      mTargetEntityID(-1),
+      mIgnoredDelay(false) {}
+
+AICommand::~AICommand() {}
+
+AICommandType_t AICommand::GetType() const { return mType; }
+
+uint64_t AICommand::GetDelay() const { return mDelay; }
+
+void AICommand::SetDelay(uint64_t delay) { mDelay = delay; }
+
+bool AICommand::GetIgnoredDelay() const { return mIgnoredDelay; }
+
+void AICommand::SetIgnoredDelay(bool ignore) { mIgnoredDelay = ignore; }
+
+uint64_t AICommand::GetStartTime() { return mStartTime; }
+
+void AICommand::Start() {
+  if (!mStartTime) {
+    mStartTime = ChannelServer::GetServerTime();
+  }
 }
 
-AICommand::~AICommand()
-{
+int32_t AICommand::GetTargetEntityID() const { return mTargetEntityID; }
+
+void AICommand::SetTargetEntityID(int32_t targetEntityID) {
+  mTargetEntityID = targetEntityID;
 }
 
-AICommandType_t AICommand::GetType() const
-{
-    return mType;
-}
-
-uint64_t AICommand::GetDelay() const
-{
-    return mDelay;
-}
-
-void AICommand::SetDelay(uint64_t delay)
-{
-    mDelay = delay;
-}
-
-bool AICommand::GetIgnoredDelay() const
-{
-    return mIgnoredDelay;
-}
-
-void AICommand::SetIgnoredDelay(bool ignore)
-{
-    mIgnoredDelay = ignore;
-}
-
-uint64_t AICommand::GetStartTime()
-{
-    return mStartTime;
-}
-
-void AICommand::Start()
-{
-    if(!mStartTime)
-    {
-        mStartTime = ChannelServer::GetServerTime();
-    }
-}
-
-int32_t AICommand::GetTargetEntityID() const
-{
-    return mTargetEntityID;
-}
-
-void AICommand::SetTargetEntityID(int32_t targetEntityID)
-{
-    mTargetEntityID = targetEntityID;
-}
-
-AIMoveCommand::AIMoveCommand()
-{
-    mType = AICommandType_t::MOVE;
-    mMinimumTargetDistance = 0.f;
-    mMaximumTargetDistance = 0.f;
+AIMoveCommand::AIMoveCommand() {
+  mType = AICommandType_t::MOVE;
+  mMinimumTargetDistance = 0.f;
+  mMaximumTargetDistance = 0.f;
 }
 
 AIMoveCommand::AIMoveCommand(int32_t targetEntityID, float minimumDistance,
-    float maximumDistance)
-{
-    SetTargetEntityID(targetEntityID);
-    mMinimumTargetDistance = minimumDistance;
-    mMaximumTargetDistance = maximumDistance;
+                             float maximumDistance) {
+  SetTargetEntityID(targetEntityID);
+  mMinimumTargetDistance = minimumDistance;
+  mMaximumTargetDistance = maximumDistance;
 }
 
-AIMoveCommand::~AIMoveCommand()
-{
+AIMoveCommand::~AIMoveCommand() {}
+
+std::list<Point> AIMoveCommand::GetPathing() const { return mPathing; }
+
+void AIMoveCommand::SetPathing(const std::list<Point>& pathing) {
+  mPathing = pathing;
 }
 
-std::list<Point> AIMoveCommand::GetPathing() const
-{
-    return mPathing;
+bool AIMoveCommand::GetCurrentDestination(Point& dest) const {
+  dest.x = 0.f;
+  dest.y = 0.f;
+
+  if (mPathing.size() > 0) {
+    dest = mPathing.front();
+
+    return true;
+  } else {
+    return false;
+  }
 }
 
-void AIMoveCommand::SetPathing(const std::list<Point>& pathing)
-{
-    mPathing = pathing;
+bool AIMoveCommand::GetEndDestination(Point& dest) const {
+  dest.x = 0.f;
+  dest.y = 0.f;
+
+  if (mPathing.size() > 0) {
+    dest = mPathing.back();
+
+    return true;
+  } else {
+    return false;
+  }
 }
 
-bool AIMoveCommand::GetCurrentDestination(Point& dest) const
-{
-    dest.x = 0.f;
-    dest.y = 0.f;
+bool AIMoveCommand::SetNextDestination() {
+  if (mPathing.size() > 0) {
+    mPathing.pop_front();
+  }
 
-    if(mPathing.size() > 0)
-    {
-        dest = mPathing.front();
-
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+  return mPathing.size() > 0;
 }
 
-bool AIMoveCommand::GetEndDestination(Point& dest) const
-{
-    dest.x = 0.f;
-    dest.y = 0.f;
-
-    if(mPathing.size() > 0)
-    {
-        dest = mPathing.back();
-
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+float AIMoveCommand::GetTargetDistance(bool min) const {
+  return min ? mMinimumTargetDistance : mMaximumTargetDistance;
 }
 
-bool AIMoveCommand::SetNextDestination()
-{
-    if(mPathing.size() > 0)
-    {
-        mPathing.pop_front();
-    }
-
-    return mPathing.size() > 0;
-}
-
-float AIMoveCommand::GetTargetDistance(bool min) const
-{
-    return min ? mMinimumTargetDistance : mMaximumTargetDistance;
-}
-
-void AIMoveCommand::SetTargetDistance(float distance, bool min)
-{
-    if(min)
-    {
-        mMinimumTargetDistance = distance;
-    }
-    else
-    {
-        mMaximumTargetDistance = distance;
-    }
+void AIMoveCommand::SetTargetDistance(float distance, bool min) {
+  if (min) {
+    mMinimumTargetDistance = distance;
+  } else {
+    mMaximumTargetDistance = distance;
+  }
 }
 
 AIUseSkillCommand::AIUseSkillCommand(
     const std::shared_ptr<objects::MiSkillData>& skillData,
-    int32_t targetEntityID)
-{
-    mType = AICommandType_t::USE_SKILL;
-    mSkillData = skillData;
-    mTargetEntityID = targetEntityID;
+    int32_t targetEntityID) {
+  mType = AICommandType_t::USE_SKILL;
+  mSkillData = skillData;
+  mTargetEntityID = targetEntityID;
 }
 
 AIUseSkillCommand::AIUseSkillCommand(
-    const std::shared_ptr<objects::ActivatedAbility>& activated)
-{
-    mType = AICommandType_t::USE_SKILL;
-    mSkillData = activated ? activated->GetSkillData() : nullptr;
-    mActivated = activated;
-    if(activated)
-    {
-        // AI cannot target non-entities
-        mTargetEntityID = (int32_t)activated->GetTargetObjectID();
-    }
+    const std::shared_ptr<objects::ActivatedAbility>& activated) {
+  mType = AICommandType_t::USE_SKILL;
+  mSkillData = activated ? activated->GetSkillData() : nullptr;
+  mActivated = activated;
+  if (activated) {
+    // AI cannot target non-entities
+    mTargetEntityID = (int32_t)activated->GetTargetObjectID();
+  }
 }
 
-AIUseSkillCommand::~AIUseSkillCommand()
-{
+AIUseSkillCommand::~AIUseSkillCommand() {}
+
+uint32_t AIUseSkillCommand::GetSkillID() const {
+  return mSkillData ? mSkillData->GetCommon()->GetID() : 0;
 }
 
-uint32_t AIUseSkillCommand::GetSkillID() const
-{
-    return mSkillData ? mSkillData->GetCommon()->GetID() : 0;
+std::shared_ptr<objects::MiSkillData> AIUseSkillCommand::GetSkillData() const {
+  return mSkillData;
 }
 
-std::shared_ptr<objects::MiSkillData> AIUseSkillCommand::GetSkillData() const
-{
-    return mSkillData;
-}
-
-void AIUseSkillCommand::SetActivatedAbility(const std::shared_ptr<
-    objects::ActivatedAbility>& activated)
-{
-    mActivated = activated;
+void AIUseSkillCommand::SetActivatedAbility(
+    const std::shared_ptr<objects::ActivatedAbility>& activated) {
+  mActivated = activated;
 }
 
 std::shared_ptr<objects::ActivatedAbility>
-    AIUseSkillCommand::GetActivatedAbility() const
-{
-    return mActivated;
+AIUseSkillCommand::GetActivatedAbility() const {
+  return mActivated;
 }
 
 AIScriptedCommand::AIScriptedCommand(const libcomp::String& functionName)
-    : mFunctionName(functionName)
-{
-    mType = AICommandType_t::SCRIPTED;
+    : mFunctionName(functionName) {
+  mType = AICommandType_t::SCRIPTED;
 }
 
-AIScriptedCommand::~AIScriptedCommand()
-{
-}
+AIScriptedCommand::~AIScriptedCommand() {}
 
-libcomp::String AIScriptedCommand::GetFunctionName() const
-{
-    return mFunctionName;
+libcomp::String AIScriptedCommand::GetFunctionName() const {
+  return mFunctionName;
 }

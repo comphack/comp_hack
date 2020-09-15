@@ -34,43 +34,40 @@
 #include "ChannelServer.h"
 #include "ZoneGeometry.h"
 
-namespace channel
-{
+namespace channel {
 
 /**
  * Loader for QMP zone geometry.
  */
-class ZoneGeometryLoader
-{
-public:
-    /**
-     * Load all QMP zone geometry files.
-     * @param localZoneIDs IDs of the zones to load the geometry for.
-     * @param server Pointer to the channel server.
-     * @returns Loaded zone geometry.
-     */
-    std::unordered_map<std::string, std::shared_ptr<ZoneGeometry>> LoadQMP(
-        std::unordered_map<uint32_t, std::set<uint32_t>> localZoneIDs,
-        const std::shared_ptr<ChannelServer>& server);
+class ZoneGeometryLoader {
+ public:
+  /**
+   * Load all QMP zone geometry files.
+   * @param localZoneIDs IDs of the zones to load the geometry for.
+   * @param server Pointer to the channel server.
+   * @returns Loaded zone geometry.
+   */
+  std::unordered_map<std::string, std::shared_ptr<ZoneGeometry>> LoadQMP(
+      std::unordered_map<uint32_t, std::set<uint32_t>> localZoneIDs,
+      const std::shared_ptr<ChannelServer>& server);
 
-private:
-    /**
-     * Load a QMP for the next zone in the list.
-     * @param server Pointer to the channel server.
-     */
-    bool LoadZoneQMP(const std::shared_ptr<ChannelServer>& server);
+ private:
+  /**
+   * Load a QMP for the next zone in the list.
+   * @param server Pointer to the channel server.
+   */
+  bool LoadZoneQMP(const std::shared_ptr<ChannelServer>& server);
 
-    /// Mutex to lock access to the input and output data by threads.
-    std::mutex mDataLock;
+  /// Mutex to lock access to the input and output data by threads.
+  std::mutex mDataLock;
 
-    /// List of zone pairs for the QMP loading process.
-    std::list<std::pair<uint32_t, std::set<uint32_t>>> mZonePairs;
+  /// List of zone pairs for the QMP loading process.
+  std::list<std::pair<uint32_t, std::set<uint32_t>>> mZonePairs;
 
-    /// Map of QMP filenames to the geometry structures built from them
-    std::unordered_map<std::string,
-        std::shared_ptr<ZoneGeometry>> mZoneGeometry;
+  /// Map of QMP filenames to the geometry structures built from them
+  std::unordered_map<std::string, std::shared_ptr<ZoneGeometry>> mZoneGeometry;
 };
 
-} // namespace channel
+}  // namespace channel
 
-#endif // SERVER_CHANNEL_SRC_ZONEGEOMETRYLOADER_H
+#endif  // SERVER_CHANNEL_SRC_ZONEGEOMETRYLOADER_H

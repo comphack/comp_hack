@@ -42,82 +42,77 @@
 
 using namespace channel;
 
-bool Parsers::Rotate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::Rotate::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 16)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 16) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    int32_t entityID = p.ReadS32Little();
+  int32_t entityID = p.ReadS32Little();
 
-    auto eState = state->GetEntityState(entityID, false);
-    if(nullptr == eState)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Invalid entity ID received from a rotate"
-                " request: %1\n").Arg(state->GetAccountUID().ToString());
-        });
+  auto eState = state->GetEntityState(entityID, false);
+  if (nullptr == eState) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Invalid entity ID received from a rotate request: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Close();
-        return true;
-    }
-    else if(!eState->Ready(true))
-    {
-        // Nothing to do, the entity is not currently active
-        return true;
-    }
-
-    float rotation = p.ReadFloat();
-    ClientTime start = (ClientTime)p.ReadFloat();
-    ClientTime stop = (ClientTime)p.ReadFloat();
-
-    ServerTime startTime = state->ToServerTime(start);
-    ServerTime stopTime = state->ToServerTime(stop);
-
-    // Rotating does not update the X and Y position
-    eState->RefreshCurrentPosition(server->GetServerTime());
-    float x = eState->GetCurrentX();
-    float y = eState->GetCurrentY();
-    eState->SetOriginX(x);
-    eState->SetOriginY(y);
-    eState->SetDestinationX(x);
-    eState->SetDestinationY(y);
-
-    eState->SetOriginTicks(startTime);
-    eState->SetDestinationTicks(stopTime);
-
-    eState->SetOriginRotation(eState->GetCurrentRotation());
-    eState->SetDestinationRotation(rotation);
-
-    // If the entity is still visible to others, relay info
-    if(eState->IsClientVisible())
-    {
-        auto zConnections = server->GetZoneManager()->GetZoneConnections(
-            client, false);
-
-        if(zConnections.size() > 0)
-        {
-            libcomp::Packet reply;
-            reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE);
-            reply.WriteS32Little(entityID);
-            reply.WriteFloat(rotation);
-
-            RelativeTimeMap timeMap;
-            timeMap[reply.Size()] = startTime;
-            timeMap[reply.Size() + 4] = stopTime;
-
-            ChannelClientConnection::SendRelativeTimePacket(zConnections,
-                reply, timeMap);
-        }
-    }
-
+    client->Close();
     return true;
+  } else if (!eState->Ready(true)) {
+    // Nothing to do, the entity is not currently active
+    return true;
+  }
+
+  float rotation = p.ReadFloat();
+  ClientTime start = (ClientTime)p.ReadFloat();
+  ClientTime stop = (ClientTime)p.ReadFloat();
+
+  ServerTime startTime = state->ToServerTime(start);
+  ServerTime stopTime = state->ToServerTime(stop);
+
+  // Rotating does not update the X and Y position
+  eState->RefreshCurrentPosition(server->GetServerTime());
+  float x = eState->GetCurrentX();
+  float y = eState->GetCurrentY();
+  eState->SetOriginX(x);
+  eState->SetOriginY(y);
+  eState->SetDestinationX(x);
+  eState->SetDestinationY(y);
+
+  eState->SetOriginTicks(startTime);
+  eState->SetDestinationTicks(stopTime);
+
+  eState->SetOriginRotation(eState->GetCurrentRotation());
+  eState->SetDestinationRotation(rotation);
+
+  // If the entity is still visible to others, relay info
+  if (eState->IsClientVisible()) {
+    auto zConnections =
+        server->GetZoneManager()->GetZoneConnections(client, false);
+
+    if (zConnections.size() > 0) {
+      libcomp::Packet reply;
+      reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ROTATE);
+      reply.WriteS32Little(entityID);
+      reply.WriteFloat(rotation);
+
+      RelativeTimeMap timeMap;
+      timeMap[reply.Size()] = startTime;
+      timeMap[reply.Size() + 4] = stopTime;
+
+      ChannelClientConnection::SendRelativeTimePacket(zConnections, reply,
+                                                      timeMap);
+    }
+  }
+
+  return true;
 }

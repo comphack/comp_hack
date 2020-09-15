@@ -40,27 +40,29 @@
 using namespace channel;
 
 void LoginAccount(AccountManager* accountManager,
-    std::shared_ptr<ChannelClientConnection> client, const libcomp::String username,
-    uint32_t sessionKey)
-{
-    accountManager->HandleLoginRequest(client, username, sessionKey);
+                  std::shared_ptr<ChannelClientConnection> client,
+                  const libcomp::String username, uint32_t sessionKey) {
+  accountManager->HandleLoginRequest(client, username, sessionKey);
 }
 
-bool Parsers::Login::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::Login::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    // Classic authentication method: username followed by the session key
-    libcomp::String username = p.ReadString16(libcomp::Convert::ENCODING_UTF8, true);
-    uint32_t sessionKey = p.ReadU32Little();
+    libcomp::ReadOnlyPacket& p) const {
+  // Classic authentication method: username followed by the session key
+  libcomp::String username =
+      p.ReadString16(libcomp::Convert::ENCODING_UTF8, true);
+  uint32_t sessionKey = p.ReadU32Little();
 
-    connection->SetName(libcomp::String("%1:%2").Arg(
-        connection->GetName()).Arg(username));
+  connection->SetName(
+      libcomp::String("%1:%2").Arg(connection->GetName()).Arg(username));
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork(LoginAccount, server->GetAccountManager(), client, username, sessionKey);
+  server->QueueWork(LoginAccount, server->GetAccountManager(), client, username,
+                    sessionKey);
 
-    return true;
+  return true;
 }

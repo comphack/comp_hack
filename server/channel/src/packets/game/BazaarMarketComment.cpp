@@ -42,51 +42,48 @@
 
 using namespace channel;
 
-bool Parsers::BazaarMarketComment::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BazaarMarketComment::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 2)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 2) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto bState = state->GetBazaarState();
+  auto cState = state->GetCharacterState();
+  auto zone = cState->GetZone();
+
+  auto worldData = state->GetAccountWorldData().Get();
+  auto bazaarData = worldData->GetBazaarData().Get();
+
+  libcomp::String comment =
+      p.ReadString16Little(state->GetClientStringEncoding(), true);
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_COMMENT);
+
+  if (bazaarData && bState) {
+    if (bazaarData->GetComment() != comment) {
+      bazaarData->SetComment(comment);
+
+      server->GetZoneManager()->SendBazaarMarketData(zone, bState,
+                                                     bazaarData->GetMarketID());
+
+      server->GetWorldDatabase()->QueueUpdate(bazaarData);
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto bState = state->GetBazaarState();
-    auto cState = state->GetCharacterState();
-    auto zone = cState->GetZone();
+    reply.WriteS32Little(0);  // Success
+  } else {
+    reply.WriteS32Little(-1);  // Failure
+  }
 
-    auto worldData = state->GetAccountWorldData().Get();
-    auto bazaarData = worldData->GetBazaarData().Get();
+  client->SendPacket(reply);
 
-    libcomp::String comment = p.ReadString16Little(
-        state->GetClientStringEncoding(), true);
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_COMMENT);
-
-    if(bazaarData && bState)
-    {
-        if(bazaarData->GetComment() != comment)
-        {
-            bazaarData->SetComment(comment);
-
-            server->GetZoneManager()->SendBazaarMarketData(zone, bState,
-                bazaarData->GetMarketID());
-
-            server->GetWorldDatabase()->QueueUpdate(bazaarData);
-        }
-
-        reply.WriteS32Little(0);    // Success
-    }
-    else
-    {
-        reply.WriteS32Little(-1);   // Failure
-    }
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

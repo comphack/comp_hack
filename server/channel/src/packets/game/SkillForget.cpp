@@ -44,60 +44,56 @@
 
 using namespace channel;
 
-bool Parsers::SkillForget::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SkillForget::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 9)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 9) {
+    return false;
+  }
 
-    int32_t entityID = p.ReadS32Little();
-    int8_t activationID = p.ReadS8();
-    uint32_t skillID = p.ReadU32Little();
+  int32_t entityID = p.ReadS32Little();
+  int8_t activationID = p.ReadS8();
+  uint32_t skillID = p.ReadU32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
 
-    if(cState->GetEntityID() != entityID)
-    {
-        LogSkillManagerError([&]()
-        {
-            return libcomp::String("Player attempted to forget a skill for a"
-                " character that does not belong to the client: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
+  if (cState->GetEntityID() != entityID) {
+    LogSkillManagerError([&]() {
+      return libcomp::String(
+                 "Player attempted to forget a skill for a character that does "
+                 "not belong to the client: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Close();
-        return true;
-    }
-
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto definitionManager = server->GetDefinitionManager();
-    auto skillManager = server->GetSkillManager();
-
-    auto activatedAbility = cState->GetSpecialActivations(activationID);
-    if(!activatedAbility)
-    {
-        LogSkillManagerErrorMsg(
-            "Invalid activation ID encountered for SkillForget request\n");
-    }
-    else
-    {
-        skillManager->ExecuteSkill(cState, activationID,
-            activatedAbility->GetTargetObjectID());
-
-        character->RemoveLearnedSkills(skillID);
-
-        cState->RecalcDisabledSkills(definitionManager);
-        state->GetDemonState()->UpdateDemonState(definitionManager);
-        server->GetCharacterManager()->RecalculateTokuseiAndStats(cState, client);
-
-        server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
-    }
-
+    client->Close();
     return true;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto definitionManager = server->GetDefinitionManager();
+  auto skillManager = server->GetSkillManager();
+
+  auto activatedAbility = cState->GetSpecialActivations(activationID);
+  if (!activatedAbility) {
+    LogSkillManagerErrorMsg(
+        "Invalid activation ID encountered for SkillForget request\n");
+  } else {
+    skillManager->ExecuteSkill(cState, activationID,
+                               activatedAbility->GetTargetObjectID());
+
+    character->RemoveLearnedSkills(skillID);
+
+    cState->RecalcDisabledSkills(definitionManager);
+    state->GetDemonState()->UpdateDemonState(definitionManager);
+    server->GetCharacterManager()->RecalculateTokuseiAndStats(cState, client);
+
+    server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+  }
+
+  return true;
 }

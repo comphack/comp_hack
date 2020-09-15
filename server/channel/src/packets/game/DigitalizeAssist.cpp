@@ -39,40 +39,37 @@
 
 using namespace channel;
 
-bool Parsers::DigitalizeAssist::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DigitalizeAssist::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t unknown = p.ReadS32Little();
-    (void)unknown;  // Always 0
+  int32_t unknown = p.ReadS32Little();
+  (void)unknown;  // Always 0
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character ? character->GetProgress().Get() : nullptr;
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DIGITALIZE_ASSIST);
-    reply.WriteS32Little(0);    // Unknown
-    reply.WriteS32Little(progress ? 0 : -1);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character ? character->GetProgress().Get() : nullptr;
 
-    if(progress)
-    {
-        auto assist = progress->GetDigitalizeAssists();
-        reply.WriteS16Little((int16_t)assist.size());
-        reply.WriteArray(&assist, (uint32_t)assist.size());
-    }
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DIGITALIZE_ASSIST);
+  reply.WriteS32Little(0);  // Unknown
+  reply.WriteS32Little(progress ? 0 : -1);
 
-    client->SendPacket(reply);
+  if (progress) {
+    auto assist = progress->GetDigitalizeAssists();
+    reply.WriteS16Little((int16_t)assist.size());
+    reply.WriteArray(&assist, (uint32_t)assist.size());
+  }
 
-    return true;
+  client->SendPacket(reply);
+
+  return true;
 }

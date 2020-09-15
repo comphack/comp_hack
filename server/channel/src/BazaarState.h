@@ -32,162 +32,164 @@
 #include <EntityState.h>
 #include <ServerBazaar.h>
 
-namespace libcomp
-{
+namespace libcomp {
 class DatabaseChangeSet;
 }
 
-namespace channel
-{
+namespace channel {
 
 class ClientState;
 
 /**
  * Contains the state of an bazaar related to a channel.
  */
-class BazaarState : public EntityState<objects::ServerBazaar>
-{
-public:
-    /**
-     * Create a bazaar state.
-     */
-    BazaarState(const std::shared_ptr<objects::ServerBazaar>& bazaar);
+class BazaarState : public EntityState<objects::ServerBazaar> {
+ public:
+  /**
+   * Create a bazaar state.
+   */
+  BazaarState(const std::shared_ptr<objects::ServerBazaar>& bazaar);
 
-    /**
-     * Clean up the bazaar state.
-     */
-    virtual ~BazaarState() { }
+  /**
+   * Clean up the bazaar state.
+   */
+  virtual ~BazaarState() {}
 
-    /**
-     * Get the current market associated to the supplied market ID
-     * @param marketID ID of the market to retrieve
-     * @return Pointer to the bazaar data representing the current market
-     */
-    std::shared_ptr<objects::BazaarData> GetCurrentMarket(uint32_t marketID);
+  /**
+   * Get the current market associated to the supplied market ID
+   * @param marketID ID of the market to retrieve
+   * @return Pointer to the bazaar data representing the current market
+   */
+  std::shared_ptr<objects::BazaarData> GetCurrentMarket(uint32_t marketID);
 
-    /**
-     * Set the current market mapped to the supplied market ID
-     * @param marketID ID of the market to set
-     * @param data Pointer to the bazaar data representing the current market
-     */
-    void SetCurrentMarket(uint32_t marketID, const std::shared_ptr<
-        objects::BazaarData>& data);
+  /**
+   * Set the current market mapped to the supplied market ID
+   * @param marketID ID of the market to set
+   * @param data Pointer to the bazaar data representing the current market
+   */
+  void SetCurrentMarket(uint32_t marketID,
+                        const std::shared_ptr<objects::BazaarData>& data);
 
-    /**
-     * Reserves a market ID while attempting to rent out a bazaar market. If
-     * the location is already taken or is already reserved, this will fail.
-     * This should be called to reserve the spot when an open request is
-     * received and called to clear the same reservation when the open request
-     * completes, successful or not.
-     * @param marketID ID of the market to reserve
-     * @param clear If true, the reservation will be cleared. This should only
-     *  be set when the market was previously reserved successfully.
-     * @return true if the update was successful
-     */
-    bool ReserveMarket(uint32_t marketID, bool clear);
+  /**
+   * Reserves a market ID while attempting to rent out a bazaar market. If
+   * the location is already taken or is already reserved, this will fail.
+   * This should be called to reserve the spot when an open request is
+   * received and called to clear the same reservation when the open request
+   * completes, successful or not.
+   * @param marketID ID of the market to reserve
+   * @param clear If true, the reservation will be cleared. This should only
+   *  be set when the market was previously reserved successfully.
+   * @return true if the update was successful
+   */
+  bool ReserveMarket(uint32_t marketID, bool clear);
 
-    /**
-     * Add an item to the supplied client account's bazaar market. This is thread
-     * safe and ensures the add is valid before anything is modified.
-     * @param state Pointer to the client state
-     * @param slot Destination market slot for the item
-     * @param itemID Client object ID of the item to add
-     * @param price Price that the item should be sold for
-     * @param dbChanges Output pointer to the DatabaseChangeSet to write all
-     *  changes to
-     * @return true on success, false on failure
-     */
-    bool AddItem(ClientState* state, int8_t slot, int64_t itemID,
-        int32_t price, std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges);
+  /**
+   * Add an item to the supplied client account's bazaar market. This is thread
+   * safe and ensures the add is valid before anything is modified.
+   * @param state Pointer to the client state
+   * @param slot Destination market slot for the item
+   * @param itemID Client object ID of the item to add
+   * @param price Price that the item should be sold for
+   * @param dbChanges Output pointer to the DatabaseChangeSet to write all
+   *  changes to
+   * @return true on success, false on failure
+   */
+  bool AddItem(ClientState* state, int8_t slot, int64_t itemID, int32_t price,
+               std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges);
 
-    /**
-     * Drop an item from the supplied client account's bazaar market. This is
-     * only thread safe if there is a BazaarState associated to the client. This
-     * function is responsible for stopping item drops for active markets.
-     * @param state Pointer to the client state
-     * @param srcSlot Source market slot for the item
-     * @param itemID Client object ID of the item to drop
-     * @param destSlot Destination inventory slot for the item
-     * @param dbChanges Output pointer to the DatabaseChangeSet to write all
-     *  changes to
-     * @return true on success, false on failure
-     */
-    static bool DropItemFromMarket(ClientState* state, int8_t srcSlot, int64_t itemID,
-        int8_t destSlot, std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges);
+  /**
+   * Drop an item from the supplied client account's bazaar market. This is
+   * only thread safe if there is a BazaarState associated to the client. This
+   * function is responsible for stopping item drops for active markets.
+   * @param state Pointer to the client state
+   * @param srcSlot Source market slot for the item
+   * @param itemID Client object ID of the item to drop
+   * @param destSlot Destination inventory slot for the item
+   * @param dbChanges Output pointer to the DatabaseChangeSet to write all
+   *  changes to
+   * @return true on success, false on failure
+   */
+  static bool DropItemFromMarket(
+      ClientState* state, int8_t srcSlot, int64_t itemID, int8_t destSlot,
+      std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges);
 
-    /**
-     * Get the item at the specified market that matches the requested
-     * information if it is currently available to purchase. This is thread
-     * safe and should be followed up with a call to BuyItem upon success.
-     * @param state Pointer to the client state of the buyer
-     * @param marketID Market ID for the item's market
-     * @param slot Market slot where the item exists
-     * @param itemID Client object ID of the item
-     * @param price Price (in macca) that the buyer is expecting to pay
-     * @return Pointer to the item that matches the requested information
-     *  or nullptr if the request was not valid
-     */
-    std::shared_ptr<objects::BazaarItem> TryBuyItem(ClientState* state,
-        uint32_t marketID, int8_t slot, int64_t itemID, int32_t price);
+  /**
+   * Get the item at the specified market that matches the requested
+   * information if it is currently available to purchase. This is thread
+   * safe and should be followed up with a call to BuyItem upon success.
+   * @param state Pointer to the client state of the buyer
+   * @param marketID Market ID for the item's market
+   * @param slot Market slot where the item exists
+   * @param itemID Client object ID of the item
+   * @param price Price (in macca) that the buyer is expecting to pay
+   * @return Pointer to the item that matches the requested information
+   *  or nullptr if the request was not valid
+   */
+  std::shared_ptr<objects::BazaarItem> TryBuyItem(ClientState* state,
+                                                  uint32_t marketID,
+                                                  int8_t slot, int64_t itemID,
+                                                  int32_t price);
 
-    /**
-     * Update the supplied BazaarItem to be marked as sold if no one else has
-     * already bought it
-     * @param bItem Pointer to the item being purchased
-     * @return true if the item can be bought, false if it cannot
-     */
-    bool BuyItem(std::shared_ptr<objects::BazaarItem> bItem);
+  /**
+   * Update the supplied BazaarItem to be marked as sold if no one else has
+   * already bought it
+   * @param bItem Pointer to the item being purchased
+   * @return true if the item can be bought, false if it cannot
+   */
+  bool BuyItem(std::shared_ptr<objects::BazaarItem> bItem);
 
-private:
-    /**
-     * Verify if the supplied bazaar market matches the current market
-     * assigned to its market ID
-     * @param data Pointer to the bazaar market to verify
-     * @return true if the market matches, false if it does not
-     */
-    bool VerifyMarket(const std::shared_ptr<objects::BazaarData>& data);
+ private:
+  /**
+   * Verify if the supplied bazaar market matches the current market
+   * assigned to its market ID
+   * @param data Pointer to the bazaar market to verify
+   * @return true if the market matches, false if it does not
+   */
+  bool VerifyMarket(const std::shared_ptr<objects::BazaarData>& data);
 
-    /**
-     * Drop an item from the supplied client account's bazaar market. This is
-     * thread safe and ensures the drop is valid before anything is modified.
-     * @param state Pointer to the client state
-     * @param srcSlot Source market slot for the item
-     * @param itemID Client object ID of the item to drop
-     * @param destSlot Destination inventory slot for the item
-     * @param dbChanges Output pointer to the DatabaseChangeSet to write all
-     *  changes to
-     * @return true on success, false on failure
-     */
-    bool DropItem(ClientState* state, int8_t srcSlot, int64_t itemID,
-        int8_t destSlot, std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges);
+  /**
+   * Drop an item from the supplied client account's bazaar market. This is
+   * thread safe and ensures the drop is valid before anything is modified.
+   * @param state Pointer to the client state
+   * @param srcSlot Source market slot for the item
+   * @param itemID Client object ID of the item to drop
+   * @param destSlot Destination inventory slot for the item
+   * @param dbChanges Output pointer to the DatabaseChangeSet to write all
+   *  changes to
+   * @return true on success, false on failure
+   */
+  bool DropItem(ClientState* state, int8_t srcSlot, int64_t itemID,
+                int8_t destSlot,
+                std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges);
 
-    /**
-     * Drop an item from the supplied client account's bazaar market. This ensures
-     * the drop is valid before anything is modified.
-     * @param state Pointer to the client state
-     * @param bState Pointer to the BazaarState to
-     * @param srcSlot Source market slot for the item
-     * @param itemID Client object ID of the item to drop
-     * @param destSlot Destination inventory slot for the item
-     * @param dbChanges Output pointer to the DatabaseChangeSet to write all
-     *  changes to
-     * @return true on success, false on failure
-     */
-    static bool DropItemInternal(ClientState* state, int8_t srcSlot, int64_t itemID,
-        int8_t destSlot, std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges);
+  /**
+   * Drop an item from the supplied client account's bazaar market. This ensures
+   * the drop is valid before anything is modified.
+   * @param state Pointer to the client state
+   * @param bState Pointer to the BazaarState to
+   * @param srcSlot Source market slot for the item
+   * @param itemID Client object ID of the item to drop
+   * @param destSlot Destination inventory slot for the item
+   * @param dbChanges Output pointer to the DatabaseChangeSet to write all
+   *  changes to
+   * @return true on success, false on failure
+   */
+  static bool DropItemInternal(
+      ClientState* state, int8_t srcSlot, int64_t itemID, int8_t destSlot,
+      std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges);
 
-    /// Map of market IDs to account owned bazaar data representing an
-    /// open market
-    std::unordered_map<uint32_t,
-        std::shared_ptr<objects::BazaarData>> mCurrentMarkets;
+  /// Map of market IDs to account owned bazaar data representing an
+  /// open market
+  std::unordered_map<uint32_t, std::shared_ptr<objects::BazaarData>>
+      mCurrentMarkets;
 
-    /// Set of reserved market IDs
-    std::set<uint32_t> mReservations;
+  /// Set of reserved market IDs
+  std::set<uint32_t> mReservations;
 
-    /// Lock for shared resources
-    std::mutex mLock;
+  /// Lock for shared resources
+  std::mutex mLock;
 };
 
-} // namespace channel
+}  // namespace channel
 
-#endif // SERVER_CHANNEL_SRC_BAZAARSTATE_H
+#endif  // SERVER_CHANNEL_SRC_BAZAARSTATE_H

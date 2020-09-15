@@ -42,83 +42,70 @@ static const libcomp::String CLIENT_PATCHED_SHA1 =
 
 static const uint8_t DLL_INJECTION[] = {
     0x68, 0x8C, 0xA0, 0x8A, 0x08, 0xFF, 0x15, 0xCC, 0xA5, 0x7E, 0x08, 0x90,
-    0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x83, 0xC4, 0x08
-};
+    0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x83, 0xC4, 0x08};
 
-void Usage(const char *szAppName)
-{
-    std::cerr << "USAGE: " << szAppName << " IN OUT" << std::endl;
+void Usage(const char *szAppName) {
+  std::cerr << "USAGE: " << szAppName << " IN OUT" << std::endl;
 
-    exit(EXIT_FAILURE);
+  exit(EXIT_FAILURE);
 }
 
-bool PatchClient(std::vector<char>& data)
-{
-    // Patch the client to inject the DLL.
-    memcpy(&data[0xE396DA], DLL_INJECTION, sizeof(DLL_INJECTION));
-    strcpy(&data[0x15E908C], "comp_client.dll");
+bool PatchClient(std::vector<char> &data) {
+  // Patch the client to inject the DLL.
+  memcpy(&data[0xE396DA], DLL_INJECTION, sizeof(DLL_INJECTION));
+  strcpy(&data[0x15E908C], "comp_client.dll");
 
-    return true;
+  return true;
 }
 
-bool SaveClient(const char *szOutPath, std::vector<char>& data)
-{
-    std::ofstream file;
+bool SaveClient(const char *szOutPath, std::vector<char> &data) {
+  std::ofstream file;
 
-    // Open the file.
-    file.open(szOutPath, std::ofstream::binary);
+  // Open the file.
+  file.open(szOutPath, std::ofstream::binary);
 
-    // Write to the file.
-    file.write(&data[0], static_cast<std::streamsize>(data.size()));
+  // Write to the file.
+  file.write(&data[0], static_cast<std::streamsize>(data.size()));
 
-    // Make sure it wrote.
-    return file.good();
+  // Make sure it wrote.
+  return file.good();
 }
 
-int main(int argc, char *argv[])
-{
-    if(3 != argc)
-    {
-        Usage(argv[0]);
-    }
+int main(int argc, char *argv[]) {
+  if (3 != argc) {
+    Usage(argv[0]);
+  }
 
-    const char *szInPath = argv[1];
-    const char *szOutPath = argv[2];
+  const char *szInPath = argv[1];
+  const char *szOutPath = argv[2];
 
-    // Load the original client.
-    std::vector<char> data = libcomp::Crypto::LoadFile(szInPath);
+  // Load the original client.
+  std::vector<char> data = libcomp::Crypto::LoadFile(szInPath);
 
-    if(data.empty())
-    {
-        std::cerr << "Failed to open input file '" << szInPath
-            << "'." << std::endl;
+  if (data.empty()) {
+    std::cerr << "Failed to open input file '" << szInPath << "'." << std::endl;
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Make sure the client was not modified.
-    libcomp::String hash = libcomp::Crypto::SHA1(data);
+  // Make sure the client was not modified.
+  libcomp::String hash = libcomp::Crypto::SHA1(data);
 
-    if(CLIENT_SHA1 != hash)
-    {
-        if(CLIENT_PATCHED_SHA1 == hash)
-        {
-            std::cerr << "Input file has already been patched." << std::endl;
-        }
-        else
-        {
-            std::cerr << "Input file has been modified. "
+  if (CLIENT_SHA1 != hash) {
+    if (CLIENT_PATCHED_SHA1 == hash) {
+      std::cerr << "Input file has already been patched." << std::endl;
+    } else {
+      std::cerr << "Input file has been modified. "
                 << "Cowardly refusing to patch it." << std::endl;
-        }
-
-        return EXIT_FAILURE;
     }
 
-    // Patch the client.
-    if(!PatchClient(data) || !SaveClient(szOutPath, data))
-    {
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    return EXIT_SUCCESS;
+  // Patch the client.
+  if (!PatchClient(data) || !SaveClient(szOutPath, data)) {
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
 }

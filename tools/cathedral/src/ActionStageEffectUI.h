@@ -32,35 +32,34 @@
 #include <ActionStageEffect.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionStageEffect;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionStageEffect : public Action
-{
-    Q_OBJECT
+class ActionStageEffect : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionStageEffect(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionStageEffect();
+ public:
+  explicit ActionStageEffect(ActionList *pList, MainWindow *pMainWindow,
+                             QWidget *pParent = 0);
+  virtual ~ActionStageEffect();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionStageEffect *prop;
+ protected:
+  Ui::ActionStageEffect *prop;
 
-    std::shared_ptr<objects::ActionStageEffect> mAction;
+  std::shared_ptr<objects::ActionStageEffect> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONSTAGEEFFECTUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONSTAGEEFFECTUI_H

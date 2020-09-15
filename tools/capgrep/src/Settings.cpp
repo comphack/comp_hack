@@ -24,33 +24,31 @@
 
 #include "Settings.h"
 
-#include <PushIgnore.h>
-#include <QFile>
-#include <QSettings>
 #include <PopIgnore.h>
-
+#include <PushIgnore.h>
 #include <stdint.h>
 
-Settings::Settings(QWidget *p) : QDialog(p)
-{
-    ui.setupUi(this);
+#include <QFile>
+#include <QSettings>
 
-    connect(ui.buttonBox, SIGNAL(accepted()), this, SLOT(save()));
-    connect(ui.buttonBox, SIGNAL(rejected()), this, SLOT(close()));
+Settings::Settings(QWidget *p) : QDialog(p) {
+  ui.setupUi(this);
 
-    setAttribute(Qt::WA_DeleteOnClose);
+  connect(ui.buttonBox, SIGNAL(accepted()), this, SLOT(save()));
+  connect(ui.buttonBox, SIGNAL(rejected()), this, SLOT(close()));
 
-    QSettings settings;
+  setAttribute(Qt::WA_DeleteOnClose);
 
-    ui.packetLimit->setValue(settings.value("packet_limit", 0).toInt());
+  QSettings settings;
+
+  ui.packetLimit->setValue(settings.value("packet_limit", 0).toInt());
 }
 
-void Settings::save()
-{
-    QSettings settings;
-    settings.setValue("packet_limit", ui.packetLimit->value());
+void Settings::save() {
+  QSettings settings;
+  settings.setValue("packet_limit", ui.packetLimit->value());
 
-    emit packetLimitChanged(ui.packetLimit->value());
+  emit packetLimitChanged(ui.packetLimit->value());
 
-    close();
+  close();
 }

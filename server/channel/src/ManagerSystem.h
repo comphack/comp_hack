@@ -41,47 +41,46 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 
-namespace channel
-{
+namespace channel {
 
 /**
  * Class to handle messages pertaining to connecting to
  * the world or game clients.
  */
-class ManagerSystem : public libcomp::Manager
-{
-public:
-    /**
-     * Create a new manager.
-     * @param server Pointer to the server that uses this manager
-     */
-    ManagerSystem(std::weak_ptr<libcomp::BaseServer> server);
+class ManagerSystem : public libcomp::Manager {
+ public:
+  /**
+   * Create a new manager.
+   * @param server Pointer to the server that uses this manager
+   */
+  ManagerSystem(std::weak_ptr<libcomp::BaseServer> server);
 
-    /**
-     * Clean up the manager.
-     */
-    virtual ~ManagerSystem();
+  /**
+   * Clean up the manager.
+   */
+  virtual ~ManagerSystem();
 
-    /**
-     * Get the different types of messages handled by this manager.
-     * @return List of supported message types
-     */
-    virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
+  /**
+   * Get the different types of messages handled by this manager.
+   * @return List of supported message types
+   */
+  virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
 
-    /**
-     * Process a message from the queue.
-     * @param pMessage Message to be processed.
-     * @return true on success, false on failure
-     */
-    virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
-private:
-    /// Static list of supported message types for the manager.
-    static std::list<libcomp::Message::MessageType> sSupportedTypes;
+  /**
+   * Process a message from the queue.
+   * @param pMessage Message to be processed.
+   * @return true on success, false on failure
+   */
+  virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
 
-    /// Pointer to the server that uses this manager.
-    std::weak_ptr<libcomp::BaseServer> mServer;
+ private:
+  /// Static list of supported message types for the manager.
+  static std::list<libcomp::Message::MessageType> sSupportedTypes;
+
+  /// Pointer to the server that uses this manager.
+  std::weak_ptr<libcomp::BaseServer> mServer;
 };
 
-} // namespace world
+}  // namespace channel
 
-#endif // SERVER_CHANNEL_SRC_MANAGERCONNECTION_H
+#endif  // SERVER_CHANNEL_SRC_MANAGERCONNECTION_H

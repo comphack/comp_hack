@@ -37,26 +37,24 @@
 
 using namespace channel;
 
-bool Parsers::ReviveCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ReviveCharacter::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
 
-    int32_t entityID = p.ReadS32Little();
-    int32_t revivalMode = p.ReadS32Little();
-    (void)entityID;
+  int32_t entityID = p.ReadS32Little();
+  int32_t revivalMode = p.ReadS32Little();
+  (void)entityID;
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->GetCharacterManager()->ReviveCharacter(client, revivalMode);
+  server->GetCharacterManager()->ReviveCharacter(client, revivalMode);
 
-    return true;
+  return true;
 }

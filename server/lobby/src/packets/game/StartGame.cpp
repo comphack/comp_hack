@@ -47,81 +47,75 @@
 
 using namespace lobby;
 
-bool Parsers::StartGame::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::StartGame::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    // Sanity check the packet size.
-    if(2 != p.Size())
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  // Sanity check the packet size.
+  if (2 != p.Size()) {
+    return false;
+  }
 
-    // Grab the character ID.
-    uint8_t cid = p.ReadU8();
+  // Grab the character ID.
+  uint8_t cid = p.ReadU8();
 
-    int8_t unknown = p.ReadS8();    // Always zero, selected channel?
-    (void)unknown;
+  int8_t unknown = p.ReadS8();  // Always zero, selected channel?
+  (void)unknown;
 
-    // We need all this jazz.
-    auto client = std::dynamic_pointer_cast<LobbyClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto account = state->GetAccount();
-    auto username = account->GetUsername();
-    auto server = std::dynamic_pointer_cast<LobbyServer>(
-        pPacketManager->GetServer());
+  // We need all this jazz.
+  auto client = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto account = state->GetAccount();
+  auto username = account->GetUsername();
+  auto server =
+      std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
 
-    // We need all this jazz too.
-    auto accountManager = server->GetAccountManager();
-    auto character = account->GetCharacters(cid).Get();
+  // We need all this jazz too.
+  auto accountManager = server->GetAccountManager();
+  auto character = account->GetCharacters(cid).Get();
 
-    // What? Go away hacker.
-    if(!character)
-    {
-        LogGeneralErrorMsg("Failed to get character?!\n");
+  // What? Go away hacker.
+  if (!character) {
+    LogGeneralErrorMsg("Failed to get character?!\n");
 
-        return false;
-    }
+    return false;
+  }
 
-    auto world = server->GetWorldByID(character->GetWorldID());
+  auto world = server->GetWorldByID(character->GetWorldID());
 
-    // Check the world is still there.
-    if(!world)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("User '%1' tried to loging to world %2 but "
-                "that world is not active.\n")
-                .Arg(username)
-                .Arg(character->GetWorldID());
-        });
-
-        return false;
-    }
-
-    // Start the channel login process.
-    auto login = accountManager->StartChannelLogin(username, character);
-
-    if(!login)
-    {
-        return false;
-    }
-
-    LogGeneralDebug([&]()
-    {
-        return libcomp::String("Start game request received for character"
-            " '%1' from %2\n")
-            .Arg(character->GetName())
-            .Arg(client->GetRemoteAddress());
+  // Check the world is still there.
+  if (!world) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "User '%1' tried to loging to world %2 but that world is not "
+                 "active.\n")
+          .Arg(username)
+          .Arg(character->GetWorldID());
     });
 
-    // Let the world know what we want to do.
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
-    login->SavePacket(request, false);
+    return false;
+  }
 
-    world->GetConnection()->SendPacket(request);
+  // Start the channel login process.
+  auto login = accountManager->StartChannelLogin(username, character);
 
-    return true;
+  if (!login) {
+    return false;
+  }
+
+  LogGeneralDebug([&]() {
+    return libcomp::String(
+               "Start game request received for character '%1' from %2\n")
+        .Arg(character->GetName())
+        .Arg(client->GetRemoteAddress());
+  });
+
+  // Let the world know what we want to do.
+  libcomp::Packet request;
+  request.WritePacketCode(InternalPacketCode_t::PACKET_ACCOUNT_LOGIN);
+  login->SavePacket(request, false);
+
+  world->GetConnection()->SendPacket(request);
+
+  return true;
 }

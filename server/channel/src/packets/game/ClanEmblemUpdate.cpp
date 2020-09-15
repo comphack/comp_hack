@@ -37,44 +37,45 @@
 
 using namespace channel;
 
-bool Parsers::ClanEmblemUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ClanEmblemUpdate::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 12)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 12) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    int32_t clanID = p.ReadS32Little();
-    uint8_t base = p.ReadU8();
-    uint8_t symbol = p.ReadU8();
-    uint8_t r1 = p.ReadU8();
-    uint8_t g1 = p.ReadU8();
-    uint8_t b1 = p.ReadU8();
-    uint8_t r2 = p.ReadU8();
-    uint8_t g2 = p.ReadU8();
-    uint8_t b2 = p.ReadU8();
+  int32_t clanID = p.ReadS32Little();
+  uint8_t base = p.ReadU8();
+  uint8_t symbol = p.ReadU8();
+  uint8_t r1 = p.ReadU8();
+  uint8_t g1 = p.ReadU8();
+  uint8_t b1 = p.ReadU8();
+  uint8_t r2 = p.ReadU8();
+  uint8_t g2 = p.ReadU8();
+  uint8_t b2 = p.ReadU8();
 
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_CLAN_EMBLEM_UPDATE);
-    request.WriteS32Little(state->GetWorldCID());
-    request.WriteS32Little(clanID);
-    request.WriteU8(base);
-    request.WriteU8(symbol);
-    request.WriteU8(r1);
-    request.WriteU8(g1);
-    request.WriteU8(b1);
-    request.WriteU8(r2);
-    request.WriteU8(g2);
-    request.WriteU8(b2);
+  libcomp::Packet request;
+  request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
+  request.WriteU8(
+      (int8_t)InternalPacketAction_t::PACKET_ACTION_CLAN_EMBLEM_UPDATE);
+  request.WriteS32Little(state->GetWorldCID());
+  request.WriteS32Little(clanID);
+  request.WriteU8(base);
+  request.WriteU8(symbol);
+  request.WriteU8(r1);
+  request.WriteU8(g1);
+  request.WriteU8(b1);
+  request.WriteU8(r2);
+  request.WriteU8(g2);
+  request.WriteU8(b2);
 
-    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
 
-    return true;
+  return true;
 }

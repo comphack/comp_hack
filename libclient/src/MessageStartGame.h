@@ -34,56 +34,53 @@
 #include <CString.h>
 #include <MessageClient.h>
 
-namespace logic
-{
+namespace logic {
 
 /**
  * Message requesting to start the game with the given character.
  */
-class MessageRequestStartGame : public libcomp::Message::MessageClient
-{
-public:
-    /**
-     * Create the message.
-     * @param characterID ID for the character to start the game with.
-     */
-    MessageRequestStartGame(uint8_t characterID) :
-        libcomp::Message::MessageClient(), mCharacterID(characterID) { }
+class MessageRequestStartGame : public libcomp::Message::MessageClient {
+ public:
+  /**
+   * Create the message.
+   * @param characterID ID for the character to start the game with.
+   */
+  MessageRequestStartGame(uint8_t characterID)
+      : libcomp::Message::MessageClient(), mCharacterID(characterID) {}
 
-    /**
-     * Cleanup the message.
-     */
-    ~MessageRequestStartGame() override { }
+  /**
+   * Cleanup the message.
+   */
+  ~MessageRequestStartGame() override {}
 
-    /**
-     * Get the ID for the character to start the game with.
-     * @returns ID for the character to start the game with.
-     */
-    uint8_t GetCharacterID() const { return mCharacterID; }
+  /**
+   * Get the ID for the character to start the game with.
+   * @returns ID for the character to start the game with.
+   */
+  uint8_t GetCharacterID() const { return mCharacterID; }
 
-    /**
-     * Get the specific client message type.
-     * @return The message's client message type
-     */
-    libcomp::Message::MessageClientType GetMessageClientType() const override {
-        return libcomp::Message::MessageClientType::REQUEST_START_GAME;
-    }
+  /**
+   * Get the specific client message type.
+   * @return The message's client message type
+   */
+  libcomp::Message::MessageClientType GetMessageClientType() const override {
+    return libcomp::Message::MessageClientType::REQUEST_START_GAME;
+  }
 
-    /**
-     * Dump the message for logging.
-     * @return String representation of the message.
-     */
-    libcomp::String Dump() const override
-    {
-        return libcomp::String("Message: Request start game\nID: %1")
-            .Arg(mCharacterID);
-    }
+  /**
+   * Dump the message for logging.
+   * @return String representation of the message.
+   */
+  libcomp::String Dump() const override {
+    return libcomp::String("Message: Request start game\nID: %1")
+        .Arg(mCharacterID);
+  }
 
-protected:
-    /// ID for the character to start the game with.
-    uint8_t mCharacterID;
+ protected:
+  /// ID for the character to start the game with.
+  uint8_t mCharacterID;
 };
 
-} // namespace logic
+}  // namespace logic
 
-#endif // LIBCLIENT_SRC_MESSAGESTARTGAME_H
+#endif  // LIBCLIENT_SRC_MESSAGESTARTGAME_H

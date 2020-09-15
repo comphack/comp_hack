@@ -28,77 +28,73 @@
 #define LIBTESTER_SRC_TESTCLIENT_H
 
 // libcomp Includes
-#include <ErrorCodes.h>
 #include <EncryptedConnection.h>
+#include <ErrorCodes.h>
 #include <PacketCodes.h>
 
 // Standard C++11 Includes
 #include <functional>
 #include <thread>
 
-namespace libtester
-{
+namespace libtester {
 
 typedef std::list<libcomp::Message::Message*> MessageList;
 
-class TestClient
-{
-public:
-    static constexpr asio::steady_timer::duration DEFAULT_TIMEOUT =
-        std::chrono::seconds(60);
+class TestClient {
+ public:
+  static constexpr asio::steady_timer::duration DEFAULT_TIMEOUT =
+      std::chrono::seconds(60);
 
-    enum class WaitStatus
-    {
-        Success,
-        Failure,
-        Wait,
-    };
+  enum class WaitStatus {
+    Success,
+    Failure,
+    Wait,
+  };
 
-    TestClient();
-    TestClient(const TestClient& other);
-    virtual ~TestClient();
+  TestClient();
+  TestClient(const TestClient& other);
+  virtual ~TestClient();
 
-    bool Connect(uint16_t port);
+  bool Connect(uint16_t port);
 
-    void Disconnect();
+  void Disconnect();
 
-    bool WaitEncrypted(double& waitTime, asio::steady_timer::duration
-        timeout = DEFAULT_TIMEOUT);
+  bool WaitEncrypted(double& waitTime,
+                     asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
 
-    bool WaitForDisconnect(double& waitTime,
-        asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
+  bool WaitForDisconnect(
+      double& waitTime, asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
 
-    bool WaitForPacket(uint16_t code,
-        libcomp::ReadOnlyPacket& p, double& waitTime,
-        asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
+  bool WaitForPacket(uint16_t code, libcomp::ReadOnlyPacket& p,
+                     double& waitTime,
+                     asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
 
-    bool WaitForMessage(std::function<WaitStatus(
-        const MessageList&)> eventFilter, double& waitTime,
-        asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
-    MessageList TakeMessages();
-    void ClearMessages();
+  bool WaitForMessage(std::function<WaitStatus(const MessageList&)> eventFilter,
+                      double& waitTime,
+                      asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
+  MessageList TakeMessages();
+  void ClearMessages();
 
-    std::shared_ptr<libcomp::EncryptedConnection> GetConnection();
+  std::shared_ptr<libcomp::EncryptedConnection> GetConnection();
 
-protected:
-    void SetConnection(const std::shared_ptr<
-        libcomp::EncryptedConnection>& conn);
-    bool HasDisconnectOrTimeout();
+ protected:
+  void SetConnection(const std::shared_ptr<libcomp::EncryptedConnection>& conn);
+  bool HasDisconnectOrTimeout();
 
-    virtual void HandlePacket(ChannelToClientPacketCode_t cmd,
-        libcomp::ReadOnlyPacket& p);
+  virtual void HandlePacket(ChannelToClientPacketCode_t cmd,
+                            libcomp::ReadOnlyPacket& p);
 
-    asio::io_service mService;
-    std::thread mServiceThread;
-    asio::steady_timer mTimer;
+  asio::io_service mService;
+  std::thread mServiceThread;
+  asio::steady_timer mTimer;
 
-    std::shared_ptr<libcomp::EncryptedConnection> mConnection;
-    std::shared_ptr<libcomp::MessageQueue<
-        libcomp::Message::Message*>> mMessageQueue;
+  std::shared_ptr<libcomp::EncryptedConnection> mConnection;
+  std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>>
+      mMessageQueue;
 
-    MessageList mReceivedMessages;
+  MessageList mReceivedMessages;
 };
 
-} // namespace libtester
+}  // namespace libtester
 
-#endif // LIBTESTER_SRC_TESTCLIENT_H
+#endif  // LIBTESTER_SRC_TESTCLIENT_H

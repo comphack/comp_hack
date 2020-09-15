@@ -27,47 +27,47 @@
 #ifndef TOOLS_UPDATER_SRC_OPTIONS_H
 #define TOOLS_UPDATER_SRC_OPTIONS_H
 
+#include <PopIgnore.h>
 #include <PushIgnore.h>
-#include "ui_Options.h"
 
 #include <QDialog>
-#include <PopIgnore.h>
+
+#include "ui_Options.h"
 
 #ifdef Q_OS_WIN32
 
+#include <PopIgnore.h>
 #include <PushIgnore.h>
 #include <d3d9.h>
-#include <PopIgnore.h>
 
-class Options : public QDialog
-{
-    Q_OBJECT
+class Options : public QDialog {
+  Q_OBJECT
 
-public:
-    Options(QWidget *parent = 0);
-    ~Options();
+ public:
+  Options(QWidget *parent = 0);
+  ~Options();
 
-protected slots:
-    void UpdatePresetToggle(bool toggled);
-    void UpdateCustomToggle(bool toggled);
+ protected slots:
+  void UpdatePresetToggle(bool toggled);
+  void UpdateCustomToggle(bool toggled);
 
-    void Load();
-    void Save();
+  void Load();
+  void Save();
 
-    void LanguageChanged();
+  void LanguageChanged();
 
-protected:
-    virtual void changeEvent(QEvent *pEvent);
+ protected:
+  virtual void changeEvent(QEvent *pEvent);
 
-    void PopulateAdapterModes();
+  void PopulateAdapterModes();
 
-    IDirect3D9 *mD3D9;
+  IDirect3D9 *mD3D9;
 
-    QList< QPair<int, int> > mScreenSizes;
+  QList<QPair<int, int> > mScreenSizes;
 
-    Ui::Options ui;
+  Ui::Options ui;
 };
 
-#endif // Q_OS_WIN32
+#endif  // Q_OS_WIN32
 
-#endif // TOOLS_UPDATER_SRC_OPTIONS_H
+#endif  // TOOLS_UPDATER_SRC_OPTIONS_H

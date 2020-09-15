@@ -25,45 +25,43 @@
 #ifndef TOOLS_CAPGREP_SRC_SEARCHFILTER_H
 #define TOOLS_CAPGREP_SRC_SEARCHFILTER_H
 
-#include <PushIgnore.h>
-#include <QString>
-#include <QByteArray>
-#include <QSortFilterProxyModel>
 #include <PopIgnore.h>
-
+#include <PushIgnore.h>
 #include <stdint.h>
 
-class SearchFilter : public QSortFilterProxyModel
-{
-    Q_OBJECT
+#include <QByteArray>
+#include <QSortFilterProxyModel>
+#include <QString>
 
-public:
-    SearchFilter(QObject *parent = 0);
+class SearchFilter : public QSortFilterProxyModel {
+  Q_OBJECT
 
-    void reset();
+ public:
+  SearchFilter(QObject* parent = 0);
 
-    typedef enum _SearchType
-    {
-        SearchType_None = -1,
-        SearchType_Binary = 0,
-        SearchType_Text = 1,
-        SearchType_Command = 2
-    } SearchType;
+  void reset();
 
-    void findBinary(const QByteArray& term);
-    void findText(const QString& encoding, const QString& text);
-    void findCommand(uint16_t cmd);
+  typedef enum _SearchType {
+    SearchType_None = -1,
+    SearchType_Binary = 0,
+    SearchType_Text = 1,
+    SearchType_Command = 2
+  } SearchType;
 
-    bool searchResult(const QModelIndex& index, int& packet,
-        int& offset, QByteArray& term);
+  void findBinary(const QByteArray& term);
+  void findText(const QString& encoding, const QString& text);
+  void findCommand(uint16_t cmd);
 
-protected:
-    bool filterAcceptsRow(int row, const QModelIndex& parent) const;
+  bool searchResult(const QModelIndex& index, int& packet, int& offset,
+                    QByteArray& term);
 
-    SearchType mSearchType;
+ protected:
+  bool filterAcceptsRow(int row, const QModelIndex& parent) const;
 
-    QByteArray mTerm;
-    uint16_t mCommand;
+  SearchType mSearchType;
+
+  QByteArray mTerm;
+  uint16_t mCommand;
 };
 
-#endif // TOOLS_CAPGREP_SRC_SEARCHFILTER_H
+#endif  // TOOLS_CAPGREP_SRC_SEARCHFILTER_H

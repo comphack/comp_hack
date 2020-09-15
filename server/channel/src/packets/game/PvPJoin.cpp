@@ -37,32 +37,28 @@
 
 using namespace channel;
 
-bool Parsers::PvPJoin::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PvPJoin::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 1)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 1) {
+    return false;
+  }
 
-    int8_t type = p.ReadS8();
+  int8_t type = p.ReadS8();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    if(!server->GetMatchManager()->JoinQueue(client, type))
-    {
-        libcomp::Packet reply;
-        reply.WritePacketCode(
-            ChannelToClientPacketCode_t::PACKET_PVP_JOIN);
-        reply.WriteS8(type);
-        reply.WriteS8(-1);  // Failure
+  if (!server->GetMatchManager()->JoinQueue(client, type)) {
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PVP_JOIN);
+    reply.WriteS8(type);
+    reply.WriteS8(-1);  // Failure
 
-        client->SendPacket(reply);
-    }
+    client->SendPacket(reply);
+  }
 
-    return true;
+  return true;
 }

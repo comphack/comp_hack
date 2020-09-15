@@ -32,35 +32,34 @@
 #include <ActionUpdateLNC.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionUpdateLNC;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionUpdateLNC : public Action
-{
-    Q_OBJECT
+class ActionUpdateLNC : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionUpdateLNC(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionUpdateLNC();
+ public:
+  explicit ActionUpdateLNC(ActionList *pList, MainWindow *pMainWindow,
+                           QWidget *pParent = 0);
+  virtual ~ActionUpdateLNC();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionUpdateLNC *prop;
+ protected:
+  Ui::ActionUpdateLNC *prop;
 
-    std::shared_ptr<objects::ActionUpdateLNC> mAction;
+  std::shared_ptr<objects::ActionUpdateLNC> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONUPDATELNCUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONUPDATELNCUI_H

@@ -44,126 +44,118 @@
 using namespace channel;
 
 void AllocatePoint(const std::shared_ptr<ChannelServer> server,
-    const std::shared_ptr<ChannelClientConnection> client,
-    int8_t correctStatOffset)
-{
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto stats = character->GetCoreStats().Get();
+                   const std::shared_ptr<ChannelClientConnection> client,
+                   int8_t correctStatOffset) {
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto stats = character->GetCoreStats().Get();
 
-    // Process these changes in an operational changeset to ensure no points
-    // are lost due to a crash etc
-    auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
-    auto expl = std::make_shared<libcomp::DBExplicitUpdate>(
-        stats);
+  // Process these changes in an operational changeset to ensure no points
+  // are lost due to a crash etc
+  auto opChangeset = std::make_shared<libcomp::DBOperationalChangeSet>();
+  auto expl = std::make_shared<libcomp::DBExplicitUpdate>(stats);
 
-    int32_t points = character->GetPoints();
+  int32_t points = character->GetPoints();
 
-    int16_t currentStat = 0;
-    switch((CorrectTbl)correctStatOffset)
-    {
-        case CorrectTbl::STR:
-            currentStat = stats->GetSTR();
-            expl->AddFrom<int32_t>("STR", 1, currentStat);
-            break;
-        case CorrectTbl::MAGIC:
-            currentStat = stats->GetMAGIC();
-            expl->AddFrom<int32_t>("MAGIC", 1, currentStat);
-            break;
-        case CorrectTbl::VIT:
-            currentStat = stats->GetVIT();
-            expl->AddFrom<int32_t>("VIT", 1, currentStat);
-            break;
-        case CorrectTbl::INT:
-            currentStat = stats->GetINTEL();
-            expl->AddFrom<int32_t>("INTEL", 1, currentStat);
-            break;
-        case CorrectTbl::SPEED:
-            currentStat = stats->GetSPEED();
-            expl->AddFrom<int32_t>("SPEED", 1, currentStat);
-            break;
-        case CorrectTbl::LUCK:
-            currentStat = stats->GetLUCK();
-            expl->AddFrom<int32_t>("LUCK", 1, currentStat);
-            break;
-        default:
-            return;
-    }
+  int16_t currentStat = 0;
+  switch ((CorrectTbl)correctStatOffset) {
+    case CorrectTbl::STR:
+      currentStat = stats->GetSTR();
+      expl->AddFrom<int32_t>("STR", 1, currentStat);
+      break;
+    case CorrectTbl::MAGIC:
+      currentStat = stats->GetMAGIC();
+      expl->AddFrom<int32_t>("MAGIC", 1, currentStat);
+      break;
+    case CorrectTbl::VIT:
+      currentStat = stats->GetVIT();
+      expl->AddFrom<int32_t>("VIT", 1, currentStat);
+      break;
+    case CorrectTbl::INT:
+      currentStat = stats->GetINTEL();
+      expl->AddFrom<int32_t>("INTEL", 1, currentStat);
+      break;
+    case CorrectTbl::SPEED:
+      currentStat = stats->GetSPEED();
+      expl->AddFrom<int32_t>("SPEED", 1, currentStat);
+      break;
+    case CorrectTbl::LUCK:
+      currentStat = stats->GetLUCK();
+      expl->AddFrom<int32_t>("LUCK", 1, currentStat);
+      break;
+    default:
+      return;
+  }
 
-    opChangeset->AddOperation(expl);
+  opChangeset->AddOperation(expl);
 
-    int32_t pointCost = (int32_t)floor((currentStat + 1) / 10) + 1;
-    if(points < pointCost)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("AllocateSkillPoint attempted with an"
-                " insufficient amount of stat points available: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
+  int32_t pointCost = (int32_t)floor((currentStat + 1) / 10) + 1;
+  if (points < pointCost) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "AllocateSkillPoint attempted with an insufficient amount of "
+                 "stat points available: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Kill();
-        return;
-    }
+    client->Kill();
+    return;
+  }
 
-    expl = std::make_shared<libcomp::DBExplicitUpdate>(character);
-    expl->SubtractFrom<int32_t>("Points", pointCost, points);
-    opChangeset->AddOperation(expl);
+  expl = std::make_shared<libcomp::DBExplicitUpdate>(character);
+  expl->SubtractFrom<int32_t>("Points", pointCost, points);
+  opChangeset->AddOperation(expl);
 
-    if(!server->GetWorldDatabase()->ProcessChangeSet(opChangeset))
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("AllocateSkillPoint failed to process"
-                " operational changeset when updating stats: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
+  if (!server->GetWorldDatabase()->ProcessChangeSet(opChangeset)) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "AllocateSkillPoint failed to process operational changeset "
+                 "when updating stats: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Kill();
-        return;
-    }
+    client->Kill();
+    return;
+  }
 
-    server->GetTokuseiManager()->Recalculate(cState);
+  server->GetTokuseiManager()->Recalculate(cState);
 
-    auto characterManager = server->GetCharacterManager();
-    characterManager->RecalculateStats(cState, client, false);
+  auto characterManager = server->GetCharacterManager();
+  characterManager->RecalculateStats(cState, client, false);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_ALLOCATE_SKILL_POINT);
-    reply.WriteS32Little(cState->GetEntityID());
-    characterManager->GetEntityStatsPacketData(reply, stats, cState, 1);
-    reply.WriteS32Little(pointCost);
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_ALLOCATE_SKILL_POINT);
+  reply.WriteS32Little(cState->GetEntityID());
+  characterManager->GetEntityStatsPacketData(reply, stats, cState, 1);
+  reply.WriteS32Little(pointCost);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 }
 
-bool Parsers::AllocateSkillPoint::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::AllocateSkillPoint::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 5)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 5) {
+    return false;
+  }
 
-    int32_t entityID = p.ReadS32Little();
-    int8_t correctStatOffset = p.ReadS8();
+  int32_t entityID = p.ReadS32Little();
+  int8_t correctStatOffset = p.ReadS8();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
 
-    if(cState->GetEntityID() != entityID)
-    {
-        return false;
-    }
+  if (cState->GetEntityID() != entityID) {
+    return false;
+  }
 
-    server->QueueWork(AllocatePoint, server, client, correctStatOffset);
+  server->QueueWork(AllocatePoint, server, client, correctStatOffset);
 
-    return true;
+  return true;
 }

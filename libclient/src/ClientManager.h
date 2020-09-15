@@ -30,29 +30,27 @@
 // libcomp Includes
 #include <MessageClient.h>
 
-namespace logic
-{
+namespace logic {
 
 /**
  * Abstract base class used to represent a @ref MessageClient handler.
  */
-class ClientManager
-{
-public:
-    /**
-     * Cleanup the manager.
-     */
-    virtual ~ClientManager() { }
+class ClientManager {
+ public:
+  /**
+   * Cleanup the manager.
+   */
+  virtual ~ClientManager() {}
 
-    /**
-     * Process a client message from the queue.
-     * @param pMessage MessageClient to be processed
-     * @return true on success, false on failure
-     */
-    virtual bool ProcessClientMessage(
-        const libcomp::Message::MessageClient *pMessage) = 0;
+  /**
+   * Process a client message from the queue.
+   * @param pMessage MessageClient to be processed
+   * @return true on success, false on failure
+   */
+  virtual bool ProcessClientMessage(
+      const libcomp::Message::MessageClient *pMessage) = 0;
 };
 
-} // namespace logic
+}  // namespace logic
 
-#endif // LIBCLIENT_SRC_CLIENTMANAGER_H
+#endif  // LIBCLIENT_SRC_CLIENTMANAGER_H

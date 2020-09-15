@@ -35,44 +35,39 @@
 
 using namespace channel;
 
-ManagerClientPacket::ManagerClientPacket(std::weak_ptr<libcomp::BaseServer> server)
-    : libcomp::ManagerPacket(server)
-{
-}
+ManagerClientPacket::ManagerClientPacket(
+    std::weak_ptr<libcomp::BaseServer> server)
+    : libcomp::ManagerPacket(server) {}
 
-ManagerClientPacket::~ManagerClientPacket()
-{
-}
+ManagerClientPacket::~ManagerClientPacket() {}
 
-bool ManagerClientPacket::ValidateConnectionState(const std::shared_ptr<
-    libcomp::TcpConnection>& connection, libcomp::CommandCode_t commandCode) const
-{
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+bool ManagerClientPacket::ValidateConnectionState(
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    libcomp::CommandCode_t commandCode) const {
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    bool valid = false;
-    switch((ClientToChannelPacketCode_t)commandCode)
-    {
-        case ClientToChannelPacketCode_t::PACKET_LOGIN:
-        case ClientToChannelPacketCode_t::PACKET_KEEP_ALIVE:
-            valid = true;
-            break;
-        case ClientToChannelPacketCode_t::PACKET_AUTH:
-            if(!(valid = state->GetLoggedIn()))
-            {
-                LogConnectionErrorMsg("Client connection attempted to "
-                    "authenticate without logging in.\n");
-            }
-            break;
-        default:
-            if(!(valid = state->GetAuthenticated() && state->GetLoggedIn()))
-            {
-                LogConnectionErrorMsg("Client connection attempted to handle a "
-                    "request packet without authenticating and logging in "
-                    "first.\n");
-            }
-            break;
-    }
+  bool valid = false;
+  switch ((ClientToChannelPacketCode_t)commandCode) {
+    case ClientToChannelPacketCode_t::PACKET_LOGIN:
+    case ClientToChannelPacketCode_t::PACKET_KEEP_ALIVE:
+      valid = true;
+      break;
+    case ClientToChannelPacketCode_t::PACKET_AUTH:
+      if (!(valid = state->GetLoggedIn())) {
+        LogConnectionErrorMsg(
+            "Client connection attempted to authenticate without logging "
+            "in.\n");
+      }
+      break;
+    default:
+      if (!(valid = state->GetAuthenticated() && state->GetLoggedIn())) {
+        LogConnectionErrorMsg(
+            "Client connection attempted to handle a request packet without "
+            "authenticating and logging in first.\n");
+      }
+      break;
+  }
 
-    return valid;
+  return valid;
 }

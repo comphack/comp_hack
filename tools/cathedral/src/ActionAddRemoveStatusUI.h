@@ -32,35 +32,34 @@
 #include <ActionAddRemoveStatus.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionAddRemoveStatus;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionAddRemoveStatus : public Action
-{
-    Q_OBJECT
+class ActionAddRemoveStatus : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionAddRemoveStatus(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionAddRemoveStatus();
+ public:
+  explicit ActionAddRemoveStatus(ActionList *pList, MainWindow *pMainWindow,
+                                 QWidget *pParent = 0);
+  virtual ~ActionAddRemoveStatus();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionAddRemoveStatus *prop;
+ protected:
+  Ui::ActionAddRemoveStatus *prop;
 
-    std::shared_ptr<objects::ActionAddRemoveStatus> mAction;
+  std::shared_ptr<objects::ActionAddRemoveStatus> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONADDREMOVESTATUSUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONADDREMOVESTATUSUI_H

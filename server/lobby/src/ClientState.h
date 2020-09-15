@@ -30,16 +30,14 @@
 // objects Includes
 #include <ClientStateObject.h>
 
-namespace lobby
-{
+namespace lobby {
 
-class ClientState : public objects::ClientStateObject
-{
-public:
-    ClientState();
-    virtual ~ClientState();
+class ClientState : public objects::ClientStateObject {
+ public:
+  ClientState();
+  virtual ~ClientState();
 };
 
-} // namespace lobby
+}  // namespace lobby
 
-#endif // SERVER_LOBBY_SRC_CLIENTSTATE_H
+#endif  // SERVER_LOBBY_SRC_CLIENTSTATE_H

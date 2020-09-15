@@ -36,28 +36,27 @@
 
 using namespace channel;
 
-bool Parsers::EventResponse::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::EventResponse::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t optionID = p.ReadS32Little();
+  int32_t optionID = p.ReadS32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    
-    server->QueueWork([](
-        const std::shared_ptr<ChannelServer>& pServer,
-        const std::shared_ptr<ChannelClientConnection> pClient,
-        int32_t pOptionID)
-    {
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+  server->QueueWork(
+      [](const std::shared_ptr<ChannelServer>& pServer,
+         const std::shared_ptr<ChannelClientConnection> pClient,
+         int32_t pOptionID) {
         pServer->GetEventManager()->HandleResponse(pClient, pOptionID);
-    }, server, client, optionID);
+      },
+      server, client, optionID);
 
-    return true;
+  return true;
 }

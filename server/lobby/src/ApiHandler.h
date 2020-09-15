@@ -48,191 +48,178 @@
 // Standard C++11 Includes
 #include <unordered_map>
 
-namespace objects
-{
+namespace objects {
 class WebGameSession;
 }
 
-namespace libobjects
-{
+namespace libobjects {
 class DefinitionManager;
 class ScriptEngine;
-}
+}  // namespace libobjects
 
-namespace lobby
-{
+namespace lobby {
 
 class AccountManager;
 class World;
 
-class ApiSession
-{
-public:
-    ApiSession()
-    {
-        requestLock = new std::mutex;
-    }
+class ApiSession {
+ public:
+  ApiSession() { requestLock = new std::mutex; }
 
-    virtual ~ApiSession()
-    {
-        delete requestLock;
-    }
+  virtual ~ApiSession() { delete requestLock; }
 
-    void Reset();
+  void Reset();
 
-    libcomp::String username;
-    libcomp::String challenge;
-    libcomp::String clientAddress;
-    std::shared_ptr<objects::Account> account;
-    std::mutex* requestLock;
+  libcomp::String username;
+  libcomp::String challenge;
+  libcomp::String clientAddress;
+  std::shared_ptr<objects::Account> account;
+  std::mutex* requestLock;
 };
 
-class WebGameApiSession : public ApiSession
-{
-public:
-    std::shared_ptr<objects::WebGameSession> webGameSession;
-    std::shared_ptr<libcomp::ScriptEngine> gameState;
+class WebGameApiSession : public ApiSession {
+ public:
+  std::shared_ptr<objects::WebGameSession> webGameSession;
+  std::shared_ptr<libcomp::ScriptEngine> gameState;
 };
 
-class ApiHandler : public CivetHandler
-{
-public:
-    ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
-        const std::shared_ptr<lobby::LobbyServer>& server);
+class ApiHandler : public CivetHandler {
+ public:
+  ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
+             const std::shared_ptr<lobby::LobbyServer>& server);
 
-    virtual ~ApiHandler();
+  virtual ~ApiHandler();
 
-    virtual bool handlePost(CivetServer *pServer,
-        struct mg_connection *pConnection);
+  virtual bool handlePost(CivetServer* pServer,
+                          struct mg_connection* pConnection);
 
-    void SetAccountManager(AccountManager *pManager);
+  void SetAccountManager(AccountManager* pManager);
 
-protected:
-    bool Authenticate(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    std::shared_ptr<libcomp::Database> GetDatabase() const;
+ protected:
+  bool Authenticate(const JsonBox::Object& request, JsonBox::Object& response,
+                    const std::shared_ptr<ApiSession>& session);
+  std::shared_ptr<libcomp::Database> GetDatabase() const;
 
-    bool Auth_Token(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
+  bool Auth_Token(const JsonBox::Object& request, JsonBox::Object& response,
+                  const std::shared_ptr<ApiSession>& session);
 
-    bool Account_GetCP(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Account_GetDetails(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Account_ChangePassword(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Account_ClientLogin(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Account_Register(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
+  bool Account_GetCP(const JsonBox::Object& request, JsonBox::Object& response,
+                     const std::shared_ptr<ApiSession>& session);
+  bool Account_GetDetails(const JsonBox::Object& request,
+                          JsonBox::Object& response,
+                          const std::shared_ptr<ApiSession>& session);
+  bool Account_ChangePassword(const JsonBox::Object& request,
+                              JsonBox::Object& response,
+                              const std::shared_ptr<ApiSession>& session);
+  bool Account_ClientLogin(const JsonBox::Object& request,
+                           JsonBox::Object& response,
+                           const std::shared_ptr<ApiSession>& session);
+  bool Account_Register(const JsonBox::Object& request,
+                        JsonBox::Object& response,
+                        const std::shared_ptr<ApiSession>& session);
 
-    bool Admin_GetAccounts(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Admin_GetAccount(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Admin_DeleteAccount(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Admin_UpdateAccount(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Admin_KickPlayer(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Admin_MessageWorld(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Admin_Online(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Admin_PostItems(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Admin_GetPromos(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Admin_CreatePromo(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool Admin_DeletePromo(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
+  bool Admin_GetAccounts(const JsonBox::Object& request,
+                         JsonBox::Object& response,
+                         const std::shared_ptr<ApiSession>& session);
+  bool Admin_GetAccount(const JsonBox::Object& request,
+                        JsonBox::Object& response,
+                        const std::shared_ptr<ApiSession>& session);
+  bool Admin_DeleteAccount(const JsonBox::Object& request,
+                           JsonBox::Object& response,
+                           const std::shared_ptr<ApiSession>& session);
+  bool Admin_UpdateAccount(const JsonBox::Object& request,
+                           JsonBox::Object& response,
+                           const std::shared_ptr<ApiSession>& session);
+  bool Admin_KickPlayer(const JsonBox::Object& request,
+                        JsonBox::Object& response,
+                        const std::shared_ptr<ApiSession>& session);
+  bool Admin_MessageWorld(const JsonBox::Object& request,
+                          JsonBox::Object& response,
+                          const std::shared_ptr<ApiSession>& session);
+  bool Admin_Online(const JsonBox::Object& request, JsonBox::Object& response,
+                    const std::shared_ptr<ApiSession>& session);
+  bool Admin_PostItems(const JsonBox::Object& request,
+                       JsonBox::Object& response,
+                       const std::shared_ptr<ApiSession>& session);
+  bool Admin_GetPromos(const JsonBox::Object& request,
+                       JsonBox::Object& response,
+                       const std::shared_ptr<ApiSession>& session);
+  bool Admin_CreatePromo(const JsonBox::Object& request,
+                         JsonBox::Object& response,
+                         const std::shared_ptr<ApiSession>& session);
+  bool Admin_DeletePromo(const JsonBox::Object& request,
+                         JsonBox::Object& response,
+                         const std::shared_ptr<ApiSession>& session);
 
-    bool WebApp_Request(const libcomp::String& appName,
-        const libcomp::String& method, const JsonBox::Object& request,
-        JsonBox::Object& response, const std::shared_ptr<ApiSession>& session);
+  bool WebApp_Request(const libcomp::String& appName,
+                      const libcomp::String& method,
+                      const JsonBox::Object& request, JsonBox::Object& response,
+                      const std::shared_ptr<ApiSession>& session);
 
-    std::shared_ptr<libcomp::Database> WebAppScript_GetLobbyDatabase();
-    std::shared_ptr<libcomp::Database> WebAppScript_GetWorldDatabase(
-        uint8_t worldID);
+  std::shared_ptr<libcomp::Database> WebAppScript_GetLobbyDatabase();
+  std::shared_ptr<libcomp::Database> WebAppScript_GetWorldDatabase(
+      uint8_t worldID);
 
-    bool WebGame_GetCoins(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool WebGame_Start(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
-    bool WebGame_Update(const JsonBox::Object& request,
-        JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session);
+  bool WebGame_GetCoins(const JsonBox::Object& request,
+                        JsonBox::Object& response,
+                        const std::shared_ptr<ApiSession>& session);
+  bool WebGame_Start(const JsonBox::Object& request, JsonBox::Object& response,
+                     const std::shared_ptr<ApiSession>& session);
+  bool WebGame_Update(const JsonBox::Object& request, JsonBox::Object& response,
+                      const std::shared_ptr<ApiSession>& session);
 
-    int64_t WebGameScript_GetCoins(const std::shared_ptr<ApiSession>& session);
-    std::shared_ptr<libcomp::Database> WebGameScript_GetDatabase(
-        const std::shared_ptr<ApiSession>& session, bool worldDB);
-    int64_t WebGameScript_GetSystemTime();
-    bool WebGameScript_UpdateCoins(const std::shared_ptr<ApiSession>& session,
-        int64_t coins, bool adjust);
+  int64_t WebGameScript_GetCoins(const std::shared_ptr<ApiSession>& session);
+  std::shared_ptr<libcomp::Database> WebGameScript_GetDatabase(
+      const std::shared_ptr<ApiSession>& session, bool worldDB);
+  int64_t WebGameScript_GetSystemTime();
+  bool WebGameScript_UpdateCoins(const std::shared_ptr<ApiSession>& session,
+                                 int64_t coins, bool adjust);
 
-    uint32_t Script_GetTimestamp();
-    void Script_SetResponse(JsonBox::Object* response,
-        const libcomp::String& key, const libcomp::String& value);
+  uint32_t Script_GetTimestamp();
+  void Script_SetResponse(JsonBox::Object* response, const libcomp::String& key,
+                          const libcomp::String& value);
 
-private:
-    std::shared_ptr<objects::Account> GetAccount(
-        const JsonBox::Object& obj, JsonBox::Object& response);
-    std::shared_ptr<World> GetWorld(
-        const JsonBox::Object& obj, JsonBox::Object& response);
+ private:
+  std::shared_ptr<objects::Account> GetAccount(const JsonBox::Object& obj,
+                                               JsonBox::Object& response);
+  std::shared_ptr<World> GetWorld(const JsonBox::Object& obj,
+                                  JsonBox::Object& response);
 
-    bool GetWebGameSession(JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session,
-        std::shared_ptr<objects::WebGameSession>& gameSession,
-        std::shared_ptr<World>& world);
+  bool GetWebGameSession(JsonBox::Object& response,
+                         const std::shared_ptr<ApiSession>& session,
+                         std::shared_ptr<objects::WebGameSession>& gameSession,
+                         std::shared_ptr<World>& world);
 
-    bool HaveUserLevel(JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session, uint32_t requiredLevel);
+  bool HaveUserLevel(JsonBox::Object& response,
+                     const std::shared_ptr<ApiSession>& session,
+                     uint32_t requiredLevel);
 
-    // List of API sessions.
-    std::unordered_map<libcomp::String, std::shared_ptr<ApiSession>> mSessions;
+  // List of API sessions.
+  std::unordered_map<libcomp::String, std::shared_ptr<ApiSession>> mSessions;
 
-    /// List of API parsers.
-    std::unordered_map<libcomp::String, std::function<bool(ApiHandler&,
-        const JsonBox::Object& request, JsonBox::Object& response,
-        const std::shared_ptr<ApiSession>& session)>> mParsers;
+  /// List of API parsers.
+  std::unordered_map<
+      libcomp::String,
+      std::function<bool(ApiHandler&, const JsonBox::Object& request,
+                         JsonBox::Object& response,
+                         const std::shared_ptr<ApiSession>& session)>>
+      mParsers;
 
-    std::shared_ptr<objects::LobbyConfig> mConfig;
-    std::shared_ptr<lobby::LobbyServer> mServer;
+  std::shared_ptr<objects::LobbyConfig> mConfig;
+  std::shared_ptr<lobby::LobbyServer> mServer;
 
-    std::unordered_map<libcomp::String,
-        std::shared_ptr<libcomp::ServerScript>> mAppDefinitions;
+  std::unordered_map<libcomp::String, std::shared_ptr<libcomp::ServerScript>>
+      mAppDefinitions;
 
-    std::unordered_map<libcomp::String,
-        std::shared_ptr<libcomp::ServerScript>> mGameDefinitions;
+  std::unordered_map<libcomp::String, std::shared_ptr<libcomp::ServerScript>>
+      mGameDefinitions;
 
-    AccountManager *mAccountManager;
-    libcomp::DefinitionManager *mDefinitionManager;
+  AccountManager* mAccountManager;
+  libcomp::DefinitionManager* mDefinitionManager;
 
-    std::mutex mSessionLock;
+  std::mutex mSessionLock;
 };
 
-} // namespace lobby
+}  // namespace lobby
 
-#endif // SERVER_LOBBY_SRC_APIHANDLER_H
+#endif  // SERVER_LOBBY_SRC_APIHANDLER_H

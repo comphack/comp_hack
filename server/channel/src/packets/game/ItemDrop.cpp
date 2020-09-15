@@ -42,82 +42,78 @@
 #include <MiItemData.h>
 
 // channel Includes
-#include "ChannelServer.h"
 #include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "DefinitionManager.h"
 
 using namespace channel;
 
 void DropItem(const std::shared_ptr<ChannelServer> server,
-    const std::shared_ptr<ChannelClientConnection>& client,
-    int64_t itemID)
-{
-    auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetEntity();
+              const std::shared_ptr<ChannelClientConnection>& client,
+              int64_t itemID) {
+  auto state = client->GetClientState();
+  auto character = state->GetCharacterState()->GetEntity();
 
-    auto uuid = state->GetObjectUUID(itemID);
+  auto uuid = state->GetObjectUUID(itemID);
 
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(uuid));
-    auto itemDef = item ? server->GetDefinitionManager()->GetItemData(
-        item->GetType()) : nullptr;
-    auto itemBox = item ? std::dynamic_pointer_cast<objects::ItemBox>(
-        libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()))
-        : nullptr;
+  auto item = std::dynamic_pointer_cast<objects::Item>(
+      libcomp::PersistentObject::GetObjectByUUID(uuid));
+  auto itemDef =
+      item ? server->GetDefinitionManager()->GetItemData(item->GetType())
+           : nullptr;
+  auto itemBox =
+      item ? std::dynamic_pointer_cast<objects::ItemBox>(
+                 libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()))
+           : nullptr;
 
-    if(itemBox && itemDef &&
-        (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_DISCARD) != 0)
-    {
-        int8_t slot = item->GetBoxSlot();
+  if (itemBox && itemDef &&
+      (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_DISCARD) != 0) {
+    int8_t slot = item->GetBoxSlot();
 
-        server->GetCharacterManager()->UnequipItem(client, item);
-        itemBox->SetItems((size_t)slot, NULLUUID);
+    server->GetCharacterManager()->UnequipItem(client, item);
+    itemBox->SetItems((size_t)slot, NULLUUID);
 
-        server->GetCharacterManager()->SendItemBoxData(client, itemBox,
-            { (uint16_t)slot });
+    server->GetCharacterManager()->SendItemBoxData(client, itemBox,
+                                                   {(uint16_t)slot});
 
-        auto dbChanges = libcomp::DatabaseChangeSet::Create(state
-            ->GetAccountUID());
-        dbChanges->Update(itemBox);
-        dbChanges->Delete(item);
-        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
-    }
-    else
-    {
-        LogItemDebug([&]()
-        {
-            return libcomp::String("ItemDrop request failed. Notifying"
-                " requestor: %1\n").Arg(state->GetAccountUID().ToString());
-        });
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+    dbChanges->Update(itemBox);
+    dbChanges->Delete(item);
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+  } else {
+    LogItemDebug([&]() {
+      return libcomp::String(
+                 "ItemDrop request failed. Notifying requestor: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        libcomp::Packet err;
-        err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_ITEM);
-        err.WriteS32Little((int32_t)
-            ClientToChannelPacketCode_t::PACKET_ITEM_DROP);
-        err.WriteS32Little(-1);
-        err.WriteS8(0);
-        err.WriteS8(0);
+    libcomp::Packet err;
+    err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_ITEM);
+    err.WriteS32Little((int32_t)ClientToChannelPacketCode_t::PACKET_ITEM_DROP);
+    err.WriteS32Little(-1);
+    err.WriteS8(0);
+    err.WriteS8(0);
 
-        client->SendPacket(err);
-    }
+    client->SendPacket(err);
+  }
 }
 
-bool Parsers::ItemDrop::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ItemDrop::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    int64_t itemID = p.ReadS64Little();
+  int64_t itemID = p.ReadS64Little();
 
-    server->QueueWork(DropItem, server, client, itemID);
+  server->QueueWork(DropItem, server, client, itemID);
 
-    return true;
+  return true;
 }

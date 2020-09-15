@@ -36,71 +36,70 @@
 // Boost ASIO Includes
 #include <asio.hpp>
 
-namespace world
-{
+namespace world {
 
 /**
  * Class to handle messages pertaining to connecting to
  * the lobby or channels.
  */
-class ManagerConnection : public libcomp::Manager
-{
-public:
-    /**
-     * Create a new manager.
-     * @param server Pointer to the server that uses this manager
-     */
-    ManagerConnection(std::weak_ptr<libcomp::BaseServer> server);
+class ManagerConnection : public libcomp::Manager {
+ public:
+  /**
+   * Create a new manager.
+   * @param server Pointer to the server that uses this manager
+   */
+  ManagerConnection(std::weak_ptr<libcomp::BaseServer> server);
 
-    /**
-     * Clean up the manager.
-     */
-    virtual ~ManagerConnection();
+  /**
+   * Clean up the manager.
+   */
+  virtual ~ManagerConnection();
 
-    /**
-     * Get the different types of messages handled by this manager.
-     * @return List of supported message types
-     */
-    virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
+  /**
+   * Get the different types of messages handled by this manager.
+   * @return List of supported message types
+   */
+  virtual std::list<libcomp::Message::MessageType> GetSupportedTypes() const;
 
-    /**
-     * Process a message from the queue.
-     * @param pMessage Message to be processed
-     * @return true on success, false on failure
-     */
-    virtual bool ProcessMessage(const libcomp::Message::Message *pMessage);
+  /**
+   * Process a message from the queue.
+   * @param pMessage Message to be processed
+   * @return true on success, false on failure
+   */
+  virtual bool ProcessMessage(const libcomp::Message::Message* pMessage);
 
-    /**
-     * Get a pointer to the lobby connection.
-     * @return Pointer to the lobby connection
-     */
-    std::shared_ptr<libcomp::InternalConnection> GetLobbyConnection();
+  /**
+   * Get a pointer to the lobby connection.
+   * @return Pointer to the lobby connection
+   */
+  std::shared_ptr<libcomp::InternalConnection> GetLobbyConnection();
 
-    /**
-     * Check if the lobby connection is currently active.
-     * @return true if connected, false if not connected
-     */
-    bool LobbyConnected();
+  /**
+   * Check if the lobby connection is currently active.
+   * @return true if connected, false if not connected
+   */
+  bool LobbyConnected();
 
-    /**
-     * Remove a connection and any associated channel
-     * when no longer needed.  This should always be a channel
-     * connection but should be called regardless.
-     * @param connection Pointer to an internal connection
-     */
-    void RemoveConnection(std::shared_ptr<libcomp::InternalConnection>& connection);
+  /**
+   * Remove a connection and any associated channel
+   * when no longer needed.  This should always be a channel
+   * connection but should be called regardless.
+   * @param connection Pointer to an internal connection
+   */
+  void RemoveConnection(
+      std::shared_ptr<libcomp::InternalConnection>& connection);
 
-private:
-    /// Static list of supported message types for the manager.
-    static std::list<libcomp::Message::MessageType> sSupportedTypes;
+ private:
+  /// Static list of supported message types for the manager.
+  static std::list<libcomp::Message::MessageType> sSupportedTypes;
 
-    /// Pointer to the server that uses this manager.
-    std::weak_ptr<libcomp::BaseServer> mServer;
+  /// Pointer to the server that uses this manager.
+  std::weak_ptr<libcomp::BaseServer> mServer;
 
-    /// Pointer to the lobby connection after connecting.
-    std::shared_ptr<libcomp::InternalConnection> mLobbyConnection;
+  /// Pointer to the lobby connection after connecting.
+  std::shared_ptr<libcomp::InternalConnection> mLobbyConnection;
 };
 
-} // namespace world
+}  // namespace world
 
-#endif // SERVER_WORLD_SRC_MANAGERCONNECTION_H
+#endif  // SERVER_WORLD_SRC_MANAGERCONNECTION_H

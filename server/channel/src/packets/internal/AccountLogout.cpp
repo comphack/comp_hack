@@ -46,64 +46,60 @@
 
 using namespace channel;
 
-bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::AccountLogout::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)connection;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)connection;
 
-    int32_t cid = p.ReadS32Little();
-    LogoutPacketAction_t action = (LogoutPacketAction_t)p.ReadU32Little();
+  int32_t cid = p.ReadS32Little();
+  LogoutPacketAction_t action = (LogoutPacketAction_t)p.ReadU32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = server->GetManagerConnection()->GetEntityClient(cid, true);
-    if(client == nullptr)
-    {
-        // Not logged in, stop here
-        return true;
-    }
-
-    // Manually perform the logout then respond to the client
-    server->GetAccountManager()->Logout(client, true);
-    client->GetClientState()->SetLogoutSave(false);
-
-    bool normalDisconnect = true;
-    if(action == LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH)
-    {
-        int8_t channelID = p.ReadS8();
-        uint32_t sessionKey = p.ReadU32Little();
-
-        std::shared_ptr<objects::RegisteredChannel> channel;
-        for(auto c : server->GetAllRegisteredChannels())
-        {
-            if(c->GetID() == channelID)
-            {
-                channel = c;
-                break;
-            }
-        }
-
-        if(channel)
-        {
-            libcomp::Packet request;
-            request.WritePacketCode(
-                ChannelToClientPacketCode_t::PACKET_LOGOUT);
-            request.WriteU32Little(
-                (uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
-            request.WriteU32Little(sessionKey);
-            request.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-                libcomp::String("%1:%2").Arg(channel->GetIP()).Arg(
-                    channel->GetPort()), true);
-            client->SendPacket(request);
-
-            normalDisconnect = false;
-        }
-    }
-
-    if(normalDisconnect)
-    {
-        server->GetAccountManager()->RequestDisconnect(client);
-    }
-
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = server->GetManagerConnection()->GetEntityClient(cid, true);
+  if (client == nullptr) {
+    // Not logged in, stop here
     return true;
+  }
+
+  // Manually perform the logout then respond to the client
+  server->GetAccountManager()->Logout(client, true);
+  client->GetClientState()->SetLogoutSave(false);
+
+  bool normalDisconnect = true;
+  if (action == LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH) {
+    int8_t channelID = p.ReadS8();
+    uint32_t sessionKey = p.ReadU32Little();
+
+    std::shared_ptr<objects::RegisteredChannel> channel;
+    for (auto c : server->GetAllRegisteredChannels()) {
+      if (c->GetID() == channelID) {
+        channel = c;
+        break;
+      }
+    }
+
+    if (channel) {
+      libcomp::Packet request;
+      request.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOGOUT);
+      request.WriteU32Little(
+          (uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH);
+      request.WriteU32Little(sessionKey);
+      request.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
+                                  libcomp::String("%1:%2")
+                                      .Arg(channel->GetIP())
+                                      .Arg(channel->GetPort()),
+                                  true);
+      client->SendPacket(request);
+
+      normalDisconnect = false;
+    }
+  }
+
+  if (normalDisconnect) {
+    server->GetAccountManager()->RequestDisconnect(client);
+  }
+
+  return true;
 }

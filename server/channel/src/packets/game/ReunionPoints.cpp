@@ -39,38 +39,34 @@
 
 using namespace channel;
 
-bool Parsers::ReunionPoints::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ReunionPoints::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t unknown = p.ReadS32Little();
-    (void)unknown;  // Always 0
+  int32_t unknown = p.ReadS32Little();
+  (void)unknown;  // Always 0
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto awd = state->GetAccountWorldData().Get();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto awd = state->GetAccountWorldData().Get();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_REUNION_POINTS);
-    reply.WriteS32Little(0);    // Unknown
-    reply.WriteS32Little(awd ? 0 : -1);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REUNION_POINTS);
+  reply.WriteS32Little(0);  // Unknown
+  reply.WriteS32Little(awd ? 0 : -1);
 
-    if(awd)
-    {
-        reply.WriteS32Little((int32_t)awd->GetReunionPoints());
-        reply.WriteS32Little((int32_t)awd->GetMitamaReunionPoints());
-    }
+  if (awd) {
+    reply.WriteS32Little((int32_t)awd->GetReunionPoints());
+    reply.WriteS32Little((int32_t)awd->GetMitamaReunionPoints());
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

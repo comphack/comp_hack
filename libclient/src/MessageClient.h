@@ -29,81 +29,79 @@
 #ifndef LIBCLIENT_SRC_MESSAGECLIENT_H
 #define LIBCLIENT_SRC_MESSAGECLIENT_H
 
-namespace libcomp
-{
+namespace libcomp {
 
-namespace Message
-{
+namespace Message {
 
 /**
  * Specific connection message type.
  */
-enum class MessageClientType : int32_t
-{
-    //
-    // ConnectionManager related requests
-    //
+enum class MessageClientType : int32_t {
+  //
+  // ConnectionManager related requests
+  //
 
-    /// Connect to the lobby server
-    CONNECT_TO_LOBBY = 1000,
-    /// Connect to the channel server
-    CONNECT_TO_CHANNEL,
-    /// Close the active connection
-    CONNECTION_CLOSE,
+  /// Connect to the lobby server
+  CONNECT_TO_LOBBY = 1000,
+  /// Connect to the channel server
+  CONNECT_TO_CHANNEL,
+  /// Close the active connection
+  CONNECTION_CLOSE,
 
-    //
-    // ConnectionManager related events
-    //
+  //
+  // ConnectionManager related events
+  //
 
-    /// Now connected to the lobby
-    CONNECTED_TO_LOBBY = 2000,
-    /// Now connected to the channel
-    CONNECTED_TO_CHANNEL,
+  /// Now connected to the lobby
+  CONNECTED_TO_LOBBY = 2000,
+  /// Now connected to the channel
+  CONNECTED_TO_CHANNEL,
 
-    //
-    // LobbyManager related requests
-    //
+  //
+  // LobbyManager related requests
+  //
 
-    REQUEST_START_GAME = 3000,
+  REQUEST_START_GAME = 3000,
 
-    //
-    // LobbyManager related events
-    //
-    CHARACTER_LIST_UPDATE = 4000,
+  //
+  // LobbyManager related events
+  //
+  CHARACTER_LIST_UPDATE = 4000,
 
-    //
-    // AmalaManager related requests
-    //
-    REQUEST_ACCOUNT_DUMP = 5000,
+  //
+  // AmalaManager related requests
+  //
+  REQUEST_ACCOUNT_DUMP = 5000,
 
-    //
-    // AmalaManager related events
-    //
-    ACCOUNT_DUMP_STATUS = 6000,
+  //
+  // AmalaManager related events
+  //
+  ACCOUNT_DUMP_STATUS = 6000,
 };
 
 /**
  * Message signifying that a connection based action has occurred.
  */
-class MessageClient : public Message
-{
-public:
-    /**
-     * Cleanup the message.
-     */
-    virtual ~MessageClient() { }
+class MessageClient : public Message {
+ public:
+  /**
+   * Cleanup the message.
+   */
+  virtual ~MessageClient() {}
 
-    virtual MessageType GetType() const { return MessageType::MESSAGE_TYPE_CLIENT; }
+  virtual MessageType GetType() const {
+    return MessageType::MESSAGE_TYPE_CLIENT;
+  }
 
-    /**
-     * Get the specific client message type.
-     * @return The message's client message type
-     */
-    virtual MessageClientType GetMessageClientType() const = 0;
+  /**
+   * Get the specific client message type.
+   * @return The message's client message type
+   */
+  virtual MessageClientType GetMessageClientType() const = 0;
 };
 
-} // namespace Message
+}  // namespace Message
 
-} // namespace libcomp
+}  // namespace libcomp
 
-#endif // LIBCLIENT_SRC_MESSAGECLIENT_H
+#endif  // LIBCLIENT_SRC_MESSAGECLIENT_H

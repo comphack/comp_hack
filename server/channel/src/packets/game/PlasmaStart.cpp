@@ -39,48 +39,45 @@
 
 using namespace channel;
 
-bool Parsers::PlasmaStart::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PlasmaStart::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 5)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 5) {
+    return false;
+  }
+
+  int32_t plasmaID = p.ReadS32Little();
+  int8_t pointID = p.ReadS8();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto zone = state->GetZone();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto eventManager = server->GetEventManager();
+
+  auto pState =
+      zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
+           : nullptr;
+
+  bool success = false;
+  if (pState && pointID && eventManager->StartSystemEvent(client, plasmaID)) {
+    auto point = pState->PickPoint((uint32_t)pointID, state->GetWorldCID());
+    success = point != nullptr;
+    if (!success) {
+      eventManager->HandleEvent(client, nullptr);
     }
+  }
 
-    int32_t plasmaID = p.ReadS32Little();
-    int8_t pointID = p.ReadS8();
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_START);
+  reply.WriteS32Little(plasmaID);
+  reply.WriteS8(pointID);
+  reply.WriteS32Little(success ? 0 : -1);
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto zone = state->GetZone();
+  client->SendPacket(reply);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
-    auto eventManager = server->GetEventManager();
-
-    auto pState = zone ? std::dynamic_pointer_cast<PlasmaState>(zone
-        ->GetEntity(plasmaID)) : nullptr;
-
-    bool success = false;
-    if(pState && pointID && eventManager->StartSystemEvent(client, plasmaID))
-    {
-        auto point = pState->PickPoint((uint32_t)pointID, state->GetWorldCID());
-        success = point != nullptr;
-        if(!success)
-        {
-            eventManager->HandleEvent(client, nullptr);
-        }
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_START);
-    reply.WriteS32Little(plasmaID);
-    reply.WriteS8(pointID);
-    reply.WriteS32Little(success ? 0 : -1);
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

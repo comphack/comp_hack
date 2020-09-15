@@ -40,166 +40,146 @@
 
 using namespace channel;
 
-bool Parsers::Relay::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::Relay::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)connection;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)connection;
 
-    if(p.Size() < 5)
-    {
-        return false;
+  if (p.Size() < 5) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto connectionManager = server->GetManagerConnection();
+
+  int32_t sourceCID = p.ReadS32Little();
+  PacketRelayMode_t mode = (PacketRelayMode_t)p.ReadU8();
+  if (mode == PacketRelayMode_t::RELAY_FAILURE) {
+    // A failure is being returned, handle it if needed
+    auto sourceClient = connectionManager->GetEntityClient(sourceCID, true);
+    if (!sourceClient) {
+      // Stop here, do not send a failure about a failure back
+      LogGeneralErrorMsg(
+          "Packet relay failed and could not be reported back to the "
+          "source.\n");
+      return true;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto connectionManager = server->GetManagerConnection();
+    auto state = sourceClient->GetClientState();
 
-    int32_t sourceCID = p.ReadS32Little();
-    PacketRelayMode_t mode = (PacketRelayMode_t)p.ReadU8();
-    if(mode == PacketRelayMode_t::RELAY_FAILURE)
-    {
-        // A failure is being returned, handle it if needed
-        auto sourceClient = connectionManager->GetEntityClient(sourceCID, true);
-        if(!sourceClient)
-        {
-            // Stop here, do not send a failure about a failure back
-            LogGeneralErrorMsg("Packet relay failed and could not be reported"
-                " back to the source.\n");
-            return true;
+    // Retrieve list of character names for world visible failures
+    uint16_t nameCount = p.ReadU16Little();
+
+    std::list<libcomp::String> characterNames;
+    for (uint16_t i = 0; i < nameCount; i++) {
+      characterNames.push_back(p.ReadString16Little(
+          libcomp::Convert::Encoding_t::ENCODING_UTF8, true));
+    }
+
+    uint16_t packetCode = p.ReadU16Little();
+    switch ((ChannelToClientPacketCode_t)packetCode) {
+      case ChannelToClientPacketCode_t::PACKET_CHAT:
+        if (p.Left() > 2) {
+          ChatType_t type = (ChatType_t)p.ReadU16Little();
+
+          // Only tell has anything the source needs to be told
+          if (type == ChatType_t::CHAT_TELL) {
+            // Ignore the names retrieved in case the character
+            // name was not even a real player
+            libcomp::String targetName =
+                p.ReadString16Little(state->GetClientStringEncoding(), true);
+
+            // Tell failures are parsed client side as an empty tell
+            // message from the requested target
+            libcomp::Packet reply;
+            reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHAT);
+            reply.WriteU16Little((uint16_t)ChatType_t::CHAT_TELL);
+            reply.WriteString16Little(state->GetClientStringEncoding(),
+                                      targetName, true);
+            reply.WriteString16Little(state->GetClientStringEncoding(), "",
+                                      true);
+            sourceClient->SendPacket(reply);
+          }
         }
-
-        auto state = sourceClient->GetClientState();
-
-        // Retrieve list of character names for world visible failures
-        uint16_t nameCount = p.ReadU16Little();
-
-        std::list<libcomp::String> characterNames;
-        for(uint16_t i = 0; i < nameCount; i++)
-        {
-            characterNames.push_back(p.ReadString16Little(
-                libcomp::Convert::Encoding_t::ENCODING_UTF8, true));
-        }
-
-        uint16_t packetCode = p.ReadU16Little();
-        switch((ChannelToClientPacketCode_t)packetCode)
-        {
-        case ChannelToClientPacketCode_t::PACKET_CHAT:
-            if(p.Left() > 2)
-            {
-                ChatType_t type = (ChatType_t)p.ReadU16Little();
-
-                // Only tell has anything the source needs to be told
-                if(type == ChatType_t::CHAT_TELL)
-                {
-                    // Ignore the names retrieved in case the character
-                    // name was not even a real player
-                    libcomp::String targetName = p.ReadString16Little(
-                        state->GetClientStringEncoding(), true);
-
-                    // Tell failures are parsed client side as an empty tell
-                    // message from the requested target
-                    libcomp::Packet reply;
-                    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHAT);
-                    reply.WriteU16Little((uint16_t)ChatType_t::CHAT_TELL);
-                    reply.WriteString16Little(state->GetClientStringEncoding(),
-                        targetName, true);
-                    reply.WriteString16Little(state->GetClientStringEncoding(),
-                        "", true);
-                    sourceClient->SendPacket(reply);
-                }
-            }
-            break;
-        default:
-            // No handling needed
-            break;
-        }
-
-        return true;
-    }
-    else if(mode == PacketRelayMode_t::RELAY_ALL)
-    {
-        // The rest is the packet itself, send to everyone
-        if(p.Left() < 2)
-        {
-            LogGeneralErrorMsg("Malformed RELAY_ALL packet encountered\n");
-            return true;
-        }
-
-        auto packetData = p.ReadArray(p.Left());
-
-        libcomp::Packet relay;
-        relay.WriteArray(packetData);
-
-        connectionManager->BroadcastPacketToClients(relay);
-
-        return true;
-    }
-    else if(mode != PacketRelayMode_t::RELAY_CIDS)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Invalid relay mode received from"
-                " the world: %1\n").Arg((uint8_t)mode);
-        });
-
-        return false;
+        break;
+      default:
+        // No handling needed
+        break;
     }
 
-    uint16_t cidCount = p.ReadU16Little();
-    if(p.Left() < (uint32_t)(cidCount * 4))
-    {
-        return false;
-    }
-
-    std::list<int32_t> worldCIDs;
-    for(uint16_t i = 0; i < cidCount; i++)
-    {
-        worldCIDs.push_back(p.ReadS32Little());
-    }
-
-    // The rest is the packet itself
-    if(p.Left() < 2)
-    {
-        return false;
+    return true;
+  } else if (mode == PacketRelayMode_t::RELAY_ALL) {
+    // The rest is the packet itself, send to everyone
+    if (p.Left() < 2) {
+      LogGeneralErrorMsg("Malformed RELAY_ALL packet encountered\n");
+      return true;
     }
 
     auto packetData = p.ReadArray(p.Left());
 
-    std::list<int32_t> failedCIDs;
-    for(int32_t worldCID : worldCIDs)
-    {
-        auto targetClient = connectionManager->GetEntityClient(worldCID, true);
-        if(targetClient)
-        {
-            libcomp::Packet relay;
-            relay.WriteArray(packetData);
+    libcomp::Packet relay;
+    relay.WriteArray(packetData);
 
-            targetClient->SendPacket(relay);
-        }
-        else
-        {
-            failedCIDs.push_back(worldCID);
-        }
-    }
-
-    if(failedCIDs.size() > 0)
-    {
-        // Build a response message containing the world CIDs that are not
-        // here and send it back to the world
-        libcomp::Packet failure;
-        failure.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
-        failure.WriteS32Little(sourceCID);
-        failure.WriteU8((uint8_t)PacketRelayMode_t::RELAY_FAILURE);
-        failure.WriteU16Little((uint16_t)failedCIDs.size());
-        for(auto worldCID : failedCIDs)
-        {
-            failure.WriteS32Little(worldCID);
-        }
-
-        failure.WriteArray(packetData);
-
-        connectionManager->GetWorldConnection()->SendPacket(failure);
-    }
+    connectionManager->BroadcastPacketToClients(relay);
 
     return true;
+  } else if (mode != PacketRelayMode_t::RELAY_CIDS) {
+    LogGeneralError([&]() {
+      return libcomp::String("Invalid relay mode received from the world: %1\n")
+          .Arg((uint8_t)mode);
+    });
+
+    return false;
+  }
+
+  uint16_t cidCount = p.ReadU16Little();
+  if (p.Left() < (uint32_t)(cidCount * 4)) {
+    return false;
+  }
+
+  std::list<int32_t> worldCIDs;
+  for (uint16_t i = 0; i < cidCount; i++) {
+    worldCIDs.push_back(p.ReadS32Little());
+  }
+
+  // The rest is the packet itself
+  if (p.Left() < 2) {
+    return false;
+  }
+
+  auto packetData = p.ReadArray(p.Left());
+
+  std::list<int32_t> failedCIDs;
+  for (int32_t worldCID : worldCIDs) {
+    auto targetClient = connectionManager->GetEntityClient(worldCID, true);
+    if (targetClient) {
+      libcomp::Packet relay;
+      relay.WriteArray(packetData);
+
+      targetClient->SendPacket(relay);
+    } else {
+      failedCIDs.push_back(worldCID);
+    }
+  }
+
+  if (failedCIDs.size() > 0) {
+    // Build a response message containing the world CIDs that are not
+    // here and send it back to the world
+    libcomp::Packet failure;
+    failure.WritePacketCode(InternalPacketCode_t::PACKET_RELAY);
+    failure.WriteS32Little(sourceCID);
+    failure.WriteU8((uint8_t)PacketRelayMode_t::RELAY_FAILURE);
+    failure.WriteU16Little((uint16_t)failedCIDs.size());
+    for (auto worldCID : failedCIDs) {
+      failure.WriteS32Little(worldCID);
+    }
+
+    failure.WriteArray(packetData);
+
+    connectionManager->GetWorldConnection()->SendPacket(failure);
+  }
+
+  return true;
 }

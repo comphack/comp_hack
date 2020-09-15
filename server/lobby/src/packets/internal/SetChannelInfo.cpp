@@ -40,67 +40,63 @@
 
 using namespace lobby;
 
-bool Parsers::SetChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SetChannelInfo::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 2)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 2) {
+    return false;
+  }
 
-    auto action = static_cast<InternalPacketAction_t>(p.ReadU8());
-    auto channelID = p.ReadU8();
+  auto action = static_cast<InternalPacketAction_t>(p.ReadU8());
+  auto channelID = p.ReadU8();
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-    auto conn = std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
-    auto world = server->GetWorldByConnection(conn);
+  auto server =
+      std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+  auto conn =
+      std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
+  auto world = server->GetWorldByConnection(conn);
 
-    auto svr = world->GetChannelByID(channelID);
-    if(nullptr == svr)
-    {
-        auto db = world->GetWorldDatabase();
+  auto svr = world->GetChannelByID(channelID);
+  if (nullptr == svr) {
+    auto db = world->GetWorldDatabase();
 
-        svr = objects::RegisteredChannel::LoadRegisteredChannelByID(db, channelID);
-    }
+    svr = objects::RegisteredChannel::LoadRegisteredChannelByID(db, channelID);
+  }
 
-    if(InternalPacketAction_t::PACKET_ACTION_REMOVE == action)
-    {
-        world->RemoveChannelByID(svr->GetID());
+  if (InternalPacketAction_t::PACKET_ACTION_REMOVE == action) {
+    world->RemoveChannelByID(svr->GetID());
 
-        server->QueueWork([](std::shared_ptr<LobbyServer> lobbyServer,
-            int8_t worldID, int8_t channel)
-            {
-                auto accountManager = lobbyServer->GetAccountManager();
-                auto usernames = accountManager->LogoutUsersInWorld(worldID, channel);
+    server->QueueWork(
+        [](std::shared_ptr<LobbyServer> lobbyServer, int8_t worldID,
+           int8_t channel) {
+          auto accountManager = lobbyServer->GetAccountManager();
+          auto usernames = accountManager->LogoutUsersInWorld(worldID, channel);
 
-                if(usernames.size() > 0)
-                {
-                    LogGeneralWarning([&]()
-                    {
-                        return libcomp::String("%1 user(s) forcefully logged "
-                            "out from channel %2 on world %3.\n")
-                            .Arg(usernames.size())
-                            .Arg(channel)
-                            .Arg(worldID);
-                    });
-                }
-            }, server, world->GetRegisteredWorld()->GetID(), channelID);
-    }
-    else
-    {
-        LogGeneralDebug([&]()
-        {
-            return libcomp::String("Updating Channel Server: (%1) %2\n")
-                .Arg(svr->GetID())
-                .Arg(svr->GetName());
-        });
+          if (usernames.size() > 0) {
+            LogGeneralWarning([&]() {
+              return libcomp::String(
+                         "%1 user(s) forcefully logged out from channel %2 on "
+                         "world %3.\n")
+                  .Arg(usernames.size())
+                  .Arg(channel)
+                  .Arg(worldID);
+            });
+          }
+        },
+        server, world->GetRegisteredWorld()->GetID(), channelID);
+  } else {
+    LogGeneralDebug([&]() {
+      return libcomp::String("Updating Channel Server: (%1) %2\n")
+          .Arg(svr->GetID())
+          .Arg(svr->GetName());
+    });
 
-        world->RegisterChannel(svr);
-    }
+    world->RegisterChannel(svr);
+  }
 
-    // Now update the world list for all connections
-    server->SendWorldList(nullptr);
+  // Now update the world list for all connections
+  server->SendWorldList(nullptr);
 
-    return true;
+  return true;
 }

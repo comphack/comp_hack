@@ -38,24 +38,23 @@
 using namespace channel;
 
 void SendPartnerData(CharacterManager* characterManager,
-    const std::shared_ptr<ChannelClientConnection> client)
-{
-    characterManager->SendPartnerData(client);
+                     const std::shared_ptr<ChannelClientConnection> client) {
+  characterManager->SendPartnerData(client);
 }
 
-bool Parsers::DemonData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonData::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork(SendPartnerData, server->GetCharacterManager(), client);
+  server->QueueWork(SendPartnerData, server->GetCharacterManager(), client);
 
-    return true;
+  return true;
 }

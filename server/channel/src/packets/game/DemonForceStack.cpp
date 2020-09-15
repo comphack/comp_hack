@@ -41,81 +41,71 @@
 
 using namespace channel;
 
-bool Parsers::DemonForceStack::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonForceStack::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 9)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 9) {
+    return false;
+  }
+
+  int64_t demonID = p.ReadS64Little();
+
+  bool toStack = p.ReadS8() == 1;
+  int8_t stackSlot = -1;
+  if (toStack) {
+    if (p.Left() == 1) {
+      stackSlot = p.ReadS8();
+    } else {
+      return false;
+    }
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto definitionManager = server->GetDefinitionManager();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto dState = state->GetDemonState();
+  auto devilData = dState->GetDevilData();
+  auto demon = dState->GetEntity();
+  uint16_t pendingEffect = demon ? demon->GetForceStackPending() : 0;
+
+  auto dfExtra = definitionManager->GetDevilBoostExtraData(pendingEffect);
+
+  bool success = dfExtra && demon &&
+                 state->GetObjectID(demon->GetUUID()) == demonID &&
+                 (!toStack || (stackSlot >= -1 && stackSlot <= 7));
+  if (success) {
+    if (stackSlot >= 0) {
+      // Set the new value
+      demon->SetForceStack((size_t)stackSlot, pendingEffect);
     }
 
-    int64_t demonID = p.ReadS64Little();
+    demon->SetForceStackPending(0);
 
-    bool toStack = p.ReadS8() == 1;
-    int8_t stackSlot = -1;
-    if(toStack)
-    {
-        if(p.Left() == 1)
-        {
-            stackSlot = p.ReadS8();
-        }
-        else
-        {
-            return false;
-        }
-    }
+    server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto definitionManager = server->GetDefinitionManager();
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FORCE_STACK);
+  reply.WriteS64Little(demonID);
+  reply.WriteS8(success ? 0 : -1);
+  reply.WriteS8(stackSlot);
+  if (stackSlot >= 0) {
+    reply.WriteU16Little(pendingEffect);
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto dState = state->GetDemonState();
-    auto devilData = dState->GetDevilData();
-    auto demon = dState->GetEntity();
-    uint16_t pendingEffect = demon ? demon->GetForceStackPending() : 0;
+  client->SendPacket(reply);
 
-    auto dfExtra = definitionManager->GetDevilBoostExtraData(pendingEffect);
-    
-    bool success = dfExtra && demon &&
-        state->GetObjectID(demon->GetUUID()) == demonID &&
-        (!toStack || (stackSlot >= -1 && stackSlot <= 7));
-    if(success)
-    {
-        if(stackSlot >= 0)
-        {
-            // Set the new value
-            demon->SetForceStack((size_t)stackSlot, pendingEffect);
-        }
+  if (success) {
+    dState->UpdateDemonState(definitionManager);
+    server->GetTokuseiManager()->Recalculate(
+        state->GetCharacterState(), true,
+        std::set<int32_t>{dState->GetEntityID()});
+    server->GetCharacterManager()->RecalculateStats(dState, client);
+  }
 
-        demon->SetForceStackPending(0);
-
-        server->GetWorldDatabase()->QueueUpdate(demon,
-            state->GetAccountUID());
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FORCE_STACK);
-    reply.WriteS64Little(demonID);
-    reply.WriteS8(success ? 0 : -1);
-    reply.WriteS8(stackSlot);
-    if(stackSlot >= 0)
-    {
-        reply.WriteU16Little(pendingEffect);
-    }
-
-    client->SendPacket(reply);
-
-    if(success)
-    {
-        dState->UpdateDemonState(definitionManager);
-        server->GetTokuseiManager()->Recalculate(state->GetCharacterState(),
-            true, std::set<int32_t>{ dState->GetEntityID() });
-        server->GetCharacterManager()->RecalculateStats(dState, client);
-    }
-
-    return true;
+  return true;
 }

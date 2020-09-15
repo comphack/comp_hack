@@ -47,287 +47,260 @@
 using namespace channel;
 
 BazaarState::BazaarState(const std::shared_ptr<objects::ServerBazaar>& bazaar)
-    : EntityState<objects::ServerBazaar>(bazaar)
-{
+    : EntityState<objects::ServerBazaar>(bazaar) {}
+
+std::shared_ptr<objects::BazaarData> BazaarState::GetCurrentMarket(
+    uint32_t marketID) {
+  std::lock_guard<std::mutex> lock(mLock);
+  auto it = mCurrentMarkets.find(marketID);
+  return it != mCurrentMarkets.end() ? it->second : nullptr;
 }
 
-std::shared_ptr<objects::BazaarData> BazaarState::GetCurrentMarket(uint32_t marketID)
-{
-    std::lock_guard<std::mutex> lock(mLock);
+void BazaarState::SetCurrentMarket(
+    uint32_t marketID, const std::shared_ptr<objects::BazaarData>& data) {
+  std::lock_guard<std::mutex> lock(mLock);
+  if (GetEntity()->MarketIDsContains(marketID)) {
+    mCurrentMarkets[marketID] = data;
+
+    // Clear reservation just in case
+    mReservations.erase(marketID);
+  }
+}
+
+bool BazaarState::ReserveMarket(uint32_t marketID, bool clear) {
+  std::lock_guard<std::mutex> lock(mLock);
+  if (clear) {
+    // Always clear
+    mReservations.erase(marketID);
+  } else {
     auto it = mCurrentMarkets.find(marketID);
-    return it != mCurrentMarkets.end() ? it->second : nullptr;
+    if (mReservations.find(marketID) != mReservations.end() ||
+        (it != mCurrentMarkets.end() && it->second != nullptr) ||
+        !GetEntity()->MarketIDsContains(marketID)) {
+      return false;
+    }
+
+    mReservations.insert(marketID);
+  }
+
+  return true;
 }
 
-void BazaarState::SetCurrentMarket(uint32_t marketID, const std::shared_ptr<
-    objects::BazaarData>& data)
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    if(GetEntity()->MarketIDsContains(marketID))
-    {
-        mCurrentMarkets[marketID] = data;
+bool BazaarState::AddItem(
+    channel::ClientState* state, int8_t slot, int64_t itemID, int32_t price,
+    std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges) {
+  auto worldData = state->GetAccountWorldData().Get();
+  auto bazaarData = worldData->GetBazaarData().Get();
 
-        // Clear reservation just in case
-        mReservations.erase(marketID);
+  auto item = std::dynamic_pointer_cast<objects::Item>(
+      libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
+
+  std::lock_guard<std::mutex> lock(mLock);
+  if (VerifyMarket(bazaarData)) {
+    // Make sure the item is valid, the slot is not taken and the item is
+    // not already outside of a normal box (already in the bazaar etc)
+    if (item && bazaarData->GetItems((size_t)slot).IsNull() &&
+        item->GetBoxSlot() != -1) {
+      // Create the item
+      auto bItem = libcomp::PersistentObject::New<objects::BazaarItem>(true);
+      bItem->SetAccount(state->GetAccountUID());
+      bItem->SetItem(item);
+      bItem->SetType(item->GetType());
+      bItem->SetStackSize(item->GetStackSize());
+      bItem->SetCost((uint32_t)price);
+
+      // Add it to the bazaar
+      bazaarData->SetItems((size_t)slot, bItem);
+
+      // Remove it from the old box
+      auto box = std::dynamic_pointer_cast<objects::ItemBox>(
+          libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
+      if (box) {
+        int8_t oldSlot = item->GetBoxSlot();
+        box->SetItems((size_t)oldSlot, NULLUUID);
+        dbChanges->Update(box);
+      }
+
+      item->SetBoxSlot(-1);
+      item->SetItemBox(NULLUUID);
+
+      dbChanges->Insert(bItem);
+      dbChanges->Update(bazaarData);
+      dbChanges->Update(item);
+
+      return true;
+    } else {
+      LogBazaarError([&]() {
+        return libcomp::String(
+                   "Failed to add bazaar item to market belonging to account: "
+                   "%1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+
+      return false;
     }
+  }
+
+  return false;
 }
 
-bool BazaarState::ReserveMarket(uint32_t marketID, bool clear)
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    if(clear)
-    {
-        // Always clear
-        mReservations.erase(marketID);
-    }
-    else
-    {
-        auto it = mCurrentMarkets.find(marketID);
-        if(mReservations.find(marketID) != mReservations.end() ||
-            (it != mCurrentMarkets.end() && it->second != nullptr) ||
-            !GetEntity()->MarketIDsContains(marketID))
-        {
-            return false;
-        }
+bool BazaarState::DropItemFromMarket(
+    ClientState* state, int8_t srcSlot, int64_t itemID, int8_t destSlot,
+    std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges) {
+  auto worldData = state->GetAccountWorldData().Get();
+  auto bazaarData = worldData->GetBazaarData().Get();
+  if (bazaarData == nullptr) {
+    return false;
+  }
 
-        mReservations.insert(marketID);
-    }
+  auto eventState = state->GetEventState();
+  uint32_t eventMarketID = (uint32_t)state->GetCurrentMenuShopID();
 
-    return true;
-}
-
-bool BazaarState::AddItem(channel::ClientState* state, int8_t slot, int64_t itemID,
-    int32_t price, std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges)
-{
-    auto worldData = state->GetAccountWorldData().Get();
-    auto bazaarData = worldData->GetBazaarData().Get();
-
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
-
-    std::lock_guard<std::mutex> lock(mLock);
-    if(VerifyMarket(bazaarData))
-    {
-        // Make sure the item is valid, the slot is not taken and the item is
-        // not already outside of a normal box (already in the bazaar etc)
-        if(item && bazaarData->GetItems((size_t)slot).IsNull() &&
-            item->GetBoxSlot() != -1)
-        {
-            // Create the item
-            auto bItem = libcomp::PersistentObject::New<objects::BazaarItem>(true);
-            bItem->SetAccount(state->GetAccountUID());
-            bItem->SetItem(item);
-            bItem->SetType(item->GetType());
-            bItem->SetStackSize(item->GetStackSize());
-            bItem->SetCost((uint32_t)price);
-
-            // Add it to the bazaar
-            bazaarData->SetItems((size_t)slot, bItem);
-
-            // Remove it from the old box
-            auto box = std::dynamic_pointer_cast<objects::ItemBox>(
-                libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()));
-            if(box)
-            {
-                int8_t oldSlot = item->GetBoxSlot();
-                box->SetItems((size_t)oldSlot, NULLUUID);
-                dbChanges->Update(box);
-            }
-
-            item->SetBoxSlot(-1);
-            item->SetItemBox(NULLUUID);
-
-            dbChanges->Insert(bItem);
-            dbChanges->Update(bazaarData);
-            dbChanges->Update(item);
-
-            return true;
-        }
-        else
-        {
-            LogBazaarError([&]()
-            {
-                return libcomp::String("Failed to add bazaar item to market"
-                    " belonging to account: %1\n")
-                    .Arg(state->GetAccountUID().ToString());
-            });
-
-            return false;
-        }
-    }
+  auto bState = state->GetBazaarState();
+  if (bState && eventMarketID == bazaarData->GetMarketID()) {
+    return bState->DropItem(state, srcSlot, itemID, destSlot, dbChanges);
+  } else if (bazaarData->GetState() !=
+             objects::BazaarData::State_t::BAZAAR_INACTIVE) {
+    LogBazaarErrorMsg(
+        "Remote DropItem request encountered for an active market\n");
 
     return false;
-}
-
-bool BazaarState::DropItemFromMarket(ClientState* state, int8_t srcSlot, int64_t itemID,
-    int8_t destSlot, std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges)
-{
-    auto worldData = state->GetAccountWorldData().Get();
-    auto bazaarData = worldData->GetBazaarData().Get();
-    if(bazaarData == nullptr)
-    {
-        return false;
-    }
-
-    auto eventState = state->GetEventState();
-    uint32_t eventMarketID = (uint32_t)state->GetCurrentMenuShopID();
-
-    auto bState = state->GetBazaarState();
-    if(bState && eventMarketID == bazaarData->GetMarketID())
-    {
-        return bState->DropItem(state, srcSlot, itemID, destSlot, dbChanges);
-    }
-    else if(bazaarData->GetState() != objects::BazaarData::State_t::BAZAAR_INACTIVE)
-    {
-        LogBazaarErrorMsg(
-            "Remote DropItem request encountered for an active market\n");
-
-        return false;
-    }
-    else
-    {
-        return DropItemInternal(state, srcSlot, itemID, destSlot, dbChanges);
-    }
+  } else {
+    return DropItemInternal(state, srcSlot, itemID, destSlot, dbChanges);
+  }
 }
 
 std::shared_ptr<objects::BazaarItem> BazaarState::TryBuyItem(ClientState* state,
-    uint32_t marketID, int8_t slot, int64_t itemID, int32_t price)
-{
-    auto market = GetCurrentMarket(marketID);
-    if(market == nullptr)
-    {
-        LogBazaarErrorMsg(
-            "BuyItem request encountered with invalid market ID\n");
+                                                             uint32_t marketID,
+                                                             int8_t slot,
+                                                             int64_t itemID,
+                                                             int32_t price) {
+  auto market = GetCurrentMarket(marketID);
+  if (market == nullptr) {
+    LogBazaarErrorMsg("BuyItem request encountered with invalid market ID\n");
 
-        return nullptr;
-    }
+    return nullptr;
+  }
 
-    std::lock_guard<std::mutex> lock(mLock);
+  std::lock_guard<std::mutex> lock(mLock);
 
-    auto itemUUID = state->GetObjectUUID(itemID);
+  auto itemUUID = state->GetObjectUUID(itemID);
 
-    auto bItem = market->GetItems((size_t)slot).Get();
-    if(bItem == nullptr || itemUUID.IsNull() || bItem->GetItem().GetUUID() != itemUUID)
-    {
-        LogBazaarError([&]()
-        {
-            return libcomp::String("BuyItem request encountered with invalid "
-                "item UID: %1\n").Arg(itemUUID.ToString());
-        });
+  auto bItem = market->GetItems((size_t)slot).Get();
+  if (bItem == nullptr || itemUUID.IsNull() ||
+      bItem->GetItem().GetUUID() != itemUUID) {
+    LogBazaarError([&]() {
+      return libcomp::String(
+                 "BuyItem request encountered with invalid item UID: %1\n")
+          .Arg(itemUUID.ToString());
+    });
 
-        return nullptr;
-    }
+    return nullptr;
+  }
 
-    if(bItem->GetCost() != (uint32_t)price)
-    {
-        LogBazaarError([&]()
-        {
-            return libcomp::String("BuyItem request encountered with invalid "
-                "price: Expected %1, found %2\n").Arg(price)
-                .Arg(bItem->GetCost());
-        });
+  if (bItem->GetCost() != (uint32_t)price) {
+    LogBazaarError([&]() {
+      return libcomp::String(
+                 "BuyItem request encountered with invalid price: Expected %1, "
+                 "found %2\n")
+          .Arg(price)
+          .Arg(bItem->GetCost());
+    });
 
-        return nullptr;
-    }
+    return nullptr;
+  }
 
-    if(bItem->GetSold())
-    {
-        LogBazaarError([&]()
-        {
-            return libcomp::String("BuyItem request encountered for already "
-                "sold item: %1\n").Arg(itemUUID.ToString());
-        });
+  if (bItem->GetSold()) {
+    LogBazaarError([&]() {
+      return libcomp::String(
+                 "BuyItem request encountered for already sold item: %1\n")
+          .Arg(itemUUID.ToString());
+    });
 
-        return nullptr;
-    }
+    return nullptr;
+  }
 
-    return bItem;
+  return bItem;
 }
 
-bool BazaarState::BuyItem(std::shared_ptr<objects::BazaarItem> bItem)
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    if(bItem->GetSold())
-    {
-        return false;
-    }
+bool BazaarState::BuyItem(std::shared_ptr<objects::BazaarItem> bItem) {
+  std::lock_guard<std::mutex> lock(mLock);
+  if (bItem->GetSold()) {
+    return false;
+  }
 
-    bItem->SetSold(true);
-    return true;
+  bItem->SetSold(true);
+  return true;
 }
 
-bool BazaarState::VerifyMarket(const std::shared_ptr<objects::BazaarData>& data)
-{
-    auto market = mCurrentMarkets.find(data != nullptr ? data->GetMarketID() : 0);
-    if(market == mCurrentMarkets.end() || market->second != data)
-    {
-        LogBazaarError([&]()
-        {
-            return libcomp::String("Market '%1' does not match the supplied "
-                "definition for bazaar %2\n").Arg(data != nullptr ?
-                data->GetMarketID() : 0).Arg(GetEntity()->GetID());
-        });
-
-        return false;
-    }
-
-    return true;
-}
-
-bool BazaarState::DropItem(ClientState* state, int8_t srcSlot, int64_t itemID,
-    int8_t destSlot, std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges)
-{
-    auto worldData = state->GetAccountWorldData().Get();
-    auto bazaarData = worldData->GetBazaarData().Get();
-
-    std::lock_guard<std::mutex> lock(mLock);
-    if(VerifyMarket(bazaarData))
-    {
-        return DropItemInternal(state, srcSlot, itemID, destSlot, dbChanges);
-    }
+bool BazaarState::VerifyMarket(
+    const std::shared_ptr<objects::BazaarData>& data) {
+  auto market = mCurrentMarkets.find(data != nullptr ? data->GetMarketID() : 0);
+  if (market == mCurrentMarkets.end() || market->second != data) {
+    LogBazaarError([&]() {
+      return libcomp::String(
+                 "Market '%1' does not match the supplied definition for "
+                 "bazaar %2\n")
+          .Arg(data != nullptr ? data->GetMarketID() : 0)
+          .Arg(GetEntity()->GetID());
+    });
 
     return false;
+  }
+
+  return true;
 }
 
-bool BazaarState::DropItemInternal(ClientState* state, int8_t srcSlot, int64_t itemID,
-    int8_t destSlot, std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges)
-{
-    auto worldData = state->GetAccountWorldData().Get();
-    auto bazaarData = worldData->GetBazaarData().Get();
+bool BazaarState::DropItem(
+    ClientState* state, int8_t srcSlot, int64_t itemID, int8_t destSlot,
+    std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges) {
+  auto worldData = state->GetAccountWorldData().Get();
+  auto bazaarData = worldData->GetBazaarData().Get();
 
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
+  std::lock_guard<std::mutex> lock(mLock);
+  if (VerifyMarket(bazaarData)) {
+    return DropItemInternal(state, srcSlot, itemID, destSlot, dbChanges);
+  }
 
-    auto bItem = bazaarData->GetItems((size_t)srcSlot).Get();
-    if(item == nullptr || bItem == nullptr || bItem->GetItem().Get() != item)
-    {
-        LogBazaarErrorMsg("DropItem request encountered with invalid item or"
-            " source slot\n");
-        return false;
-    }
+  return false;
+}
 
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto inventory = character->GetItemBoxes(0).Get();
+bool BazaarState::DropItemInternal(
+    ClientState* state, int8_t srcSlot, int64_t itemID, int8_t destSlot,
+    std::shared_ptr<libcomp::DatabaseChangeSet>& dbChanges) {
+  auto worldData = state->GetAccountWorldData().Get();
+  auto bazaarData = worldData->GetBazaarData().Get();
 
-    if(!inventory->GetItems((size_t)destSlot).IsNull())
-    {
-        LogBazaarErrorMsg("DropItem request encountered with invalid"
-            " destination slot\n");
-        return false;
-    }
-    else
-    {
-        bazaarData->SetItems((size_t)srcSlot, NULLUUID);
+  auto item = std::dynamic_pointer_cast<objects::Item>(
+      libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
 
-        inventory->SetItems((size_t)destSlot, item);
-        item->SetBoxSlot(destSlot);
-        item->SetItemBox(inventory->GetUUID());
+  auto bItem = bazaarData->GetItems((size_t)srcSlot).Get();
+  if (item == nullptr || bItem == nullptr || bItem->GetItem().Get() != item) {
+    LogBazaarErrorMsg(
+        "DropItem request encountered with invalid item or source slot\n");
+    return false;
+  }
 
-        dbChanges->Delete(bItem);
-        dbChanges->Update(bazaarData);
-        dbChanges->Update(inventory);
-        dbChanges->Update(item);
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto inventory = character->GetItemBoxes(0).Get();
 
-        return true;
-    }
+  if (!inventory->GetItems((size_t)destSlot).IsNull()) {
+    LogBazaarErrorMsg(
+        "DropItem request encountered with invalid destination slot\n");
+    return false;
+  } else {
+    bazaarData->SetItems((size_t)srcSlot, NULLUUID);
+
+    inventory->SetItems((size_t)destSlot, item);
+    item->SetBoxSlot(destSlot);
+    item->SetItemBox(inventory->GetUUID());
+
+    dbChanges->Delete(bItem);
+    dbChanges->Update(bazaarData);
+    dbChanges->Update(inventory);
+    dbChanges->Update(item);
+
+    return true;
+  }
 }

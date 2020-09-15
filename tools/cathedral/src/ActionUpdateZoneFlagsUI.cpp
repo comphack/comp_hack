@@ -28,71 +28,63 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionUpdateZoneFlags.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
 ActionUpdateZoneFlags::ActionUpdateZoneFlags(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionUpdateZoneFlags;
-    prop->setupUi(pWidget);
-    prop->flagStates->SetValueName(tr("State:"));
+                                             MainWindow *pMainWindow,
+                                             QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionUpdateZoneFlags;
+  prop->setupUi(pWidget);
+  prop->flagStates->SetValueName(tr("State:"));
 
-    ui->actionTitle->setText(tr("<b>Update Zone Flags</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Update Zone Flags</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionUpdateZoneFlags::~ActionUpdateZoneFlags()
-{
-    delete prop;
+ActionUpdateZoneFlags::~ActionUpdateZoneFlags() { delete prop; }
+
+void ActionUpdateZoneFlags::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionUpdateZoneFlags>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->type->setCurrentIndex(to_underlying(mAction->GetType()));
+  prop->setMode->setCurrentIndex(to_underlying(mAction->GetSetMode()));
+
+  auto states = mAction->GetFlagStates();
+  prop->flagStates->Load(states);
 }
 
-void ActionUpdateZoneFlags::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionUpdateZoneFlags>(act);
+std::shared_ptr<objects::Action> ActionUpdateZoneFlags::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetType(
+      (objects::ActionUpdateZoneFlags::Type_t)prop->type->currentIndex());
+  mAction->SetSetMode(
+      (objects::ActionUpdateZoneFlags::SetMode_t)prop->setMode->currentIndex());
 
-    prop->type->setCurrentIndex(to_underlying(
-        mAction->GetType()));
-    prop->setMode->setCurrentIndex(to_underlying(
-        mAction->GetSetMode()));
+  auto states = prop->flagStates->SaveSigned();
+  mAction->SetFlagStates(states);
 
-    auto states = mAction->GetFlagStates();
-    prop->flagStates->Load(states);
-}
-
-std::shared_ptr<objects::Action> ActionUpdateZoneFlags::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetType((objects::ActionUpdateZoneFlags::Type_t)
-        prop->type->currentIndex());
-    mAction->SetSetMode((objects::ActionUpdateZoneFlags::SetMode_t)
-        prop->setMode->currentIndex());
-
-    auto states = prop->flagStates->SaveSigned();
-    mAction->SetFlagStates(states);
-
-    return mAction;
+  return mAction;
 }

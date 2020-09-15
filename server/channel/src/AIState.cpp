@@ -35,294 +35,225 @@
 
 using namespace channel;
 
-namespace libcomp
-{
-    template<>
-    ScriptEngine& ScriptEngine::Using<AIState>()
-    {
-        if(!BindingExists("AIState", true))
-        {
-            Using<objects::AIStateObject>();
+namespace libcomp {
+template <>
+ScriptEngine& ScriptEngine::Using<AIState>() {
+  if (!BindingExists("AIState", true)) {
+    Using<objects::AIStateObject>();
 
-            Sqrat::DerivedClass<AIState,
-                objects::AIStateObject,
-                Sqrat::NoConstructor<AIState>> binding(mVM, "AIState");
-            binding
-                .Func("GetStatus", &AIState::GetStatus)
-                .Func("SetStatus", &AIState::SetStatus);
+    Sqrat::DerivedClass<AIState, objects::AIStateObject,
+                        Sqrat::NoConstructor<AIState>>
+        binding(mVM, "AIState");
+    binding.Func("GetStatus", &AIState::GetStatus)
+        .Func("SetStatus", &AIState::SetStatus);
 
-            Bind<AIState>("AIState", binding);
+    Bind<AIState>("AIState", binding);
 
-            Sqrat::Enumeration e(mVM);
-            e.Const("IDLE", (int32_t)AIStatus_t::IDLE);
-            e.Const("WANDERING", (int32_t)AIStatus_t::WANDERING);
-            e.Const("FOLLOWING", (int32_t)AIStatus_t::FOLLOWING);
-            e.Const("AGGRO", (int32_t)AIStatus_t::AGGRO);
-            e.Const("COMBAT", (int32_t)AIStatus_t::COMBAT);
+    Sqrat::Enumeration e(mVM);
+    e.Const("IDLE", (int32_t)AIStatus_t::IDLE);
+    e.Const("WANDERING", (int32_t)AIStatus_t::WANDERING);
+    e.Const("FOLLOWING", (int32_t)AIStatus_t::FOLLOWING);
+    e.Const("AGGRO", (int32_t)AIStatus_t::AGGRO);
+    e.Const("COMBAT", (int32_t)AIStatus_t::COMBAT);
 
-            Sqrat::ConstTable(mVM).Enum("AIStatus_t", e);
+    Sqrat::ConstTable(mVM).Enum("AIStatus_t", e);
 
-            e = Sqrat::Enumeration(mVM);
-            e.Const("CLSR", AI_SKILL_TYPE_CLSR);
-            e.Const("LNGR", AI_SKILL_TYPE_LNGR);
-            e.Const("DEF", AI_SKILL_TYPE_DEF);
-            e.Const("HEAL", AI_SKILL_TYPE_HEAL);
-            e.Const("SUPPORT", AI_SKILL_TYPE_SUPPORT);
-            e.Const("ENEMY", AI_SKILL_TYPES_ENEMY);
-            e.Const("ALLY", AI_SKILL_TYPES_ALLY);
-            e.Const("ALL", AI_SKILL_TYPES_ALL);
+    e = Sqrat::Enumeration(mVM);
+    e.Const("CLSR", AI_SKILL_TYPE_CLSR);
+    e.Const("LNGR", AI_SKILL_TYPE_LNGR);
+    e.Const("DEF", AI_SKILL_TYPE_DEF);
+    e.Const("HEAL", AI_SKILL_TYPE_HEAL);
+    e.Const("SUPPORT", AI_SKILL_TYPE_SUPPORT);
+    e.Const("ENEMY", AI_SKILL_TYPES_ENEMY);
+    e.Const("ALLY", AI_SKILL_TYPES_ALLY);
+    e.Const("ALL", AI_SKILL_TYPES_ALL);
 
-            Sqrat::ConstTable(mVM).Enum("AISkillType_t", e);
-        }
+    Sqrat::ConstTable(mVM).Enum("AISkillType_t", e);
+  }
 
-        return *this;
-    }
+  return *this;
 }
+}  // namespace libcomp
 
-AIState::AIState() :  mStatus(AIStatus_t::IDLE),
-    mPreviousStatus(AIStatus_t::IDLE), mDefaultStatus(AIStatus_t::IDLE),
-    mStatusChanged(false)
-{
-}
+AIState::AIState()
+    : mStatus(AIStatus_t::IDLE),
+      mPreviousStatus(AIStatus_t::IDLE),
+      mDefaultStatus(AIStatus_t::IDLE),
+      mStatusChanged(false) {}
 
-AIStatus_t AIState::GetStatus() const
-{
-    return mStatus;
-}
+AIStatus_t AIState::GetStatus() const { return mStatus; }
 
-AIStatus_t AIState::GetPreviousStatus() const
-{
-    return mPreviousStatus;
-}
+AIStatus_t AIState::GetPreviousStatus() const { return mPreviousStatus; }
 
-AIStatus_t AIState::GetDefaultStatus() const
-{
-    return mDefaultStatus;
-}
+AIStatus_t AIState::GetDefaultStatus() const { return mDefaultStatus; }
 
-bool AIState::SetStatus(AIStatus_t status, bool isDefault)
-{
-    // Disallow default setting to target dependent status
-    if(isDefault &&
-        (status == AIStatus_t::AGGRO || status == AIStatus_t::COMBAT ||
-            status == AIStatus_t::FOLLOWING))
-    {
-        return false;
-    }
+bool AIState::SetStatus(AIStatus_t status, bool isDefault) {
+  // Disallow default setting to target dependent status
+  if (isDefault &&
+      (status == AIStatus_t::AGGRO || status == AIStatus_t::COMBAT ||
+       status == AIStatus_t::FOLLOWING)) {
+    return false;
+  }
 
-    bool statusChanged = false;
-    {
-        std::lock_guard<std::mutex> lock(mFieldLock);
-        mStatusChanged = statusChanged = mStatus != status;
-
-        mPreviousStatus = mStatus;
-        mStatus = status;
-
-        if(isDefault)
-        {
-            mDefaultStatus = status;
-        }
-    }
-
-    if(statusChanged)
-    {
-        // Always reset next target time
-        SetNextTargetTime(0);
-
-        if(status == AIStatus_t::WANDERING)
-        {
-            uint64_t now = ChannelServer::GetServerTime();
-            if(GetDespawnWhenLost() && !HasFollowTarget())
-            {
-                // Most entities despawn when switching to wandering after a
-                // set time if they don't make their way back to their spawn
-                // location
-                SetDespawnTimeout(now + (uint64_t)AI_DESPAWN_TIMEOUT);
-            }
-
-            // Set next target time based on think speed
-            SetNextTargetTime(now + (uint64_t)(GetThinkSpeed() * 1000));
-        }
-        else if(GetDespawnTimeout() && !HasFollowTarget())
-        {
-            // Clear if switching to anything else
-            SetDespawnTimeout(0);
-        }
-    }
-
-    return true;
-}
-
-bool AIState::InCombat() const
-{
-    return mStatus == AIStatus_t::COMBAT;
-}
-
-bool AIState::IsAggro(bool includeCombat) const
-{
-    return mStatus == AIStatus_t::AGGRO ||
-        (includeCombat && mStatus == AIStatus_t::COMBAT);
-}
-
-bool AIState::IsFollowing() const
-{
-    return mStatus == AIStatus_t::FOLLOWING;
-}
-
-bool AIState::IsIdle() const
-{
-    return mStatus == AIStatus_t::IDLE;
-}
-
-bool AIState::IsWandering() const
-{
-    return mStatus == AIStatus_t::WANDERING;
-}
-
-bool AIState::HasFollowTarget() const
-{
-    return GetFollowEntityID() > 0;
-}
-
-bool AIState::StatusChanged() const
-{
-    return mStatusChanged;
-}
-
-void AIState::ResetStatusChanged()
-{
+  bool statusChanged = false;
+  {
     std::lock_guard<std::mutex> lock(mFieldLock);
-    mStatusChanged = false;
+    mStatusChanged = statusChanged = mStatus != status;
+
+    mPreviousStatus = mStatus;
+    mStatus = status;
+
+    if (isDefault) {
+      mDefaultStatus = status;
+    }
+  }
+
+  if (statusChanged) {
+    // Always reset next target time
+    SetNextTargetTime(0);
+
+    if (status == AIStatus_t::WANDERING) {
+      uint64_t now = ChannelServer::GetServerTime();
+      if (GetDespawnWhenLost() && !HasFollowTarget()) {
+        // Most entities despawn when switching to wandering after a
+        // set time if they don't make their way back to their spawn
+        // location
+        SetDespawnTimeout(now + (uint64_t)AI_DESPAWN_TIMEOUT);
+      }
+
+      // Set next target time based on think speed
+      SetNextTargetTime(now + (uint64_t)(GetThinkSpeed() * 1000));
+    } else if (GetDespawnTimeout() && !HasFollowTarget()) {
+      // Clear if switching to anything else
+      SetDespawnTimeout(0);
+    }
+  }
+
+  return true;
 }
 
-std::shared_ptr<libcomp::ScriptEngine> AIState::GetScript() const
-{
-    return mAIScript;
+bool AIState::InCombat() const { return mStatus == AIStatus_t::COMBAT; }
+
+bool AIState::IsAggro(bool includeCombat) const {
+  return mStatus == AIStatus_t::AGGRO ||
+         (includeCombat && mStatus == AIStatus_t::COMBAT);
+}
+
+bool AIState::IsFollowing() const { return mStatus == AIStatus_t::FOLLOWING; }
+
+bool AIState::IsIdle() const { return mStatus == AIStatus_t::IDLE; }
+
+bool AIState::IsWandering() const { return mStatus == AIStatus_t::WANDERING; }
+
+bool AIState::HasFollowTarget() const { return GetFollowEntityID() > 0; }
+
+bool AIState::StatusChanged() const { return mStatusChanged; }
+
+void AIState::ResetStatusChanged() {
+  std::lock_guard<std::mutex> lock(mFieldLock);
+  mStatusChanged = false;
+}
+
+std::shared_ptr<libcomp::ScriptEngine> AIState::GetScript() const {
+  return mAIScript;
 }
 
 void AIState::SetScript(
-    const std::shared_ptr<libcomp::ScriptEngine>& aiScript)
-{
-    mAIScript = aiScript;
+    const std::shared_ptr<libcomp::ScriptEngine>& aiScript) {
+  mAIScript = aiScript;
 }
 
-float AIState::GetAggroValue(uint8_t mode, bool fov, float defaultVal)
-{
-    auto aiData = GetBaseAI();
-    if(aiData && mode < 3)
-    {
-        auto fInfo = mode == 0 ? aiData->GetAggroNormal()
-            : (mode == 1 ? aiData->GetAggroNight() : aiData->GetAggroCast());
+float AIState::GetAggroValue(uint8_t mode, bool fov, float defaultVal) {
+  auto aiData = GetBaseAI();
+  if (aiData && mode < 3) {
+    auto fInfo = mode == 0 ? aiData->GetAggroNormal()
+                           : (mode == 1 ? aiData->GetAggroNight()
+                                        : aiData->GetAggroCast());
 
-        float val = fov
-            ? ((float)fInfo->GetFOV() / 360.f * (float)PI)
-            : (float)fInfo->GetDistance() * 10.f;
-        return val * GetAwareness();
-    }
+    float val = fov ? ((float)fInfo->GetFOV() / 360.f * (float)libcomp::PI)
+                    : (float)fInfo->GetDistance() * 10.f;
+    return val * GetAwareness();
+  }
 
-    return defaultVal;
+  return defaultVal;
 }
 
-float AIState::GetDeaggroDistance(bool isNight)
-{
-    float dist = GetAggroValue(isNight ? 1 : 0, false, 0.f);
+float AIState::GetDeaggroDistance(bool isNight) {
+  float dist = GetAggroValue(isNight ? 1 : 0, false, 0.f);
 
-    // Enforce lower limit
-    const static float LOWER_LIMIT = AI_DEFAULT_AGGRO_RANGE;
-    if(!GetIgnoreDeaggroMin() && dist < LOWER_LIMIT)
-    {
-        dist = LOWER_LIMIT;
-    }
+  // Enforce lower limit
+  const static float LOWER_LIMIT = AI_DEFAULT_AGGRO_RANGE;
+  if (!GetIgnoreDeaggroMin() && dist < LOWER_LIMIT) {
+    dist = LOWER_LIMIT;
+  }
 
-    dist = (dist < 200.f ? 200.f : dist) * (float)GetDeaggroScale();
+  dist = (dist < 200.f ? 200.f : dist) * (float)GetDeaggroScale();
 
-    // Enforce upper limit
-    if(!GetIgnoreDeaggroMax() && dist > MAX_ENTITY_DRAW_DISTANCE)
-    {
-        return MAX_ENTITY_DRAW_DISTANCE;
-    }
+  // Enforce upper limit
+  if (!GetIgnoreDeaggroMax() && dist > MAX_ENTITY_DRAW_DISTANCE) {
+    return MAX_ENTITY_DRAW_DISTANCE;
+  }
 
-    return dist;
+  return dist;
 }
 
-std::shared_ptr<AICommand> AIState::GetCurrentCommand() const
-{
-    return mCurrentCommand;
+std::shared_ptr<AICommand> AIState::GetCurrentCommand() const {
+  return mCurrentCommand;
 }
 
 void AIState::QueueCommand(const std::shared_ptr<AICommand>& command,
-    bool interrupt)
-{
-    std::lock_guard<std::mutex> lock(mFieldLock);
-    if(interrupt)
-    {
-        mCommandQueue.push_front(command);
-        mCurrentCommand = command;
-    }
-    else
-    {
-        mCommandQueue.push_back(command);
+                           bool interrupt) {
+  std::lock_guard<std::mutex> lock(mFieldLock);
+  if (interrupt) {
+    mCommandQueue.push_front(command);
+    mCurrentCommand = command;
+  } else {
+    mCommandQueue.push_back(command);
 
-        if(mCommandQueue.size() == 1)
-        {
-            mCurrentCommand = command;
-        }
+    if (mCommandQueue.size() == 1) {
+      mCurrentCommand = command;
     }
-
+  }
 }
 
-void AIState::ClearCommands()
-{
-    std::lock_guard<std::mutex> lock(mFieldLock);
-    mCommandQueue.clear();
-    mCurrentCommand = nullptr;
+void AIState::ClearCommands() {
+  std::lock_guard<std::mutex> lock(mFieldLock);
+  mCommandQueue.clear();
+  mCurrentCommand = nullptr;
 }
 
 std::shared_ptr<AICommand> AIState::PopCommand(
-    const std::shared_ptr<AICommand>& specific)
-{
-    std::lock_guard<std::mutex> lock(mFieldLock);
-    if(specific)
-    {
-        mCommandQueue.remove_if([specific]
-            (const std::shared_ptr<AICommand>& cmd)
-            {
-                return cmd == specific;
-            });
+    const std::shared_ptr<AICommand>& specific) {
+  std::lock_guard<std::mutex> lock(mFieldLock);
+  if (specific) {
+    mCommandQueue.remove_if([specific](const std::shared_ptr<AICommand>& cmd) {
+      return cmd == specific;
+    });
+  } else {
+    if (mCommandQueue.size() > 0) {
+      auto command = mCommandQueue.front();
+      mCommandQueue.pop_front();
     }
-    else
-    {
-        if(mCommandQueue.size() > 0)
-        {
-            auto command = mCommandQueue.front();
-            mCommandQueue.pop_front();
-        }
-    }
+  }
 
-    mCurrentCommand = nullptr;
-    if(mCommandQueue.size() > 0)
-    {
-        mCurrentCommand = mCommandQueue.front();
-    }
+  mCurrentCommand = nullptr;
+  if (mCommandQueue.size() > 0) {
+    mCurrentCommand = mCommandQueue.front();
+  }
 
-    return mCurrentCommand;
+  return mCurrentCommand;
 }
 
-void AIState::ResetSkillsMapped()
-{
-    SetSkillsMapped(false);
+void AIState::ResetSkillsMapped() {
+  SetSkillsMapped(false);
 
-    std::lock_guard<std::mutex> lock(mFieldLock);
-    mSkillMap.clear();
+  std::lock_guard<std::mutex> lock(mFieldLock);
+  mSkillMap.clear();
 }
 
-AISkillMap_t AIState::GetSkillMap() const
-{
-    return mSkillMap;
-}
+AISkillMap_t AIState::GetSkillMap() const { return mSkillMap; }
 
-void AIState::SetSkillMap(const AISkillMap_t& skillMap)
-{
-    std::lock_guard<std::mutex> lock(mFieldLock);
-    mSkillMap = skillMap;
+void AIState::SetSkillMap(const AISkillMap_t& skillMap) {
+  std::lock_guard<std::mutex> lock(mFieldLock);
+  mSkillMap = skillMap;
 }

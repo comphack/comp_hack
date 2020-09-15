@@ -25,39 +25,39 @@
 #ifndef TOOLS_LOGGER_SRC_CLOSE_H
 #define TOOLS_LOGGER_SRC_CLOSE_H
 
-#include <PushIgnore.h>
-#include "ui_Close.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include "ui_Close.h"
 
 /**
  * This dialog notifies the user that any clients will be disconnected when the
  * application exists.
  */
-class Close : public QDialog
-{
-    Q_OBJECT
+class Close : public QDialog {
+  Q_OBJECT
 
-public:
-    /**
-     * Construct the dialog box.
-     * @arg parent Parent object that this dialog belongs to. Should remain 0.
-     */
-    Close(QWidget *parent = 0);
+ public:
+  /**
+   * Construct the dialog box.
+   * @arg parent Parent object that this dialog belongs to. Should remain 0.
+   */
+  Close(QWidget *parent = 0);
 
-    /**
-     * Delete the dialog box.
-     */
-    ~Close();
+  /**
+   * Delete the dialog box.
+   */
+  ~Close();
 
-protected slots:
-    /**
-     * Close the application anyway.
-     */
-    void fuckEm();
+ protected slots:
+  /**
+   * Close the application anyway.
+   */
+  void fuckEm();
 
-protected:
-    /// Generated UI for the dialog.
-    Ui::Close ui;
+ protected:
+  /// Generated UI for the dialog.
+  Ui::Close ui;
 };
 
-#endif // TOOLS_LOGGER_SRC_CLOSE_H
+#endif  // TOOLS_LOGGER_SRC_CLOSE_H

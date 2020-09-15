@@ -32,35 +32,34 @@
 #include <ActionZoneInstance.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionZoneInstance;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionZoneInstance : public Action
-{
-    Q_OBJECT
+class ActionZoneInstance : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionZoneInstance(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionZoneInstance();
+ public:
+  explicit ActionZoneInstance(ActionList *pList, MainWindow *pMainWindow,
+                              QWidget *pParent = 0);
+  virtual ~ActionZoneInstance();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionZoneInstance *prop;
+ protected:
+  Ui::ActionZoneInstance *prop;
 
-    std::shared_ptr<objects::ActionZoneInstance> mAction;
+  std::shared_ptr<objects::ActionZoneInstance> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONZONEINSTANCEUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONZONEINSTANCEUI_H

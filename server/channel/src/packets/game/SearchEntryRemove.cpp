@@ -38,118 +38,107 @@
 
 using namespace channel;
 
-bool Parsers::SearchEntryRemove::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SearchEntryRemove::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 8) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto syncManager = server->GetChannelSyncManager();
-    int32_t worldCID = state->GetWorldCID();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto syncManager = server->GetChannelSyncManager();
+  int32_t worldCID = state->GetWorldCID();
 
-    int32_t type = p.ReadS32Little();
-    int32_t entryID = p.ReadS32Little();
+  int32_t type = p.ReadS32Little();
+  int32_t entryID = p.ReadS32Little();
 
-    std::shared_ptr<objects::SearchEntry> existing;
-    for(auto entry : syncManager->GetSearchEntries((objects::SearchEntry::Type_t)type))
-    {
-        if(entry->GetEntryID() == entryID ||
-            (entryID == 0 && worldCID == entry->GetSourceCID()))
-        {
-            existing = entry;
-            break;
-        }
+  std::shared_ptr<objects::SearchEntry> existing;
+  for (auto entry :
+       syncManager->GetSearchEntries((objects::SearchEntry::Type_t)type)) {
+    if (entry->GetEntryID() == entryID ||
+        (entryID == 0 && worldCID == entry->GetSourceCID())) {
+      existing = entry;
+      break;
     }
+  }
 
-    bool success = false;
-    if(!existing)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("SearchEntryRemove with invalid entry ID"
-                " encountered: %1\n").Arg(type);
-        });
-    }
-    else if(existing->GetSourceCID() != worldCID)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("SearchEntryRemove request encountered"
-                " with an entry ID associated to a different player: %1\n")
-                .Arg(type);
-        });
-    }
-    else
-    {
+  bool success = false;
+  if (!existing) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "SearchEntryRemove with invalid entry ID encountered: %1\n")
+          .Arg(type);
+    });
+  } else if (existing->GetSourceCID() != worldCID) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "SearchEntryRemove request encountered with an entry ID "
+                 "associated to a different player: %1\n")
+          .Arg(type);
+    });
+  } else {
+    success = true;
+  }
+
+  if (success) {
+    // Copy the existing record and let the callback update the
+    // existing synced data
+    auto entry = std::make_shared<objects::SearchEntry>(*existing);
+    entry->SetLastAction(objects::SearchEntry::LastAction_t::REMOVE_MANUAL);
+
+    switch ((objects::SearchEntry::Type_t)type) {
+      case objects::SearchEntry::Type_t::PARTY_JOIN:
+      case objects::SearchEntry::Type_t::PARTY_RECRUIT:
+      case objects::SearchEntry::Type_t::CLAN_JOIN:
+      case objects::SearchEntry::Type_t::CLAN_RECRUIT:
+      case objects::SearchEntry::Type_t::TRADE_SELLING:
+      case objects::SearchEntry::Type_t::TRADE_BUYING:
+      case objects::SearchEntry::Type_t::FREE_RECRUIT:
+      case objects::SearchEntry::Type_t::PARTY_JOIN_APP:
+      case objects::SearchEntry::Type_t::PARTY_RECRUIT_APP:
+      case objects::SearchEntry::Type_t::CLAN_JOIN_APP:
+      case objects::SearchEntry::Type_t::CLAN_RECRUIT_APP:
+      case objects::SearchEntry::Type_t::TRADE_SELLING_APP:
+      case objects::SearchEntry::Type_t::TRADE_BUYING_APP:
         success = true;
+        break;
+      default:
+        LogGeneralError([&]() {
+          return libcomp::String(
+                     "Invalid SearchEntryRemove type encountered: %1\n")
+              .Arg(type);
+        });
+        break;
     }
 
-    if(success)
-    {
-        // Copy the existing record and let the callback update the
-        // existing synced data
-        auto entry = std::make_shared<objects::SearchEntry>(*existing);
-        entry->SetLastAction(objects::SearchEntry::LastAction_t::REMOVE_MANUAL);
-
-        switch((objects::SearchEntry::Type_t)type)
-        {
-        case objects::SearchEntry::Type_t::PARTY_JOIN:
-        case objects::SearchEntry::Type_t::PARTY_RECRUIT:
-        case objects::SearchEntry::Type_t::CLAN_JOIN:
-        case objects::SearchEntry::Type_t::CLAN_RECRUIT:
-        case objects::SearchEntry::Type_t::TRADE_SELLING:
-        case objects::SearchEntry::Type_t::TRADE_BUYING:
-        case objects::SearchEntry::Type_t::FREE_RECRUIT:
-        case objects::SearchEntry::Type_t::PARTY_JOIN_APP:
-        case objects::SearchEntry::Type_t::PARTY_RECRUIT_APP:
-        case objects::SearchEntry::Type_t::CLAN_JOIN_APP:
-        case objects::SearchEntry::Type_t::CLAN_RECRUIT_APP:
-        case objects::SearchEntry::Type_t::TRADE_SELLING_APP:
-        case objects::SearchEntry::Type_t::TRADE_BUYING_APP:
-            success = true;
-            break;
-        default:
-            LogGeneralError([&]()
-            {
-                return libcomp::String("Invalid SearchEntryRemove type"
-                    " encountered: %1\n").Arg(type);
-            });
-            break;
-        }
-
-        if(success)
-        {
-            success = syncManager->SyncRecordRemoval(entry, "SearchEntry");
-        }
-        else
-        {
-            LogGeneralError([&]()
-            {
-                return libcomp::String("Invalid SearchEntryRemove request"
-                    " encountered: %1\n").Arg(type);
-            });
-        }
+    if (success) {
+      success = syncManager->SyncRecordRemoval(entry, "SearchEntry");
+    } else {
+      LogGeneralError([&]() {
+        return libcomp::String(
+                   "Invalid SearchEntryRemove request encountered: %1\n")
+            .Arg(type);
+      });
     }
+  }
 
-    if(!success)
-    {
-        // If it succeeds, the reply will be sent when the callback returns
-        // from the world server
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SEARCH_ENTRY_REMOVE);
-        reply.WriteS32Little(type);
-        reply.WriteS32Little(entryID);
-        reply.WriteS32Little(-1);
-        reply.WriteS32Little(0);
+  if (!success) {
+    // If it succeeds, the reply will be sent when the callback returns
+    // from the world server
+    libcomp::Packet reply;
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_SEARCH_ENTRY_REMOVE);
+    reply.WriteS32Little(type);
+    reply.WriteS32Little(entryID);
+    reply.WriteS32Little(-1);
+    reply.WriteS32Little(0);
 
-        connection->SendPacket(reply);
-    }
+    connection->SendPacket(reply);
+  }
 
-    return true;
+  return true;
 }

@@ -36,31 +36,29 @@
 
 using namespace channel;
 
-bool Parsers::BikeDismount::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BikeDismount::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BIKE_DISMOUNT);
-    reply.WriteS32Little(0);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BIKE_DISMOUNT);
+  reply.WriteS32Little(0);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    // Just expire the status, no need to verify that its there
-    std::set<uint32_t> effects = { SVR_CONST.STATUS_BIKE };
-    cState->ExpireStatusEffects(effects);
+  // Just expire the status, no need to verify that its there
+  std::set<uint32_t> effects = {SVR_CONST.STATUS_BIKE};
+  cState->ExpireStatusEffects(effects);
 
-    return true;
+  return true;
 }

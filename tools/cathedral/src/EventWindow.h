@@ -26,11 +26,12 @@
 #define TOOLS_CATHEDRAL_SRC_EVENTWINDOW_H
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QWidget>
 
 #include "ui_EventWindow.h"
-#include <PopIgnore.h>
 
 // objects Includes
 #include <CString.h>
@@ -40,19 +41,17 @@
 // Standard C++11 Includes
 #include <set>
 
-namespace objects
-{
+namespace objects {
 
 class Action;
 
-} // namespace objects
+}  // namespace objects
 
-namespace Ui
-{
+namespace Ui {
 
 class FindEventAction;
 
-} // namespace Ui
+}  // namespace Ui
 
 class EventFile;
 class EventTreeItem;
@@ -60,112 +59,110 @@ class FileEvent;
 class MainWindow;
 class QTreeWidgetItem;
 
-class EventWindow : public QMainWindow
-{
-    Q_OBJECT
+class EventWindow : public QMainWindow {
+  Q_OBJECT
 
-public:
-    explicit EventWindow(MainWindow *pMainWindow, QWidget *pParent = 0);
-    virtual ~EventWindow();
+ public:
+  explicit EventWindow(MainWindow* pMainWindow, QWidget* pParent = 0);
+  virtual ~EventWindow();
 
-    bool GoToEvent(const libcomp::String& eventID);
+  bool GoToEvent(const libcomp::String& eventID);
 
-    size_t GetLoadedEventCount() const;
+  size_t GetLoadedEventCount() const;
 
-    void ChangeEventID(const libcomp::String& currentID);
+  void ChangeEventID(const libcomp::String& currentID);
 
-    std::list<libcomp::String> GetCurrentEventIDs() const;
+  std::list<libcomp::String> GetCurrentEventIDs() const;
 
-    libcomp::String GetCurrentFile() const;
+  libcomp::String GetCurrentFile() const;
 
-    std::list<libcomp::String> GetCurrentFiles() const;
+  std::list<libcomp::String> GetCurrentFiles() const;
 
-    std::list<std::shared_ptr<objects::Event>> GetFileEvents(
-        const libcomp::String& path) const;
+  std::list<std::shared_ptr<objects::Event>> GetFileEvents(
+      const libcomp::String& path) const;
 
-    void closeEvent(QCloseEvent* event) override;
+  void closeEvent(QCloseEvent* event) override;
 
-private slots:
-    void FileSelectionChanged();
-    void LoadDirectory();
-    void LoadFile();
-    void ReloadFile();
-    void SaveFile();
-    void SaveAllFiles();
-    void NewFile();
-    void NewEvent();
-    void Convert();
-    void RemoveEvent();
-    void Search();
-    void Refresh(bool reselectEvent = true);
-    void GoTo();
-    void FindAction();
-    void FindNextAction();
-    void Back();
-    void FileViewChanged();
-    void CollapseAll();
-    void ExpandAll();
-    void CurrentEventEdited();
-    void TreeSelectionChanged();
+ private slots:
+  void FileSelectionChanged();
+  void LoadDirectory();
+  void LoadFile();
+  void ReloadFile();
+  void SaveFile();
+  void SaveAllFiles();
+  void NewFile();
+  void NewEvent();
+  void Convert();
+  void RemoveEvent();
+  void Search();
+  void Refresh(bool reselectEvent = true);
+  void GoTo();
+  void FindAction();
+  void FindNextAction();
+  void Back();
+  void FileViewChanged();
+  void CollapseAll();
+  void ExpandAll();
+  void CurrentEventEdited();
+  void TreeSelectionChanged();
 
-    void MoveUp();
-    void MoveDown();
-    void Reorganize();
-    void ChangeCurrentEventID();
-    void ChangeFileEventIDs();
-    void ChangeTreeBranchIDs();
+  void MoveUp();
+  void MoveDown();
+  void Reorganize();
+  void ChangeCurrentEventID();
+  void ChangeFileEventIDs();
+  void ChangeTreeBranchIDs();
 
-private:
-    bool LoadFileFromPath(const libcomp::String& path);
-    bool SelectFile(const libcomp::String& path);
+ private:
+  bool LoadFileFromPath(const libcomp::String& path);
+  bool SelectFile(const libcomp::String& path);
 
-    void SaveFiles(const std::list<libcomp::String>& paths);
+  void SaveFiles(const std::list<libcomp::String>& paths);
 
-    std::shared_ptr<objects::Event> GetNewEvent(
-        objects::Event::EventType_t type) const;
+  std::shared_ptr<objects::Event> GetNewEvent(
+      objects::Event::EventType_t type) const;
 
-    void BindSelectedEvent(bool storePrevious);
-    void BindEventEditControls(QWidget* eNode);
+  void BindSelectedEvent(bool storePrevious);
+  void BindEventEditControls(QWidget* eNode);
 
-    void AddEventToTree(const libcomp::String& id, EventTreeItem* parent,
-        const std::shared_ptr<EventFile>& file,
-        std::set<libcomp::String>& seen, int32_t eventIdx = -1);
+  void AddEventToTree(const libcomp::String& id, EventTreeItem* parent,
+                      const std::shared_ptr<EventFile>& file,
+                      std::set<libcomp::String>& seen, int32_t eventIdx = -1);
 
-    void ChangeEventIDs(const std::unordered_map<libcomp::String,
-        libcomp::String>& idMap);
-    bool ChangeActionEventIDs(const std::unordered_map<libcomp::String,
-        libcomp::String>& idMap, const std::list<std::shared_ptr<
-        objects::Action>>& actions);
+  void ChangeEventIDs(
+      const std::unordered_map<libcomp::String, libcomp::String>& idMap);
+  bool ChangeActionEventIDs(
+      const std::unordered_map<libcomp::String, libcomp::String>& idMap,
+      const std::list<std::shared_ptr<objects::Action>>& actions);
 
-    libcomp::String GetCommonEventPrefix(
-        const std::shared_ptr<EventFile>& file);
-    libcomp::String GetEventTypePrefix(const libcomp::String& prefix,
-        objects::Event::EventType_t eventType);
-    libcomp::String GetNewEventID(const std::shared_ptr<EventFile>& file,
-        objects::Event::EventType_t eventType);
+  libcomp::String GetCommonEventPrefix(const std::shared_ptr<EventFile>& file);
+  libcomp::String GetEventTypePrefix(const libcomp::String& prefix,
+                                     objects::Event::EventType_t eventType);
+  libcomp::String GetNewEventID(const std::shared_ptr<EventFile>& file,
+                                objects::Event::EventType_t eventType);
 
-    void UpdatePreviousEvents(const libcomp::String& last);
+  void UpdatePreviousEvents(const libcomp::String& last);
 
-    void RebuildLocalIDMap(const std::shared_ptr<EventFile>& file);
-    void RebuildGlobalIDMap();
+  void RebuildLocalIDMap(const std::shared_ptr<EventFile>& file);
+  void RebuildGlobalIDMap();
 
-    libcomp::String GetInlineMessageText(const libcomp::String& raw,
-        size_t limit = 0);
+  libcomp::String GetInlineMessageText(const libcomp::String& raw,
+                                       size_t limit = 0);
 
-    MainWindow *mMainWindow;
+  MainWindow* mMainWindow;
 
-    std::unordered_map<libcomp::String, std::shared_ptr<EventFile>> mFiles;
-    std::unordered_map<libcomp::String, libcomp::String> mGlobalIDMap;
+  std::unordered_map<libcomp::String, std::shared_ptr<EventFile>> mFiles;
+  std::unordered_map<libcomp::String, libcomp::String> mGlobalIDMap;
 
-    libcomp::String mCurrentFileName;
-    std::shared_ptr<FileEvent> mCurrentEvent;
+  libcomp::String mCurrentFileName;
+  std::shared_ptr<FileEvent> mCurrentEvent;
 
-    std::list<libcomp::String> mPreviousEventIDs;
+  std::list<libcomp::String> mPreviousEventIDs;
 
-    Ui::EventWindow *ui;
+  Ui::EventWindow* ui;
 
-    QWidget *findActionWidget;
-    Ui::FindEventAction *findAction;
+  QWidget* findActionWidget;
+  Ui::FindEventAction* findAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_EVENTWINDOW_H
+#endif  // TOOLS_CATHEDRAL_SRC_EVENTWINDOW_H

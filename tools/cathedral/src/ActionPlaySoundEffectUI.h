@@ -32,35 +32,34 @@
 #include <ActionPlaySoundEffect.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionPlaySoundEffect;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionPlaySoundEffect : public Action
-{
-    Q_OBJECT
+class ActionPlaySoundEffect : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionPlaySoundEffect(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionPlaySoundEffect();
+ public:
+  explicit ActionPlaySoundEffect(ActionList *pList, MainWindow *pMainWindow,
+                                 QWidget *pParent = 0);
+  virtual ~ActionPlaySoundEffect();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionPlaySoundEffect *prop;
+ protected:
+  Ui::ActionPlaySoundEffect *prop;
 
-    std::shared_ptr<objects::ActionPlaySoundEffect> mAction;
+  std::shared_ptr<objects::ActionPlaySoundEffect> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONPLAYSOUNDEFFECTUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONPLAYSOUNDEFFECTUI_H

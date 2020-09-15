@@ -47,82 +47,82 @@
 
 using namespace channel;
 
-bool Parsers::EntrustRewardUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::EntrustRewardUpdate::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 16)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 16) {
+    return false;
+  }
 
-    int64_t itemID = p.ReadS64Little();
-    int32_t rewardType = p.ReadS32Little();
-    int32_t offset = p.ReadS32Little();
+  int64_t itemID = p.ReadS64Little();
+  int32_t rewardType = p.ReadS32Little();
+  int32_t offset = p.ReadS32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
 
-    auto otherClient = exchangeSession &&
-        exchangeSession->GetSourceEntityID() != cState->GetEntityID()
-        ? server->GetManagerConnection()->GetEntityClient(
-            exchangeSession->GetSourceEntityID(), false) : nullptr;
+  auto otherClient = exchangeSession && exchangeSession->GetSourceEntityID() !=
+                                            cState->GetEntityID()
+                         ? server->GetManagerConnection()->GetEntityClient(
+                               exchangeSession->GetSourceEntityID(), false)
+                         : nullptr;
 
-    auto item = itemID != -1 ? std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)))
-        : nullptr;
-    auto itemDef = item ? server->GetDefinitionManager()->GetItemData(
-        item->GetType()) : nullptr;
+  auto item = itemID != -1 ? std::dynamic_pointer_cast<objects::Item>(
+                                 libcomp::PersistentObject::GetObjectByUUID(
+                                     state->GetObjectUUID(itemID)))
+                           : nullptr;
+  auto itemDef =
+      item ? server->GetDefinitionManager()->GetItemData(item->GetType())
+           : nullptr;
 
-    bool success = false;
-    if(item && (!itemDef ||
-        (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0))
-    {
-        LogTradeError([item, state]()
-        {
-            return libcomp::String("Player attempted to add non-trade"
-                " item type %1 to an entrust reward: %2\n")
-                .Arg(item->GetType()).Arg(state->GetAccountUID().ToString());
-        });
-    }
-    else if((itemID == -1 || item) && otherClient)
-    {
-        // Add to slots 10 to 21
-        exchangeSession->SetItems((size_t)(10 + rewardType * 4 + offset), item);
+  bool success = false;
+  if (item &&
+      (!itemDef || (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0)) {
+    LogTradeError([item, state]() {
+      return libcomp::String(
+                 "Player attempted to add non-trade item type %1 to an entrust "
+                 "reward: %2\n")
+          .Arg(item->GetType())
+          .Arg(state->GetAccountUID().ToString());
+    });
+  } else if ((itemID == -1 || item) && otherClient) {
+    // Add to slots 10 to 21
+    exchangeSession->SetItems((size_t)(10 + rewardType * 4 + offset), item);
 
-        success = true;
-    }
+    success = true;
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_REWARD_UPDATE);
-    reply.WriteS64Little(itemID);
-    reply.WriteS32Little(rewardType);
-    reply.WriteS32Little(offset);
-    reply.WriteS32Little(success ? 0 : -1);
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_ENTRUST_REWARD_UPDATE);
+  reply.WriteS64Little(itemID);
+  reply.WriteS32Little(rewardType);
+  reply.WriteS32Little(offset);
+  reply.WriteS32Little(success ? 0 : -1);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    if(success)
-    {
-        auto otherState = otherClient->GetClientState();
-        int64_t otherItemID = item ? otherState->GetObjectID(item->GetUUID()) : -1;
+  if (success) {
+    auto otherState = otherClient->GetClientState();
+    int64_t otherItemID = item ? otherState->GetObjectID(item->GetUUID()) : -1;
 
-        libcomp::Packet notify;
-        notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_REWARD_UPDATED);
-        notify.WriteS32Little(rewardType);
-        notify.WriteS32Little(offset);
-        notify.WriteS64Little(otherItemID);
+    libcomp::Packet notify;
+    notify.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_ENTRUST_REWARD_UPDATED);
+    notify.WriteS32Little(rewardType);
+    notify.WriteS32Little(offset);
+    notify.WriteS64Little(otherItemID);
 
-        characterManager->GetItemDetailPacketData(notify, item);
+    characterManager->GetItemDetailPacketData(notify, item);
 
-        otherClient->SendPacket(notify);
-    }
+    otherClient->SendPacket(notify);
+  }
 
-    return true;
+  return true;
 }

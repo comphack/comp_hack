@@ -40,53 +40,50 @@
 
 using namespace channel;
 
-bool Parsers::PopulateZone::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PopulateZone::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t entityID = p.ReadS32Little();
+  int32_t entityID = p.ReadS32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    int32_t cEntityID = state->GetCharacterState()->GetEntityID();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  int32_t cEntityID = state->GetCharacterState()->GetEntityID();
 
-    if(entityID != cEntityID)
-    {
-        LogZoneManagerError([&]()
-        {
-            return libcomp::String("PopulateZone request sent with an"
-                " entity ID not matching the client connection: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
+  if (entityID != cEntityID) {
+    LogZoneManagerError([&]() {
+      return libcomp::String(
+                 "PopulateZone request sent with an entity ID not matching the "
+                 "client connection: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Close();
-        return true;
-    }
-
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    server->QueueWork([](ZoneManager* manager,
-        const std::shared_ptr<ChannelClientConnection> pClient)
-                {
-                    if(!manager->SendPopulateZoneData(pClient))
-                    {
-                        auto pState = pClient->GetClientState();
-                        auto uuid = pState ? pState->GetAccountUID() : NULLUUID;
-
-                        LogZoneManagerError([&]()
-                        {
-                            return libcomp::String("PopulateZone response"
-                                " failed to send data for account: %1\n")
-                                .Arg(uuid.ToString());
-                        });
-                    }
-                }, server->GetZoneManager(), client);
-
+    client->Close();
     return true;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  server->QueueWork(
+      [](ZoneManager* manager,
+         const std::shared_ptr<ChannelClientConnection> pClient) {
+        if (!manager->SendPopulateZoneData(pClient)) {
+          auto pState = pClient->GetClientState();
+          auto uuid = pState ? pState->GetAccountUID() : NULLUUID;
+
+          LogZoneManagerError([&]() {
+            return libcomp::String(
+                       "PopulateZone response failed to send data for account: "
+                       "%1\n")
+                .Arg(uuid.ToString());
+          });
+        }
+      },
+      server->GetZoneManager(), client);
+
+  return true;
 }

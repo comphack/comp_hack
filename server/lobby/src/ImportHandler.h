@@ -41,28 +41,26 @@
 // JsonBox Includes
 #include <JsonBox.h>
 
-namespace lobby
-{
+namespace lobby {
 
-class ImportHandler : public CivetHandler
-{
-public:
-    ImportHandler(const std::shared_ptr<objects::LobbyConfig>& config,
-        const std::shared_ptr<lobby::LobbyServer>& server);
+class ImportHandler : public CivetHandler {
+ public:
+  ImportHandler(const std::shared_ptr<objects::LobbyConfig>& config,
+                const std::shared_ptr<lobby::LobbyServer>& server);
 
-    virtual ~ImportHandler();
+  virtual ~ImportHandler();
 
-    virtual bool handlePost(CivetServer *pServer,
-        struct mg_connection *pConnection);
+  virtual bool handlePost(CivetServer* pServer,
+                          struct mg_connection* pConnection);
 
-private:
-    libcomp::String ExtractFile(const libcomp::String& contentType,
-        const libcomp::String& contentData);
+ private:
+  libcomp::String ExtractFile(const libcomp::String& contentType,
+                              const libcomp::String& contentData);
 
-    std::shared_ptr<objects::LobbyConfig> mConfig;
-    std::shared_ptr<lobby::LobbyServer> mServer;
+  std::shared_ptr<objects::LobbyConfig> mConfig;
+  std::shared_ptr<lobby::LobbyServer> mServer;
 };
 
-} // namespace lobby
+}  // namespace lobby
 
-#endif // SERVER_LOBBY_SRC_IMPORTHANDLER_H
+#endif  // SERVER_LOBBY_SRC_IMPORTHANDLER_H

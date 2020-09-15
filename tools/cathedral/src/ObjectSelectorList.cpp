@@ -30,82 +30,67 @@
 #include "MainWindow.h"
 #include "ObjectListModel.h"
 
-ObjectSelectorList::ObjectSelectorList(const std::shared_ptr<
-    BinaryDataNamedSet>& dataSet, const libcomp::String& objType,
-    bool emtpySelectable, QWidget *pParent) : ObjectList(pParent),
-    mDataSet(dataSet), mObjType(objType), mEmptySelectable(emtpySelectable),
-    mLoaded(false)
-{
+ObjectSelectorList::ObjectSelectorList(
+    const std::shared_ptr<BinaryDataNamedSet>& dataSet,
+    const libcomp::String& objType, bool emtpySelectable, QWidget* pParent)
+    : ObjectList(pParent),
+      mDataSet(dataSet),
+      mObjType(objType),
+      mEmptySelectable(emtpySelectable),
+      mLoaded(false) {}
+
+ObjectSelectorList::~ObjectSelectorList() {}
+
+QString ObjectSelectorList::GetObjectID(
+    const std::shared_ptr<libcomp::Object>& obj) const {
+  if (mDataSet) {
+    return QString::number(mDataSet->GetMapID(obj));
+  }
+
+  return "0";
 }
 
-ObjectSelectorList::~ObjectSelectorList()
-{
+QString ObjectSelectorList::GetObjectName(
+    const std::shared_ptr<libcomp::Object>& obj) const {
+  if (mDataSet) {
+    // "Tab in" new lines so they are easier to read
+    return qs(mDataSet->GetName(obj)
+                  .Replace("\r", "\n")
+                  .Replace("\n\n", "\n")
+                  .Replace("\n", "\n\r    "));
+  }
+
+  return "";
 }
 
+bool ObjectSelectorList::Select(uint32_t value) {
+  if (mDataSet) {
+    auto obj = mDataSet->GetObjectByID(value);
+    return obj && ObjectList::Select(obj);
+  }
 
-QString ObjectSelectorList::GetObjectID(const std::shared_ptr<
-    libcomp::Object>& obj) const
-{
-    if(mDataSet)
-    {
-        return QString::number(mDataSet->GetMapID(obj));
-    }
-
-    return "0";
+  return false;
 }
 
-QString ObjectSelectorList::GetObjectName(const std::shared_ptr<
-    libcomp::Object>& obj) const
-{
-    if(mDataSet)
-    {
-        // "Tab in" new lines so they are easier to read
-        return qs(mDataSet->GetName(obj).Replace("\r", "\n")
-            .Replace("\n\n", "\n").Replace("\n", "\n\r    "));
-    }
-
-    return "";
-}
-
-bool ObjectSelectorList::Select(uint32_t value)
-{
-    if(mDataSet)
-    {
-        auto obj = mDataSet->GetObjectByID(value);
-        return obj && ObjectList::Select(obj);
-    }
-
-    return false;
-}
-
-void ObjectSelectorList::LoadIfNeeded()
-{
-    if(!mLoaded)
-    {
-        std::vector<std::shared_ptr<libcomp::Object>> objs;
-        if(mDataSet)
-        {
-            for(auto obj : mDataSet->GetObjects())
-            {
-                if(mEmptySelectable || !GetObjectName(obj).isEmpty())
-                {
-                    objs.push_back(obj);
-                }
-            }
+void ObjectSelectorList::LoadIfNeeded() {
+  if (!mLoaded) {
+    std::vector<std::shared_ptr<libcomp::Object>> objs;
+    if (mDataSet) {
+      for (auto obj : mDataSet->GetObjects()) {
+        if (mEmptySelectable || !GetObjectName(obj).isEmpty()) {
+          objs.push_back(obj);
         }
-
-        SetObjectList(objs);
-
-        mLoaded = true;
+      }
     }
+
+    SetObjectList(objs);
+
+    mLoaded = true;
+  }
 }
 
-libcomp::String ObjectSelectorList::GetObjectType() const
-{
-    return mObjType;
-}
+libcomp::String ObjectSelectorList::GetObjectType() const { return mObjType; }
 
-std::shared_ptr<libcomp::Object> ObjectSelectorList::GetSelectedObject()
-{
-    return mActiveObject.lock();
+std::shared_ptr<libcomp::Object> ObjectSelectorList::GetSelectedObject() {
+  return mActiveObject.lock();
 }

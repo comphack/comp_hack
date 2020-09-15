@@ -49,163 +49,144 @@ const int8_t ACTION_MOVE = 2;
 using namespace channel;
 
 void UpdateDemonSkill(const std::shared_ptr<ChannelServer> server,
-    const std::shared_ptr<ChannelClientConnection> client,
-    int32_t entityID, int8_t skillSlot, uint32_t skillID)
-{
-    auto state = client->GetClientState();
-    auto dState = state->GetDemonState();
-    auto demon = dState->GetEntity();
+                      const std::shared_ptr<ChannelClientConnection> client,
+                      int32_t entityID, int8_t skillSlot, uint32_t skillID) {
+  auto state = client->GetClientState();
+  auto dState = state->GetDemonState();
+  auto demon = dState->GetEntity();
 
-    if(dState->GetEntityID() != entityID || nullptr == demon)
-    {
-        return;
+  if (dState->GetEntityID() != entityID || nullptr == demon) {
+    return;
+  }
+
+  int8_t oldSlot = -1;
+  for (size_t i = 0; i < 8; i++) {
+    if (demon->GetLearnedSkills(i) == skillID) {
+      oldSlot = (int8_t)i;
+      break;
+    }
+  }
+
+  int8_t action = ACTION_LEARN_ACQUIRED;
+  if (oldSlot != -1) {
+    action = ACTION_MOVE;
+  }
+
+  auto changes = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+  changes->Update(demon);
+
+  bool recalc = false;
+
+  uint32_t currentSkillID = demon->GetLearnedSkills((size_t)skillSlot);
+  if (action == ACTION_LEARN_ACQUIRED) {
+    bool found = false;
+
+    // Remove from acquired skills if it exists
+    size_t skillCount = demon->AcquiredSkillsCount();
+    for (size_t i = skillCount; i > 0; i--) {
+      size_t idx = (size_t)(i - 1);
+      if (demon->GetAcquiredSkills(idx) == skillID) {
+        demon->RemoveAcquiredSkills(idx);
+        found = true;
+      }
     }
 
-    int8_t oldSlot = -1;
-    for(size_t i = 0; i < 8; i++)
-    {
-        if(demon->GetLearnedSkills(i) == skillID)
-        {
-            oldSlot = (int8_t)i;
-            break;
-        }
+    // Remove from inherited skills if it exists and update
+    // the action
+    size_t iSkillIdx = 0;
+    for (auto iSkill : demon->GetInheritedSkills()) {
+      if (!iSkill.IsNull() && iSkill->GetSkill() == skillID) {
+        action = ACTION_LEARN_INHERITED;
+        changes->Delete(iSkill.Get());
+        demon->RemoveInheritedSkills(iSkillIdx);
+        found = true;
+        break;
+      }
+      iSkillIdx++;
     }
 
-    int8_t action = ACTION_LEARN_ACQUIRED;
-    if(oldSlot != -1)
-    {
-        action = ACTION_MOVE;
+    if (!found) {
+      LogDemonError([&]() {
+        return libcomp::String(
+                   "DemonSkillUpdate request received for skill ID '%1' which "
+                   "is not on the demon: %2\n")
+            .Arg(skillID)
+            .Arg(state->GetAccountUID().ToString());
+      });
+
+      client->Close();
+      return;
+    } else {
+      demon->SetLearnedSkills((size_t)skillSlot, skillID);
     }
 
-    auto changes = libcomp::DatabaseChangeSet::Create(
-        state->GetAccountUID());
-    changes->Update(demon);
+    recalc = true;
+  } else if (action == ACTION_MOVE) {
+    demon->SetLearnedSkills((size_t)skillSlot, skillID);
+    demon->SetLearnedSkills((size_t)oldSlot, currentSkillID);
+  }
 
-    bool recalc = false;
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_SKILL_UPDATE);
+  reply.WriteS32Little(entityID);
+  reply.WriteS8(action);
+  reply.WriteS8(skillSlot);
+  reply.WriteU32Little(skillID);
 
-    uint32_t currentSkillID = demon->GetLearnedSkills((size_t)skillSlot);
-    if(action == ACTION_LEARN_ACQUIRED)
-    {
-        bool found = false;
+  if (action == ACTION_MOVE) {
+    reply.WriteS8(oldSlot);
+    reply.WriteU32Little(currentSkillID ? currentSkillID : (uint32_t)-1);
+  } else {
+    reply.WriteS8(0);
+    reply.WriteU32Little(6);
+  }
 
-        // Remove from acquired skills if it exists
-        size_t skillCount = demon->AcquiredSkillsCount();
-        for(size_t i = skillCount; i > 0; i--)
-        {
-            size_t idx = (size_t)(i - 1);
-            if(demon->GetAcquiredSkills(idx) == skillID)
-            {
-                demon->RemoveAcquiredSkills(idx);
-                found = true;
-            }
-        }
+  client->SendPacket(reply);
 
-        // Remove from inherited skills if it exists and update
-        // the action
-        size_t iSkillIdx = 0;
-        for(auto iSkill : demon->GetInheritedSkills())
-        {
-            if(!iSkill.IsNull() && iSkill->GetSkill() == skillID)
-            {
-                action = ACTION_LEARN_INHERITED;
-                changes->Delete(iSkill.Get());
-                demon->RemoveInheritedSkills(iSkillIdx);
-                found = true;
-                break;
-            }
-            iSkillIdx++;
-        }
+  server->GetWorldDatabase()->QueueChangeSet(changes);
 
-        if(!found)
-        {
-            LogDemonError([&]()
-            {
-                return libcomp::String("DemonSkillUpdate request received"
-                    " for skill ID '%1' which is not on the demon: %2\n")
-                    .Arg(skillID).Arg(state->GetAccountUID().ToString());
-            });
-
-            client->Close();
-            return;
-        }
-        else
-        {
-            demon->SetLearnedSkills((size_t)skillSlot, skillID);
-        }
-
-        recalc = true;
-    }
-    else if(action == ACTION_MOVE)
-    {
-        demon->SetLearnedSkills((size_t)skillSlot, skillID);
-        demon->SetLearnedSkills((size_t)oldSlot, currentSkillID);
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_DEMON_SKILL_UPDATE);
-    reply.WriteS32Little(entityID);
-    reply.WriteS8(action);
-    reply.WriteS8(skillSlot);
-    reply.WriteU32Little(skillID);
-
-    if(action == ACTION_MOVE)
-    {
-        reply.WriteS8(oldSlot);
-        reply.WriteU32Little(currentSkillID ? currentSkillID : (uint32_t)-1);
-    }
-    else
-    {
-        reply.WriteS8(0);
-        reply.WriteU32Little(6);
-    }
-
-    client->SendPacket(reply);
-
-    server->GetWorldDatabase()->QueueChangeSet(changes);
-
-    if(recalc)
-    {
-        server->GetTokuseiManager()->Recalculate(state->GetCharacterState(), true,
-            std::set<int32_t>{ dState->GetEntityID() });
-        server->GetCharacterManager()->RecalculateStats(dState, client);
-    }
+  if (recalc) {
+    server->GetTokuseiManager()->Recalculate(
+        state->GetCharacterState(), true,
+        std::set<int32_t>{dState->GetEntityID()});
+    server->GetCharacterManager()->RecalculateStats(dState, client);
+  }
 }
 
-bool Parsers::DemonSkillUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonSkillUpdate::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 9)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 9) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    int32_t entityID = p.ReadS32Little();
-    int8_t skillSlot = p.ReadS8();
-    uint32_t skillID = p.ReadU32Little();
+  int32_t entityID = p.ReadS32Little();
+  int8_t skillSlot = p.ReadS8();
+  uint32_t skillID = p.ReadU32Little();
 
-    if(skillSlot < 0 || skillSlot >= 8 || entityID <= 0)
-    {
-        return false;
-    }
+  if (skillSlot < 0 || skillSlot >= 8 || entityID <= 0) {
+    return false;
+  }
 
-    auto skillDef = server->GetDefinitionManager()->GetSkillData(skillID);
-    if(nullptr == skillDef)
-    {
-        LogDemonError([&]()
-        {
-            return libcomp::String("Invalid skill ID encountered when "
-                "attempting to to update a demon's skills: %1\n").Arg(skillID);
-        });
+  auto skillDef = server->GetDefinitionManager()->GetSkillData(skillID);
+  if (nullptr == skillDef) {
+    LogDemonError([&]() {
+      return libcomp::String(
+                 "Invalid skill ID encountered when attempting to to update a "
+                 "demon's skills: %1\n")
+          .Arg(skillID);
+    });
 
-        return false;
-    }
+    return false;
+  }
 
-    server->QueueWork(UpdateDemonSkill, server, client, entityID, skillSlot, skillID);
+  server->QueueWork(UpdateDemonSkill, server, client, entityID, skillSlot,
+                    skillID);
 
-    return true;
+  return true;
 }

@@ -37,28 +37,26 @@
 
 using namespace world;
 
-bool Parsers::DataSync::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DataSync::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    auto server = std::dynamic_pointer_cast<WorldServer>(pPacketManager
-        ->GetServer());
-    auto syncManager = server->GetWorldSyncManager();
+    libcomp::ReadOnlyPacket& p) const {
+  auto server =
+      std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
+  auto syncManager = server->GetWorldSyncManager();
 
-    libcomp::String source = server->GetLobbyConnection() == connection
-        ? "lobby" : "channel";
-    if(!syncManager->SyncIncoming(p, source))
-    {
-        LogGeneralError([source]()
-        {
-            return libcomp::String("Data sync from '%1' failed to process.\n")
-                .Arg(source);
-        });
-        return false;
-    }
+  libcomp::String source =
+      server->GetLobbyConnection() == connection ? "lobby" : "channel";
+  if (!syncManager->SyncIncoming(p, source)) {
+    LogGeneralError([source]() {
+      return libcomp::String("Data sync from '%1' failed to process.\n")
+          .Arg(source);
+    });
+    return false;
+  }
 
-    // Sync any records that need to relay back
-    syncManager->SyncOutgoing();
+  // Sync any records that need to relay back
+  syncManager->SyncOutgoing();
 
-    return true;
+  return true;
 }

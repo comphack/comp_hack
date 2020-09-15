@@ -30,106 +30,83 @@
 
 using namespace channel;
 
-ChannelClientConnection::ChannelClientConnection(asio::ip::tcp::socket& socket,
-    const std::shared_ptr<libcomp::Crypto::DiffieHellman>& diffieHellman) :
-    ChannelConnection(socket, diffieHellman), mClientState(
-        std::shared_ptr<ClientState>(new ClientState)), mTimeout(0)
-{
+ChannelClientConnection::ChannelClientConnection(
+    asio::ip::tcp::socket& socket,
+    const std::shared_ptr<libcomp::Crypto::DiffieHellman>& diffieHellman)
+    : ChannelConnection(socket, diffieHellman),
+      mClientState(std::shared_ptr<ClientState>(new ClientState)),
+      mTimeout(0) {}
+
+ChannelClientConnection::~ChannelClientConnection() {}
+
+ClientState* ChannelClientConnection::GetClientState() const {
+  return mClientState.get();
 }
 
-ChannelClientConnection::~ChannelClientConnection()
-{
+void ChannelClientConnection::RefreshTimeout(uint64_t now,
+                                             uint16_t aliveUntil) {
+  mTimeout = now + (uint64_t)(aliveUntil * 1000000);
 }
 
-ClientState* ChannelClientConnection::GetClientState() const
-{
-    return mClientState.get();
+uint64_t ChannelClientConnection::GetTimeout() const { return mTimeout; }
+
+void ChannelClientConnection::Kill() {
+  mClientState->SetLogoutSave(false);
+  Close();
 }
 
-void ChannelClientConnection::RefreshTimeout(uint64_t now, uint16_t aliveUntil)
-{
-    mTimeout = now + (uint64_t)(aliveUntil * 1000000);
-}
-
-uint64_t ChannelClientConnection::GetTimeout() const
-{
-    return mTimeout;
-}
-
-void ChannelClientConnection::Kill()
-{
-    mClientState->SetLogoutSave(false);
-    Close();
-}
-
-void ChannelClientConnection::BroadcastPacket(const std::list<std::shared_ptr<
-    ChannelClientConnection>>& clients, libcomp::Packet& packet, bool queue)
-{
-    if(queue)
-    {
-        for(auto client : clients)
-        {
-            client->QueuePacketCopy(packet);
-        }
+void ChannelClientConnection::BroadcastPacket(
+    const std::list<std::shared_ptr<ChannelClientConnection>>& clients,
+    libcomp::Packet& packet, bool queue) {
+  if (queue) {
+    for (auto client : clients) {
+      client->QueuePacketCopy(packet);
     }
-    else
-    {
-        std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
-        for(auto client : clients)
-        {
-            connections.push_back(client);
-        }
-
-        libcomp::TcpConnection::BroadcastPacket(connections, packet);
+  } else {
+    std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
+    for (auto client : clients) {
+      connections.push_back(client);
     }
+
+    libcomp::TcpConnection::BroadcastPacket(connections, packet);
+  }
 }
 
-void ChannelClientConnection::BroadcastPackets(const std::list<std::shared_ptr<
-    ChannelClientConnection>>& clients, std::list<libcomp::Packet>& packets)
-{
-    for(auto client : clients)
-    {
-        for(auto& packet : packets)
-        {
-            client->QueuePacketCopy(packet);
-        }
-
-        client->FlushOutgoing();
+void ChannelClientConnection::BroadcastPackets(
+    const std::list<std::shared_ptr<ChannelClientConnection>>& clients,
+    std::list<libcomp::Packet>& packets) {
+  for (auto client : clients) {
+    for (auto& packet : packets) {
+      client->QueuePacketCopy(packet);
     }
+
+    client->FlushOutgoing();
+  }
 }
 
-void ChannelClientConnection::FlushAllOutgoing(const std::list<std::shared_ptr<
-    ChannelClientConnection>>& clients)
-{
-    for(auto client : clients)
-    {
-        client->FlushOutgoing();
-    }
+void ChannelClientConnection::FlushAllOutgoing(
+    const std::list<std::shared_ptr<ChannelClientConnection>>& clients) {
+  for (auto client : clients) {
+    client->FlushOutgoing();
+  }
 }
 
 void ChannelClientConnection::SendRelativeTimePacket(
     const std::list<std::shared_ptr<ChannelClientConnection>>& clients,
-    libcomp::Packet& packet, const RelativeTimeMap& timeMap,
-    bool queue)
-{
-    for(auto client : clients)
-    {
-        libcomp::Packet pCopy(packet);
+    libcomp::Packet& packet, const RelativeTimeMap& timeMap, bool queue) {
+  for (auto client : clients) {
+    libcomp::Packet pCopy(packet);
 
-        auto state = client->GetClientState();
-        for(auto tPair : timeMap)
-        {
-            pCopy.Seek(tPair.first);
-            pCopy.WriteFloat(state->ToClientTime(tPair.second));
-        }
-
-        if(queue)
-        {
-            client->QueuePacket(pCopy);
-        }
-        else
-        {
-            client->SendPacket(pCopy);
-        }
+    auto state = client->GetClientState();
+    for (auto tPair : timeMap) {
+      pCopy.Seek(tPair.first);
+      pCopy.WriteFloat(state->ToClientTime(tPair.second));
     }
+
+    if (queue) {
+      client->QueuePacket(pCopy);
+    } else {
+      client->SendPacket(pCopy);
+    }
+  }
 }

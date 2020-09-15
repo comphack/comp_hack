@@ -24,91 +24,82 @@
 
 #include "OpenMulti.h"
 
+#include <PopIgnore.h>
 #include <PushIgnore.h>
-#include <QSettings>
 
 #include <QComboBox>
-#include <QLineEdit>
 #include <QFileDialog>
+#include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
-#include <PopIgnore.h>
+#include <QSettings>
 
-OpenMulti::OpenMulti(QWidget *p) : QDialog(p)
-{
-    ui.setupUi(this);
+OpenMulti::OpenMulti(QWidget *p) : QDialog(p) {
+  ui.setupUi(this);
 
-    setAttribute(Qt::WA_DeleteOnClose);
+  setAttribute(Qt::WA_DeleteOnClose);
 
-    QSettings settings;
-    QStringList recentFiles = settings.value("recentFiles").toStringList();
+  QSettings settings;
+  QStringList recentFiles = settings.value("recentFiles").toStringList();
 
-    mEdits << ui.pathA << ui.pathB << ui.pathC
-        << ui.pathD << ui.pathE << ui.pathF;
+  mEdits << ui.pathA << ui.pathB << ui.pathC << ui.pathD << ui.pathE
+         << ui.pathF;
 
-    mButtons << ui.browseA << ui.browseB << ui.browseC
-        << ui.browseD << ui.browseE << ui.browseF;
+  mButtons << ui.browseA << ui.browseB << ui.browseC << ui.browseD << ui.browseE
+           << ui.browseF;
 
-    for(int i = 0; i < 6; i++)
-    {
-        QComboBox *edit = mEdits.at(i);
+  for (int i = 0; i < 6; i++) {
+    QComboBox *edit = mEdits.at(i);
 
-        foreach(QString file, recentFiles)
-            edit->addItem(file);
+    foreach (QString file, recentFiles)
+      edit->addItem(file);
 
-        edit->lineEdit()->clear();
+    edit->lineEdit()->clear();
 
-        connect(mButtons.at(i), SIGNAL(clicked(bool)), this, SLOT(browse()));
-    }
+    connect(mButtons.at(i), SIGNAL(clicked(bool)), this, SLOT(browse()));
+  }
 
-    connect(ui.buttonBox, SIGNAL(accepted()), this, SLOT(openFiles()));
-    connect(ui.buttonBox, SIGNAL(rejected()), this, SLOT(close()));
+  connect(ui.buttonBox, SIGNAL(accepted()), this, SLOT(openFiles()));
+  connect(ui.buttonBox, SIGNAL(rejected()), this, SLOT(close()));
 }
 
-void OpenMulti::openFiles()
-{
-    QStringList files;
+void OpenMulti::openFiles() {
+  QStringList files;
 
-    int count = 0;
+  int count = 0;
 
-    foreach(QComboBox *edit, mEdits)
-    {
-        QString file = edit->lineEdit()->text();
-        if( !file.isEmpty() )
-            count++;
+  foreach (QComboBox *edit, mEdits) {
+    QString file = edit->lineEdit()->text();
+    if (!file.isEmpty()) count++;
 
-        files << file;
-    }
+    files << file;
+  }
 
-    if(count < 2)
-    {
-        QMessageBox::warning(this, tr("Open Multiple Failed"),
-            tr("You must open at least 2 cpature files."));
+  if (count < 2) {
+    QMessageBox::warning(this, tr("Open Multiple Failed"),
+                         tr("You must open at least 2 cpature files."));
 
-        return;
-    }
+    return;
+  }
 
-    emit filesReady(files);
+  emit filesReady(files);
 
-    deleteLater();
+  deleteLater();
 }
 
-void OpenMulti::browse()
-{
-    QPushButton *button = qobject_cast<QPushButton*>(sender());
-    if(!button)
-        return;
+void OpenMulti::browse() {
+  QPushButton *button = qobject_cast<QPushButton *>(sender());
+  if (!button) return;
 
-    if( !mButtons.contains(button) )
-        return;
+  if (!mButtons.contains(button)) return;
 
-    QComboBox *edit = mEdits.at( mButtons.indexOf(button) );
+  QComboBox *edit = mEdits.at(mButtons.indexOf(button));
 
-    QString path = QFileDialog::getOpenFileName(this, tr("Open Capture File"),
-        QString(), tr("COMP_hack Channel Capture (*.hack)"));
+  QString path =
+      QFileDialog::getOpenFileName(this, tr("Open Capture File"), QString(),
+                                   tr("COMP_hack Channel Capture (*.hack)"));
 
-    if( path.isEmpty() )
-        return;
+  if (path.isEmpty()) return;
 
-    edit->lineEdit()->setText(path);
+  edit->lineEdit()->setText(path);
 }

@@ -32,38 +32,38 @@
 
 class BinaryDataNamedSet;
 
-class ObjectSelectorList : public ObjectList
-{
-    Q_OBJECT
+class ObjectSelectorList : public ObjectList {
+  Q_OBJECT
 
-public:
-    explicit ObjectSelectorList(const std::shared_ptr<
-        BinaryDataNamedSet>& dataSet, const libcomp::String& objType,
-        bool emptySelectable, QWidget *pParent = 0);
-    virtual ~ObjectSelectorList();
-    
-    QString GetObjectID(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
+ public:
+  explicit ObjectSelectorList(
+      const std::shared_ptr<BinaryDataNamedSet>& dataSet,
+      const libcomp::String& objType, bool emptySelectable,
+      QWidget* pParent = 0);
+  virtual ~ObjectSelectorList();
 
-    QString GetObjectName(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
+  QString GetObjectID(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
 
-    bool Select(uint32_t value);
+  QString GetObjectName(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
 
-    void LoadIfNeeded();
+  bool Select(uint32_t value);
 
-    libcomp::String GetObjectType() const;
+  void LoadIfNeeded();
 
-    std::shared_ptr<libcomp::Object> GetSelectedObject();
+  libcomp::String GetObjectType() const;
 
-private:
-    std::shared_ptr<BinaryDataNamedSet> mDataSet;
+  std::shared_ptr<libcomp::Object> GetSelectedObject();
 
-    libcomp::String mObjType;
+ private:
+  std::shared_ptr<BinaryDataNamedSet> mDataSet;
 
-    bool mEmptySelectable;
+  libcomp::String mObjType;
 
-    bool mLoaded;
+  bool mEmptySelectable;
+
+  bool mLoaded;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_OBJECTSELECTORLIST_H
+#endif  // TOOLS_CATHEDRAL_SRC_OBJECTSELECTORLIST_H

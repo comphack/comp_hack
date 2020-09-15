@@ -28,13 +28,13 @@
 
 using namespace channel;
 
-bool Parsers::Unsupported::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::Unsupported::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
-    (void)connection;
-    (void)p;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+  (void)connection;
+  (void)p;
 
-    return true;
+  return true;
 }

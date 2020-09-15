@@ -27,33 +27,31 @@
 
 #include "ObjectList.h"
 
-namespace Ui
-{
+namespace Ui {
 
 class NPCProperties;
 
-} // namespace Ui
+}  // namespace Ui
 
-class NPCList : public ObjectList
-{
-    Q_OBJECT
+class NPCList : public ObjectList {
+  Q_OBJECT
 
-public:
-    explicit NPCList(QWidget *pParent = 0);
-    virtual ~NPCList();
+ public:
+  explicit NPCList(QWidget* pParent = 0);
+  virtual ~NPCList();
 
-    void Bind(MainWindow *pMainWindow, bool isHNPC);
+  void Bind(MainWindow* pMainWindow, bool isHNPC);
 
-    QString GetObjectID(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
-    QString GetObjectName(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
+  QString GetObjectID(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
+  QString GetObjectName(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
 
-    void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
-    void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+  void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+  void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
 
-protected:
-    Ui::NPCProperties *prop;
+ protected:
+  Ui::NPCProperties* prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_NPCLIST_H
+#endif  // TOOLS_CATHEDRAL_SRC_NPCLIST_H

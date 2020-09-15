@@ -26,36 +26,30 @@
 
 #include "UpdaterWebEngineView.h"
 
+#include <PopIgnore.h>
 #include <PushIgnore.h>
 #include <QDesktopServices.h>
-#include <PopIgnore.h>
 
-UpdaterWebEngineView::UpdaterWebEngineView(QWidget *pParent) :
-    QWebEngineView(pParent)
-{
-}
+UpdaterWebEngineView::UpdaterWebEngineView(QWidget* pParent)
+    : QWebEngineView(pParent) {}
 
-UpdaterWebEngineView::~UpdaterWebEngineView()
-{
-}
+UpdaterWebEngineView::~UpdaterWebEngineView() {}
 
 QWebEngineView* UpdaterWebEngineView::createWindow(
-    QWebEnginePage::WebWindowType type)
-{
-    Q_UNUSED(type);
+    QWebEnginePage::WebWindowType type) {
+  Q_UNUSED(type);
 
-    UpdaterWebEngineView *pView = new UpdaterWebEngineView;
-    pView->setAttribute(Qt::WA_DeleteOnClose);
-    pView->show();
+  UpdaterWebEngineView* pView = new UpdaterWebEngineView;
+  pView->setAttribute(Qt::WA_DeleteOnClose);
+  pView->show();
 
-    connect(pView, SIGNAL(urlChanged(const QUrl&)),
-        pView, SLOT(openExternal(const QUrl&)));
-    
-    return pView;
+  connect(pView, SIGNAL(urlChanged(const QUrl&)), pView,
+          SLOT(openExternal(const QUrl&)));
+
+  return pView;
 }
 
-void UpdaterWebEngineView::openExternal(const QUrl& url)
-{
-    QDesktopServices::openUrl(url);
-    deleteLater();
+void UpdaterWebEngineView::openExternal(const QUrl& url) {
+  QDesktopServices::openUrl(url);
+  deleteLater();
 }

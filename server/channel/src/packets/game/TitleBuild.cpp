@@ -41,59 +41,52 @@
 
 using namespace channel;
 
-bool Parsers::TitleBuild::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TitleBuild::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 27)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 27) {
+    return false;
+  }
+
+  uint8_t index = p.ReadU8();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+
+  bool valid = index < 5;
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TITLE_BUILD);
+  reply.WriteU8(index);
+  reply.WriteS32Little(valid ? 0 : -1);
+
+  if (valid) {
+    auto titles = character->GetCustomTitles();
+    for (size_t i = (size_t)(index * MAX_TITLE_PARTS);
+         i < (size_t)((index + 1) * MAX_TITLE_PARTS); i++) {
+      titles[i] = p.ReadS16Little();
+      reply.WriteS16Little(titles[i]);
     }
 
-    uint8_t index = p.ReadU8();
+    character->SetCustomTitles(titles);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+    server->GetWorldDatabase()->QueueUpdate(character);
+  } else {
+    reply.WriteBlank(26);
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+  client->SendPacket(reply);
 
-    bool valid = index < 5;
+  if (valid && index == character->GetCurrentTitle()) {
+    // Send the new title to everyone
+    server->GetCharacterManager()->SendCharacterTitle(client, true);
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TITLE_BUILD);
-    reply.WriteU8(index);
-    reply.WriteS32Little(valid ? 0 : -1);
-
-    if(valid)
-    {
-        auto titles = character->GetCustomTitles();
-        for(size_t i = (size_t)(index * MAX_TITLE_PARTS);
-            i < (size_t)((index + 1) * MAX_TITLE_PARTS); i++)
-        {
-            titles[i] = p.ReadS16Little();
-            reply.WriteS16Little(titles[i]);
-        }
-
-        character->SetCustomTitles(titles);
-
-        server->GetWorldDatabase()->QueueUpdate(character);
-    }
-    else
-    {
-        reply.WriteBlank(26);
-    }
-
-    client->SendPacket(reply);
-
-    if(valid && index == character->GetCurrentTitle())
-    {
-        // Send the new title to everyone
-        server->GetCharacterManager()->SendCharacterTitle(client, true);
-    }
-
-    return true;
+  return true;
 }

@@ -26,125 +26,121 @@
 #define TOOLS_CATHEDRAL_SRC_MAINWINDOW_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QMainWindow>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QMainWindow>
 
 // libcomp Includes
 #include <BinaryDataSet.h>
 #include <DataStore.h>
 #include <DefinitionManager.h>
 
-namespace objects
-{
+namespace objects {
 
 class MiCEventMessageData;
 class MiNPCInvisibleData;
 
-} // namespace objects
+}  // namespace objects
 
-namespace Ui
-{
+namespace Ui {
 
 class MainWindow;
 
-} // namespace Ui
+}  // namespace Ui
 
 class DropSetWindow;
 class EventWindow;
 class ObjectSelectorWindow;
 class ZoneWindow;
 
-class MainWindow : public QMainWindow
-{
-    Q_OBJECT
+class MainWindow : public QMainWindow {
+  Q_OBJECT
 
-public:
-    explicit MainWindow(QWidget *pParent = 0);
-    ~MainWindow();
+ public:
+  explicit MainWindow(QWidget* pParent = 0);
+  ~MainWindow();
 
-    bool Init();
+  bool Init();
 
-    std::shared_ptr<libcomp::DataStore> GetDatastore() const;
-    std::shared_ptr<libcomp::DefinitionManager> GetDefinitions() const;
+  std::shared_ptr<libcomp::DataStore> GetDatastore() const;
+  std::shared_ptr<libcomp::DefinitionManager> GetDefinitions() const;
 
-    DropSetWindow* GetDropSets() const;
-    EventWindow* GetEvents() const;
-    ZoneWindow* GetZones() const;
+  DropSetWindow* GetDropSets() const;
+  EventWindow* GetEvents() const;
+  ZoneWindow* GetZones() const;
 
-    std::shared_ptr<objects::MiCEventMessageData> GetEventMessage(
-        int32_t msgID) const;
+  std::shared_ptr<objects::MiCEventMessageData> GetEventMessage(
+      int32_t msgID) const;
 
-    std::shared_ptr<libcomp::BinaryDataSet> GetBinaryDataSet(
-        const libcomp::String& objType) const;
+  std::shared_ptr<libcomp::BinaryDataSet> GetBinaryDataSet(
+      const libcomp::String& objType) const;
 
-    void RegisterBinaryDataSet(const libcomp::String& objType,
-        const std::shared_ptr<libcomp::BinaryDataSet>& dataset,
-        bool createSelector = true);
+  void RegisterBinaryDataSet(
+      const libcomp::String& objType,
+      const std::shared_ptr<libcomp::BinaryDataSet>& dataset,
+      bool createSelector = true);
 
-    ObjectSelectorWindow* GetObjectSelector(
-        const libcomp::String& objType) const;
+  ObjectSelectorWindow* GetObjectSelector(const libcomp::String& objType) const;
 
-    void UpdateActiveZone(const libcomp::String& path);
+  void UpdateActiveZone(const libcomp::String& path);
 
-    void ResetDropSetCount();
-    void ResetEventCount();
+  void ResetDropSetCount();
+  void ResetEventCount();
 
-    QString GetDialogDirectory();
-    void SetDialogDirectory(QString path, bool isFile);
+  QString GetDialogDirectory();
+  void SetDialogDirectory(QString path, bool isFile);
 
-    void CloseSelectors(QWidget* topLevel);
+  void CloseSelectors(QWidget* topLevel);
 
-protected slots:
-    void OpenDropSets();
-    void OpenEvents();
-    void OpenSettings();
-    void OpenZone();
-    void ViewObjectList();
+ protected slots:
+  void OpenDropSets();
+  void OpenEvents();
+  void OpenSettings();
+  void OpenZone();
+  void ViewObjectList();
 
-protected:
-    bool LoadBinaryData(const libcomp::String& binaryFile,
-        const libcomp::String& objName, bool decrypt, bool addSelector = false,
-        bool selectorAllowBlanks = false);
+ protected:
+  bool LoadBinaryData(const libcomp::String& binaryFile,
+                      const libcomp::String& objName, bool decrypt,
+                      bool addSelector = false,
+                      bool selectorAllowBlanks = false);
 
-    void CloseAllWindows();
+  void CloseAllWindows();
 
-    void closeEvent(QCloseEvent* event) override;
+  void closeEvent(QCloseEvent* event) override;
 
-    libcomp::String GetInvisibleDataDescription(
-        const std::shared_ptr<objects::MiNPCInvisibleData>& invisibleData);
+  libcomp::String GetInvisibleDataDescription(
+      const std::shared_ptr<objects::MiNPCInvisibleData>& invisibleData);
 
-private slots:
-    void BrowseZone();
+ private slots:
+  void BrowseZone();
 
-protected:
-    DropSetWindow *mDropSetWindow;
-    EventWindow *mEventWindow;
-    ZoneWindow *mZoneWindow;
+ protected:
+  DropSetWindow* mDropSetWindow;
+  EventWindow* mEventWindow;
+  ZoneWindow* mZoneWindow;
 
-private:
-    Ui::MainWindow *ui;
+ private:
+  Ui::MainWindow* ui;
 
-    std::shared_ptr<libcomp::DataStore> mDatastore;
-    std::shared_ptr<libcomp::DefinitionManager> mDefinitions;
-    
-    std::unordered_map<libcomp::String,
-        std::shared_ptr<libcomp::BinaryDataSet>> mBinaryDataSets;
+  std::shared_ptr<libcomp::DataStore> mDatastore;
+  std::shared_ptr<libcomp::DefinitionManager> mDefinitions;
 
-    std::unordered_map<libcomp::String,
-        ObjectSelectorWindow*> mObjectSelectors;
+  std::unordered_map<libcomp::String, std::shared_ptr<libcomp::BinaryDataSet>>
+      mBinaryDataSets;
 
-    libcomp::String mActiveZonePath;
+  std::unordered_map<libcomp::String, ObjectSelectorWindow*> mObjectSelectors;
+
+  libcomp::String mActiveZonePath;
 };
 
-static inline QString qs(const libcomp::String& s)
-{
-    return QString::fromUtf8(s.C());
+static inline QString qs(const libcomp::String& s) {
+  return QString::fromUtf8(s.C());
 }
 
-static inline libcomp::String cs(const QString& s)
-{
-    return libcomp::String(s.toUtf8().constData());
+static inline libcomp::String cs(const QString& s) {
+  return libcomp::String(s.toUtf8().constData());
 }
 
-#endif // TOOLS_CATHEDRAL_SRC_MAINWINDOW_H
+#endif  // TOOLS_CATHEDRAL_SRC_MAINWINDOW_H

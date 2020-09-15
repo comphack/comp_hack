@@ -44,88 +44,78 @@
 
 using namespace channel;
 
-bool Parsers::DigitalizeAssistLearn::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DigitalizeAssistLearn::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
 
-    int32_t unknown = p.ReadS32Little();
-    (void)unknown;  // Always 0
+  int32_t unknown = p.ReadS32Little();
+  (void)unknown;  // Always 0
 
-    uint32_t assistID = p.ReadU32Little();
+  uint32_t assistID = p.ReadU32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto definitionManager = server->GetDefinitionManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto definitionManager = server->GetDefinitionManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character ? character->GetProgress().Get() : nullptr;
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character ? character->GetProgress().Get() : nullptr;
 
-    bool success = false;
-    if(progress)
-    {
-        // Check that the player has access to the assist skill
-        auto assistData = definitionManager->GetGuardianAssistData(assistID);
-        auto levelData = assistData ? definitionManager->GetGuardianLevelData(
-            assistData->GetRaceID()) : nullptr;
-        if(levelData)
-        {
-            uint8_t lvl = (uint8_t)progress->GetDigitalizeLevels(assistData
-                ->GetRaceID());
-            for(uint8_t i = 1; i <= lvl; i++)
-            {
-                for(uint32_t aID : levelData->GetLevels(i)->GetAssists())
-                {
-                    if(aID == assistID)
-                    {
-                        success = true;
-                        break;
-                    }
-                }
-            }
+  bool success = false;
+  if (progress) {
+    // Check that the player has access to the assist skill
+    auto assistData = definitionManager->GetGuardianAssistData(assistID);
+    auto levelData =
+        assistData
+            ? definitionManager->GetGuardianLevelData(assistData->GetRaceID())
+            : nullptr;
+    if (levelData) {
+      uint8_t lvl =
+          (uint8_t)progress->GetDigitalizeLevels(assistData->GetRaceID());
+      for (uint8_t i = 1; i <= lvl; i++) {
+        for (uint32_t aID : levelData->GetLevels(i)->GetAssists()) {
+          if (aID == assistID) {
+            success = true;
+            break;
+          }
         }
+      }
     }
+  }
 
-    if(success)
-    {
-        size_t index;
-        uint8_t shiftVal;
-        CharacterManager::ConvertIDToMaskValues((uint16_t)assistID, index,
-            shiftVal);
-        if(index < progress->DigitalizeAssistsCount())
-        {
-            auto oldValue = progress->GetDigitalizeAssists(index);
-            uint8_t newValue = static_cast<uint8_t>(oldValue | shiftVal);
+  if (success) {
+    size_t index;
+    uint8_t shiftVal;
+    CharacterManager::ConvertIDToMaskValues((uint16_t)assistID, index,
+                                            shiftVal);
+    if (index < progress->DigitalizeAssistsCount()) {
+      auto oldValue = progress->GetDigitalizeAssists(index);
+      uint8_t newValue = static_cast<uint8_t>(oldValue | shiftVal);
 
-            if(oldValue != newValue)
-            {
-                progress->SetDigitalizeAssists((size_t)index, newValue);
+      if (oldValue != newValue) {
+        progress->SetDigitalizeAssists((size_t)index, newValue);
 
-                server->GetWorldDatabase()->QueueUpdate(progress);
-            }
-        }
-        else
-        {
-            success = false;
-        }
+        server->GetWorldDatabase()->QueueUpdate(progress);
+      }
+    } else {
+      success = false;
     }
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_DIGITALIZE_ASSIST_LEARN);
-    reply.WriteS32Little(0);    // Unknown
-    reply.WriteS32Little(success ? 0 : -1);
-    reply.WriteU32Little(assistID);
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_DIGITALIZE_ASSIST_LEARN);
+  reply.WriteS32Little(0);  // Unknown
+  reply.WriteS32Little(success ? 0 : -1);
+  reply.WriteU32Little(assistID);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

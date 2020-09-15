@@ -27,33 +27,31 @@
 
 #include "ObjectList.h"
 
-namespace Ui
-{
+namespace Ui {
 
 class SpawnLocationGroup;
 
-} // namespace Ui
+}  // namespace Ui
 
-class SpawnLocationGroupList : public ObjectList
-{
-    Q_OBJECT
+class SpawnLocationGroupList : public ObjectList {
+  Q_OBJECT
 
-public:
-    explicit SpawnLocationGroupList(QWidget *pParent = 0);
-    virtual ~SpawnLocationGroupList();
+ public:
+  explicit SpawnLocationGroupList(QWidget* pParent = 0);
+  virtual ~SpawnLocationGroupList();
 
-    virtual void SetMainWindow(MainWindow *pMainWindow);
+  virtual void SetMainWindow(MainWindow* pMainWindow);
 
-    QString GetObjectID(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
-    QString GetObjectName(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
+  QString GetObjectID(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
+  QString GetObjectName(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
 
-    void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
-    void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+  void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+  void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
 
-protected:
-    Ui::SpawnLocationGroup *prop;
+ protected:
+  Ui::SpawnLocationGroup* prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_SPAWNLOCATIONGROUPLIST_H
+#endif  // TOOLS_CATHEDRAL_SRC_SPAWNLOCATIONGROUPLIST_H

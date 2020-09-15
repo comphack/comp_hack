@@ -35,38 +35,30 @@
 
 using namespace channel;
 
-std::list<libcomp::Message::MessageType> ManagerSystem::sSupportedTypes =
-    { libcomp::Message::MessageType::MESSAGE_TYPE_SYSTEM };
+std::list<libcomp::Message::MessageType> ManagerSystem::sSupportedTypes = {
+    libcomp::Message::MessageType::MESSAGE_TYPE_SYSTEM};
 
 ManagerSystem::ManagerSystem(std::weak_ptr<libcomp::BaseServer> server)
-    : mServer(server)
-{
+    : mServer(server) {}
+
+ManagerSystem::~ManagerSystem() {}
+
+std::list<libcomp::Message::MessageType> ManagerSystem::GetSupportedTypes()
+    const {
+  return sSupportedTypes;
 }
 
-ManagerSystem::~ManagerSystem()
-{
-}
+bool ManagerSystem::ProcessMessage(const libcomp::Message::Message *pMessage) {
+  const libcomp::Message::Tick *tick =
+      dynamic_cast<const libcomp::Message::Tick *>(pMessage);
 
-std::list<libcomp::Message::MessageType>
-ManagerSystem::GetSupportedTypes() const
-{
-    return sSupportedTypes;
-}
+  if (nullptr != tick) {
+    auto server = std::dynamic_pointer_cast<ChannelServer>(mServer.lock());
 
-bool ManagerSystem::ProcessMessage(const libcomp::Message::Message *pMessage)
-{
-    const libcomp::Message::Tick *tick = dynamic_cast<
-        const libcomp::Message::Tick*>(pMessage);
+    server->Tick();
 
-    if(nullptr != tick)
-    {
-        auto server = std::dynamic_pointer_cast<ChannelServer>(
-            mServer.lock());
+    return true;
+  }
 
-        server->Tick();
-
-        return true;
-    }
-
-    return false;
+  return false;
 }

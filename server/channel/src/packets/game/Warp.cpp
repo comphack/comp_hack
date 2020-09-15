@@ -49,75 +49,68 @@
 
 using namespace channel;
 
-bool Parsers::Warp::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::Warp::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 9)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 9) {
+    return false;
+  }
 
-    int32_t entityID = p.ReadS32Little();
-    int8_t activationID = p.ReadS8();
-    uint32_t warpPointID = p.ReadU32Little();
+  int32_t entityID = p.ReadS32Little();
+  int8_t activationID = p.ReadS8();
+  uint32_t warpPointID = p.ReadU32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto sourceState = state->GetEntityState(entityID);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto sourceState = state->GetEntityState(entityID);
 
-    if(sourceState == nullptr)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Invalid entity ID received from a warp"
-                " request: %1\n").Arg(state->GetAccountUID().ToString());
-        });
+  if (sourceState == nullptr) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Invalid entity ID received from a warp request: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Close();
-        return true;
-    }
+    client->Close();
+    return true;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto definitionManager = server->GetDefinitionManager();
-    auto skillManager = server->GetSkillManager();
-    auto zoneManager = server->GetZoneManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto definitionManager = server->GetDefinitionManager();
+  auto skillManager = server->GetSkillManager();
+  auto zoneManager = server->GetZoneManager();
 
-    auto activatedAbility = sourceState->GetSpecialActivations(activationID);
-    if(!activatedAbility)
-    {
-        LogGeneralErrorMsg(
-            "Invalid activation ID encountered for Warp request\n");
-    }
-    else
-    {
-        auto item = std::dynamic_pointer_cast<objects::Item>(
-            libcomp::PersistentObject::GetObjectByUUID(
+  auto activatedAbility = sourceState->GetSpecialActivations(activationID);
+  if (!activatedAbility) {
+    LogGeneralErrorMsg("Invalid activation ID encountered for Warp request\n");
+  } else {
+    auto item = std::dynamic_pointer_cast<objects::Item>(
+        libcomp::PersistentObject::GetObjectByUUID(
             state->GetObjectUUID(activatedAbility->GetActivationObjectID())));
 
-        // Warp is valid if the item was consumed or the skill wasn't an item skill
-        auto warpDef = definitionManager->GetWarpPointData(warpPointID);
-        auto skillData = activatedAbility->GetSkillData();
-        if (warpDef && (item ||
-            (skillData->GetBasic()->GetFamily() != SkillFamily_t::ITEM &&
-            skillData->GetBasic()->GetFamily() != SkillFamily_t::DEMON_SOLO)))
-        {
-            uint32_t zoneID = warpDef->GetZoneID();
+    // Warp is valid if the item was consumed or the skill wasn't an item skill
+    auto warpDef = definitionManager->GetWarpPointData(warpPointID);
+    auto skillData = activatedAbility->GetSkillData();
+    if (warpDef &&
+        (item ||
+         (skillData->GetBasic()->GetFamily() != SkillFamily_t::ITEM &&
+          skillData->GetBasic()->GetFamily() != SkillFamily_t::DEMON_SOLO))) {
+      uint32_t zoneID = warpDef->GetZoneID();
 
-            float x = warpDef->GetX();
-            float y = warpDef->GetY();
-            float rot = warpDef->GetRotation();
+      float x = warpDef->GetX();
+      float y = warpDef->GetY();
+      float rot = warpDef->GetRotation();
 
-            skillManager->ExecuteSkill(sourceState, activationID,
-                activatedAbility->GetActivationObjectID());
+      skillManager->ExecuteSkill(sourceState, activationID,
+                                 activatedAbility->GetActivationObjectID());
 
-            zoneManager->EnterZone(client, zoneID, 0, x, y, rot);
-        }
-        else
-        {
-            skillManager->CancelSkill(sourceState, activationID);
-        }
+      zoneManager->EnterZone(client, zoneID, 0, x, y, rot);
+    } else {
+      skillManager->CancelSkill(sourceState, activationID);
     }
+  }
 
-    return true;
+  return true;
 }

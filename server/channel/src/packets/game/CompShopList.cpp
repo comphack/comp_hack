@@ -40,55 +40,51 @@
 
 using namespace channel;
 
-bool Parsers::CompShopList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CompShopList::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
+
+  int32_t trendTime = p.ReadS32Little();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto serverDataManager = server->GetServerDataManager();
+
+  std::list<uint32_t> compShopIDs = serverDataManager->GetCompShopIDs();
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMP_SHOP_LIST);
+  reply.WriteS32Little(trendTime);
+
+  if (compShopIDs.size() > 0) {
+    reply.WriteS32Little(0);  // First idx
+
+    int8_t idx = 0;
+    for (uint32_t compShopID : compShopIDs) {
+      auto shop = serverDataManager->GetShopData(compShopID);
+      libcomp::String name = shop ? shop->GetName() : "";
+
+      reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                !name.IsEmpty() ? name : "?", true);
+      reply.WriteS8(idx++);
+      reply.WriteS32Little(0);  // New item flag
+      reply.WriteS8(1);         // Enabled
+      reply.WriteS8(0);         // Unknown
+      reply.WriteU32Little(compShopID);
+
+      // Notify if more exist
+      reply.WriteS32Little((size_t)idx == compShopIDs.size() ? -1
+                                                             : (int32_t)idx);
     }
+  } else {
+    reply.WriteS32Little(-1);  // No first idx, none exist
+  }
 
-    int32_t trendTime = p.ReadS32Little();
+  connection->SendPacket(reply);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto serverDataManager = server->GetServerDataManager();
-
-    std::list<uint32_t> compShopIDs = serverDataManager->GetCompShopIDs();
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMP_SHOP_LIST);
-    reply.WriteS32Little(trendTime);
-
-    if(compShopIDs.size() > 0)
-    {
-        reply.WriteS32Little(0);    // First idx
-
-        int8_t idx = 0;
-        for(uint32_t compShopID : compShopIDs)
-        {
-            auto shop = serverDataManager->GetShopData(compShopID);
-            libcomp::String name = shop ? shop->GetName() : "";
-
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                !name.IsEmpty() ? name : "?", true);
-            reply.WriteS8(idx++);
-            reply.WriteS32Little(0);    // New item flag
-            reply.WriteS8(1);    // Enabled
-            reply.WriteS8(0);    // Unknown
-            reply.WriteU32Little(compShopID);
-
-            // Notify if more exist
-            reply.WriteS32Little((size_t)idx == compShopIDs.size()
-                ? -1 : (int32_t)idx);
-        }
-    }
-    else
-    {
-        reply.WriteS32Little(-1);    // No first idx, none exist
-    }
-
-    connection->SendPacket(reply);
-
-    return true;
+  return true;
 }

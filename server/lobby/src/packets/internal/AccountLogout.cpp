@@ -43,61 +43,58 @@
 
 using namespace lobby;
 
-bool Parsers::AccountLogout::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::AccountLogout::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)connection;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)connection;
 
-    libcomp::String username = p.ReadString16Little(
-        libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
-    bool channelSwitch = p.Left() > 4 &&
-        p.ReadU32Little() == (uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH;
+  libcomp::String username =
+      p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
+  bool channelSwitch =
+      p.Left() > 4 && p.ReadU32Little() ==
+                          (uint32_t)LogoutPacketAction_t::LOGOUT_CHANNEL_SWITCH;
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-    auto accountManager = server->GetAccountManager();
+  auto server =
+      std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+  auto accountManager = server->GetAccountManager();
 
-    auto login = accountManager->GetUserLogin(username);
-    if(!login)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("World requested logout for an account that"
-                " is not currently logged in: '%1'\n").Arg(username);
-        });
-
-        return true;
-    }
-
-    auto cLogin = login->GetCharacterLogin();
-    if(channelSwitch)
-    {
-        int8_t channelID = p.ReadS8();
-        uint32_t sessionKey = p.ReadU32Little();
-
-        if(!accountManager->ChannelToChannelSwitch(username, channelID, sessionKey))
-        {
-            LogGeneralError([&]()
-            {
-                return libcomp::String("Failed to set channel to channel "
-                    "switch for account: '%1'\n").Arg(username);
-            });
-        }
-    }
-    else
-    {
-        // Do not log out the user if they connected back to the lobby
-        if(cLogin->GetWorldID() != -1)
-        {
-            LogGeneralDebug([&]()
-            {
-                return libcomp::String("Logging out user: '%1'\n")
-                    .Arg(username);
-            });
-
-            accountManager->Logout(username);
-        }
-    }
+  auto login = accountManager->GetUserLogin(username);
+  if (!login) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "World requested logout for an account that is not currently "
+                 "logged in: '%1'\n")
+          .Arg(username);
+    });
 
     return true;
+  }
+
+  auto cLogin = login->GetCharacterLogin();
+  if (channelSwitch) {
+    int8_t channelID = p.ReadS8();
+    uint32_t sessionKey = p.ReadU32Little();
+
+    if (!accountManager->ChannelToChannelSwitch(username, channelID,
+                                                sessionKey)) {
+      LogGeneralError([&]() {
+        return libcomp::String(
+                   "Failed to set channel to channel switch for account: "
+                   "'%1'\n")
+            .Arg(username);
+      });
+    }
+  } else {
+    // Do not log out the user if they connected back to the lobby
+    if (cLogin->GetWorldID() != -1) {
+      LogGeneralDebug([&]() {
+        return libcomp::String("Logging out user: '%1'\n").Arg(username);
+      });
+
+      accountManager->Logout(username);
+    }
+  }
+
+  return true;
 }

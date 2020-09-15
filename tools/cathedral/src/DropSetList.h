@@ -30,33 +30,31 @@
 // libcomp Includes
 #include <CString.h>
 
-namespace Ui
-{
+namespace Ui {
 
 class DropSetProperties;
 
-} // namespace Ui
+}  // namespace Ui
 
-class DropSetList : public ObjectList
-{
-    Q_OBJECT
+class DropSetList : public ObjectList {
+  Q_OBJECT
 
-public:
-    explicit DropSetList(QWidget *pParent = 0);
-    virtual ~DropSetList();
+ public:
+  explicit DropSetList(QWidget* pParent = 0);
+  virtual ~DropSetList();
 
-    virtual void SetMainWindow(MainWindow *pMainWindow);
+  virtual void SetMainWindow(MainWindow* pMainWindow);
 
-    QString GetObjectID(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
-    QString GetObjectName(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
+  QString GetObjectID(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
+  QString GetObjectName(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
 
-    void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
-    void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+  void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+  void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
 
-protected:
-    Ui::DropSetProperties *prop;
+ protected:
+  Ui::DropSetProperties* prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_DROPSETLIST_H
+#endif  // TOOLS_CATHEDRAL_SRC_DROPSETLIST_H

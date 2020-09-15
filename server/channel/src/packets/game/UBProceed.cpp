@@ -41,32 +41,29 @@
 
 using namespace channel;
 
-bool Parsers::UBProceed::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::UBProceed::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    uint32_t matchSubType = p.ReadU32Little();
-    (void)matchSubType; // Just check the match state
+  uint32_t matchSubType = p.ReadU32Little();
+  (void)matchSubType;  // Just check the match state
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto zone = state->GetZone();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto zone = state->GetZone();
 
-    auto ubMatch = zone ? zone->GetUBMatch() : nullptr;
-    if(!ubMatch || ubMatch->GetState() == objects::UBMatch::State_t::COMPLETE)
-    {
-        auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-            ->GetServer());
-        auto zoneManager = server->GetZoneManager();
+  auto ubMatch = zone ? zone->GetUBMatch() : nullptr;
+  if (!ubMatch || ubMatch->GetState() == objects::UBMatch::State_t::COMPLETE) {
+    auto server =
+        std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto zoneManager = server->GetZoneManager();
 
-        zoneManager->MoveToLobby(client);
-    }
+    zoneManager->MoveToLobby(client);
+  }
 
-    return true;
+  return true;
 }

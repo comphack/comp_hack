@@ -33,87 +33,84 @@
 // libclient Includes
 #include <ClientManager.h>
 
-namespace packets
-{
+namespace packets {
 
 class PacketLobbyCharacterList;
 
-} // namespace packets
+}  // namespace packets
 
-namespace game
-{
+namespace game {
 
 class GameWorker;
 
 /**
  * Scene to present the user with the lobby (character list).
  */
-class LobbyScene : public QWidget, public logic::ClientManager
-{
-    Q_OBJECT
+class LobbyScene : public QWidget, public logic::ClientManager {
+  Q_OBJECT
 
-public:
-    /**
-     * Construct the lobby scene.
-     * @param pWorker The GameWorker for the UI.
-     * @param pParent Parent Qt widget for the dialog.
-     */
-    LobbyScene(GameWorker *pWorker, QWidget *pParent = nullptr);
+ public:
+  /**
+   * Construct the lobby scene.
+   * @param pWorker The GameWorker for the UI.
+   * @param pParent Parent Qt widget for the dialog.
+   */
+  LobbyScene(GameWorker *pWorker, QWidget *pParent = nullptr);
 
-    /**
-     * Cleanup the scene.
-     */
-    ~LobbyScene() override;
+  /**
+   * Cleanup the scene.
+   */
+  ~LobbyScene() override;
 
-    /**
-     * Process a client message.
-     * @param pMessage Client message to process.
-     */
-    bool ProcessClientMessage(
-        const libcomp::Message::MessageClient *pMessage);
+  /**
+   * Process a client message.
+   * @param pMessage Client message to process.
+   */
+  bool ProcessClientMessage(const libcomp::Message::MessageClient *pMessage);
 
-protected:
-    /**
-     * Handle a close event on the scene.
-     * @param pEvent Close event to handle.
-     */
-    void closeEvent(QCloseEvent *pEvent) override;
+ protected:
+  /**
+   * Handle a close event on the scene.
+   * @param pEvent Close event to handle.
+   */
+  void closeEvent(QCloseEvent *pEvent) override;
 
-private slots:
-    /**
-     * Update the UI after selecting a character.
-     */
-    void selectionChanged();
+ private slots:
+  /**
+   * Update the UI after selecting a character.
+   */
+  void selectionChanged();
 
-    /**
-     * Start game button was clicked.
-     */
-    void startGame();
+  /**
+   * Start game button was clicked.
+   */
+  void startGame();
 
-private:
-    /**
-     * Handle Character List Update message.
-     * @param pMessage Client message to process.
-     */
-    bool HandleCharacterListUpdate(const libcomp::Message::MessageClient *pMessage);
+ private:
+  /**
+   * Handle Character List Update message.
+   * @param pMessage Client message to process.
+   */
+  bool HandleCharacterListUpdate(
+      const libcomp::Message::MessageClient *pMessage);
 
-    /**
-     * Handle the authentication reply.
-     * @param pMessage Client message to process.
-     */
-    bool HandleConnectedToChannel(
-        const libcomp::Message::MessageClient *pMessage);
+  /**
+   * Handle the authentication reply.
+   * @param pMessage Client message to process.
+   */
+  bool HandleConnectedToChannel(
+      const libcomp::Message::MessageClient *pMessage);
 
-    /// Pointer to the GameWorker.
-    GameWorker *mGameWorker;
+  /// Pointer to the GameWorker.
+  GameWorker *mGameWorker;
 
-    /// Character list data.
-    std::shared_ptr<packets::PacketLobbyCharacterList> mCharacterList;
+  /// Character list data.
+  std::shared_ptr<packets::PacketLobbyCharacterList> mCharacterList;
 
-    /// UI for this scene.
-    Ui::LobbyScene ui;
+  /// UI for this scene.
+  Ui::LobbyScene ui;
 };
 
-} // namespace game
+}  // namespace game
 
-#endif // LIBCLIENT_SRC_LOBBYSCENE_H
+#endif  // LIBCLIENT_SRC_LOBBYSCENE_H

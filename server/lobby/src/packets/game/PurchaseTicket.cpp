@@ -43,52 +43,48 @@
 
 using namespace lobby;
 
-bool Parsers::PurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PurchaseTicket::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+  auto lobbyDB = server->GetMainDatabase();
+  auto config =
+      std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
+  auto account = state(connection)->GetAccount();
+  auto ticketCost = config->GetCharacterTicketCost();
+
+  if (account->GetCP() >= ticketCost) {
+    account->SetCP(static_cast<uint32_t>(account->GetCP() - ticketCost));
+    account->SetTicketCount(
+        static_cast<uint8_t>(account->GetTicketCount() + 1));
+
+    if (!account->Update(lobbyDB)) {
+      LogGeneralError([&]() {
+        return libcomp::String(
+                   "Account purchased a character ticket but could not be "
+                   "updated: %1")
+            .Arg(account->GetUUID().ToString());
+      });
     }
+  } else {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Account attempted to purchase a character ticket without "
+                 "having enough CP available: %1")
+          .Arg(account->GetUUID().ToString());
+    });
+  }
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-    auto lobbyDB = server->GetMainDatabase();
-    auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(
-        server->GetConfig());
-    auto account = state(connection)->GetAccount();
-    auto ticketCost = config->GetCharacterTicketCost();
+  libcomp::Packet reply;
+  reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_PURCHASE_TICKET);
 
-    if(account->GetCP() >= ticketCost)
-    {
-        account->SetCP(static_cast<uint32_t>(account->GetCP() - ticketCost));
-        account->SetTicketCount(static_cast<uint8_t>(account->GetTicketCount() + 1));
+  connection->SendPacket(reply);
 
-        if(!account->Update(lobbyDB))
-        {
-            LogGeneralError([&]()
-            {
-                return libcomp::String("Account purchased a character ticket "
-                    "but could not be updated: %1")
-                    .Arg(account->GetUUID().ToString());
-            });
-        }
-    }
-    else
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Account attempted to purchase a character "
-                "ticket without having enough CP available: %1")
-                .Arg(account->GetUUID().ToString());
-        });
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        LobbyToClientPacketCode_t::PACKET_PURCHASE_TICKET);
-
-    connection->SendPacket(reply);
-
-    return true;
+  return true;
 }

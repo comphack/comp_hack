@@ -32,35 +32,34 @@
 #include <ActionDisplayMessage.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionDisplayMessage;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionDisplayMessage : public Action
-{
-    Q_OBJECT
+class ActionDisplayMessage : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionDisplayMessage(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionDisplayMessage();
+ public:
+  explicit ActionDisplayMessage(ActionList *pList, MainWindow *pMainWindow,
+                                QWidget *pParent = 0);
+  virtual ~ActionDisplayMessage();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionDisplayMessage *prop;
+ protected:
+  Ui::ActionDisplayMessage *prop;
 
-    std::shared_ptr<objects::ActionDisplayMessage> mAction;
+  std::shared_ptr<objects::ActionDisplayMessage> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONDISPLAYMESSAGEUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONDISPLAYMESSAGEUI_H

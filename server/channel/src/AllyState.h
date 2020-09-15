@@ -31,48 +31,47 @@
 #include <ActiveEntityState.h>
 #include <Ally.h>
 
-namespace channel
-{
+namespace channel {
 
 /**
  * Contains the state of an ally entity related to a channel as well
  * as functionality to be used by the scripting engine for AI.
  */
-class AllyState : public ActiveEntityStateImp<objects::Ally>
-{
-public:
-    /**
-     * Create a new ally state.
-     */
-    AllyState();
+class AllyState : public ActiveEntityStateImp<objects::Ally> {
+ public:
+  /**
+   * Create a new ally state.
+   */
+  AllyState();
 
-    /**
-     * Clean up the ally state.
-     */
-    virtual ~AllyState() { }
+  /**
+   * Clean up the ally state.
+   */
+  virtual ~AllyState() {}
 
-    virtual std::shared_ptr<objects::EnemyBase> GetEnemyBase() const;
+  virtual std::shared_ptr<objects::EnemyBase> GetEnemyBase() const;
 
-    virtual uint8_t RecalculateStats(libcomp::DefinitionManager* definitionManager,
-        std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr,
-        std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
+  virtual uint8_t RecalculateStats(
+      libcomp::DefinitionManager* definitionManager,
+      std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr,
+      std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
 
-    virtual std::set<uint32_t> GetAllSkills(
-        libcomp::DefinitionManager* definitionManager, bool includeTokusei);
+  virtual std::set<uint32_t> GetAllSkills(
+      libcomp::DefinitionManager* definitionManager, bool includeTokusei);
 
-    virtual uint8_t GetLNCType();
+  virtual uint8_t GetLNCType();
 
-    virtual int8_t GetGender();
+  virtual int8_t GetGender();
 
-    /**
-     * Cast an EntityStateObject into an AllyState. Useful for script
-     * bindings.
-     * @return Pointer to the casted AllyState
-     */
-    static std::shared_ptr<AllyState> Cast(
-        const std::shared_ptr<EntityStateObject>& obj);
+  /**
+   * Cast an EntityStateObject into an AllyState. Useful for script
+   * bindings.
+   * @return Pointer to the casted AllyState
+   */
+  static std::shared_ptr<AllyState> Cast(
+      const std::shared_ptr<EntityStateObject>& obj);
 };
 
-} // namespace channel
+}  // namespace channel
 
-#endif // SERVER_CHANNEL_SRC_ALLYSTATE_H
+#endif  // SERVER_CHANNEL_SRC_ALLYSTATE_H

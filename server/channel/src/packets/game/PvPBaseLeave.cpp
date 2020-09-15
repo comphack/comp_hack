@@ -36,7 +36,7 @@
 // object Includes
 #include <Match.h>
 
- // channel Includes
+// channel Includes
 #include "ChannelServer.h"
 #include "EventManager.h"
 #include "MatchManager.h"
@@ -44,35 +44,32 @@
 
 using namespace channel;
 
-bool Parsers::PvPBaseLeave::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PvPBaseLeave::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    int32_t baseID = state->GetEventSourceEntityID();
-    server->GetMatchManager()->LeaveBase(client, baseID);
+  int32_t baseID = state->GetEventSourceEntityID();
+  server->GetMatchManager()->LeaveBase(client, baseID);
 
-    auto zone = state->GetZone();
-    if(zone && MatchManager::InPvPTeam(state->GetCharacterState()) &&
-        !MatchManager::PvPActive(zone->GetInstance()))
-    {
-        // Match is over and this should be treated like the "end
-        // confirmation" request so trigger complete actions
-        server->GetZoneManager()->TriggerZoneActions(zone,
-            { state->GetCharacterState() }, ZoneTrigger_t::ON_PVP_COMPLETE,
-            client);
-    }
+  auto zone = state->GetZone();
+  if (zone && MatchManager::InPvPTeam(state->GetCharacterState()) &&
+      !MatchManager::PvPActive(zone->GetInstance())) {
+    // Match is over and this should be treated like the "end
+    // confirmation" request so trigger complete actions
+    server->GetZoneManager()->TriggerZoneActions(
+        zone, {state->GetCharacterState()}, ZoneTrigger_t::ON_PVP_COMPLETE,
+        client);
+  }
 
-    return true;
+  return true;
 }

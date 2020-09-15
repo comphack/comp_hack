@@ -28,63 +28,57 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionSpecialDirection.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
 ActionSpecialDirection::ActionSpecialDirection(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionSpecialDirection;
-    prop->setupUi(pWidget);
+                                               MainWindow *pMainWindow,
+                                               QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionSpecialDirection;
+  prop->setupUi(pWidget);
 
-    ui->actionTitle->setText(tr("<b>Special Direction</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Special Direction</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionSpecialDirection::~ActionSpecialDirection()
-{
-    delete prop;
+ActionSpecialDirection::~ActionSpecialDirection() { delete prop; }
+
+void ActionSpecialDirection::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionSpecialDirection>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->direction->lineEdit()->setText(
+      QString::number(mAction->GetDirection()));
+  prop->special1->setValue(mAction->GetSpecial1());
+  prop->special2->setValue(mAction->GetSpecial2());
 }
 
-void ActionSpecialDirection::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionSpecialDirection>(act);
+std::shared_ptr<objects::Action> ActionSpecialDirection::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetDirection(prop->direction->currentText().toInt());
+  mAction->SetSpecial1((uint8_t)prop->special1->value());
+  mAction->SetSpecial2((uint8_t)prop->special2->value());
 
-    prop->direction->lineEdit()->setText(
-        QString::number(mAction->GetDirection()));
-    prop->special1->setValue(mAction->GetSpecial1());
-    prop->special2->setValue(mAction->GetSpecial2());
-}
-
-std::shared_ptr<objects::Action> ActionSpecialDirection::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetDirection(prop->direction->currentText().toInt());
-    mAction->SetSpecial1((uint8_t)prop->special1->value());
-    mAction->SetSpecial2((uint8_t)prop->special2->value());
-
-    return mAction;
+  return mAction;
 }

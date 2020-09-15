@@ -31,39 +31,36 @@
 #include <MessageQueue.h>
 #include <TcpConnection.h>
 
-namespace libcomp
-{
+namespace libcomp {
 
-namespace Message
-{
+namespace Message {
 
 class Message;
 
-} // namespace Message
+}  // namespace Message
 
-} // namespace libcomp
+}  // namespace libcomp
 
-namespace libtester
-{
+namespace libtester {
 
-class HttpConnection : public libcomp::TcpConnection
-{
-public:
-    HttpConnection(asio::io_service& io_service);
+class HttpConnection : public libcomp::TcpConnection {
+ public:
+  HttpConnection(asio::io_service& io_service);
 
-    virtual void ConnectionSuccess();
+  virtual void ConnectionSuccess();
 
-    void SetMessageQueue(const std::shared_ptr<libcomp::MessageQueue<
-        libcomp::Message::Message*>>& messageQueue);
+  void SetMessageQueue(
+      const std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>>&
+          messageQueue);
 
-protected:
-    virtual void PacketReceived(libcomp::Packet& packet);
+ protected:
+  virtual void PacketReceived(libcomp::Packet& packet);
 
-    std::string mRequest;
-    std::shared_ptr<libcomp::MessageQueue<
-        libcomp::Message::Message*>> mMessageQueue;
+  std::string mRequest;
+  std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message*>>
+      mMessageQueue;
 };
 
-} // namespace libtester
+}  // namespace libtester
 
-#endif // LIBTESTER_SRC_HTTPCONNECTION_H
+#endif  // LIBTESTER_SRC_HTTPCONNECTION_H

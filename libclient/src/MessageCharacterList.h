@@ -2,7 +2,7 @@
  * @file libclient/src/MessageCharacterList.h
  * @ingroup libcomp
  *
- * @author Aaron M Brown 
+ * @author Aaron M Brown
  *
  * @brief Client message.
  *
@@ -36,60 +36,51 @@
 // packet Includes
 #include <PacketLobbyCharacterList.h>
 
-namespace logic
-{
-    /**
-     * Message containing characterlist data 
-     */
-    class MessageCharacterList : public libcomp::Message::MessageClient
-    {
-    public:
-        /**
-         * Create the message.
-         */
-        MessageCharacterList(const std::shared_ptr<packets::PacketLobbyCharacterList>& mPacket) :
-            libcomp::Message::MessageClient(), mPayload(mPacket)
-        {
-        }
+namespace logic {
+/**
+ * Message containing characterlist data
+ */
+class MessageCharacterList : public libcomp::Message::MessageClient {
+ public:
+  /**
+   * Create the message.
+   */
+  MessageCharacterList(
+      const std::shared_ptr<packets::PacketLobbyCharacterList>& mPacket)
+      : libcomp::Message::MessageClient(), mPayload(mPacket) {}
 
-        /**
-         * Cleanup the message.
-         */
-        ~MessageCharacterList() override
-        {
-        }
+  /**
+   * Cleanup the message.
+   */
+  ~MessageCharacterList() override {}
 
-        /**
-         * Get the specific client message type.
-         * @return The message's client message type
-         */
-        libcomp::Message::MessageClientType
-            GetMessageClientType() const override
-        {
-            return libcomp::Message::MessageClientType::CHARACTER_LIST_UPDATE;
-        }
-        
-        /**
-         * Getter for packet object containing character list data.
-         * @return Packet object containing character list data.
-         */
-        std::shared_ptr<packets::PacketLobbyCharacterList> GetPayload() const
-        {
-            return mPayload;
-        }
+  /**
+   * Get the specific client message type.
+   * @return The message's client message type
+   */
+  libcomp::Message::MessageClientType GetMessageClientType() const override {
+    return libcomp::Message::MessageClientType::CHARACTER_LIST_UPDATE;
+  }
 
-        /**
-         * Dump the message for logging.
-         * @return String representation of the message.
-         */
-        libcomp::String Dump() const override
-        {
-            return "Message: Character List Update Request\n";
-        }
+  /**
+   * Getter for packet object containing character list data.
+   * @return Packet object containing character list data.
+   */
+  std::shared_ptr<packets::PacketLobbyCharacterList> GetPayload() const {
+    return mPayload;
+  }
 
-    private:
-        std::shared_ptr<packets::PacketLobbyCharacterList> mPayload; 
-    };
-} // namespace logic
+  /**
+   * Dump the message for logging.
+   * @return String representation of the message.
+   */
+  libcomp::String Dump() const override {
+    return "Message: Character List Update Request\n";
+  }
 
-#endif // LIBCLIENT_SRC_MESSAGECHARACTERLIST_H
+ private:
+  std::shared_ptr<packets::PacketLobbyCharacterList> mPayload;
+};
+}  // namespace logic
+
+#endif  // LIBCLIENT_SRC_MESSAGECHARACTERLIST_H

@@ -50,78 +50,65 @@ using namespace game;
 
 using libcomp::Message::MessageClientType;
 
-ChannelScene::ChannelScene(GameWorker *pWorker, QWidget *pParent) :
-    QWidget(pParent), mGameWorker(pWorker)
-{
-    ui.setupUi(this);
+ChannelScene::ChannelScene(GameWorker *pWorker, QWidget *pParent)
+    : QWidget(pParent), mGameWorker(pWorker) {
+  ui.setupUi(this);
 
-    connect(ui.backupAccount, SIGNAL(clicked(bool)),
-        this, SLOT(backupAccount()));
+  connect(ui.backupAccount, SIGNAL(clicked(bool)), this, SLOT(backupAccount()));
 }
 
-ChannelScene::~ChannelScene()
-{
-}
+ChannelScene::~ChannelScene() {}
 
 bool ChannelScene::ProcessClientMessage(
-    const libcomp::Message::MessageClient *pMessage)
-{
-    switch(to_underlying(pMessage->GetMessageClientType()))
-    {
-        case to_underlying(MessageClientType::ACCOUNT_DUMP_STATUS):
-            return HandleAccountDumpStatus(pMessage);
-        default:
-            break;
-    }
+    const libcomp::Message::MessageClient *pMessage) {
+  switch (to_underlying(pMessage->GetMessageClientType())) {
+    case to_underlying(MessageClientType::ACCOUNT_DUMP_STATUS):
+      return HandleAccountDumpStatus(pMessage);
+    default:
+      break;
+  }
 
-    return false;
+  return false;
 }
 
 bool ChannelScene::HandleAccountDumpStatus(
-    const libcomp::Message::MessageClient *pMessage)
-{
-    const logic::MessageAccountDumpStatus *pStatus =
-        reinterpret_cast<const logic::MessageAccountDumpStatus *>(pMessage);
+    const libcomp::Message::MessageClient *pMessage) {
+  const logic::MessageAccountDumpStatus *pStatus =
+      reinterpret_cast<const logic::MessageAccountDumpStatus *>(pMessage);
 
-    if(pStatus->IsSuccess())
-    {
-        QMessageBox::information(this, tr("Backup Account"),
-            tr("Account has been backed up!"));
-    }
-    else
-    {
-        QMessageBox::critical(this, tr("Backup Account"),
-            tr("Account backup has failed!"));
-    }
+  if (pStatus->IsSuccess()) {
+    QMessageBox::information(this, tr("Backup Account"),
+                             tr("Account has been backed up!"));
+  } else {
+    QMessageBox::critical(this, tr("Backup Account"),
+                          tr("Account backup has failed!"));
+  }
 
-    ui.backupAccount->setEnabled(true);
+  ui.backupAccount->setEnabled(true);
 
-    return true;
+  return true;
 }
 
-void ChannelScene::closeEvent(QCloseEvent *pEvent)
-{
-    // Show the login dialog again.
-    mGameWorker->SendToLogic(new logic::MessageConnectionClose());
-    mGameWorker->GetLoginDialog()->show();
+void ChannelScene::closeEvent(QCloseEvent *pEvent) {
+  // Show the login dialog again.
+  mGameWorker->SendToLogic(new logic::MessageConnectionClose());
+  mGameWorker->GetLoginDialog()->show();
 
-    // Continue with the event.
-    QWidget::closeEvent(pEvent);
+  // Continue with the event.
+  QWidget::closeEvent(pEvent);
 }
 
-void ChannelScene::backupAccount()
-{
-    // Prompt the user for the save dialog.
-    auto path = QFileDialog::getSaveFileName(this, tr("Backup Account"),
-        QString(), tr("Account Data (*.xml)"));
+void ChannelScene::backupAccount() {
+  // Prompt the user for the save dialog.
+  auto path = QFileDialog::getSaveFileName(
+      this, tr("Backup Account"), QString(), tr("Account Data (*.xml)"));
 
-    if(path.isEmpty())
-    {
-        return;
-    }
+  if (path.isEmpty()) {
+    return;
+  }
 
-    // Send the account dump request.
-    mGameWorker->SendToLogic(new logic::MessageAccountDump(cs(path)));
+  // Send the account dump request.
+  mGameWorker->SendToLogic(new logic::MessageAccountDump(cs(path)));
 
-    ui.backupAccount->setEnabled(false);
+  ui.backupAccount->setEnabled(false);
 }

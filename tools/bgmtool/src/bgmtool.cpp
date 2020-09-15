@@ -22,10 +22,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdint.h>
+
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
-#include <stdint.h>
 #include <string>
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -55,10 +56,9 @@
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 // Combine the magic into a single DWORD.
-#define BGM_MAGIC (((uint32_t)BGM_MAGIC4 << 24) | \
-    ((uint32_t)BGM_MAGIC3 << 16) | \
-    ((uint32_t)BGM_MAGIC2 << 8) | \
-     (uint32_t)BGM_MAGIC1)
+#define BGM_MAGIC                                                \
+  (((uint32_t)BGM_MAGIC4 << 24) | ((uint32_t)BGM_MAGIC3 << 16) | \
+   ((uint32_t)BGM_MAGIC2 << 8) | (uint32_t)BGM_MAGIC1)
 
 /**
  * Encrypt a background music file.
@@ -66,85 +66,76 @@
  * @param szOut Path to the output file to write.
  * @returns Standard exit code.
  */
-int EncryptFile(const char *szIn, const char *szOut)
-{
-    FILE *pIn = fopen(szIn, "rb");
-    FILE *pOut = fopen(szOut, "wb");
+int EncryptFile(const char *szIn, const char *szOut) {
+  FILE *pIn = fopen(szIn, "rb");
+  FILE *pOut = fopen(szOut, "wb");
 
-    if(!pIn)
-    {
-        fprintf(stderr, "Failed to open input file.\n");
+  if (!pIn) {
+    fprintf(stderr, "Failed to open input file.\n");
 
-        return EXIT_FAILURE;
+    return EXIT_FAILURE;
+  }
+
+  if (!pOut) {
+    fprintf(stderr, "Failed to open input file.\n");
+
+    return EXIT_FAILURE;
+  }
+
+  if (0 != fseek(pIn, 0, SEEK_END)) {
+    fprintf(stderr, "Seek error in input file.\n");
+
+    return EXIT_FAILURE;
+  }
+
+  // Get the size of the file and calculate the XOR key.
+  uint32_t sz = (uint32_t)ftell(pIn);
+  uint32_t key = sz ^ BGM_XOR_KEY;
+
+  // Start over now that we have the key
+  if (0 != fseek(pIn, 0, SEEK_SET)) {
+    fprintf(stderr, "Seek error in input file.\n");
+
+    return EXIT_FAILURE;
+  }
+
+  // Write the magic.
+  uint32_t magic = BGM_MAGIC;
+
+  if (1 != fwrite(&magic, 4, 1, pOut)) {
+    fprintf(stderr, "Failed to write output file.\n");
+
+    return EXIT_FAILURE;
+  }
+
+  // Write the output file contents.
+  while (sz) {
+    uint32_t buffer = 0;
+    uint32_t chunk = std::min((uint32_t)4, sz);
+
+    if (1 != fread(&buffer, chunk, 1, pIn)) {
+      fprintf(stderr, "Failed to read input file.\n");
+
+      return EXIT_FAILURE;
     }
 
-    if(!pOut)
-    {
-        fprintf(stderr, "Failed to open input file.\n");
+    // Encrypt the dword.
+    buffer ^= key;
 
-        return EXIT_FAILURE;
+    if (1 != fwrite(&buffer, chunk, 1, pOut)) {
+      fprintf(stderr, "Failed to write output file.\n");
+
+      return EXIT_FAILURE;
     }
 
-    if(0 != fseek(pIn, 0, SEEK_END))
-    {
-        fprintf(stderr, "Seek error in input file.\n");
+    sz -= chunk;
+  }
 
-        return EXIT_FAILURE;
-    }
+  // Close the files and cleanup.
+  fclose(pIn);
+  fclose(pOut);
 
-    // Get the size of the file and calculate the XOR key.
-    uint32_t sz = (uint32_t)ftell(pIn);
-    uint32_t key = sz ^ BGM_XOR_KEY;
-
-    // Start over now that we have the key
-    if(0 != fseek(pIn, 0, SEEK_SET))
-    {
-        fprintf(stderr, "Seek error in input file.\n");
-
-        return EXIT_FAILURE;
-    }
-
-    // Write the magic.
-    uint32_t magic = BGM_MAGIC;
-
-    if(1 != fwrite(&magic, 4, 1, pOut))
-    {
-        fprintf(stderr, "Failed to write output file.\n");
-
-        return EXIT_FAILURE;
-    }
-
-    // Write the output file contents.
-    while(sz)
-    {
-        uint32_t buffer = 0;
-        uint32_t chunk = std::min((uint32_t)4, sz);
-
-        if(1 != fread(&buffer, chunk, 1, pIn))
-        {
-            fprintf(stderr, "Failed to read input file.\n");
-
-            return EXIT_FAILURE;
-        }
-
-        // Encrypt the dword.
-        buffer ^= key;
-
-        if(1 != fwrite(&buffer, chunk, 1, pOut))
-        {
-            fprintf(stderr, "Failed to write output file.\n");
-
-            return EXIT_FAILURE;
-        }
-
-        sz -= chunk;
-    }
-
-    // Close the files and cleanup.
-    fclose(pIn);
-    fclose(pOut);
-
-    return EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }
 
 /**
@@ -153,93 +144,83 @@ int EncryptFile(const char *szIn, const char *szOut)
  * @param szOut Path to the output file to write.
  * @returns Standard exit code.
  */
-int DecryptFile(const char *szIn, const char *szOut)
-{
-    FILE *pIn = fopen(szIn, "rb");
-    FILE *pOut = fopen(szOut, "wb");
+int DecryptFile(const char *szIn, const char *szOut) {
+  FILE *pIn = fopen(szIn, "rb");
+  FILE *pOut = fopen(szOut, "wb");
 
-    if(!pIn)
-    {
-        fprintf(stderr, "Failed to open input file.\n");
+  if (!pIn) {
+    fprintf(stderr, "Failed to open input file.\n");
 
-        return EXIT_FAILURE;
+    return EXIT_FAILURE;
+  }
+
+  if (!pOut) {
+    fprintf(stderr, "Failed to open input file.\n");
+
+    return EXIT_FAILURE;
+  }
+
+  // Read and check the magic is correct.
+  uint32_t magic = 0;
+
+  if (1 != fread(&magic, 4, 1, pIn)) {
+    fprintf(stderr, "Failed to read input file.\n");
+  }
+
+  if (BGM_MAGIC != magic) {
+    fprintf(stderr, "ERROR: File is not encrypted!\n");
+
+    return EXIT_FAILURE;
+  }
+
+  if (0 != fseek(pIn, 0, SEEK_END)) {
+    fprintf(stderr, "Seek error in input file.\n");
+
+    return EXIT_FAILURE;
+  }
+
+  // Get the size of the file and calculate the XOR key.
+  uint32_t sz = (uint32_t)ftell(pIn);
+  uint32_t key = (sz - 4) ^ BGM_XOR_KEY;
+
+  // Start over now that we have the key
+  if (0 != fseek(pIn, 4, SEEK_SET)) {
+    fprintf(stderr, "Seek error in input file.\n");
+
+    return EXIT_FAILURE;
+  }
+
+  // We don't read the magic as part of the file.
+  sz -= 4;
+
+  // Write the output file contents.
+  while (sz) {
+    uint32_t buffer = 0;
+    uint32_t chunk = std::min((uint32_t)4, sz);
+
+    if (1 != fread(&buffer, chunk, 1, pIn)) {
+      fprintf(stderr, "Failed to read input file.\n");
+
+      return EXIT_FAILURE;
     }
 
-    if(!pOut)
-    {
-        fprintf(stderr, "Failed to open input file.\n");
+    // Encrypt the dword.
+    buffer ^= key;
 
-        return EXIT_FAILURE;
+    if (1 != fwrite(&buffer, chunk, 1, pOut)) {
+      fprintf(stderr, "Failed to write output file.\n");
+
+      return EXIT_FAILURE;
     }
 
-    // Read and check the magic is correct.
-    uint32_t magic = 0;
+    sz -= chunk;
+  }
 
-    if(1 != fread(&magic, 4, 1, pIn))
-    {
-        fprintf(stderr, "Failed to read input file.\n");
-    }
+  // Close the files and cleanup.
+  fclose(pIn);
+  fclose(pOut);
 
-    if(BGM_MAGIC != magic)
-    {
-        fprintf(stderr, "ERROR: File is not encrypted!\n");
-
-        return EXIT_FAILURE;
-    }
-
-    if(0 != fseek(pIn, 0, SEEK_END))
-    {
-        fprintf(stderr, "Seek error in input file.\n");
-
-        return EXIT_FAILURE;
-    }
-
-    // Get the size of the file and calculate the XOR key.
-    uint32_t sz = (uint32_t)ftell(pIn);
-    uint32_t key = (sz - 4) ^ BGM_XOR_KEY;
-
-    // Start over now that we have the key
-    if(0 != fseek(pIn, 4, SEEK_SET))
-    {
-        fprintf(stderr, "Seek error in input file.\n");
-
-        return EXIT_FAILURE;
-    }
-
-    // We don't read the magic as part of the file.
-    sz -= 4;
-
-    // Write the output file contents.
-    while(sz)
-    {
-        uint32_t buffer = 0;
-        uint32_t chunk = std::min((uint32_t)4, sz);
-
-        if(1 != fread(&buffer, chunk, 1, pIn))
-        {
-            fprintf(stderr, "Failed to read input file.\n");
-
-            return EXIT_FAILURE;
-        }
-
-        // Encrypt the dword.
-        buffer ^= key;
-
-        if(1 != fwrite(&buffer, chunk, 1, pOut))
-        {
-            fprintf(stderr, "Failed to write output file.\n");
-
-            return EXIT_FAILURE;
-        }
-
-        sz -= chunk;
-    }
-
-    // Close the files and cleanup.
-    fclose(pIn);
-    fclose(pOut);
-
-    return EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }
 
 /**
@@ -248,21 +229,15 @@ int DecryptFile(const char *szIn, const char *szOut)
  * @param argv Array of command line arguments.
  * @returns Standard exit code.
  */
-int main(int argc, char *argv[])
-{
-    // Detect encrypt or decrypt mode or print usage.
-    if(argc == 4 && std::string("-d") == argv[1])
-    {
-        return DecryptFile(argv[2], argv[3]);
-    }
-    else if(argc == 3)
-    {
-        return EncryptFile(argv[1], argv[2]);
-    }
-    else
-    {
-        fprintf(stderr, "USAGE: %s [-d] IN OUT\n", argv[0]);
-    }
+int main(int argc, char *argv[]) {
+  // Detect encrypt or decrypt mode or print usage.
+  if (argc == 4 && std::string("-d") == argv[1]) {
+    return DecryptFile(argv[2], argv[3]);
+  } else if (argc == 3) {
+    return EncryptFile(argv[1], argv[2]);
+  } else {
+    fprintf(stderr, "USAGE: %s [-d] IN OUT\n", argv[0]);
+  }
 
-    return EXIT_FAILURE;
+  return EXIT_FAILURE;
 }

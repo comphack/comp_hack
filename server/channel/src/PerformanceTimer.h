@@ -33,49 +33,47 @@
 // libcomp Includes
 #include <CString.h>
 
-namespace channel
-{
+namespace channel {
 
 class ChannelServer;
 
 #ifndef ServerTime
 typedef uint64_t ServerTime;
-#endif // ServerTime
+#endif  // ServerTime
 
 /**
  * Timer to measure performance of a task.
  */
-class PerformanceTimer
-{
-protected:
-    /// Channel server pointer. Should stay valid while the object exists.
-    ChannelServer *mServer;
+class PerformanceTimer {
+ protected:
+  /// Channel server pointer. Should stay valid while the object exists.
+  ChannelServer *mServer;
 
-    /// Start time of the performance measurement.
-    ServerTime mStart;
+  /// Start time of the performance measurement.
+  ServerTime mStart;
 
-    /// If the performance monitor is enabled.
-    bool mEnabled;
+  /// If the performance monitor is enabled.
+  bool mEnabled;
 
-public:
-    /**
-     * Create the performance timer.
-     * @param pServer Channel server to create the timer for.
-     */
-    PerformanceTimer(ChannelServer *pServer);
+ public:
+  /**
+   * Create the performance timer.
+   * @param pServer Channel server to create the timer for.
+   */
+  PerformanceTimer(ChannelServer *pServer);
 
-    /**
-     * Start a performance measurement.
-     */
-    void Start();
+  /**
+   * Start a performance measurement.
+   */
+  void Start();
 
-    /**
-     * Stop a performance measurement and log it.
-     * @param metric Name of the task that was measured.
-     */
-    void Stop(const libcomp::String& metric);
+  /**
+   * Stop a performance measurement and log it.
+   * @param metric Name of the task that was measured.
+   */
+  void Stop(const libcomp::String &metric);
 };
 
-} // namespace channel
+}  // namespace channel
 
-#endif // SERVER_CHANNEL_SRC_PERFORMANCETIMER_H
+#endif  // SERVER_CHANNEL_SRC_PERFORMANCETIMER_H

@@ -49,107 +49,90 @@
 
 using namespace channel;
 
-bool Parsers::ExpertiseDown::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ExpertiseDown::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 9)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 9) {
+    return false;
+  }
 
-    int32_t entityID = p.ReadS32Little();
-    int8_t activationID = p.ReadS8();
-    int32_t expertiseID = p.ReadS32Little();
+  int32_t entityID = p.ReadS32Little();
+  int8_t activationID = p.ReadS8();
+  int32_t expertiseID = p.ReadS32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto sourceState = state->GetEntityState(entityID);
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto sourceState = state->GetEntityState(entityID);
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
 
-    if(sourceState == nullptr)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Invalid entity ID received from a"
-                " ExpertiseDown request: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
+  if (sourceState == nullptr) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Invalid entity ID received from a ExpertiseDown request: "
+                 "%1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Close();
-        return true;
-    }
-
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto skillManager = server->GetSkillManager();
-
-    auto activatedAbility = cState->GetSpecialActivations(activationID);
-    if(!activatedAbility)
-    {
-        LogGeneralErrorMsg(
-            "Invalid activation ID encountered for ExpertiseDown request\n");
-    }
-    else
-    {
-        bool failure = false;
-
-        auto exp = character->GetExpertises((size_t)expertiseID).Get();
-        auto skillData = activatedAbility->GetSkillData();
-        if(exp && skillData)
-        {
-            int32_t points = exp->GetPoints();
-
-            // Always remove the progress to next rank
-            int32_t remove = points % 10000;
-
-            uint16_t functionID = skillData->GetDamage()->GetFunctionID();
-            if (functionID == SVR_CONST.SKILL_EXPERT_CLASS_DOWN)
-            {
-                // Remove one class
-                if(points >= 100000)
-                {
-                    remove = remove + 100000;
-                }
-            }
-            else if(functionID == SVR_CONST.SKILL_EXPERT_RANK_DOWN)
-            {
-                // Remove one rank
-                if(points >= 10000)
-                {
-                    remove = remove + 10000;
-                }
-            }
-            else
-            {
-                // Shouldn't happen
-                remove = 0;
-            }
-
-            if(remove > 0 && skillManager->ExecuteSkill(sourceState,
-                activationID, activatedAbility->GetTargetObjectID()))
-            {
-                std::list<std::pair<uint8_t, int32_t>> pointMap;
-                pointMap.push_back(std::make_pair((uint8_t)expertiseID, -remove));
-
-                server->GetCharacterManager()->UpdateExpertisePoints(client,
-                    pointMap, true);
-            }
-            else
-            {
-                failure = true;
-            }
-        }
-        else
-        {
-            failure = true;
-        }
-
-        if(failure)
-        {
-            skillManager->CancelSkill(sourceState, activationID);
-        }
-    }
-
+    client->Close();
     return true;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto skillManager = server->GetSkillManager();
+
+  auto activatedAbility = cState->GetSpecialActivations(activationID);
+  if (!activatedAbility) {
+    LogGeneralErrorMsg(
+        "Invalid activation ID encountered for ExpertiseDown request\n");
+  } else {
+    bool failure = false;
+
+    auto exp = character->GetExpertises((size_t)expertiseID).Get();
+    auto skillData = activatedAbility->GetSkillData();
+    if (exp && skillData) {
+      int32_t points = exp->GetPoints();
+
+      // Always remove the progress to next rank
+      int32_t remove = points % 10000;
+
+      uint16_t functionID = skillData->GetDamage()->GetFunctionID();
+      if (functionID == SVR_CONST.SKILL_EXPERT_CLASS_DOWN) {
+        // Remove one class
+        if (points >= 100000) {
+          remove = remove + 100000;
+        }
+      } else if (functionID == SVR_CONST.SKILL_EXPERT_RANK_DOWN) {
+        // Remove one rank
+        if (points >= 10000) {
+          remove = remove + 10000;
+        }
+      } else {
+        // Shouldn't happen
+        remove = 0;
+      }
+
+      if (remove > 0 &&
+          skillManager->ExecuteSkill(sourceState, activationID,
+                                     activatedAbility->GetTargetObjectID())) {
+        std::list<std::pair<uint8_t, int32_t>> pointMap;
+        pointMap.push_back(std::make_pair((uint8_t)expertiseID, -remove));
+
+        server->GetCharacterManager()->UpdateExpertisePoints(client, pointMap,
+                                                             true);
+      } else {
+        failure = true;
+      }
+    } else {
+      failure = true;
+    }
+
+    if (failure) {
+      skillManager->CancelSkill(sourceState, activationID);
+    }
+  }
+
+  return true;
 }

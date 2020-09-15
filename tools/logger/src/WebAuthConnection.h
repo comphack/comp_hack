@@ -26,138 +26,137 @@
 #ifndef TOOLS_LOGGER_SRC_WEBAUTHCONNECTION_H
 #define TOOLS_LOGGER_SRC_WEBAUTHCONNECTION_H
 
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+#include <stdint.h>
+
 #include <QByteArray>
-#include <QStringList>
-#include <QThread>
 #include <QSslError>
 #include <QSslSocket>
+#include <QStringList>
 #include <QTcpSocket>
-#include <PopIgnore.h>
-
-#include <stdint.h>
+#include <QThread>
 
 class LoggerServer;
 
 /**
  * Proxy connection between the logger and the web authentication server.
  */
-class WebAuthConnection : public QThread
-{
-    Q_OBJECT
+class WebAuthConnection : public QThread {
+  Q_OBJECT
 
-public:
-    /**
-     * Create a new web authentication connection.
-     * @param server @ref LoggerServer this connection was made from.
-     * @param socketDescriptor Netowrk socket for the connection.
-     * @param clientID ID to identify this client in the log.
-     * @param parent Parent object that this object belongs to.
-     * Should remain 0.
-     */
-    WebAuthConnection(LoggerServer *server, qintptr socketDescriptor,
-        uint32_t clientID, QObject *parent = 0);
+ public:
+  /**
+   * Create a new web authentication connection.
+   * @param server @ref LoggerServer this connection was made from.
+   * @param socketDescriptor Netowrk socket for the connection.
+   * @param clientID ID to identify this client in the log.
+   * @param parent Parent object that this object belongs to.
+   * Should remain 0.
+   */
+  WebAuthConnection(LoggerServer *server, qintptr socketDescriptor,
+                    uint32_t clientID, QObject *parent = 0);
 
-    /**
-     * Delete the connection.
-     */
-    virtual ~WebAuthConnection();
+  /**
+   * Delete the connection.
+   */
+  virtual ~WebAuthConnection();
 
-protected slots:
-    /**
-     * This method is called when the client closes the connection. The
-     * connection to the web auth server will be closed and the connection
-     * object will be deleted.
-     */
-    void clientLost();
+ protected slots:
+  /**
+   * This method is called when the client closes the connection. The
+   * connection to the web auth server will be closed and the connection
+   * object will be deleted.
+   */
+  void clientLost();
 
-    /**
-     * This method is called when new data has arrived from the client. The
-     * data will be parsed and then sent to the web auth server.
-     */
-    void clientReady();
+  /**
+   * This method is called when new data has arrived from the client. The
+   * data will be parsed and then sent to the web auth server.
+   */
+  void clientReady();
 
-    /**
-     * This method is called when the web auth server closes the connection.
-     * The connection to the client will be closed and the connection object
-     * will be deleted.
-     */
-    void serverLost();
+  /**
+   * This method is called when the web auth server closes the connection.
+   * The connection to the client will be closed and the connection object
+   * will be deleted.
+   */
+  void serverLost();
 
-    /**
-     * This method is called when new data has arrived from the web auth
-     * server. The data will be parsed and then sent to the client.
-     */
-    void serverReady();
+  /**
+   * This method is called when new data has arrived from the web auth
+   * server. The data will be parsed and then sent to the client.
+   */
+  void serverReady();
 
-    /**
-     * Parse an HTTP request.
-     */
-    void parseRequest();
+  /**
+   * Parse an HTTP request.
+   */
+  void parseRequest();
 
-    /**
-     * Handle any SSL errors that have occured.
-     * @param errors List of SSL errors.
-     */
-    void sslErrors(const QList<QSslError>& errors);
+  /**
+   * Handle any SSL errors that have occured.
+   * @param errors List of SSL errors.
+   */
+  void sslErrors(const QList<QSslError> &errors);
 
-    /**
-     * Handle any SSL peer verification errors.
-     * @param error Peer verification error.
-     */
-    void peerVerifyError(const QSslError& error);
+  /**
+   * Handle any SSL peer verification errors.
+   * @param error Peer verification error.
+   */
+  void peerVerifyError(const QSslError &error);
 
-protected:
-    /**
-     * This method is called when the connection thread starts executing.
-     */
-    virtual void run();
+ protected:
+  /**
+   * This method is called when the connection thread starts executing.
+   */
+  virtual void run();
 
-    /**
-     * Generate a timestamp to be used in the log.
-     * @returns The timestamp string.
-     */
-    QString timestamp() const;
+  /**
+   * Generate a timestamp to be used in the log.
+   * @returns The timestamp string.
+   */
+  QString timestamp() const;
 
-    /**
-     * Log a message to the console and GUI.
-     * @param msg Message to log.
-     */
-    void logMessage(const QString& msg);
+  /**
+   * Log a message to the console and GUI.
+   * @param msg Message to log.
+   */
+  void logMessage(const QString &msg);
 
-private:
-    /// Logger server this connection belongs to.
-    LoggerServer *mServer;
+ private:
+  /// Logger server this connection belongs to.
+  LoggerServer *mServer;
 
-    /// Host name of the target server.
-    QString mHost;
+  /// Host name of the target server.
+  QString mHost;
 
-    /// Buffer of the most recent HTTP request.
-    QByteArray mBuffer;
+  /// Buffer of the most recent HTTP request.
+  QByteArray mBuffer;
 
-    /// Request line of the most recent HTTP request.
-    QString mReqLine;
+  /// Request line of the most recent HTTP request.
+  QString mReqLine;
 
-    /// List of HTTP headers in the order they occured.
-    QStringList mHeaderKeys;
+  /// List of HTTP headers in the order they occured.
+  QStringList mHeaderKeys;
 
-    /// Map of the HTTP headers and their values.
-    QHash<QString, QString> mHeaders;
+  /// Map of the HTTP headers and their values.
+  QHash<QString, QString> mHeaders;
 
-    /// Connection to the client.
-    QTcpSocket *mClientSocket;
+  /// Connection to the client.
+  QTcpSocket *mClientSocket;
 
-    /// Connection to the target server.
-    QSslSocket *mServerSocket;
+  /// Connection to the target server.
+  QSslSocket *mServerSocket;
 
-    /// IP address of the client connection.
-    QString mClientAddress;
+  /// IP address of the client connection.
+  QString mClientAddress;
 
-    /// Socket descriptior of the client connection.
-    qintptr mSocketDescriptor;
+  /// Socket descriptior of the client connection.
+  qintptr mSocketDescriptor;
 
-    /// Unique channel ID of this client connection.
-    uint32_t mClientID;
+  /// Unique channel ID of this client connection.
+  uint32_t mClientID;
 };
 
-#endif // TOOLS_LOGGER_SRC_WEBAUTHCONNECTION_H
+#endif  // TOOLS_LOGGER_SRC_WEBAUTHCONNECTION_H

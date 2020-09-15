@@ -28,23 +28,18 @@
 
 using namespace lobby;
 
-LobbyClientConnection::LobbyClientConnection(asio::ip::tcp::socket& socket,
-    const std::shared_ptr<libcomp::Crypto::DiffieHellman>& diffieHellman) :
-    LobbyConnection(socket, diffieHellman)
-{
-}
+LobbyClientConnection::LobbyClientConnection(
+    asio::ip::tcp::socket& socket,
+    const std::shared_ptr<libcomp::Crypto::DiffieHellman>& diffieHellman)
+    : LobbyConnection(socket, diffieHellman) {}
 
-LobbyClientConnection::~LobbyClientConnection()
-{
-}
+LobbyClientConnection::~LobbyClientConnection() {}
 
-ClientState* LobbyClientConnection::GetClientState() const
-{
-    return mClientState.get();
+ClientState* LobbyClientConnection::GetClientState() const {
+  return mClientState.get();
 }
 
 void LobbyClientConnection::SetClientState(
-    const std::shared_ptr<ClientState>& state)
-{
-    mClientState = state;
+    const std::shared_ptr<ClientState>& state) {
+  mClientState = state;
 }

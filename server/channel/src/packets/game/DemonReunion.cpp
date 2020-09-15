@@ -37,31 +37,30 @@
 
 using namespace channel;
 
-bool Parsers::DemonReunion::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonReunion::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 13)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 13) {
+    return false;
+  }
 
-    int64_t demonID = p.ReadS64Little();
-    uint8_t growthType = p.ReadU8();
-    uint32_t costItemType = p.ReadU32Little();
+  int64_t demonID = p.ReadS64Little();
+  uint8_t growthType = p.ReadU8();
+  uint32_t costItemType = p.ReadU32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork([](const std::shared_ptr<ChannelServer> pServer,
-        const std::shared_ptr<ChannelClientConnection> pClient,
-        int64_t pDemonID, uint8_t pGrowthType, uint32_t pCostItemType)
-        {
-            pServer->GetCharacterManager()->ReunionDemon(pClient,
-                pDemonID, pGrowthType, pCostItemType, true);
-        }, server, client, demonID, growthType, costItemType);
+  server->QueueWork(
+      [](const std::shared_ptr<ChannelServer> pServer,
+         const std::shared_ptr<ChannelClientConnection> pClient,
+         int64_t pDemonID, uint8_t pGrowthType, uint32_t pCostItemType) {
+        pServer->GetCharacterManager()->ReunionDemon(
+            pClient, pDemonID, pGrowthType, pCostItemType, true);
+      },
+      server, client, demonID, growthType, costItemType);
 
-    return true;
+  return true;
 }

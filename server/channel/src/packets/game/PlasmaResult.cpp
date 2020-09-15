@@ -32,7 +32,7 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
- // channel Includes
+// channel Includes
 #include "ActionManager.h"
 #include "ChannelServer.h"
 #include "EventManager.h"
@@ -41,95 +41,89 @@
 
 using namespace channel;
 
-bool Parsers::PlasmaResult::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PlasmaResult::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 6)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 6) {
+    return false;
+  }
 
-    int32_t plasmaID = p.ReadS32Little();
-    int8_t pointID = p.ReadS8();
-    int8_t result = p.ReadS8();
+  int32_t plasmaID = p.ReadS32Little();
+  int8_t pointID = p.ReadS8();
+  int8_t result = p.ReadS8();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto zone = state->GetZone();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto zone = state->GetZone();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto eventManager = server->GetEventManager();
-    auto zoneManager = server->GetZoneManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto eventManager = server->GetEventManager();
+  auto zoneManager = server->GetZoneManager();
 
-    auto pState = zone
-        ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
-        : nullptr;
+  auto pState =
+      zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
+           : nullptr;
 
-    auto point = pState
-        ? pState->SetPickResult((uint32_t)pointID, state->GetWorldCID(), result)
-        : nullptr;
+  auto point = pState ? pState->SetPickResult((uint32_t)pointID,
+                                              state->GetWorldCID(), result)
+                      : nullptr;
 
-    bool failure = result < 0;
+  bool failure = result < 0;
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_RESULT);
-    reply.WriteS32Little(plasmaID);
-    reply.WriteS8(pointID);
-    reply.WriteS8(result);
-    reply.WriteS32Little(failure ? 1 : (point ? 0 : -1));
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_RESULT);
+  reply.WriteS32Little(plasmaID);
+  reply.WriteS8(pointID);
+  reply.WriteS8(result);
+  reply.WriteS32Little(failure ? 1 : (point ? 0 : -1));
 
-    client->QueuePacket(reply);
+  client->QueuePacket(reply);
 
-    if(point)
-    {
-        // Send state to source player
-        libcomp::Packet notify;
-        pState->GetPointStatusData(notify, (uint32_t)pointID, state->GetWorldCID());
-        client->QueuePacket(notify);
-
-        // Send state to other players
-        notify.Clear();
-        pState->GetPointStatusData(notify, (uint32_t)pointID);
-        zoneManager->BroadcastPacket(client, notify, false);
-    }
-
+  if (point) {
+    // Send state to source player
     libcomp::Packet notify;
-    notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_END);
-    notify.WriteS32Little(plasmaID);
-    notify.WriteS8(pointID);
-    notify.WriteS32Little(failure ? 1 : 0);
-
+    pState->GetPointStatusData(notify, (uint32_t)pointID, state->GetWorldCID());
     client->QueuePacket(notify);
 
-    // End the system event
-    eventManager->HandleEvent(client, nullptr);
+    // Send state to other players
+    notify.Clear();
+    pState->GetPointStatusData(notify, (uint32_t)pointID);
+    zoneManager->BroadcastPacket(client, notify, false);
+  }
 
-    if(pState)
-    {
-        std::list<std::shared_ptr<objects::Action>> actions;
-        if(!failure)
-        {
-            // Update demon quest if active
-            eventManager->UpdateDemonQuestCount(client,
-                objects::DemonQuest::Type_t::PLASMA,
-                (uint32_t)pState->GetEntity()->GetColor(), 1);
+  libcomp::Packet notify;
+  notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_END);
+  notify.WriteS32Little(plasmaID);
+  notify.WriteS8(pointID);
+  notify.WriteS32Little(failure ? 1 : 0);
 
-            actions = pState->GetEntity()->GetSuccessActions();
-        }
-        else
-        {
-            actions = pState->GetEntity()->GetFailActions();
-        }
+  client->QueuePacket(notify);
 
-        if(actions.size() > 0)
-        {
-            server->GetActionManager()->PerformActions(client,
-                actions, pState->GetEntityID(), zone);
-        }
+  // End the system event
+  eventManager->HandleEvent(client, nullptr);
+
+  if (pState) {
+    std::list<std::shared_ptr<objects::Action>> actions;
+    if (!failure) {
+      // Update demon quest if active
+      eventManager->UpdateDemonQuestCount(
+          client, objects::DemonQuest::Type_t::PLASMA,
+          (uint32_t)pState->GetEntity()->GetColor(), 1);
+
+      actions = pState->GetEntity()->GetSuccessActions();
+    } else {
+      actions = pState->GetEntity()->GetFailActions();
     }
 
-    client->FlushOutgoing();
+    if (actions.size() > 0) {
+      server->GetActionManager()->PerformActions(client, actions,
+                                                 pState->GetEntityID(), zone);
+    }
+  }
 
-    return true;
+  client->FlushOutgoing();
+
+  return true;
 }

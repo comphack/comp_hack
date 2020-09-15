@@ -42,52 +42,44 @@
 
 using namespace channel;
 
-bool Parsers::WebGame::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::WebGame::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)connection;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)connection;
 
-    if(p.Size() < 5)
-    {
-        return false;
-    }
+  if (p.Size() < 5) {
+    return false;
+  }
 
-    uint8_t mode = p.ReadU8();
-    int32_t worldCID = p.ReadS32Little();
+  uint8_t mode = p.ReadU8();
+  int32_t worldCID = p.ReadS32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto client = server->GetManagerConnection()->GetEntityClient(worldCID,
-        true);
-    if(!client)
-    {
-        // Client is no longer connected, quit now
-        return true;
-    }
-
-    switch((InternalPacketAction_t)mode)
-    {
-    case InternalPacketAction_t::PACKET_ACTION_ADD:
-        {
-            if(p.Left() < 2 ||
-                (p.Left() < (uint32_t)(2 + p.PeekU16Little())))
-            {
-                return false;
-            }
-
-            auto sessionID = p.ReadString16Little(
-                libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
-
-            server->GetEventManager()->StartWebGame(client, sessionID);
-        }
-        break;
-    case InternalPacketAction_t::PACKET_ACTION_REMOVE:
-        server->GetEventManager()->EndWebGame(client, false);
-        break;
-    default:
-        break;
-    }
-
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = server->GetManagerConnection()->GetEntityClient(worldCID, true);
+  if (!client) {
+    // Client is no longer connected, quit now
     return true;
+  }
+
+  switch ((InternalPacketAction_t)mode) {
+    case InternalPacketAction_t::PACKET_ACTION_ADD: {
+      if (p.Left() < 2 || (p.Left() < (uint32_t)(2 + p.PeekU16Little()))) {
+        return false;
+      }
+
+      auto sessionID = p.ReadString16Little(
+          libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
+
+      server->GetEventManager()->StartWebGame(client, sessionID);
+    } break;
+    case InternalPacketAction_t::PACKET_ACTION_REMOVE:
+      server->GetEventManager()->EndWebGame(client, false);
+      break;
+    default:
+      break;
+  }
+
+  return true;
 }

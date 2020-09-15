@@ -28,64 +28,58 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionPlaySoundEffect.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
 ActionPlaySoundEffect::ActionPlaySoundEffect(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionPlaySoundEffect;
-    prop->setupUi(pWidget);
+                                             MainWindow *pMainWindow,
+                                             QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionPlaySoundEffect;
+  prop->setupUi(pWidget);
 
-    prop->sound->BindSelector(pMainWindow, "CSoundData");
+  prop->sound->BindSelector(pMainWindow, "CSoundData");
 
-    ui->actionTitle->setText(tr("<b>Play Sound Effect</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Play Sound Effect</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionPlaySoundEffect::~ActionPlaySoundEffect()
-{
-    delete prop;
+ActionPlaySoundEffect::~ActionPlaySoundEffect() { delete prop; }
+
+void ActionPlaySoundEffect::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionPlaySoundEffect>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->sound->SetValue((uint32_t)mAction->GetSoundID());
+  prop->delay->setValue(mAction->GetDelay());
+  prop->waitTime->setValue(mAction->GetWaitTime());
 }
 
-void ActionPlaySoundEffect::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionPlaySoundEffect>(act);
+std::shared_ptr<objects::Action> ActionPlaySoundEffect::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetSoundID((int32_t)prop->sound->GetValue());
+  mAction->SetDelay(prop->delay->value());
+  mAction->SetWaitTime(prop->waitTime->value());
 
-    prop->sound->SetValue((uint32_t)mAction->GetSoundID());
-    prop->delay->setValue(mAction->GetDelay());
-    prop->waitTime->setValue(mAction->GetWaitTime());
-}
-
-std::shared_ptr<objects::Action> ActionPlaySoundEffect::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetSoundID((int32_t)prop->sound->GetValue());
-    mAction->SetDelay(prop->delay->value());
-    mAction->SetWaitTime(prop->waitTime->value());
-
-    return mAction;
+  return mAction;
 }

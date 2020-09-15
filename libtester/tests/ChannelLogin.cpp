@@ -24,9 +24,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <PopIgnore.h>
 #include <PushIgnore.h>
 #include <gtest/gtest.h>
-#include <PopIgnore.h>
 
 // libtester Includes
 #include <ChannelClient.h>
@@ -35,46 +35,38 @@
 
 using namespace libcomp;
 
-TEST(Lobby, GoodPassword)
-{
-    EXPECT_SERVER(libtester::ServerConfig::SingleChannel(), []()
-    {
-        std::shared_ptr<libtester::ChannelClient> client(
-            new libtester::ChannelClient);
+TEST(Lobby, GoodPassword) {
+  EXPECT_SERVER(libtester::ServerConfig::SingleChannel(), []() {
+    std::shared_ptr<libtester::ChannelClient> client(
+        new libtester::ChannelClient);
 
-        client->Login(LOGIN_USERNAME, LOGIN_PASSWORD, "CrashDummy");
-        client->SendData();
+    client->Login(LOGIN_USERNAME, LOGIN_PASSWORD, "CrashDummy");
+    client->SendData();
 
-        std::shared_ptr<libtester::ChannelClient> client2(
-            new libtester::ChannelClient);
+    std::shared_ptr<libtester::ChannelClient> client2(
+        new libtester::ChannelClient);
 
-        client2->Login(LOGIN_USERNAME2, LOGIN_PASSWORD2, "TheInstigator");
-        client2->SendData();
-    });
+    client2->Login(LOGIN_USERNAME2, LOGIN_PASSWORD2, "TheInstigator");
+    client2->SendData();
+  });
 }
 
-static void SignalHandler(int signum)
-{
-    extern pthread_t gSelf;
+static void SignalHandler(int signum) {
+  extern pthread_t gSelf;
 
-    if(SIGUSR2 == signum)
-    {
-        pthread_kill(gSelf, SIGUSR2);
-    }
+  if (SIGUSR2 == signum) {
+    pthread_kill(gSelf, SIGUSR2);
+  }
 }
 
-int main(int argc, char *argv[])
-{
-    signal(SIGUSR2, SignalHandler);
+int main(int argc, char *argv[]) {
+  signal(SIGUSR2, SignalHandler);
 
-    try
-    {
-        ::testing::InitGoogleTest(&argc, argv);
+  try {
+    ::testing::InitGoogleTest(&argc, argv);
 
-        return RUN_ALL_TESTS();
-    }
-    catch(...)
-    {
-        return EXIT_FAILURE;
-    }
+    return RUN_ALL_TESTS();
+  } catch (...) {
+    return EXIT_FAILURE;
+  }
 }

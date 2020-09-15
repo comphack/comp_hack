@@ -37,28 +37,26 @@
 
 using namespace channel;
 
-bool Parsers::CultureEnd::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CultureEnd::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    // End the current event
-    server->GetEventManager()->HandleEvent(client, nullptr);
+  // End the current event
+  server->GetEventManager()->HandleEvent(client, nullptr);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CULTURE_END);
-    reply.WriteS8(0);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CULTURE_END);
+  reply.WriteS8(0);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

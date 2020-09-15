@@ -40,69 +40,61 @@
 
 using namespace channel;
 
-bool Parsers::ToggleExpertise::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ToggleExpertise::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 6)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 6) {
+    return false;
+  }
 
-    int32_t entityID = p.ReadS32Little();
-    int8_t expID = p.ReadS8();
-    int8_t disabled = p.ReadS8();
+  int32_t entityID = p.ReadS32Little();
+  int8_t expID = p.ReadS8();
+  int8_t disabled = p.ReadS8();
 
-    // Check the expertise array bounds
-    if(expID < 0 || expID > 37)
-    {
-        return false;
-    }
+  // Check the expertise array bounds
+  if (expID < 0 || expID > 37) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
 
-    if(cState->GetEntityID() != entityID)
-    {
-        return false;
-    }
+  if (cState->GetEntityID() != entityID) {
+    return false;
+  }
 
-    auto dbChanges = libcomp::DatabaseChangeSet::Create(
-        state->GetAccountUID());
+  auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
 
-    auto character = cState->GetEntity();
-    auto expertise = character->GetExpertises((size_t)expID).Get();
-    if(!expertise)
-    {
-        expertise = libcomp::PersistentObject::New<objects::Expertise>(true);
-        expertise->SetExpertiseID((uint8_t)expID);
-        expertise->SetCharacter(character->GetUUID());
-        character->SetExpertises((size_t)expID, expertise);
+  auto character = cState->GetEntity();
+  auto expertise = character->GetExpertises((size_t)expID).Get();
+  if (!expertise) {
+    expertise = libcomp::PersistentObject::New<objects::Expertise>(true);
+    expertise->SetExpertiseID((uint8_t)expID);
+    expertise->SetCharacter(character->GetUUID());
+    character->SetExpertises((size_t)expID, expertise);
 
-        dbChanges->Update(character);
-        dbChanges->Insert(expertise);
-    }
-    else
-    {
-        dbChanges->Update(expertise);
-    }
+    dbChanges->Update(character);
+    dbChanges->Insert(expertise);
+  } else {
+    dbChanges->Update(expertise);
+  }
 
-    expertise->SetDisabled(disabled != 0);
+  expertise->SetDisabled(disabled != 0);
 
-    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+  server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TOGGLE_EXPERTISE);
-    reply.WriteS32Little(entityID);
-    reply.WriteS8(expID);
-    reply.WriteU8((uint8_t)disabled);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TOGGLE_EXPERTISE);
+  reply.WriteS32Little(entityID);
+  reply.WriteS8(expID);
+  reply.WriteU8((uint8_t)disabled);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

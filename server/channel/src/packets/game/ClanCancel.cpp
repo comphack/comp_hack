@@ -37,36 +37,36 @@
 
 using namespace channel;
 
-bool Parsers::ClanCancel::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ClanCancel::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 12)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 12) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    int32_t sourceCID = p.ReadS32Little();
-    int8_t unknown1 = p.ReadS8();
-    int32_t clanID = p.ReadS32Little();
-    libcomp::String targetName = p.ReadString16Little(
-        state->GetClientStringEncoding(), true);
-    int8_t unknown2 = p.ReadS8();
-    (void)sourceCID;
-    (void)targetName;
+  int32_t sourceCID = p.ReadS32Little();
+  int8_t unknown1 = p.ReadS8();
+  int32_t clanID = p.ReadS32Little();
+  libcomp::String targetName =
+      p.ReadString16Little(state->GetClientStringEncoding(), true);
+  int8_t unknown2 = p.ReadS8();
+  (void)sourceCID;
+  (void)targetName;
 
-    // Nothing to relay to the sender, just reply to the sender
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_CANCEL);
-    reply.WriteS32Little(clanID);
-    reply.WriteS8(unknown1);
-    reply.WriteS8(unknown2);
+  // Nothing to relay to the sender, just reply to the sender
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_CANCEL);
+  reply.WriteS32Little(clanID);
+  reply.WriteS8(unknown1);
+  reply.WriteS8(unknown2);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

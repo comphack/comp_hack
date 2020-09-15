@@ -42,121 +42,108 @@
 #include <PlayerExchangeSession.h>
 
 // channel Includes
-#include "CharacterManager.h"
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 
 using namespace channel;
 
-bool Parsers::SynthesizeRecipe::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SynthesizeRecipe::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 20)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 20) {
+    return false;
+  }
 
-    uint32_t recipeID = p.ReadU32Little();
-    int64_t catalystID = p.ReadS64Little();
+  uint32_t recipeID = p.ReadU32Little();
+  int64_t catalystID = p.ReadS64Little();
 
-    // Apparently this was never implemented
-    int64_t protectionItemID = p.ReadS64Little();
+  // Apparently this was never implemented
+  int64_t protectionItemID = p.ReadS64Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto definitionManager = server->GetDefinitionManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto definitionManager = server->GetDefinitionManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
 
-    auto catalyst = catalystID ? std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(catalystID)))
-        : nullptr;
+  auto catalyst = catalystID ? std::dynamic_pointer_cast<objects::Item>(
+                                   libcomp::PersistentObject::GetObjectByUUID(
+                                       state->GetObjectUUID(catalystID)))
+                             : nullptr;
 
-    auto synthData = definitionManager->GetSynthesisData(recipeID);
-    int16_t successRate = 0;
+  auto synthData = definitionManager->GetSynthesisData(recipeID);
+  int16_t successRate = 0;
 
-    bool success = false;
-    if((!catalystID || catalyst) && exchangeSession && synthData)
-    {
-        exchangeSession->SetSelectionID(recipeID);
+  bool success = false;
+  if ((!catalystID || catalyst) && exchangeSession && synthData) {
+    exchangeSession->SetSelectionID(recipeID);
 
-        if(catalyst)
-        {
-            exchangeSession->SetItems(0, catalyst);
+    if (catalyst) {
+      exchangeSession->SetItems(0, catalyst);
 
-            int8_t catalystIdx = -1;
+      int8_t catalystIdx = -1;
 
-            auto it = SVR_CONST.RATE_SCALING_ITEMS[3].begin();
-            for(size_t i = 0; i < SVR_CONST.RATE_SCALING_ITEMS[3].size(); i++)
-            {
-                if(*it == catalyst->GetType())
-                {
-                    catalystIdx = (int8_t)(i + 1);
-                    break;
-                }
-
-                it++;
-            }
-
-            if(catalystIdx != -1)
-            {
-                successRate = synthData->GetRateScaling((size_t)catalystIdx);
-                success = successRate != 0;
-            }
-        }
-        else
-        {
-            successRate = synthData->GetRateScaling(0);
-            success = true;
+      auto it = SVR_CONST.RATE_SCALING_ITEMS[3].begin();
+      for (size_t i = 0; i < SVR_CONST.RATE_SCALING_ITEMS[3].size(); i++) {
+        if (*it == catalyst->GetType()) {
+          catalystIdx = (int8_t)(i + 1);
+          break;
         }
 
-        if(success)
-        {
-            // Verify materials
-            auto character = cState->GetEntity();
-            for(auto mat : synthData->GetMaterials())
-            {
-                uint32_t materialID = mat->GetItemID();
+        it++;
+      }
 
-                if(materialID &&
-                    character->GetMaterials(materialID) < mat->GetAmount())
-                {
-                    LogGeneralError([&]()
-                    {
-                        return libcomp::String("SynthesizeRecipe set attampted"
-                            " without the necessary materials: %1\n")
-                            .Arg(state->GetAccountUID().ToString());
-                    });
+      if (catalystIdx != -1) {
+        successRate = synthData->GetRateScaling((size_t)catalystIdx);
+        success = successRate != 0;
+      }
+    } else {
+      successRate = synthData->GetRateScaling(0);
+      success = true;
+    }
 
-                    success = false;
-                    break;
-                }
-            }
+    if (success) {
+      // Verify materials
+      auto character = cState->GetEntity();
+      for (auto mat : synthData->GetMaterials()) {
+        uint32_t materialID = mat->GetItemID();
+
+        if (materialID &&
+            character->GetMaterials(materialID) < mat->GetAmount()) {
+          LogGeneralError([&]() {
+            return libcomp::String(
+                       "SynthesizeRecipe set attampted without the necessary "
+                       "materials: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+          });
+
+          success = false;
+          break;
         }
+      }
     }
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_SYNTHESIZE_RECIPE);
-    reply.WriteU32Little(recipeID);
-    reply.WriteS64Little(catalystID);
-    reply.WriteU32Little(catalyst ? catalyst->GetType() : 0);
-    reply.WriteS64Little(protectionItemID);
-    reply.WriteU32Little(0);    // Protection item type?
-    reply.WriteS32Little(success ? 0 : 1);
-    reply.WriteU32Little(synthData ? synthData->GetItemID() : 0);
-    reply.WriteS16Little(successRate);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNTHESIZE_RECIPE);
+  reply.WriteU32Little(recipeID);
+  reply.WriteS64Little(catalystID);
+  reply.WriteU32Little(catalyst ? catalyst->GetType() : 0);
+  reply.WriteS64Little(protectionItemID);
+  reply.WriteU32Little(0);  // Protection item type?
+  reply.WriteS32Little(success ? 0 : 1);
+  reply.WriteU32Little(synthData ? synthData->GetItemID() : 0);
+  reply.WriteS16Little(successRate);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    if(!success)
-    {
-        server->GetCharacterManager()->EndExchange(client);
-    }
+  if (!success) {
+    server->GetCharacterManager()->EndExchange(client);
+  }
 
-    return true;
+  return true;
 }

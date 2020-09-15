@@ -42,43 +42,43 @@
 
 using namespace channel;
 
-bool Parsers::BazaarMarketEnd::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BazaarMarketEnd::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
+
+  int32_t bazaarEntityID = p.ReadS32Little();
+  int32_t responseID = p.ReadS32Little();
+  (void)responseID;
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+
+  // If the player's own market was the market being interacted with and is
+  // currently marked as "preparing", make it active now and update the zone
+  auto bState = state->GetBazaarState();
+  if (bState && bState->GetEntityID() == bazaarEntityID) {
+    auto worldData = state->GetAccountWorldData().Get();
+    auto bazaarData = worldData->GetBazaarData().Get();
+
+    if (bazaarData->GetState() ==
+        objects::BazaarData::State_t::BAZAAR_PREPARING) {
+      bazaarData->SetState(objects::BazaarData::State_t::BAZAAR_ACTIVE);
+      server->GetZoneManager()->SendBazaarMarketData(
+          state->GetCharacterState()->GetZone(), bState,
+          bazaarData->GetMarketID());
+
+      server->GetWorldDatabase()->QueueUpdate(bazaarData);
     }
+  }
 
-    int32_t bazaarEntityID = p.ReadS32Little();
-    int32_t responseID = p.ReadS32Little();
-    (void)responseID;
+  // End the current event
+  server->GetEventManager()->HandleEvent(client, nullptr);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-
-    // If the player's own market was the market being interacted with and is
-    // currently marked as "preparing", make it active now and update the zone
-    auto bState = state->GetBazaarState();
-    if(bState && bState->GetEntityID() == bazaarEntityID)
-    {
-        auto worldData = state->GetAccountWorldData().Get();
-        auto bazaarData = worldData->GetBazaarData().Get();
-
-        if(bazaarData->GetState() == objects::BazaarData::State_t::BAZAAR_PREPARING)
-        {
-            bazaarData->SetState(objects::BazaarData::State_t::BAZAAR_ACTIVE);
-            server->GetZoneManager()->SendBazaarMarketData(
-                state->GetCharacterState()->GetZone(), bState, bazaarData->GetMarketID());
-
-            server->GetWorldDatabase()->QueueUpdate(bazaarData);
-        }
-    }
-
-    // End the current event
-    server->GetEventManager()->HandleEvent(client, nullptr);
-
-    return true;
+  return true;
 }

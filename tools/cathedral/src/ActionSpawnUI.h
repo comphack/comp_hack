@@ -32,35 +32,34 @@
 #include <ActionSpawn.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionSpawn;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionSpawn : public Action
-{
-    Q_OBJECT
+class ActionSpawn : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionSpawn(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionSpawn();
+ public:
+  explicit ActionSpawn(ActionList *pList, MainWindow *pMainWindow,
+                       QWidget *pParent = 0);
+  virtual ~ActionSpawn();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionSpawn *prop;
+ protected:
+  Ui::ActionSpawn *prop;
 
-    std::shared_ptr<objects::ActionSpawn> mAction;
+  std::shared_ptr<objects::ActionSpawn> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONSPAWNUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONSPAWNUI_H

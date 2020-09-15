@@ -30,86 +30,67 @@
 // libcomp Includes
 #include <CString.h>
 
+BinaryDataNamedSet::BinaryDataNamedSet(
+    std::function<uint32_t(const std::shared_ptr<libcomp::Object>&)> mapper)
+    : libcomp::BinaryDataSet(nullptr, mapper), mObjectNamer(nullptr) {}
 
-BinaryDataNamedSet::BinaryDataNamedSet(std::function<uint32_t(
-    const std::shared_ptr<libcomp::Object>&)> mapper) :
-    libcomp::BinaryDataSet(nullptr, mapper), mObjectNamer(nullptr)
-{
+BinaryDataNamedSet::BinaryDataNamedSet(
+    std::function<std::shared_ptr<libcomp::Object>()> allocator,
+    std::function<uint32_t(const std::shared_ptr<libcomp::Object>&)> mapper,
+    std::function<libcomp::String(const std::shared_ptr<libcomp::Object>&)>
+        namer)
+    : libcomp::BinaryDataSet(allocator, mapper), mObjectNamer(namer) {}
+
+BinaryDataNamedSet::~BinaryDataNamedSet() {}
+
+uint32_t BinaryDataNamedSet::GetMapID(
+    const std::shared_ptr<libcomp::Object>& obj) const {
+  return mObjectMapper(obj);
 }
 
-BinaryDataNamedSet::BinaryDataNamedSet(std::function<std::shared_ptr<
-    libcomp::Object>()> allocator, std::function<uint32_t(
-    const std::shared_ptr<libcomp::Object>&)> mapper,
-	std::function<libcomp::String(const std::shared_ptr<
-	libcomp::Object>&)> namer) :
-    libcomp::BinaryDataSet(allocator, mapper), mObjectNamer(namer)
-{
-}
+libcomp::String BinaryDataNamedSet::GetName(
+    const std::shared_ptr<libcomp::Object>& obj) const {
+  if (!obj) {
+    return "";
+  }
 
-BinaryDataNamedSet::~BinaryDataNamedSet()
-{
-}
+  if (mExplicitNames.size() > 0) {
+    uint32_t mapID = GetMapID(obj);
 
-uint32_t BinaryDataNamedSet::GetMapID(const std::shared_ptr<
-    libcomp::Object>& obj) const
-{
-    return mObjectMapper(obj);
-}
-
-libcomp::String BinaryDataNamedSet::GetName(const std::shared_ptr<
-    libcomp::Object>& obj) const
-{
-    if(!obj)
-    {
-        return "";
+    auto iter = mExplicitNames.find(mapID);
+    if (iter != mExplicitNames.end()) {
+      return iter->second;
     }
+  }
 
-    if(mExplicitNames.size() > 0)
-    {
-        uint32_t mapID = GetMapID(obj);
-
-        auto iter = mExplicitNames.find(mapID);
-        if(iter != mExplicitNames.end())
-        {
-            return iter->second;
-        }
-    }
-
-    if(mObjectNamer)
-    {
-        return mObjectNamer(obj);
-    }
-    else
-    {
-        return "";
-    }
+  if (mObjectNamer) {
+    return mObjectNamer(obj);
+  } else {
+    return "";
+  }
 }
 
 void BinaryDataNamedSet::MapRecords(
     std::vector<std::shared_ptr<libcomp::Object>>& objs,
-    std::vector<libcomp::String>& explicitNames)
-{
-    // Clear old records and reload
-    mObjects.clear();
-    mObjectMap.clear();
-    mExplicitNames.clear();
+    std::vector<libcomp::String>& explicitNames) {
+  // Clear old records and reload
+  mObjects.clear();
+  mObjectMap.clear();
+  mExplicitNames.clear();
 
-    bool setNames = objs.size() == explicitNames.size();
-    for(size_t i = 0; i < objs.size(); i++)
-    {
-        auto obj = objs[i];
-        uint32_t mapID = GetMapID(obj);
+  bool setNames = objs.size() == explicitNames.size();
+  for (size_t i = 0; i < objs.size(); i++) {
+    auto obj = objs[i];
+    uint32_t mapID = GetMapID(obj);
 
-        // Make sure we don't add the same value twice
-        if(mObjectMap.find(mapID) == mObjectMap.end())
-        {
-            mObjects.push_back(obj);
-            mObjectMap[mapID] = obj;
+    // Make sure we don't add the same value twice
+    if (mObjectMap.find(mapID) == mObjectMap.end()) {
+      mObjects.push_back(obj);
+      mObjectMap[mapID] = obj;
 
-            if(setNames)
-            {
-                mExplicitNames[mapID] = explicitNames[i];
-            }
-        }
+      if (setNames) {
+        mExplicitNames[mapID] = explicitNames[i];
+      }
     }
+  }
 }

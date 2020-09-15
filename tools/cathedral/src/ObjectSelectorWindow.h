@@ -26,56 +26,54 @@
 #define TOOLS_CATHEDRAL_SRC_OBJECTSELECTORWINDOW_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QMainWindow>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QMainWindow>
 
 // libcomp Includes
 #include <CString.h>
 #include <Object.h>
 
-namespace Ui
-{
+namespace Ui {
 
 class ObjectSelectorWindow;
 
-} // namespace Ui
+}  // namespace Ui
 
 class FindRefWindow;
 class MainWindow;
 class ObjectSelectorBase;
 class ObjectSelectorList;
 
-class ObjectSelectorWindow : public QMainWindow
-{
-    Q_OBJECT
+class ObjectSelectorWindow : public QMainWindow {
+  Q_OBJECT
 
-public:
-    explicit ObjectSelectorWindow(MainWindow* pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ObjectSelectorWindow();
+ public:
+  explicit ObjectSelectorWindow(MainWindow* pMainWindow, QWidget* pParent = 0);
+  virtual ~ObjectSelectorWindow();
 
-    void Bind(ObjectSelectorList* listControl, bool findRef);
+  void Bind(ObjectSelectorList* listControl, bool findRef);
 
-    void Open(ObjectSelectorBase* ctrl = 0);
+  void Open(ObjectSelectorBase* ctrl = 0);
 
-    bool CloseIfConnected(QWidget* topLevel);
+  bool CloseIfConnected(QWidget* topLevel);
 
-    void closeEvent(QCloseEvent* event) override;
+  void closeEvent(QCloseEvent* event) override;
 
-protected slots:
-    void ObjectSelected();
-    void SelectedObjectChanged();
-    void Find();
+ protected slots:
+  void ObjectSelected();
+  void SelectedObjectChanged();
+  void Find();
 
-private:
-    Ui::ObjectSelectorWindow *ui;
+ private:
+  Ui::ObjectSelectorWindow* ui;
 
-    MainWindow* mMainWindow;
+  MainWindow* mMainWindow;
 
-    ObjectSelectorBase* mSelectorControl;
+  ObjectSelectorBase* mSelectorControl;
 
-    FindRefWindow* mFindWindow;
+  FindRefWindow* mFindWindow;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_OBJECTSELECTORWINDOW_H
+#endif  // TOOLS_CATHEDRAL_SRC_OBJECTSELECTORWINDOW_H

@@ -46,60 +46,56 @@
 
 using namespace channel;
 
-bool Parsers::BazaarItemDrop::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BazaarItemDrop::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 10)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 10) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+
+  int8_t srcSlot = p.ReadS8();
+  int64_t itemID = p.ReadS64Little();
+  int8_t destSlot = p.ReadS8();
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_ITEM_DROP);
+  reply.WriteS8(srcSlot);
+  reply.WriteS64Little(itemID);
+  reply.WriteS8(destSlot);
+
+  auto dbChanges = libcomp::DatabaseChangeSet::Create();
+  if (channel::BazaarState::DropItemFromMarket(state, srcSlot, itemID, destSlot,
+                                               dbChanges)) {
+    if (!server->GetWorldDatabase()->ProcessChangeSet(dbChanges)) {
+      LogBazaarError([&]() {
+        return libcomp::String("BazaarItemDrop failed to save: %1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+
+      client->Kill();
+      return true;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+    auto cState = state->GetCharacterState();
+    auto character = cState->GetEntity();
+    auto inventory = character->GetItemBoxes(0).Get();
 
-    int8_t srcSlot = p.ReadS8();
-    int64_t itemID = p.ReadS64Little();
-    int8_t destSlot = p.ReadS8();
+    std::list<uint16_t> updatedSlots = {(uint16_t)destSlot};
+    server->GetCharacterManager()->SendItemBoxData(client, inventory,
+                                                   updatedSlots);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_ITEM_DROP);
-    reply.WriteS8(srcSlot);
-    reply.WriteS64Little(itemID);
-    reply.WriteS8(destSlot);
+    reply.WriteS32Little(0);  // Success
+  } else {
+    reply.WriteS32Little(-1);  // Failure
+  }
 
-    auto dbChanges = libcomp::DatabaseChangeSet::Create();
-    if(channel::BazaarState::DropItemFromMarket(state, srcSlot, itemID, destSlot, dbChanges))
-    {
-        if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
-        {
-            LogBazaarError([&]()
-            {
-                return libcomp::String("BazaarItemDrop failed to save: %1\n")
-                    .Arg(state->GetAccountUID().ToString());
-            });
+  client->SendPacket(reply);
 
-            client->Kill();
-            return true;
-        }
-
-        auto cState = state->GetCharacterState();
-        auto character = cState->GetEntity();
-        auto inventory = character->GetItemBoxes(0).Get();
-
-        std::list<uint16_t> updatedSlots = { (uint16_t)destSlot };
-        server->GetCharacterManager()->SendItemBoxData(client, inventory,
-            updatedSlots);
-
-        reply.WriteS32Little(0);    // Success
-    }
-    else
-    {
-        reply.WriteS32Little(-1);   // Failure
-    }
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

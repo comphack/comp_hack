@@ -42,103 +42,93 @@
 
 using namespace channel;
 
-bool Parsers::PostList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PostList::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto lobbyDB = server->GetLobbyDatabase();
+
+  int32_t slotsRemaining = p.ReadS32Little();
+  int32_t itemIdx = p.ReadS32Little();
+
+  // Always reload the items
+  auto postItems = objects::PostItem::LoadPostItemListByAccount(
+      lobbyDB, state->GetAccountUID());
+
+  // Since the post items are not kept in a sequential container,
+  // guarantee the order doesn't change by listing by timestamp,
+  // then type, then UUID
+  postItems.sort([](const std::shared_ptr<objects::PostItem>& a,
+                    const std::shared_ptr<objects::PostItem>& b) {
+    return a->GetTimestamp() < b->GetTimestamp() ||
+           (a->GetTimestamp() == b->GetTimestamp() &&
+            a->GetType() < b->GetType()) ||
+           (a->GetTimestamp() == b->GetTimestamp() &&
+            a->GetType() == b->GetType() &&
+            a->GetUUID().ToString() < b->GetUUID().ToString());
+  });
+
+  // Adjust the index to only return the ones the client doesn't
+  // know about as the client only wants new items
+  itemIdx = (int32_t)(itemIdx + (21 - slotsRemaining));
+
+  // Pull the items starting at the index
+  std::list<std::shared_ptr<objects::PostItem>> items;
+  if (itemIdx < (int32_t)postItems.size()) {
+    auto pIter = postItems.begin();
+    std::advance(pIter, itemIdx);
+
+    for (int32_t i = itemIdx;
+         i < (int32_t)(itemIdx + slotsRemaining) && pIter != postItems.end();
+         i++) {
+      auto item = *pIter;
+      items.push_back(item);
+      pIter++;
+    }
+  }
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_POST_LIST);
+  reply.WriteS32Little(0);  // Success
+  reply.WriteS32Little((int32_t)items.size());
+
+  for (auto item : items) {
+    int32_t localObjectID = state->GetLocalObjectID(item->GetUUID());
+    reply.WriteS32Little(localObjectID);
+    reply.WriteS8((int8_t)item->GetSource());
+
+    if (item->GetSource() == objects::PostItem::Source_t::GIFT) {
+      reply.WriteS32Little(localObjectID);  // Gift ID
+    } else {
+      reply.WriteS32Little(-1);
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto lobbyDB = server->GetLobbyDatabase();
+    reply.WriteS32Little((int32_t)item->GetType());
+    reply.WriteS32Little((int32_t)item->GetTimestamp());
+    reply.WriteS32Little(1);  // Unknown
+  }
 
-    int32_t slotsRemaining = p.ReadS32Little();
-    int32_t itemIdx = p.ReadS32Little();
+  reply.WriteS32Little(itemIdx);
+  reply.WriteS32Little((int32_t)postItems.size());
 
-    // Always reload the items
-    auto postItems = objects::PostItem::LoadPostItemListByAccount(lobbyDB,
-        state->GetAccountUID());
+  connection->SendPacket(reply);
 
-    // Since the post items are not kept in a sequential container,
-    // guarantee the order doesn't change by listing by timestamp,
-    // then type, then UUID
-    postItems.sort([](const std::shared_ptr<objects::PostItem>& a,
-        const std::shared_ptr<objects::PostItem>& b)
-    {
-        return a->GetTimestamp() < b->GetTimestamp() ||
-            (a->GetTimestamp() == b->GetTimestamp() &&
-                a->GetType() < b->GetType()) ||
-            (a->GetTimestamp() == b->GetTimestamp() &&
-                a->GetType() == b->GetType() &&
-                a->GetUUID().ToString() < b->GetUUID().ToString());
-    });
+  // Send any post items pending distribution
+  auto distribute = postItems;
+  distribute.remove_if([](const std::shared_ptr<objects::PostItem>& item) {
+    return item->GetDistributionMessageID() == 0;
+  });
+  if (distribute.size() > 0) {
+    server->GetCharacterManager()->NotifyItemDistribution(client, distribute);
+  }
 
-    // Adjust the index to only return the ones the client doesn't
-    // know about as the client only wants new items
-    itemIdx = (int32_t)(itemIdx + (21 - slotsRemaining));
-
-    // Pull the items starting at the index
-    std::list<std::shared_ptr<objects::PostItem>> items;
-    if(itemIdx < (int32_t)postItems.size())
-    {
-        auto pIter = postItems.begin();
-        std::advance(pIter, itemIdx);
-
-        for(int32_t i = itemIdx; i < (int32_t)(itemIdx + slotsRemaining) &&
-            pIter != postItems.end(); i++)
-        {
-            auto item = *pIter;
-            items.push_back(item);
-            pIter++;
-        }
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_POST_LIST);
-    reply.WriteS32Little(0);    // Success
-    reply.WriteS32Little((int32_t)items.size());
-
-    for(auto item : items)
-    {
-        int32_t localObjectID = state->GetLocalObjectID(item->GetUUID());
-        reply.WriteS32Little(localObjectID);
-        reply.WriteS8((int8_t)item->GetSource());
-
-        if(item->GetSource() == objects::PostItem::Source_t::GIFT)
-        {
-            reply.WriteS32Little(localObjectID);   // Gift ID
-        }
-        else
-        {
-            reply.WriteS32Little(-1);
-        }
-
-        reply.WriteS32Little((int32_t)item->GetType());
-        reply.WriteS32Little((int32_t)item->GetTimestamp());
-        reply.WriteS32Little(1);    // Unknown
-    }
-
-    reply.WriteS32Little(itemIdx);
-    reply.WriteS32Little((int32_t)postItems.size());
-
-    connection->SendPacket(reply);
-
-    // Send any post items pending distribution
-    auto distribute = postItems;
-    distribute.remove_if([](
-        const std::shared_ptr<objects::PostItem>& item)
-        {
-            return item->GetDistributionMessageID() == 0;
-        });
-    if(distribute.size() > 0)
-    {
-        server->GetCharacterManager()->NotifyItemDistribution(client,
-            distribute);
-    }
-
-    return true;
+  return true;
 }

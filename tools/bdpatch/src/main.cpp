@@ -118,17 +118,17 @@
 #include <MiModificationTriggerData.h>
 #include <MiModifiedEffectData.h>
 #include <MiMultiTalkCmdTbl.h>
-#include <MiNextEpisodeInfo.h>
 #include <MiNPCBarterConditionData.h>
 #include <MiNPCBarterData.h>
 #include <MiNPCBarterGroupData.h>
 #include <MiNPCBarterTextData.h>
 #include <MiNPCBasicData.h>
 #include <MiNPCInvisibleData.h>
+#include <MiNextEpisodeInfo.h>
 #include <MiONPCData.h>
 #include <MiPMAttachCharacterTbl.h>
-#include <MiPMBaseInfo.h>
 #include <MiPMBGMKeyTbl.h>
+#include <MiPMBaseInfo.h>
 #include <MiPMCameraKeyTbl.h>
 #include <MiPMEffectKeyTbl.h>
 #include <MiPMFadeKeyTbl.h>
@@ -136,18 +136,17 @@
 #include <MiPMGouraudKeyTbl.h>
 #include <MiPMMotionKeyTbl.h>
 #include <MiPMMsgKeyTbl.h>
-#include <MiPMScalingHelperTbl.h>
 #include <MiPMSEKeyTbl.h>
+#include <MiPMScalingHelperTbl.h>
 #include <MiQuestBonusCodeData.h>
 #include <MiQuestBonusData.h>
 #include <MiQuestData.h>
 #include <MiReportTypeData.h>
-#include <MiShopProductData.h>
 #include <MiSItemData.h>
+#include <MiShopProductData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
 #include <MiSpotData.h>
-#include <MiStatusData.h>
 #include <MiStatusData.h>
 #include <MiSynthesisData.h>
 #include <MiTankData.h>
@@ -163,411 +162,360 @@
 
 #ifdef DREAM_OBJGEN_INCLUDE_A
 #include DREAM_OBJGEN_INCLUDE_A
-#endif // DREAM_OBJGEN_INCLUDE_A
+#endif  // DREAM_OBJGEN_INCLUDE_A
 
 // tinyxml2 Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
 #include <tinyxml2.h>
-#include <PopIgnore.h>
 
-class ManualBinaryDataSet : public libcomp::BinaryDataSet
-{
-public:
-    ManualBinaryDataSet(
-        std::function<std::shared_ptr<libcomp::Object>()> alloc,
-        std::function<uint32_t(const std::shared_ptr<libcomp::Object>&)> map) :
-        libcomp::BinaryDataSet(alloc, map) { }
-    virtual ~ManualBinaryDataSet() { }
+class ManualBinaryDataSet : public libcomp::BinaryDataSet {
+ public:
+  ManualBinaryDataSet(
+      std::function<std::shared_ptr<libcomp::Object>()> alloc,
+      std::function<uint32_t(const std::shared_ptr<libcomp::Object>&)> map)
+      : libcomp::BinaryDataSet(alloc, map) {}
+  virtual ~ManualBinaryDataSet() {}
 
-    void AddRecord(std::shared_ptr<libcomp::Object> obj)
-    {
-        mObjects.push_back(obj);
-    }
+  void AddRecord(std::shared_ptr<libcomp::Object> obj) {
+    mObjects.push_back(obj);
+  }
 };
 
-int Usage(const char *szAppName, const std::map<std::string,
-    std::pair<std::string, std::function<libcomp::BinaryDataSet*(void)>>>& binaryTypes)
-{
-    std::cerr << "USAGE: " << szAppName << " load TYPE IN OUT" << std::endl;
-    std::cerr << "USAGE: " << szAppName << " save TYPE IN OUT" << std::endl;
-    std::cerr << "USAGE: " << szAppName << " flatten TYPE IN OUT" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "TYPE indicates the format of the BinaryData and can "
-        << "be one of:" << std::endl;
+int Usage(
+    const char* szAppName,
+    const std::map<
+        std::string,
+        std::pair<std::string, std::function<libcomp::BinaryDataSet*(void)>>>&
+        binaryTypes) {
+  std::cerr << "USAGE: " << szAppName << " load TYPE IN OUT" << std::endl;
+  std::cerr << "USAGE: " << szAppName << " save TYPE IN OUT" << std::endl;
+  std::cerr << "USAGE: " << szAppName << " flatten TYPE IN OUT" << std::endl;
+  std::cerr << std::endl;
+  std::cerr << "TYPE indicates the format of the BinaryData and can "
+            << "be one of:" << std::endl;
 
-    for(auto& typ : binaryTypes)
-    {
-        std::cerr << typ.second.first << std::endl;
-    }
+  for (auto& typ : binaryTypes) {
+    std::cerr << typ.second.first << std::endl;
+  }
 
-    std::cerr << std::endl;
-    std::cerr << "Mode 'load' will take the input BinaryData file and "
-        << "write the output XML file." << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "Mode 'save' will take the input XML file and "
-        << "write the output BinaryData file." << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "Mode 'flatten' will take the input BinaryData file and "
-        << "write the output text file." << std::endl;
+  std::cerr << std::endl;
+  std::cerr << "Mode 'load' will take the input BinaryData file and "
+            << "write the output XML file." << std::endl;
+  std::cerr << std::endl;
+  std::cerr << "Mode 'save' will take the input XML file and "
+            << "write the output BinaryData file." << std::endl;
+  std::cerr << std::endl;
+  std::cerr << "Mode 'flatten' will take the input BinaryData file and "
+            << "write the output text file." << std::endl;
 
-    return EXIT_FAILURE;
+  return EXIT_FAILURE;
 }
 
-#define ADD_TYPE(desc, key, objname) \
-    binaryTypes[key] = std::make_pair(desc, []() \
-    { \
-        return new libcomp::BinaryDataSet( \
-            []() \
-            { \
-                return std::make_shared<objects::objname>(); \
-            }, \
-\
-            [](const std::shared_ptr<libcomp::Object>& obj) -> uint32_t \
-            { \
-                return static_cast<uint32_t>(std::dynamic_pointer_cast< \
-                    objects::objname>(obj)->GetID()); \
-            } \
-        ); \
-    });
+#define ADD_TYPE(desc, key, objname)                                      \
+  binaryTypes[key] = std::make_pair(desc, []() {                          \
+    return new libcomp::BinaryDataSet(                                    \
+        []() { return std::make_shared<objects::objname>(); },            \
+                                                                          \
+        [](const std::shared_ptr<libcomp::Object>& obj) -> uint32_t {     \
+          return static_cast<uint32_t>(                                   \
+              std::dynamic_pointer_cast<objects::objname>(obj)->GetID()); \
+        });                                                               \
+  });
 
-#define ADD_TYPE_EX(desc, key, objname, getid) \
-    binaryTypes[key] = std::make_pair(desc, []() \
-    { \
-\
-        return new libcomp::BinaryDataSet( \
-            []() \
-            { \
-                return std::make_shared<objects::objname>(); \
-            }, \
-\
-            [](const std::shared_ptr<libcomp::Object>& obj) -> uint32_t \
-            { \
-                return static_cast<uint32_t>(std::dynamic_pointer_cast< \
-                    objects::objname>(obj)->getid); \
-            } \
-        ); \
-    });
+#define ADD_TYPE_EX(desc, key, objname, getid)                          \
+  binaryTypes[key] = std::make_pair(desc, []() {                        \
+    return new libcomp::BinaryDataSet(                                  \
+        []() { return std::make_shared<objects::objname>(); },          \
+                                                                        \
+        [](const std::shared_ptr<libcomp::Object>& obj) -> uint32_t {   \
+          return static_cast<uint32_t>(                                 \
+              std::dynamic_pointer_cast<objects::objname>(obj)->getid); \
+        });                                                             \
+  });
 
-#define ADD_TYPE_SEQ(desc, key, objname) \
-    binaryTypes[key] = std::make_pair(desc, []() \
-    { \
-        static uint32_t nextID = 0; \
-\
-        return new libcomp::BinaryDataSet( \
-            []() \
-            { \
-                return std::make_shared<objects::objname>(); \
-            }, \
-\
-            [](const std::shared_ptr<libcomp::Object>& obj) \
-            { \
-                (void)obj; \
-\
-                return nextID++; \
-            } \
-        ); \
-    });
+#define ADD_TYPE_SEQ(desc, key, objname)                       \
+  binaryTypes[key] = std::make_pair(desc, []() {               \
+    static uint32_t nextID = 0;                                \
+                                                               \
+    return new libcomp::BinaryDataSet(                         \
+        []() { return std::make_shared<objects::objname>(); }, \
+                                                               \
+        [](const std::shared_ptr<libcomp::Object>& obj) {      \
+          (void)obj;                                           \
+                                                               \
+          return nextID++;                                     \
+        });                                                    \
+  });
 
-#define ADD_TYPE_MAN(desc, key, objname) \
-    binaryTypes[key] = std::make_pair(desc, []() \
-    { \
-        static uint32_t nextID = 0; \
-\
-        return new ManualBinaryDataSet( \
-            []() \
-            { \
-                return std::make_shared<objects::objname>(); \
-            }, \
-\
-            [](const std::shared_ptr<libcomp::Object>& obj) \
-            { \
-                (void)obj; \
-\
-                return nextID++; \
-            } \
-        ); \
-    });
+#define ADD_TYPE_MAN(desc, key, objname)                       \
+  binaryTypes[key] = std::make_pair(desc, []() {               \
+    static uint32_t nextID = 0;                                \
+                                                               \
+    return new ManualBinaryDataSet(                            \
+        []() { return std::make_shared<objects::objname>(); }, \
+                                                               \
+        [](const std::shared_ptr<libcomp::Object>& obj) {      \
+          (void)obj;                                           \
+                                                               \
+          return nextID++;                                     \
+        });                                                    \
+  });
 
-int main(int argc, char *argv[])
-{
-    std::map<std::string, std::pair<std::string,
-        std::function<libcomp::BinaryDataSet*(void)>>> binaryTypes;
+int main(int argc, char* argv[]) {
+  std::map<std::string,
+           std::pair<std::string, std::function<libcomp::BinaryDataSet*(void)>>>
+      binaryTypes;
 
-    ADD_TYPE    ("  ai                    Format for AIData.sbin", "ai", MiAIData);
-    ADD_TYPE    ("  bazaarclerknpc        Format for BazaarClerkNPCData.sbin", "bazaarclerknpc", MiBazaarClerkNPCData);
-    ADD_TYPE    ("  blend                 Format for BlendData.sbin", "blend", MiBlendData);
-    ADD_TYPE    ("  blendext              Format for BlendExtData.sbin", "blendext", MiBlendExtData);
-    ADD_TYPE    ("  cappearanceequip      Format for CAppearanceEquipData.bin", "cappearanceequip", MiCAppearanceEquipData);
-    ADD_TYPE    ("  cchanceitem           Format for CChanceItemData.sbin", "cchanceitem", MiCChanceItemData);
-    ADD_TYPE    ("  cdevilbookbonus       Format for CDevilBookBonusData.sbin", "cdevilbookbonus", MiCDevilBookBonusData);
-    ADD_TYPE    ("  cdevilbookbonusmitama Format for CDevilBookBonusMitamaData.sbin", "cdevilbookbonusmitama", MiCDevilBookBonusMitamaData);
-    ADD_TYPE    ("  cdevilboosticon       Format for CDevilBoostIconData.sbin", "cdevilboosticon", MiCDevilBoostIconData);
-    ADD_TYPE    ("  cdevildungeon         Format for CDevilDungeonData.sbin", "cdevildungeon", MiCDevilDungeonData);
-    ADD_TYPE    ("  cdevilequipexclusive  Format for CDevilEquipmentExclusiveData.sbin", "cdevilequipexclusive", MiCDevilEquipmentExclusiveData);
-    ADD_TYPE    ("  cequipmodel           Format for CEquipModelData.sbin", "cequipmodel", MiCEquipModelData);
-    ADD_TYPE    ("  cevent                Format for CEventData.bin", "cevent", MiCEventData);
-    ADD_TYPE    ("  ceventmessage         Format for CEventMessageData.sbin", "ceventmessage", MiCEventMessageData);
-    ADD_TYPE    ("  cguardianassist       Format for CGuardianAssistData.sbin", "cguardianassist", MiCGuardianAssistData);
-    ADD_TYPE    ("  chelp                 Format for CHelpData.sbin", "chelp", MiCHelpData);
-    ADD_TYPE    ("  chourai               Format for CHouraiData.sbin", "chourai", MiCHouraiData);
-    ADD_TYPE    ("  chouraimessage        Format for CHouraiMessageData.sbin", "chouraimessage", MiCHouraiMessageData);
-    ADD_TYPE    ("  cicon                 Format for CIconData.bin", "cicon", MiCIconData);
-    ADD_TYPE    ("  cloadingcommercial    Format for CLoadingCommercialData.sbin", "cloadingcommercial", MiCLoadingCommercialData);
-    ADD_TYPE    ("  cmap                  Format for CMapData.bin", "cmap", MiCMapData);
-    ADD_TYPE    ("  cmessage              Format for CMessageData.sbin", "cmessage", MiCMessageData);
-    ADD_TYPE    ("  cmodifiedeffect       Format for CModifiedEffectData.sbin", "cmodifiedeffect", MiCModifiedEffectData);
-    ADD_TYPE    ("  cmultitalk            Format for CMultiTalkData.bin", "cmultitalk", MiCMultiTalkData);
-    ADD_TYPE    ("  cmultitalkdirection   Format for CMultiTalkDirectionData.bin", "cmultitalkdirection", MiCMultiTalkDirectionData);
-    ADD_TYPE    ("  cmultitalkpop         Format for CMultiTalkPopData.bin", "cmultitalkpop", MiCMultiTalkPopData);
-    ADD_TYPE    ("  cquest                Format for CQuestData.sbin", "cquest", MiCQuestData);
-    ADD_TYPE    ("  csound                Format for CSoundData.bin", "csound", MiCSoundData);
-    ADD_TYPE    ("  cspskilleffect        Format for CSpecialSkillEffectData.sbin", "cspskilleffect", MiCSpecialSkillEffectData);
-    ADD_TYPE    ("  cstatus               Format for CStatusData.sbin", "cstatus", MiCStatusData);
-    ADD_TYPE    ("  ctalkmessage          Format for CTalkMessageData.sbin", "ctalkmessage", MiCTalkMessageData);
-    ADD_TYPE    ("  ctimeattack           Format for CTimeAttackData.sbin", "ctimeattack", MiCTimeAttackData);
-    ADD_TYPE    ("  ctitle                Format for CTitleData.sbin", "ctitle", MiCTitleData);
-    ADD_TYPE    ("  cultureitem           Format for CultureItemData.sbin", "cultureitem", MiCultureItemData);
-    ADD_TYPE    ("  cvaluables            Format for CValuablesData.sbin", "cvaluables", MiCValuablesData);
-    ADD_TYPE    ("  devilbook             Format for DevilBookData.sbin", "devilbook", MiDevilBookData);
-    ADD_TYPE    ("  devilboost            Format for DevilBoostData.sbin", "devilboost", MiDevilBoostData);
-    ADD_TYPE    ("  devillvluprate        Format for DevilLVUpRateData.sbin", "devillvluprate", MiDevilLVUpRateData);
-    ADD_TYPE    ("  disassembly           Format for DisassemblyData.sbin", "disassembly", MiDisassemblyData);
-    ADD_TYPE    ("  disassemblytrig       Format for DisassemblyTriggerData.sbin", "disassemblytrig", MiDisassemblyTriggerData);
-    ADD_TYPE    ("  dynamicmap            Format for DynamicMapData.bin", "dynamicmap", MiDynamicMapData);
-    ADD_TYPE    ("  enchant               Format for EnchantData.sbin", "enchant", MiEnchantData);
-    ADD_TYPE    ("  equipset              Format for EquipmentSetData.sbin", "equipset", MiEquipmentSetData);
-    ADD_TYPE    ("  eventdirection        Format for EventDirectionData.bin", "eventdirection", MiEventDirectionData);
-    ADD_TYPE    ("  exchange              Format for ExchangeData.sbin", "exchange", MiExchangeData);
-    ADD_TYPE    ("  expert                Format for ExpertClassData.sbin", "expert", MiExpertData);
-    ADD_TYPE    ("  guardianassist        Format for GuardianAssistData.sbin", "guardianassist", MiGuardianAssistData);
-    ADD_TYPE    ("  guardianlevel         Format for GuardianLevelData.sbin", "guardianlevel", MiGuardianLevelData);
-    ADD_TYPE    ("  guardianspecial       Format for GuardianSpecialData.sbin", "guardianspecial", MiGuardianSpecialData);
-    ADD_TYPE    ("  guardianunlock        Format for GuardianUnlockData.sbin", "guardianunlock", MiGuardianUnlockData);
-    ADD_TYPE    ("  gvgtrophy             Format for GvGTrophyData.sbin", "gvgtrophy", MiGvGTrophyData);
-    ADD_TYPE    ("  mission               Format for MissionData.sbin", "mission", MiMissionData);
-    ADD_TYPE    ("  mitamabonus           Format for MitamaReunionBonusData.sbin", "mitamabonus", MiMitamaReunionBonusData);
-    ADD_TYPE    ("  mitamasetbonus        Format for MitamaReunionSetBonusData.sbin", "mitamasetbonus", MiMitamaReunionSetBonusData);
-    ADD_TYPE    ("  mitamaunion           Format for MitamaUnionBonusData.sbin", "mitamaunion", MiMitamaUnionBonusData);
-    ADD_TYPE    ("  mod                   Format for ModificationData.sbin", "mod", MiModificationData);
-    ADD_TYPE    ("  modeffect             Format for ModifiedEffectData.sbin", "modeffect", MiModifiedEffectData);
-    ADD_TYPE    ("  modextrecipe          Format for ModificationExtRecipeData.sbin", "modextrecipe", MiModificationExtRecipeData);
-    ADD_TYPE    ("  modtrigger            Format for ModificationTriggerData.sbin", "modtrigger", MiModificationTriggerData);
-    ADD_TYPE    ("  npcbarter             Format for NPCBarterData.sbin", "npcbarter", MiNPCBarterData);
-    ADD_TYPE    ("  npcbartercondition    Format for NPCBarterConditionData.sbin", "npcbartercondition", MiNPCBarterConditionData);
-    ADD_TYPE    ("  npcbartergroup        Format for NPCBarterGroupData.sbin", "npcbartergroup", MiNPCBarterGroupData);
-    ADD_TYPE    ("  npcbartertext         Format for NPCBarterTextData.sbin", "npcbartertext", MiNPCBarterTextData);
-    ADD_TYPE    ("  npcinvisible          Format for NPCInvisibleData.sbin", "npcinvisible", MiNPCInvisibleData);
-    ADD_TYPE    ("  onpc                  Format for oNPCData.sbin", "onpc", MiONPCData);
-    ADD_TYPE    ("  quest                 Format for QuestData.sbin", "quest", MiQuestData);
-    ADD_TYPE    ("  questbonus            Format for QuestBonusData.sbin", "questbonus", MiQuestBonusData);
-    ADD_TYPE    ("  questbonuscode        Format for QuestBonusCodeData.sbin", "questbonuscode", MiQuestBonusCodeData);
-    ADD_TYPE    ("  reporttype            Format for ReportTypeData.bin", "reporttype", MiReportTypeData);
-    ADD_TYPE    ("  shopproduct           Format for ShopProductData.sbin", "shopproduct", MiShopProductData);
-    ADD_TYPE    ("  sitem                 Format for SItemData.sbin", "sitem", MiSItemData);
-    ADD_TYPE    ("  spot                  Format for SpotData.bin", "spot", MiSpotData);
-    ADD_TYPE    ("  synthesis             Format for SynthesisData.sbin", "synthesis", MiSynthesisData);
-    ADD_TYPE    ("  tank                  Format for TankData.sbin", "tank", MiTankData);
-    ADD_TYPE    ("  timelimit             Format for TimeLimitData.sbin", "timelimit", MiTimeLimitData);
-    ADD_TYPE    ("  title                 Format for CodeNameData.sbin", "title", MiTitleData);
-    ADD_TYPE    ("  triunionspecial       Format for TriUnionSpecialData.sbin", "triunionspecial", MiTriUnionSpecialData);
-    ADD_TYPE    ("  uiinfo                Format for UIInfoData.bin", "uiinfo", MiUIInfoData);
-    ADD_TYPE    ("  warppoint             Format for WarpPointData.sbin", "warppoint", MiWarpPointData);
-    ADD_TYPE_EX ("  cculture              Format for CCultureData.sbin", "cculture", MiCCultureData, GetUpperLimit());
-    ADD_TYPE_EX ("  citem                 Format for CItemData.sbin", "citem", MiCItemData, GetBaseData()->GetID());
-    ADD_TYPE_EX ("  ckeyitem              Format for CKeyItemData.sbin", "ckeyitem", MiCKeyItemData, GetItemData()->GetID());
-    ADD_TYPE_EX ("  cmodel                Format for CModelData.sbin", "cmodel", MiCModelData, GetBase()->GetID());
-    ADD_TYPE_EX ("  cskill                Format for CSkillData.bin", "cskill", MiCSkillData, GetBase()->GetID());
-    ADD_TYPE_EX ("  ctransformedmodel     Format for CTransformedModelData.sbin", "ctransformedmodel", MiCTransformedModelData, GetItemID());
-    ADD_TYPE_EX ("  devil                 Format for DevilData.sbin", "devil", MiDevilData, GetBasic()->GetID());
-    ADD_TYPE_EX ("  devilboostextra       Format for DevilBoostExtraData.sbin", "devilboostextra", MiDevilBoostExtraData, GetStackID());
-    ADD_TYPE_EX ("  devilboostitem        Format for DevilBoostItemData.sbin", "devilboostitem", MiDevilBoostItemData, GetItemID());
-    ADD_TYPE_EX ("  devilboostlot         Format for DevilBoostLotData.sbin", "devilboostlot", MiDevilBoostLotData, GetLot());
-    ADD_TYPE_EX ("  devilequip            Format for DevilEquipmentData.sbin", "devilequip", MiDevilEquipmentData, GetSkillID());
-    ADD_TYPE_EX ("  devilequipitem        Format for DevilEquipmentItemData.sbin", "devilequipitem", MiDevilEquipmentItemData, GetItemID());
-    ADD_TYPE_EX ("  devilfusion           Format for DevilFusionData.sbin", "devilfusion", MiDevilFusionData, GetSkillID());
-    ADD_TYPE_EX ("  hnpc                  Format for hNPCData.sbin", "hnpc", MiHNPCData, GetBasic()->GetID());
-    ADD_TYPE_EX ("  item                  Format for ItemData.sbin", "item", MiItemData, GetCommon()->GetID());
-    ADD_TYPE_EX ("  skill                 Format for SkillData.sbin", "skill", MiSkillData, GetCommon()->GetID());
-    ADD_TYPE_EX ("  status                Format for StatusData.sbin", "status", MiStatusData, GetCommon()->GetID());
-    ADD_TYPE_EX ("  zone                  Format for ZoneData.sbin", "zone", MiZoneData, GetBasic()->GetID());
-    ADD_TYPE_SEQ("  cpolygonmovie         Format for CPolygonMoveData.sbin", "cpolygonmovie", MiCPolygonMovieData);
-    ADD_TYPE_SEQ("  modexteffect          Format for ModificationExtEffectData.sbin", "modexteffect", MiModificationExtEffectData);
-    ADD_TYPE_SEQ("  urafieldtower         Format for UraFieldTowerData.sbin", "urafieldtower", MiUraFieldTowerData);
-    ADD_TYPE_MAN("  qmp                   Format for misc qmp files", "qmp", QmpFile);
+  // clang-format off
+  ADD_TYPE    ("  ai                    Format for AIData.sbin", "ai", MiAIData);
+  ADD_TYPE    ("  bazaarclerknpc        Format for BazaarClerkNPCData.sbin", "bazaarclerknpc", MiBazaarClerkNPCData);
+  ADD_TYPE    ("  blend                 Format for BlendData.sbin", "blend", MiBlendData);
+  ADD_TYPE    ("  blendext              Format for BlendExtData.sbin", "blendext", MiBlendExtData);
+  ADD_TYPE    ("  cappearanceequip      Format for CAppearanceEquipData.bin", "cappearanceequip", MiCAppearanceEquipData);
+  ADD_TYPE    ("  cchanceitem           Format for CChanceItemData.sbin", "cchanceitem", MiCChanceItemData);
+  ADD_TYPE    ("  cdevilbookbonus       Format for CDevilBookBonusData.sbin", "cdevilbookbonus", MiCDevilBookBonusData);
+  ADD_TYPE    ("  cdevilbookbonusmitama Format for CDevilBookBonusMitamaData.sbin", "cdevilbookbonusmitama", MiCDevilBookBonusMitamaData);
+  ADD_TYPE    ("  cdevilboosticon       Format for CDevilBoostIconData.sbin", "cdevilboosticon", MiCDevilBoostIconData);
+  ADD_TYPE    ("  cdevildungeon         Format for CDevilDungeonData.sbin", "cdevildungeon", MiCDevilDungeonData);
+  ADD_TYPE    ("  cdevilequipexclusive  Format for CDevilEquipmentExclusiveData.sbin", "cdevilequipexclusive", MiCDevilEquipmentExclusiveData);
+  ADD_TYPE    ("  cequipmodel           Format for CEquipModelData.sbin", "cequipmodel", MiCEquipModelData);
+  ADD_TYPE    ("  cevent                Format for CEventData.bin", "cevent", MiCEventData);
+  ADD_TYPE    ("  ceventmessage         Format for CEventMessageData.sbin", "ceventmessage", MiCEventMessageData);
+  ADD_TYPE    ("  cguardianassist       Format for CGuardianAssistData.sbin", "cguardianassist", MiCGuardianAssistData);
+  ADD_TYPE    ("  chelp                 Format for CHelpData.sbin", "chelp", MiCHelpData);
+  ADD_TYPE    ("  chourai               Format for CHouraiData.sbin", "chourai", MiCHouraiData);
+  ADD_TYPE    ("  chouraimessage        Format for CHouraiMessageData.sbin", "chouraimessage", MiCHouraiMessageData);
+  ADD_TYPE    ("  cicon                 Format for CIconData.bin", "cicon", MiCIconData);
+  ADD_TYPE    ("  cloadingcommercial    Format for CLoadingCommercialData.sbin", "cloadingcommercial", MiCLoadingCommercialData);
+  ADD_TYPE    ("  cmap                  Format for CMapData.bin", "cmap", MiCMapData);
+  ADD_TYPE    ("  cmessage              Format for CMessageData.sbin", "cmessage", MiCMessageData);
+  ADD_TYPE    ("  cmodifiedeffect       Format for CModifiedEffectData.sbin", "cmodifiedeffect", MiCModifiedEffectData);
+  ADD_TYPE    ("  cmultitalk            Format for CMultiTalkData.bin", "cmultitalk", MiCMultiTalkData);
+  ADD_TYPE    ("  cmultitalkdirection   Format for CMultiTalkDirectionData.bin", "cmultitalkdirection", MiCMultiTalkDirectionData);
+  ADD_TYPE    ("  cmultitalkpop         Format for CMultiTalkPopData.bin", "cmultitalkpop", MiCMultiTalkPopData);
+  ADD_TYPE    ("  cquest                Format for CQuestData.sbin", "cquest", MiCQuestData);
+  ADD_TYPE    ("  csound                Format for CSoundData.bin", "csound", MiCSoundData);
+  ADD_TYPE    ("  cspskilleffect        Format for CSpecialSkillEffectData.sbin", "cspskilleffect", MiCSpecialSkillEffectData);
+  ADD_TYPE    ("  cstatus               Format for CStatusData.sbin", "cstatus", MiCStatusData);
+  ADD_TYPE    ("  ctalkmessage          Format for CTalkMessageData.sbin", "ctalkmessage", MiCTalkMessageData);
+  ADD_TYPE    ("  ctimeattack           Format for CTimeAttackData.sbin", "ctimeattack", MiCTimeAttackData);
+  ADD_TYPE    ("  ctitle                Format for CTitleData.sbin", "ctitle", MiCTitleData);
+  ADD_TYPE    ("  cultureitem           Format for CultureItemData.sbin", "cultureitem", MiCultureItemData);
+  ADD_TYPE    ("  cvaluables            Format for CValuablesData.sbin", "cvaluables", MiCValuablesData);
+  ADD_TYPE    ("  devilbook             Format for DevilBookData.sbin", "devilbook", MiDevilBookData);
+  ADD_TYPE    ("  devilboost            Format for DevilBoostData.sbin", "devilboost", MiDevilBoostData);
+  ADD_TYPE    ("  devillvluprate        Format for DevilLVUpRateData.sbin", "devillvluprate", MiDevilLVUpRateData);
+  ADD_TYPE    ("  disassembly           Format for DisassemblyData.sbin", "disassembly", MiDisassemblyData);
+  ADD_TYPE    ("  disassemblytrig       Format for DisassemblyTriggerData.sbin", "disassemblytrig", MiDisassemblyTriggerData);
+  ADD_TYPE    ("  dynamicmap            Format for DynamicMapData.bin", "dynamicmap", MiDynamicMapData);
+  ADD_TYPE    ("  enchant               Format for EnchantData.sbin", "enchant", MiEnchantData);
+  ADD_TYPE    ("  equipset              Format for EquipmentSetData.sbin", "equipset", MiEquipmentSetData);
+  ADD_TYPE    ("  eventdirection        Format for EventDirectionData.bin", "eventdirection", MiEventDirectionData);
+  ADD_TYPE    ("  exchange              Format for ExchangeData.sbin", "exchange", MiExchangeData);
+  ADD_TYPE    ("  expert                Format for ExpertClassData.sbin", "expert", MiExpertData);
+  ADD_TYPE    ("  guardianassist        Format for GuardianAssistData.sbin", "guardianassist", MiGuardianAssistData);
+  ADD_TYPE    ("  guardianlevel         Format for GuardianLevelData.sbin", "guardianlevel", MiGuardianLevelData);
+  ADD_TYPE    ("  guardianspecial       Format for GuardianSpecialData.sbin", "guardianspecial", MiGuardianSpecialData);
+  ADD_TYPE    ("  guardianunlock        Format for GuardianUnlockData.sbin", "guardianunlock", MiGuardianUnlockData);
+  ADD_TYPE    ("  gvgtrophy             Format for GvGTrophyData.sbin", "gvgtrophy", MiGvGTrophyData);
+  ADD_TYPE    ("  mission               Format for MissionData.sbin", "mission", MiMissionData);
+  ADD_TYPE    ("  mitamabonus           Format for MitamaReunionBonusData.sbin", "mitamabonus", MiMitamaReunionBonusData);
+  ADD_TYPE    ("  mitamasetbonus        Format for MitamaReunionSetBonusData.sbin", "mitamasetbonus", MiMitamaReunionSetBonusData);
+  ADD_TYPE    ("  mitamaunion           Format for MitamaUnionBonusData.sbin", "mitamaunion", MiMitamaUnionBonusData);
+  ADD_TYPE    ("  mod                   Format for ModificationData.sbin", "mod", MiModificationData);
+  ADD_TYPE    ("  modeffect             Format for ModifiedEffectData.sbin", "modeffect", MiModifiedEffectData);
+  ADD_TYPE    ("  modextrecipe          Format for ModificationExtRecipeData.sbin", "modextrecipe", MiModificationExtRecipeData);
+  ADD_TYPE    ("  modtrigger            Format for ModificationTriggerData.sbin", "modtrigger", MiModificationTriggerData);
+  ADD_TYPE    ("  npcbarter             Format for NPCBarterData.sbin", "npcbarter", MiNPCBarterData);
+  ADD_TYPE    ("  npcbartercondition    Format for NPCBarterConditionData.sbin", "npcbartercondition", MiNPCBarterConditionData);
+  ADD_TYPE    ("  npcbartergroup        Format for NPCBarterGroupData.sbin", "npcbartergroup", MiNPCBarterGroupData);
+  ADD_TYPE    ("  npcbartertext         Format for NPCBarterTextData.sbin", "npcbartertext", MiNPCBarterTextData);
+  ADD_TYPE    ("  npcinvisible          Format for NPCInvisibleData.sbin", "npcinvisible", MiNPCInvisibleData);
+  ADD_TYPE    ("  onpc                  Format for oNPCData.sbin", "onpc", MiONPCData);
+  ADD_TYPE    ("  quest                 Format for QuestData.sbin", "quest", MiQuestData);
+  ADD_TYPE    ("  questbonus            Format for QuestBonusData.sbin", "questbonus", MiQuestBonusData);
+  ADD_TYPE    ("  questbonuscode        Format for QuestBonusCodeData.sbin", "questbonuscode", MiQuestBonusCodeData);
+  ADD_TYPE    ("  reporttype            Format for ReportTypeData.bin", "reporttype", MiReportTypeData);
+  ADD_TYPE    ("  shopproduct           Format for ShopProductData.sbin", "shopproduct", MiShopProductData);
+  ADD_TYPE    ("  sitem                 Format for SItemData.sbin", "sitem", MiSItemData);
+  ADD_TYPE    ("  spot                  Format for SpotData.bin", "spot", MiSpotData);
+  ADD_TYPE    ("  synthesis             Format for SynthesisData.sbin", "synthesis", MiSynthesisData);
+  ADD_TYPE    ("  tank                  Format for TankData.sbin", "tank", MiTankData);
+  ADD_TYPE    ("  timelimit             Format for TimeLimitData.sbin", "timelimit", MiTimeLimitData);
+  ADD_TYPE    ("  title                 Format for CodeNameData.sbin", "title", MiTitleData);
+  ADD_TYPE    ("  triunionspecial       Format for TriUnionSpecialData.sbin", "triunionspecial", MiTriUnionSpecialData);
+  ADD_TYPE    ("  uiinfo                Format for UIInfoData.bin", "uiinfo", MiUIInfoData);
+  ADD_TYPE    ("  warppoint             Format for WarpPointData.sbin", "warppoint", MiWarpPointData);
+  ADD_TYPE_EX ("  cculture              Format for CCultureData.sbin", "cculture", MiCCultureData, GetUpperLimit());
+  ADD_TYPE_EX ("  citem                 Format for CItemData.sbin", "citem", MiCItemData, GetBaseData()->GetID());
+  ADD_TYPE_EX ("  ckeyitem              Format for CKeyItemData.sbin", "ckeyitem", MiCKeyItemData, GetItemData()->GetID());
+  ADD_TYPE_EX ("  cmodel                Format for CModelData.sbin", "cmodel", MiCModelData, GetBase()->GetID());
+  ADD_TYPE_EX ("  cskill                Format for CSkillData.bin", "cskill", MiCSkillData, GetBase()->GetID());
+  ADD_TYPE_EX ("  ctransformedmodel     Format for CTransformedModelData.sbin", "ctransformedmodel", MiCTransformedModelData, GetItemID());
+  ADD_TYPE_EX ("  devil                 Format for DevilData.sbin", "devil", MiDevilData, GetBasic()->GetID());
+  ADD_TYPE_EX ("  devilboostextra       Format for DevilBoostExtraData.sbin", "devilboostextra", MiDevilBoostExtraData, GetStackID());
+  ADD_TYPE_EX ("  devilboostitem        Format for DevilBoostItemData.sbin", "devilboostitem", MiDevilBoostItemData, GetItemID());
+  ADD_TYPE_EX ("  devilboostlot         Format for DevilBoostLotData.sbin", "devilboostlot", MiDevilBoostLotData, GetLot());
+  ADD_TYPE_EX ("  devilequip            Format for DevilEquipmentData.sbin", "devilequip", MiDevilEquipmentData, GetSkillID());
+  ADD_TYPE_EX ("  devilequipitem        Format for DevilEquipmentItemData.sbin", "devilequipitem", MiDevilEquipmentItemData, GetItemID());
+  ADD_TYPE_EX ("  devilfusion           Format for DevilFusionData.sbin", "devilfusion", MiDevilFusionData, GetSkillID());
+  ADD_TYPE_EX ("  hnpc                  Format for hNPCData.sbin", "hnpc", MiHNPCData, GetBasic()->GetID());
+  ADD_TYPE_EX ("  item                  Format for ItemData.sbin", "item", MiItemData, GetCommon()->GetID());
+  ADD_TYPE_EX ("  skill                 Format for SkillData.sbin", "skill", MiSkillData, GetCommon()->GetID());
+  ADD_TYPE_EX ("  status                Format for StatusData.sbin", "status", MiStatusData, GetCommon()->GetID());
+  ADD_TYPE_EX ("  zone                  Format for ZoneData.sbin", "zone", MiZoneData, GetBasic()->GetID());
+  ADD_TYPE_SEQ("  cpolygonmovie         Format for CPolygonMoveData.sbin", "cpolygonmovie", MiCPolygonMovieData);
+  ADD_TYPE_SEQ("  modexteffect          Format for ModificationExtEffectData.sbin", "modexteffect", MiModificationExtEffectData);
+  ADD_TYPE_SEQ("  urafieldtower         Format for UraFieldTowerData.sbin", "urafieldtower", MiUraFieldTowerData);
+  ADD_TYPE_MAN("  qmp                   Format for misc qmp files", "qmp", QmpFile);
+  // clang-format on
 
 #ifdef DREAM_OBJGEN_INCLUDE_B
 #include DREAM_OBJGEN_INCLUDE_B
-#endif // DREAM_OBJGEN_INCLUDE_B
+#endif  // DREAM_OBJGEN_INCLUDE_B
 
-    if(5 != argc)
-    {
-        return Usage(argv[0], binaryTypes);
-    }
+  if (5 != argc) {
+    return Usage(argv[0], binaryTypes);
+  }
 
-    libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
+  libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
-    libcomp::String mode = argv[1];
-    libcomp::String bdType = argv[2];
-    const char *szInPath = argv[3];
-    const char *szOutPath = argv[4];
+  libcomp::String mode = argv[1];
+  libcomp::String bdType = argv[2];
+  const char* szInPath = argv[3];
+  const char* szOutPath = argv[4];
 
-    if("load" != mode && "save" != mode && "flatten" != mode)
-    {
-        return Usage(argv[0], binaryTypes);
-    }
+  if ("load" != mode && "save" != mode && "flatten" != mode) {
+    return Usage(argv[0], binaryTypes);
+  }
 
-    libcomp::BinaryDataSet *pSet = nullptr;
+  libcomp::BinaryDataSet* pSet = nullptr;
 
-    auto match = binaryTypes.find(bdType.ToUtf8());
+  auto match = binaryTypes.find(bdType.ToUtf8());
 
-    if(binaryTypes.end() != match)
-    {
-        pSet = (match->second.second)();
-    }
+  if (binaryTypes.end() != match) {
+    pSet = (match->second.second)();
+  }
 
-    if(!pSet)
-    {
-        return Usage(argv[0], binaryTypes);
-    }
+  if (!pSet) {
+    return Usage(argv[0], binaryTypes);
+  }
 
-    if("qmp" == bdType && ("load" == mode || "flatten" == mode))
-    {
-        // Manually load single record
-        std::ifstream file;
-        file.open(szInPath, std::ifstream::binary);
+  if ("qmp" == bdType && ("load" == mode || "flatten" == mode)) {
+    // Manually load single record
+    std::ifstream file;
+    file.open(szInPath, std::ifstream::binary);
 
-        // Read and discard magic
-        uint32_t magic;
-        file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+    // Read and discard magic
+    uint32_t magic;
+    file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
 
-        if(magic != QMP_FORMAT_MAGIC)
-        {
-            std::cerr << "File magic invlalid for Qmp file: " << szInPath
+    if (magic != QMP_FORMAT_MAGIC) {
+      std::cerr << "File magic invlalid for Qmp file: " << szInPath
                 << std::endl;
 
-            return EXIT_FAILURE;
-        }
-
-        auto qmp = std::make_shared<objects::QmpFile>();
-        if(!qmp->Load(file))
-        {
-            std::cerr << "Failed to load Qmp file: " << szInPath
-                << std::endl;
-
-            return EXIT_FAILURE;
-        }
-
-        ((ManualBinaryDataSet*)pSet)->AddRecord(qmp);
+      return EXIT_FAILURE;
     }
 
-    if("load" == mode)
-    {
-        if("qmp" != bdType)
-        {
-            std::ifstream file;
-            file.open(szInPath, std::ifstream::binary);
+    auto qmp = std::make_shared<objects::QmpFile>();
+    if (!qmp->Load(file)) {
+      std::cerr << "Failed to load Qmp file: " << szInPath << std::endl;
 
-            if(!pSet->Load(file))
-            {
-                std::cerr << "Failed to load file: " << szInPath << std::endl;
-
-                return EXIT_FAILURE;
-            }
-        }
-
-        std::ofstream out;
-        out.open(szOutPath);
-
-        out << pSet->GetXml().c_str();
-
-        if(!out.good())
-        {
-            std::cerr << "Failed to save file: " << szOutPath << std::endl;
-
-            return EXIT_FAILURE;
-        }
+      return EXIT_FAILURE;
     }
-    else if("flatten" == mode)
-    {
-        if("qmp" != bdType)
-        {
-            std::ifstream file;
-            file.open(szInPath, std::ifstream::binary);
 
-            if(!pSet->Load(file))
-            {
-                std::cerr << "Failed to load file: " << szInPath << std::endl;
+    ((ManualBinaryDataSet*)pSet)->AddRecord(qmp);
+  }
 
-                return EXIT_FAILURE;
-            }
-        }
+  if ("load" == mode) {
+    if ("qmp" != bdType) {
+      std::ifstream file;
+      file.open(szInPath, std::ifstream::binary);
 
-        std::ofstream out;
-        out.open(szOutPath);
+      if (!pSet->Load(file)) {
+        std::cerr << "Failed to load file: " << szInPath << std::endl;
 
-        out << pSet->GetTabular().c_str();
-
-        if(!out.good())
-        {
-            std::cerr << "Failed to save file: " << szOutPath << std::endl;
-
-            return EXIT_FAILURE;
-        }
+        return EXIT_FAILURE;
+      }
     }
-    else if("save" == mode)
-    {
-        tinyxml2::XMLDocument doc;
 
-        if(tinyxml2::XML_SUCCESS != doc.LoadFile(szInPath))
-        {
-            std::cerr << "Failed to parse file: " << szInPath << std::endl;
+    std::ofstream out;
+    out.open(szOutPath);
 
-            return EXIT_FAILURE;
-        }
+    out << pSet->GetXml().c_str();
 
-        if(!pSet->LoadXml(doc))
-        {
-            std::cerr << "Failed to load file: " << szInPath << std::endl;
+    if (!out.good()) {
+      std::cerr << "Failed to save file: " << szOutPath << std::endl;
 
-            return EXIT_FAILURE;
-        }
-
-        std::ofstream out;
-        out.open(szOutPath, std::ofstream::binary);
-
-        if("qmp" == bdType)
-        {
-            // Write magic
-            uint32_t magic = QMP_FORMAT_MAGIC;
-            out.write(reinterpret_cast<char*>(&magic), sizeof(uint32_t));
-
-            // Write (single) entry manually
-            for(auto obj : pSet->GetObjects())
-            {
-                if(!obj->Save(out) || !out.good())
-                {
-                    std::cerr << "Failed to save QMP file: " << szOutPath <<
-                        std::endl;
-
-                    return EXIT_FAILURE;
-                }
-            }
-        }
-        else
-        {
-            if(!pSet->Save(out))
-            {
-                std::cerr << "Failed to save file: " << szOutPath << std::endl;
-
-                return EXIT_FAILURE;
-            }
-        }
+      return EXIT_FAILURE;
     }
+  } else if ("flatten" == mode) {
+    if ("qmp" != bdType) {
+      std::ifstream file;
+      file.open(szInPath, std::ifstream::binary);
+
+      if (!pSet->Load(file)) {
+        std::cerr << "Failed to load file: " << szInPath << std::endl;
+
+        return EXIT_FAILURE;
+      }
+    }
+
+    std::ofstream out;
+    out.open(szOutPath);
+
+    out << pSet->GetTabular().c_str();
+
+    if (!out.good()) {
+      std::cerr << "Failed to save file: " << szOutPath << std::endl;
+
+      return EXIT_FAILURE;
+    }
+  } else if ("save" == mode) {
+    tinyxml2::XMLDocument doc;
+
+    if (tinyxml2::XML_SUCCESS != doc.LoadFile(szInPath)) {
+      std::cerr << "Failed to parse file: " << szInPath << std::endl;
+
+      return EXIT_FAILURE;
+    }
+
+    if (!pSet->LoadXml(doc)) {
+      std::cerr << "Failed to load file: " << szInPath << std::endl;
+
+      return EXIT_FAILURE;
+    }
+
+    std::ofstream out;
+    out.open(szOutPath, std::ofstream::binary);
+
+    if ("qmp" == bdType) {
+      // Write magic
+      uint32_t magic = QMP_FORMAT_MAGIC;
+      out.write(reinterpret_cast<char*>(&magic), sizeof(uint32_t));
+
+      // Write (single) entry manually
+      for (auto obj : pSet->GetObjects()) {
+        if (!obj->Save(out) || !out.good()) {
+          std::cerr << "Failed to save QMP file: " << szOutPath << std::endl;
+
+          return EXIT_FAILURE;
+        }
+      }
+    } else {
+      if (!pSet->Save(out)) {
+        std::cerr << "Failed to save file: " << szOutPath << std::endl;
+
+        return EXIT_FAILURE;
+      }
+    }
+  }
 
 #ifndef EXOTIC_PLATFORM
-    // Stop the logger
-    delete libcomp::Log::GetSingletonPtr();
-#endif // !EXOTIC_PLATFORM
+  // Stop the logger
+  delete libcomp::Log::GetSingletonPtr();
+#endif  // !EXOTIC_PLATFORM
 
-    return EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }

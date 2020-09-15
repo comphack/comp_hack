@@ -37,35 +37,35 @@
 
 using namespace channel;
 
-bool Parsers::PartyCancel::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PartyCancel::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 2 || (p.Size() != (uint32_t)(6 + p.PeekU16Little())))
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 2 || (p.Size() != (uint32_t)(6 + p.PeekU16Little()))) {
+    return false;
+  }
 
-    libcomp::String targetName = p.ReadString16Little(
-        libcomp::Convert::Encoding_t::ENCODING_CP932, true);
-    uint32_t partyID = p.ReadU32Little();
+  libcomp::String targetName =
+      p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+  uint32_t partyID = p.ReadU32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetEntity();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+  auto character = state->GetCharacterState()->GetEntity();
 
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO);
-    request.WriteS32Little(state->GetWorldCID());
-    request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
-        character->GetName(), true);
-    request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
-        targetName, true);
-    request.WriteU32Little(partyID);
+  libcomp::Packet request;
+  request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
+  request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO);
+  request.WriteS32Little(state->GetWorldCID());
+  request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                              character->GetName(), true);
+  request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                              targetName, true);
+  request.WriteU32Little(partyID);
 
-    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
 
-    return true;
+  return true;
 }

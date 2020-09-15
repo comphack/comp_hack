@@ -44,53 +44,46 @@
 
 using namespace channel;
 
-bool Parsers::QuestTitle::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::QuestTitle::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    uint32_t bonusID = p.ReadU32Little();
+  uint32_t bonusID = p.ReadU32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto definitionManager = server->GetDefinitionManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto definitionManager = server->GetDefinitionManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character->GetProgress().Get();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character->GetProgress().Get();
 
-    auto bonusData = definitionManager->GetQuestBonusCodeData(bonusID);
-    if(!bonusData ||
-        (bonusData->GetTitleID() >= (int32_t)(progress->SpecialTitlesCount() * 8)))
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Invalid quest bonus ID supplied"
-                " for QuestTitle request: %1\n").Arg(bonusID);
-        });
-    }
-    else if((uint32_t)bonusData->GetCount() > cState->GetQuestBonusCount())
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("QuestTitle request encountered for"
-                " a quest bonus count that has not been obtained: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
-    }
-    else
-    {
-        int16_t titleID = (int16_t)bonusData->GetTitleID();
-        characterManager->AddTitle(client, titleID);
-    }
+  auto bonusData = definitionManager->GetQuestBonusCodeData(bonusID);
+  if (!bonusData || (bonusData->GetTitleID() >=
+                     (int32_t)(progress->SpecialTitlesCount() * 8))) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Invalid quest bonus ID supplied for QuestTitle request: %1\n")
+          .Arg(bonusID);
+    });
+  } else if ((uint32_t)bonusData->GetCount() > cState->GetQuestBonusCount()) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "QuestTitle request encountered for a quest bonus count that "
+                 "has not been obtained: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
+  } else {
+    int16_t titleID = (int16_t)bonusData->GetTitleID();
+    characterManager->AddTitle(client, titleID);
+  }
 
-    return true;
+  return true;
 }

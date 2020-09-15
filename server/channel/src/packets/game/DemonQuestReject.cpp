@@ -42,46 +42,41 @@
 
 using namespace channel;
 
-bool Parsers::DemonQuestReject::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonQuestReject::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
 
-    int64_t demonID = p.ReadS64Little();
+  int64_t demonID = p.ReadS64Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto dQuest = character->GetDemonQuest().Get();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto dQuest = character->GetDemonQuest().Get();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_DEMON_QUEST_REJECT);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_QUEST_REJECT);
 
-    auto demon = std::dynamic_pointer_cast<objects::Demon>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
-    if(dQuest && demon && dQuest->GetDemon() == demon->GetUUID() &&
-        server->GetEventManager()->EndDemonQuest(client) == 0)
-    {
-        reply.WriteS8(0);   // Success
-    }
-    else
-    {
-        reply.WriteS8(-1);  // Failed
-    }
+  auto demon = std::dynamic_pointer_cast<objects::Demon>(
+      libcomp::PersistentObject::GetObjectByUUID(
+          state->GetObjectUUID(demonID)));
+  if (dQuest && demon && dQuest->GetDemon() == demon->GetUUID() &&
+      server->GetEventManager()->EndDemonQuest(client) == 0) {
+    reply.WriteS8(0);  // Success
+  } else {
+    reply.WriteS8(-1);  // Failed
+  }
 
-    reply.WriteS64Little(demonID);
+  reply.WriteS64Little(demonID);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

@@ -38,57 +38,50 @@
 
 using namespace channel;
 
-bool Parsers::KeepAlive::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::KeepAlive::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    ServerTime now = ChannelServer::GetServerTime();
+  ServerTime now = ChannelServer::GetServerTime();
 
-    // Keep alive requests should occur once every 10 seconds
-    // After a missed request, the configurable server timeout countdown
-    // will occur. Stop refreshing if the client is already prepared for
-    // a disconnect
-    if(state->GetLogoutSave())
-    {
-        client->RefreshTimeout(now, 10);
-    }
+  // Keep alive requests should occur once every 10 seconds
+  // After a missed request, the configurable server timeout countdown
+  // will occur. Stop refreshing if the client is already prepared for
+  // a disconnect
+  if (state->GetLogoutSave()) {
+    client->RefreshTimeout(now, 10);
+  }
 
-    // Refresh the client entity positions
-    auto cState = state->GetCharacterState();
-    cState->RefreshCurrentPosition(now);
+  // Refresh the client entity positions
+  auto cState = state->GetCharacterState();
+  cState->RefreshCurrentPosition(now);
 
-    auto dState = state->GetDemonState();
-    if(dState->Ready())
-    {
-        dState->RefreshCurrentPosition(now);
-    }
+  auto dState = state->GetDemonState();
+  if (dState->Ready()) {
+    dState->RefreshCurrentPosition(now);
+  }
 
-    // Sync equipment expiration up with this request since frequent calls
-    // are required to keep connected
-    if(cState->EquipmentExpired((uint32_t)std::time(0)))
-    {
-        auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-            ->GetServer());
-        cState->RecalcEquipState(server->GetDefinitionManager());
-        server->GetCharacterManager()->RecalculateTokuseiAndStats(cState,
-            client);
-    }
+  // Sync equipment expiration up with this request since frequent calls
+  // are required to keep connected
+  if (cState->EquipmentExpired((uint32_t)std::time(0))) {
+    auto server =
+        std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    cState->RecalcEquipState(server->GetDefinitionManager());
+    server->GetCharacterManager()->RecalculateTokuseiAndStats(cState, client);
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_KEEP_ALIVE);
-    reply.WriteU32Little(p.ReadU32Little());
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_KEEP_ALIVE);
+  reply.WriteU32Little(p.ReadU32Little());
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

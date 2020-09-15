@@ -28,12 +28,13 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionZoneChange.h"
-#include <PopIgnore.h>
 
 // object Includes
 #include <ObjectPosition.h>
@@ -43,60 +44,53 @@
 #include <PacketCodes.h>
 
 ActionZoneChange::ActionZoneChange(ActionList *pList, MainWindow *pMainWindow,
-    QWidget *pParent) : Action(pList, pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionZoneChange;
-    prop->setupUi(pWidget);
+                                   QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionZoneChange;
+  prop->setupUi(pWidget);
 
-    ui->actionTitle->setText(tr("<b>Zone Change</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Zone Change</b>"));
+  ui->layoutMain->addWidget(pWidget);
 
-    prop->zone->BindSelector(pMainWindow, "ZoneData");
-    prop->destination->SetMainWindow(pMainWindow);
+  prop->zone->BindSelector(pMainWindow, "ZoneData");
+  prop->destination->SetMainWindow(pMainWindow);
 }
 
-ActionZoneChange::~ActionZoneChange()
-{
-    delete prop;
+ActionZoneChange::~ActionZoneChange() { delete prop; }
+
+void ActionZoneChange::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionZoneChange>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->zone->SetValue(mAction->GetZoneID());
+  prop->dynamicMap->setValue((int32_t)mAction->GetDynamicMapID());
+
+  prop->destination->Load(mAction->GetSpotID(), mAction->GetDestinationX(),
+                          mAction->GetDestinationY(),
+                          mAction->GetDestinationRotation());
 }
 
-void ActionZoneChange::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionZoneChange>(act);
+std::shared_ptr<objects::Action> ActionZoneChange::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetZoneID(prop->zone->GetValue());
+  mAction->SetDynamicMapID((uint32_t)prop->dynamicMap->value());
 
-    prop->zone->SetValue(mAction->GetZoneID());
-    prop->dynamicMap->setValue((int32_t)mAction->GetDynamicMapID());
+  auto pos = prop->destination->Save();
+  mAction->SetSpotID(pos->GetSpotID());
+  mAction->SetDestinationX(pos->GetX());
+  mAction->SetDestinationY(pos->GetY());
+  mAction->SetDestinationRotation(pos->GetRotation());
 
-    prop->destination->Load(mAction->GetSpotID(),
-        mAction->GetDestinationX(), mAction->GetDestinationY(),
-        mAction->GetDestinationRotation());
-}
-
-std::shared_ptr<objects::Action> ActionZoneChange::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetZoneID(prop->zone->GetValue());
-    mAction->SetDynamicMapID((uint32_t)prop->dynamicMap->value());
-
-    auto pos = prop->destination->Save();
-    mAction->SetSpotID(pos->GetSpotID());
-    mAction->SetDestinationX(pos->GetX());
-    mAction->SetDestinationY(pos->GetY());
-    mAction->SetDestinationRotation(pos->GetRotation());
-
-    return mAction;
+  return mAction;
 }

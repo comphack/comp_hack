@@ -37,42 +37,38 @@
 
 using namespace channel;
 
-bool Parsers::ITimeTalk::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ITimeTalk::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 2)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 2) {
+    return false;
+  }
+
+  int8_t requestID = p.ReadS8();
+  bool itemIncluded = p.ReadS8() == 1;
+
+  int64_t itemID = -1;
+  if (itemIncluded) {
+    if (p.Left() < 8) {
+      return false;
     }
 
-    int8_t requestID = p.ReadS8();
-    bool itemIncluded = p.ReadS8() == 1;
+    itemID = p.ReadS64Little();
+  }
 
-    int64_t itemID = -1;
-    if(itemIncluded)
-    {
-        if(p.Left() < 8)
-        {
-            return false;
-        }
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-        itemID = p.ReadS64Little();
-    }
-
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-
-    server->QueueWork([](
-        const std::shared_ptr<ChannelServer>& pServer,
-        const std::shared_ptr<ChannelClientConnection> pClient,
-        int8_t pRequestID, int64_t pItemID)
-    {
+  server->QueueWork(
+      [](const std::shared_ptr<ChannelServer>& pServer,
+         const std::shared_ptr<ChannelClientConnection> pClient,
+         int8_t pRequestID, int64_t pItemID) {
         pServer->GetEventManager()->HandleResponse(pClient, pRequestID,
-            pItemID);
-    }, server, client, requestID, itemID);
+                                                   pItemID);
+      },
+      server, client, requestID, itemID);
 
-    return true;
+  return true;
 }

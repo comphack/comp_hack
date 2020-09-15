@@ -32,35 +32,34 @@
 #include <ActionSetHomepoint.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionSetHomepoint;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionSetHomepoint : public Action
-{
-    Q_OBJECT
+class ActionSetHomepoint : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionSetHomepoint(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionSetHomepoint();
+ public:
+  explicit ActionSetHomepoint(ActionList *pList, MainWindow *pMainWindow,
+                              QWidget *pParent = 0);
+  virtual ~ActionSetHomepoint();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionSetHomepoint *prop;
+ protected:
+  Ui::ActionSetHomepoint *prop;
 
-    std::shared_ptr<objects::ActionSetHomepoint> mAction;
+  std::shared_ptr<objects::ActionSetHomepoint> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONSETHOMEPOINTUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONSETHOMEPOINTUI_H

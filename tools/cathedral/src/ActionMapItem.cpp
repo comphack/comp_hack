@@ -28,11 +28,12 @@
 #include "ActionMap.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_ActionMapItem.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
@@ -41,77 +42,59 @@
 // Standard C++11 Includes
 #include <algorithm>
 
-ActionMapItem::ActionMapItem(const QString& valueName, ActionMap *pMap,
-    QWidget *pParent) : QWidget(pParent), mMap(pMap)
-{
-    ui = new Ui::ActionMapItem;
-    ui->setupUi(this);
+ActionMapItem::ActionMapItem(const QString& valueName, ActionMap* pMap,
+                             QWidget* pParent)
+    : QWidget(pParent), mMap(pMap) {
+  ui = new Ui::ActionMapItem;
+  ui->setupUi(this);
 
-    if(!valueName.isEmpty())
-    {
-        ui->valueLabel->setText(valueName);
-    }
+  if (!valueName.isEmpty()) {
+    ui->valueLabel->setText(valueName);
+  }
 
-    connect(ui->remove, SIGNAL(clicked(bool)), this, SLOT(Remove()));
+  connect(ui->remove, SIGNAL(clicked(bool)), this, SLOT(Remove()));
 }
 
-ActionMapItem::~ActionMapItem()
-{
-    delete ui;
+ActionMapItem::~ActionMapItem() { delete ui; }
+
+int32_t ActionMapItem::GetKey() const {
+  if (!ui->keyNumber->isHidden()) {
+    return ui->keyNumber->value();
+  } else {
+    return (int32_t)ui->keySelector->GetValue();
+  }
 }
 
-int32_t ActionMapItem::GetKey() const
-{
-    if(!ui->keyNumber->isHidden())
-    {
-        return ui->keyNumber->value();
-    }
-    else
-    {
-        return (int32_t)ui->keySelector->GetValue();
-    }
-}
+int32_t ActionMapItem::GetValue() const { return ui->value->value(); }
 
-int32_t ActionMapItem::GetValue() const
-{
-    return ui->value->value();
-}
-
-void ActionMapItem::SetMinMax(int32_t min, int32_t max)
-{
-    ui->value->setMinimum(min);
-    ui->value->setMaximum(max);
+void ActionMapItem::SetMinMax(int32_t min, int32_t max) {
+  ui->value->setMinimum(min);
+  ui->value->setMaximum(max);
 }
 
 void ActionMapItem::Setup(int32_t key, int32_t value,
-    const libcomp::String& objectSelectorType, bool selectorServerData,
-    MainWindow* pMainWindow)
-{
-    if(!objectSelectorType.IsEmpty())
-    {
-        ui->keyNumber->hide();
-        ui->keySelector->show();
+                          const libcomp::String& objectSelectorType,
+                          bool selectorServerData, MainWindow* pMainWindow) {
+  if (!objectSelectorType.IsEmpty()) {
+    ui->keyNumber->hide();
+    ui->keySelector->show();
 
-        ui->keySelector->BindSelector(pMainWindow, objectSelectorType,
-            selectorServerData);
+    ui->keySelector->BindSelector(pMainWindow, objectSelectorType,
+                                  selectorServerData);
 
-        ui->keySelector->SetValue((uint32_t)key);
-    }
-    else
-    {
-        ui->keyNumber->show();
-        ui->keySelector->hide();
+    ui->keySelector->SetValue((uint32_t)key);
+  } else {
+    ui->keyNumber->show();
+    ui->keySelector->hide();
 
-        ui->keyNumber->setValue(key);
-    }
+    ui->keyNumber->setValue(key);
+  }
 
-    ui->value->setValue(value);
+  ui->value->setValue(value);
 }
 
-void ActionMapItem::Remove()
-{
-    if(mMap)
-    {
-        mMap->RemoveValue(this);
-    }
+void ActionMapItem::Remove() {
+  if (mMap) {
+    mMap->RemoveValue(this);
+  }
 }

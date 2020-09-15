@@ -41,46 +41,41 @@
 
 using namespace channel;
 
-bool Parsers::DigitalizePoints::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DigitalizePoints::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
+
+  int32_t unknown = p.ReadS32Little();
+  (void)unknown;  // Always 0
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto definitionManager = server->GetDefinitionManager();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character ? character->GetProgress().Get() : nullptr;
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DIGITALIZE_POINTS);
+  reply.WriteS32Little(0);  // Unknown
+  reply.WriteS32Little(progress ? 0 : -1);
+
+  if (progress) {
+    for (uint8_t raceID : definitionManager->GetGuardianRaceIDs()) {
+      reply.WriteU8(raceID);
+      reply.WriteS8(progress->GetDigitalizeLevels(raceID));
+      reply.WriteS32Little(progress->GetDigitalizePoints(raceID));
     }
+  }
 
-    int32_t unknown = p.ReadS32Little();
-    (void)unknown;  // Always 0
+  client->SendPacket(reply);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto definitionManager = server->GetDefinitionManager();
-
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character ? character->GetProgress().Get() : nullptr;
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_DIGITALIZE_POINTS);
-    reply.WriteS32Little(0);    // Unknown
-    reply.WriteS32Little(progress ? 0 : -1);
-
-    if(progress)
-    {
-        for(uint8_t raceID : definitionManager->GetGuardianRaceIDs())
-        {
-            reply.WriteU8(raceID);
-            reply.WriteS8(progress->GetDigitalizeLevels(raceID));
-            reply.WriteS32Little(progress->GetDigitalizePoints(raceID));
-        }
-    }
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

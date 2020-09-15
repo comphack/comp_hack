@@ -27,8 +27,8 @@
 #include "Packets.h"
 
 // libcomp Includes
-#include <ManagerPacket.h>
 #include <Log.h>
+#include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
@@ -43,82 +43,77 @@
 
 using namespace world;
 
-bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::AccountLogin::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    auto server = std::dynamic_pointer_cast<WorldServer>(
-        pPacketManager->GetServer());
-    auto iConnection = std::dynamic_pointer_cast<
-        libcomp::InternalConnection>(connection);
+    libcomp::ReadOnlyPacket& p) const {
+  auto server =
+      std::dynamic_pointer_cast<WorldServer>(pPacketManager->GetServer());
+  auto iConnection =
+      std::dynamic_pointer_cast<libcomp::InternalConnection>(connection);
 
-    if(connection == server->GetLobbyConnection())
-    {
-        // The lobby is requesting a channel to log into
-        auto login = std::make_shared<objects::AccountLogin>();
-        if(!login->LoadPacket(p, false))
-        {
-            LogGeneralErrorMsg("Invalid AccountLogin sent from lobby"
-                " when requesting login channel for account.\n");
-            return false;
-        }
-
-        server->QueueWork([](std::shared_ptr<WorldServer> pServer,
-            std::shared_ptr<objects::AccountLogin> pLogin)
-            {
-                pServer->GetAccountManager()->HandleLobbyLogin(pLogin);
-            }, server, login);
-    }
-    else
-    {
-        if(p.ReadU8() == 0)
-        {
-            // The channel is requesting session info
-            libcomp::String username = p.ReadString16Little(
-                libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
-            uint32_t sessionKey = p.ReadU32();
-
-            server->QueueWork([](std::shared_ptr<WorldServer> pServer,
-                const std::shared_ptr<libcomp::InternalConnection>& pChannel,
-                uint32_t pSessionKey, const libcomp::String pUsername)
-                {
-                    pServer->GetAccountManager()->HandleChannelLogin(pChannel,
-                        pSessionKey, pUsername);
-                }, server, iConnection, sessionKey, username);
-        }
-        else
-        {
-            // The channel is supplying requested first login info
-            auto login = std::make_shared<objects::AccountLogin>();
-            if(!login->LoadPacket(p, false))
-            {
-                LogGeneralErrorMsg("Invalid AccountLogin sent from"
-                    " channel when requesting first login info.\n");
-                return false;
-            }
-
-            auto channelLogin = std::make_shared<objects::ChannelLogin>();
-            if(!channelLogin->LoadPacket(p, false))
-            {
-                LogGeneralError([&]()
-                {
-                    return libcomp::String("Invalid ChannelLogin sent from"
-                        " channel when requesting first login info for"
-                        " account: %1.\n")
-                        .Arg(login->GetAccount().GetUUID().ToString());
-                });
-                return false;
-            }
-
-            server->QueueWork([](std::shared_ptr<WorldServer> pServer,
-                std::shared_ptr<objects::AccountLogin> pLogin,
-                std::shared_ptr<objects::ChannelLogin> pChannelLogin)
-                {
-                    pServer->GetAccountManager()->CompleteLobbyLogin(pLogin,
-                        pChannelLogin);
-                }, server, login, channelLogin);
-        }
+  if (connection == server->GetLobbyConnection()) {
+    // The lobby is requesting a channel to log into
+    auto login = std::make_shared<objects::AccountLogin>();
+    if (!login->LoadPacket(p, false)) {
+      LogGeneralErrorMsg(
+          "Invalid AccountLogin sent from lobby when requesting login channel "
+          "for account.\n");
+      return false;
     }
 
-    return true;
+    server->QueueWork(
+        [](std::shared_ptr<WorldServer> pServer,
+           std::shared_ptr<objects::AccountLogin> pLogin) {
+          pServer->GetAccountManager()->HandleLobbyLogin(pLogin);
+        },
+        server, login);
+  } else {
+    if (p.ReadU8() == 0) {
+      // The channel is requesting session info
+      libcomp::String username = p.ReadString16Little(
+          libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
+      uint32_t sessionKey = p.ReadU32();
+
+      server->QueueWork(
+          [](std::shared_ptr<WorldServer> pServer,
+             const std::shared_ptr<libcomp::InternalConnection>& pChannel,
+             uint32_t pSessionKey, const libcomp::String pUsername) {
+            pServer->GetAccountManager()->HandleChannelLogin(
+                pChannel, pSessionKey, pUsername);
+          },
+          server, iConnection, sessionKey, username);
+    } else {
+      // The channel is supplying requested first login info
+      auto login = std::make_shared<objects::AccountLogin>();
+      if (!login->LoadPacket(p, false)) {
+        LogGeneralErrorMsg(
+            "Invalid AccountLogin sent from channel when requesting first "
+            "login info.\n");
+        return false;
+      }
+
+      auto channelLogin = std::make_shared<objects::ChannelLogin>();
+      if (!channelLogin->LoadPacket(p, false)) {
+        LogGeneralError([&]() {
+          return libcomp::String(
+                     "Invalid ChannelLogin sent from channel when requesting "
+                     "first login info for account: %1.\n")
+              .Arg(login->GetAccount().GetUUID().ToString());
+        });
+        return false;
+      }
+
+      server->QueueWork(
+          [](std::shared_ptr<WorldServer> pServer,
+             std::shared_ptr<objects::AccountLogin> pLogin,
+             std::shared_ptr<objects::ChannelLogin> pChannelLogin) {
+            pServer->GetAccountManager()->CompleteLobbyLogin(pLogin,
+                                                             pChannelLogin);
+          },
+          server, login, channelLogin);
+    }
+  }
+
+  return true;
 }

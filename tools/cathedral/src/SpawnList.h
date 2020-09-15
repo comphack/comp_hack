@@ -27,37 +27,35 @@
 
 #include "ObjectList.h"
 
-namespace Ui
-{
+namespace Ui {
 
 class Spawn;
 
-} // namespace Ui
+}  // namespace Ui
 
-class SpawnList : public ObjectList
-{
-    Q_OBJECT
+class SpawnList : public ObjectList {
+  Q_OBJECT
 
-public:
-    explicit SpawnList(QWidget *pParent = 0);
-    virtual ~SpawnList();
+ public:
+  explicit SpawnList(QWidget* pParent = 0);
+  virtual ~SpawnList();
 
-    virtual void SetMainWindow(MainWindow *pMainWindow);
+  virtual void SetMainWindow(MainWindow* pMainWindow);
 
-    QString GetObjectID(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
-    QString GetObjectName(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
+  QString GetObjectID(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
+  QString GetObjectName(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
 
-    void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
-    void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+  void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+  void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
 
-private slots:
-    void BaseAITypeToggled(bool checked);
-    void UpdateAIDisplay();
+ private slots:
+  void BaseAITypeToggled(bool checked);
+  void UpdateAIDisplay();
 
-protected:
-    Ui::Spawn *prop;
+ protected:
+  Ui::Spawn* prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_SPAWNLIST_H
+#endif  // TOOLS_CATHEDRAL_SRC_SPAWNLIST_H

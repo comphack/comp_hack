@@ -28,61 +28,54 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Event.h"
 #include "ui_EventExNPCMessage.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
 EventExNPCMessage::EventExNPCMessage(MainWindow *pMainWindow, QWidget *pParent)
-    : Event(pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::EventExNPCMessage;
-    prop->setupUi(pWidget);
+    : Event(pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::EventExNPCMessage;
+  prop->setupUi(pWidget);
 
-    ui->eventTitle->setText(tr("<b>EX-NPC Message</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->eventTitle->setText(tr("<b>EX-NPC Message</b>"));
+  ui->layoutMain->addWidget(pWidget);
 
-    prop->message->Setup(pMainWindow);
+  prop->message->Setup(pMainWindow);
 }
 
-EventExNPCMessage::~EventExNPCMessage()
-{
-    delete prop;
+EventExNPCMessage::~EventExNPCMessage() { delete prop; }
+
+void EventExNPCMessage::Load(const std::shared_ptr<objects::Event> &e) {
+  Event::Load(e);
+
+  mEvent = std::dynamic_pointer_cast<objects::EventExNPCMessage>(e);
+
+  if (!mEvent) {
+    return;
+  }
+
+  prop->message->SetValue((uint32_t)mEvent->GetMessageID());
+  prop->messageValue->setValue(mEvent->GetMessageValue());
 }
 
-void EventExNPCMessage::Load(const std::shared_ptr<objects::Event>& e)
-{
-    Event::Load(e);
+std::shared_ptr<objects::Event> EventExNPCMessage::Save() const {
+  if (!mEvent) {
+    return nullptr;
+  }
 
-    mEvent = std::dynamic_pointer_cast<objects::EventExNPCMessage>(e);
+  Event::Save();
 
-    if(!mEvent)
-    {
-        return;
-    }
+  mEvent->SetMessageID((int32_t)prop->message->GetValue());
+  mEvent->SetMessageValue(prop->messageValue->value());
 
-    prop->message->SetValue((uint32_t)mEvent->GetMessageID());
-    prop->messageValue->setValue(mEvent->GetMessageValue());
-}
-
-std::shared_ptr<objects::Event> EventExNPCMessage::Save() const
-{
-    if(!mEvent)
-    {
-        return nullptr;
-    }
-
-    Event::Save();
-
-    mEvent->SetMessageID((int32_t)prop->message->GetValue());
-    mEvent->SetMessageValue(prop->messageValue->value());
-
-    return mEvent;
+  return mEvent;
 }

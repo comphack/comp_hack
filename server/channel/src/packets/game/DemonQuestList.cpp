@@ -42,51 +42,46 @@
 
 using namespace channel;
 
-bool Parsers::DemonQuestList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonQuestList::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character->GetProgress().Get();
+  auto dQuest = character->GetDemonQuest().Get();
+
+  std::list<std::shared_ptr<objects::Demon>> questDemons;
+  for (auto demon : character->GetCOMP()->GetDemons()) {
+    if (!demon.IsNull() && demon->GetHasQuest()) {
+      questDemons.push_back(demon.Get());
     }
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_QUEST_LIST);
+  reply.WriteS8(0);  // Success
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character->GetProgress().Get();
-    auto dQuest = character->GetDemonQuest().Get();
+  reply.WriteS8((int8_t)questDemons.size());
+  for (auto demon : questDemons) {
+    reply.WriteS64Little(state->GetObjectID(demon->GetUUID()));
+  }
+  reply.WriteS64Little(dQuest ? state->GetObjectID(dQuest->GetDemon()) : -1);
 
-    std::list<std::shared_ptr<objects::Demon>> questDemons;
-    for(auto demon : character->GetCOMP()->GetDemons())
-    {
-        if(!demon.IsNull() && demon->GetHasQuest())
-        {
-            questDemons.push_back(demon.Get());
-        }
-    }
+  reply.WriteS16Little((int16_t)progress->GetDemonQuestSequence());
+  reply.WriteS32Little(0);  // Last completed? Not actually used
+  reply.WriteS8(progress->GetDemonQuestDaily());
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_QUEST_LIST);
-    reply.WriteS8(0);   // Success
+  client->SendPacket(reply);
 
-    reply.WriteS8((int8_t)questDemons.size());
-    for(auto demon : questDemons)
-    {
-        reply.WriteS64Little(state->GetObjectID(demon->GetUUID()));
-    }
-    reply.WriteS64Little(dQuest ? state->GetObjectID(dQuest->GetDemon()) : -1);
-
-    reply.WriteS16Little((int16_t)progress->GetDemonQuestSequence());
-    reply.WriteS32Little(0);   // Last completed? Not actually used
-    reply.WriteS8(progress->GetDemonQuestDaily());
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

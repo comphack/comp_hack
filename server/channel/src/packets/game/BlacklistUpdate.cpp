@@ -39,102 +39,83 @@
 
 using namespace channel;
 
-bool Parsers::BlacklistUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BlacklistUpdate::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 11)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 11) {
+    return false;
+  }
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto worldData = state->GetAccountWorldData().Get();
+
+  int32_t requestID = p.ReadS32Little();  // Increments each time
+
+  bool isDelete = p.ReadU8() == 1;
+  int32_t nameCount = p.ReadS32Little();
+
+  std::list<libcomp::String> names;
+  for (int32_t i = 0; i < nameCount; i++) {
+    if (p.Left() < (uint16_t)(2 + p.PeekU16Little())) {
+      return false;
     }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto worldData = state->GetAccountWorldData().Get();
+    libcomp::String name =
+        p.ReadString16Little(state->GetClientStringEncoding(), true);
+    names.push_back(name);
+  }
 
-    int32_t requestID = p.ReadS32Little();  // Increments each time
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    bool isDelete = p.ReadU8() == 1;
-    int32_t nameCount = p.ReadS32Little();
-
-    std::list<libcomp::String> names;
-    for(int32_t i = 0; i < nameCount; i++)
-    {
-        if(p.Left() < (uint16_t)(2 + p.PeekU16Little()))
-        {
-            return false;
+  bool success = true;
+  if (isDelete) {
+    for (auto& name : names) {
+      size_t count = worldData->BlacklistCount();
+      for (size_t i = 0; i < count; i++) {
+        if (worldData->GetBlacklist(i) == name) {
+          worldData->RemoveBlacklist(i);
+          break;
         }
-
-        libcomp::String name = p.ReadString16Little(
-            state->GetClientStringEncoding(), true);
-        names.push_back(name);
+      }
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+    server->GetWorldDatabase()->QueueUpdate(worldData, state->GetAccountUID());
+  } else {
+    std::set<std::string> existing;
+    for (auto& entry : worldData->GetBlacklist()) {
+      existing.insert(entry.C());
+    }
 
-    bool success = true;
-    if(isDelete)
-    {
-        for(auto& name : names)
-        {
-            size_t count = worldData->BlacklistCount();
-            for(size_t i = 0; i < count; i++)
-            {
-                if(worldData->GetBlacklist(i) == name)
-                {
-                    worldData->RemoveBlacklist(i);
-                    break;
-                }
-            }
+    for (auto& name : names) {
+      if (existing.find(name.C()) != existing.end()) {
+        // Already in the list
+        success = false;
+        break;
+      }
+    }
+
+    if (success) {
+      if (existing.size() + names.size() > MAX_BLACKLIST_COUNT) {
+        success = false;
+      } else {
+        for (auto& name : names) {
+          worldData->AppendBlacklist(name);
         }
 
         server->GetWorldDatabase()->QueueUpdate(worldData,
-            state->GetAccountUID());
+                                                state->GetAccountUID());
+      }
     }
-    else
-    {
-        std::set<std::string> existing;
-        for(auto& entry : worldData->GetBlacklist())
-        {
-            existing.insert(entry.C());
-        }
+  }
 
-        for(auto& name : names)
-        {
-            if(existing.find(name.C()) != existing.end())
-            {
-                // Already in the list
-                success = false;
-                break;
-            }
-        }
+  libcomp::Packet reply;
+  reply.WriteS32Little(requestID);
+  reply.WriteS32Little(success ? 0 : 1);
 
-        if(success)
-        {
-            if(existing.size() + names.size() > MAX_BLACKLIST_COUNT)
-            {
-                success = false;
-            }
-            else
-            {
-                for(auto& name : names)
-                {
-                    worldData->AppendBlacklist(name);
-                }
+  client->SendPacket(reply);
 
-                server->GetWorldDatabase()->QueueUpdate(worldData,
-                    state->GetAccountUID());
-            }
-        }
-    }
-
-    libcomp::Packet reply;
-    reply.WriteS32Little(requestID);
-    reply.WriteS32Little(success ? 0 : 1);
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

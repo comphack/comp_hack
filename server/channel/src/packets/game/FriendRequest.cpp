@@ -37,47 +37,44 @@
 
 using namespace channel;
 
-bool Parsers::FriendRequest::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::FriendRequest::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 2 || (p.Size() != (uint32_t)(2 + p.PeekU16Little())))
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 2 || (p.Size() != (uint32_t)(2 + p.PeekU16Little()))) {
+    return false;
+  }
 
-    libcomp::String targetName = p.ReadString16Little(
-        libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+  libcomp::String targetName =
+      p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, true);
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetEntity();
-    auto worldDB = server->GetWorldDatabase();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+  auto character = state->GetCharacterState()->GetEntity();
+  auto worldDB = server->GetWorldDatabase();
 
-    auto target = objects::Character::LoadCharacterByName(worldDB, targetName);
-    if(target && target != character)
-    {
-        libcomp::Packet request;
-        request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
-        request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_YN_REQUEST);
-        request.WriteS32Little(state->GetWorldCID());
-        request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
-            character->GetName(), true);
-        request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
-            targetName, true);
+  auto target = objects::Character::LoadCharacterByName(worldDB, targetName);
+  if (target && target != character) {
+    libcomp::Packet request;
+    request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
+    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_YN_REQUEST);
+    request.WriteS32Little(state->GetWorldCID());
+    request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                                character->GetName(), true);
+    request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                                targetName, true);
 
-        server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
-    }
-    else
-    {
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FRIEND_REQUEST);
-        reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
-            targetName, true);
-        reply.WriteS32Little(-1);
-        client->SendPacket(reply);
-    }
+    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  } else {
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FRIEND_REQUEST);
+    reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+                              targetName, true);
+    reply.WriteS32Little(-1);
+    client->SendPacket(reply);
+  }
 
-    return true;
+  return true;
 }

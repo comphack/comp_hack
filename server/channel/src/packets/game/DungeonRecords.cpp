@@ -39,36 +39,34 @@
 
 using namespace channel;
 
-bool Parsers::DungeonRecords::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DungeonRecords::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character->GetProgress().Get();
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DUNGEON_CHALLENGES);
-    reply.WriteS8(0);   // Unknown
-    reply.WriteS8(progress->GetTimeTrialID());
-    reply.WriteU16Little(progress->GetTimeTrialTime());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character->GetProgress().Get();
 
-    reply.WriteS8((int8_t)progress->TimeTrialRecordsCount());
-    for(uint16_t trialTime : progress->GetTimeTrialRecords())
-    {
-        reply.WriteU16Little(trialTime ? trialTime : (uint16_t)-1);
-    }
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DUNGEON_CHALLENGES);
+  reply.WriteS8(0);  // Unknown
+  reply.WriteS8(progress->GetTimeTrialID());
+  reply.WriteU16Little(progress->GetTimeTrialTime());
 
-    connection->SendPacket(reply);
+  reply.WriteS8((int8_t)progress->TimeTrialRecordsCount());
+  for (uint16_t trialTime : progress->GetTimeTrialRecords()) {
+    reply.WriteU16Little(trialTime ? trialTime : (uint16_t)-1);
+  }
 
-    return true;
+  connection->SendPacket(reply);
+
+  return true;
 }

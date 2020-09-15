@@ -42,64 +42,61 @@
 
 using namespace channel;
 
-bool Parsers::BazaarItemUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BazaarItemUpdate::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 13)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 13) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+
+  auto worldData = state->GetAccountWorldData().Get();
+  auto bazaarData = worldData->GetBazaarData().Get();
+
+  int8_t slot = p.ReadS8();
+  int64_t itemID = p.ReadS64Little();
+  int32_t price = p.ReadS32Little();
+
+  bool ok = true;
+
+  auto bItem = bazaarData->GetItems((size_t)slot).Get();
+  if (bItem == nullptr ||
+      bItem->GetItem().GetUUID() != state->GetObjectUUID(itemID)) {
+    LogBazaarErrorMsg(
+        "BazaarItemUpdate request encountered with invalid item or source "
+        "slot\n");
+
+    ok = false;
+  } else {
+    bItem->SetCost((uint32_t)price);
+
+    auto dbChanges = libcomp::DatabaseChangeSet::Create();
+    dbChanges->Update(bItem);
+
+    if (!server->GetWorldDatabase()->ProcessChangeSet(dbChanges)) {
+      LogBazaarError([&]() {
+        return libcomp::String("BazaarItemUpdate failed to save: %1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+
+      client->Kill();
+      return true;
     }
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_ITEM_UPDATE);
+  reply.WriteS8(slot);
+  reply.WriteS64Little(itemID);
+  reply.WriteS32Little(price);
+  reply.WriteS32Little(ok ? 0 : -1);
 
-    auto worldData = state->GetAccountWorldData().Get();
-    auto bazaarData = worldData->GetBazaarData().Get();
+  client->SendPacket(reply);
 
-    int8_t slot = p.ReadS8();
-    int64_t itemID = p.ReadS64Little();
-    int32_t price = p.ReadS32Little();
-
-    bool ok = true;
-
-    auto bItem = bazaarData->GetItems((size_t)slot).Get();
-    if(bItem == nullptr || bItem->GetItem().GetUUID() != state->GetObjectUUID(itemID))
-    {
-        LogBazaarErrorMsg("BazaarItemUpdate request encountered with invalid "
-            "item or source slot\n");
-
-        ok = false;
-    }
-    else
-    {
-        bItem->SetCost((uint32_t)price);
-
-        auto dbChanges = libcomp::DatabaseChangeSet::Create();
-        dbChanges->Update(bItem);
-
-        if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
-        {
-            LogBazaarError([&]()
-            {
-                return libcomp::String("BazaarItemUpdate failed to save: %1\n")
-                    .Arg(state->GetAccountUID().ToString());
-            });
-
-            client->Kill();
-            return true;
-        }
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_ITEM_UPDATE);
-    reply.WriteS8(slot);
-    reply.WriteS64Little(itemID);
-    reply.WriteS32Little(price);
-    reply.WriteS32Little(ok ? 0 : -1);
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

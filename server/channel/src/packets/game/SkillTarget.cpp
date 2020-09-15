@@ -38,41 +38,41 @@
 
 using namespace channel;
 
-bool Parsers::SkillTarget::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SkillTarget::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8 && p.Size() != 12)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8 && p.Size() != 12) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto skillManager = server->GetSkillManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto skillManager = server->GetSkillManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    int32_t sourceEntityID = p.ReadS32Little();
-    int64_t targetObjectID = p.Size() == 8 ? (int64_t)p.ReadS32Little() : p.ReadS64Little();
+  int32_t sourceEntityID = p.ReadS32Little();
+  int64_t targetObjectID =
+      p.Size() == 8 ? (int64_t)p.ReadS32Little() : p.ReadS64Little();
 
-    // Load the player entity and let the processer handle it not being ready
-    auto source = state->GetEntityState(sourceEntityID, false);
-    if(!source)
-    {
-        LogSkillManagerErrorMsg("Invalid skill source sent from client for "
-            "skill target\n");
+  // Load the player entity and let the processer handle it not being ready
+  auto source = state->GetEntityState(sourceEntityID, false);
+  if (!source) {
+    LogSkillManagerErrorMsg(
+        "Invalid skill source sent from client for skill target\n");
 
-        return false;
-    }
+    return false;
+  }
 
-    server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<
-        ActiveEntityState> pSource, int64_t pTargetObjectID)
-        {
-            pSkillManager->TargetSkill(pSource, pTargetObjectID);
-        }, skillManager, source, targetObjectID);
+  server->QueueWork(
+      [](SkillManager* pSkillManager,
+         const std::shared_ptr<ActiveEntityState> pSource,
+         int64_t pTargetObjectID) {
+        pSkillManager->TargetSkill(pSource, pTargetObjectID);
+      },
+      skillManager, source, targetObjectID);
 
-    return true;
+  return true;
 }

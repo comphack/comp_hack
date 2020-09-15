@@ -40,60 +40,54 @@
 
 using namespace channel;
 
-bool Parsers::Logout::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::Logout::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 4) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    uint32_t codeValue = p.ReadU32Little();
-    if(LogoutCode_t::LOGOUT_CODE_UNKNOWN_MIN >= codeValue ||
-        LogoutCode_t::LOGOUT_CODE_UNKNOWN_MAX <= codeValue)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Unknown logout code: %1\n").Arg(codeValue);
-        });
+  uint32_t codeValue = p.ReadU32Little();
+  if (LogoutCode_t::LOGOUT_CODE_UNKNOWN_MIN >= codeValue ||
+      LogoutCode_t::LOGOUT_CODE_UNKNOWN_MAX <= codeValue) {
+    LogGeneralError([&]() {
+      return libcomp::String("Unknown logout code: %1\n").Arg(codeValue);
+    });
 
-        return false;
-    }
+    return false;
+  }
 
-    LogoutCode_t code = (LogoutCode_t)codeValue;
-    if((code == LogoutCode_t::LOGOUT_CODE_SWITCH && p.Size() != 5) ||
-        (code != LogoutCode_t::LOGOUT_CODE_SWITCH && p.Size() != 4))
-    {
-        return false;
-    }
+  LogoutCode_t code = (LogoutCode_t)codeValue;
+  if ((code == LogoutCode_t::LOGOUT_CODE_SWITCH && p.Size() != 5) ||
+      (code != LogoutCode_t::LOGOUT_CODE_SWITCH && p.Size() != 4)) {
+    return false;
+  }
 
-    bool sendReply = false;
-    uint8_t channelIdx = 0;
-    switch(code)
-    {
-        case LogoutCode_t::LOGOUT_CODE_QUIT:
-            sendReply = true;
-            break;
-        case LogoutCode_t::LOGOUT_CODE_CANCEL:
-            client->GetClientState()->SetLogoutTimer(0);
-            break;
-        case LogoutCode_t::LOGOUT_CODE_SWITCH:
-            channelIdx = p.ReadU8();
-            sendReply = true;
-            break;
-        default:
-            break;
-    }
+  bool sendReply = false;
+  uint8_t channelIdx = 0;
+  switch (code) {
+    case LogoutCode_t::LOGOUT_CODE_QUIT:
+      sendReply = true;
+      break;
+    case LogoutCode_t::LOGOUT_CODE_CANCEL:
+      client->GetClientState()->SetLogoutTimer(0);
+      break;
+    case LogoutCode_t::LOGOUT_CODE_SWITCH:
+      channelIdx = p.ReadU8();
+      sendReply = true;
+      break;
+    default:
+      break;
+  }
 
-    if(sendReply)
-    {
-        server->GetAccountManager()->HandleLogoutRequest(client,
-            code, channelIdx);
-    }
+  if (sendReply) {
+    server->GetAccountManager()->HandleLogoutRequest(client, code, channelIdx);
+  }
 
-    return true;
+  return true;
 }

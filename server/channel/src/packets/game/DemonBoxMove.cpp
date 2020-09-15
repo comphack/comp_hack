@@ -46,137 +46,125 @@
 
 using namespace channel;
 
-bool Parsers::DemonBoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonBoxMove::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 11)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 11) {
+    return false;
+  }
+
+  int8_t srcBoxID = p.ReadS8();
+  int64_t demonID = p.ReadS64Little();
+  int8_t destBoxID = p.ReadS8();
+  int8_t destSlot = p.ReadS8();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character->GetProgress();
+  auto characterManager = server->GetCharacterManager();
+
+  auto destBox = characterManager->GetDemonBox(state, destBoxID);
+
+  auto srcDemon = std::dynamic_pointer_cast<objects::Demon>(
+      libcomp::PersistentObject::GetObjectByUUID(
+          state->GetObjectUUID(demonID)));
+  auto destDemon =
+      destBox ? destBox->GetDemons((size_t)destSlot).Get() : nullptr;
+
+  int8_t srcSlot = srcDemon->GetBoxSlot();
+  auto srcBox = std::dynamic_pointer_cast<objects::DemonBox>(
+      libcomp::PersistentObject::GetObjectByUUID(srcDemon->GetDemonBox()));
+
+  uint8_t maxDestSlots = destBoxID == 0 ? progress->GetMaxCOMPSlots() : 50;
+
+  bool fail = false;
+  if (!srcBox || srcBoxID != srcBox->GetBoxID() || !destBox ||
+      srcDemon != srcBox->GetDemons((size_t)srcSlot).Get() ||
+      destSlot >= maxDestSlots) {
+    LogDemonDebug([&]() {
+      return libcomp::String(
+                 "DemonBoxMove request failed. Notifying requestor: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    fail = true;
+  } else if (srcBox != destBox) {
+    // Make sure nothing is being moved into an expired box (allow
+    // reorganize because why not?)
+    uint32_t now = (uint32_t)std::time(0);
+    if ((srcDemon && destBox->GetRentalExpiration() &&
+         destBox->GetRentalExpiration() < now) ||
+        (destDemon && srcBox->GetRentalExpiration() &&
+         srcBox->GetRentalExpiration() < now)) {
+      fail = true;
     }
+  }
 
-    int8_t srcBoxID = p.ReadS8();
-    int64_t demonID = p.ReadS64Little();
-    int8_t destBoxID = p.ReadS8();
-    int8_t destSlot = p.ReadS8();
+  if (fail) {
+    // Request client rollback and quit here
+    libcomp::Packet err;
+    err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);
+    err.WriteS32Little(
+        (int32_t)ClientToChannelPacketCode_t::PACKET_DEMON_BOX_MOVE);
+    err.WriteS32Little(-1);
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character->GetProgress();
-    auto characterManager = server->GetCharacterManager();
-
-    auto destBox = characterManager->GetDemonBox(state, destBoxID);
-
-    auto srcDemon = std::dynamic_pointer_cast<objects::Demon>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
-    auto destDemon = destBox
-        ? destBox->GetDemons((size_t)destSlot).Get() : nullptr;
-
-    int8_t srcSlot = srcDemon->GetBoxSlot();
-    auto srcBox = std::dynamic_pointer_cast<objects::DemonBox>(
-        libcomp::PersistentObject::GetObjectByUUID(srcDemon->GetDemonBox()));
-
-    uint8_t maxDestSlots = destBoxID == 0 ? progress->GetMaxCOMPSlots() : 50;
-
-    bool fail = false;
-    if(!srcBox || srcBoxID != srcBox->GetBoxID() || !destBox ||
-        srcDemon != srcBox->GetDemons((size_t)srcSlot).Get() || destSlot >= maxDestSlots)
-    {
-        LogDemonDebug([&]()
-        {
-            return libcomp::String("DemonBoxMove request failed. Notifying"
-                " requestor: %1\n").Arg(state->GetAccountUID().ToString());
-        });
-
-        fail = true;
-    }
-    else if(srcBox != destBox)
-    {
-        // Make sure nothing is being moved into an expired box (allow
-        // reorganize because why not?)
-        uint32_t now = (uint32_t)std::time(0);
-        if((srcDemon && destBox->GetRentalExpiration() &&
-            destBox->GetRentalExpiration() < now) ||
-            (destDemon && srcBox->GetRentalExpiration() &&
-                srcBox->GetRentalExpiration() < now))
-        {
-            fail = true;
-        }
-    }
-
-    if(fail)
-    {
-        // Request client rollback and quit here
-        libcomp::Packet err;
-        err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);
-        err.WriteS32Little((int32_t)
-            ClientToChannelPacketCode_t::PACKET_DEMON_BOX_MOVE);
-        err.WriteS32Little(-1);
-
-        client->SendPacket(err);
-
-        return true;
-    }
-
-    auto dbChanges = libcomp::DatabaseChangeSet::Create(state
-        ->GetAccountUID());
-
-    // If the active demon is being moved to a non-COMP box, store it first
-    if((srcDemon && srcDemon == character->GetActiveDemon().Get()
-        && destBoxID != 0) ||
-        (destDemon && destDemon == character->GetActiveDemon().Get()
-            && srcBoxID != 0))
-    {
-        characterManager->StoreDemon(client);
-        dbChanges->Update(character);
-    }
-
-    dbChanges->Update(srcDemon);
-    dbChanges->Update(srcBox);
-    dbChanges->Update(destBox);
-
-    srcDemon->SetBoxSlot(destSlot);
-    srcDemon->SetDemonBox(destBox->GetUUID());
-    if(destDemon)
-    {
-        destDemon->SetBoxSlot(srcSlot);
-        destDemon->SetDemonBox(srcBox->GetUUID());
-        dbChanges->Update(destDemon);
-    }
-
-    srcBox->SetDemons((size_t)srcSlot, destDemon);
-    destBox->SetDemons((size_t)destSlot, srcDemon);
-
-    if(srcBox != destBox)
-    {
-        characterManager->SendDemonBoxData(client, destBoxID, { destSlot });
-        characterManager->SendDemonBoxData(client, srcBoxID, { srcSlot });
-
-        // Clear all quests
-        auto dQuest = character->GetDemonQuest().Get();
-        for(auto& d : { srcDemon, destDemon })
-        {
-            if(d && d->GetHasQuest())
-            {
-                if(dQuest && dQuest->GetDemon() == d->GetUUID())
-                {
-                    // Fail the quest
-                    server->GetEventManager()->EndDemonQuest(client);
-                }
-
-                d->SetHasQuest(false);
-            }
-        }
-    }
-    else
-    {
-        characterManager->SendDemonBoxData(client, srcBoxID, { srcSlot, destSlot });
-    }
-
-    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+    client->SendPacket(err);
 
     return true;
+  }
+
+  auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+
+  // If the active demon is being moved to a non-COMP box, store it first
+  if ((srcDemon && srcDemon == character->GetActiveDemon().Get() &&
+       destBoxID != 0) ||
+      (destDemon && destDemon == character->GetActiveDemon().Get() &&
+       srcBoxID != 0)) {
+    characterManager->StoreDemon(client);
+    dbChanges->Update(character);
+  }
+
+  dbChanges->Update(srcDemon);
+  dbChanges->Update(srcBox);
+  dbChanges->Update(destBox);
+
+  srcDemon->SetBoxSlot(destSlot);
+  srcDemon->SetDemonBox(destBox->GetUUID());
+  if (destDemon) {
+    destDemon->SetBoxSlot(srcSlot);
+    destDemon->SetDemonBox(srcBox->GetUUID());
+    dbChanges->Update(destDemon);
+  }
+
+  srcBox->SetDemons((size_t)srcSlot, destDemon);
+  destBox->SetDemons((size_t)destSlot, srcDemon);
+
+  if (srcBox != destBox) {
+    characterManager->SendDemonBoxData(client, destBoxID, {destSlot});
+    characterManager->SendDemonBoxData(client, srcBoxID, {srcSlot});
+
+    // Clear all quests
+    auto dQuest = character->GetDemonQuest().Get();
+    for (auto& d : {srcDemon, destDemon}) {
+      if (d && d->GetHasQuest()) {
+        if (dQuest && dQuest->GetDemon() == d->GetUUID()) {
+          // Fail the quest
+          server->GetEventManager()->EndDemonQuest(client);
+        }
+
+        d->SetHasQuest(false);
+      }
+    }
+  } else {
+    characterManager->SendDemonBoxData(client, srcBoxID, {srcSlot, destSlot});
+  }
+
+  server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+
+  return true;
 }

@@ -44,100 +44,92 @@
 
 using namespace channel;
 
-bool Parsers::DemonCrystallizeItem::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonCrystallizeItem::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
 
-    int64_t itemID = p.ReadS64Little();
+  int64_t itemID = p.ReadS64Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
 
-    auto otherClient = exchangeSession &&
-        exchangeSession->GetSourceEntityID() != cState->GetEntityID()
-        ? server->GetManagerConnection()->GetEntityClient(
-            exchangeSession->GetSourceEntityID(), false) : nullptr;
+  auto otherClient = exchangeSession && exchangeSession->GetSourceEntityID() !=
+                                            cState->GetEntityID()
+                         ? server->GetManagerConnection()->GetEntityClient(
+                               exchangeSession->GetSourceEntityID(), false)
+                         : nullptr;
 
-    bool success = false;
-    std::list<int32_t> successRates;
-    uint32_t itemType = 0;
+  bool success = false;
+  std::list<int32_t> successRates;
+  uint32_t itemType = 0;
 
-    auto item = itemID != -1 ? std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)))
-        : nullptr;
+  auto item = itemID != -1 ? std::dynamic_pointer_cast<objects::Item>(
+                                 libcomp::PersistentObject::GetObjectByUUID(
+                                     state->GetObjectUUID(itemID)))
+                           : nullptr;
 
-    bool error = false;
-    if(exchangeSession && (itemID == -1 || item))
-    {
-        auto previous = exchangeSession->GetItems(0);
-        exchangeSession->SetItems(0, item);
+  bool error = false;
+  if (exchangeSession && (itemID == -1 || item)) {
+    auto previous = exchangeSession->GetItems(0);
+    exchangeSession->SetItems(0, item);
 
-        if(item)
-        {
-            auto otherState = otherClient
-                ? otherClient->GetClientState() : state;
-            success = characterManager->GetSynthOutcome(otherState,
-                exchangeSession, itemType, successRates);
+    if (item) {
+      auto otherState = otherClient ? otherClient->GetClientState() : state;
+      success = characterManager->GetSynthOutcome(otherState, exchangeSession,
+                                                  itemType, successRates);
 
-            if(!success)
-            {
-                // Put the previous item back and recalc old values
-                exchangeSession->SetItems(0, previous);
-                itemID = state->GetObjectID(previous.GetUUID());
+      if (!success) {
+        // Put the previous item back and recalc old values
+        exchangeSession->SetItems(0, previous);
+        itemID = state->GetObjectID(previous.GetUUID());
 
-                if(!characterManager->GetSynthOutcome(otherState,
-                    exchangeSession, itemType, successRates))
-                {
-                    error = true;
-                }
-            }
+        if (!characterManager->GetSynthOutcome(otherState, exchangeSession,
+                                               itemType, successRates)) {
+          error = true;
         }
-        else
-        {
-            success = true;
-        }
+      }
+    } else {
+      success = true;
     }
-    else
-    {
-        error = true;
-    }
+  } else {
+    error = true;
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_DEMON_CRYSTALLIZE_ITEM_UPDATE);
-    reply.WriteS64Little(itemID);
-    reply.WriteS32Little(successRates.front());
-    reply.WriteU32Little(itemType);
-    reply.WriteS32Little(error ? -1 : 0);
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_DEMON_CRYSTALLIZE_ITEM_UPDATE);
+  reply.WriteS64Little(itemID);
+  reply.WriteS32Little(successRates.front());
+  reply.WriteU32Little(itemType);
+  reply.WriteS32Little(error ? -1 : 0);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    if(success && otherClient)
-    {
-        auto otherState = otherClient->GetClientState();
-        int64_t otherItemID = item ? otherState->GetObjectID(item->GetUUID()) : -1;
+  if (success && otherClient) {
+    auto otherState = otherClient->GetClientState();
+    int64_t otherItemID = item ? otherState->GetObjectID(item->GetUUID()) : -1;
 
-        libcomp::Packet notify;
-        notify.WritePacketCode(
-            ChannelToClientPacketCode_t::PACKET_DEMON_CRYSTALLIZE_ITEM_UPDATED);
-        notify.WriteS64Little(otherItemID);
+    libcomp::Packet notify;
+    notify.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_DEMON_CRYSTALLIZE_ITEM_UPDATED);
+    notify.WriteS64Little(otherItemID);
 
-        characterManager->GetItemDetailPacketData(notify, item);
+    characterManager->GetItemDetailPacketData(notify, item);
 
-        notify.WriteS32Little(successRates.front());
-        notify.WriteU32Little(itemType);
+    notify.WriteS32Little(successRates.front());
+    notify.WriteU32Little(itemType);
 
-        otherClient->SendPacket(notify);
-    }
+    otherClient->SendPacket(notify);
+  }
 
-    return true;
+  return true;
 }

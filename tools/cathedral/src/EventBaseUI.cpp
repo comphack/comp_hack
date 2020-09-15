@@ -28,108 +28,90 @@
 #include "MainWindow.h"
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_EventBase.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include "ui_EventBase.h"
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-EventBase::EventBase(MainWindow *pMainWindow, QWidget *pParent) :
-    QWidget(pParent), mMainWindow(pMainWindow)
-{
-    ui = new Ui::EventBase;
-    ui->setupUi(this);
+EventBase::EventBase(MainWindow *pMainWindow, QWidget *pParent)
+    : QWidget(pParent), mMainWindow(pMainWindow) {
+  ui = new Ui::EventBase;
+  ui->setupUi(this);
 
-    ui->conditions->Setup(DynamicItemType_t::OBJ_EVENT_CONDITION, pMainWindow);
-    ui->conditions->SetAddText("Add Condition");
+  ui->conditions->Setup(DynamicItemType_t::OBJ_EVENT_CONDITION, pMainWindow);
+  ui->conditions->SetAddText("Add Condition");
 
+  ui->layoutBaseBody->setVisible(false);
+
+  // Hide skip invalid by default
+  ui->lblSkipInvalid->setVisible(false);
+  ui->skipInvalid->setVisible(false);
+
+  ui->next->SetMainWindow(pMainWindow);
+  ui->queueNext->SetMainWindow(pMainWindow);
+
+  connect(ui->toggleBaseDisplay, SIGNAL(clicked(bool)), this,
+          SLOT(ToggleBaseDisplay()));
+}
+
+EventBase::~EventBase() { delete ui; }
+
+void EventBase::Load(const std::shared_ptr<objects::EventBase> &e) {
+  mEventBase = e;
+
+  if (!mEventBase) {
+    return;
+  }
+
+  ui->next->SetEvent(e->GetNext());
+  ui->queueNext->SetEvent(e->GetQueueNext());
+
+  for (auto condition : e->GetConditions()) {
+    ui->conditions->AddObject(condition);
+  }
+
+  // If any non-base values are set, display the base values section
+  // (skip invalid is assumed to have already been set)
+  if (!ui->layoutBaseBody->isVisible() &&
+      (!e->GetQueueNext().IsEmpty() || ui->skipInvalid->isChecked())) {
+    ToggleBaseDisplay();
+  }
+}
+
+std::shared_ptr<objects::EventBase> EventBase::Save() const {
+  if (!mEventBase) {
+    return nullptr;
+  }
+
+  mEventBase->SetNext(ui->next->GetEvent());
+  mEventBase->SetQueueNext(ui->queueNext->GetEvent());
+
+  auto conditions = ui->conditions->GetObjectList<objects::EventCondition>();
+  mEventBase->SetConditions(conditions);
+
+  return mEventBase;
+}
+
+void EventBase::ToggleBaseDisplay() {
+  if (ui->layoutBaseBody->isVisible()) {
     ui->layoutBaseBody->setVisible(false);
-
-    // Hide skip invalid by default
-    ui->lblSkipInvalid->setVisible(false);
-    ui->skipInvalid->setVisible(false);
-
-    ui->next->SetMainWindow(pMainWindow);
-    ui->queueNext->SetMainWindow(pMainWindow);
-
-    connect(ui->toggleBaseDisplay, SIGNAL(clicked(bool)), this,
-        SLOT(ToggleBaseDisplay()));
+    ui->toggleBaseDisplay->setText(u8"►");
+  } else {
+    ui->layoutBaseBody->setVisible(true);
+    ui->toggleBaseDisplay->setText(u8"▼");
+  }
 }
 
-EventBase::~EventBase()
-{
-    delete ui;
-}
+bool EventBase::GetSkipInvalid() const { return ui->skipInvalid->isChecked(); }
 
-void EventBase::Load(const std::shared_ptr<objects::EventBase>& e)
-{
-    mEventBase = e;
+void EventBase::SetSkipInvalid(bool skip) {
+  // Since we are using the property, show it
+  ui->lblSkipInvalid->setVisible(true);
+  ui->skipInvalid->setVisible(true);
 
-    if(!mEventBase)
-    {
-        return;
-    }
-
-    ui->next->SetEvent(e->GetNext());
-    ui->queueNext->SetEvent(e->GetQueueNext());
-
-    for(auto condition : e->GetConditions())
-    {
-        ui->conditions->AddObject(condition);
-    }
-
-    // If any non-base values are set, display the base values section
-    // (skip invalid is assumed to have already been set)
-    if(!ui->layoutBaseBody->isVisible() &&
-        (!e->GetQueueNext().IsEmpty() ||
-            ui->skipInvalid->isChecked()))
-    {
-        ToggleBaseDisplay();
-    }
-}
-
-std::shared_ptr<objects::EventBase> EventBase::Save() const
-{
-    if(!mEventBase)
-    {
-        return nullptr;
-    }
-
-    mEventBase->SetNext(ui->next->GetEvent());
-    mEventBase->SetQueueNext(ui->queueNext->GetEvent());
-
-    auto conditions = ui->conditions->GetObjectList<objects::EventCondition>();
-    mEventBase->SetConditions(conditions);
-
-    return mEventBase;
-}
-
-void EventBase::ToggleBaseDisplay()
-{
-    if(ui->layoutBaseBody->isVisible())
-    {
-        ui->layoutBaseBody->setVisible(false);
-        ui->toggleBaseDisplay->setText(u8"►");
-    }
-    else
-    {
-        ui->layoutBaseBody->setVisible(true);
-        ui->toggleBaseDisplay->setText(u8"▼");
-    }
-}
-
-bool EventBase::GetSkipInvalid() const
-{
-    return ui->skipInvalid->isChecked();
-}
-
-void EventBase::SetSkipInvalid(bool skip)
-{
-    // Since we are using the property, show it
-    ui->lblSkipInvalid->setVisible(true);
-    ui->skipInvalid->setVisible(true);
-
-    ui->skipInvalid->setChecked(skip);
+  ui->skipInvalid->setChecked(skip);
 }

@@ -29,104 +29,94 @@
 #include "ZoneWindow.h"
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_ZonePartialSelector.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include "ui_ZonePartialSelector.h"
 
 // object Includes
 #include <ServerZone.h>
 #include <ServerZonePartial.h>
 
 ZonePartialSelector::ZonePartialSelector(MainWindow *pMainWindow,
-    QWidget *pParent) : QDialog(pParent), mMainWindow(pMainWindow)
-{
-    ui = new Ui::ZonePartialSelector;
-    ui->setupUi(this);
+                                         QWidget *pParent)
+    : QDialog(pParent), mMainWindow(pMainWindow) {
+  ui = new Ui::ZonePartialSelector;
+  ui->setupUi(this);
 
-    connect(ui->apply, SIGNAL(clicked()), this, SLOT(close()));
+  connect(ui->apply, SIGNAL(clicked()), this, SLOT(close()));
 }
 
-ZonePartialSelector::~ZonePartialSelector()
-{
-    delete ui;
-}
+ZonePartialSelector::~ZonePartialSelector() { delete ui; }
 
-std::set<uint32_t> ZonePartialSelector::Select()
-{
-    if(mMainWindow)
-    {
-        auto zoneWindow = mMainWindow->GetZones();
+std::set<uint32_t> ZonePartialSelector::Select() {
+  if (mMainWindow) {
+    auto zoneWindow = mMainWindow->GetZones();
 
-        auto merged = zoneWindow->GetMergedZone();
-        auto partials = zoneWindow->GetLoadedPartials();
-        auto selected = zoneWindow->GetSelectedPartials();
+    auto merged = zoneWindow->GetMergedZone();
+    auto partials = zoneWindow->GetLoadedPartials();
+    auto selected = zoneWindow->GetSelectedPartials();
 
-        ui->tableWidget->setRowCount((int)partials.size());
+    ui->tableWidget->setRowCount((int)partials.size());
 
-        uint32_t dynamicMapID = merged->CurrentZone->GetDynamicMapID();
+    uint32_t dynamicMapID = merged->CurrentZone->GetDynamicMapID();
 
-        int idx = 0;
-        for(auto& pair : partials)
-        {
-            auto partial = pair.second;
+    int idx = 0;
+    for (auto &pair : partials) {
+      auto partial = pair.second;
 
-            bool mapped = dynamicMapID &&
-                partial->DynamicMapIDsContains(dynamicMapID);
-            bool hasObjects = partial->NPCsCount() ||
-                partial->ObjectsCount();
-            bool hasSpawns = partial->SpawnsCount() ||
-                partial->SpawnGroupsCount() ||
-                partial->SpawnLocationGroupsCount();
-            bool hasSpots = partial->SpotsCount() > 0;
-            bool hasTriggers = partial->TriggersCount() > 0;
-            bool hasOther = partial->DropSetIDsCount() ||
-                partial->SkillBlacklistCount() ||
-                partial->SkillWhitelistCount();
+      bool mapped =
+          dynamicMapID && partial->DynamicMapIDsContains(dynamicMapID);
+      bool hasObjects = partial->NPCsCount() || partial->ObjectsCount();
+      bool hasSpawns = partial->SpawnsCount() || partial->SpawnGroupsCount() ||
+                       partial->SpawnLocationGroupsCount();
+      bool hasSpots = partial->SpotsCount() > 0;
+      bool hasTriggers = partial->TriggersCount() > 0;
+      bool hasOther = partial->DropSetIDsCount() ||
+                      partial->SkillBlacklistCount() ||
+                      partial->SkillWhitelistCount();
 
-            ui->tableWidget->setItem(idx, 0, new QTableWidgetItem(
-                QString::number(pair.first)));
-            ui->tableWidget->setItem(idx, 1, new QTableWidgetItem(
-                (mapped ? "Y" : "N")));
-            ui->tableWidget->setItem(idx, 2, new QTableWidgetItem(
-                (partial->GetAutoApply() ? "Y" : "N")));
-            ui->tableWidget->setItem(idx, 3, new QTableWidgetItem(
-                (hasObjects ? "Y" : "N")));
-            ui->tableWidget->setItem(idx, 4, new QTableWidgetItem(
-                (hasSpawns ? "Y" : "N")));
-            ui->tableWidget->setItem(idx, 5, new QTableWidgetItem(
-                (hasSpots ? "Y" : "N")));
-            ui->tableWidget->setItem(idx, 6, new QTableWidgetItem(
-                (hasTriggers ? "Y" : "N")));
-            ui->tableWidget->setItem(idx, 7, new QTableWidgetItem(
-                (hasOther ? "Y" : "N")));
+      ui->tableWidget->setItem(
+          idx, 0, new QTableWidgetItem(QString::number(pair.first)));
+      ui->tableWidget->setItem(idx, 1,
+                               new QTableWidgetItem((mapped ? "Y" : "N")));
+      ui->tableWidget->setItem(
+          idx, 2, new QTableWidgetItem((partial->GetAutoApply() ? "Y" : "N")));
+      ui->tableWidget->setItem(idx, 3,
+                               new QTableWidgetItem((hasObjects ? "Y" : "N")));
+      ui->tableWidget->setItem(idx, 4,
+                               new QTableWidgetItem((hasSpawns ? "Y" : "N")));
+      ui->tableWidget->setItem(idx, 5,
+                               new QTableWidgetItem((hasSpots ? "Y" : "N")));
+      ui->tableWidget->setItem(idx, 6,
+                               new QTableWidgetItem((hasTriggers ? "Y" : "N")));
+      ui->tableWidget->setItem(idx, 7,
+                               new QTableWidgetItem((hasOther ? "Y" : "N")));
 
-            if(selected.find(pair.first) != selected.end())
-            {
-                auto qIdx = ui->tableWidget->model()->index(idx, 0);
-                ui->tableWidget->selectionModel()->select(qIdx,
-                    QItemSelectionModel::Select | QItemSelectionModel::Rows);
-            }
+      if (selected.find(pair.first) != selected.end()) {
+        auto qIdx = ui->tableWidget->model()->index(idx, 0);
+        ui->tableWidget->selectionModel()->select(
+            qIdx, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+      }
 
-            idx++;
-        }
-
-        ui->tableWidget->resizeColumnsToContents();
+      idx++;
     }
 
-    // Block until selection is done
-    exec();
+    ui->tableWidget->resizeColumnsToContents();
+  }
 
-    std::set<uint32_t> selection;
+  // Block until selection is done
+  exec();
 
-    int rowCount = ui->tableWidget->rowCount();
-    for(int i = 0; i < rowCount; i++)
-    {
-        auto item = ui->tableWidget->item(i, 0);
-        if(ui->tableWidget->isItemSelected(item))
-        {
-            selection.insert(item->text().toUInt());
-        }
+  std::set<uint32_t> selection;
+
+  int rowCount = ui->tableWidget->rowCount();
+  for (int i = 0; i < rowCount; i++) {
+    auto item = ui->tableWidget->item(i, 0);
+    if (ui->tableWidget->isItemSelected(item)) {
+      selection.insert(item->text().toUInt());
     }
+  }
 
-    return selection;
+  return selection;
 }

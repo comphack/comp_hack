@@ -32,35 +32,34 @@
 #include <ActionStartEvent.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionStartEvent;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionStartEvent : public Action
-{
-    Q_OBJECT
+class ActionStartEvent : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionStartEvent(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionStartEvent();
+ public:
+  explicit ActionStartEvent(ActionList *pList, MainWindow *pMainWindow,
+                            QWidget *pParent = 0);
+  virtual ~ActionStartEvent();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionStartEvent *prop;
+ protected:
+  Ui::ActionStartEvent *prop;
 
-    std::shared_ptr<objects::ActionStartEvent> mAction;
+  std::shared_ptr<objects::ActionStartEvent> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONSTARTEVENTUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONSTARTEVENTUI_H

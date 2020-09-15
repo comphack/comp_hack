@@ -41,79 +41,71 @@
 
 using namespace channel;
 
-bool Parsers::DigitalizeAssistRemove::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DigitalizeAssistRemove::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
+
+  int32_t unknown = p.ReadS32Little();
+  (void)unknown;  // Always 0
+
+  uint32_t assistID = p.ReadU32Little();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character ? character->GetProgress().Get() : nullptr;
+
+  bool success = progress != nullptr;
+  if (success) {
+    // Consume rollback PG item
+    success = false;
+
+    for (uint32_t itemID : SVR_CONST.ROLLBACK_PG_ITEMS) {
+      std::unordered_map<uint32_t, uint32_t> items;
+      items[itemID] = 1;
+      if (characterManager->AddRemoveItems(client, items, false)) {
+        success = true;
+        break;
+      }
     }
+  }
 
-    int32_t unknown = p.ReadS32Little();
-    (void)unknown;  // Always 0
+  if (success) {
+    size_t index;
+    uint8_t shiftVal;
+    CharacterManager::ConvertIDToMaskValues((uint16_t)assistID, index,
+                                            shiftVal);
+    if (index < progress->DigitalizeAssistsCount()) {
+      auto oldValue = progress->GetDigitalizeAssists(index);
+      uint8_t newValue = static_cast<uint8_t>(oldValue ^ shiftVal);
 
-    uint32_t assistID = p.ReadU32Little();
+      if (oldValue != newValue) {
+        progress->SetDigitalizeAssists((size_t)index, newValue);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+        server->GetWorldDatabase()->QueueUpdate(progress);
+      }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character ? character->GetProgress().Get() : nullptr;
-
-    bool success = progress != nullptr;
-    if(success)
-    {
-        // Consume rollback PG item
-        success = false;
-
-        for(uint32_t itemID : SVR_CONST.ROLLBACK_PG_ITEMS)
-        {
-            std::unordered_map<uint32_t, uint32_t> items;
-            items[itemID] = 1;
-            if(characterManager->AddRemoveItems(client, items, false))
-            {
-                success = true;
-                break;
-            }
-        }
+      success = true;
     }
+  }
 
-    if(success)
-    {
-        size_t index;
-        uint8_t shiftVal;
-        CharacterManager::ConvertIDToMaskValues((uint16_t)assistID, index,
-            shiftVal);
-        if(index < progress->DigitalizeAssistsCount())
-        {
-            auto oldValue = progress->GetDigitalizeAssists(index);
-            uint8_t newValue = static_cast<uint8_t>(oldValue ^ shiftVal);
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_DIGITALIZE_ASSIST_REMOVE);
+  reply.WriteS32Little(0);  // Unknown
+  reply.WriteS32Little(success ? 0 : -1);
+  reply.WriteU32Little(assistID);
 
-            if(oldValue != newValue)
-            {
-                progress->SetDigitalizeAssists((size_t)index, newValue);
+  client->SendPacket(reply);
 
-                server->GetWorldDatabase()->QueueUpdate(progress);
-            }
-
-            success = true;
-        }
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_DIGITALIZE_ASSIST_REMOVE);
-    reply.WriteS32Little(0);    // Unknown
-    reply.WriteS32Little(success ? 0 : -1);
-    reply.WriteU32Little(assistID);
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

@@ -28,72 +28,63 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionDelay.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionDelay::ActionDelay(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionDelay;
-    prop->setupUi(pWidget);
+ActionDelay::ActionDelay(ActionList *pList, MainWindow *pMainWindow,
+                         QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionDelay;
+  prop->setupUi(pWidget);
 
-    ui->actionTitle->setText(tr("<b>Delay</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Delay</b>"));
+  ui->layoutMain->addWidget(pWidget);
 
-    prop->actions->SetMainWindow(pMainWindow);
+  prop->actions->SetMainWindow(pMainWindow);
 }
 
-ActionDelay::~ActionDelay()
-{
-    delete prop;
+ActionDelay::~ActionDelay() { delete prop; }
+
+void ActionDelay::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionDelay>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->type->setCurrentIndex(to_underlying(mAction->GetType()));
+  prop->delayID->setValue(mAction->GetDelayID());
+  prop->duration->setValue((int32_t)mAction->GetDuration());
+
+  auto actions = mAction->GetActions();
+  prop->actions->Load(actions);
 }
 
-void ActionDelay::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionDelay>(act);
+std::shared_ptr<objects::Action> ActionDelay::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetType((objects::ActionDelay::Type_t)prop->type->currentIndex());
+  mAction->SetDelayID(prop->delayID->value());
+  mAction->SetDuration((uint32_t)prop->duration->value());
 
-    prop->type->setCurrentIndex(to_underlying(
-        mAction->GetType()));
-    prop->delayID->setValue(mAction->GetDelayID());
-    prop->duration->setValue((int32_t)mAction->GetDuration());
+  auto actions = prop->actions->Save();
+  mAction->SetActions(actions);
 
-    auto actions = mAction->GetActions();
-    prop->actions->Load(actions);
-}
-
-std::shared_ptr<objects::Action> ActionDelay::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetType((objects::ActionDelay::Type_t)
-        prop->type->currentIndex());
-    mAction->SetDelayID(prop->delayID->value());
-    mAction->SetDuration((uint32_t)prop->duration->value());
-
-    auto actions = prop->actions->Save();
-    mAction->SetActions(actions);
-
-    return mAction;
+  return mAction;
 }

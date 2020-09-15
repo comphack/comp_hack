@@ -40,37 +40,36 @@
 
 using namespace channel;
 
-bool Parsers::CultureData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CultureData::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto cultureData = character ? character->GetCultureData().Get() : nullptr;
-    auto cultureItem = cultureData ? cultureData->GetItem().Get() : nullptr;
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto cultureData = character ? character->GetCultureData().Get() : nullptr;
+  auto cultureItem = cultureData ? cultureData->GetItem().Get() : nullptr;
 
-    bool active = cultureData && cultureData->GetActive();
+  bool active = cultureData && cultureData->GetActive();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CULTURE_DATA);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CULTURE_DATA);
 
-    reply.WriteS8(0);   // Success
-    reply.WriteS32Little(active ? ChannelServer::GetExpirationInSeconds(
-        cultureData->GetExpiration()) : 0);
-    reply.WriteU32Little(active ? cultureItem->GetType()
-        : static_cast<uint32_t>(-1));
+  reply.WriteS8(0);  // Success
+  reply.WriteS32Little(active ? ChannelServer::GetExpirationInSeconds(
+                                    cultureData->GetExpiration())
+                              : 0);
+  reply.WriteU32Little(active ? cultureItem->GetType()
+                              : static_cast<uint32_t>(-1));
 
-    connection->SendPacket(reply);
+  connection->SendPacket(reply);
 
-    return true;
+  return true;
 }

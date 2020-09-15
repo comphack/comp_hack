@@ -36,33 +36,29 @@
 
 using namespace channel;
 
-bool Parsers::CommonSwitchInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CommonSwitchInfo::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_COMMON_SWITCH_INFO);
-    reply.WriteU16Little((uint16_t)character->CommonSwitchCount());
-    for(int8_t byte : character->GetCommonSwitch())
-    {
-        reply.WriteS8(byte);
-    }
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMMON_SWITCH_INFO);
+  reply.WriteU16Little((uint16_t)character->CommonSwitchCount());
+  for (int8_t byte : character->GetCommonSwitch()) {
+    reply.WriteS8(byte);
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

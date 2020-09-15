@@ -39,32 +39,32 @@
 
 using namespace channel;
 
-bool Parsers::ClanInvite::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ClanInvite::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 6)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 6) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    int32_t clanID = p.ReadS32Little();
-    libcomp::String targetName = p.ReadString16Little(
-        state->GetClientStringEncoding(), true);
+  int32_t clanID = p.ReadS32Little();
+  libcomp::String targetName =
+      p.ReadString16Little(state->GetClientStringEncoding(), true);
 
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_YN_REQUEST);
-    request.WriteS32Little(state->GetWorldCID());
-    request.WriteS32Little(clanID);
-    request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
-        targetName, true);
+  libcomp::Packet request;
+  request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
+  request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_YN_REQUEST);
+  request.WriteS32Little(state->GetWorldCID());
+  request.WriteS32Little(clanID);
+  request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                              targetName, true);
 
-    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
 
-    return true;
+  return true;
 }

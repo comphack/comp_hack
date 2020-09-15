@@ -28,61 +28,54 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Event.h"
 #include "ui_EventOpenMenu.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
 EventOpenMenu::EventOpenMenu(MainWindow *pMainWindow, QWidget *pParent)
-    : Event(pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::EventOpenMenu;
-    prop->setupUi(pWidget);
+    : Event(pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::EventOpenMenu;
+  prop->setupUi(pWidget);
 
-    ui->eventTitle->setText(tr("<b>Open Menu</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->eventTitle->setText(tr("<b>Open Menu</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-EventOpenMenu::~EventOpenMenu()
-{
-    delete prop;
+EventOpenMenu::~EventOpenMenu() { delete prop; }
+
+void EventOpenMenu::Load(const std::shared_ptr<objects::Event> &e) {
+  Event::Load(e);
+
+  mEvent = std::dynamic_pointer_cast<objects::EventOpenMenu>(e);
+
+  if (!mEvent) {
+    return;
+  }
+
+  prop->menuType->setValue(mEvent->GetMenuType());
+  prop->shopID->setValue(mEvent->GetShopID());
+  prop->useNext->SetEvent(mEvent->GetUseNext());
 }
 
-void EventOpenMenu::Load(const std::shared_ptr<objects::Event>& e)
-{
-    Event::Load(e);
+std::shared_ptr<objects::Event> EventOpenMenu::Save() const {
+  if (!mEvent) {
+    return nullptr;
+  }
 
-    mEvent = std::dynamic_pointer_cast<objects::EventOpenMenu>(e);
+  Event::Save();
 
-    if(!mEvent)
-    {
-        return;
-    }
+  mEvent->SetMenuType(prop->menuType->value());
+  mEvent->SetShopID(prop->shopID->value());
+  mEvent->SetUseNext(prop->useNext->GetEvent());
 
-    prop->menuType->setValue(mEvent->GetMenuType());
-    prop->shopID->setValue(mEvent->GetShopID());
-    prop->useNext->SetEvent(mEvent->GetUseNext());
-}
-
-std::shared_ptr<objects::Event> EventOpenMenu::Save() const
-{
-    if(!mEvent)
-    {
-        return nullptr;
-    }
-
-    Event::Save();
-
-    mEvent->SetMenuType(prop->menuType->value());
-    mEvent->SetShopID(prop->shopID->value());
-    mEvent->SetUseNext(prop->useNext->GetEvent());
-
-    return mEvent;
+  return mEvent;
 }

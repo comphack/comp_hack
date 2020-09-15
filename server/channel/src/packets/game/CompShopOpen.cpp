@@ -34,31 +34,29 @@
 
 // channel Includes
 #include "AccountManager.h"
-#include "ChannelServer.h"
 #include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 #include "EventManager.h"
 
 using namespace channel;
 
-bool Parsers::CompShopOpen::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CompShopOpen::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->GetEventManager()->RequestMenu(client,
-        (int32_t)SVR_CONST.MENU_COMP_SHOP);
+  server->GetEventManager()->RequestMenu(client,
+                                         (int32_t)SVR_CONST.MENU_COMP_SHOP);
 
-    // Resend the current CP balance
-    server->GetAccountManager()->SendCPBalance(client);
+  // Resend the current CP balance
+  server->GetAccountManager()->SendCPBalance(client);
 
-    return true;
+  return true;
 }

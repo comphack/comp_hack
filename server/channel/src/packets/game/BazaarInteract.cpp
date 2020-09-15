@@ -42,33 +42,29 @@
 
 using namespace channel;
 
-bool Parsers::BazaarInteract::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BazaarInteract::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
 
-    int32_t bazaarEntityID = p.ReadS32Little();
-    int32_t bazaarMarketID = p.ReadS32Little();
+  int32_t bazaarEntityID = p.ReadS32Little();
+  int32_t bazaarMarketID = p.ReadS32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto eventManager = server->GetEventManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto eventManager = server->GetEventManager();
 
-    if(!eventManager->RequestMenu(client, (int32_t)SVR_CONST.MENU_BAZAAR,
-        bazaarMarketID, bazaarEntityID))
-    {
-        LogBazaarError([&]()
-        {
-            return libcomp::String("Failed to open bazaar market: %1\n")
-                .Arg(bazaarMarketID);
-        });
-    }
+  if (!eventManager->RequestMenu(client, (int32_t)SVR_CONST.MENU_BAZAAR,
+                                 bazaarMarketID, bazaarEntityID)) {
+    LogBazaarError([&]() {
+      return libcomp::String("Failed to open bazaar market: %1\n")
+          .Arg(bazaarMarketID);
+    });
+  }
 
-    return true;
+  return true;
 }

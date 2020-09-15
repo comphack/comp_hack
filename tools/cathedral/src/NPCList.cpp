@@ -29,162 +29,139 @@
 #include "SpotList.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include "ui_NPCProperties.h"
 #include "ui_ObjectList.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 
 // BinaryData Includes
-#include <MiHNPCData.h>
 #include <MiHNPCBasicData.h>
+#include <MiHNPCData.h>
 #include <MiONPCData.h>
 
 // objects Includes
 #include <ServerNPC.h>
 #include <ServerObject.h>
 
-NPCList::NPCList(QWidget *pParent) : ObjectList(pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::NPCProperties;
-    prop->setupUi(pWidget);
+NPCList::NPCList(QWidget* pParent) : ObjectList(pParent) {
+  QWidget* pWidget = new QWidget;
+  prop = new Ui::NPCProperties;
+  prop->setupUi(pWidget);
 
-    ui->splitter->addWidget(pWidget);
+  ui->splitter->addWidget(pWidget);
 }
 
-NPCList::~NPCList()
-{
-    delete prop;
+NPCList::~NPCList() { delete prop; }
+
+void NPCList::Bind(MainWindow* pMainWindow, bool isHNPC) {
+  SetMainWindow(pMainWindow);
+
+  prop->type->BindSelector(pMainWindow, isHNPC ? "hNPCData" : "oNPCData");
+  prop->displayFlag->BindSelector(pMainWindow, "NPCInvisibleData");
+  prop->position->SetMainWindow(pMainWindow);
+  prop->actions->SetMainWindow(pMainWindow);
 }
 
-void NPCList::Bind(MainWindow *pMainWindow, bool isHNPC)
-{
-    SetMainWindow(pMainWindow);
+QString NPCList::GetObjectID(
+    const std::shared_ptr<libcomp::Object>& obj) const {
+  auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
 
-    prop->type->BindSelector(pMainWindow, isHNPC ? "hNPCData" : "oNPCData");
-    prop->displayFlag->BindSelector(pMainWindow, "NPCInvisibleData");
-    prop->position->SetMainWindow(pMainWindow);
-    prop->actions->SetMainWindow(pMainWindow);
+  if (!sObj) {
+    return {};
+  }
+
+  return QString::number(sObj->GetID());
 }
 
-QString NPCList::GetObjectID(const std::shared_ptr<
-    libcomp::Object>& obj) const
-{
-    auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
+QString NPCList::GetObjectName(
+    const std::shared_ptr<libcomp::Object>& obj) const {
+  auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
+  if (!sObj) {
+    return {};
+  }
 
-    if(!sObj)
-    {
-        return {};
+  libcomp::String name;
+
+  auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(sObj);
+  if (npc) {
+    auto dataset = mMainWindow->GetBinaryDataSet("hNPCData");
+    auto hNPC = std::dynamic_pointer_cast<objects::MiHNPCData>(
+        dataset->GetObjectByID(sObj->GetID()));
+    if (hNPC) {
+      name = hNPC->GetBasic()->GetName();
     }
+  } else {
+    auto dataset = mMainWindow->GetBinaryDataSet("oNPCData");
+    auto oNPC = std::dynamic_pointer_cast<objects::MiONPCData>(
+        dataset->GetObjectByID(sObj->GetID()));
+    if (oNPC) {
+      name = oNPC->GetName();
+    }
+  }
 
-    return QString::number(sObj->GetID());
+  if (sObj->GetActorID()) {
+    name = libcomp::String("%1 [Actor %2]")
+               .Arg(name)
+               .Arg(sObj->GetActorID())
+               .Trimmed();
+  }
+
+  return qs(name);
 }
 
-QString NPCList::GetObjectName(const std::shared_ptr<
-    libcomp::Object>& obj) const
-{
-    auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
-    if(!sObj)
-    {
-        return {};
+void NPCList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj) {
+  auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
+
+  auto parentWidget = prop->layoutMain->itemAt(0)->widget();
+  if (!sObj) {
+    parentWidget->hide();
+  } else {
+    if (parentWidget->isHidden()) {
+      parentWidget->show();
     }
 
-    libcomp::String name;
+    prop->type->SetValue(sObj->GetID());
+    prop->position->Load(sObj);
+    prop->state->setValue((uint8_t)sObj->GetState());
+    prop->actorID->setValue(sObj->GetActorID());
 
-    auto npc = std::dynamic_pointer_cast<objects::ServerNPC>(sObj);
-    if(npc)
-    {
-        auto dataset = mMainWindow->GetBinaryDataSet("hNPCData");
-        auto hNPC = std::dynamic_pointer_cast<objects::MiHNPCData>(
-            dataset->GetObjectByID(sObj->GetID()));
-        if(hNPC)
-        {
-            name = hNPC->GetBasic()->GetName();
-        }
-    }
-    else
-    {
-        auto dataset = mMainWindow->GetBinaryDataSet("oNPCData");
-        auto oNPC = std::dynamic_pointer_cast<objects::MiONPCData>(
-            dataset->GetObjectByID(sObj->GetID()));
-        if(oNPC)
-        {
-            name = oNPC->GetName();
-        }
+    auto nObj = std::dynamic_pointer_cast<objects::ServerNPC>(obj);
+    if (nObj) {
+      prop->displayFlag->SetValue((uint32_t)nObj->GetDisplayFlag());
+    } else {
+      prop->displayFlag->hide();
+      prop->lblDisplayFlag->hide();
     }
 
-    if(sObj->GetActorID())
-    {
-        name = libcomp::String("%1 [Actor %2]").Arg(name)
-            .Arg(sObj->GetActorID()).Trimmed();
-    }
-
-    return qs(name);
+    auto actions = sObj->GetActions();
+    prop->actions->Load(actions);
+  }
 }
 
-void NPCList::LoadProperties(const std::shared_ptr<libcomp::Object>& obj)
-{
-    auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
+void NPCList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj) {
+  auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
+  if (sObj) {
+    sObj->SetID(prop->type->GetValue());
 
-    auto parentWidget = prop->layoutMain->itemAt(0)->widget();
-    if(!sObj)
-    {
-        parentWidget->hide();
+    auto pos = prop->position->Save();
+    sObj->SetSpotID(pos->GetSpotID());
+    sObj->SetX(pos->GetX());
+    sObj->SetY(pos->GetY());
+    sObj->SetRotation(pos->GetRotation());
+
+    sObj->SetState((uint8_t)prop->state->value());
+    sObj->SetActorID(prop->actorID->value());
+
+    auto actions = prop->actions->Save();
+    sObj->SetActions(actions);
+
+    auto nObj = std::dynamic_pointer_cast<objects::ServerNPC>(obj);
+    if (nObj) {
+      nObj->SetDisplayFlag((int16_t)prop->displayFlag->GetValue());
     }
-    else
-    {
-        if(parentWidget->isHidden())
-        {
-            parentWidget->show();
-        }
-
-        prop->type->SetValue(sObj->GetID());
-        prop->position->Load(sObj);
-        prop->state->setValue((uint8_t)sObj->GetState());
-        prop->actorID->setValue(sObj->GetActorID());
-
-        auto nObj = std::dynamic_pointer_cast<objects::ServerNPC>(obj);
-        if(nObj)
-        {
-            prop->displayFlag->SetValue((uint32_t)nObj->GetDisplayFlag());
-        }
-        else
-        {
-            prop->displayFlag->hide();
-            prop->lblDisplayFlag->hide();
-        }
-
-        auto actions = sObj->GetActions();
-        prop->actions->Load(actions);
-    }
-}
-
-void NPCList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj)
-{
-    auto sObj = std::dynamic_pointer_cast<objects::ServerObject>(obj);
-    if(sObj)
-    {
-        sObj->SetID(prop->type->GetValue());
-
-        auto pos = prop->position->Save();
-        sObj->SetSpotID(pos->GetSpotID());
-        sObj->SetX(pos->GetX());
-        sObj->SetY(pos->GetY());
-        sObj->SetRotation(pos->GetRotation());
-
-        sObj->SetState((uint8_t)prop->state->value());
-        sObj->SetActorID(prop->actorID->value());
-
-        auto actions = prop->actions->Save();
-        sObj->SetActions(actions);
-
-        auto nObj = std::dynamic_pointer_cast<objects::ServerNPC>(obj);
-        if(nObj)
-        {
-            nObj->SetDisplayFlag((int16_t)prop->displayFlag->GetValue());
-        }
-    }
+  }
 }

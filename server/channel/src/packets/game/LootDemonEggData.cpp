@@ -43,52 +43,51 @@
 
 using namespace channel;
 
-bool Parsers::LootDemonEggData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::LootDemonEggData::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
+
+  int32_t lootEntityID = p.ReadS32Little();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto definitionManager = server->GetDefinitionManager();
+
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto zone = cState->GetZone();
+
+  auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
+  auto enemy = lState ? lState->GetEntity()->GetEnemy() : nullptr;
+  if (enemy) {
+    uint32_t demonType = enemy->GetType();
+    auto demonData = definitionManager->GetDevilData(demonType);
+    auto tempDemon = characterManager->GenerateDemon(demonData);
+    auto cs = tempDemon->GetCoreStats().Get();
+
+    libcomp::Packet reply;
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_LOOT_DEMON_EGG_DATA);
+    reply.WriteU32Little(demonType);
+    reply.WriteS16Little((int16_t)cs->GetMaxHP());
+    reply.WriteS16Little((int16_t)cs->GetMaxMP());
+    reply.WriteS8(cs->GetLevel());
+    characterManager->GetEntityStatsPacketData(reply, cs, nullptr, 0);
+
+    reply.WriteS32Little((int32_t)tempDemon->LearnedSkillsCount());
+    for (uint32_t skillID : tempDemon->GetLearnedSkills()) {
+      reply.WriteU32Little(skillID == 0 ? (uint32_t)-1 : skillID);
     }
+    reply.WriteS8(-1);  // Unknown
 
-    int32_t lootEntityID = p.ReadS32Little();
+    connection->SendPacket(reply);
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto definitionManager = server->GetDefinitionManager();
-
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto zone = cState->GetZone();
-
-    auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
-    auto enemy = lState ? lState->GetEntity()->GetEnemy() : nullptr;
-    if(enemy)
-    {
-        uint32_t demonType = enemy->GetType();
-        auto demonData = definitionManager->GetDevilData(demonType);
-        auto tempDemon = characterManager->GenerateDemon(demonData);
-        auto cs = tempDemon->GetCoreStats().Get();
-
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_DEMON_EGG_DATA);
-        reply.WriteU32Little(demonType);
-        reply.WriteS16Little((int16_t)cs->GetMaxHP());
-        reply.WriteS16Little((int16_t)cs->GetMaxMP());
-        reply.WriteS8(cs->GetLevel());
-        characterManager->GetEntityStatsPacketData(reply, cs, nullptr, 0);
-
-        reply.WriteS32Little((int32_t)tempDemon->LearnedSkillsCount());
-        for(uint32_t skillID : tempDemon->GetLearnedSkills())
-        {
-            reply.WriteU32Little(skillID == 0 ? (uint32_t)-1 : skillID);
-        }
-        reply.WriteS8(-1);  // Unknown
-
-        connection->SendPacket(reply);
-    }
-
-    return true;
+  return true;
 }

@@ -26,37 +26,35 @@
 #define TOOLS_CATHEDRAL_SRC_ZONEPARTIALSELECTOR_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QDialog>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QDialog>
 
 // C++11 Standard Includes
 #include <set>
 
-namespace Ui
-{
+namespace Ui {
 
 class ZonePartialSelector;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ZonePartialSelector : public QDialog
-{
-    Q_OBJECT
+class ZonePartialSelector : public QDialog {
+  Q_OBJECT
 
-public:
-    explicit ZonePartialSelector(MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ZonePartialSelector();
+ public:
+  explicit ZonePartialSelector(MainWindow *pMainWindow, QWidget *pParent = 0);
+  virtual ~ZonePartialSelector();
 
-    std::set<uint32_t> Select();
+  std::set<uint32_t> Select();
 
-private:
-    Ui::ZonePartialSelector *ui;
+ private:
+  Ui::ZonePartialSelector *ui;
 
-    MainWindow* mMainWindow;
+  MainWindow *mMainWindow;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ZONEPARTIALSELECTOR_H
+#endif  // TOOLS_CATHEDRAL_SRC_ZONEPARTIALSELECTOR_H

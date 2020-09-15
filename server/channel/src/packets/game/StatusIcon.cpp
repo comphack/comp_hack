@@ -38,24 +38,22 @@
 
 using namespace channel;
 
-bool Parsers::StatusIcon::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::StatusIcon::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 1)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 1) {
+    return false;
+  }
 
-    int8_t status = p.ReadS8();
+  int8_t status = p.ReadS8();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->GetCharacterManager()->SetStatusIcon(client, status);
+  server->GetCharacterManager()->SetStatusIcon(client, status);
 
-    return true;
+  return true;
 }

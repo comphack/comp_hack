@@ -26,9 +26,10 @@
 #define TOOLS_CATHEDRAL_SRC_ACTIONMAPITEM_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QWidget>
 
 // objects Includes
 #include <Action.h>
@@ -36,41 +37,39 @@
 // Standard C++11 Includes
 #include <map>
 
-namespace Ui
-{
+namespace Ui {
 
 class ActionMapItem;
 
-} // namespace Ui
+}  // namespace Ui
 
 class ActionMap;
 class MainWindow;
 
-class ActionMapItem : public QWidget
-{
-    Q_OBJECT
+class ActionMapItem : public QWidget {
+  Q_OBJECT
 
-public:
-    explicit ActionMapItem(const QString& valueName, ActionMap *pMap,
-        QWidget *pParent = 0);
-    virtual ~ActionMapItem();
+ public:
+  explicit ActionMapItem(const QString &valueName, ActionMap *pMap,
+                         QWidget *pParent = 0);
+  virtual ~ActionMapItem();
 
-    void Setup(int32_t key, int32_t value,
-        const libcomp::String& objectSelectorType,
-        bool selectorServerData, MainWindow* pMainWindow);
+  void Setup(int32_t key, int32_t value,
+             const libcomp::String &objectSelectorType, bool selectorServerData,
+             MainWindow *pMainWindow);
 
-    int32_t GetKey() const;
-    int32_t GetValue() const;
+  int32_t GetKey() const;
+  int32_t GetValue() const;
 
-    void SetMinMax(int32_t min, int32_t max);
+  void SetMinMax(int32_t min, int32_t max);
 
-public slots:
-    void Remove();
+ public slots:
+  void Remove();
 
-protected:
-    Ui::ActionMapItem *ui;
+ protected:
+  Ui::ActionMapItem *ui;
 
-    ActionMap *mMap;
+  ActionMap *mMap;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONMAPITEM_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONMAPITEM_H

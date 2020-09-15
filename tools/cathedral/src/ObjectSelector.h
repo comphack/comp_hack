@@ -28,39 +28,37 @@
 
 #include <ObjectSelectorBase.h>
 
-namespace Ui
-{
+namespace Ui {
 
 class ObjectSelector;
 
-} // namespace Ui
+}  // namespace Ui
 
-class ObjectSelector : public ObjectSelectorBase
-{
-    Q_OBJECT
+class ObjectSelector : public ObjectSelectorBase {
+  Q_OBJECT
 
-public:
-    explicit ObjectSelector(QWidget *pParent = 0);
-    virtual ~ObjectSelector();
+ public:
+  explicit ObjectSelector(QWidget *pParent = 0);
+  virtual ~ObjectSelector();
 
-    bool BindSelector(MainWindow *pMainWindow,
-        const libcomp::String& objType, bool serverData = false);
+  bool BindSelector(MainWindow *pMainWindow, const libcomp::String &objType,
+                    bool serverData = false);
 
-    void SetValue(uint32_t value) override;
-    uint32_t GetValue() const override;
+  void SetValue(uint32_t value) override;
+  uint32_t GetValue() const override;
 
-    void SetValueSigned(int32_t value);
-    int32_t GetValueSigned() const;
+  void SetValueSigned(int32_t value);
+  int32_t GetValueSigned() const;
 
-    void SetMinimum(int32_t min);
+  void SetMinimum(int32_t min);
 
-private slots:
-    void ValueChanged();
+ private slots:
+  void ValueChanged();
 
-protected:
-    Ui::ObjectSelector *ui;
+ protected:
+  Ui::ObjectSelector *ui;
 
-    bool mServerData;
+  bool mServerData;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_OBJECTSELECTOR_H
+#endif  // TOOLS_CATHEDRAL_SRC_OBJECTSELECTOR_H

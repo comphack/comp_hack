@@ -42,44 +42,44 @@
 
 using namespace channel;
 
-bool Parsers::FriendInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::FriendInfo::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto state = client->GetClientState();
-    auto cLogin = state->GetAccountLogin()->GetCharacterLogin();
-    auto character = state->GetCharacterState()->GetEntity();
-    auto fSettings = character->LoadFriendSettings(server->GetWorldDatabase());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+  auto cLogin = state->GetAccountLogin()->GetCharacterLogin();
+  auto character = state->GetCharacterState()->GetEntity();
+  auto fSettings = character->LoadFriendSettings(server->GetWorldDatabase());
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FRIEND_INFO_SELF);
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-        character->GetName(), true);
-    reply.WriteU32Little((uint32_t)cLogin->GetWorldCID());
-    reply.WriteS8(0);
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-        fSettings->GetFriendMessage(), true);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FRIEND_INFO_SELF);
+  reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                            character->GetName(), true);
+  reply.WriteU32Little((uint32_t)cLogin->GetWorldCID());
+  reply.WriteS8(0);
+  reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                            fSettings->GetFriendMessage(), true);
 
-    auto privacySet = fSettings->GetPublicToZone();
-    reply.WriteU8(privacySet ? 1 : 0);
-    reply.WriteU8(fSettings->GetPublicToZone() ? 1 : 0);
+  auto privacySet = fSettings->GetPublicToZone();
+  reply.WriteU8(privacySet ? 1 : 0);
+  reply.WriteU8(fSettings->GetPublicToZone() ? 1 : 0);
 
-    connection->SendPacket(reply);
+  connection->SendPacket(reply);
 
-    // Request current friend info from the world to send on reply
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_LIST);
-    request.WriteS32Little(cLogin->GetWorldCID());
+  // Request current friend info from the world to send on reply
+  libcomp::Packet request;
+  request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
+  request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_LIST);
+  request.WriteS32Little(cLogin->GetWorldCID());
 
-    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
 
-    return true;
+  return true;
 }

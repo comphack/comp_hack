@@ -42,33 +42,36 @@
 
 using namespace channel;
 
-bool Parsers::TradeCancel::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TradeCancel::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
 
-    characterManager->EndExchange(client, 1);
+  characterManager->EndExchange(client, 1);
 
-    auto otherCState = exchangeSession ? std::dynamic_pointer_cast<CharacterState>(
-        exchangeSession->GetOtherCharacterState()) : nullptr;
-    auto otherClient = otherCState ? server->GetManagerConnection()->GetEntityClient(
-        otherCState->GetEntityID(), false) : nullptr;
-    if(otherClient)
-    {
-        characterManager->EndExchange(otherClient, 1);
-    }
+  auto otherCState = exchangeSession
+                         ? std::dynamic_pointer_cast<CharacterState>(
+                               exchangeSession->GetOtherCharacterState())
+                         : nullptr;
+  auto otherClient = otherCState
+                         ? server->GetManagerConnection()->GetEntityClient(
+                               otherCState->GetEntityID(), false)
+                         : nullptr;
+  if (otherClient) {
+    characterManager->EndExchange(otherClient, 1);
+  }
 
-    return true;
+  return true;
 }

@@ -40,55 +40,49 @@
 
 using namespace channel;
 
-bool Parsers::DemonDepoList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonDepoList::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 0)
-    {
-        return false;
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto worldData = state->GetAccountWorldData();
+
+  auto timestamp = (uint32_t)time(0);
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_DEPO_LIST);
+
+  reply.WriteS8(0);  // Unknown
+
+  auto depoCount = worldData->DemonBoxesCount();
+  reply.WriteS32Little((int32_t)depoCount);
+  for (size_t i = 0; i < depoCount; i++) {
+    auto depo = worldData->GetDemonBoxes(i);
+
+    if (i > 0 && (depo.IsNull() || depo->GetRentalExpiration() == 0)) {
+      reply.WriteS32Little(-1);
+      reply.WriteS32Little(0);
+    } else {
+      reply.WriteS32Little(ChannelServer::GetExpirationInSeconds(
+          depo->GetRentalExpiration(), timestamp));
+
+      int32_t demonCount = 0;
+      for (auto demon : depo->GetDemons()) {
+        demonCount += !demon.IsNull() ? 1 : 0;
+      }
+
+      reply.WriteS32Little(demonCount);
     }
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto worldData = state->GetAccountWorldData();
+  client->SendPacket(reply);
 
-    auto timestamp = (uint32_t)time(0);
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_DEPO_LIST);
-
-    reply.WriteS8(0);   // Unknown
-
-    auto depoCount = worldData->DemonBoxesCount();
-    reply.WriteS32Little((int32_t)depoCount);
-    for(size_t i = 0; i < depoCount; i++)
-    {
-        auto depo = worldData->GetDemonBoxes(i);
-        
-        if(i > 0 && (depo.IsNull() || depo->GetRentalExpiration() == 0))
-        {
-            reply.WriteS32Little(-1);
-            reply.WriteS32Little(0);
-        }
-        else
-        {
-            reply.WriteS32Little(ChannelServer::GetExpirationInSeconds(
-                depo->GetRentalExpiration(), timestamp));
-
-            int32_t demonCount = 0;
-            for(auto demon : depo->GetDemons())
-            {
-                demonCount += !demon.IsNull() ? 1 : 0;
-            }
-
-            reply.WriteS32Little(demonCount);
-        }
-    }
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

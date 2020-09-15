@@ -43,59 +43,56 @@
 
 using namespace channel;
 
-bool Parsers::LootBossBox::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::LootBossBox::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
+
+  int32_t entityID = p.ReadS32Little();
+  int32_t lootEntityID = p.ReadS32Little();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto zone = cState->GetZone();
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_BOSS_BOX);
+  reply.WriteS32Little(entityID);
+  reply.WriteS32Little(lootEntityID);
+
+  auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
+  if (lState && zone->ClaimBossBox(lootEntityID, state->GetWorldCID())) {
+    // If the loot time has not already started, set to 60 minutes
+    auto lBox = lState->GetEntity();
+    if (lBox->GetLootTime() == 0) {
+      uint64_t now = ChannelServer::GetServerTime();
+      uint64_t lootTime = (uint64_t)(now + 3600000000);
+      lBox->SetLootTime(lootTime);
+
+      std::list<int32_t> entityIDs = {lState->GetEntityID()};
+      server->GetZoneManager()->ScheduleEntityRemoval(lootTime, zone,
+                                                      entityIDs);
     }
 
-    int32_t entityID = p.ReadS32Little();
-    int32_t lootEntityID = p.ReadS32Little();
+    reply.WriteS8(0);  // Success
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+    client->QueuePacket(reply);
 
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto zone = cState->GetZone();
+    std::list<std::shared_ptr<ChannelClientConnection>> clients = {client};
+    characterManager->SendLootItemData(clients, lState);
+  } else {
+    reply.WriteS8(-1);  // One person, one box error
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_BOSS_BOX);
-    reply.WriteS32Little(entityID);
-    reply.WriteS32Little(lootEntityID);
+    client->SendPacket(reply);
+  }
 
-    auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
-    if(lState && zone->ClaimBossBox(lootEntityID, state->GetWorldCID()))
-    {
-        // If the loot time has not already started, set to 60 minutes
-        auto lBox = lState->GetEntity();
-        if(lBox->GetLootTime() == 0)
-        {
-            uint64_t now = ChannelServer::GetServerTime();
-            uint64_t lootTime = (uint64_t)(now + 3600000000);
-            lBox->SetLootTime(lootTime);
-
-            std::list<int32_t> entityIDs = { lState->GetEntityID() };
-            server->GetZoneManager()->ScheduleEntityRemoval(lootTime, zone, entityIDs);
-        }
-
-        reply.WriteS8(0);   // Success
-
-        client->QueuePacket(reply);
-
-        std::list<std::shared_ptr<ChannelClientConnection>> clients = { client };
-        characterManager->SendLootItemData(clients, lState);
-    }
-    else
-    {
-        reply.WriteS8(-1);   // One person, one box error
-
-        client->SendPacket(reply);
-    }
-
-    return true;
+  return true;
 }

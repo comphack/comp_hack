@@ -29,122 +29,102 @@
 #include "MainWindow.h"
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_Action.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include "ui_Action.h"
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-Action::Action(ActionList *pList, MainWindow *pMainWindow, QWidget *pParent) :
-    QWidget(pParent), mList(pList), mMainWindow(pMainWindow)
-{
-    ui = new Ui::Action;
-    ui->setupUi(this);
+Action::Action(ActionList *pList, MainWindow *pMainWindow, QWidget *pParent)
+    : QWidget(pParent), mList(pList), mMainWindow(pMainWindow) {
+  ui = new Ui::Action;
+  ui->setupUi(this);
 
+  ui->layoutBaseBody->setVisible(false);
+
+  ui->failureEvent->SetMainWindow(pMainWindow);
+
+  connect(ui->remove, SIGNAL(clicked(bool)), this, SLOT(Remove()));
+  connect(ui->up, SIGNAL(clicked(bool)), this, SLOT(MoveUp()));
+  connect(ui->down, SIGNAL(clicked(bool)), this, SLOT(MoveDown()));
+  connect(ui->toggleBaseDisplay, SIGNAL(clicked(bool)), this,
+          SLOT(ToggleBaseDisplay()));
+}
+
+Action::~Action() { delete ui; }
+
+void Action::UpdatePosition(bool isFirst, bool isLast) {
+  ui->up->setEnabled(!isFirst);
+  ui->down->setEnabled(!isLast);
+  ui->actionListDiv->setVisible(!isLast);
+}
+
+void Action::Remove() {
+  if (mList) {
+    mList->RemoveAction(this);
+  }
+}
+
+void Action::MoveUp() {
+  if (mList) {
+    mList->MoveUp(this);
+  }
+}
+
+void Action::MoveDown() {
+  if (mList) {
+    mList->MoveDown(this);
+  }
+}
+
+void Action::ToggleBaseDisplay() {
+  if (ui->layoutBaseBody->isVisible()) {
     ui->layoutBaseBody->setVisible(false);
-
-    ui->failureEvent->SetMainWindow(pMainWindow);
-
-    connect(ui->remove, SIGNAL(clicked(bool)), this, SLOT(Remove()));
-    connect(ui->up, SIGNAL(clicked(bool)), this, SLOT(MoveUp()));
-    connect(ui->down, SIGNAL(clicked(bool)), this, SLOT(MoveDown()));
-    connect(ui->toggleBaseDisplay, SIGNAL(clicked(bool)), this,
-        SLOT(ToggleBaseDisplay()));
+    ui->toggleBaseDisplay->setText(u8"►");
+  } else {
+    ui->layoutBaseBody->setVisible(true);
+    ui->toggleBaseDisplay->setText(u8"▼");
+  }
 }
 
-Action::~Action()
-{
-    delete ui;
+void Action::LoadBaseProperties(
+    const std::shared_ptr<objects::Action> &action) {
+  ui->sourceContext->setCurrentIndex(to_underlying(action->GetSourceContext()));
+  ui->location->setCurrentIndex(to_underlying(action->GetLocation()));
+  ui->stopOnFailure->setChecked(action->GetStopOnFailure());
+  ui->failureEvent->SetEvent(action->GetOnFailureEvent());
+  ui->transformScript->SetScriptID(action->GetTransformScriptID());
+
+  auto params = action->GetTransformScriptParams();
+  ui->transformScript->SetParams(params);
+
+  // If any non-base values are set, display the base values section
+  if (!ui->layoutBaseBody->isVisible() &&
+      (action->GetSourceContext() != objects::Action::SourceContext_t::SOURCE ||
+       action->GetLocation() != objects::Action::Location_t::ZONE ||
+       !action->GetStopOnFailure() || !action->GetOnFailureEvent().IsEmpty() ||
+       !action->GetTransformScriptID().IsEmpty())) {
+    ToggleBaseDisplay();
+  }
 }
 
-void Action::UpdatePosition(bool isFirst, bool isLast)
-{
-    ui->up->setEnabled(!isFirst);
-    ui->down->setEnabled(!isLast);
-    ui->actionListDiv->setVisible(!isLast);
-}
+void Action::SaveBaseProperties(
+    const std::shared_ptr<objects::Action> &action) const {
+  action->SetSourceContext(
+      (objects::Action::SourceContext_t)ui->sourceContext->currentIndex());
+  action->SetLocation(
+      (objects::Action::Location_t)ui->location->currentIndex());
+  action->SetStopOnFailure(ui->stopOnFailure->isChecked());
+  action->SetOnFailureEvent(ui->failureEvent->GetEvent());
+  action->SetTransformScriptID(ui->transformScript->GetScriptID());
 
-void Action::Remove()
-{
-    if(mList)
-    {
-        mList->RemoveAction(this);
-    }
-}
-
-void Action::MoveUp()
-{
-    if(mList)
-    {
-        mList->MoveUp(this);
-    }
-}
-
-void Action::MoveDown()
-{
-    if(mList)
-    {
-        mList->MoveDown(this);
-    }
-}
-
-void Action::ToggleBaseDisplay()
-{
-    if(ui->layoutBaseBody->isVisible())
-    {
-        ui->layoutBaseBody->setVisible(false);
-        ui->toggleBaseDisplay->setText(u8"►");
-    }
-    else
-    {
-        ui->layoutBaseBody->setVisible(true);
-        ui->toggleBaseDisplay->setText(u8"▼");
-    }
-}
-
-void Action::LoadBaseProperties(const std::shared_ptr<objects::Action>& action)
-{
-    ui->sourceContext->setCurrentIndex(to_underlying(
-        action->GetSourceContext()));
-    ui->location->setCurrentIndex(to_underlying(
-        action->GetLocation()));
-    ui->stopOnFailure->setChecked(action->GetStopOnFailure());
-    ui->failureEvent->SetEvent(action->GetOnFailureEvent());
-    ui->transformScript->SetScriptID(action->GetTransformScriptID());
-
-    auto params = action->GetTransformScriptParams();
-    ui->transformScript->SetParams(params);
-
-    // If any non-base values are set, display the base values section
-    if(!ui->layoutBaseBody->isVisible() &&
-        (action->GetSourceContext() != objects::Action::SourceContext_t::SOURCE ||
-            action->GetLocation() != objects::Action::Location_t::ZONE ||
-            !action->GetStopOnFailure() ||
-            !action->GetOnFailureEvent().IsEmpty() ||
-            !action->GetTransformScriptID().IsEmpty()))
-    {
-        ToggleBaseDisplay();
-    }
-}
-
-void Action::SaveBaseProperties(const std::shared_ptr<
-    objects::Action>& action) const
-{
-    action->SetSourceContext((objects::Action::SourceContext_t)ui
-        ->sourceContext->currentIndex());
-    action->SetLocation((objects::Action::Location_t)ui->location
-        ->currentIndex());
-    action->SetStopOnFailure(ui->stopOnFailure->isChecked());
-    action->SetOnFailureEvent(ui->failureEvent->GetEvent());
-    action->SetTransformScriptID(ui->transformScript->GetScriptID());
-
-    action->ClearTransformScriptParams();
-    if(!action->GetTransformScriptID().IsEmpty())
-    {
-        // Ignore params if no script is set
-        auto params = ui->transformScript->GetParams();
-        action->SetTransformScriptParams(params);
-    }
+  action->ClearTransformScriptParams();
+  if (!action->GetTransformScriptID().IsEmpty()) {
+    // Ignore params if no script is set
+    auto params = ui->transformScript->GetParams();
+    action->SetTransformScriptParams(params);
+  }
 }

@@ -27,16 +27,16 @@
 #define TOOLS_CATHEDRAL_SRC_ZONEWINDOW_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_ZoneWindow.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include "ui_ZoneWindow.h"
 
 // C++11 Standard Includes
 #include <memory>
 #include <set>
 
-namespace objects
-{
+namespace objects {
 
 class Action;
 class MiSpotData;
@@ -51,173 +51,168 @@ class ServerZone;
 class ServerZonePartial;
 class SpawnLocation;
 
-} // namespace objects
+}  // namespace objects
 
 class MainWindow;
 
-class MergedZone
-{
-public:
-    std::shared_ptr<objects::ServerZone> Definition;
-    std::shared_ptr<objects::ServerZone> CurrentZone;
-    std::shared_ptr<objects::ServerZonePartial> CurrentPartial;
-    libcomp::String Path;
+class MergedZone {
+ public:
+  std::shared_ptr<objects::ServerZone> Definition;
+  std::shared_ptr<objects::ServerZone> CurrentZone;
+  std::shared_ptr<objects::ServerZonePartial> CurrentPartial;
+  libcomp::String Path;
 };
 
-class ZoneWindow : public QMainWindow
-{
-    Q_OBJECT
+class ZoneWindow : public QMainWindow {
+  Q_OBJECT
 
-public:
-    explicit ZoneWindow(MainWindow *pMainWindow, QWidget *parent = 0);
-    ~ZoneWindow();
+ public:
+  explicit ZoneWindow(MainWindow* pMainWindow, QWidget* parent = 0);
+  ~ZoneWindow();
 
-    std::shared_ptr<MergedZone> GetMergedZone() const;
-    std::map<uint32_t,
-        std::shared_ptr<objects::ServerZonePartial>> GetLoadedPartials() const;
-    std::set<uint32_t> GetSelectedPartials() const;
+  std::shared_ptr<MergedZone> GetMergedZone() const;
+  std::map<uint32_t, std::shared_ptr<objects::ServerZonePartial>>
+  GetLoadedPartials() const;
+  std::set<uint32_t> GetSelectedPartials() const;
 
-    bool ShowZone();
+  bool ShowZone();
 
-    void RebuildNamedDataSet(const libcomp::String& objType);
+  void RebuildNamedDataSet(const libcomp::String& objType);
 
-    std::list<std::shared_ptr<objects::Action>> GetLoadedActions(
-        bool forUpdate);
+  std::list<std::shared_ptr<objects::Action>> GetLoadedActions(bool forUpdate);
 
-    bool ShowSpot(uint32_t spotID);
+  bool ShowSpot(uint32_t spotID);
 
-    std::shared_ptr<objects::ServerZone> LoadZoneFromFile(
-        const libcomp::String& path);
+  std::shared_ptr<objects::ServerZone> LoadZoneFromFile(
+      const libcomp::String& path);
 
-    void closeEvent(QCloseEvent* event) override;
+  void closeEvent(QCloseEvent* event) override;
 
-public slots:
-    void LoadZoneFile();
+ public slots:
+  void LoadZoneFile();
 
-protected:
-    void mouseMoveEvent(QMouseEvent* event);
-    void mousePressEvent(QMouseEvent* event);
-    void mouseReleaseEvent(QMouseEvent* event);
-    bool eventFilter(QObject* o, QEvent* e);
+ protected:
+  void mouseMoveEvent(QMouseEvent* event);
+  void mousePressEvent(QMouseEvent* event);
+  void mouseReleaseEvent(QMouseEvent* event);
+  bool eventFilter(QObject* o, QEvent* e);
 
-protected slots:
-    void LoadPartialDirectory();
-    void LoadPartialFile();
-    void LoadQmpFile();
-    void SaveFile();
-    void SaveAllFiles();
-    void SaveQmpFile();
-    void ResetQmpFile();
-    void ApplyPartials();
+ protected slots:
+  void LoadPartialDirectory();
+  void LoadPartialFile();
+  void LoadQmpFile();
+  void SaveFile();
+  void SaveAllFiles();
+  void SaveQmpFile();
+  void ResetQmpFile();
+  void ApplyPartials();
 
-    void AddNPC();
-    void AddObject();
-    void AddSpawn(bool cloneSelected = false);
-    void CloneSpawn();
-    void RemoveNPC();
-    void RemoveObject();
-    void RemoveSpawn();
+  void AddNPC();
+  void AddObject();
+  void AddSpawn(bool cloneSelected = false);
+  void CloneSpawn();
+  void RemoveNPC();
+  void RemoveObject();
+  void RemoveSpawn();
 
-    void ZoneViewUpdated();
-    void SelectListObject();
-    void GeometrySelectionChanged();
-    void MainTabChanged();
-    void SpawnTabChanged();
+  void ZoneViewUpdated();
+  void SelectListObject();
+  void GeometrySelectionChanged();
+  void MainTabChanged();
+  void SpawnTabChanged();
 
-    void ResetBoundaries(bool redraw = true, bool optimize = true);
-    void ResetNavPoints();
-    void ToggleBoundaryDivide();
+  void ResetBoundaries(bool redraw = true, bool optimize = true);
+  void ResetNavPoints();
+  void ToggleBoundaryDivide();
 
-    void NPCMoved(std::shared_ptr<libcomp::Object> obj,
-        bool up);
-    void ObjectMoved(std::shared_ptr<libcomp::Object> obj,
-        bool up);
+  void NPCMoved(std::shared_ptr<libcomp::Object> obj, bool up);
+  void ObjectMoved(std::shared_ptr<libcomp::Object> obj, bool up);
 
-    void Zoom();
-    void ShowToggled(bool checked);
-    void Refresh();
+  void Zoom();
+  void ShowToggled(bool checked);
+  void Refresh();
 
-private:
-    bool LoadZonePartials(const libcomp::String& path);
+ private:
+  bool LoadZonePartials(const libcomp::String& path);
 
-    void SaveZone();
-    void SavePartials(const std::set<uint32_t>& partialIDs);
+  void SaveZone();
+  void SavePartials(const std::set<uint32_t>& partialIDs);
 
-    void ResetAppliedPartials(std::set<uint32_t> newPartials = {});
-    void RebuildCurrentZoneDisplay();
-    void UpdateMergedZone(bool redraw);
+  void ResetAppliedPartials(std::set<uint32_t> newPartials = {});
+  void RebuildCurrentZoneDisplay();
+  void UpdateMergedZone(bool redraw);
 
-    void ResetQmpFileLines();
+  void ResetQmpFileLines();
 
-    void RebuildBoundariesTree();
-    QTreeWidgetItem* GetBoundaryNode(std::shared_ptr<
-        objects::QmpBoundary> boundary, uint32_t id, QTreeWidgetItem* parent);
-    QPushButton* GetBoundaryActionButton(std::shared_ptr<
-        objects::QmpBoundary> boundary);
+  void RebuildBoundariesTree();
+  QTreeWidgetItem* GetBoundaryNode(
+      std::shared_ptr<objects::QmpBoundary> boundary, uint32_t id,
+      QTreeWidgetItem* parent);
+  QPushButton* GetBoundaryActionButton(
+      std::shared_ptr<objects::QmpBoundary> boundary);
 
-    std::shared_ptr<objects::QmpBoundary> GetBoundary(uint32_t id);
-    void DivideBoundary(uint32_t boundaryID);
-    void MergeBoundary(std::shared_ptr<objects::QmpBoundary> boundary);
+  std::shared_ptr<objects::QmpBoundary> GetBoundary(uint32_t id);
+  void DivideBoundary(uint32_t boundaryID);
+  void MergeBoundary(std::shared_ptr<objects::QmpBoundary> boundary);
 
-    void RebuildNavPointTable();
+  void RebuildNavPointTable();
 
-    bool LoadMapFromZone();
+  bool LoadMapFromZone();
 
-    void LoadProperties();
-    void SaveProperties();
+  void LoadProperties();
+  void SaveProperties();
 
-    bool GetSpotPosition(uint32_t dynamicMapID,
-        uint32_t spotID, float& x, float& y, float& rot) const;
+  bool GetSpotPosition(uint32_t dynamicMapID, uint32_t spotID, float& x,
+                       float& y, float& rot) const;
 
-    void BindNPCs();
-    void BindObjects();
-    void BindSpawns();
-    void BindSpots();
+  void BindNPCs();
+  void BindObjects();
+  void BindSpawns();
+  void BindSpots();
 
-    void DrawMap();
+  void DrawMap();
 
-    void DrawNPC(const std::shared_ptr<objects::ServerNPC>& npc,
-        bool selected, QPainter& painter);
-    void DrawObject(const std::shared_ptr<objects::ServerObject>& obj,
-        bool selected, QPainter& painter);
-    void DrawSpawnLocation(const std::shared_ptr<objects::SpawnLocation>& loc,
-        QPainter& painter);
-    void DrawSpot(const std::shared_ptr<objects::MiSpotData>& spotDef,
-        bool selected, QPainter& painter);
-    void DrawNavPoint(const std::shared_ptr<objects::QmpNavPoint>& navPoint,
-        bool selected, QPainter& painter);
+  void DrawNPC(const std::shared_ptr<objects::ServerNPC>& npc, bool selected,
+               QPainter& painter);
+  void DrawObject(const std::shared_ptr<objects::ServerObject>& obj,
+                  bool selected, QPainter& painter);
+  void DrawSpawnLocation(const std::shared_ptr<objects::SpawnLocation>& loc,
+                         QPainter& painter);
+  void DrawSpot(const std::shared_ptr<objects::MiSpotData>& spotDef,
+                bool selected, QPainter& painter);
+  void DrawNavPoint(const std::shared_ptr<objects::QmpNavPoint>& navPoint,
+                    bool selected, QPainter& painter);
 
-    int32_t Scale(int32_t point);
-    int32_t Scale(float point);
+  int32_t Scale(int32_t point);
+  int32_t Scale(float point);
 
-    QPointF GetNavPointLocation(QPointF p1, QPointF vert, QPointF p2,
-        bool& valid);
+  QPointF GetNavPointLocation(QPointF p1, QPointF vert, QPointF p2,
+                              bool& valid);
 
-    std::list<QPointF> GetLineNavPointLocations(QPointF p1, QPointF p2);
+  std::list<QPointF> GetLineNavPointLocations(QPointF p1, QPointF p2);
 
-    QPointF RotatePoint(QPointF p, QPointF origin, double radians);
+  QPointF RotatePoint(QPointF p, QPointF origin, double radians);
 
-    MainWindow *mMainWindow;
+  MainWindow* mMainWindow;
 
-    Ui::ZoneWindow ui;
+  Ui::ZoneWindow ui;
 
-    int32_t mOffsetX;
-    int32_t mOffsetY;
+  int32_t mOffsetX;
+  int32_t mOffsetY;
 
-    QPoint mLastMousePos;
-    bool mDragging;
+  QPoint mLastMousePos;
+  bool mDragging;
 
-    std::shared_ptr<MergedZone> mMergedZone;
-    std::shared_ptr<objects::MiZoneData> mZoneData;
-    std::shared_ptr<objects::QmpFile> mQmpFile;
-    bool mExternalQmpFile;
-    std::list<std::shared_ptr<objects::QmpBoundaryLine>> mFileLines;
-    std::set<std::string> mHiddenPoints;
+  std::shared_ptr<MergedZone> mMergedZone;
+  std::shared_ptr<objects::MiZoneData> mZoneData;
+  std::shared_ptr<objects::QmpFile> mQmpFile;
+  bool mExternalQmpFile;
+  std::list<std::shared_ptr<objects::QmpBoundaryLine>> mFileLines;
+  std::set<std::string> mHiddenPoints;
 
-    std::set<uint32_t> mSelectedPartials;
-    std::map<uint32_t,
-        std::shared_ptr<objects::ServerZonePartial>> mZonePartials;
-    std::map<uint32_t, libcomp::String> mZonePartialFiles;
+  std::set<uint32_t> mSelectedPartials;
+  std::map<uint32_t, std::shared_ptr<objects::ServerZonePartial>> mZonePartials;
+  std::map<uint32_t, libcomp::String> mZonePartialFiles;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ZONEWINDOW_H
+#endif  // TOOLS_CATHEDRAL_SRC_ZONEWINDOW_H

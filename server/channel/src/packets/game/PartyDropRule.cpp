@@ -37,28 +37,29 @@
 
 using namespace channel;
 
-bool Parsers::PartyDropRule::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PartyDropRule::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 1)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 1) {
+    return false;
+  }
 
-    uint8_t rule = p.ReadU8();
+  uint8_t rule = p.ReadU8();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto state = client->GetClientState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
 
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_PARTY_DROP_RULE);
-    request.WriteS32Little(state->GetWorldCID());
-    request.WriteU8(rule);
+  libcomp::Packet request;
+  request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);
+  request.WriteU8(
+      (int8_t)InternalPacketAction_t::PACKET_ACTION_PARTY_DROP_RULE);
+  request.WriteS32Little(state->GetWorldCID());
+  request.WriteU8(rule);
 
-    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
 
-    return true;
+  return true;
 }

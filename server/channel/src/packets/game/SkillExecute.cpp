@@ -36,44 +36,46 @@
 
 using namespace channel;
 
-bool Parsers::SkillExecute::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SkillExecute::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 9)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 9) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto skillManager = server->GetSkillManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto skillManager = server->GetSkillManager();
 
-    int32_t sourceEntityID = p.ReadS32Little();
-    int8_t activationID = p.ReadS8();
-    int64_t targetObjectID = p.Size() == 9 ? (int64_t)p.ReadS32Little() : p.ReadS64Little();
+  int32_t sourceEntityID = p.ReadS32Little();
+  int8_t activationID = p.ReadS8();
+  int64_t targetObjectID =
+      p.Size() == 9 ? (int64_t)p.ReadS32Little() : p.ReadS64Little();
 
-    // Load the player entity and let the processer handle it not being ready
-    auto source = state->GetEntityState(sourceEntityID, false);
-    if(!source)
-    {
-        LogSkillManagerError([&]()
-        {
-            return libcomp::String("Invalid skill source sent from client for"
-                " skill execution: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
+  // Load the player entity and let the processer handle it not being ready
+  auto source = state->GetEntityState(sourceEntityID, false);
+  if (!source) {
+    LogSkillManagerError([&]() {
+      return libcomp::String(
+                 "Invalid skill source sent from client for skill execution: "
+                 "%1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Close();
-        return true;
-    }
-
-    server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<
-        ActiveEntityState> pSource, int8_t pActivationID, int64_t pTargetObjectID)
-        {
-            pSkillManager->ExecuteSkill(pSource, pActivationID, pTargetObjectID);
-        }, skillManager, source, activationID, targetObjectID);
-
+    client->Close();
     return true;
+  }
+
+  server->QueueWork(
+      [](SkillManager* pSkillManager,
+         const std::shared_ptr<ActiveEntityState> pSource, int8_t pActivationID,
+         int64_t pTargetObjectID) {
+        pSkillManager->ExecuteSkill(pSource, pActivationID, pTargetObjectID);
+      },
+      skillManager, source, activationID, targetObjectID);
+
+  return true;
 }

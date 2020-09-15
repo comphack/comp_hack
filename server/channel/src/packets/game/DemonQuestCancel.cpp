@@ -42,46 +42,42 @@
 
 using namespace channel;
 
-bool Parsers::DemonQuestCancel::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonQuestCancel::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    // Even though only one demon quest can be active at once, its kinda
-    // strange that no demon ID is supplied as confirmation.
+  // Even though only one demon quest can be active at once, its kinda
+  // strange that no demon ID is supplied as confirmation.
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto dQuest = character->GetDemonQuest().Get();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto dQuest = character->GetDemonQuest().Get();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_DEMON_QUEST_CANCEL);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_QUEST_CANCEL);
 
-    auto demon = dQuest ? std::dynamic_pointer_cast<objects::Demon>(
-        libcomp::PersistentObject::GetObjectByUUID(dQuest->GetDemon()))
-        : nullptr;
-    if(demon && server->GetEventManager()->EndDemonQuest(client, 3) == 0)
-    {
-        reply.WriteS8(0);   // Success
-        reply.WriteS16Little(0);    // New sequence count?
-    }
-    else
-    {
-        reply.WriteS8(-1);  // Failed
-    }
+  auto demon =
+      dQuest
+          ? std::dynamic_pointer_cast<objects::Demon>(
+                libcomp::PersistentObject::GetObjectByUUID(dQuest->GetDemon()))
+          : nullptr;
+  if (demon && server->GetEventManager()->EndDemonQuest(client, 3) == 0) {
+    reply.WriteS8(0);         // Success
+    reply.WriteS16Little(0);  // New sequence count?
+  } else {
+    reply.WriteS8(-1);  // Failed
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

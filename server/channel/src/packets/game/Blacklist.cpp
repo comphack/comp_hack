@@ -38,39 +38,36 @@
 
 using namespace channel;
 
-bool Parsers::Blacklist::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::Blacklist::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t unknown = p.ReadS32Little();    // Always 0
-    (void)unknown;
+  int32_t unknown = p.ReadS32Little();  // Always 0
+  (void)unknown;
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto worldData = state->GetAccountWorldData().Get();
-    auto blacklist = worldData->GetBlacklist();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto worldData = state->GetAccountWorldData().Get();
+  auto blacklist = worldData->GetBlacklist();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BLACKLIST);
-    reply.WriteS32Little(0);    // Unknown, always 0
-    reply.WriteS32Little(0);    // Unknown, always 0
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BLACKLIST);
+  reply.WriteS32Little(0);  // Unknown, always 0
+  reply.WriteS32Little(0);  // Unknown, always 0
 
-    reply.WriteS32Little((int32_t)blacklist.size());
-    for(auto& entry : blacklist)
-    {
-        reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
-            entry, true);
-    }
+  reply.WriteS32Little((int32_t)blacklist.size());
+  for (auto& entry : blacklist) {
+    reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+                              entry, true);
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

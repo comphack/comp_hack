@@ -42,101 +42,101 @@
 
 using namespace channel;
 
-bool Parsers::EnchantItem::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::EnchantItem::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 12)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 12) {
+    return false;
+  }
 
-    int64_t itemID = p.ReadS64Little();
-    int32_t functionalType = p.ReadS32Little();
+  int64_t itemID = p.ReadS64Little();
+  int32_t functionalType = p.ReadS32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
 
-    auto otherClient = exchangeSession &&
-        exchangeSession->GetSourceEntityID() != cState->GetEntityID()
-        ? server->GetManagerConnection()->GetEntityClient(
-            exchangeSession->GetSourceEntityID(), false) : nullptr;
+  auto otherClient = exchangeSession && exchangeSession->GetSourceEntityID() !=
+                                            cState->GetEntityID()
+                         ? server->GetManagerConnection()->GetEntityClient(
+                               exchangeSession->GetSourceEntityID(), false)
+                         : nullptr;
 
-    bool success = false;
-    int16_t effectID = 0;
-    std::list<int32_t> successRates;
-    uint32_t specialEnchantItemType = static_cast<uint32_t>(-1);
+  bool success = false;
+  int16_t effectID = 0;
+  std::list<int32_t> successRates;
+  uint32_t specialEnchantItemType = static_cast<uint32_t>(-1);
 
-    auto item = itemID != -1 ? std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)))
-        : nullptr;
+  auto item = itemID != -1 ? std::dynamic_pointer_cast<objects::Item>(
+                                 libcomp::PersistentObject::GetObjectByUUID(
+                                     state->GetObjectUUID(itemID)))
+                           : nullptr;
 
-    bool error = false;
-    if(exchangeSession && (itemID == -1 || item))
-    {
-        auto previous = exchangeSession->GetItems((size_t)functionalType);
-        exchangeSession->SetItems((size_t)functionalType, item);
+  bool error = false;
+  if (exchangeSession && (itemID == -1 || item)) {
+    auto previous = exchangeSession->GetItems((size_t)functionalType);
+    exchangeSession->SetItems((size_t)functionalType, item);
 
-        auto otherState = otherClient ? otherClient->GetClientState() : state;
-        success = characterManager->GetSynthOutcome(otherState,
-            exchangeSession, specialEnchantItemType, successRates, &effectID);
+    auto otherState = otherClient ? otherClient->GetClientState() : state;
+    success = characterManager->GetSynthOutcome(otherState, exchangeSession,
+                                                specialEnchantItemType,
+                                                successRates, &effectID);
 
-        if(!success)
-        {
-            // Put the previous item back and recalc old values
-            exchangeSession->SetItems((size_t)functionalType, previous);
-            itemID = state->GetObjectID(previous.GetUUID());
+    if (!success) {
+      // Put the previous item back and recalc old values
+      exchangeSession->SetItems((size_t)functionalType, previous);
+      itemID = state->GetObjectID(previous.GetUUID());
 
-            if(!characterManager->GetSynthOutcome(otherState, exchangeSession,
-                specialEnchantItemType, successRates, &effectID))
-            {
-                error = true;
-            }
-        }
-    }
-    else
-    {
+      if (!characterManager->GetSynthOutcome(otherState, exchangeSession,
+                                             specialEnchantItemType,
+                                             successRates, &effectID)) {
         error = true;
+      }
     }
+  } else {
+    error = true;
+  }
 
-    int32_t normalRate = successRates.size() > 0 ? successRates.front() : 0;
-    int32_t specialRate = successRates.size() > 1 ? successRates.back() : 0;
+  int32_t normalRate = successRates.size() > 0 ? successRates.front() : 0;
+  int32_t specialRate = successRates.size() > 1 ? successRates.back() : 0;
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENCHANT_ITEM_UPDATE);
-    reply.WriteS64Little(itemID);
-    reply.WriteS32Little(functionalType);
-    reply.WriteS16Little(effectID);
-    reply.WriteS32Little(normalRate);
-    reply.WriteU32Little(specialEnchantItemType);
-    reply.WriteS32Little(specialRate);
-    reply.WriteS32Little(error ? -1 : 0);
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_ENCHANT_ITEM_UPDATE);
+  reply.WriteS64Little(itemID);
+  reply.WriteS32Little(functionalType);
+  reply.WriteS16Little(effectID);
+  reply.WriteS32Little(normalRate);
+  reply.WriteU32Little(specialEnchantItemType);
+  reply.WriteS32Little(specialRate);
+  reply.WriteS32Little(error ? -1 : 0);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    if(success && otherClient)
-    {
-        auto otherState = otherClient->GetClientState();
-        int64_t otherItemID = item ? otherState->GetObjectID(item->GetUUID()) : -1;
+  if (success && otherClient) {
+    auto otherState = otherClient->GetClientState();
+    int64_t otherItemID = item ? otherState->GetObjectID(item->GetUUID()) : -1;
 
-        libcomp::Packet notify;
-        notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENCHANT_ITEM_UPDATED);
-        notify.WriteS64Little(otherItemID);
+    libcomp::Packet notify;
+    notify.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_ENCHANT_ITEM_UPDATED);
+    notify.WriteS64Little(otherItemID);
 
-        characterManager->GetItemDetailPacketData(notify, item);
+    characterManager->GetItemDetailPacketData(notify, item);
 
-        notify.WriteS32Little(functionalType);
-        notify.WriteS16Little(effectID);
-        notify.WriteS32Little(normalRate);
-        notify.WriteU32Little(specialEnchantItemType);
-        notify.WriteS32Little(specialRate);
+    notify.WriteS32Little(functionalType);
+    notify.WriteS16Little(effectID);
+    notify.WriteS32Little(normalRate);
+    notify.WriteU32Little(specialEnchantItemType);
+    notify.WriteS32Little(specialRate);
 
-        otherClient->SendPacket(notify);
-    }
+    otherClient->SendPacket(notify);
+  }
 
-    return true;
+  return true;
 }

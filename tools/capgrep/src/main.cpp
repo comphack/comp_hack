@@ -24,40 +24,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QApplication>
+
 #include "MainWindow.h"
 
-#include <PushIgnore.h>
-#include <QApplication>
-#include <PopIgnore.h>
-
 /**
-  * This is the main function for the packet analysis application. This
-  * application displays channel packet captures produced by the logger.
-  * @arg argc Number of arguments passed to the application.
-  * @arg argv Array of arguments passed to the application.
-  * @returns Return code when appplication exits.
-  */
-int main(int argc, char *argv[])
-{
-    QApplication app(argc, argv);
+ * This is the main function for the packet analysis application. This
+ * application displays channel packet captures produced by the logger.
+ * @arg argc Number of arguments passed to the application.
+ * @arg argv Array of arguments passed to the application.
+ * @returns Return code when appplication exits.
+ */
+int main(int argc, char *argv[]) {
+  QApplication app(argc, argv);
 
-    // These settings are used to specify how the settings are stored. On
-    // Windows, there settings are stored in the registry at
-    // HKEY_CURRENT_USER\Software\COMP_hack\COMP_hack Capture Grep
-    // On Linux, these settings will be stored in the file
-    // $HOME/.config/COMP_hack/COMP_hack Capture Grep.conf
-    // Consult the QSettings documentation in the Qt API reference for more
-    // information on how the settings work (and where they are on Mac OS X).
-    app.setOrganizationName("COMP_hack");
-    app.setOrganizationDomain("comp.hack");
-    app.setApplicationName("COMP_hack Capture Grep");
+  // These settings are used to specify how the settings are stored. On
+  // Windows, there settings are stored in the registry at
+  // HKEY_CURRENT_USER\Software\COMP_hack\COMP_hack Capture Grep
+  // On Linux, these settings will be stored in the file
+  // $HOME/.config/COMP_hack/COMP_hack Capture Grep.conf
+  // Consult the QSettings documentation in the Qt API reference for more
+  // information on how the settings work (and where they are on Mac OS X).
+  app.setOrganizationName("COMP_hack");
+  app.setOrganizationDomain("comp.hack");
+  app.setApplicationName("COMP_hack Capture Grep");
 
-    // Remove the border around widgets added to the status bar.
-    app.setStyleSheet("QStatusBar::item { border: 0px solid black; }");
+  // Remove the border around widgets added to the status bar.
+  app.setStyleSheet("QStatusBar::item { border: 0px solid black; }");
 
-    // Create and display the main window.
-    (new MainWindow)->show();
+  // Create and display the main window.
+  (new MainWindow)->show();
 
-    // Run the main application event loop.
-    return app.exec();
+  // Run the main application event loop.
+  return app.exec();
 }

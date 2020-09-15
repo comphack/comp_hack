@@ -37,32 +37,25 @@
 
 using namespace channel;
 
-PerformanceTimer::PerformanceTimer(ChannelServer *pServer) : mServer(pServer),
-    mStart(0)
-{
-    auto config = std::dynamic_pointer_cast<objects::ChannelConfig>(
-        pServer->GetConfig());
-    mEnabled = config->GetPerfMonitorEnabled();
+PerformanceTimer::PerformanceTimer(ChannelServer* pServer)
+    : mServer(pServer), mStart(0) {
+  auto config =
+      std::dynamic_pointer_cast<objects::ChannelConfig>(pServer->GetConfig());
+  mEnabled = config->GetPerfMonitorEnabled();
 }
 
-void PerformanceTimer::Start()
-{
-    if(mEnabled)
-    {
-        mStart = mServer->GetServerTime();
-    }
+void PerformanceTimer::Start() {
+  if (mEnabled) {
+    mStart = mServer->GetServerTime();
+  }
 }
 
-void PerformanceTimer::Stop(const libcomp::String& metric)
-{
-    if(mEnabled)
-    {
-        ServerTime diff = mServer->GetServerTime() - mStart;
+void PerformanceTimer::Stop(const libcomp::String& metric) {
+  if (mEnabled) {
+    ServerTime diff = mServer->GetServerTime() - mStart;
 
-        LogGeneralDebug([&]()
-        {
-            return libcomp::String("PERF: %1 in %2 us\n")
-                .Arg(metric).Arg(diff);
-        });
-    }
+    LogGeneralDebug([&]() {
+      return libcomp::String("PERF: %1 in %2 us\n").Arg(metric).Arg(diff);
+    });
+  }
 }

@@ -41,95 +41,84 @@
 #include <Hotbar.h>
 
 // channel Includes
-#include "ChannelServer.h"
 #include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
-struct HotbarItemRequest
-{
-    int8_t Type;
-    int64_t ObjectID;
+struct HotbarItemRequest {
+  int8_t Type;
+  int64_t ObjectID;
 };
 
-void SaveHotbarItems(const std::shared_ptr<ChannelServer> server, 
-    const std::shared_ptr<ChannelClientConnection> client,
-    size_t page, std::vector<HotbarItemRequest> items)
-{
-    auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetEntity();
-    auto hotbar = character->GetHotbars(page).Get();
+void SaveHotbarItems(const std::shared_ptr<ChannelServer> server,
+                     const std::shared_ptr<ChannelClientConnection> client,
+                     size_t page, std::vector<HotbarItemRequest> items) {
+  auto state = client->GetClientState();
+  auto character = state->GetCharacterState()->GetEntity();
+  auto hotbar = character->GetHotbars(page).Get();
 
-    auto dbChanges = libcomp::DatabaseChangeSet::Create(
-        state->GetAccountUID());
-    if(nullptr == hotbar)
-    {
-        hotbar = libcomp::PersistentObject::New<objects::Hotbar>(true);
-        hotbar->SetCharacter(character->GetUUID());
-        hotbar->SetPageID((uint8_t)page);
-        character->SetHotbars(page, hotbar);
+  auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+  if (nullptr == hotbar) {
+    hotbar = libcomp::PersistentObject::New<objects::Hotbar>(true);
+    hotbar->SetCharacter(character->GetUUID());
+    hotbar->SetPageID((uint8_t)page);
+    character->SetHotbars(page, hotbar);
 
-        dbChanges->Update(character);
-        dbChanges->Insert(hotbar);
+    dbChanges->Update(character);
+    dbChanges->Insert(hotbar);
+  } else {
+    dbChanges->Update(hotbar);
+  }
+
+  for (size_t i = 0; i < 16; i++) {
+    auto item = items[i];
+
+    // Demons and equipment need to be instance references
+    bool instanceRef = item.Type == 3 || item.Type == 5;
+    if (instanceRef) {
+      hotbar->SetItems(i, state->GetObjectUUID(item.ObjectID));
+      hotbar->SetItemIDs(i, 0);
+    } else {
+      hotbar->SetItems(i, NULLUUID);
+      hotbar->SetItemIDs(i, (uint32_t)item.ObjectID);
     }
-    else
-    {
-        dbChanges->Update(hotbar);
-    }
+    hotbar->SetItemTypes(i, item.Type);
+  }
 
-    for(size_t i = 0; i < 16; i++)
-    {
-        auto item = items[i];
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_HOTBAR_SAVE);
+  reply.WriteS8((int8_t)page);
+  reply.WriteS32(0);
 
-        // Demons and equipment need to be instance references
-        bool instanceRef = item.Type == 3 || item.Type == 5;
-        if(instanceRef)
-        {
-            hotbar->SetItems(i, state->GetObjectUUID(item.ObjectID));
-            hotbar->SetItemIDs(i, 0);
-        }
-        else
-        {
-            hotbar->SetItems(i, NULLUUID);
-            hotbar->SetItemIDs(i, (uint32_t)item.ObjectID);
-        }
-        hotbar->SetItemTypes(i, item.Type);
-    }
+  client->SendPacket(reply);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_HOTBAR_SAVE);
-    reply.WriteS8((int8_t)page);
-    reply.WriteS32(0);
-
-    client->SendPacket(reply);
-
-    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+  server->GetWorldDatabase()->QueueChangeSet(dbChanges);
 }
 
-bool Parsers::HotbarSave::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::HotbarSave::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 145)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 145) {
+    return false;
+  }
 
-    int8_t page = p.ReadS8();
+  int8_t page = p.ReadS8();
 
-    std::vector<HotbarItemRequest> items;
-    for(size_t i = 0; i < 16; i++)
-    {
-        HotbarItemRequest item;
-        item.Type = p.ReadS8();
-        item.ObjectID = p.ReadS64Little();
-        items.push_back(item);
-    }
+  std::vector<HotbarItemRequest> items;
+  for (size_t i = 0; i < 16; i++) {
+    HotbarItemRequest item;
+    item.Type = p.ReadS8();
+    item.ObjectID = p.ReadS64Little();
+    items.push_back(item);
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork(SaveHotbarItems, server, client, (size_t)page, items);
+  server->QueueWork(SaveHotbarItems, server, client, (size_t)page, items);
 
-    return true;
+  return true;
 }

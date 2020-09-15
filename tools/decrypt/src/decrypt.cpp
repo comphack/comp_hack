@@ -26,45 +26,40 @@
 
 #include <Crypto.h>
 
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <cstdlib>
 
-int main(int argc, char *argv[])
-{
-    if(3 != argc)
-    {
-        std::cerr << "USAGE: " << argv[0] << " IN OUT" << std::endl;
+int main(int argc, char *argv[]) {
+  if (3 != argc) {
+    std::cerr << "USAGE: " << argv[0] << " IN OUT" << std::endl;
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    std::vector<char> data = libcomp::Crypto::LoadFile(argv[1]);
+  std::vector<char> data = libcomp::Crypto::LoadFile(argv[1]);
 
-    if(data.empty())
-    {
-        std::cerr << "Failed to load input file." << std::endl;
+  if (data.empty()) {
+    std::cerr << "Failed to load input file." << std::endl;
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    if(!libcomp::Crypto::DecryptFile(data))
-    {
-        std::cerr << "Failed to decrypt file." << std::endl;
+  if (!libcomp::Crypto::DecryptFile(data)) {
+    std::cerr << "Failed to decrypt file." << std::endl;
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    std::ofstream out;
-    out.open(argv[2], std::ofstream::out | std::ofstream::binary);
-    out.write(&data[0], static_cast<std::streamsize>(data.size()));
+  std::ofstream out;
+  out.open(argv[2], std::ofstream::out | std::ofstream::binary);
+  out.write(&data[0], static_cast<std::streamsize>(data.size()));
 
-    if(!out.good())
-    {
-        std::cerr << "Failed to write output file." << std::endl;
+  if (!out.good()) {
+    std::cerr << "Failed to write output file." << std::endl;
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    return EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }

@@ -48,114 +48,94 @@
 
 using namespace channel;
 
-bool Parsers::ItemRepairMax::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ItemRepairMax::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 13)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 13) {
+    return false;
+  }
 
-    int32_t entityID = p.ReadS32Little();
-    int8_t activationID = p.ReadS8();
-    int64_t itemID = p.ReadS64Little();
+  int32_t entityID = p.ReadS32Little();
+  int8_t activationID = p.ReadS8();
+  int64_t itemID = p.ReadS64Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto sourceState = state->GetEntityState(entityID);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto sourceState = state->GetEntityState(entityID);
 
-    if(sourceState == nullptr)
-    {
-        LogItemError([&]()
-        {
-            return libcomp::String("Invalid entity ID received from a"
-                " ItemRepairMax request: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
+  if (sourceState == nullptr) {
+    LogItemError([&]() {
+      return libcomp::String(
+                 "Invalid entity ID received from a ItemRepairMax request: "
+                 "%1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Close();
-        return true;
-    }
-
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
-    int8_t preDurability = item ? item->GetMaxDurability() : 0;
-
-    auto activatedAbility = sourceState->GetSpecialActivations(activationID);
-
-    bool success = false;
-    int32_t adjust = 0;
-    if(!item)
-    {
-        LogItemErrorMsg(
-            "Invalid item ID encountered for ItemRepairMax request\n");
-    }
-    else if(!activatedAbility)
-    {
-        LogItemErrorMsg(
-            "Invalid activation ID encountered for ItemRepairMax request\n");
-    }
-    else
-    {
-        auto skillData = activatedAbility->GetSkillData();
-        if(skillData)
-        {
-            uint16_t functionID = skillData->GetDamage()->GetFunctionID();
-            if(functionID == SVR_CONST.SKILL_MAX_DURABILITY_FIXED)
-            {
-                adjust = skillData->GetSpecial()->GetSpecialParams(0);
-
-                success = true;
-            }
-            else if(functionID == SVR_CONST.SKILL_MAX_DURABILITY_RANDOM)
-            {
-                int32_t min = skillData->GetSpecial()->GetSpecialParams(0);
-                int32_t max = skillData->GetSpecial()->GetSpecialParams(1);
-
-                adjust = RNG(int32_t, min, max);
-
-                success = true;
-            }
-        }
-    }
-
-    if(success)
-    {
-        if(server->GetSkillManager()->ExecuteSkill(sourceState,
-            activationID, itemID))
-        {
-            if(adjust)
-            {
-                characterManager->UpdateDurability(client, item, adjust, true,
-                    true);
-            }
-        }
-        else
-        {
-            success = false;
-        }
-    }
-    else
-    {
-        server->GetSkillManager()->CancelSkill(sourceState, activationID);
-    }
-
-    if(success)
-    {
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_REPAIR_MAX);
-        reply.WriteS32Little(entityID);
-        reply.WriteS64Little(itemID);
-        reply.WriteU32Little(item ? item->GetType() : 0);
-        reply.WriteU8((uint8_t)preDurability);
-        reply.WriteU8(item ? (uint8_t)item->GetMaxDurability() : 0);
-
-        client->SendPacket(reply);
-    }
-
+    client->Close();
     return true;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+
+  auto item = std::dynamic_pointer_cast<objects::Item>(
+      libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
+  int8_t preDurability = item ? item->GetMaxDurability() : 0;
+
+  auto activatedAbility = sourceState->GetSpecialActivations(activationID);
+
+  bool success = false;
+  int32_t adjust = 0;
+  if (!item) {
+    LogItemErrorMsg("Invalid item ID encountered for ItemRepairMax request\n");
+  } else if (!activatedAbility) {
+    LogItemErrorMsg(
+        "Invalid activation ID encountered for ItemRepairMax request\n");
+  } else {
+    auto skillData = activatedAbility->GetSkillData();
+    if (skillData) {
+      uint16_t functionID = skillData->GetDamage()->GetFunctionID();
+      if (functionID == SVR_CONST.SKILL_MAX_DURABILITY_FIXED) {
+        adjust = skillData->GetSpecial()->GetSpecialParams(0);
+
+        success = true;
+      } else if (functionID == SVR_CONST.SKILL_MAX_DURABILITY_RANDOM) {
+        int32_t min = skillData->GetSpecial()->GetSpecialParams(0);
+        int32_t max = skillData->GetSpecial()->GetSpecialParams(1);
+
+        adjust = RNG(int32_t, min, max);
+
+        success = true;
+      }
+    }
+  }
+
+  if (success) {
+    if (server->GetSkillManager()->ExecuteSkill(sourceState, activationID,
+                                                itemID)) {
+      if (adjust) {
+        characterManager->UpdateDurability(client, item, adjust, true, true);
+      }
+    } else {
+      success = false;
+    }
+  } else {
+    server->GetSkillManager()->CancelSkill(sourceState, activationID);
+  }
+
+  if (success) {
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_REPAIR_MAX);
+    reply.WriteS32Little(entityID);
+    reply.WriteS64Little(itemID);
+    reply.WriteU32Little(item ? item->GetType() : 0);
+    reply.WriteU8((uint8_t)preDurability);
+    reply.WriteU8(item ? (uint8_t)item->GetMaxDurability() : 0);
+
+    client->SendPacket(reply);
+  }
+
+  return true;
 }

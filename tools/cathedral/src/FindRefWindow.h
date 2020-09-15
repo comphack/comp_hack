@@ -38,104 +38,111 @@
 #include <EventCondition.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_FindRefWindow.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace objects
-{
+#include "ui_FindRefWindow.h"
+
+namespace objects {
 
 class DropSet;
 class ServerZone;
 class ServerZonePartial;
 class Spawn;
 
-} // namespace objects
+}  // namespace objects
 
 class MainWindow;
 
-class FindRefWindow : public QMainWindow
-{
-    Q_OBJECT
+class FindRefWindow : public QMainWindow {
+  Q_OBJECT
 
-public:
-    explicit FindRefWindow(MainWindow *pMainWindow, QWidget *pParent = 0);
-    virtual ~FindRefWindow();
+ public:
+  explicit FindRefWindow(MainWindow* pMainWindow, QWidget* pParent = 0);
+  virtual ~FindRefWindow();
 
-    bool Open(const libcomp::String& objType, uint32_t val);
+  bool Open(const libcomp::String& objType, uint32_t val);
 
-    void closeEvent(QCloseEvent* event);
+  void closeEvent(QCloseEvent* event);
 
-private slots:
-    void Export();
-    void Find();
+ private slots:
+  void Export();
+  void Find();
 
-    void SetZoneDirectory();
-    void ToggleZoneDirectory();
+  void SetZoneDirectory();
+  void ToggleZoneDirectory();
 
-private:
-    void BuildDropSetFilters();
-    void BuildCEventMessageDataFilters();
-    void BuildCHouraiDataFilters();
-    void BuildCHouraiMessageDataFilters();
-    void BuildCItemDataFilters();
-    void BuildCKeyItemDataFilters();
-    void BuildCQuestDataFilters();
-    void BuildCSoundDataFilters();
-    void BuildCTitleDataFilters();
-    void BuildCValuablesDataFilters();
-    void BuildDevilDataFilters();
-    void BuildHNPCDataFilters();
-    void BuildONPCDataFilters();
-    void BuildShopProductDataFilters();
-    void BuildStatusDataFilters();
-    void BuildZoneDataFilters();
+ private:
+  void BuildDropSetFilters();
+  void BuildCEventMessageDataFilters();
+  void BuildCHouraiDataFilters();
+  void BuildCHouraiMessageDataFilters();
+  void BuildCItemDataFilters();
+  void BuildCKeyItemDataFilters();
+  void BuildCQuestDataFilters();
+  void BuildCSoundDataFilters();
+  void BuildCTitleDataFilters();
+  void BuildCValuablesDataFilters();
+  void BuildDevilDataFilters();
+  void BuildHNPCDataFilters();
+  void BuildONPCDataFilters();
+  void BuildShopProductDataFilters();
+  void BuildStatusDataFilters();
+  void BuildZoneDataFilters();
 
-    void GetValue1(const std::shared_ptr<objects::EventCondition>& c,
-        std::set<uint32_t>& ids);
+  void GetValue1(const std::shared_ptr<objects::EventCondition>& c,
+                 std::set<uint32_t>& ids);
 
-    void FindAsync();
+  void FindAsync();
 
-    void AddResult(uint32_t id, const libcomp::String& location,
-        const libcomp::String& section);
+  void AddResult(uint32_t id, const libcomp::String& location,
+                 const libcomp::String& section);
 
-    void FilterActionIDs(
-        const std::list<std::shared_ptr<objects::Action>>& actions,
-        std::set<uint32_t>& ids);
+  void FilterActionIDs(
+      const std::list<std::shared_ptr<objects::Action>>& actions,
+      std::set<uint32_t>& ids);
 
-    std::set<uint32_t> GetFilteredIDs(const std::set<uint32_t>& ids,
-        uint32_t value, uint32_t maxValue);
+  std::set<uint32_t> GetFilteredIDs(const std::set<uint32_t>& ids,
+                                    uint32_t value, uint32_t maxValue);
 
-    MainWindow *mMainWindow;
+  MainWindow* mMainWindow;
 
-    libcomp::EnumMap<objects::Action::ActionType_t,
-        std::function<void(const std::shared_ptr<objects::Action>&,
-            std::set<uint32_t>&)>> mActionFilters;
+  libcomp::EnumMap<objects::Action::ActionType_t,
+                   std::function<void(const std::shared_ptr<objects::Action>&,
+                                      std::set<uint32_t>&)>>
+      mActionFilters;
 
-    libcomp::EnumMap<objects::Event::EventType_t,
-        std::function<void(const std::shared_ptr<objects::Event>&,
-            std::set<uint32_t>&)>> mEventFilters;
+  libcomp::EnumMap<objects::Event::EventType_t,
+                   std::function<void(const std::shared_ptr<objects::Event>&,
+                                      std::set<uint32_t>&)>>
+      mEventFilters;
 
-    libcomp::EnumMap<objects::EventCondition::Type_t,
-        std::function<void(FindRefWindow&,
-            const std::shared_ptr<objects::EventCondition>&,
-            std::set<uint32_t>&)>> mEventConditionFilters;
+  libcomp::EnumMap<
+      objects::EventCondition::Type_t,
+      std::function<void(FindRefWindow&,
+                         const std::shared_ptr<objects::EventCondition>&,
+                         std::set<uint32_t>&)>>
+      mEventConditionFilters;
 
-    std::function<void(const std::shared_ptr<objects::DropSet>&,
-        std::set<uint32_t>&)> mDropSetFilter;
+  std::function<void(const std::shared_ptr<objects::DropSet>&,
+                     std::set<uint32_t>&)>
+      mDropSetFilter;
 
-    std::function<void(const std::shared_ptr<objects::Spawn>&,
-        std::set<uint32_t>&)> mSpawnFilter;
+  std::function<void(const std::shared_ptr<objects::Spawn>&,
+                     std::set<uint32_t>&)>
+      mSpawnFilter;
 
-    std::function<void(const std::shared_ptr<objects::ServerZone>&,
-        std::set<uint32_t>&)> mZoneFilter;
+  std::function<void(const std::shared_ptr<objects::ServerZone>&,
+                     std::set<uint32_t>&)>
+      mZoneFilter;
 
-    std::function<void(const std::shared_ptr<objects::ServerZonePartial>&,
-        std::set<uint32_t>&)> mZonePartialFilter;
+  std::function<void(const std::shared_ptr<objects::ServerZonePartial>&,
+                     std::set<uint32_t>&)>
+      mZonePartialFilter;
 
-    libcomp::String mObjType;
+  libcomp::String mObjType;
 
-    Ui::FindRefWindow *ui;
+  Ui::FindRefWindow* ui;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_FINDREFWINDOW_H
+#endif  // TOOLS_CATHEDRAL_SRC_FINDREFWINDOW_H

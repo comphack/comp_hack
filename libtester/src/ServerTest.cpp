@@ -28,31 +28,22 @@
 
 using namespace libtester;
 
-ServerTestConfig::ServerTestConfig(
-    const std::chrono::milliseconds& testTime,
-    const std::chrono::milliseconds& bootTime,
-    const std::string& programsPath,
-    bool debug) : mTestTime(testTime), mBootTime(bootTime),
-    mProgramsPath(programsPath), mDebug(debug)
-{
+ServerTestConfig::ServerTestConfig(const std::chrono::milliseconds& testTime,
+                                   const std::chrono::milliseconds& bootTime,
+                                   const std::string& programsPath, bool debug)
+    : mTestTime(testTime),
+      mBootTime(bootTime),
+      mProgramsPath(programsPath),
+      mDebug(debug) {}
+
+std::chrono::milliseconds ServerTestConfig::GetTestTime() const {
+  return mTestTime;
 }
 
-std::chrono::milliseconds ServerTestConfig::GetTestTime() const
-{
-    return mTestTime;
+std::chrono::milliseconds ServerTestConfig::GetBootTime() const {
+  return mBootTime;
 }
 
-std::chrono::milliseconds ServerTestConfig::GetBootTime() const
-{
-    return mBootTime;
-}
+std::string ServerTestConfig::GetProgramsPath() const { return mProgramsPath; }
 
-std::string ServerTestConfig::GetProgramsPath() const
-{
-    return mProgramsPath;
-}
-
-bool ServerTestConfig::GetDebug() const
-{
-    return mDebug;
-}
+bool ServerTestConfig::GetDebug() const { return mDebug; }

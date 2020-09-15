@@ -37,24 +37,22 @@
 
 using namespace channel;
 
-bool Parsers::PvPBaseCapture::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PvPBaseCapture::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t baseID = p.ReadS32Little();
+  int32_t baseID = p.ReadS32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->GetMatchManager()->StartPvPBaseCapture(client, baseID);
+  server->GetMatchManager()->StartPvPBaseCapture(client, baseID);
 
-    return true;
+  return true;
 }

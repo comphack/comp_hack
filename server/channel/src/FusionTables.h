@@ -74,4 +74,4 @@ extern uint8_t INHERITENCE_SKILL_MAP[21][21];
 // point extraction and injection.
 extern uint16_t REUNION_RANK_POINTS[10];
 
-#endif // SERVER_CHANNEL_SRC_FUSIONTABLES_H
+#endif  // SERVER_CHANNEL_SRC_FUSIONTABLES_H

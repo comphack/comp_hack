@@ -39,206 +39,201 @@
 
 using namespace channel;
 
-bool Parsers::SearchEntrySelf::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SearchEntrySelf::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto syncManager = server->GetChannelSyncManager();
-    auto worldCID = state->GetWorldCID();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto syncManager = server->GetChannelSyncManager();
+  auto worldCID = state->GetWorldCID();
 
-    int32_t type = p.ReadS32Little();
+  int32_t type = p.ReadS32Little();
 
-    auto entries = syncManager->GetSearchEntries((objects::SearchEntry::Type_t)type);
-    entries.remove_if([worldCID](
-        const std::shared_ptr<objects::SearchEntry>& entry)
-        {
-            return entry->GetSourceCID() != worldCID;
-        });
+  auto entries =
+      syncManager->GetSearchEntries((objects::SearchEntry::Type_t)type);
+  entries.remove_if(
+      [worldCID](const std::shared_ptr<objects::SearchEntry>& entry) {
+        return entry->GetSourceCID() != worldCID;
+      });
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SEARCH_ENTRY_SELF);
-    reply.WriteS32Little(type);
-    reply.WriteS32Little(0);    // Success
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SEARCH_ENTRY_SELF);
+  reply.WriteS32Little(type);
+  reply.WriteS32Little(0);  // Success
 
-    int32_t previousPageIndexID = -1;
-    int32_t nextPageIndexID = -1;
+  int32_t previousPageIndexID = -1;
+  int32_t nextPageIndexID = -1;
 
-    switch((objects::SearchEntry::Type_t)type)
-    {
+  switch ((objects::SearchEntry::Type_t)type) {
     case objects::SearchEntry::Type_t::PARTY_JOIN:
-        for(auto entry : entries)
-        {
-            reply.WriteS32Little(entry->GetEntryID());
+      for (auto entry : entries) {
+        reply.WriteS32Little(entry->GetEntryID());
 
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_GOAL));
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_LOCATION));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_GOAL));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_LOCATION));
 
-            reply.WriteS32Little((int32_t)entry->GetPostTime());
+        reply.WriteS32Little((int32_t)entry->GetPostTime());
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                entry->GetTextData(SEARCH_IDX_COMMENT), true);
-        }
-        break;
+        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                  entry->GetTextData(SEARCH_IDX_COMMENT), true);
+      }
+      break;
     case objects::SearchEntry::Type_t::PARTY_RECRUIT:
-        for(auto entry : entries)
-        {
-            reply.WriteS32Little(entry->GetEntryID());
+      for (auto entry : entries) {
+        reply.WriteS32Little(entry->GetEntryID());
 
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_GOAL));
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_LOCATION));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_GOAL));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_LOCATION));
 
-            reply.WriteS32Little((int32_t)entry->GetPostTime());
+        reply.WriteS32Little((int32_t)entry->GetPostTime());
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                entry->GetTextData(SEARCH_IDX_COMMENT), true);
+        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                  entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PARTY_SIZE));
-        }
-        break;
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PARTY_SIZE));
+      }
+      break;
     case objects::SearchEntry::Type_t::CLAN_JOIN:
-        for(auto entry : entries)
-        {
-            reply.WriteS32Little(entry->GetEntryID());
+      for (auto entry : entries) {
+        reply.WriteS32Little(entry->GetEntryID());
 
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PLAYSTYLE));
-            reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_TIME_FROM));
-            reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_TIME_TO));
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_SERIES));
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PLAYSTYLE));
+        reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_TIME_FROM));
+        reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_TIME_TO));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_SERIES));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON));
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                entry->GetTextData(SEARCH_IDX_COMMENT), true);
+        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                  entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON_RACE));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON_RACE));
 
-            reply.WriteS32Little(ChannelServer::GetExpirationInSeconds(
-                entry->GetExpirationTime()));
-        }
-        break;
+        reply.WriteS32Little(
+            ChannelServer::GetExpirationInSeconds(entry->GetExpirationTime()));
+      }
+      break;
     case objects::SearchEntry::Type_t::CLAN_RECRUIT:
-        for(auto entry : entries)
-        {
-            reply.WriteS32Little(entry->GetEntryID());
+      for (auto entry : entries) {
+        reply.WriteS32Little(entry->GetEntryID());
 
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PLAYSTYLE));
-            reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_TIME_FROM));
-            reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_TIME_TO));
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_SERIES));
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PLAYSTYLE));
+        reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_TIME_FROM));
+        reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_TIME_TO));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_SERIES));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON));
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                entry->GetTextData(SEARCH_IDX_COMMENT), true);
+        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                  entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON_RACE));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON_RACE));
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                entry->GetTextData(SEARCH_IDX_CLAN_CATCHPHRASE), true);
+        reply.WriteString16Little(
+            libcomp::Convert::ENCODING_CP932,
+            entry->GetTextData(SEARCH_IDX_CLAN_CATCHPHRASE), true);
 
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_CLAN_IMAGE));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_CLAN_IMAGE));
 
-            reply.WriteS32Little(ChannelServer::GetExpirationInSeconds(
-                entry->GetExpirationTime()));
-        }
-        break;
+        reply.WriteS32Little(
+            ChannelServer::GetExpirationInSeconds(entry->GetExpirationTime()));
+      }
+
+      // Break the list with a invalid (-1) entry ID.
+      reply.WriteS32Little(-1);
+      break;
     case objects::SearchEntry::Type_t::TRADE_SELLING:
-        for(auto entry : entries)
-        {
-            reply.WriteS32Little(entry->GetEntryID());
-            reply.WriteS8(0);   // Unknown
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_SUB_CATEGORY));
+      for (auto entry : entries) {
+        reply.WriteS32Little(entry->GetEntryID());
+        reply.WriteS8(0);  // Unknown
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_SUB_CATEGORY));
 
-            reply.WriteS16Little((int16_t)(entry->GetData(SEARCH_IDX_TAROT)));
-            reply.WriteS16Little((int16_t)(entry->GetData(SEARCH_IDX_SOUL)));
+        reply.WriteS16Little((int16_t)(entry->GetData(SEARCH_IDX_TAROT)));
+        reply.WriteS16Little((int16_t)(entry->GetData(SEARCH_IDX_SOUL)));
 
-            reply.WriteS32Little(entry->GetData(SEARCH_IDX_ITEM_TYPE));
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_MAX_DURABILITY));
-            reply.WriteS32Little(entry->GetData(SEARCH_IDX_PRICE));
-            reply.WriteS32Little(0);    // Unknown
-            reply.WriteS32Little(entry->GetData(SEARCH_IDX_LOCATION));
+        reply.WriteS32Little(entry->GetData(SEARCH_IDX_ITEM_TYPE));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_MAX_DURABILITY));
+        reply.WriteS32Little(entry->GetData(SEARCH_IDX_PRICE));
+        reply.WriteS32Little(0);  // Unknown
+        reply.WriteS32Little(entry->GetData(SEARCH_IDX_LOCATION));
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                entry->GetTextData(SEARCH_IDX_COMMENT), true);
+        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                  entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
-            reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_DURABILITY));
+        reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_DURABILITY));
 
-            reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT));
-            reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 1));
-            reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 2));
-            reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 3));
-            reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 4));
+        reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT));
+        reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 1));
+        reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 2));
+        reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 3));
+        reply.WriteS16Little((int16_t)entry->GetData(SEARCH_BASE_MOD_SLOT + 4));
 
-            reply.WriteS32Little((int32_t)entry->GetPostTime());
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_MAIN_CATEGORY));
+        reply.WriteS32Little((int32_t)entry->GetPostTime());
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_MAIN_CATEGORY));
 
-            reply.WriteS32Little(entry->GetData(SEARCH_IDX_BASIC_EFFECT));
-            reply.WriteS32Little(entry->GetData(SEARCH_IDX_SPECIAL_EFFECT));
-        }
-        break;
+        reply.WriteS32Little(entry->GetData(SEARCH_IDX_BASIC_EFFECT));
+        reply.WriteS32Little(entry->GetData(SEARCH_IDX_SPECIAL_EFFECT));
+      }
+      break;
     case objects::SearchEntry::Type_t::TRADE_BUYING:
-        for(auto entry : entries)
-        {
-            reply.WriteS32Little(entry->GetEntryID());
-            reply.WriteS8(0);   // Unknown
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_SUB_CATEGORY));
+      for (auto entry : entries) {
+        reply.WriteS32Little(entry->GetEntryID());
+        reply.WriteS8(0);  // Unknown
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_SUB_CATEGORY));
 
-            reply.WriteS32Little(entry->GetData(SEARCH_IDX_ITEM_TYPE));
-            reply.WriteS32Little(entry->GetData(SEARCH_IDX_PRICE));
-            reply.WriteS32Little(0);    // Unknown
-            reply.WriteS32Little(entry->GetData(SEARCH_IDX_LOCATION));
+        reply.WriteS32Little(entry->GetData(SEARCH_IDX_ITEM_TYPE));
+        reply.WriteS32Little(entry->GetData(SEARCH_IDX_PRICE));
+        reply.WriteS32Little(0);  // Unknown
+        reply.WriteS32Little(entry->GetData(SEARCH_IDX_LOCATION));
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                entry->GetTextData(SEARCH_IDX_COMMENT), true);
+        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                  entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
-            reply.WriteS32Little((int32_t)entry->GetPostTime());
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_SLOT_COUNT));
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_MAIN_CATEGORY));
-        }
-        break;
+        reply.WriteS32Little((int32_t)entry->GetPostTime());
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_SLOT_COUNT));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_MAIN_CATEGORY));
+      }
+      break;
     case objects::SearchEntry::Type_t::FREE_RECRUIT:
-        for(auto entry : entries)
-        {
-            reply.WriteS32Little(entry->GetEntryID());
+      for (auto entry : entries) {
+        reply.WriteS32Little(entry->GetEntryID());
 
-            reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_GOAL));
+        reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_GOAL));
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                entry->GetTextData(SEARCH_IDX_COMMENT), true);
+        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                  entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
-            reply.WriteS32Little((int32_t)entry->GetPostTime());
-        }
-        break;
+        reply.WriteS32Little((int32_t)entry->GetPostTime());
+      }
+      break;
     case objects::SearchEntry::Type_t::PARTY_JOIN_APP:
     case objects::SearchEntry::Type_t::PARTY_RECRUIT_APP:
     case objects::SearchEntry::Type_t::CLAN_JOIN_APP:
     case objects::SearchEntry::Type_t::CLAN_RECRUIT_APP:
     case objects::SearchEntry::Type_t::TRADE_SELLING_APP:
     case objects::SearchEntry::Type_t::TRADE_BUYING_APP:
-        for(auto entry : entries)
-        {
-            reply.WriteS32Little(entry->GetEntryID());
+      for (auto entry : entries) {
+        reply.WriteS32Little(entry->GetEntryID());
 
-            reply.WriteS32Little(entry->GetParentEntryID());
+        reply.WriteS32Little(entry->GetParentEntryID());
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                entry->GetTextData(SEARCH_IDX_COMMENT), true);
-        }
-        break;
+        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                  entry->GetTextData(SEARCH_IDX_COMMENT), true);
+      }
+      break;
     default:
-        break;
-    }
+      break;
+  }
 
-    reply.WriteS32Little(previousPageIndexID);
-    reply.WriteS32Little(nextPageIndexID);
+  reply.WriteS32Little(previousPageIndexID);
+  reply.WriteS32Little(nextPageIndexID);
 
-    connection->SendPacket(reply);
+  connection->SendPacket(reply);
 
-    return true;
+  return true;
 }

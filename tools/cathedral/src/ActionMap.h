@@ -26,9 +26,10 @@
 #define TOOLS_CATHEDRAL_SRC_ACTIONMAP_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QWidget>
 
 // objects Includes
 #include <Action.h>
@@ -36,59 +37,58 @@
 // Standard C++11 Includes
 #include <unordered_map>
 
-namespace Ui
-{
+namespace Ui {
 
 class ActionMap;
 
-} // namespace Ui
+}  // namespace Ui
 
 class ActionMapItem;
 class MainWindow;
 
-class ActionMap : public QWidget
-{
-    Q_OBJECT
+class ActionMap : public QWidget {
+  Q_OBJECT
 
-public:
-    explicit ActionMap(QWidget *pParent = 0);
-    virtual ~ActionMap();
+ public:
+  explicit ActionMap(QWidget *pParent = 0);
+  virtual ~ActionMap();
 
-    void BindSelector(MainWindow *pMainWindow,
-        const libcomp::String& objectSelectorType, bool serverData = false);
+  void BindSelector(MainWindow *pMainWindow,
+                    const libcomp::String &objectSelectorType,
+                    bool serverData = false);
 
-    void SetAddText(const libcomp::String& text);
+  void SetAddText(const libcomp::String &text);
 
-    void Load(const std::unordered_map<int32_t, int32_t>& values);
-    void Load(const std::unordered_map<uint32_t, int32_t>& values);
-    std::unordered_map<int32_t, int32_t> SaveSigned() const;
-    std::unordered_map<uint32_t, int32_t> SaveUnsigned() const;
+  void Load(const std::unordered_map<int32_t, int32_t> &values);
+  void Load(const std::unordered_map<uint32_t, int32_t> &values);
+  std::unordered_map<int32_t, int32_t> SaveSigned() const;
+  std::unordered_map<uint32_t, int32_t> SaveUnsigned() const;
 
-    void RemoveValue(ActionMapItem *pValue);
-    void SetValueName(const QString& name);
-    void SetMinMax(int32_t min, int32_t max);
+  void RemoveValue(ActionMapItem *pValue);
+  void SetValueName(const QString &name);
+  void SetMinMax(int32_t min, int32_t max);
 
-protected slots:
-    void AddNewValue();
+ protected slots:
+  void AddNewValue();
 
-signals:
-    void rowEdit();
+ signals:
+  void rowEdit();
 
-protected:
-    void AddValue(ActionMapItem *pValue);
-    void ClearValues();
+ protected:
+  void AddValue(ActionMapItem *pValue);
+  void ClearValues();
 
-    QString mValueName;
-    int32_t mMin, mMax;
+  QString mValueName;
+  int32_t mMin, mMax;
 
-    libcomp::String mObjectSelectorType;
+  libcomp::String mObjectSelectorType;
 
-    bool mServerData;
+  bool mServerData;
 
-    Ui::ActionMap *ui;
+  Ui::ActionMap *ui;
 
-    MainWindow *mMainWindow;
-    std::list<ActionMapItem*> mValues;
+  MainWindow *mMainWindow;
+  std::list<ActionMapItem *> mValues;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONMAP_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONMAP_H

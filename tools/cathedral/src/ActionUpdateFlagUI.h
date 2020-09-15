@@ -32,38 +32,37 @@
 #include <ActionUpdateFlag.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionUpdateFlag;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionUpdateFlag : public Action
-{
-    Q_OBJECT
+class ActionUpdateFlag : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionUpdateFlag(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionUpdateFlag();
+ public:
+  explicit ActionUpdateFlag(ActionList *pList, MainWindow *pMainWindow,
+                            QWidget *pParent = 0);
+  virtual ~ActionUpdateFlag();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected slots:
-    void FlagTypeChanged();
+ protected slots:
+  void FlagTypeChanged();
 
-protected:
-    Ui::ActionUpdateFlag *prop;
+ protected:
+  Ui::ActionUpdateFlag *prop;
 
-    std::shared_ptr<objects::ActionUpdateFlag> mAction;
+  std::shared_ptr<objects::ActionUpdateFlag> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONUPDATEFLAGUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONUPDATEFLAGUI_H

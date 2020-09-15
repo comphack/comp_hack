@@ -46,96 +46,83 @@
 
 using namespace channel;
 
-bool Parsers::ClanForm::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ClanForm::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 7)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 7) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    int32_t entityID = p.ReadS32Little();
-    int8_t activationID = p.ReadS8();
-    libcomp::String clanName = p.ReadString16Little(
-        state->GetClientStringEncoding(), true);
+  int32_t entityID = p.ReadS32Little();
+  int8_t activationID = p.ReadS8();
+  libcomp::String clanName =
+      p.ReadString16Little(state->GetClientStringEncoding(), true);
 
-    const int8_t ERR_IN_CLAN = -1;
-    const int8_t ERR_DUPE_NAME = -2;
-    const int8_t ERR_INVALID_NAME = -3;
-    const int8_t ERR_FAIL = -5;
+  const int8_t ERR_IN_CLAN = -1;
+  const int8_t ERR_DUPE_NAME = -2;
+  const int8_t ERR_INVALID_NAME = -3;
+  const int8_t ERR_FAIL = -5;
 
-    int8_t errorCode = 0;
+  int8_t errorCode = 0;
 
-    auto sourceState = state->GetEntityState(entityID);
-    auto activatedAbility = sourceState
-        ? sourceState->GetSpecialActivations(activationID) : nullptr;
-    if(!activatedAbility)
-    {
-        // Request is invalid but don't kill the connection or cancel the skill
+  auto sourceState = state->GetEntityState(entityID);
+  auto activatedAbility =
+      sourceState ? sourceState->GetSpecialActivations(activationID) : nullptr;
+  if (!activatedAbility) {
+    // Request is invalid but don't kill the connection or cancel the skill
+    errorCode = ERR_FAIL;
+  } else if (state->GetClanID() > 0) {
+    errorCode = ERR_IN_CLAN;
+  } else if (clanName.Size() > 32) {
+    // 16 2-byte or 8 4-byte character limit
+    errorCode = ERR_INVALID_NAME;
+  } else {
+    auto worldDB = server->GetWorldDatabase();
+    auto existing = objects::Clan::LoadClanByName(worldDB, clanName);
+    if (existing) {
+      errorCode = ERR_DUPE_NAME;
+    } else {
+      auto item = std::dynamic_pointer_cast<objects::Item>(
+          libcomp::PersistentObject::GetObjectByUUID(
+              state->GetObjectUUID(activatedAbility->GetActivationObjectID())));
+
+      uint32_t itemID = item ? item->GetType() : 0;
+      auto baseZoneIter = SVR_CONST.CLAN_FORM_MAP.find(itemID);
+
+      if (baseZoneIter != SVR_CONST.CLAN_FORM_MAP.end()) {
+        libcomp::Packet request;
+        request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
+        request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_ADD);
+        request.WriteS32Little(state->GetWorldCID());
+        request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                                    clanName, true);
+        request.WriteU32Little(baseZoneIter->second);
+        request.WriteS8(activationID);
+
+        server->GetManagerConnection()->GetWorldConnection()->SendPacket(
+            request);
+      } else {
         errorCode = ERR_FAIL;
+      }
     }
-    else if(state->GetClanID() > 0)
-    {
-        errorCode = ERR_IN_CLAN;
-    }
-    else if(clanName.Size() > 32)
-    {
-        // 16 2-byte or 8 4-byte character limit
-        errorCode = ERR_INVALID_NAME;
-    }
-    else
-    {
-        auto worldDB = server->GetWorldDatabase();
-        auto existing = objects::Clan::LoadClanByName(worldDB, clanName);
-        if(existing)
-        {
-            errorCode = ERR_DUPE_NAME;
-        }
-        else
-        {
-            auto item = std::dynamic_pointer_cast<objects::Item>(
-                libcomp::PersistentObject::GetObjectByUUID(
-                state->GetObjectUUID(activatedAbility->GetActivationObjectID())));
+  }
 
-            uint32_t itemID = item ? item->GetType() : 0;
-            auto baseZoneIter = SVR_CONST.CLAN_FORM_MAP.find(itemID);
+  if (errorCode) {
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_FORM);
+    reply.WriteS32Little(0);
+    reply.WriteS8(errorCode);
 
-            if(baseZoneIter != SVR_CONST.CLAN_FORM_MAP.end())
-            {
-                libcomp::Packet request;
-                request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
-                request.WriteU8((uint8_t)InternalPacketAction_t::PACKET_ACTION_ADD);
-                request.WriteS32Little(state->GetWorldCID());
-                request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
-                    clanName, true);
-                request.WriteU32Little(baseZoneIter->second);
-                request.WriteS8(activationID);
+    client->SendPacket(reply);
 
-                server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
-            }
-            else
-            {
-                errorCode = ERR_FAIL;
-            }
-        }
-    }
+    server->GetSkillManager()->CancelSkill(sourceState, activationID);
+  }
 
-    if(errorCode)
-    {
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_FORM);
-        reply.WriteS32Little(0);
-        reply.WriteS8(errorCode);
-
-        client->SendPacket(reply);
-
-        server->GetSkillManager()->CancelSkill(sourceState, activationID);
-    }
-
-    return true;
+  return true;
 }

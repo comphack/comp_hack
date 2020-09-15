@@ -25,17 +25,14 @@
 #include "DynamicListItem.h"
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_DynamicListItem.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-DynamicListItem::DynamicListItem(QWidget *pParent) : QWidget(pParent)
-{
-    ui = new Ui::DynamicListItem;
-    ui->setupUi(this);
+#include "ui_DynamicListItem.h"
+
+DynamicListItem::DynamicListItem(QWidget *pParent) : QWidget(pParent) {
+  ui = new Ui::DynamicListItem;
+  ui->setupUi(this);
 }
 
-DynamicListItem::~DynamicListItem()
-{
-    delete ui;
-}
+DynamicListItem::~DynamicListItem() { delete ui; }

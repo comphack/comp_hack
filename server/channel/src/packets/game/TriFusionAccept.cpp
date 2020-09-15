@@ -45,198 +45,176 @@
 
 using namespace channel;
 
-bool Parsers::TriFusionAccept::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TriFusionAccept::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 5)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 5) {
+    return false;
+  }
 
-    int8_t result = p.ReadS8();
-    int32_t unknown = p.ReadS32Little();    // Always 0
-    (void)unknown;
+  int8_t result = p.ReadS8();
+  int32_t unknown = p.ReadS32Little();  // Always 0
+  (void)unknown;
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto managerConnection = server->GetManagerConnection();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto managerConnection = server->GetManagerConnection();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
-    auto tfSession = std::dynamic_pointer_cast<objects::TriFusionHostSession>(
-        exchangeSession);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
+  auto tfSession =
+      std::dynamic_pointer_cast<objects::TriFusionHostSession>(exchangeSession);
 
-    bool doFusion = false;
-    std::array<int64_t, 3> demonIDs = { { -1, -1, -1 } };
+  bool doFusion = false;
+  std::array<int64_t, 3> demonIDs = {{-1, -1, -1}};
 
-    bool success = false;
-    if(exchangeSession)
-    {
-        switch(exchangeSession->GetType())
-        {
-        case objects::PlayerExchangeSession::Type_t::TRIFUSION_GUEST:
-            {
-                auto otherCState = exchangeSession ? std::dynamic_pointer_cast<
-                    CharacterState>(exchangeSession->GetOtherCharacterState()) : nullptr;
-                auto otherClient = otherCState ? managerConnection->GetEntityClient(
-                    otherCState->GetEntityID(), false) : nullptr;
-                auto otherState = otherClient ? otherClient->GetClientState() : nullptr;
-                tfSession = otherState ? std::dynamic_pointer_cast<
-                    objects::TriFusionHostSession>(otherState->GetExchangeSession())
-                    : nullptr;
+  bool success = false;
+  if (exchangeSession) {
+    switch (exchangeSession->GetType()) {
+      case objects::PlayerExchangeSession::Type_t::TRIFUSION_GUEST: {
+        auto otherCState = exchangeSession
+                               ? std::dynamic_pointer_cast<CharacterState>(
+                                     exchangeSession->GetOtherCharacterState())
+                               : nullptr;
+        auto otherClient = otherCState ? managerConnection->GetEntityClient(
+                                             otherCState->GetEntityID(), false)
+                                       : nullptr;
+        auto otherState = otherClient ? otherClient->GetClientState() : nullptr;
+        tfSession =
+            otherState
+                ? std::dynamic_pointer_cast<objects::TriFusionHostSession>(
+                      otherState->GetExchangeSession())
+                : nullptr;
 
-                if(tfSession)
-                {
-                    exchangeSession->SetFinished(result == 1);
-                    success = true;
-                }
-                else
-                {
-                    LogGeneralError([&]()
-                    {
-                        return libcomp::String("Player attempted to accept a "
-                            "TriFusion but is not participating in one: %1\n")
-                            .Arg(state->GetAccountUID().ToString());
-                    });
-                }
-            }
-            break;
-        case objects::PlayerExchangeSession::Type_t::TRIFUSION_HOST:
-            if(tfSession)
-            {
-                // Ensure that everyone has accepted and all 3 demons
-                // have been set
-                exchangeSession->SetFinished(result == 1);
-                success = true;
-
-                if(result == 1)
-                {
-                    std::set<std::shared_ptr<objects::Character>> pCharacters;
-                    for(auto d : tfSession->GetDemons())
-                    {
-                        auto dBox = std::dynamic_pointer_cast<objects::DemonBox>(
-                            libcomp::PersistentObject::GetObjectByUUID(d->GetDemonBox()));
-                        auto pCharacter = dBox ? std::dynamic_pointer_cast<objects::Character>(
-                            libcomp::PersistentObject::GetObjectByUUID(dBox->GetCharacter()))
-                            : nullptr;
-
-                        if(pCharacter)
-                        {
-                            pCharacters.insert(pCharacter);
-                        }
-                        else
-                        {
-                            success = false;
-                        }
-                    }
-
-                    demonIDs[0] = state->GetObjectID(
-                        tfSession->GetDemons(0).GetUUID());
-                    demonIDs[1] = state->GetObjectID(
-                        tfSession->GetDemons(1).GetUUID());
-                    demonIDs[2] = state->GetObjectID(
-                        tfSession->GetDemons(2).GetUUID());
-
-                    if(success)
-                    {
-                        for(auto guest : tfSession->GetGuests())
-                        {
-                            auto pState = ClientState::GetEntityClientState(
-                                guest->GetEntityID(), false);
-                            auto pCharacter = pState
-                                ? pState->GetCharacterState()->GetEntity() : nullptr;
-                            if(pCharacter &&
-                                pCharacters.find(pCharacter) != pCharacters.end())
-                            {
-                                auto pExchange = pState->GetExchangeSession();
-                                success &= pExchange && pExchange->GetFinished();
-                            }
-                        }
-
-                        // If we're still good, the fusion is ready to go
-                        doFusion = success;
-                    }
-                }
-            }
-            break;
-        default:
-            break;
+        if (tfSession) {
+          exchangeSession->SetFinished(result == 1);
+          success = true;
+        } else {
+          LogGeneralError([&]() {
+            return libcomp::String(
+                       "Player attempted to accept a TriFusion but is not "
+                       "participating in one: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+          });
         }
-    }
+      } break;
+      case objects::PlayerExchangeSession::Type_t::TRIFUSION_HOST:
+        if (tfSession) {
+          // Ensure that everyone has accepted and all 3 demons
+          // have been set
+          exchangeSession->SetFinished(result == 1);
+          success = true;
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_TRIFUSION_ACCEPT);
-    reply.WriteS8(success ? 0 : -1);
+          if (result == 1) {
+            std::set<std::shared_ptr<objects::Character>> pCharacters;
+            for (auto d : tfSession->GetDemons()) {
+              auto dBox = std::dynamic_pointer_cast<objects::DemonBox>(
+                  libcomp::PersistentObject::GetObjectByUUID(d->GetDemonBox()));
+              auto pCharacter =
+                  dBox ? std::dynamic_pointer_cast<objects::Character>(
+                             libcomp::PersistentObject::GetObjectByUUID(
+                                 dBox->GetCharacter()))
+                       : nullptr;
 
-    client->SendPacket(reply);
-
-    if(success)
-    {
-        // Notify the rest of the session
-        std::set<int32_t> participantIDs;
-        participantIDs.insert(tfSession->GetSourceEntityID());
-        for(auto pState : tfSession->GetGuests())
-        {
-            participantIDs.insert(pState->GetEntityID());
-        }
-
-        participantIDs.erase(cState->GetEntityID());
-
-        std::list<std::shared_ptr<ChannelClientConnection>> pClients;
-        for(int32_t pID : participantIDs)
-        {
-            auto pClient = managerConnection->GetEntityClient(pID,
-                false);
-            if(pClient)
-            {
-                pClients.push_back(pClient);
-            }
-        }
-
-        if(pClients.size() > 0)
-        {
-            libcomp::Packet notify;
-            notify.WritePacketCode(
-                ChannelToClientPacketCode_t::PACKET_TRIFUSION_ACCEPTED);
-            notify.WriteS32Little(cState->GetEntityID());
-            notify.WriteS8(result);
-
-            ChannelClientConnection::BroadcastPacket(pClients, notify);
-        }
-
-        if(result != 1)
-        {
-            // Back out to pre-demon set
-            for(auto pClient : pClients)
-            {
-                auto pState = pClient->GetClientState();
-                auto exchange = pState->GetExchangeSession();
-                for(size_t i = 0; i < 4; i++)
-                {
-                    exchange->SetItems(i, NULLUUID);
-                }
+              if (pCharacter) {
+                pCharacters.insert(pCharacter);
+              } else {
+                success = false;
+              }
             }
 
-            tfSession->SetDemons(0, NULLUUID);
-            tfSession->SetDemons(1, NULLUUID);
-            tfSession->SetDemons(2, NULLUUID);
-            tfSession->SetSelectionID(0);
+            demonIDs[0] = state->GetObjectID(tfSession->GetDemons(0).GetUUID());
+            demonIDs[1] = state->GetObjectID(tfSession->GetDemons(1).GetUUID());
+            demonIDs[2] = state->GetObjectID(tfSession->GetDemons(2).GetUUID());
+
+            if (success) {
+              for (auto guest : tfSession->GetGuests()) {
+                auto pState = ClientState::GetEntityClientState(
+                    guest->GetEntityID(), false);
+                auto pCharacter =
+                    pState ? pState->GetCharacterState()->GetEntity() : nullptr;
+                if (pCharacter &&
+                    pCharacters.find(pCharacter) != pCharacters.end()) {
+                  auto pExchange = pState->GetExchangeSession();
+                  success &= pExchange && pExchange->GetFinished();
+                }
+              }
+
+              // If we're still good, the fusion is ready to go
+              doFusion = success;
+            }
+          }
         }
+        break;
+      default:
+        break;
+    }
+  }
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRIFUSION_ACCEPT);
+  reply.WriteS8(success ? 0 : -1);
+
+  client->SendPacket(reply);
+
+  if (success) {
+    // Notify the rest of the session
+    std::set<int32_t> participantIDs;
+    participantIDs.insert(tfSession->GetSourceEntityID());
+    for (auto pState : tfSession->GetGuests()) {
+      participantIDs.insert(pState->GetEntityID());
     }
 
-    if(doFusion)
-    {
-        server->QueueWork([](const std::shared_ptr<ChannelServer> pServer,
-            const std::shared_ptr<ChannelClientConnection> pClient,
-            int64_t pDemonID1, int64_t pDemonID2, int64_t pDemonID3)
-            {
-                pServer->GetFusionManager()->HandleTriFusion(pClient, pDemonID1,
-                    pDemonID2, pDemonID3, false);
-            }, server, client, demonIDs[0], demonIDs[1], demonIDs[2]);
+    participantIDs.erase(cState->GetEntityID());
+
+    std::list<std::shared_ptr<ChannelClientConnection>> pClients;
+    for (int32_t pID : participantIDs) {
+      auto pClient = managerConnection->GetEntityClient(pID, false);
+      if (pClient) {
+        pClients.push_back(pClient);
+      }
     }
 
-    return true;
+    if (pClients.size() > 0) {
+      libcomp::Packet notify;
+      notify.WritePacketCode(
+          ChannelToClientPacketCode_t::PACKET_TRIFUSION_ACCEPTED);
+      notify.WriteS32Little(cState->GetEntityID());
+      notify.WriteS8(result);
+
+      ChannelClientConnection::BroadcastPacket(pClients, notify);
+    }
+
+    if (result != 1) {
+      // Back out to pre-demon set
+      for (auto pClient : pClients) {
+        auto pState = pClient->GetClientState();
+        auto exchange = pState->GetExchangeSession();
+        for (size_t i = 0; i < 4; i++) {
+          exchange->SetItems(i, NULLUUID);
+        }
+      }
+
+      tfSession->SetDemons(0, NULLUUID);
+      tfSession->SetDemons(1, NULLUUID);
+      tfSession->SetDemons(2, NULLUUID);
+      tfSession->SetSelectionID(0);
+    }
+  }
+
+  if (doFusion) {
+    server->QueueWork(
+        [](const std::shared_ptr<ChannelServer> pServer,
+           const std::shared_ptr<ChannelClientConnection> pClient,
+           int64_t pDemonID1, int64_t pDemonID2, int64_t pDemonID3) {
+          pServer->GetFusionManager()->HandleTriFusion(
+              pClient, pDemonID1, pDemonID2, pDemonID3, false);
+        },
+        server, client, demonIDs[0], demonIDs[1], demonIDs[2]);
+  }
+
+  return true;
 }

@@ -25,35 +25,35 @@
 #ifndef TOOLS_CAPGREP_SRC_OPENMULTI_H
 #define TOOLS_CAPGREP_SRC_OPENMULTI_H
 
-#include <PushIgnore.h>
-#include "ui_OpenMulti.h"
-
-#include <QList>
-#include <QDialog>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QDialog>
+#include <QList>
+
+#include "ui_OpenMulti.h"
 
 class QComboBox;
 class QPushButton;
 
-class OpenMulti : public QDialog
-{
-    Q_OBJECT
+class OpenMulti : public QDialog {
+  Q_OBJECT
 
-public:
-    OpenMulti(QWidget *parent = 0);
+ public:
+  OpenMulti(QWidget* parent = 0);
 
-signals:
-    void filesReady(const QStringList& files);
+ signals:
+  void filesReady(const QStringList& files);
 
-protected slots:
-    void browse();
-    void openFiles();
+ protected slots:
+  void browse();
+  void openFiles();
 
-protected:
-    QList<QComboBox*> mEdits;
-    QList<QPushButton*> mButtons;
+ protected:
+  QList<QComboBox*> mEdits;
+  QList<QPushButton*> mButtons;
 
-    Ui::OpenMulti ui;
+  Ui::OpenMulti ui;
 };
 
-#endif // TOOLS_CAPGREP_SRC_OPENMULTI_H
+#endif  // TOOLS_CAPGREP_SRC_OPENMULTI_H

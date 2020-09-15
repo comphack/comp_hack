@@ -36,42 +36,33 @@
 
 using namespace channel;
 
-CultureMachineState::CultureMachineState(uint32_t machineID,
+CultureMachineState::CultureMachineState(
+    uint32_t machineID,
     const std::shared_ptr<objects::ServerCultureMachineSet>& cmSet)
-    : EntityState<objects::ServerCultureMachineSet>(cmSet), mMachineID(0)
-{
-    // Only set the machine if it exists
-    if(cmSet)
-    {
-        for(auto& machine : cmSet->GetMachines())
-        {
-            if(machine->GetID() == machineID)
-            {
-                mMachineID = machineID;
-            }
-        }
+    : EntityState<objects::ServerCultureMachineSet>(cmSet), mMachineID(0) {
+  // Only set the machine if it exists
+  if (cmSet) {
+    for (auto& machine : cmSet->GetMachines()) {
+      if (machine->GetID() == machineID) {
+        mMachineID = machineID;
+      }
     }
+  }
 }
 
-uint32_t CultureMachineState::GetMachineID()
-{
-    return mMachineID;
+uint32_t CultureMachineState::GetMachineID() { return mMachineID; }
+
+std::shared_ptr<objects::CultureData> CultureMachineState::GetRentalData() {
+  return mRentalData;
 }
 
-std::shared_ptr<objects::CultureData> CultureMachineState::GetRentalData()
-{
-    return mRentalData;
-}
+bool CultureMachineState::SetRentalData(
+    const std::shared_ptr<objects::CultureData>& data) {
+  std::lock_guard<std::mutex> lock(mLock);
+  if (!mRentalData || !data) {
+    mRentalData = data;
+    return true;
+  }
 
-bool CultureMachineState::SetRentalData(const std::shared_ptr<
-    objects::CultureData>& data)
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    if(!mRentalData || !data)
-    {
-        mRentalData = data;
-        return true;
-    }
-
-    return false;
+  return false;
 }

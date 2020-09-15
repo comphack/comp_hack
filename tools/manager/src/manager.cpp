@@ -39,112 +39,94 @@ static volatile bool gTerm = false;
 
 extern pthread_t gSelf;
 
-void SignalHandler(int signum)
-{
-    static int killCount = 0;
+void SignalHandler(int signum) {
+  static int killCount = 0;
 
-    switch(signum)
-    {
-        case SIGUSR1:
-        {
-            printf("Got SIGUSR1. Printing status...\n");
+  switch (signum) {
+    case SIGUSR1: {
+      printf("Got SIGUSR1. Printing status...\n");
 
-            if(nullptr != gDayCare)
-            {
-                gDayCare->PrintStatus();
-            }
-            break;
-        }
-        case SIGUSR2:
-        {
-            printf("Got SIGUSR2. Server has started.\n");
-            pthread_kill(gSelf, SIGUSR2);
-
-            break;
-        }
-        case SIGINT:
-        {
-            printf("Got SIGINT. Interrupting applications...\n");
-
-            gTerm = true;
-
-            if(nullptr != gDayCare)
-            {
-                gDayCare->CloseDoors(false);
-            }
-
-            killCount++;
-            break;
-        }
-        case SIGTERM:
-        {
-            printf("Got SIGTERM. Killing applications...\n");
-
-            gTerm = true;
-
-            if(nullptr != gDayCare)
-            {
-                gDayCare->CloseDoors(true);
-            }
-
-            killCount++;
-            break;
-        }
+      if (nullptr != gDayCare) {
+        gDayCare->PrintStatus();
+      }
+      break;
     }
+    case SIGUSR2: {
+      printf("Got SIGUSR2. Server has started.\n");
+      pthread_kill(gSelf, SIGUSR2);
 
-    if(3 <= killCount)
-    {
-        fprintf(stderr, "Killing everything at request of user.\n");
-
-        exit(EXIT_FAILURE);
+      break;
     }
+    case SIGINT: {
+      printf("Got SIGINT. Interrupting applications...\n");
+
+      gTerm = true;
+
+      if (nullptr != gDayCare) {
+        gDayCare->CloseDoors(false);
+      }
+
+      killCount++;
+      break;
+    }
+    case SIGTERM: {
+      printf("Got SIGTERM. Killing applications...\n");
+
+      gTerm = true;
+
+      if (nullptr != gDayCare) {
+        gDayCare->CloseDoors(true);
+      }
+
+      killCount++;
+      break;
+    }
+  }
+
+  if (3 <= killCount) {
+    fprintf(stderr, "Killing everything at request of user.\n");
+
+    exit(EXIT_FAILURE);
+  }
 }
 
-int main(int argc, char *argv[])
-{
-    signal(SIGUSR1, SignalHandler);
-    signal(SIGUSR2, SignalHandler);
-    signal(SIGTERM, SignalHandler);
-    signal(SIGINT, SignalHandler);
+int main(int argc, char *argv[]) {
+  signal(SIGUSR1, SignalHandler);
+  signal(SIGUSR2, SignalHandler);
+  signal(SIGTERM, SignalHandler);
+  signal(SIGINT, SignalHandler);
 
-    const char *szProgramsXml = "programs.xml";
+  const char *szProgramsXml = "programs.xml";
 
-    if(2 == argc)
-    {
-        szProgramsXml = argv[1];
-    }
-    else if(1 != argc)
-    {
-        fprintf(stderr, "USAGE: %s [PATH]\n", argv[0]);
+  if (2 == argc) {
+    szProgramsXml = argv[1];
+  } else if (1 != argc) {
+    fprintf(stderr, "USAGE: %s [PATH]\n", argv[0]);
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    printf("Manager started with PID %d\n", getpid());
+  printf("Manager started with PID %d\n", getpid());
 
-    try
-    {
-        DayCare juvy;
+  try {
+    DayCare juvy;
 
-        if(!juvy.DetainMonsters(szProgramsXml))
-        {
-            fprintf(stderr, "Failed to load programs XML.\n");
+    if (!juvy.DetainMonsters(szProgramsXml)) {
+      fprintf(stderr, "Failed to load programs XML.\n");
 
-            return EXIT_FAILURE;
-        }
-
-        gDayCare = &juvy;
-        juvy.WaitForExit();
-        gDayCare = nullptr;
-
-    }
-    catch(const std::system_error& e)
-    {
-        std::cerr << "Caught system_error with code " << e.code() 
-            << " meaning " << e.what() << '\n';
+      return EXIT_FAILURE;
     }
 
-    printf("Manager stopped.\n");
+    gDayCare = &juvy;
+    juvy.WaitForExit();
+    gDayCare = nullptr;
 
-    return EXIT_SUCCESS;
+  } catch (const std::system_error &e) {
+    std::cerr << "Caught system_error with code " << e.code() << " meaning "
+              << e.what() << '\n';
+  }
+
+  printf("Manager stopped.\n");
+
+  return EXIT_SUCCESS;
 }

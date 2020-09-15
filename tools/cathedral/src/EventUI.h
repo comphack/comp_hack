@@ -26,46 +26,45 @@
 #define TOOLS_CATHEDRAL_SRC_EVENTUI_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QWidget>
 
 // objects Includes
 #include <Event.h>
 
-namespace Ui
-{
+namespace Ui {
 
 class Event;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class Event : public QWidget
-{
-    Q_OBJECT
+class Event : public QWidget {
+  Q_OBJECT
 
-public:
-    explicit Event(MainWindow *pMainWindow, QWidget *pParent = 0);
-    virtual ~Event();
+ public:
+  explicit Event(MainWindow *pMainWindow, QWidget *pParent = 0);
+  virtual ~Event();
 
-    virtual void Load(const std::shared_ptr<objects::Event>& e);
-    virtual std::shared_ptr<objects::Event> Save() const;
+  virtual void Load(const std::shared_ptr<objects::Event> &e);
+  virtual std::shared_ptr<objects::Event> Save() const;
 
-    void SetComments(const std::list<libcomp::String>& comments);
-    std::list<libcomp::String> GetComments();
+  void SetComments(const std::list<libcomp::String> &comments);
+  std::list<libcomp::String> GetComments();
 
-public slots:
-    void ChangeEventID();
-    virtual void ToggleBaseDisplay();
+ public slots:
+  void ChangeEventID();
+  virtual void ToggleBaseDisplay();
 
-protected:
-    Ui::Event *ui;
+ protected:
+  Ui::Event *ui;
 
-    MainWindow *mMainWindow;
+  MainWindow *mMainWindow;
 
-    std::shared_ptr<objects::Event> mEventBase;
+  std::shared_ptr<objects::Event> mEventBase;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_EVENTUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_EVENTUI_H

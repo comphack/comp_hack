@@ -31,89 +31,75 @@
 #include <ItemDrop.h>
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_ItemDrop.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <PacketCodes.h>
 
-ItemDrop::ItemDrop(MainWindow *pMainWindow,
-    QWidget *pParent) : QWidget(pParent)
-{
-    prop = new Ui::ItemDrop;
-    prop->setupUi(this);
+ItemDrop::ItemDrop(MainWindow *pMainWindow, QWidget *pParent)
+    : QWidget(pParent) {
+  prop = new Ui::ItemDrop;
+  prop->setupUi(this);
 
-    prop->itemType->BindSelector(pMainWindow, "CItemData");
+  prop->itemType->BindSelector(pMainWindow, "CItemData");
 
-    // Hide by default
+  // Hide by default
+  prop->lblModifier->hide();
+  prop->modifier->hide();
+
+  connect(prop->type, SIGNAL(currentIndexChanged(const QString &)), this,
+          SLOT(TypeChanged()));
+  connect(prop->minStack, SIGNAL(valueChanged(int)), this,
+          SLOT(MinStackChanged()));
+}
+
+ItemDrop::~ItemDrop() { delete prop; }
+
+void ItemDrop::Load(const std::shared_ptr<objects::ItemDrop> &drop) {
+  prop->itemType->SetValue(drop->GetItemType());
+  prop->rate->setValue((double)drop->GetRate());
+  prop->minStack->setValue(drop->GetMinStack());
+  prop->maxStack->setValue(drop->GetMaxStack());
+  prop->type->setCurrentIndex(to_underlying(drop->GetType()));
+  prop->modifier->setValue((double)drop->GetModifier());
+  prop->cooldownRestrict->setValue(drop->GetCooldownRestrict());
+}
+
+std::shared_ptr<objects::ItemDrop> ItemDrop::Save() const {
+  auto obj = std::make_shared<objects::ItemDrop>();
+  obj->SetItemType(prop->itemType->GetValue());
+  obj->SetRate((float)prop->rate->value());
+  obj->SetMinStack((uint16_t)prop->minStack->value());
+  obj->SetMaxStack((uint16_t)prop->maxStack->value());
+  obj->SetType((objects::ItemDrop::Type_t)prop->type->currentIndex());
+  obj->SetModifier((float)prop->modifier->value());
+  obj->SetCooldownRestrict(prop->cooldownRestrict->value());
+
+  return obj;
+}
+
+void ItemDrop::MinStackChanged() {
+  int min = prop->minStack->value();
+  if (min) {
+    prop->maxStack->setMinimum(min);
+  } else {
+    prop->maxStack->setMinimum(1);
+  }
+}
+
+void ItemDrop::TypeChanged() {
+  if (prop->type->currentIndex() == 0) {
+    // Modifier not used
     prop->lblModifier->hide();
     prop->modifier->hide();
-
-    connect(prop->type, SIGNAL(currentIndexChanged(const QString&)),
-        this, SLOT(TypeChanged()));
-    connect(prop->minStack, SIGNAL(valueChanged(int)), this,
-        SLOT(MinStackChanged()));
-}
-
-ItemDrop::~ItemDrop()
-{
-    delete prop;
-}
-
-void ItemDrop::Load(const std::shared_ptr<objects::ItemDrop>& drop)
-{
-    prop->itemType->SetValue(drop->GetItemType());
-    prop->rate->setValue((double)drop->GetRate());
-    prop->minStack->setValue(drop->GetMinStack());
-    prop->maxStack->setValue(drop->GetMaxStack());
-    prop->type->setCurrentIndex(to_underlying(
-        drop->GetType()));
-    prop->modifier->setValue((double)drop->GetModifier());
-    prop->cooldownRestrict->setValue(drop->GetCooldownRestrict());
-}
-
-std::shared_ptr<objects::ItemDrop> ItemDrop::Save() const
-{
-    auto obj = std::make_shared<objects::ItemDrop>();
-    obj->SetItemType(prop->itemType->GetValue());
-    obj->SetRate((float)prop->rate->value());
-    obj->SetMinStack((uint16_t)prop->minStack->value());
-    obj->SetMaxStack((uint16_t)prop->maxStack->value());
-    obj->SetType((objects::ItemDrop::Type_t)prop->type->currentIndex());
-    obj->SetModifier((float)prop->modifier->value());
-    obj->SetCooldownRestrict(prop->cooldownRestrict->value());
-
-    return obj;
-}
-
-void ItemDrop::MinStackChanged()
-{
-    int min = prop->minStack->value();
-    if(min)
-    {
-        prop->maxStack->setMinimum(min);
-    }
-    else
-    {
-        prop->maxStack->setMinimum(1);
-    }
-}
-
-void ItemDrop::TypeChanged()
-{
-    if(prop->type->currentIndex() == 0)
-    {
-        // Modifier not used
-        prop->lblModifier->hide();
-        prop->modifier->hide();
-    }
-    else
-    {
-        // Modifier used
-        prop->lblModifier->show();
-        prop->modifier->show();
-    }
+  } else {
+    // Modifier used
+    prop->lblModifier->show();
+    prop->modifier->show();
+  }
 }

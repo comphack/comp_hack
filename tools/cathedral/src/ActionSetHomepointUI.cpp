@@ -28,62 +28,57 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionSetHomepoint.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionSetHomepoint::ActionSetHomepoint(ActionList *pList, MainWindow *pMainWindow,
-    QWidget *pParent) : Action(pList, pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionSetHomepoint;
-    prop->setupUi(pWidget);
+ActionSetHomepoint::ActionSetHomepoint(ActionList *pList,
+                                       MainWindow *pMainWindow,
+                                       QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionSetHomepoint;
+  prop->setupUi(pWidget);
 
-    prop->zone->BindSelector(pMainWindow, "ZoneData");
-    prop->spot->SetMainWindow(pMainWindow);
+  prop->zone->BindSelector(pMainWindow, "ZoneData");
+  prop->spot->SetMainWindow(pMainWindow);
 
-    ui->actionTitle->setText(tr("<b>Set Homepoint</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Set Homepoint</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionSetHomepoint::~ActionSetHomepoint()
-{
-    delete prop;
+ActionSetHomepoint::~ActionSetHomepoint() { delete prop; }
+
+void ActionSetHomepoint::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionSetHomepoint>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->zone->SetValue(mAction->GetZoneID());
+  prop->spot->SetValue(mAction->GetSpotID());
 }
 
-void ActionSetHomepoint::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionSetHomepoint>(act);
+std::shared_ptr<objects::Action> ActionSetHomepoint::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetZoneID(prop->zone->GetValue());
+  mAction->SetSpotID(prop->spot->GetValue());
 
-    prop->zone->SetValue(mAction->GetZoneID());
-    prop->spot->SetValue(mAction->GetSpotID());
-}
-
-std::shared_ptr<objects::Action> ActionSetHomepoint::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetZoneID(prop->zone->GetValue());
-    mAction->SetSpotID(prop->spot->GetValue());
-
-    return mAction;
+  return mAction;
 }

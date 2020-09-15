@@ -32,29 +32,27 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
- // channel Includes
+// channel Includes
 #include "ChannelServer.h"
 #include "MatchManager.h"
 
 using namespace channel;
 
-bool Parsers::UBLottoJoin::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::UBLottoJoin::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t matchID = p.ReadS32Little();
+  int32_t matchID = p.ReadS32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->GetMatchManager()->ConfirmMatch(client, (uint32_t)matchID);
+  server->GetMatchManager()->ConfirmMatch(client, (uint32_t)matchID);
 
-    return true;
+  return true;
 }

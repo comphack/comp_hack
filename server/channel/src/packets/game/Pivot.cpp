@@ -41,102 +41,89 @@
 
 using namespace channel;
 
-bool Parsers::Pivot::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::Pivot::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 24)
-    {
-        return false;
-    }
+  if (p.Size() != 24) {
+    return false;
+  }
 
-    int32_t entityID = p.ReadS32Little();
+  int32_t entityID = p.ReadS32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    auto eState = state->GetEntityState(entityID, false);
-    if(!eState)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Invalid entity ID received from a pivot"
-                " request: %1\n").Arg(state->GetAccountUID().ToString());
-        });
+  auto eState = state->GetEntityState(entityID, false);
+  if (!eState) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Invalid entity ID received from a pivot request: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Close();
-        return true;
-    }
-    else if(!eState->Ready(true))
-    {
-        // Nothing to do, the entity is not currently active
-        return true;
-    }
-    else if(state->IsMovementLocked(entityID))
-    {
-        // Movement locked, ignore request
-        return true;
-    }
-
-    auto zone = eState->GetZone();
-    if(!zone)
-    {
-        // Not actually in a zone
-        return true;
-    }
-
-    float x = p.ReadFloat();
-    float y = p.ReadFloat();
-    float rot = p.ReadFloat();
-    float startTime = p.ReadFloat();
-    float stopTime = p.ReadFloat();
-
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
-    auto zoneManager = server->GetZoneManager();
-
-    const static bool moveCorrection = server->GetWorldSharedConfig()
-        ->GetMoveCorrection();
-    if(moveCorrection)
-    {
-        Point dest(x, y);
-        if(zoneManager->CorrectClientPosition(eState, dest))
-        {
-            LogGeneralDebug([&]()
-            {
-                return libcomp::String("Player pivot corrected in"
-                    " zone %1: %2\n").Arg(zone->GetDefinitionID())
-                    .Arg(state->GetAccountUID().ToString());
-            });
-
-            x = dest.x;
-            y = dest.y;
-        }
-    }
-
-    // Make sure the request is not in the future
-    ServerTime now = ChannelServer::GetServerTime();
-    if(now >= state->ToServerTime(startTime))
-    {
-        eState->SetOriginX(x);
-        eState->SetOriginY(y);
-        eState->SetOriginRotation(rot);
-        eState->SetOriginTicks(now);
-        eState->SetDestinationX(x);
-        eState->SetDestinationY(y);
-        eState->SetDestinationRotation(rot);
-        eState->SetDestinationTicks(now);
-
-        ServerTime stopConverted = state->ToServerTime(stopTime);
-        uint64_t immobileTime = eState->GetStatusTimes(STATUS_IMMOBILE);
-        if(stopConverted > immobileTime)
-        {
-            eState->SetStatusTimes(STATUS_IMMOBILE, stopConverted);
-        }
-    }
-
+    client->Close();
     return true;
+  } else if (!eState->Ready(true)) {
+    // Nothing to do, the entity is not currently active
+    return true;
+  } else if (state->IsMovementLocked(entityID)) {
+    // Movement locked, ignore request
+    return true;
+  }
+
+  auto zone = eState->GetZone();
+  if (!zone) {
+    // Not actually in a zone
+    return true;
+  }
+
+  float x = p.ReadFloat();
+  float y = p.ReadFloat();
+  float rot = p.ReadFloat();
+  float startTime = p.ReadFloat();
+  float stopTime = p.ReadFloat();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto zoneManager = server->GetZoneManager();
+
+  const static bool moveCorrection =
+      server->GetWorldSharedConfig()->GetMoveCorrection();
+  if (moveCorrection) {
+    Point dest(x, y);
+    if (zoneManager->CorrectClientPosition(eState, dest)) {
+      LogGeneralDebug([&]() {
+        return libcomp::String("Player pivot corrected in zone %1: %2\n")
+            .Arg(zone->GetDefinitionID())
+            .Arg(state->GetAccountUID().ToString());
+      });
+
+      x = dest.x;
+      y = dest.y;
+    }
+  }
+
+  // Make sure the request is not in the future
+  ServerTime now = ChannelServer::GetServerTime();
+  if (now >= state->ToServerTime(startTime)) {
+    eState->SetOriginX(x);
+    eState->SetOriginY(y);
+    eState->SetOriginRotation(rot);
+    eState->SetOriginTicks(now);
+    eState->SetDestinationX(x);
+    eState->SetDestinationY(y);
+    eState->SetDestinationRotation(rot);
+    eState->SetDestinationTicks(now);
+
+    ServerTime stopConverted = state->ToServerTime(stopTime);
+    uint64_t immobileTime = eState->GetStatusTimes(STATUS_IMMOBILE);
+    if (stopConverted > immobileTime) {
+      eState->SetStatusTimes(STATUS_IMMOBILE, stopConverted);
+    }
+  }
+
+  return true;
 }

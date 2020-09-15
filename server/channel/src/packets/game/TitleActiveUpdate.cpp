@@ -38,48 +38,45 @@
 
 using namespace channel;
 
-bool Parsers::TitleActiveUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TitleActiveUpdate::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 2)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 2) {
+    return false;
+  }
 
-    uint8_t titleIdx = p.ReadU8();
-    uint8_t prioritize = p.ReadU8();
+  uint8_t titleIdx = p.ReadU8();
+  uint8_t prioritize = p.ReadU8();
 
-    if(titleIdx >= 5)
-    {
-        return false;
-    }
+  if (titleIdx >= 5) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
 
-    character->SetCurrentTitle(titleIdx);
-    character->SetTitlePrioritized(prioritize == 1);
+  character->SetCurrentTitle(titleIdx);
+  character->SetTitlePrioritized(prioritize == 1);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_TITLE_ACTIVE_UPDATE);
-    reply.WriteU8(titleIdx);
-    reply.WriteS32Little(0);    // Success
-    reply.WriteU8(prioritize);
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_TITLE_ACTIVE_UPDATE);
+  reply.WriteU8(titleIdx);
+  reply.WriteS32Little(0);  // Success
+  reply.WriteU8(prioritize);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    characterManager->SendCharacterTitle(client, false);
+  characterManager->SendCharacterTitle(client, false);
 
-    server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+  server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
 
-    return true;
+  return true;
 }

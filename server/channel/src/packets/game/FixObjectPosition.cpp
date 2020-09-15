@@ -41,72 +41,71 @@
 
 using namespace channel;
 
-bool Parsers::FixObjectPosition::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::FixObjectPosition::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 16)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 16) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto zoneManager = server->GetZoneManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto zoneManager = server->GetZoneManager();
 
-    int32_t entityID = p.ReadS32Little();
+  int32_t entityID = p.ReadS32Little();
 
-    auto eState = state->GetEntityState(entityID);
-    if(nullptr == eState)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Invalid entity ID received from a fix"
-                " object position request: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
+  auto eState = state->GetEntityState(entityID);
+  if (nullptr == eState) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Invalid entity ID received from a fix object position "
+                 "request: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Close();
-        return true;
-    }
-
-    float destX = p.ReadFloat();
-    float destY = p.ReadFloat();
-    ClientTime stop = (ClientTime)p.ReadFloat();
-
-    ServerTime stopTime = state->ToServerTime(stop);
-
-    // Stop using the current rotation value
-    eState->RefreshCurrentPosition(server->GetServerTime());
-    float rot = eState->GetCurrentRotation();
-    eState->SetDestinationRotation(rot);
-
-    eState->SetDestinationX(destX);
-    eState->SetCurrentX(destX);
-    eState->SetDestinationY(destY);
-    eState->SetCurrentY(destY);
-
-    eState->SetDestinationTicks(stopTime);
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FIX_OBJECT_POSITION);
-    reply.WriteS32Little(entityID);
-    reply.WriteFloat(destX);
-    reply.WriteFloat(destY);
-    reply.WriteFloat(stop);
-
-    zoneManager->BroadcastPacket(client, reply, false);
-
-    auto dState = std::dynamic_pointer_cast<DemonState>(eState);
-    auto zone = dState ? dState->GetZone() : nullptr;
-    if (dState && zone && !MatchManager::SpectatingMatch(client, zone) &&
-        dState->GetDisplayState() <= ActiveDisplayState_t::DATA_SENT)
-    {
-        // If a demon is being placed, it will have already been described to the
-        // the client by this point so create and show it now.
-        zoneManager->ShowDemonToZone(zone, client);
-    }
-
+    client->Close();
     return true;
+  }
+
+  float destX = p.ReadFloat();
+  float destY = p.ReadFloat();
+  ClientTime stop = (ClientTime)p.ReadFloat();
+
+  ServerTime stopTime = state->ToServerTime(stop);
+
+  // Stop using the current rotation value
+  eState->RefreshCurrentPosition(server->GetServerTime());
+  float rot = eState->GetCurrentRotation();
+  eState->SetDestinationRotation(rot);
+
+  eState->SetDestinationX(destX);
+  eState->SetCurrentX(destX);
+  eState->SetDestinationY(destY);
+  eState->SetCurrentY(destY);
+
+  eState->SetDestinationTicks(stopTime);
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_FIX_OBJECT_POSITION);
+  reply.WriteS32Little(entityID);
+  reply.WriteFloat(destX);
+  reply.WriteFloat(destY);
+  reply.WriteFloat(stop);
+
+  zoneManager->BroadcastPacket(client, reply, false);
+
+  auto dState = std::dynamic_pointer_cast<DemonState>(eState);
+  auto zone = dState ? dState->GetZone() : nullptr;
+  if (dState && zone && !MatchManager::SpectatingMatch(client, zone) &&
+      dState->GetDisplayState() <= ActiveDisplayState_t::DATA_SENT) {
+    // If a demon is being placed, it will have already been described to the
+    // the client by this point so create and show it now.
+    zoneManager->ShowDemonToZone(zone, client);
+  }
+
+  return true;
 }

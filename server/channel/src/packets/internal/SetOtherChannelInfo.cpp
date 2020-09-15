@@ -36,19 +36,20 @@
 
 using namespace channel;
 
-bool Parsers::SetOtherChannelInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SetOtherChannelInfo::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)connection;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)connection;
 
-    // Packet contains data but ignore it because the set will always be small
-    // enough to reload each time to ensure correctness
-    (void)p;
+  // Packet contains data but ignore it because the set will always be small
+  // enough to reload each time to ensure correctness
+  (void)p;
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->LoadAllRegisteredChannels();
+  server->LoadAllRegisteredChannels();
 
-    return true;
+  return true;
 }

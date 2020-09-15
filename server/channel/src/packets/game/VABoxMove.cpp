@@ -36,59 +36,57 @@
 
 using namespace channel;
 
-bool Parsers::VABoxMove::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::VABoxMove::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 14)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 14) {
+    return false;
+  }
 
-    int32_t unused = p.ReadS32Little(); // Always 0
-    int8_t slot1 = p.ReadS8();
-    uint32_t itemType1 = p.ReadU32Little();
-    int8_t slot2 = p.ReadS8();
-    uint32_t itemType2 = p.ReadU32Little();
-    (void)unused;
+  int32_t unused = p.ReadS32Little();  // Always 0
+  int8_t slot1 = p.ReadS8();
+  uint32_t itemType1 = p.ReadU32Little();
+  int8_t slot2 = p.ReadS8();
+  uint32_t itemType2 = p.ReadU32Little();
+  (void)unused;
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
 
-    bool item1Null = itemType1 == static_cast<uint32_t>(-1);
-    bool item2Null = itemType2 == static_cast<uint32_t>(-1);
+  bool item1Null = itemType1 == static_cast<uint32_t>(-1);
+  bool item2Null = itemType2 == static_cast<uint32_t>(-1);
 
-    bool success = false;
-    if(((item1Null && character->GetVACloset((size_t)slot1) == 0) ||
-        (!item1Null && character->GetVACloset((size_t)slot1) == itemType1)) &&
-        ((item2Null && character->GetVACloset((size_t)slot2) == 0) ||
-        (!item2Null && character->GetVACloset((size_t)slot2) == itemType2)))
-    {
-        character->SetVACloset((size_t)slot1, item2Null ? 0 : itemType2);
-        character->SetVACloset((size_t)slot2, item1Null ? 0 : itemType1);
+  bool success = false;
+  if (((item1Null && character->GetVACloset((size_t)slot1) == 0) ||
+       (!item1Null && character->GetVACloset((size_t)slot1) == itemType1)) &&
+      ((item2Null && character->GetVACloset((size_t)slot2) == 0) ||
+       (!item2Null && character->GetVACloset((size_t)slot2) == itemType2))) {
+    character->SetVACloset((size_t)slot1, item2Null ? 0 : itemType2);
+    character->SetVACloset((size_t)slot2, item1Null ? 0 : itemType1);
 
-        success = true;
-    }
+    success = true;
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VA_BOX_MOVE);
-    reply.WriteS32Little(success ? 0 : -1);
-    reply.WriteS32Little(0);    // Unknown
-    reply.WriteS8(slot1);
-    reply.WriteU32Little(itemType2);
-    reply.WriteS8(slot2);
-    reply.WriteU32Little(itemType1);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VA_BOX_MOVE);
+  reply.WriteS32Little(success ? 0 : -1);
+  reply.WriteS32Little(0);  // Unknown
+  reply.WriteS8(slot1);
+  reply.WriteU32Little(itemType2);
+  reply.WriteS8(slot2);
+  reply.WriteU32Little(itemType1);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    if(success)
-    {
-        server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
-    }
+  if (success) {
+    server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+  }
 
-    return true;
+  return true;
 }

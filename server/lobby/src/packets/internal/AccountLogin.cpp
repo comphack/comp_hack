@@ -49,156 +49,139 @@
 using namespace lobby;
 
 void UpdateAccountLogin(std::shared_ptr<LobbyServer> server,
-    const std::shared_ptr<objects::AccountLogin> login)
-{
-    auto cLogin = login->GetCharacterLogin();
-    auto character = cLogin->GetCharacter();
-    auto worldID = cLogin->GetWorldID();
-    auto channelID = cLogin->GetChannelID();
+                        const std::shared_ptr<objects::AccountLogin> login) {
+  auto cLogin = login->GetCharacterLogin();
+  auto character = cLogin->GetCharacter();
+  auto worldID = cLogin->GetWorldID();
+  auto channelID = cLogin->GetChannelID();
 
-    if(0 > worldID || 0 > channelID)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Invalid channel (%1) or world (%2) "
-                "ID received for AccountLogin.\n").Arg(channelID).Arg(worldID);
-        });
+  if (0 > worldID || 0 > channelID) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Invalid channel (%1) or world (%2) ID received for "
+                 "AccountLogin.\n")
+          .Arg(channelID)
+          .Arg(worldID);
+    });
 
-        return;
-    }
+    return;
+  }
 
-    auto world = server->GetWorldByID((uint8_t)worldID);
+  auto world = server->GetWorldByID((uint8_t)worldID);
 
-    if(!world)
-    {
-        return;
-    }
+  if (!world) {
+    return;
+  }
 
-    // Should be the same one we passed in.
-    auto account = login->GetAccount().Get(server->GetMainDatabase());
+  // Should be the same one we passed in.
+  auto account = login->GetAccount().Get(server->GetMainDatabase());
 
-    if(!account)
-    {
-        return;
-    }
+  if (!account) {
+    return;
+  }
 
-    auto channel = world->GetChannelByID((uint8_t)channelID);
+  auto channel = world->GetChannelByID((uint8_t)channelID);
 
-    if(!channel)
-    {
-        LogGeneralErrorMsg("Unknown channel ID returned from the world.\n");
+  if (!channel) {
+    LogGeneralErrorMsg("Unknown channel ID returned from the world.\n");
 
-        return;
-    }
+    return;
+  }
 
-    auto username = account->GetUsername();
-    auto accountManager = server->GetAccountManager();
+  auto username = account->GetUsername();
+  auto accountManager = server->GetAccountManager();
 
-    int8_t currentWorldID;
+  int8_t currentWorldID;
 
-    if(!accountManager->IsLoggedIn(username, currentWorldID))
-    {
-        return;
-    }
+  if (!accountManager->IsLoggedIn(username, currentWorldID)) {
+    return;
+  }
 
-    auto clientConnection = server->GetManagerConnection()->GetClientConnection(
-        account->GetUsername());
+  auto clientConnection = server->GetManagerConnection()->GetClientConnection(
+      account->GetUsername());
 
-    if(clientConnection && currentWorldID == -1)
-    {
-        // Initial login response from the world.
-        LogGeneralDebug([&]()
-        {
-            return libcomp::String("Login character with UUID '%1' into "
-                "world %2, channel %3 using session key: %4\n")
-                .Arg(character.GetUUID().ToString())
-                .Arg(worldID)
-                .Arg(channelID)
-                .Arg(login->GetSessionKey());
-        });
+  if (clientConnection && currentWorldID == -1) {
+    // Initial login response from the world.
+    LogGeneralDebug([&]() {
+      return libcomp::String(
+                 "Login character with UUID '%1' into world %2, channel %3 "
+                 "using session key: %4\n")
+          .Arg(character.GetUUID().ToString())
+          .Arg(worldID)
+          .Arg(channelID)
+          .Arg(login->GetSessionKey());
+    });
 
-        libcomp::Packet reply;
-        reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_START_GAME);
-        reply.WriteU32Little(login->GetSessionKey());
-        reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8,
-            libcomp::String("%1:%2").Arg(channel->GetIP()).Arg(
-            channel->GetPort()), true);
-        reply.WriteS32Little(channelID);
+    libcomp::Packet reply;
+    reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_START_GAME);
+    reply.WriteU32Little(login->GetSessionKey());
+    reply.WriteString16Little(
+        libcomp::Convert::ENCODING_UTF8,
+        libcomp::String("%1:%2").Arg(channel->GetIP()).Arg(channel->GetPort()),
+        true);
+    reply.WriteS32Little(channelID);
 
-        clientConnection->SendPacket(reply);
+    clientConnection->SendPacket(reply);
 
-        // Switch channels now.
-        accountManager->SwitchToChannel(username, worldID, channelID);
-    }
-    else
-    {
-        // We are now in the channel so update the login state.
-        accountManager->CompleteChannelLogin(username, worldID, channelID);
-    }
+    // Switch channels now.
+    accountManager->SwitchToChannel(username, worldID, channelID);
+  } else {
+    // We are now in the channel so update the login state.
+    accountManager->CompleteChannelLogin(username, worldID, channelID);
+  }
 }
 
-bool Parsers::AccountLogin::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::AccountLogin::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 1)
-    {
-        LogGeneralErrorMsg("Invalid response received for AccountLogin.\n");
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 1) {
+    LogGeneralErrorMsg("Invalid response received for AccountLogin.\n");
+
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+
+  int8_t errorCode = p.ReadS8();
+  if (errorCode == 1) {
+    // No error
+    auto response =
+        std::shared_ptr<objects::AccountLogin>(new objects::AccountLogin);
+
+    if (!response->LoadPacket(p, false)) {
+      p.Rewind();
+
+      if (sizeof(int8_t) == p.Size() && 0 == p.PeekS8()) {
+        // This error is expected, ignore it.
+        return true;
+      } else {
+        LogGeneralErrorMsg(
+            "Invalid response received for AccountLogin (lobby).\n");
+
+        p.HexDump();
 
         return false;
+      }
     }
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(
-        pPacketManager->GetServer());
-
-    int8_t errorCode = p.ReadS8();
-    if(errorCode == 1)
-    {
-        // No error
-        auto response = std::shared_ptr<objects::AccountLogin>(
-            new objects::AccountLogin);
-
-        if(!response->LoadPacket(p, false))
-        {
-            p.Rewind();
-
-            if(sizeof(int8_t) == p.Size() && 0 == p.PeekS8())
-            {
-                // This error is expected, ignore it.
-                return true;
-            }
-            else
-            {
-                LogGeneralErrorMsg("Invalid response received for "
-                    "AccountLogin (lobby).\n");
-
-                p.HexDump();
-
-                return false;
-            }
-        }
-
-        server->QueueWork(UpdateAccountLogin, server, response);
+    server->QueueWork(UpdateAccountLogin, server, response);
+  } else if (p.Left() > 2 && p.Left() == (uint16_t)(2 + p.PeekU16Little())) {
+    // Failure, disconnect the client if they're here
+    auto username =
+        p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
+    auto client = server->GetManagerConnection()->GetClientConnection(username);
+    if (nullptr != client) {
+      client->Close();
     }
-    else if(p.Left() > 2 && p.Left() == (uint16_t)(2 + p.PeekU16Little()))
-    {
-        // Failure, disconnect the client if they're here
-        auto username = p.ReadString16Little(
-            libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
-        auto client = server->GetManagerConnection()
-            ->GetClientConnection(username);
-        if(nullptr != client)
-        {
-            client->Close();
-        }
-    }
-    else
-    {
-        LogGeneralErrorMsg("World server sent a malformed AccountLogin message!"
-            " Killing the connection...\n");
+  } else {
+    LogGeneralErrorMsg(
+        "World server sent a malformed AccountLogin message! Killing the "
+        "connection...\n");
 
-        connection->Close();
-    }
+    connection->Close();
+  }
 
-    return true;
+  return true;
 }

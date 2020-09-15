@@ -4,7 +4,8 @@
  *
  * @author HACKfrost
  *
- * @brief Request from the client to list the client account's item depositories.
+ * @brief Request from the client to list the client account's item
+ * depositories.
  *
  * This file is part of the Channel Server (channel).
  *
@@ -41,82 +42,70 @@
 
 using namespace channel;
 
-bool Parsers::ItemDepoList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ItemDepoList::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto worldData = state->GetAccountWorldData();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto worldData = state->GetAccountWorldData();
 
-    auto timestamp = (uint32_t)time(0);
+  auto timestamp = (uint32_t)time(0);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_DEPO_LIST);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_DEPO_LIST);
 
-    reply.WriteS32Little(0);    // Unknown
+  reply.WriteS32Little(0);  // Unknown
 
-    auto depoCount = worldData->ItemBoxesCount();
-    reply.WriteS32Little((int32_t)depoCount);
-    for(size_t i = 0; i < depoCount; i++)
-    {
-        auto depo = worldData->GetItemBoxes(i);
+  auto depoCount = worldData->ItemBoxesCount();
+  reply.WriteS32Little((int32_t)depoCount);
+  for (size_t i = 0; i < depoCount; i++) {
+    auto depo = worldData->GetItemBoxes(i);
 
-        // First box is always available
-        if(i > 0 && (depo.IsNull() || depo->GetRentalExpiration() == 0))
-        {
-            reply.WriteS32Little(-1);
-            reply.WriteS32Little(0);
-            reply.WriteS64Little(0);
-            reply.WriteS32Little(0);
+    // First box is always available
+    if (i > 0 && (depo.IsNull() || depo->GetRentalExpiration() == 0)) {
+      reply.WriteS32Little(-1);
+      reply.WriteS32Little(0);
+      reply.WriteS64Little(0);
+      reply.WriteS32Little(0);
+    } else {
+      reply.WriteS32Little(ChannelServer::GetExpirationInSeconds(
+          depo->GetRentalExpiration(), timestamp));
+
+      int32_t itemCount = 0, mag = 0;
+      int64_t macca = 0;
+
+      for (auto item : depo->GetItems()) {
+        if (item.IsNull()) {
+          continue;
         }
-        else
-        {
-            reply.WriteS32Little(ChannelServer::GetExpirationInSeconds(
-                depo->GetRentalExpiration(), timestamp));
 
-            int32_t itemCount = 0, mag = 0;
-            int64_t macca = 0;
+        itemCount++;
 
-            for(auto item : depo->GetItems())
-            {
-                if(item.IsNull())
-                {
-                    continue;
-                }
-
-                itemCount++;
-
-                auto itemType = item->GetType();
-                if(itemType == SVR_CONST.ITEM_MACCA_NOTE)
-                {
-                    macca = (int64_t)(macca + item->GetStackSize()
-                        * ITEM_MACCA_NOTE_AMOUNT);
-                }
-                else if(itemType == SVR_CONST.ITEM_MACCA)
-                {
-                    macca = (int64_t)(macca + item->GetStackSize());
-                }
-                else if(itemType == SVR_CONST.ITEM_MAGNETITE)
-                {
-                    mag = (int32_t)(mag + item->GetStackSize());
-                }
-            }
-
-            reply.WriteS32Little(itemCount);
-            reply.WriteS64Little(macca);
-            reply.WriteS32Little(mag);
+        auto itemType = item->GetType();
+        if (itemType == SVR_CONST.ITEM_MACCA_NOTE) {
+          macca =
+              (int64_t)(macca + item->GetStackSize() * ITEM_MACCA_NOTE_AMOUNT);
+        } else if (itemType == SVR_CONST.ITEM_MACCA) {
+          macca = (int64_t)(macca + item->GetStackSize());
+        } else if (itemType == SVR_CONST.ITEM_MAGNETITE) {
+          mag = (int32_t)(mag + item->GetStackSize());
         }
+      }
+
+      reply.WriteS32Little(itemCount);
+      reply.WriteS64Little(macca);
+      reply.WriteS32Little(mag);
     }
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

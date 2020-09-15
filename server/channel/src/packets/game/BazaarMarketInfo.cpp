@@ -46,108 +46,97 @@
 
 using namespace channel;
 
-bool Parsers::BazaarMarketInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BazaarMarketInfo::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto worldDB = server->GetWorldDatabase();
+
+  uint32_t marketID = (uint32_t)state->GetCurrentMenuShopID();
+  auto zone = cState->GetZone();
+
+  bool invalidMarket = marketID == 0 || zone == nullptr;
+  if (!invalidMarket) {
+    std::shared_ptr<channel::BazaarState> bState;
+    std::shared_ptr<objects::BazaarData> market;
+    for (auto b : zone->GetBazaars()) {
+      market = b->GetCurrentMarket(marketID);
+      if (market) {
+        bState = b;
+        break;
+      }
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto worldDB = server->GetWorldDatabase();
+    libcomp::Packet reply;
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_INFO);
 
-    uint32_t marketID = (uint32_t)state->GetCurrentMenuShopID();
-    auto zone = cState->GetZone();
+    invalidMarket = market == nullptr ||
+                    market->GetAccount().GetUUID() == state->GetAccountUID();
+    if (!invalidMarket) {
+      reply.WriteS32Little(0);  // Success
 
-    bool invalidMarket = marketID == 0 || zone == nullptr;
-    if(!invalidMarket)
-    {
-        std::shared_ptr<channel::BazaarState> bState;
-        std::shared_ptr<objects::BazaarData> market;
-        for(auto b : zone->GetBazaars())
-        {
-            market = b->GetCurrentMarket(marketID);
-            if(market)
-            {
-                bState = b;
-                break;
-            }
+      auto owner = market->GetCharacter().Get(worldDB);
+      reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                owner ? owner->GetName() : "", true);
+
+      int32_t itemCount = 0;
+      for (auto bItem : market->GetItems()) {
+        if (!bItem.IsNull()) {
+          itemCount++;
         }
+      }
 
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_INFO);
+      reply.WriteS32Little(itemCount);
+      for (size_t i = 0; i < 15; i++) {
+        // Since bazaars exist in exactly one zone at a time, the
+        // items can be lazy loaded and we do not need to worry
+        // about the market itself having been updated while active
+        // without the work being done on the same channel
+        auto bItem = market->GetItems(i).Get(worldDB);
+        if (bItem) {
+          auto item = bItem->GetItem().Get(worldDB);
 
-        invalidMarket = market == nullptr ||
-            market->GetAccount().GetUUID() == state->GetAccountUID();
-        if(!invalidMarket)
-        {
-            reply.WriteS32Little(0);    // Success
+          bool available = item && !bItem->GetSold();
 
-            auto owner = market->GetCharacter().Get(worldDB);
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                owner ? owner->GetName() : "", true);
+          reply.WriteS8((int8_t)i);
 
-            int32_t itemCount = 0;
-            for(auto bItem : market->GetItems())
-            {
-                if(!bItem.IsNull())
-                {
-                    itemCount++;
-                }
-            }
+          // It the item exists and is not registered to the client
+          // with a unique object ID, register it now so a purchase
+          // request can get the correct UUID
+          int64_t objectID =
+              available ? state->GetObjectID(bItem->GetItem().GetUUID()) : -1;
+          if (available && objectID <= 0) {
+            objectID = server->GetNextObjectID();
+            state->SetObjectID(bItem->GetItem().GetUUID(), objectID);
+          }
 
-            reply.WriteS32Little(itemCount);
-            for(size_t i = 0; i < 15; i++)
-            {
-                // Since bazaars exist in exactly one zone at a time, the
-                // items can be lazy loaded and we do not need to worry
-                // about the market itself having been updated while active
-                // without the work being done on the same channel
-                auto bItem = market->GetItems(i).Get(worldDB);
-                if(bItem)
-                {
-                    auto item = bItem->GetItem().Get(worldDB);
+          reply.WriteS64Little(objectID);
+          reply.WriteS32Little((int32_t)(available ? bItem->GetCost() : 0));
 
-                    bool available = item && !bItem->GetSold();
+          reply.WriteU32Little(bItem->GetType());
+          reply.WriteU16Little(bItem->GetStackSize());
 
-                    reply.WriteS8((int8_t)i);
-
-                    // It the item exists and is not registered to the client
-                    // with a unique object ID, register it now so a purchase
-                    // request can get the correct UUID
-                    int64_t objectID = available ? state->GetObjectID(
-                        bItem->GetItem().GetUUID()) : -1;
-                    if(available && objectID <= 0)
-                    {
-                        objectID = server->GetNextObjectID();
-                        state->SetObjectID(bItem->GetItem().GetUUID(),
-                            objectID);
-                    }
-
-                    reply.WriteS64Little(objectID);
-                    reply.WriteS32Little((int32_t)(available ? bItem->GetCost() : 0));
-
-                    reply.WriteU32Little(bItem->GetType());
-                    reply.WriteU16Little(bItem->GetStackSize());
-
-                    characterManager->GetItemDetailPacketData(reply, available
-                        ? item : nullptr, 1);
-                }
-            }
+          characterManager->GetItemDetailPacketData(
+              reply, available ? item : nullptr, 1);
         }
-        else
-        {
-            reply.WriteS32Little(-1);    // Failure
-        }
-
-        client->SendPacket(reply);
+      }
+    } else {
+      reply.WriteS32Little(-1);  // Failure
     }
 
-    return true;
+    client->SendPacket(reply);
+  }
+
+  return true;
 }

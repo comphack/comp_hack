@@ -36,71 +36,62 @@
 #include <ServerNPC.h>
 #include <ServerObject.h>
 
-namespace channel
-{
+namespace channel {
 
-template<>
+template <>
 EntityState<objects::DiasporaBase>::EntityState(
     const std::shared_ptr<objects::DiasporaBase>& entity)
-    : mEntity(entity)
-{
-    SetEntityType(EntityType_t::DIASPORA_BASE);
+    : mEntity(entity) {
+  SetEntityType(EntityType_t::DIASPORA_BASE);
 }
 
-template<>
+template <>
 EntityState<objects::ServerObject>::EntityState(
     const std::shared_ptr<objects::ServerObject>& entity)
-    : mEntity(entity)
-{
-    SetEntityType(EntityType_t::OBJECT);
+    : mEntity(entity) {
+  SetEntityType(EntityType_t::OBJECT);
 }
 
-template<>
+template <>
 EntityState<objects::ServerNPC>::EntityState(
     const std::shared_ptr<objects::ServerNPC>& entity)
-    : mEntity(entity)
-{
-    SetEntityType(EntityType_t::NPC);
+    : mEntity(entity) {
+  SetEntityType(EntityType_t::NPC);
 }
 
-template<>
+template <>
 EntityState<objects::ServerBazaar>::EntityState(
     const std::shared_ptr<objects::ServerBazaar>& entity)
-    : mEntity(entity)
-{
-    SetEntityType(EntityType_t::BAZAAR);
+    : mEntity(entity) {
+  SetEntityType(EntityType_t::BAZAAR);
 }
 
-template<>
+template <>
 EntityState<objects::ServerCultureMachineSet>::EntityState(
     const std::shared_ptr<objects::ServerCultureMachineSet>& entity)
-    : mEntity(entity)
-{
-    SetEntityType(EntityType_t::CULTURE_MACHINE);
+    : mEntity(entity) {
+  SetEntityType(EntityType_t::CULTURE_MACHINE);
 }
 
-template<>
+template <>
 EntityState<objects::LootBox>::EntityState(
     const std::shared_ptr<objects::LootBox>& entity)
-    : mEntity(entity)
-{
-    SetEntityType(EntityType_t::LOOT_BOX);
+    : mEntity(entity) {
+  SetEntityType(EntityType_t::LOOT_BOX);
 }
 
-template<>
+template <>
 EntityState<objects::PlasmaSpawn>::EntityState(
     const std::shared_ptr<objects::PlasmaSpawn>& entity)
-    : mEntity(entity)
-{
-    SetEntityType(EntityType_t::PLASMA);
+    : mEntity(entity) {
+  SetEntityType(EntityType_t::PLASMA);
 }
 
-template<>
+template <>
 EntityState<objects::PvPBase>::EntityState(
     const std::shared_ptr<objects::PvPBase>& entity)
-    : mEntity(entity)
-{
-    SetEntityType(EntityType_t::PVP_BASE);
+    : mEntity(entity) {
+  SetEntityType(EntityType_t::PVP_BASE);
 }
 
-}
+}  // namespace channel

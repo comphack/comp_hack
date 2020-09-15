@@ -25,46 +25,45 @@
 #ifndef TOOLS_CAPGREP_SRC_PACKETFILTERLIST_H
 #define TOOLS_CAPGREP_SRC_PACKETFILTERLIST_H
 
-#include <PushIgnore.h>
-#include <QSortFilterProxyModel>
 #include <PopIgnore.h>
-
+#include <PushIgnore.h>
 #include <stdint.h>
 
-class PacketListFilter : public QSortFilterProxyModel
-{
-    Q_OBJECT
+#include <QSortFilterProxyModel>
 
-public:
-    PacketListFilter(QObject *parent = 0);
+class PacketListFilter : public QSortFilterProxyModel {
+  Q_OBJECT
 
-    QList<uint16_t> white() const;
-    QList<uint16_t> black() const;
+ public:
+  PacketListFilter(QObject* parent = 0);
 
-    void addWhite(uint16_t cmd);
-    void addBlack(uint16_t cmd);
-    void removeWhite(uint16_t cmd);
-    void removeBlack(uint16_t cmd);
+  QList<uint16_t> white() const;
+  QList<uint16_t> black() const;
 
-    void clear();
-    void clearWhite();
-    void clearBlack();
-    void reset();
+  void addWhite(uint16_t cmd);
+  void addBlack(uint16_t cmd);
+  void removeWhite(uint16_t cmd);
+  void removeBlack(uint16_t cmd);
 
-    void setWhite(const QList<uint16_t>& cmds);
-    void setBlack(const QList<uint16_t>& cmds);
-    void setFilter(const QList<uint16_t>& w, const QList<uint16_t>& b);
+  void clear();
+  void clearWhite();
+  void clearBlack();
+  void reset();
 
-    int mapRow(int row) const;
+  void setWhite(const QList<uint16_t>& cmds);
+  void setBlack(const QList<uint16_t>& cmds);
+  void setFilter(const QList<uint16_t>& w, const QList<uint16_t>& b);
 
-protected:
-    void saveBoth();
-    void saveWhite();
-    void saveBlack();
+  int mapRow(int row) const;
 
-    bool filterAcceptsRow(int row, const QModelIndex& parent) const;
+ protected:
+  void saveBoth();
+  void saveWhite();
+  void saveBlack();
 
-    QList<uint16_t> mWhiteList, mBlackList;
+  bool filterAcceptsRow(int row, const QModelIndex& parent) const;
+
+  QList<uint16_t> mWhiteList, mBlackList;
 };
 
-#endif // TOOLS_CAPGREP_SRC_PACKETFILTERLIST_H
+#endif  // TOOLS_CAPGREP_SRC_PACKETFILTERLIST_H

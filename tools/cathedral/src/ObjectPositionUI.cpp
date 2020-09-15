@@ -28,99 +28,82 @@
 #include <ObjectPosition.h>
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_ObjectPosition.h"
-#include <PopIgnore.h>
 
-ObjectPosition::ObjectPosition(QWidget *pParent) : QWidget(pParent),
-    mMainWindow(nullptr)
-{
-    prop = new Ui::ObjectPosition;
-    prop->setupUi(this);
+ObjectPosition::ObjectPosition(QWidget *pParent)
+    : QWidget(pParent), mMainWindow(nullptr) {
+  prop = new Ui::ObjectPosition;
+  prop->setupUi(this);
 
-    connect(prop->radSpot, SIGNAL(clicked(bool)), this, SLOT(RadioToggle()));
-    connect(prop->radPosition, SIGNAL(clicked(bool)), this, SLOT(RadioToggle()));
+  connect(prop->radSpot, SIGNAL(clicked(bool)), this, SLOT(RadioToggle()));
+  connect(prop->radPosition, SIGNAL(clicked(bool)), this, SLOT(RadioToggle()));
 }
 
-ObjectPosition::~ObjectPosition()
-{
-    delete prop;
+ObjectPosition::~ObjectPosition() { delete prop; }
+
+void ObjectPosition::SetMainWindow(MainWindow *pMainWindow) {
+  mMainWindow = pMainWindow;
+
+  prop->spot->SetMainWindow(pMainWindow);
 }
 
-void ObjectPosition::SetMainWindow(MainWindow *pMainWindow)
-{
-    mMainWindow = pMainWindow;
-
-    prop->spot->SetMainWindow(pMainWindow);
+void ObjectPosition::Load(const std::shared_ptr<objects::ObjectPosition> &pos) {
+  Load(pos->GetSpotID(), pos->GetX(), pos->GetY(), pos->GetRotation());
 }
 
-void ObjectPosition::Load(const std::shared_ptr<objects::ObjectPosition>& pos)
-{
-    Load(pos->GetSpotID(), pos->GetX(), pos->GetY(), pos->GetRotation());
+void ObjectPosition::Load(uint32_t spotID, float x, float y, float rot) {
+  prop->spot->SetValue(spotID);
+  prop->x->setValue((double)x);
+  prop->y->setValue((double)y);
+  prop->rotation->setValue((double)rot);
+
+  if (spotID || (!x && !y && !rot)) {
+    prop->radSpot->setChecked(true);
+  } else {
+    prop->radPosition->setChecked(true);
+  }
+
+  RadioToggle();
 }
 
-void ObjectPosition::Load(uint32_t spotID, float x, float y, float rot)
-{
-    prop->spot->SetValue(spotID);
-    prop->x->setValue((double)x);
-    prop->y->setValue((double)y);
-    prop->rotation->setValue((double)rot);
+std::shared_ptr<objects::ObjectPosition> ObjectPosition::Save() const {
+  auto obj = std::make_shared<objects::ObjectPosition>();
 
-    if(spotID || (!x && !y && !rot))
-    {
-        prop->radSpot->setChecked(true);
-    }
-    else
-    {
-        prop->radPosition->setChecked(true);
-    }
+  uint32_t spotID = (uint32_t)prop->spot->GetValue();
+  if (spotID) {
+    obj->SetSpotID(spotID);
+  } else {
+    obj->SetX((float)prop->x->value());
+    obj->SetY((float)prop->y->value());
+    obj->SetRotation((float)prop->rotation->value());
+  }
 
-    RadioToggle();
+  return obj;
 }
 
-std::shared_ptr<objects::ObjectPosition> ObjectPosition::Save() const
-{
-    auto obj = std::make_shared<objects::ObjectPosition>();
+void ObjectPosition::RadioToggle() {
+  if (prop->radSpot->isChecked()) {
+    // Clear all position properties
+    prop->x->setValue(0.0);
+    prop->y->setValue(0.0);
+    prop->rotation->setValue(0.0);
 
-    uint32_t spotID = (uint32_t)prop->spot->GetValue();
-    if(spotID)
-    {
-        obj->SetSpotID(spotID);
-    }
-    else
-    {
-        obj->SetX((float)prop->x->value());
-        obj->SetY((float)prop->y->value());
-        obj->SetRotation((float)prop->rotation->value());
-    }
+    prop->spot->setEnabled(true);
+    prop->x->setEnabled(false);
+    prop->y->setEnabled(false);
+    prop->rotation->setEnabled(false);
+  } else {
+    // Clear spot property
+    prop->spot->SetValue(0);
 
-    return obj;
-}
-
-void ObjectPosition::RadioToggle()
-{
-    if(prop->radSpot->isChecked())
-    {
-        // Clear all position properties
-        prop->x->setValue(0.0);
-        prop->y->setValue(0.0);
-        prop->rotation->setValue(0.0);
-
-        prop->spot->setEnabled(true);
-        prop->x->setEnabled(false);
-        prop->y->setEnabled(false);
-        prop->rotation->setEnabled(false);
-    }
-    else
-    {
-        // Clear spot property
-        prop->spot->SetValue(0);
-
-        prop->spot->setEnabled(false);
-        prop->x->setEnabled(true);
-        prop->y->setEnabled(true);
-        prop->rotation->setEnabled(true);
-    }
+    prop->spot->setEnabled(false);
+    prop->x->setEnabled(true);
+    prop->y->setEnabled(true);
+    prop->rotation->setEnabled(true);
+  }
 }

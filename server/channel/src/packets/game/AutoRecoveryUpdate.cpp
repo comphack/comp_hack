@@ -36,46 +36,42 @@
 
 using namespace channel;
 
-bool Parsers::AutoRecoveryUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::AutoRecoveryUpdate::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() < 1)
-    {
-        return false;
-    }
+  if (p.Size() < 1) {
+    return false;
+  }
 
-    uint8_t size = p.ReadU8();
-    if(size != 4 || p.Left() != (uint32_t)(size * 5))
-    {
-        return false;
-    }
+  uint8_t size = p.ReadU8();
+  if (size != 4 || p.Left() != (uint32_t)(size * 5)) {
+    return false;
+  }
 
-    // Simply store the definition as a byte array
-    auto data = p.ReadArray(20);
+  // Simply store the definition as a byte array
+  auto data = p.ReadArray(20);
 
-    std::array<int8_t, 20> val;
-    for(size_t i = 0; i < 20; i++)
-    {
-        val[i] = data[i];
-    }
+  std::array<int8_t, 20> val;
+  for (size_t i = 0; i < 20; i++) {
+    val[i] = data[i];
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
 
-    character->SetAutoRecovery(val);
+  character->SetAutoRecovery(val);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_AUTO_RECOVERY_UPDATE);
-    reply.WriteS8(0);   // Success
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_AUTO_RECOVERY_UPDATE);
+  reply.WriteS8(0);  // Success
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

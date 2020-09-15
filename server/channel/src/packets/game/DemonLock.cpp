@@ -38,65 +38,60 @@
 using namespace channel;
 
 void DemonLockSet(const std::shared_ptr<ChannelClientConnection> client,
-    int64_t demonID, bool lock)
-{
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto demon = std::dynamic_pointer_cast<objects::Demon>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
+                  int64_t demonID, bool lock) {
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto demon = std::dynamic_pointer_cast<objects::Demon>(
+      libcomp::PersistentObject::GetObjectByUUID(
+          state->GetObjectUUID(demonID)));
 
-    if(demon)
-    {
-        demon->SetLocked(lock);
+  if (demon) {
+    demon->SetLocked(lock);
 
-        libcomp::Packet reply;
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_LOCK);
-        reply.WriteS64Little(demonID);
-        reply.WriteS8(static_cast<int8_t>(lock ? 1 : 0));
-        reply.WriteS8(0);   //Unknown
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_LOCK);
+    reply.WriteS64Little(demonID);
+    reply.WriteS8(static_cast<int8_t>(lock ? 1 : 0));
+    reply.WriteS8(0);  // Unknown
 
-        client->SendPacket(reply);
-    }
-    else
-    {
-        LogGeneralDebug([&]()
-        {
-            return libcomp::String("DemonLock request failed. Notifying"
-                " requestor: %1\n").Arg(state->GetAccountUID().ToString());
-        });
+    client->SendPacket(reply);
+  } else {
+    LogGeneralDebug([&]() {
+      return libcomp::String(
+                 "DemonLock request failed. Notifying requestor: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        libcomp::Packet err;
-        err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);
-        err.WriteS32Little((int32_t)
-            ClientToChannelPacketCode_t::PACKET_DEMON_LOCK);
-        err.WriteS32Little(-1);
+    libcomp::Packet err;
+    err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);
+    err.WriteS32Little((int32_t)ClientToChannelPacketCode_t::PACKET_DEMON_LOCK);
+    err.WriteS32Little(-1);
 
-        client->SendPacket(err);
-    }
+    client->SendPacket(err);
+  }
 }
 
-bool Parsers::DemonLock::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonLock::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 9)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 9) {
+    return false;
+  }
 
-    int64_t demonID = p.ReadS64Little();
-    int8_t lock = p.ReadS8();
+  int64_t demonID = p.ReadS64Little();
+  int8_t lock = p.ReadS8();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    if(client->GetClientState()->GetObjectUUID(demonID).IsNull())
-    {
-        return false;
-    }
+  if (client->GetClientState()->GetObjectUUID(demonID).IsNull()) {
+    return false;
+  }
 
-    server->QueueWork(DemonLockSet, client, demonID, lock == 1);
+  server->QueueWork(DemonLockSet, client, demonID, lock == 1);
 
-    return true;
+  return true;
 }

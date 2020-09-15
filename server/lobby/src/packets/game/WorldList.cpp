@@ -39,20 +39,20 @@
 
 using namespace lobby;
 
-bool Parsers::WorldList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::WorldList::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_WORLD_LIST);
+  libcomp::Packet reply;
+  reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_WORLD_LIST);
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-    server->SendWorldList(connection);
+  auto server =
+      std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+  server->SendWorldList(connection);
 
-    return true;
+  return true;
 }

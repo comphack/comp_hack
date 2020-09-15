@@ -53,233 +53,202 @@
 
 using namespace channel;
 
-bool Parsers::ShopRepair::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ShopRepair::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 20)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 20) {
+    return false;
+  }
+
+  int32_t shopID = p.ReadS32Little();
+  int32_t trendTime = p.ReadS32Little();
+  int64_t itemID = p.ReadS64Little();
+  uint32_t pointDelta = p.ReadU32Little();
+  (void)trendTime;  // Not used
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto inventory = character->GetItemBoxes(0).Get();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto definitionManager = server->GetDefinitionManager();
+
+  int32_t repairShopID =
+      state->GetCurrentMenuShopID((int32_t)SVR_CONST.MENU_SHOP_REPAIR);
+  if (repairShopID != shopID) {
+    auto accountUID = state->GetAccountUID();
+    LogGeneralError([shopID, accountUID]() {
+      return libcomp::String(
+                 "Player attempted item repair at shop %1 which they are not "
+                 "currently interacting with: %2\n")
+          .Arg(shopID)
+          .Arg(accountUID.ToString());
+    });
+
+    // No error code for this, end the event if any repair shop is being
+    // interacted with
+    if (repairShopID) {
+      server->GetEventManager()->HandleEvent(client, nullptr);
     }
-
-    int32_t shopID = p.ReadS32Little();
-    int32_t trendTime = p.ReadS32Little();
-    int64_t itemID = p.ReadS64Little();
-    uint32_t pointDelta = p.ReadU32Little();
-    (void)trendTime;    // Not used
-
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto inventory = character->GetItemBoxes(0).Get();
-
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto definitionManager = server->GetDefinitionManager();
-
-    int32_t repairShopID = state->GetCurrentMenuShopID(
-        (int32_t)SVR_CONST.MENU_SHOP_REPAIR);
-    if(repairShopID != shopID)
-    {
-        auto accountUID = state->GetAccountUID();
-        LogGeneralError([shopID, accountUID]()
-        {
-            return libcomp::String("Player attempted item repair at shop %1"
-                " which they are not currently interacting with: %2\n")
-                .Arg(shopID).Arg(accountUID.ToString());
-        });
-
-        // No error code for this, end the event if any repair shop is being
-        // interacted with
-        if(repairShopID)
-        {
-            server->GetEventManager()->HandleEvent(client, nullptr);
-        }
-
-        return true;
-    }
-
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
-
-    auto shop = server->GetServerDataManager()->GetShopData((uint32_t)shopID);
-    auto itemData = item ? definitionManager->GetItemData(item->GetType()) : nullptr;
-
-    bool success = false;
-    if(!itemData || (itemData->GetBasic()->GetFlags() & ITEM_FLAG_REPAIR) == 0)
-    {
-        auto accountUID = state->GetAccountUID();
-        LogItemError([item, accountUID]()
-        {
-            return libcomp::String("Player attempted to repair irreparable"
-                " item type %1: %2\n").Arg(item ? item->GetType() : 0)
-                .Arg(accountUID.ToString());
-        });
-    }
-    else if(shop && item->GetItemBox() == inventory->GetUUID())
-    {
-        bool kreuzRepair = false;
-
-        auto eState = state->GetEventState();
-        auto current = eState ? eState->GetCurrent() : nullptr;
-        if(current)
-        {
-            auto menu = std::dynamic_pointer_cast<objects::EventOpenMenu>(
-                current->GetEvent());
-            if(menu && (uint32_t)menu->GetMenuType() == SVR_CONST.MENU_REPAIR_KZ)
-            {
-                kreuzRepair = true;
-            }
-        }
-
-        int32_t repairBase = itemData->GetBasic()->GetRepairPrice();
-
-        bool isTarot = item->GetTarot() &&
-            item->GetTarot() != ENCHANT_ENABLE_EFFECT;
-        bool isSoul = item->GetSoul() &&
-            item->GetSoul() != ENCHANT_ENABLE_EFFECT;
-
-        float enchantBoost = (isTarot ? 1.5f : 0.f) + (isSoul ? 3.f : 0.f);
-        if(enchantBoost == 0.f)
-        {
-            enchantBoost = 1.f;
-        }
-
-        // Weapons can have repair reduction modifications that can reduce
-        // the repair cost to 0
-        float modReduction = 0.f;
-        if(itemData->GetBasic()->GetEquipType() ==
-            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON)
-        {
-            for(size_t i = 0; i < 5; i++)
-            {
-                uint16_t effectID = item->GetModSlots(i);
-                auto effect = definitionManager->GetModifiedEffectData(effectID);
-                if(effect && effect->GetType() == MOD_SLOT_REPAIR_REDUCTION_TYPE)
-                {
-                    modReduction += 0.1f * (float)effect->GetSequenceID();
-                }
-            }
-        }
-
-        if(modReduction > 1.f)
-        {
-            modReduction = 1.f;
-        }
-
-        uint32_t cost = 0;
-        if(kreuzRepair)
-        {
-            // Calculate with all adjustments at once
-            cost = (uint32_t)ceil((float)repairBase * 10.5f *
-                shop->GetRepairCostMultiplier() * enchantBoost *
-                (1.f - modReduction) * (float)pointDelta);
-
-            // Set minimum total cost of 1
-            if(cost == 0)
-            {
-                cost = 1;
-            }
-        }
-        else
-        {
-            // Calculate the cost per point
-            uint32_t pointCost = (uint32_t)floor((float)repairBase *
-                shop->GetRepairCostMultiplier() * enchantBoost);
-
-            // Apply mod reduction
-            if(modReduction > 0.f)
-            {
-                pointCost = (uint32_t)floor((float)pointCost * (1.f - modReduction));
-            }
-
-            // Set minimum point cost of 1 (not minimum total cost)
-            if(pointCost == 0)
-            {
-                pointCost = 1;
-            }
-
-            // Now that we have the final point cost, calculate the total
-            cost = (uint32_t)(pointCost * pointDelta);
-        }
-
-        bool paid = false;
-        if(kreuzRepair)
-        {
-            std::unordered_map<uint32_t, uint32_t> payment;
-            payment[SVR_CONST.ITEM_KREUZ] = cost;
-            paid = characterManager->AddRemoveItems(client, payment, false);
-        }
-        else
-        {
-            paid = characterManager->PayMacca(client, (uint64_t)cost);
-        }
-
-        if(paid)
-        {
-            int32_t currentUp = 0;
-            int32_t maxDown = 0;
-
-            uint16_t repairRate = (uint16_t)(shop->GetRepairRate() * 100.f);
-            if(repairRate >= 10000)
-            {
-                // Do full repair
-                currentUp = (int32_t)(pointDelta * 1000);
-            }
-            else
-            {
-                // Check rate once per point
-                for(uint32_t i = 0; i < pointDelta; i++)
-                {
-                    if(RNG(uint16_t, 1, 10000) <= repairRate)
-                    {
-                        // Repair one point
-                        currentUp += 1000;
-                    }
-                    else
-                    {
-                        // Drop max by one point
-                        maxDown--;
-                    }
-                }
-            }
-
-            // Increase current durability
-            if(currentUp)
-            {
-                characterManager->UpdateDurability(client, item, currentUp,
-                    true, false, false);
-            }
-
-            // Decrease max durability
-            if(maxDown)
-            {
-                characterManager->UpdateDurability(client, item, maxDown,
-                    true, true, false);
-            }
-
-            success = true;
-        }
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOP_REPAIR);
-    reply.WriteS32Little(shopID);
-    reply.WriteS64Little(itemID);
-    reply.WriteU16Little(item ? item->GetDurability() : 0);
-    reply.WriteS8(item ? item->GetMaxDurability() : 0);
-    reply.WriteS32Little(success ? 0 : -5);
-
-    client->QueuePacket(reply);
-
-    if(success && item->GetBoxSlot() >= 0)
-    {
-        characterManager->SendItemBoxData(client, inventory,
-            { (uint16_t)item->GetBoxSlot() }, false);
-    }
-
-    client->FlushOutgoing();
 
     return true;
+  }
+
+  auto item = std::dynamic_pointer_cast<objects::Item>(
+      libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
+
+  auto shop = server->GetServerDataManager()->GetShopData((uint32_t)shopID);
+  auto itemData =
+      item ? definitionManager->GetItemData(item->GetType()) : nullptr;
+
+  bool success = false;
+  if (!itemData || (itemData->GetBasic()->GetFlags() & ITEM_FLAG_REPAIR) == 0) {
+    auto accountUID = state->GetAccountUID();
+    LogItemError([item, accountUID]() {
+      return libcomp::String(
+                 "Player attempted to repair irreparable item type %1: %2\n")
+          .Arg(item ? item->GetType() : 0)
+          .Arg(accountUID.ToString());
+    });
+  } else if (shop && item->GetItemBox() == inventory->GetUUID()) {
+    bool kreuzRepair = false;
+
+    auto eState = state->GetEventState();
+    auto current = eState ? eState->GetCurrent() : nullptr;
+    if (current) {
+      auto menu = std::dynamic_pointer_cast<objects::EventOpenMenu>(
+          current->GetEvent());
+      if (menu && (uint32_t)menu->GetMenuType() == SVR_CONST.MENU_REPAIR_KZ) {
+        kreuzRepair = true;
+      }
+    }
+
+    int32_t repairBase = itemData->GetBasic()->GetRepairPrice();
+
+    bool isTarot =
+        item->GetTarot() && item->GetTarot() != ENCHANT_ENABLE_EFFECT;
+    bool isSoul = item->GetSoul() && item->GetSoul() != ENCHANT_ENABLE_EFFECT;
+
+    float enchantBoost = (isTarot ? 1.5f : 0.f) + (isSoul ? 3.f : 0.f);
+    if (enchantBoost == 0.f) {
+      enchantBoost = 1.f;
+    }
+
+    // Weapons can have repair reduction modifications that can reduce
+    // the repair cost to 0
+    float modReduction = 0.f;
+    if (itemData->GetBasic()->GetEquipType() ==
+        objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON) {
+      for (size_t i = 0; i < 5; i++) {
+        uint16_t effectID = item->GetModSlots(i);
+        auto effect = definitionManager->GetModifiedEffectData(effectID);
+        if (effect && effect->GetType() == MOD_SLOT_REPAIR_REDUCTION_TYPE) {
+          modReduction += 0.1f * (float)effect->GetSequenceID();
+        }
+      }
+    }
+
+    if (modReduction > 1.f) {
+      modReduction = 1.f;
+    }
+
+    uint32_t cost = 0;
+    if (kreuzRepair) {
+      // Calculate with all adjustments at once
+      cost = (uint32_t)ceil((float)repairBase * 10.5f *
+                            shop->GetRepairCostMultiplier() * enchantBoost *
+                            (1.f - modReduction) * (float)pointDelta);
+
+      // Set minimum total cost of 1
+      if (cost == 0) {
+        cost = 1;
+      }
+    } else {
+      // Calculate the cost per point
+      uint32_t pointCost = (uint32_t)floor(
+          (float)repairBase * shop->GetRepairCostMultiplier() * enchantBoost);
+
+      // Apply mod reduction
+      if (modReduction > 0.f) {
+        pointCost = (uint32_t)floor((float)pointCost * (1.f - modReduction));
+      }
+
+      // Set minimum point cost of 1 (not minimum total cost)
+      if (pointCost == 0) {
+        pointCost = 1;
+      }
+
+      // Now that we have the final point cost, calculate the total
+      cost = (uint32_t)(pointCost * pointDelta);
+    }
+
+    bool paid = false;
+    if (kreuzRepair) {
+      std::unordered_map<uint32_t, uint32_t> payment;
+      payment[SVR_CONST.ITEM_KREUZ] = cost;
+      paid = characterManager->AddRemoveItems(client, payment, false);
+    } else {
+      paid = characterManager->PayMacca(client, (uint64_t)cost);
+    }
+
+    if (paid) {
+      int32_t currentUp = 0;
+      int32_t maxDown = 0;
+
+      uint16_t repairRate = (uint16_t)(shop->GetRepairRate() * 100.f);
+      if (repairRate >= 10000) {
+        // Do full repair
+        currentUp = (int32_t)(pointDelta * 1000);
+      } else {
+        // Check rate once per point
+        for (uint32_t i = 0; i < pointDelta; i++) {
+          if (RNG(uint16_t, 1, 10000) <= repairRate) {
+            // Repair one point
+            currentUp += 1000;
+          } else {
+            // Drop max by one point
+            maxDown--;
+          }
+        }
+      }
+
+      // Increase current durability
+      if (currentUp) {
+        characterManager->UpdateDurability(client, item, currentUp, true, false,
+                                           false);
+      }
+
+      // Decrease max durability
+      if (maxDown) {
+        characterManager->UpdateDurability(client, item, maxDown, true, true,
+                                           false);
+      }
+
+      success = true;
+    }
+  }
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOP_REPAIR);
+  reply.WriteS32Little(shopID);
+  reply.WriteS64Little(itemID);
+  reply.WriteU16Little(item ? item->GetDurability() : 0);
+  reply.WriteS8(item ? item->GetMaxDurability() : 0);
+  reply.WriteS32Little(success ? 0 : -5);
+
+  client->QueuePacket(reply);
+
+  if (success && item->GetBoxSlot() >= 0) {
+    characterManager->SendItemBoxData(client, inventory,
+                                      {(uint16_t)item->GetBoxSlot()}, false);
+  }
+
+  client->FlushOutgoing();
+
+  return true;
 }

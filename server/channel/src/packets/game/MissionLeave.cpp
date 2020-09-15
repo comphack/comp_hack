@@ -44,59 +44,55 @@
 
 using namespace channel;
 
-bool Parsers::MissionLeave::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::MissionLeave::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 5)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 5) {
+    return false;
+  }
 
-    uint32_t missionID = p.ReadU32Little();
-    int8_t exitID = p.ReadS8();
+  uint32_t missionID = p.ReadU32Little();
+  int8_t exitID = p.ReadS8();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
-    auto definitionManager = server->GetDefinitionManager();
-    auto zoneManager = server->GetZoneManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto definitionManager = server->GetDefinitionManager();
+  auto zoneManager = server->GetZoneManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto zone = state->GetZone();
-    auto instance = zone ? zone->GetInstance() : nullptr;
-    auto variant = instance ? instance->GetVariant() : nullptr;
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto zone = state->GetZone();
+  auto instance = zone ? zone->GetInstance() : nullptr;
+  auto variant = instance ? instance->GetVariant() : nullptr;
 
-    std::shared_ptr<objects::MiMissionExit> exit;
-    if(variant && variant->GetInstanceType() == InstanceType_t::MISSION &&
-        variant->GetSubID() == missionID)
-    {
-        auto missionData = definitionManager->GetMissionData(missionID);
-        exit = missionData ? missionData->GetExits((size_t)exitID) : nullptr;
-    }
+  std::shared_ptr<objects::MiMissionExit> exit;
+  if (variant && variant->GetInstanceType() == InstanceType_t::MISSION &&
+      variant->GetSubID() == missionID) {
+    auto missionData = definitionManager->GetMissionData(missionID);
+    exit = missionData ? missionData->GetExits((size_t)exitID) : nullptr;
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MISSION_LEAVE);
-    reply.WriteS8(exit ? 0 : -1);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MISSION_LEAVE);
+  reply.WriteS8(exit ? 0 : -1);
 
-    client->QueuePacket(reply);
+  client->QueuePacket(reply);
 
-    if(exit)
-    {
-        uint32_t zoneID = exit->GetZoneID();
-        float xCoord = exit->GetX();
-        float yCoord = exit->GetY();
-        float rot = exit->GetRotation();
+  if (exit) {
+    uint32_t zoneID = exit->GetZoneID();
+    float xCoord = exit->GetX();
+    float yCoord = exit->GetY();
+    float rot = exit->GetRotation();
 
-        auto zoneDef = server->GetServerDataManager()->GetZoneData(zoneID, 0);
-        uint32_t dynamicMapID = zoneDef ? zoneDef->GetDynamicMapID() : 0;
+    auto zoneDef = server->GetServerDataManager()->GetZoneData(zoneID, 0);
+    uint32_t dynamicMapID = zoneDef ? zoneDef->GetDynamicMapID() : 0;
 
-        zoneManager->EnterZone(client, zoneID, dynamicMapID, xCoord,
-            yCoord, rot, true);
-    }
+    zoneManager->EnterZone(client, zoneID, dynamicMapID, xCoord, yCoord, rot,
+                           true);
+  }
 
-    client->FlushOutgoing();
+  client->FlushOutgoing();
 
-    return true;
+  return true;
 }

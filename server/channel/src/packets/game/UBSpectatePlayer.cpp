@@ -31,53 +31,48 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
- // objects Includes
+// objects Includes
 #include <UBMatch.h>
 
- // channel Includes
+// channel Includes
 #include "ChannelServer.h"
 #include "MatchManager.h"
 #include "ZoneManager.h"
 
 using namespace channel;
 
-bool Parsers::UBSpectatePlayer::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::UBSpectatePlayer::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 8)
-    {
-        return false;
+  if (p.Size() != 8) {
+    return false;
+  }
+
+  uint32_t matchSubType = p.ReadU32Little();
+  int32_t entityID = p.ReadS32Little();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto zone = state->GetZone();
+
+  std::shared_ptr<ActiveEntityState> targetState;
+  if (entityID > 0) {
+    auto ubMatch = zone ? zone->GetUBMatch() : nullptr;
+    if (ubMatch && ubMatch->GetSubType() == matchSubType) {
+      targetState = zone->GetActiveEntity(entityID);
     }
+  }
 
-    uint32_t matchSubType = p.ReadU32Little();
-    int32_t entityID = p.ReadS32Little();
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_UB_SPECTATE_PLAYER);
+  reply.WriteU32Little(matchSubType);
+  reply.WriteS32Little(entityID);
+  reply.WriteS32Little(entityID <= 0 || targetState ? 0 : -1);
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto zone = state->GetZone();
+  client->SendPacket(reply);
 
-    std::shared_ptr<ActiveEntityState> targetState;
-    if(entityID > 0)
-    {
-        auto ubMatch = zone ? zone->GetUBMatch() : nullptr;
-        if(ubMatch && ubMatch->GetSubType() == matchSubType)
-        {
-            targetState = zone->GetActiveEntity(entityID);
-        }
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_UB_SPECTATE_PLAYER);
-    reply.WriteU32Little(matchSubType);
-    reply.WriteS32Little(entityID);
-    reply.WriteS32Little(entityID <= 0 || targetState ? 0 : -1);
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

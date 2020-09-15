@@ -24,30 +24,27 @@
 
 #include "Close.h"
 
-#include <PushIgnore.h>
-#include <QSettings>
-#include <QApplication>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-Close::Close(QWidget *p) : QDialog(p)
-{
-    // Setup the UI.
-    ui.setupUi(this);
+#include <QApplication>
+#include <QSettings>
 
-    // Connect the buttons to the slots.
-    connect(ui.yesButton, SIGNAL(clicked(bool)), this, SLOT(fuckEm()));
-    connect(ui.noButton, SIGNAL(clicked(bool)), this, SLOT(deleteLater()));
+Close::Close(QWidget *p) : QDialog(p) {
+  // Setup the UI.
+  ui.setupUi(this);
+
+  // Connect the buttons to the slots.
+  connect(ui.yesButton, SIGNAL(clicked(bool)), this, SLOT(fuckEm()));
+  connect(ui.noButton, SIGNAL(clicked(bool)), this, SLOT(deleteLater()));
 }
 
-Close::~Close()
-{
-}
+Close::~Close() {}
 
-void Close::fuckEm()
-{
-    // Save the setting.
-    QSettings().setValue("noexitwarning", ui.ignoreCheckbox->isChecked());
+void Close::fuckEm() {
+  // Save the setting.
+  QSettings().setValue("noexitwarning", ui.ignoreCheckbox->isChecked());
 
-    // Quit the application.
-    qApp->quit();
+  // Quit the application.
+  qApp->quit();
 }

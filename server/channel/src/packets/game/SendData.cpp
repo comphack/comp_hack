@@ -53,220 +53,203 @@
 
 using namespace channel;
 
-void SendClientReadyData(std::shared_ptr<ChannelServer> server,
-    const std::shared_ptr<ChannelClientConnection> client)
-{
-    auto characterManager = server->GetCharacterManager();
-    auto serverDataManager = server->GetServerDataManager();
-    auto zoneManager = server->GetZoneManager();
-    auto state = client->GetClientState();
-    auto channelLogin = state->GetChannelLogin();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+void SendClientReadyData(
+    std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client) {
+  auto characterManager = server->GetCharacterManager();
+  auto serverDataManager = server->GetServerDataManager();
+  auto zoneManager = server->GetZoneManager();
+  auto state = client->GetClientState();
+  auto channelLogin = state->GetChannelLogin();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
 
-    // Send world time
-    {
-        auto clock = server->GetWorldClockTime();
+  // Send world time
+  {
+    auto clock = server->GetWorldClockTime();
 
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_WORLD_TIME);
-        p.WriteS8(clock.MoonPhase);
-        p.WriteS8(clock.Hour);
-        p.WriteS8(clock.Min);
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_WORLD_TIME);
+    p.WriteS8(clock.MoonPhase);
+    p.WriteS8(clock.Hour);
+    p.WriteS8(clock.Min);
 
-        client->QueuePacket(p);
-    }
+    client->QueuePacket(p);
+  }
 
-    // Send sync time relative to the client
-    {
-        ServerTime currentServerTime = ChannelServer::GetServerTime();
-        ClientTime currentClientTime = state->ToClientTime(currentServerTime);
+  // Send sync time relative to the client
+  {
+    ServerTime currentServerTime = ChannelServer::GetServerTime();
+    ClientTime currentClientTime = state->ToClientTime(currentServerTime);
 
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC_TIME);
-        p.WriteFloat(currentClientTime);
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC_TIME);
+    p.WriteFloat(currentClientTime);
 
-        client->QueuePacket(p);
-    }
+    client->QueuePacket(p);
+  }
 
-    auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
+  auto conf =
+      std::dynamic_pointer_cast<objects::ChannelConfig>(server->GetConfig());
 
-    // Send any server system messages
-    libcomp::String systemMessage = conf->GetSystemMessage();
-    if(!systemMessage.IsEmpty())
-    {
-        server->SendSystemMessage(client, systemMessage,
-            (int8_t)conf->GetSystemMessageColor(), false);
-    }
+  // Send any server system messages
+  libcomp::String systemMessage = conf->GetSystemMessage();
+  if (!systemMessage.IsEmpty()) {
+    server->SendSystemMessage(client, systemMessage,
+                              (int8_t)conf->GetSystemMessageColor(), false);
+  }
 
-    auto worldSharedConfig = conf->GetWorldSharedConfig();
-    libcomp::String compShopMessage = worldSharedConfig->GetCOMPShopMessage();
-    if(!compShopMessage.IsEmpty())
-    {
-        server->SendSystemMessage(client, compShopMessage, 4, false);
-    }
+  auto worldSharedConfig = conf->GetWorldSharedConfig();
+  libcomp::String compShopMessage = worldSharedConfig->GetCOMPShopMessage();
+  if (!compShopMessage.IsEmpty()) {
+    server->SendSystemMessage(client, compShopMessage, 4, false);
+  }
 
-    // Send client recognized world bonuses
-    {
-        /// @todo: identify more of these
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_WORLD_BONUS);
-        p.WriteS32Little(1);
+  // Send client recognized world bonuses
+  {
+    /// @todo: identify more of these
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_WORLD_BONUS);
+    p.WriteS32Little(1);
 
-        p.WriteS32Little(2);    // Type
-        p.WriteFloat(worldSharedConfig->GetDeathPenaltyDisabled() ? 0.f : 1.f);
+    p.WriteS32Little(2);  // Type
+    p.WriteFloat(worldSharedConfig->GetDeathPenaltyDisabled() ? 0.f : 1.f);
 
-        client->QueuePacket(p);
-    }
+    client->QueuePacket(p);
+  }
 
-    // Set character icon
-    characterManager->SetStatusIcon(client);
+  // Set character icon
+  characterManager->SetStatusIcon(client);
 
-    // Add to the login zone
-    {
-        std::shared_ptr<objects::InstanceAccess> instAccess;
-        if(channelLogin && channelLogin->GetToZoneID())
-        {
-            // Enter instance if valid
-            auto access = zoneManager->GetInstanceAccess(state
-                ->GetWorldCID());
-            if(access && serverDataManager->ExistsInInstance(
-                access->GetDefinitionID(), channelLogin->GetToZoneID(),
-                channelLogin->GetToDynamicMapID()))
-            {
-                instAccess = access;
+  // Add to the login zone
+  {
+    std::shared_ptr<objects::InstanceAccess> instAccess;
+    if (channelLogin && channelLogin->GetToZoneID()) {
+      // Enter instance if valid
+      auto access = zoneManager->GetInstanceAccess(state->GetWorldCID());
+      if (access && serverDataManager->ExistsInInstance(
+                        access->GetDefinitionID(), channelLogin->GetToZoneID(),
+                        channelLogin->GetToDynamicMapID())) {
+        instAccess = access;
 
-                if(channelLogin->GetFromChannel() == -1)
-                {
-                    // Recovering from an instance disconnect, set last
-                    // zone and instance ID to simulate respawn
-                    state->SetLastZoneID(channelLogin->GetToZoneID());
-                    state->SetLastInstanceID(instAccess->GetInstanceID());
-                }
-            }
+        if (channelLogin->GetFromChannel() == -1) {
+          // Recovering from an instance disconnect, set last
+          // zone and instance ID to simulate respawn
+          state->SetLastZoneID(channelLogin->GetToZoneID());
+          state->SetLastInstanceID(instAccess->GetInstanceID());
         }
+      }
+    }
 
-        if(instAccess)
-        {
-            if(!zoneManager->MoveToInstance(client, instAccess, true))
-            {
-                LogGeneralError([&]()
-                {
-                    return libcomp::String("Failed to add client to zone"
-                        " instance %1. Closing the connection.\n")
-                        .Arg(instAccess->GetDefinitionID());
-                });
+    if (instAccess) {
+      if (!zoneManager->MoveToInstance(client, instAccess, true)) {
+        LogGeneralError([&]() {
+          return libcomp::String(
+                     "Failed to add client to zone instance %1. Closing the "
+                     "connection.\n")
+              .Arg(instAccess->GetDefinitionID());
+        });
 
-                client->Close();
-                return;
-            }
+        client->Close();
+        return;
+      }
+    } else {
+      // Normal login, get zone info and verify channel
+      uint32_t zoneID = 0, dynamicMapID = 0;
+      float x = 0.f, y = 0.f, rot = 0.f;
+
+      int8_t channelID = -1;
+      if (!zoneManager->GetLoginZone(character, zoneID, dynamicMapID, channelID,
+                                     x, y, rot)) {
+        LogGeneralError([&]() {
+          return libcomp::String(
+                     "Login zone for character %1 could not be determined.\n")
+              .Arg(character->GetUUID().ToString());
+        });
+
+        client->Close();
+        return;
+      } else if (channelID != -1 &&
+                 (uint8_t)channelID != server->GetChannelID()) {
+        // Don't actually fail here, attempt to move to other channel
+        LogGeneralError([&]() {
+          return libcomp::String(
+                     "Login zone information determined for character %1 was "
+                     "not valid for this channel.\n")
+              .Arg(character->GetUUID().ToString());
+        });
+      } else if (character->GetLogoutInstance()) {
+        // Fire ToLobby event if one exists and adjust starting zone
+        // if moved. Do not perform login checks againg, instead let
+        // the zone manager handle channel switching as needed.
+        auto instDef = serverDataManager->GetZoneInstanceData(
+            character->GetLogoutInstance());
+        if (instDef && !instDef->GetToLobbyEventID().IsEmpty()) {
+          auto logoutZoneID = character->GetLogoutZone();
+
+          EventOptions options;
+          options.AutoOnly = true;
+
+          if (server->GetEventManager()->HandleEvent(
+                  client, instDef->GetToLobbyEventID(), 0, nullptr, options) &&
+              character->GetLogoutZone() != logoutZoneID) {
+            zoneID = character->GetLogoutZone();
+            dynamicMapID = 0;
+            x = character->GetLogoutX();
+            y = character->GetLogoutY();
+            rot = character->GetLogoutRotation();
+
+            // Reset instance so we don't loop
+            character->SetLogoutInstance(0);
+          }
         }
-        else
-        {
-            // Normal login, get zone info and verify channel
-            uint32_t zoneID = 0, dynamicMapID = 0;
-            float x = 0.f, y = 0.f, rot = 0.f;
+      }
 
-            int8_t channelID = -1;
-            if(!zoneManager->GetLoginZone(character, zoneID, dynamicMapID,
-                channelID, x, y, rot))
-            {
-                LogGeneralError([&]()
-                {
-                    return libcomp::String("Login zone for character %1 could"
-                        " not be determined.\n")
-                        .Arg(character->GetUUID().ToString());
-                });
+      if (!zoneManager->EnterZone(client, zoneID, dynamicMapID, x, y, rot)) {
+        LogGeneralError([&]() {
+          return libcomp::String(
+                     "Failed to add client to zone %1. Closing the "
+                     "connection.\n")
+              .Arg(zoneID);
+        });
 
-                client->Close();
-                return;
-            }
-            else if(channelID != -1 &&
-                (uint8_t)channelID != server->GetChannelID())
-            {
-                // Don't actually fail here, attempt to move to other channel
-                LogGeneralError([&]()
-                {
-                    return libcomp::String("Login zone information determined"
-                        " for character %1 was not valid for this channel.\n")
-                        .Arg(character->GetUUID().ToString());
-                });
-            }
-            else if(character->GetLogoutInstance())
-            {
-                // Fire ToLobby event if one exists and adjust starting zone
-                // if moved. Do not perform login checks againg, instead let
-                // the zone manager handle channel switching as needed.
-                auto instDef = serverDataManager->GetZoneInstanceData(
-                    character->GetLogoutInstance());
-                if(instDef && !instDef->GetToLobbyEventID().IsEmpty())
-                {
-                    auto logoutZoneID = character->GetLogoutZone();
-
-                    EventOptions options;
-                    options.AutoOnly = true;
-
-                    if(server->GetEventManager()->HandleEvent(client, instDef
-                        ->GetToLobbyEventID(), 0, nullptr, options) &&
-                        character->GetLogoutZone() != logoutZoneID)
-                    {
-                        zoneID = character->GetLogoutZone();
-                        dynamicMapID = 0;
-                        x = character->GetLogoutX();
-                        y = character->GetLogoutY();
-                        rot = character->GetLogoutRotation();
-
-                        // Reset instance so we don't loop
-                        character->SetLogoutInstance(0);
-                    }
-                }
-            }
-
-            if(!zoneManager->EnterZone(client, zoneID, dynamicMapID, x, y, rot))
-            {
-                LogGeneralError([&]()
-                {
-                    return libcomp::String("Failed to add client to zone"
-                        " %1. Closing the connection.\n").Arg(zoneID);
-                });
-
-                client->Close();
-                return;
-            }
-        }
+        client->Close();
+        return;
+      }
     }
+  }
 
-    // Send active partner demon ID
-    if(!character->GetActiveDemon().IsNull())
-    {
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_SUMMONED);
-        p.WriteS64Little(state->GetObjectID(character->GetActiveDemon().GetUUID()));
+  // Send active partner demon ID
+  if (!character->GetActiveDemon().IsNull()) {
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTNER_SUMMONED);
+    p.WriteS64Little(state->GetObjectID(character->GetActiveDemon().GetUUID()));
 
-        client->QueuePacket(p);
-    }
+    client->QueuePacket(p);
+  }
 
-    {
-        libcomp::Packet p;
-        p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMM_SERVER_STATE);
-        p.WriteS32Little(1);    // Connected
+  {
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_COMM_SERVER_STATE);
+    p.WriteS32Little(1);  // Connected
 
-        client->QueuePacket(p);
-    }
+    client->QueuePacket(p);
+  }
 
-    client->FlushOutgoing();
+  client->FlushOutgoing();
 }
 
-bool Parsers::SendData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SendData::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)p;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)p;
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->QueueWork(SendClientReadyData, server, client);
+  server->QueueWork(SendClientReadyData, server, client);
 
-    return true;
+  return true;
 }

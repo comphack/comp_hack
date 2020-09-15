@@ -46,95 +46,85 @@
 
 using namespace channel;
 
-bool Parsers::PlasmaItemData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PlasmaItemData::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 5)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 5) {
+    return false;
+  }
+
+  int32_t plasmaID = p.ReadS32Little();
+  int8_t pointID = p.ReadS8();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto serverDataManager = server->GetServerDataManager();
+
+  auto zone = cState->GetZone();
+  auto pState =
+      zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
+           : nullptr;
+  auto point = pState ? pState->GetPoint((uint32_t)pointID) : nullptr;
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_ITEM_DATA);
+  reply.WriteS32Little(plasmaID);
+  reply.WriteS8(pointID);
+
+  if (point) {
+    bool success = true;
+
+    auto loot = point->GetLoot();
+    if (!loot) {
+      // Generate the loot
+      auto dropSet = serverDataManager->GetDropSetData(
+          pState->GetEntity()->GetDropSetID());
+      if (dropSet) {
+        loot = std::make_shared<objects::LootBox>();
+        loot->SetType(objects::LootBox::Type_t::PLASMA);
+
+        float maccaRate =
+            (float)cState->GetCorrectValue(CorrectTbl::RATE_MACCA) / 100.f;
+        float magRate =
+            (float)cState->GetCorrectValue(CorrectTbl::RATE_MAG) / 100.f;
+
+        characterManager->CreateLootFromDrops(loot, dropSet->GetDrops(),
+                                              cState->GetLUCK(), true,
+                                              maccaRate, magRate);
+
+        success =
+            pState->SetLoot((uint32_t)pointID, state->GetWorldCID(), loot);
+      } else {
+        success = false;
+      }
     }
 
-    int32_t plasmaID = p.ReadS32Little();
-    int8_t pointID = p.ReadS8();
+    reply.WriteS32Little(success ? 0 : -1);
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
+    if (success) {
+      reply.WriteFloat(state->ToClientTime(loot->GetLootTime()));
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto serverDataManager = server->GetServerDataManager();
-
-    auto zone = cState->GetZone();
-    auto pState = zone ? std::dynamic_pointer_cast<PlasmaState>(
-        zone->GetEntity(plasmaID)) : nullptr;
-    auto point = pState ? pState->GetPoint((uint32_t)pointID) : nullptr;
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_ITEM_DATA);
-    reply.WriteS32Little(plasmaID);
-    reply.WriteS8(pointID);
-
-    if(point)
-    {
-        bool success = true;
-
-        auto loot = point->GetLoot();
-        if(!loot)
-        {
-            // Generate the loot
-            auto dropSet = serverDataManager->GetDropSetData(pState
-                ->GetEntity()->GetDropSetID());
-            if(dropSet)
-            {
-                loot = std::make_shared<objects::LootBox>();
-                loot->SetType(objects::LootBox::Type_t::PLASMA);
-
-                float maccaRate = (float)cState->GetCorrectValue(
-                    CorrectTbl::RATE_MACCA) / 100.f;
-                float magRate = (float)cState->GetCorrectValue(
-                    CorrectTbl::RATE_MAG) / 100.f;
-
-                characterManager->CreateLootFromDrops(loot, dropSet->GetDrops(),
-                    cState->GetLUCK(), true, maccaRate, magRate);
-
-                success = pState->SetLoot((uint32_t)pointID, state->GetWorldCID(),
-                    loot);
-            }
-            else
-            {
-                success = false;
-            }
+      for (auto lItem : loot->GetLoot()) {
+        if (lItem && lItem->GetCount() > 0) {
+          reply.WriteU32Little(lItem->GetType());
+          reply.WriteU16Little(lItem->GetCount());
+        } else {
+          reply.WriteU32Little(static_cast<uint32_t>(-1));
+          reply.WriteU16Little(0);
         }
-
-        reply.WriteS32Little(success ? 0 : -1);
-
-        if(success)
-        {
-            reply.WriteFloat(state->ToClientTime(loot->GetLootTime()));
-
-            for(auto lItem : loot->GetLoot())
-            {
-                if(lItem && lItem->GetCount() > 0)
-                {
-                    reply.WriteU32Little(lItem->GetType());
-                    reply.WriteU16Little(lItem->GetCount());
-                }
-                else
-                {
-                    reply.WriteU32Little(static_cast<uint32_t>(-1));
-                    reply.WriteU16Little(0);
-                }
-            }
-        }
+      }
     }
-    else
-    {
-        reply.WriteS32Little(-1);
-    }
+  } else {
+    reply.WriteS32Little(-1);
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

@@ -38,59 +38,58 @@
 
 using namespace channel;
 
-void AuthenticateAccount(AccountManager* accountManager,
-    const std::shared_ptr<ChannelClientConnection> client)
-{
-    accountManager->Authenticate(client);
+void AuthenticateAccount(
+    AccountManager* accountManager,
+    const std::shared_ptr<ChannelClientConnection> client) {
+  accountManager->Authenticate(client);
 
-    auto state = client->GetClientState();
+  auto state = client->GetClientState();
 
-    if(nullptr != state)
-    {
-        auto enc = libcomp::Convert::Encoding_t::ENCODING_UTF8;
+  if (nullptr != state) {
+    auto enc = libcomp::Convert::Encoding_t::ENCODING_UTF8;
 
-        libcomp::Packet reply;
-        reply.WritePacketCode(
-            ChannelToClientPacketCode_t::PACKET_AMALA_SERVER_VERSION);
-        reply.WriteU8(VERSION_MAJOR);
-        reply.WriteU8(VERSION_MINOR);
-        reply.WriteU8(VERSION_PATCH);
-        reply.WriteString16Little(enc, VERSION_CODENAME, true);
+    libcomp::Packet reply;
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_AMALA_SERVER_VERSION);
+    reply.WriteU8(VERSION_MAJOR);
+    reply.WriteU8(VERSION_MINOR);
+    reply.WriteU8(VERSION_PATCH);
+    reply.WriteString16Little(enc, VERSION_CODENAME, true);
 
 #if 1 == HAVE_GIT
-        (void)szGitDescription;
-        (void)szGitDate;
-        (void)szGitAuthor;
-        (void)szGitBranch;
+    (void)szGitDescription;
+    (void)szGitDate;
+    (void)szGitAuthor;
+    (void)szGitBranch;
 
-        reply.WriteString16Little(enc, szGitCommittish, true);
-        reply.WriteString16Little(enc, szGitRemoteURL, true);
+    reply.WriteString16Little(enc, szGitCommittish, true);
+    reply.WriteString16Little(enc, szGitRemoteURL, true);
 #else
-        reply.WriteString16Little(enc, "", true);
-        reply.WriteString16Little(enc, "", true);
+    reply.WriteString16Little(enc, "", true);
+    reply.WriteString16Little(enc, "", true);
 #endif
 
-        reply.WriteS32Little(state->GetUserLevel());
+    reply.WriteS32Little(state->GetUserLevel());
 
-        client->SendPacket(reply);
-    }
+    client->SendPacket(reply);
+  }
 }
 
-bool Parsers::Auth::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::Auth::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 43 || p.PeekU16Little() != 41)
-    {
-        return false;
-    }
+  if (p.Size() != 43 || p.PeekU16Little() != 41) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->QueueWork(AuthenticateAccount, server->GetAccountManager(), client);
+  server->QueueWork(AuthenticateAccount, server->GetAccountManager(), client);
 
-    return true;
+  return true;
 }

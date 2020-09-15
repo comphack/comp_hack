@@ -49,123 +49,100 @@
 
 using namespace channel;
 
-bool Parsers::TeamUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TeamUpdate::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)connection;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)connection;
 
-    if(p.Size() < 3)
-    {
-        LogGeneralErrorMsg("Invalid response received for TeamUpdate.\n");
+  if (p.Size() < 3) {
+    LogGeneralErrorMsg("Invalid response received for TeamUpdate.\n");
 
-        return false;
-    }
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    bool connectionsFound = false;
-    uint8_t mode = p.ReadU8();
+  bool connectionsFound = false;
+  uint8_t mode = p.ReadU8();
 
-    auto clients = server->GetManagerConnection()
-        ->GatherWorldTargetClients(p, connectionsFound);
-    if(!connectionsFound)
-    {
-        LogGeneralErrorMsg("Connections not found for TeamUpdate.\n");
+  auto clients = server->GetManagerConnection()->GatherWorldTargetClients(
+      p, connectionsFound);
+  if (!connectionsFound) {
+    LogGeneralErrorMsg("Connections not found for TeamUpdate.\n");
 
-        return false;
-    }
+    return false;
+  }
 
-    if(clients.size() == 0)
-    {
-        // Nothing to do
-        return true;
-    }
-
-    switch((InternalPacketAction_t)mode)
-    {
-    case InternalPacketAction_t::PACKET_ACTION_UPDATE:
-        {
-            // Team updated
-            int32_t teamID = p.ReadS32Little();
-            uint8_t exists = p.ReadU8() == 1;
-
-            auto team = exists
-                ? std::make_shared<objects::Team>() : nullptr;
-            if(team && !team->LoadPacket(p))
-            {
-                return false;
-            }
-
-            for(auto client : clients)
-            {
-                auto state = client->GetClientState();
-                if(team && team->MemberIDsContains(state->GetWorldCID()))
-                {
-                    // Adding/updating
-                    state->GetAccountLogin()->GetCharacterLogin()
-                        ->SetTeamID(teamID);
-                    state->SetTeam(team);
-                }
-                else if(state->GetTeamID() == teamID)
-                {
-                    // Removing
-                    state->GetAccountLogin()->GetCharacterLogin()
-                        ->SetTeamID(0);
-                    state->SetTeam(nullptr);
-                }
-            }
-
-            server->GetZoneManager()->UpdateTrackedTeam(team);
-        }
-        break;
-    case InternalPacketAction_t::PACKET_ACTION_TEAM_ZIOTITE:
-        {
-            // Ziotite updated
-            int32_t teamID = p.ReadS32Little();
-
-            if(p.Left() < 5)
-            {
-                LogGeneralError([&]()
-                {
-                    return libcomp::String("Missing ziotite parameter"
-                        " for command %1\n").Arg(mode);
-                });
-
-                return false;
-            }
-
-            int32_t sZiotite = p.ReadS32Little();
-            int8_t lZiotite = p.ReadS8();
-
-            std::shared_ptr<objects::Team> team;
-            for(auto client : clients)
-            {
-                auto state = client->GetClientState();
-                auto t = state->GetTeam();
-                if(t && t->GetID() == teamID)
-                {
-                    team = t;
-                    break;
-                }
-            }
-
-            if(team)
-            {
-                server->GetMatchManager()->UpdateZiotite(team, sZiotite,
-                    lZiotite);
-            }
-            else
-            {
-                LogGeneralErrorMsg("Update ziotite request received from the world"
-                    " for team with no connected members");
-            }
-        }
-        break;
-    default:
-        break;
-    }
-
+  if (clients.size() == 0) {
+    // Nothing to do
     return true;
+  }
+
+  switch ((InternalPacketAction_t)mode) {
+    case InternalPacketAction_t::PACKET_ACTION_UPDATE: {
+      // Team updated
+      int32_t teamID = p.ReadS32Little();
+      uint8_t exists = p.ReadU8() == 1;
+
+      auto team = exists ? std::make_shared<objects::Team>() : nullptr;
+      if (team && !team->LoadPacket(p)) {
+        return false;
+      }
+
+      for (auto client : clients) {
+        auto state = client->GetClientState();
+        if (team && team->MemberIDsContains(state->GetWorldCID())) {
+          // Adding/updating
+          state->GetAccountLogin()->GetCharacterLogin()->SetTeamID(teamID);
+          state->SetTeam(team);
+        } else if (state->GetTeamID() == teamID) {
+          // Removing
+          state->GetAccountLogin()->GetCharacterLogin()->SetTeamID(0);
+          state->SetTeam(nullptr);
+        }
+      }
+
+      server->GetZoneManager()->UpdateTrackedTeam(team);
+    } break;
+    case InternalPacketAction_t::PACKET_ACTION_TEAM_ZIOTITE: {
+      // Ziotite updated
+      int32_t teamID = p.ReadS32Little();
+
+      if (p.Left() < 5) {
+        LogGeneralError([&]() {
+          return libcomp::String("Missing ziotite parameter for command %1\n")
+              .Arg(mode);
+        });
+
+        return false;
+      }
+
+      int32_t sZiotite = p.ReadS32Little();
+      int8_t lZiotite = p.ReadS8();
+
+      std::shared_ptr<objects::Team> team;
+      for (auto client : clients) {
+        auto state = client->GetClientState();
+        auto t = state->GetTeam();
+        if (t && t->GetID() == teamID) {
+          team = t;
+          break;
+        }
+      }
+
+      if (team) {
+        server->GetMatchManager()->UpdateZiotite(team, sZiotite, lZiotite);
+      } else {
+        LogGeneralErrorMsg(
+            "Update ziotite request received from the world for team with no "
+            "connected members");
+      }
+    } break;
+    default:
+      break;
+  }
+
+  return true;
 }

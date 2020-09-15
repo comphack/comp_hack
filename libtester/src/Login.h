@@ -30,18 +30,16 @@
 // libcomp Includes
 #include <HttpConnection.h>
 
-namespace libtester
-{
+namespace libtester {
 
-namespace Login
-{
+namespace Login {
 
-bool WebLogin(const libcomp::String& username,
-    const libcomp::String& password, const libcomp::String& clientVersion,
-    libcomp::String& sid1, libcomp::String& sid2);
+bool WebLogin(const libcomp::String& username, const libcomp::String& password,
+              const libcomp::String& clientVersion, libcomp::String& sid1,
+              libcomp::String& sid2);
 
-} // namespace Login
+}  // namespace Login
 
-} // namespace libtester
+}  // namespace libtester
 
-#endif // LIBTESTER_SRC_LOGIN_H
+#endif  // LIBTESTER_SRC_LOGIN_H

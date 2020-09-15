@@ -29,9 +29,9 @@
 #include "ApiHandler.h"
 #include "Config.h"
 #include "ImportHandler.h"
-#include "LoginWebHandler.h"
 #include "LobbyConfig.h"
 #include "LobbyServer.h"
+#include "LoginWebHandler.h"
 
 // libcomp Includes
 #include <Constants.h>
@@ -48,153 +48,144 @@
 int ApplicationMain(int argc, const char *argv[])
 #else
 int main(int argc, const char *argv[])
-#endif // defined(_WIN32) && defined(WIN32_SERV)
+#endif  // defined(_WIN32) && defined(WIN32_SERV)
 {
-    libcomp::Exception::RegisterSignalHandler();
+  libcomp::Exception::RegisterSignalHandler();
 
-    libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
+  libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
-    libcomp::Config::LogVersion("COMP_hack Lobby Server");
+  libcomp::Config::LogVersion("COMP_hack Lobby Server");
 
-    std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() +
-        "lobby.xml";
+  std::string configPath =
+      libcomp::BaseServer::GetDefaultConfigPath() + "lobby.xml";
 
-    bool unitTestMode = false;
+  bool unitTestMode = false;
 
-    // Command line argument parser.
-    auto parser = std::make_shared<libcomp::ServerCommandLineParser>();
+  // Command line argument parser.
+  auto parser = std::make_shared<libcomp::ServerCommandLineParser>();
 
-    // Parse the command line arguments.
-    if(!parser->Parse(argc, argv))
-    {
-        return EXIT_FAILURE;
+  // Parse the command line arguments.
+  if (!parser->Parse(argc, argv)) {
+    return EXIT_FAILURE;
+  }
+
+  // initialize x
+  int x = 4;
+  // set x
+  x = 2;
+  // use x
+  if (x <= argc && parser->GetTestingEnabled()) {
+    argc--;
+    argv++;
+
+    LogGeneralDebugMsg("Starting the lobby in unit test mode.\n");
+
+    unitTestMode = true;
+  }
+
+  auto arguments = parser->GetStandardArguments();
+
+  if (!arguments.empty()) {
+    configPath = arguments.front().ToUtf8();
+
+    LogGeneralDebug([&]() {
+      return libcomp::String("Using custom config path %1\n").Arg(configPath);
+    });
+
+    size_t pos = configPath.find_last_of("\\/");
+    if (std::string::npos != pos) {
+      libcomp::BaseServer::SetConfigPath(
+          configPath.substr(0, ((size_t)pos + 1)));
     }
+  }
 
-    //initialize x
-    int x = 4;
-    //set x
-    x = 2;
-    //use x
-    if(x <= argc && parser->GetTestingEnabled())
-    {
-        argc--;
-        argv++;
+  auto config = std::make_shared<objects::LobbyConfig>();
+  if (!libcomp::BaseServer::ReadConfig(config, configPath)) {
+    LogGeneralWarningMsg(
+        "Failed to load the lobby config file. Default values will be used.\n");
+  }
 
-        LogGeneralDebugMsg("Starting the lobby in unit test mode.\n");
+  if (!libcomp::PersistentObject::Initialize()) {
+    LogGeneralCriticalMsg(
+        "One or more persistent object definition failed to load.\n");
 
-        unitTestMode = true;
-    }
+    return EXIT_FAILURE;
+  }
+  auto server = std::make_shared<lobby::LobbyServer>(argv[0], config, parser,
+                                                     unitTestMode);
 
-    auto arguments = parser->GetStandardArguments();
+  if (!server->Initialize()) {
+    LogGeneralCriticalMsg("The server could not be initialized.\n");
 
-    if(!arguments.empty())
-    {
-        configPath = arguments.front().ToUtf8();
+    return EXIT_FAILURE;
+  }
 
-        LogGeneralDebug([&]()
-        {
-            return libcomp::String("Using custom config path %1\n")
-                .Arg(configPath);
-        });
+  bool useSSL = !std::dynamic_pointer_cast<objects::LobbyConfig>(config)
+                     ->GetWebCertificate()
+                     .IsEmpty();
 
-        size_t pos = configPath.find_last_of("\\/");
-        if(std::string::npos != pos)
-        {
-            libcomp::BaseServer::SetConfigPath(
-                configPath.substr(0, ((size_t)pos+1)));
-        }
-    }
+  /// @todo Consider moving the web server.
+  std::vector<std::string> options;
+  options.push_back("listening_ports");
+  options.push_back(
+      std::to_string(std::dynamic_pointer_cast<objects::LobbyConfig>(config)
+                         ->GetWebListeningPort()) +
+      (useSSL ? "s" : ""));
 
-    auto config = std::make_shared<objects::LobbyConfig>();
-    if(!libcomp::BaseServer::ReadConfig(config, configPath))
-    {
-        LogGeneralWarningMsg("Failed to load the lobby config file."
-            " Default values will be used.\n");
-    }
+  if (useSSL) {
+    options.push_back("ssl_certificate");
+    options.push_back(std::dynamic_pointer_cast<objects::LobbyConfig>(config)
+                          ->GetWebCertificate()
+                          .ToUtf8());
+  }
 
-    if(!libcomp::PersistentObject::Initialize())
-    {
-        LogGeneralCriticalMsg("One or more persistent object definition "
-            "failed to load.\n");
+  auto pLoginHandler = new lobby::LoginHandler(server->GetMainDatabase());
+  pLoginHandler->SetAccountManager(server->GetAccountManager());
+  pLoginHandler->SetConfig(
+      std::dynamic_pointer_cast<objects::LobbyConfig>(config));
 
-        return EXIT_FAILURE;
-    }
-    auto server = std::make_shared<lobby::LobbyServer>(
-        argv[0], config, parser, unitTestMode);
+  auto pApiHandler = new lobby::ApiHandler(config, server);
+  pApiHandler->SetAccountManager(server->GetAccountManager());
 
-    if(!server->Initialize())
-    {
-        LogGeneralCriticalMsg("The server could not be initialized.\n");
+  auto pImportHandler = new lobby::ImportHandler(config, server);
 
-        return EXIT_FAILURE;
-    }
+  CivetServer *pWebServer = nullptr;
 
-    bool useSSL = !std::dynamic_pointer_cast<objects::LobbyConfig>(config
-        )->GetWebCertificate().IsEmpty();
+  try {
+    pWebServer = new CivetServer(options);
+    pWebServer->addHandler("/", pLoginHandler);
+    pWebServer->addHandler("/api", pApiHandler);
+    pWebServer->addHandler("/import", pImportHandler);
+  } catch (CivetException e) {
+    LogGeneralCritical([&]() {
+      return libcomp::String(
+                 "The lobby API server failed to start with the following "
+                 "message: %1\n")
+          .Arg(e.what());
+    });
 
-    /// @todo Consider moving the web server.
-    std::vector<std::string> options;
-    options.push_back("listening_ports");
-    options.push_back(std::to_string(std::dynamic_pointer_cast<
-        objects::LobbyConfig>(config)->GetWebListeningPort()) +
-        (useSSL ? "s" : ""));
+    return EXIT_FAILURE;
+  }
 
-    if(useSSL)
-    {
-        options.push_back("ssl_certificate");
-        options.push_back(std::dynamic_pointer_cast<
-            objects::LobbyConfig>(config)->GetWebCertificate().ToUtf8());
-    }
+  // Set this for the signal handler.
+  libcomp::Shutdown::Configure(server.get());
 
-    auto pLoginHandler = new lobby::LoginHandler(server->GetMainDatabase());
-    pLoginHandler->SetAccountManager(server->GetAccountManager());
-    pLoginHandler->SetConfig(std::dynamic_pointer_cast<
-        objects::LobbyConfig>(config));
+  // Start the main server loop (blocks until done).
+  int returnCode = server->Start();
 
-    auto pApiHandler = new lobby::ApiHandler(config, server);
-    pApiHandler->SetAccountManager(server->GetAccountManager());
+  // Shut down the web server.
+  delete pWebServer;
+  pWebServer = nullptr;
 
-    auto pImportHandler = new lobby::ImportHandler(config, server);
+  // Complete the shutdown process.
+  libcomp::Shutdown::Complete();
 
-    CivetServer *pWebServer = nullptr;
-
-    try
-    {
-        pWebServer = new CivetServer(options);
-        pWebServer->addHandler("/", pLoginHandler);
-        pWebServer->addHandler("/api", pApiHandler);
-        pWebServer->addHandler("/import", pImportHandler);
-    }
-    catch(CivetException e)
-    {
-        LogGeneralCritical([&]()
-        {
-            return libcomp::String("The lobby API server failed to start "
-                "with the following message: %1\n").Arg(e.what());
-        });
-
-        return EXIT_FAILURE;
-    }
-
-    // Set this for the signal handler.
-    libcomp::Shutdown::Configure(server.get());
-
-    // Start the main server loop (blocks until done).
-    int returnCode = server->Start();
-
-    // Shut down the web server.
-    delete pWebServer;
-    pWebServer = nullptr;
-
-    // Complete the shutdown process.
-    libcomp::Shutdown::Complete();
-
-    LogGeneralInfoMsg("Bye!\n");
+  LogGeneralInfoMsg("Bye!\n");
 
 #ifndef EXOTIC_PLATFORM
-    // Stop the logger
-    delete libcomp::Log::GetSingletonPtr();
-#endif // !EXOTIC_PLATFORM
+  // Stop the logger
+  delete libcomp::Log::GetSingletonPtr();
+#endif  // !EXOTIC_PLATFORM
 
-    return returnCode;
+  return returnCode;
 }

@@ -28,61 +28,49 @@
 #include "MainWindow.h"
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_ServerScript.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-ServerScript::ServerScript(QWidget *pParent) : QWidget(pParent)
-{
-    ui = new Ui::ServerScript;
-    ui->setupUi(this);
+#include "ui_ServerScript.h"
 
-    ui->params->Setup(DynamicItemType_t::PRIMITIVE_STRING, nullptr);
-    ui->params->SetAddText("Add Param");
+ServerScript::ServerScript(QWidget* pParent) : QWidget(pParent) {
+  ui = new Ui::ServerScript;
+  ui->setupUi(this);
 
-    // Hide params by default until a script ID is set
+  ui->params->Setup(DynamicItemType_t::PRIMITIVE_STRING, nullptr);
+  ui->params->SetAddText("Add Param");
+
+  // Hide params by default until a script ID is set
+  ui->grpParams->hide();
+
+  connect(ui->scriptID, SIGNAL(textChanged(const QString&)), this,
+          SLOT(ScriptIDChanged()));
+}
+
+ServerScript::~ServerScript() { delete ui; }
+
+void ServerScript::SetScriptID(const libcomp::String& scriptID) {
+  ui->scriptID->setText(qs(scriptID));
+}
+
+libcomp::String ServerScript::GetScriptID() const {
+  return libcomp::String(ui->scriptID->text().toStdString());
+}
+
+void ServerScript::SetParams(std::list<libcomp::String>& params) {
+  for (auto param : params) {
+    ui->params->AddString(param);
+  }
+}
+
+std::list<libcomp::String> ServerScript::GetParams() const {
+  return ui->params->GetStringList();
+}
+
+void ServerScript::ScriptIDChanged() {
+  if (ui->scriptID->text().isEmpty()) {
     ui->grpParams->hide();
-
-    connect(ui->scriptID, SIGNAL(textChanged(const QString&)), this,
-        SLOT(ScriptIDChanged()));
-}
-
-ServerScript::~ServerScript()
-{
-    delete ui;
-}
-
-void ServerScript::SetScriptID(const libcomp::String& scriptID)
-{
-    ui->scriptID->setText(qs(scriptID));
-}
-
-libcomp::String ServerScript::GetScriptID() const
-{
-    return libcomp::String(ui->scriptID->text().toStdString());
-}
-
-void ServerScript::SetParams(std::list<libcomp::String>& params)
-{
-    for(auto param : params)
-    {
-        ui->params->AddString(param);
-    }
-}
-
-std::list<libcomp::String> ServerScript::GetParams() const
-{
-    return ui->params->GetStringList();
-}
-
-void ServerScript::ScriptIDChanged()
-{
-    if(ui->scriptID->text().isEmpty())
-    {
-        ui->grpParams->hide();
-    }
-    else
-    {
-        ui->grpParams->show();
-    }
+  } else {
+    ui->grpParams->show();
+  }
 }

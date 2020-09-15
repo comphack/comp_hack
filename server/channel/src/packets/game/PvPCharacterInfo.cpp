@@ -37,22 +37,20 @@
 
 using namespace channel;
 
-bool Parsers::PvPCharacterInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PvPCharacterInfo::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->GetCharacterManager()->SendPvPCharacterInfo(client);
+  server->GetCharacterManager()->SendPvPCharacterInfo(client);
 
-    return true;
+  return true;
 }

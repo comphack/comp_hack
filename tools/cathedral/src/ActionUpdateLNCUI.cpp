@@ -28,60 +28,53 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionUpdateLNC.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionUpdateLNC::ActionUpdateLNC(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionUpdateLNC;
-    prop->setupUi(pWidget);
+ActionUpdateLNC::ActionUpdateLNC(ActionList *pList, MainWindow *pMainWindow,
+                                 QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionUpdateLNC;
+  prop->setupUi(pWidget);
 
-    ui->actionTitle->setText(tr("<b>Update LNC</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Update LNC</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionUpdateLNC::~ActionUpdateLNC()
-{
-    delete prop;
+ActionUpdateLNC::~ActionUpdateLNC() { delete prop; }
+
+void ActionUpdateLNC::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionUpdateLNC>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->value->setValue(mAction->GetValue());
+  prop->isSet->setChecked(mAction->GetIsSet());
 }
 
-void ActionUpdateLNC::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionUpdateLNC>(act);
+std::shared_ptr<objects::Action> ActionUpdateLNC::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetValue((int16_t)prop->value->value());
+  mAction->SetIsSet(prop->isSet->isChecked());
 
-    prop->value->setValue(mAction->GetValue());
-    prop->isSet->setChecked(mAction->GetIsSet());
-}
-
-std::shared_ptr<objects::Action> ActionUpdateLNC::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetValue((int16_t)prop->value->value());
-    mAction->SetIsSet(prop->isSet->isChecked());
-
-    return mAction;
+  return mAction;
 }

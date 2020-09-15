@@ -26,124 +26,111 @@
 #define TOOLS_CATHEDRAL_SRC_OBJECTLIST_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QWidget>
 
 // objects Includes
 #include <Object.h>
 
-namespace Ui
-{
+namespace Ui {
 
 class ObjectList;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 class ObjectListModel;
 class QSortFilterProxyModel;
 
-class ObjectList : public QWidget
-{
-    Q_OBJECT
+class ObjectList : public QWidget {
+  Q_OBJECT
 
-public:
-    explicit ObjectList(QWidget *pParent = 0);
-    virtual ~ObjectList();
+ public:
+  explicit ObjectList(QWidget* pParent = 0);
+  virtual ~ObjectList();
 
-    virtual void SetMainWindow(MainWindow *pMainWindow);
+  virtual void SetMainWindow(MainWindow* pMainWindow);
 
-    virtual void SetObjectList(const std::vector<
-        std::shared_ptr<libcomp::Object>>& objs);
+  virtual void SetObjectList(
+      const std::vector<std::shared_ptr<libcomp::Object>>& objs);
 
-    virtual QString GetObjectID(const std::shared_ptr<
-        libcomp::Object>& obj) const = 0;
-    virtual QString GetObjectName(const std::shared_ptr<
-        libcomp::Object>& obj) const;
+  virtual QString GetObjectID(
+      const std::shared_ptr<libcomp::Object>& obj) const = 0;
+  virtual QString GetObjectName(
+      const std::shared_ptr<libcomp::Object>& obj) const;
 
-    bool Select(const std::shared_ptr<libcomp::Object>& obj);
+  bool Select(const std::shared_ptr<libcomp::Object>& obj);
 
-    virtual void LoadProperties(const std::shared_ptr<libcomp::Object>& obj);
-    virtual void SaveProperties(const std::shared_ptr<libcomp::Object>& obj);
+  virtual void LoadProperties(const std::shared_ptr<libcomp::Object>& obj);
+  virtual void SaveProperties(const std::shared_ptr<libcomp::Object>& obj);
 
-    std::shared_ptr<libcomp::Object> GetActiveObject();
+  std::shared_ptr<libcomp::Object> GetActiveObject();
 
-    void SaveActiveProperties();
+  void SaveActiveProperties();
 
-    std::map<uint32_t, QString> GetObjectMapping() const;
+  std::map<uint32_t, QString> GetObjectMapping() const;
 
-    void SetReadOnly(bool readOnly);
+  void SetReadOnly(bool readOnly);
 
-    void ToggleMoveControls(bool visible);
+  void ToggleMoveControls(bool visible);
 
-    template<class T>
-    static bool Move(std::list<std::shared_ptr<T>>& list,
-        std::shared_ptr<T> obj, bool up)
-    {
-        auto iter = list.begin();
-        auto iter2 = list.end();
-        if(!up)
-        {
-            iter2 = list.begin();
-            iter2++;
-        }
-
-        while(iter != list.end() && (up || iter2 != list.end()))
-        {
-            if(*iter == obj)
-            {
-                if(up)
-                {
-                    // Make sure its not already at the top
-                    if(iter2 != list.end())
-                    {
-                        list.splice(iter2, list, iter);
-                    }
-                }
-                else
-                {
-                    list.splice(iter, list, iter2);
-                }
-                return true;
-            }
-
-            iter++;
-
-            if(up && iter2 == list.end())
-            {
-                iter2 = list.begin();
-            }
-            else
-            {
-                iter2++;
-            }
-        }
-
-        return false;
+  template <class T>
+  static bool Move(std::list<std::shared_ptr<T>>& list, std::shared_ptr<T> obj,
+                   bool up) {
+    auto iter = list.begin();
+    auto iter2 = list.end();
+    if (!up) {
+      iter2 = list.begin();
+      iter2++;
     }
 
-signals:
-    void selectedObjectChanged();
-    void objectMoved(std::shared_ptr<libcomp::Object> obj,
-        bool up);
+    while (iter != list.end() && (up || iter2 != list.end())) {
+      if (*iter == obj) {
+        if (up) {
+          // Make sure its not already at the top
+          if (iter2 != list.end()) {
+            list.splice(iter2, list, iter);
+          }
+        } else {
+          list.splice(iter, list, iter2);
+        }
+        return true;
+      }
 
-public slots:
-    virtual void Search(const QString& term);
-    virtual void SelectedObjectChanged();
-    void MoveUp();
-    void MoveDown();
+      iter++;
 
-protected:
-    MainWindow *mMainWindow;
-    ObjectListModel *mObjectModel;
-    QSortFilterProxyModel *mFilterModel;
+      if (up && iter2 == list.end()) {
+        iter2 = list.begin();
+      } else {
+        iter2++;
+      }
+    }
 
-    std::weak_ptr<libcomp::Object> mActiveObject;
+    return false;
+  }
 
-    Ui::ObjectList *ui;
+ signals:
+  void selectedObjectChanged();
+  void objectMoved(std::shared_ptr<libcomp::Object> obj, bool up);
 
-    bool mReadOnly;
+ public slots:
+  virtual void Search(const QString& term);
+  virtual void SelectedObjectChanged();
+  void MoveUp();
+  void MoveDown();
+
+ protected:
+  MainWindow* mMainWindow;
+  ObjectListModel* mObjectModel;
+  QSortFilterProxyModel* mFilterModel;
+
+  std::weak_ptr<libcomp::Object> mActiveObject;
+
+  Ui::ObjectList* ui;
+
+  bool mReadOnly;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_OBJECTLIST_H
+#endif  // TOOLS_CATHEDRAL_SRC_OBJECTLIST_H

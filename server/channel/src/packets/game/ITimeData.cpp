@@ -40,44 +40,40 @@
 
 using namespace channel;
 
-bool Parsers::ITimeData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ITimeData::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto definitionManager = server->GetDefinitionManager();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character ? character->GetProgress().Get() : nullptr;
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITIME_DATA);
+
+  reply.WriteS8(progress ? 0 : -1);
+
+  if (progress) {
+    auto houraiData = definitionManager->GetCHouraiData();
+
+    reply.WriteS8((int8_t)houraiData.size());
+    for (auto& pair : houraiData) {
+      reply.WriteS8(pair.first);
+      reply.WriteS16Little(progress->GetITimePoints(pair.first));
     }
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto definitionManager = server->GetDefinitionManager();
+  client->SendPacket(reply);
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character ? character->GetProgress().Get() : nullptr;
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITIME_DATA);
-
-    reply.WriteS8(progress ? 0 : -1);
-
-    if(progress)
-    {
-        auto houraiData = definitionManager->GetCHouraiData();
-
-        reply.WriteS8((int8_t)houraiData.size());
-        for(auto& pair : houraiData)
-        {
-            reply.WriteS8(pair.first);
-            reply.WriteS16Little(progress->GetITimePoints(pair.first));
-        }
-    }
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

@@ -29,48 +29,38 @@
 #include "ZoneWindow.h"
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_SpotRef.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-SpotRef::SpotRef(QWidget *pParent) : QWidget(pParent)
-{
-    ui = new Ui::SpotRef;
-    ui->setupUi(this);
+#include "ui_SpotRef.h"
 
-    // Hide the show button until the window is bound
-    ui->show->hide();
+SpotRef::SpotRef(QWidget *pParent) : QWidget(pParent) {
+  ui = new Ui::SpotRef;
+  ui->setupUi(this);
 
-    connect(ui->show, SIGNAL(clicked(bool)), this, SLOT(Show()));
+  // Hide the show button until the window is bound
+  ui->show->hide();
+
+  connect(ui->show, SIGNAL(clicked(bool)), this, SLOT(Show()));
 }
 
-SpotRef::~SpotRef()
-{
-    delete ui;
+SpotRef::~SpotRef() { delete ui; }
+
+void SpotRef::SetMainWindow(MainWindow *pMainWindow) {
+  mMainWindow = pMainWindow;
+  ui->show->show();
 }
 
-void SpotRef::SetMainWindow(MainWindow *pMainWindow)
-{
-    mMainWindow = pMainWindow;
-    ui->show->show();
+void SpotRef::SetValue(uint32_t spotID) {
+  ui->spotID->setValue((int32_t)spotID);
 }
 
-void SpotRef::SetValue(uint32_t spotID)
-{
-    ui->spotID->setValue((int32_t)spotID);
-}
+uint32_t SpotRef::GetValue() const { return (uint32_t)ui->spotID->value(); }
 
-uint32_t SpotRef::GetValue() const
-{
-    return (uint32_t)ui->spotID->value();
-}
-
-void SpotRef::Show()
-{
-    uint32_t spotID = GetValue();
-    if(mMainWindow && spotID)
-    {
-        auto zoneWindow = mMainWindow->GetZones();
-        zoneWindow->ShowSpot(spotID);
-    }
+void SpotRef::Show() {
+  uint32_t spotID = GetValue();
+  if (mMainWindow && spotID) {
+    auto zoneWindow = mMainWindow->GetZones();
+    zoneWindow->ShowSpot(spotID);
+  }
 }

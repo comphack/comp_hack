@@ -42,50 +42,48 @@
 
 using namespace channel;
 
-bool Parsers::EntrustRewardFinish::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::EntrustRewardFinish::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t choice = p.ReadS32Little();
+  int32_t choice = p.ReadS32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
 
-    auto otherClient = exchangeSession &&
-        exchangeSession->GetSourceEntityID() != cState->GetEntityID()
-        ? server->GetManagerConnection()->GetEntityClient(
-            exchangeSession->GetSourceEntityID(), false) : nullptr;
+  auto otherClient = exchangeSession && exchangeSession->GetSourceEntityID() !=
+                                            cState->GetEntityID()
+                         ? server->GetManagerConnection()->GetEntityClient(
+                               exchangeSession->GetSourceEntityID(), false)
+                         : nullptr;
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_REWARD_FINISH);
-    reply.WriteS8((int8_t)choice);
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_ENTRUST_REWARD_FINISH);
+  reply.WriteS8((int8_t)choice);
 
-    if(otherClient)
-    {
-        exchangeSession->SetLocked(true);
-        otherClient->SendPacketCopy(reply);
+  if (otherClient) {
+    exchangeSession->SetLocked(true);
+    otherClient->SendPacketCopy(reply);
 
-        reply.WriteS32Little(0);
-    }
-    else
-    {
-        reply.WriteS32Little(-1);
-    }
+    reply.WriteS32Little(0);
+  } else {
+    reply.WriteS32Little(-1);
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    if(exchangeSession && !otherClient)
-    {
-        server->GetCharacterManager()->EndExchange(client, 0);
-    }
+  if (exchangeSession && !otherClient) {
+    server->GetCharacterManager()->EndExchange(client, 0);
+  }
 
-    return true;
+  return true;
 }

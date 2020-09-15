@@ -37,22 +37,22 @@
 
 using namespace channel;
 
-bool Parsers::UnionFlag::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::UnionFlag::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    auto entityID = p.ReadS32Little();
-    (void)entityID;
+  auto entityID = p.ReadS32Little();
+  (void)entityID;
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->GetCharacterManager()->SendPluginFlags(client);
+  server->GetCharacterManager()->SendPluginFlags(client);
 
-    return true;
+  return true;
 }

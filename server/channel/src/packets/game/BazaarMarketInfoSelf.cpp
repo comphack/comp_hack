@@ -44,92 +44,89 @@
 
 using namespace channel;
 
-bool Parsers::BazaarMarketInfoSelf::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BazaarMarketInfoSelf::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto worldDB = server->GetWorldDatabase();
+
+  // Always reload
+  auto bazaarData = objects::BazaarData::LoadBazaarDataByAccount(
+      worldDB, state->GetAccountUID());
+
+  auto character = bazaarData ? bazaarData->LoadCharacter(worldDB) : nullptr;
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_INFO_SELF);
+  reply.WriteS32Little(0);  // Success
+  reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                            character ? character->GetName() : "", true);
+  reply.WriteS8(bazaarData ? (int8_t)bazaarData->GetChannelID() : -1);
+  reply.WriteU32Little(bazaarData ? bazaarData->GetZone() : 0);
+  reply.WriteU32Little(bazaarData ? bazaarData->GetMarketID() : 0);
+  reply.WriteU32Little(bazaarData ? bazaarData->GetMarketID()
+                                  : 0);  // Unique ID?
+  reply.WriteS32Little(15);              // Max item slots
+  reply.WriteS16Little(bazaarData ? bazaarData->GetNPCType() : 0);
+  reply.WriteS32Little(
+      bazaarData && bazaarData->GetState() !=
+                        objects::BazaarData::State_t::BAZAAR_INACTIVE
+          ? ChannelServer::GetExpirationInSeconds(bazaarData->GetExpiration())
+          : -1);
+
+  if (bazaarData) {
+    reply.WriteString16Little(state->GetClientStringEncoding(),
+                              bazaarData->GetComment(), true);
+
+    int32_t itemCount = 0;
+    for (auto bItem : bazaarData->GetItems()) {
+      if (!bItem.IsNull()) {
+        itemCount++;
+      }
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto worldDB = server->GetWorldDatabase();
+    bool marketActive =
+        bazaarData->GetState() == objects::BazaarData::State_t::BAZAAR_ACTIVE;
+    reply.WriteS32Little(itemCount);
+    for (size_t i = 0; i < 15; i++) {
+      auto bItem = bazaarData->GetItems(i);
+      if (!bItem.IsNull()) {
+        auto item = bItem->GetItem().Get(worldDB);
 
-    // Always reload
-    auto bazaarData = objects::BazaarData::LoadBazaarDataByAccount(worldDB,
-        state->GetAccountUID());
+        reply.WriteS8((int8_t)i);
 
-    auto character = bazaarData ? bazaarData->LoadCharacter(worldDB) : nullptr;
+        // Item states: Selling/removable/sold
+        reply.WriteS8(bItem->GetSold() ? 2 : (marketActive ? 0 : 1));
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_INFO_SELF);
-    reply.WriteS32Little(0);    // Success
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-        character ? character->GetName() : "", true);
-    reply.WriteS8(bazaarData ? (int8_t)bazaarData->GetChannelID() : -1);
-    reply.WriteU32Little(bazaarData ? bazaarData->GetZone() : 0);
-    reply.WriteU32Little(bazaarData ? bazaarData->GetMarketID() : 0);
-    reply.WriteU32Little(bazaarData ? bazaarData->GetMarketID() : 0);   // Unique ID?
-    reply.WriteS32Little(15);    // Max item slots
-    reply.WriteS16Little(bazaarData ? bazaarData->GetNPCType() : 0);
-    reply.WriteS32Little(bazaarData && bazaarData->GetState() !=
-        objects::BazaarData::State_t::BAZAAR_INACTIVE ?
-        ChannelServer::GetExpirationInSeconds(bazaarData->GetExpiration()) : -1);
+        reply.WriteFloat(0.f);  // Unknown
+        reply.WriteS64Little(item ? state->GetObjectID(item->GetUUID()) : -1);
 
-    if(bazaarData)
-    {
-        reply.WriteString16Little(state->GetClientStringEncoding(),
-            bazaarData->GetComment(), true);
+        reply.WriteS32Little((int32_t)bItem->GetCost());
 
-        int32_t itemCount = 0;
-        for(auto bItem : bazaarData->GetItems())
-        {
-            if(!bItem.IsNull())
-            {
-                itemCount++;
-            }
-        }
+        reply.WriteU32Little(bItem->GetType());
+        reply.WriteU16Little(bItem->GetStackSize());
 
-        bool marketActive = bazaarData->GetState() == objects::BazaarData::State_t::BAZAAR_ACTIVE;
-        reply.WriteS32Little(itemCount);
-        for(size_t i = 0; i < 15; i++)
-        {
-            auto bItem = bazaarData->GetItems(i);
-            if(!bItem.IsNull())
-            {
-                auto item = bItem->GetItem().Get(worldDB);
-
-                reply.WriteS8((int8_t)i);
-
-                // Item states: Selling/removable/sold
-                reply.WriteS8(bItem->GetSold() ? 2 : (marketActive ? 0 : 1));
-
-                reply.WriteFloat(0.f);  // Unknown
-                reply.WriteS64Little(item ? state->GetObjectID(item->GetUUID()) : -1);
-
-                reply.WriteS32Little((int32_t)bItem->GetCost());
-
-                reply.WriteU32Little(bItem->GetType());
-                reply.WriteU16Little(bItem->GetStackSize());
-
-                characterManager->GetItemDetailPacketData(reply, item, 1);
-            }
-        }
+        characterManager->GetItemDetailPacketData(reply, item, 1);
+      }
     }
-    else
-    {
-        reply.WriteString16Little(state->GetClientStringEncoding(),
-            "", true);
-        reply.WriteS32Little(0);
-    }
+  } else {
+    reply.WriteString16Little(state->GetClientStringEncoding(), "", true);
+    reply.WriteS32Little(0);
+  }
 
-    reply.WriteS32Little(15);    // Unknown
+  reply.WriteS32Little(15);  // Unknown
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

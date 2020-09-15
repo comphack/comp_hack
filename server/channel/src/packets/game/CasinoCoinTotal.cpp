@@ -38,25 +38,23 @@
 
 using namespace channel;
 
-bool Parsers::CasinoCoinTotal::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CasinoCoinTotal::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t unknown = p.ReadS32Little();
-    (void)unknown;
+  int32_t unknown = p.ReadS32Little();
+  (void)unknown;
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->GetCharacterManager()->SendCoinTotal(client, false);
+  server->GetCharacterManager()->SendCoinTotal(client, false);
 
-    return true;
+  return true;
 }

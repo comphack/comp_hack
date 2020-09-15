@@ -42,67 +42,65 @@
 
 using namespace channel;
 
-bool Parsers::TradeAccept::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TradeAccept::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
+
+  auto otherCState = exchangeSession
+                         ? std::dynamic_pointer_cast<CharacterState>(
+                               exchangeSession->GetOtherCharacterState())
+                         : nullptr;
+  auto otherClient = otherCState
+                         ? server->GetManagerConnection()->GetEntityClient(
+                               otherCState->GetEntityID(), false)
+                         : nullptr;
+
+  bool cancel = false;
+  if (!otherClient) {
+    cancel = true;
+  } else {
+    auto otherSession = otherClient->GetClientState()->GetExchangeSession();
+    if (!otherSession || otherSession->GetOtherCharacterState() != cState) {
+      cancel = true;
     }
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_ACCEPT);
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
+  if (cancel) {
+    state->SetExchangeSession(nullptr);
 
-    auto otherCState = exchangeSession ? std::dynamic_pointer_cast<CharacterState>(
-        exchangeSession->GetOtherCharacterState()) : nullptr;
-    auto otherClient = otherCState ? server->GetManagerConnection()->GetEntityClient(
-        otherCState->GetEntityID(), false) : nullptr;
-
-    bool cancel = false;
-    if(!otherClient)
-    {
-        cancel = true;
-    }
-    else
-    {
-        auto otherSession = otherClient->GetClientState()->GetExchangeSession();
-        if(!otherSession || otherSession->GetOtherCharacterState() != cState)
-        {
-            cancel = true;
-        }
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_ACCEPT);
-
-    if(cancel)
-    {
-        state->SetExchangeSession(nullptr);
-
-        // Rejected
-        reply.WriteS32Little(-1);
-        client->SendPacket(reply);
-        return true;
-    }
-
-    // Accepted
-    reply.WriteS32Little(0);
-
-    client->QueuePacketCopy(reply);
-
-    if(otherClient)
-    {
-        characterManager->SetStatusIcon(otherClient, 8);
-        otherClient->SendPacket(reply);
-    }
-
-    characterManager->SetStatusIcon(client, 8);
-
+    // Rejected
+    reply.WriteS32Little(-1);
+    client->SendPacket(reply);
     return true;
+  }
+
+  // Accepted
+  reply.WriteS32Little(0);
+
+  client->QueuePacketCopy(reply);
+
+  if (otherClient) {
+    characterManager->SetStatusIcon(otherClient, 8);
+    otherClient->SendPacket(reply);
+  }
+
+  characterManager->SetStatusIcon(client, 8);
+
+  return true;
 }

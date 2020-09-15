@@ -31,19 +31,18 @@
 
 class XmlTemplateObject;
 
-class XmlHandler
-{
-public:
-    XmlHandler() {}
+class XmlHandler {
+ public:
+  XmlHandler() {}
 
-    static void SimplifyObjects(std::list<tinyxml2::XMLNode*> nodes);
+  static void SimplifyObjects(std::list<tinyxml2::XMLNode*> nodes);
 
-    static void CorrectMap(tinyxml2::XMLNode* parentNode);
+  static void CorrectMap(tinyxml2::XMLNode* parentNode);
 
-    static std::list<libcomp::String> GetComments(tinyxml2::XMLNode* node);
+  static std::list<libcomp::String> GetComments(tinyxml2::XMLNode* node);
 
-    static std::shared_ptr<XmlTemplateObject> GetTemplateObject(
-        const libcomp::String& objType, tinyxml2::XMLDocument& templateDoc);
+  static std::shared_ptr<XmlTemplateObject> GetTemplateObject(
+      const libcomp::String& objType, tinyxml2::XMLDocument& templateDoc);
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_XMLHANDLER_H
+#endif  // TOOLS_CATHEDRAL_SRC_XMLHANDLER_H

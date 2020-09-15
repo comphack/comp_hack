@@ -43,63 +43,57 @@
 
 using namespace channel;
 
-bool Parsers::BikeBoostOff::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BikeBoostOff::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto zone = cState->GetZone();
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BIKE_BOOST_OFF);
+
+  if (cState->Ready(true) &&
+      cState->StatusEffectActive(SVR_CONST.STATUS_BIKE) &&
+      state->GetBikeBoosting()) {
+    // Success
+    reply.WriteS32Little(0);
+
+    state->SetBikeBoosting(false);
+    cState->RemoveAdditionalTokusei(SVR_CONST.TOKUSEI_BIKE_BOOST);
+
+    server->GetTokuseiManager()->Recalculate(cState, true);
+
+    // Show for other players if hidden
+    if (cState->GetDisplayState() == ActiveDisplayState_t::BIKE_BOOST) {
+      cState->SetDisplayState(ActiveDisplayState_t::ACTIVE);
+
+      auto zoneManager = server->GetZoneManager();
+      auto zConnections = zoneManager->GetZoneConnections(client, false);
+
+      // Resend all the character's info because they have been removed
+      server->GetCharacterManager()->SendOtherCharacterData(zConnections,
+                                                            state);
+
+      zoneManager->PopEntityForProduction(zConnections, cState->GetEntityID(),
+                                          4);
+      zoneManager->ShowEntity(zConnections, cState->GetEntityID());
     }
+  } else {
+    // Generic failure
+    reply.WriteS32Little(-1);
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  client->SendPacket(reply);
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto zone = cState->GetZone();
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BIKE_BOOST_OFF);
-
-    if(cState->Ready(true) &&
-        cState->StatusEffectActive(SVR_CONST.STATUS_BIKE) &&
-        state->GetBikeBoosting())
-    {
-        // Success
-        reply.WriteS32Little(0);
-        
-        state->SetBikeBoosting(false);
-        cState->RemoveAdditionalTokusei(SVR_CONST.TOKUSEI_BIKE_BOOST);
-
-        server->GetTokuseiManager()->Recalculate(cState, true);
-
-        // Show for other players if hidden
-        if(cState->GetDisplayState() == ActiveDisplayState_t::BIKE_BOOST)
-        {
-            cState->SetDisplayState(ActiveDisplayState_t::ACTIVE);
-
-            auto zoneManager = server->GetZoneManager();
-            auto zConnections = zoneManager->GetZoneConnections(client, false);
-
-            // Resend all the character's info because they have been removed
-            server->GetCharacterManager()->SendOtherCharacterData(zConnections,
-                state);
-
-            zoneManager->PopEntityForProduction(zConnections,
-                cState->GetEntityID(), 4);
-            zoneManager->ShowEntity(zConnections, cState->GetEntityID());
-        }
-    }
-    else
-    {
-        // Generic failure
-        reply.WriteS32Little(-1);
-    }
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

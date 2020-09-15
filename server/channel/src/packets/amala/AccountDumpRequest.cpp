@@ -44,81 +44,70 @@ using namespace channel;
 #define PART_SIZE (1024)
 
 void DumpAccount(AccountManager* accountManager,
-    const std::shared_ptr<ChannelClientConnection> client)
-{
-    auto state = client->GetClientState();
+                 const std::shared_ptr<ChannelClientConnection> client) {
+  auto state = client->GetClientState();
 
-    std::string dump = accountManager->DumpAccount(state).ToUtf8();
+  std::string dump = accountManager->DumpAccount(state).ToUtf8();
 
-    // Send the account dump to the client.
-    if(!dump.empty())
+  // Send the account dump to the client.
+  if (!dump.empty()) {
+    std::vector<char> dumpData(dump.c_str(), dump.c_str() + dump.size());
+
     {
-        std::vector<char> dumpData(dump.c_str(), dump.c_str() + dump.size());
+      auto accountName = state->GetAccountLogin()->GetAccount()->GetUsername();
 
-        {
-            auto accountName = state->GetAccountLogin()->GetAccount(
-                )->GetUsername();
+      libcomp::Packet reply;
+      reply.WritePacketCode(
+          ChannelToClientPacketCode_t::PACKET_AMALA_ACCOUNT_DUMP_HEADER);
+      reply.WriteU32Little((uint32_t)dump.size());
+      reply.WriteU32Little(((uint32_t)dump.size() + PART_SIZE - 1) / PART_SIZE);
+      reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                                libcomp::Crypto::SHA1(dumpData), true);
+      reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                                accountName, true);
 
-            libcomp::Packet reply;
-            reply.WritePacketCode(
-                ChannelToClientPacketCode_t::PACKET_AMALA_ACCOUNT_DUMP_HEADER);
-            reply.WriteU32Little((uint32_t)dump.size());
-            reply.WriteU32Little(((uint32_t)dump.size() + PART_SIZE - 1) /
-                PART_SIZE);
-            reply.WriteString16Little(
-                libcomp::Convert::Encoding_t::ENCODING_UTF8,
-                libcomp::Crypto::SHA1(dumpData), true);
-            reply.WriteString16Little(
-                libcomp::Convert::Encoding_t::ENCODING_UTF8,
-                accountName, true);
-
-            client->SendPacket(reply);
-        }
-
-        const char *szNextPart = &dumpData[0];
-        const char *szEnd = szNextPart + dump.size();
-
-        uint32_t partNumber = 1;
-
-        while(szNextPart < szEnd)
-        {
-            uint32_t partSize = (uint32_t)(szEnd - szNextPart);
-
-            if(partSize > PART_SIZE)
-            {
-                partSize = PART_SIZE;
-            }
-
-            libcomp::Packet reply;
-            reply.WritePacketCode(
-                ChannelToClientPacketCode_t::PACKET_AMALA_ACCOUNT_DUMP_PART);
-            reply.WriteU32Little(partNumber++);
-            reply.WriteU32Little(partSize);
-            reply.WriteArray(szNextPart, partSize);
-
-            client->SendPacket(reply);
-
-            szNextPart += partSize;
-        }
+      client->SendPacket(reply);
     }
+
+    const char* szNextPart = &dumpData[0];
+    const char* szEnd = szNextPart + dump.size();
+
+    uint32_t partNumber = 1;
+
+    while (szNextPart < szEnd) {
+      uint32_t partSize = (uint32_t)(szEnd - szNextPart);
+
+      if (partSize > PART_SIZE) {
+        partSize = PART_SIZE;
+      }
+
+      libcomp::Packet reply;
+      reply.WritePacketCode(
+          ChannelToClientPacketCode_t::PACKET_AMALA_ACCOUNT_DUMP_PART);
+      reply.WriteU32Little(partNumber++);
+      reply.WriteU32Little(partSize);
+      reply.WriteArray(szNextPart, partSize);
+
+      client->SendPacket(reply);
+
+      szNextPart += partSize;
+    }
+  }
 }
 
 bool Parsers::AmalaAccountDumpRequest::Parse(
-    libcomp::ManagerPacket *pPacketManager,
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(0 != p.Size())
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (0 != p.Size()) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->QueueWork(DumpAccount, server->GetAccountManager(), client);
+  server->QueueWork(DumpAccount, server->GetAccountManager(), client);
 
-    return true;
+  return true;
 }

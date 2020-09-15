@@ -26,51 +26,50 @@
 #define TOOLS_CATHEDRAL_SRC_ACTIONUI_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QWidget>
 
 // objects Includes
 #include <Action.h>
 
-namespace Ui
-{
+namespace Ui {
 
 class Action;
 
-} // namespace Ui
+}  // namespace Ui
 
 class ActionList;
 class MainWindow;
 
-class Action : public QWidget
-{
-    Q_OBJECT
+class Action : public QWidget {
+  Q_OBJECT
 
-public:
-    explicit Action(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~Action();
+ public:
+  explicit Action(ActionList *pList, MainWindow *pMainWindow,
+                  QWidget *pParent = 0);
+  virtual ~Action();
 
-    virtual void Load(const std::shared_ptr<objects::Action>& act) = 0;
-    virtual std::shared_ptr<objects::Action> Save() const = 0;
+  virtual void Load(const std::shared_ptr<objects::Action> &act) = 0;
+  virtual std::shared_ptr<objects::Action> Save() const = 0;
 
-    virtual void UpdatePosition(bool isFirst, bool isLast);
+  virtual void UpdatePosition(bool isFirst, bool isLast);
 
-public slots:
-    virtual void Remove();
-    virtual void MoveUp();
-    virtual void MoveDown();
-    virtual void ToggleBaseDisplay();
+ public slots:
+  virtual void Remove();
+  virtual void MoveUp();
+  virtual void MoveDown();
+  virtual void ToggleBaseDisplay();
 
-protected:
-    void LoadBaseProperties(const std::shared_ptr<objects::Action>& action);
-    void SaveBaseProperties(const std::shared_ptr<objects::Action>& action) const;
+ protected:
+  void LoadBaseProperties(const std::shared_ptr<objects::Action> &action);
+  void SaveBaseProperties(const std::shared_ptr<objects::Action> &action) const;
 
-    Ui::Action *ui;
+  Ui::Action *ui;
 
-    ActionList *mList;
-    MainWindow *mMainWindow;
+  ActionList *mList;
+  MainWindow *mMainWindow;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONUI_H

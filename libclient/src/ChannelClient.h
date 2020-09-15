@@ -37,89 +37,83 @@
 // Standard C++11 Includes
 #include <vector>
 
-namespace libtester
-{
+namespace libtester {
 
 typedef std::list<libcomp::Message::Message*> MessageList;
 
-class ChannelClient : public TestClient
-{
-public:
-    ChannelClient();
-    ChannelClient(const ChannelClient& other);
-    virtual ~ChannelClient();
+class ChannelClient : public TestClient {
+ public:
+  ChannelClient();
+  ChannelClient(const ChannelClient& other);
+  virtual ~ChannelClient();
 
-    bool WaitForPacket(ChannelToClientPacketCode_t code,
-        libcomp::ReadOnlyPacket& p, double& waitTime,
-        asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
+  bool WaitForPacket(ChannelToClientPacketCode_t code,
+                     libcomp::ReadOnlyPacket& p, double& waitTime,
+                     asio::steady_timer::duration timeout = DEFAULT_TIMEOUT);
 
-    bool Login(const libcomp::String& username,
-        const libcomp::String& password,
-        const libcomp::String& characterName = libcomp::String());
-    bool LoginWithKey(const libcomp::String& username,
-        int32_t sessionKey);
+  bool Login(const libcomp::String& username, const libcomp::String& password,
+             const libcomp::String& characterName = libcomp::String());
+  bool LoginWithKey(const libcomp::String& username, int32_t sessionKey);
 
-    bool SendData();
-    bool SendState();
-    bool SendPopulateZone();
+  bool SendData();
+  bool SendState();
+  bool SendPopulateZone();
 
-    bool AmalaRequestAccountDump();
+  bool AmalaRequestAccountDump();
 
-    bool Say(const libcomp::String& msg);
+  bool Say(const libcomp::String& msg);
 
-    bool ActivateSkill(int32_t entityID, uint32_t skillID,
-        uint32_t targetType, int64_t demonID);
-    bool ExecuteSkill(int32_t entityID, int8_t activationID,
-        int64_t demonID);
+  bool ActivateSkill(int32_t entityID, uint32_t skillID, uint32_t targetType,
+                     int64_t demonID);
+  bool ExecuteSkill(int32_t entityID, int8_t activationID, int64_t demonID);
 
-    bool ContractDemon(uint32_t demonID);
-    bool SummonDemon(int64_t demonID);
-    bool EventResponse(int32_t option);
+  bool ContractDemon(uint32_t demonID);
+  bool SummonDemon(int64_t demonID);
+  bool EventResponse(int32_t option);
 
-    int32_t GetEntityID() const;
-    int8_t GetActivationID() const;
-    int64_t GetDemonID(int8_t slot) const;
+  int32_t GetEntityID() const;
+  int8_t GetActivationID() const;
+  int64_t GetDemonID(int8_t slot) const;
 
-protected:
-    enum ChatType_t : uint16_t
-    {
+ protected:
+  enum ChatType_t : uint16_t {
 
-        CHAT_PARTY = 41,
-        CHAT_SHOUT = 44,
-        CHAT_SAY = 45,
-        CHAT_TELL = 46,
-        CHAT_SELF = 47,
-        CHAT_CLAN = 48,
-        CHAT_TEAM = 714,
-    };
+    CHAT_PARTY = 41,
+    CHAT_SHOUT = 44,
+    CHAT_SAY = 45,
+    CHAT_TELL = 46,
+    CHAT_SELF = 47,
+    CHAT_CLAN = 48,
+    CHAT_TEAM = 714,
+  };
 
-    virtual void HandlePacket(ChannelToClientPacketCode_t cmd,
-        libcomp::ReadOnlyPacket& p);
+  virtual void HandlePacket(ChannelToClientPacketCode_t cmd,
+                            libcomp::ReadOnlyPacket& p);
 
-private:
-    void HandleCharacterData(libcomp::ReadOnlyPacket& p);
-    void HandleDemonBoxData(libcomp::ReadOnlyPacket& p);
-    void HandleZoneChange(libcomp::ReadOnlyPacket& p);
+ private:
+  void HandleCharacterData(libcomp::ReadOnlyPacket& p);
+  void HandleDemonBoxData(libcomp::ReadOnlyPacket& p);
+  void HandleZoneChange(libcomp::ReadOnlyPacket& p);
 
-    void HandleAmalaServerVersion(libcomp::ReadOnlyPacket& p);
-    void HandleAmalaAccountDumpHeader(libcomp::ReadOnlyPacket& p);
-    void HandleAmalaAccountDumpPart(libcomp::ReadOnlyPacket& p);
+  void HandleAmalaServerVersion(libcomp::ReadOnlyPacket& p);
+  void HandleAmalaAccountDumpHeader(libcomp::ReadOnlyPacket& p);
+  void HandleAmalaAccountDumpPart(libcomp::ReadOnlyPacket& p);
 
-    int32_t mEntityID;
-    int32_t mPartnerEntityID;
-    int32_t mZoneID;
-    int8_t mActivationID;
-    int64_t mDemonIDs[10];
+  int32_t mEntityID;
+  int32_t mPartnerEntityID;
+  int32_t mZoneID;
+  int8_t mActivationID;
+  int64_t mDemonIDs[10];
 
-    uint32_t mAccountDumpParts;
-    uint32_t mLastAccountDumpPart;
-    libcomp::String mAccountDumpChecksum;
-    libcomp::String mAccountDumpAccountName;
-    std::vector<char> mAccountDumpData;
+  uint32_t mAccountDumpParts;
+  uint32_t mLastAccountDumpPart;
+  libcomp::String mAccountDumpChecksum;
+  libcomp::String mAccountDumpAccountName;
+  std::vector<char> mAccountDumpData;
 
-    std::shared_ptr<objects::Character> mCharacter;
+  std::shared_ptr<objects::Character> mCharacter;
 };
 
-} // namespace libtester
+}  // namespace libtester
 
-#endif // LIBTESTER_SRC_CHANNELCLIENT_H
+#endif  // LIBTESTER_SRC_CHANNELCLIENT_H

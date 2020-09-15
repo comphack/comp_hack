@@ -36,22 +36,22 @@
 
 using namespace channel;
 
-bool Parsers::DataSync::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DataSync::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)connection;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)connection;
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto syncManager = server->GetChannelSyncManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto syncManager = server->GetChannelSyncManager();
 
-    if(!syncManager->SyncIncoming(p))
-    {
-        return false;
-    }
+  if (!syncManager->SyncIncoming(p)) {
+    return false;
+  }
 
-    // Sync any records that need to relay back
-    syncManager->SyncOutgoing();
+  // Sync any records that need to relay back
+  syncManager->SyncOutgoing();
 
-    return true;
+  return true;
 }

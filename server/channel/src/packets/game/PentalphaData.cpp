@@ -43,57 +43,53 @@
 
 using namespace channel;
 
-bool Parsers::PentalphaData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PentalphaData::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
-    auto matchManager = server->GetMatchManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto matchManager = server->GetMatchManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto character = state->GetCharacterState()->GetEntity();
-    auto progress = character ? character->GetProgress()
-        .Get(server->GetWorldDatabase()) : nullptr;
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto character = state->GetCharacterState()->GetEntity();
+  auto progress = character
+                      ? character->GetProgress().Get(server->GetWorldDatabase())
+                      : nullptr;
 
-    auto entry = matchManager->LoadPentalphaData(client);
-    auto previousEntry = state->GetPentalphaData(1).Get();
-    auto match = matchManager->GetPentalphaMatch(false);
-    auto previous = matchManager->GetPentalphaMatch(true);
+  auto entry = matchManager->LoadPentalphaData(client);
+  auto previousEntry = state->GetPentalphaData(1).Get();
+  auto match = matchManager->GetPentalphaMatch(false);
+  auto previous = matchManager->GetPentalphaMatch(true);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PENTALPHA_DATA);
-    reply.WriteS32Little(0);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PENTALPHA_DATA);
+  reply.WriteS32Little(0);
 
-    for(size_t i = 0; i < 5; i++)
-    {
-        reply.WriteS32Little(progress ? progress->GetBethel(i) : 0);
-    }
+  for (size_t i = 0; i < 5; i++) {
+    reply.WriteS32Little(progress ? progress->GetBethel(i) : 0);
+  }
 
-    reply.WriteS32Little((int32_t)(previousEntry
-        ? previousEntry->GetTeam() : -1));
-    reply.WriteS32Little(entry ? entry->GetTeam() : -1);
+  reply.WriteS32Little(
+      (int32_t)(previousEntry ? previousEntry->GetTeam() : -1));
+  reply.WriteS32Little(entry ? entry->GetTeam() : -1);
 
-    reply.WriteS32Little(progress ? progress->GetCowrie() : 0);
-    reply.WriteS32Little(previousEntry ? previousEntry->GetCowrie() : 0);
+  reply.WriteS32Little(progress ? progress->GetCowrie() : 0);
+  reply.WriteS32Little(previousEntry ? previousEntry->GetCowrie() : 0);
 
-    reply.WriteS32Little(0);    // Unknown/unused
+  reply.WriteS32Little(0);  // Unknown/unused
 
-    for(size_t i = 0; i < 5; i++)
-    {
-        reply.WriteS32Little((int32_t)(match ? match->GetPoints(i) : 0));
-        reply.WriteS32Little((int32_t)(previous
-            ? previous->GetRankings(i) : 0));
-    }
+  for (size_t i = 0; i < 5; i++) {
+    reply.WriteS32Little((int32_t)(match ? match->GetPoints(i) : 0));
+    reply.WriteS32Little((int32_t)(previous ? previous->GetRankings(i) : 0));
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

@@ -49,314 +49,293 @@
 
 using namespace channel;
 
-bool Parsers::CharacterLogin::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CharacterLogin::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)connection;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)connection;
 
-    if(p.Size() < 5)
-    {
-        LogCharacterManagerErrorMsg(
-            "Invalid response received for CharacterLogin.\n");
+  if (p.Size() < 5) {
+    LogCharacterManagerErrorMsg(
+        "Invalid response received for CharacterLogin.\n");
 
-        return false;
-    }
+    return false;
+  }
 
-    uint8_t updateFlags = p.ReadU8();
+  uint8_t updateFlags = p.ReadU8();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    bool connectionsFound = false;
-    auto clients = server->GetManagerConnection()
-        ->GatherWorldTargetClients(p, connectionsFound);
-    if(!connectionsFound)
-    {
-        LogCharacterManagerErrorMsg(
-            "Connections not found for CharacterLogin.\n");
+  bool connectionsFound = false;
+  auto clients = server->GetManagerConnection()->GatherWorldTargetClients(
+      p, connectionsFound);
+  if (!connectionsFound) {
+    LogCharacterManagerErrorMsg("Connections not found for CharacterLogin.\n");
 
-        return false;
-    }
+    return false;
+  }
 
-    if(clients.size() == 0)
-    {
-        // Character(s) are not here anymore, exit now
-        return true;
-    }
-
-    // Pull all the logins
-    auto worldDB = server->GetWorldDatabase();
-    auto login = std::make_shared<objects::CharacterLogin>();
-    if(!login->LoadPacket(p, false))
-    {
-        LogCharacterManagerErrorMsg(
-            "Invalid character info received for CharacterLogin.\n");
-
-        return false;
-    }
-
-    auto member = std::make_shared<objects::PartyCharacter>();
-    if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO &&
-        !member->LoadPacket(p, true))
-    {
-        LogCharacterManagerErrorMsg(
-            "Invalid party member character received for CharacterLogin.\n");
-
-        return false;
-    }
-
-    auto partyDemon = std::make_shared<objects::PartyMember>();
-    if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO &&
-        !partyDemon->LoadPacket(p, true))
-    {
-        LogCharacterManagerErrorMsg(
-            "Invalid party member demon received for CharacterLogin.\n");
-
-        return false;
-    }
-
-    // Update friend information
-    if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_FRIEND_FLAGS)
-    {
-        auto fSettings = objects::FriendSettings::LoadFriendSettingsByCharacter(
-            worldDB, login->GetCharacter().GetUUID());
-        if(!fSettings)
-        {
-            LogCharacterManagerError([&]()
-            {
-                return libcomp::String("Character friend settings "
-                    "failed to load: %1\n")
-                    .Arg(login->GetCharacter().GetUUID().ToString());
-            });
-
-            return true;
-        }
-
-        auto friends = fSettings->GetFriends();
-        std::list<std::shared_ptr<ChannelClientConnection>> friendConnections;
-        for(auto client : clients)
-        {
-            auto uuid = client->GetClientState()->GetCharacterState()
-                ->GetEntity()->GetUUID();
-            for(auto f : friends)
-            {
-                if(f == uuid)
-                {
-                    friendConnections.push_back(client);
-                    break;
-                }
-            }
-        }
-
-        libcomp::Packet packet;
-        packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FRIEND_DATA);
-        packet.WriteS32Little(login->GetWorldCID());
-        packet.WriteU8(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_FRIEND_FLAGS);
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_STATUS)
-        {
-            packet.WriteS8((int8_t)login->GetStatus());
-        }
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE)
-        {
-            packet.WriteS32Little((int32_t)login->GetZoneID());
-        }
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_CHANNEL)
-        {
-            packet.WriteS8(login->GetChannelID());
-        }
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_MESSAGE)
-        {
-            packet.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-                fSettings->GetFriendMessage(), true);
-        }
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_FRIEND_UNKNOWN)
-        {
-            packet.WriteU32Little((uint32_t)login->GetWorldCID());
-            packet.WriteS8(0);   // Unknown
-        }
-
-        ChannelClientConnection::BroadcastPacket(friendConnections, packet);
-    }
-
-    // Update clan information
-    if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC)
-    {
-        int32_t clanID = p.ReadS32Little();
-
-        // Load the character if they are not local
-        auto character = login->GetCharacter().Get(worldDB);
-
-        std::list<std::shared_ptr<ChannelClientConnection>> clanConnections;
-        for(auto client : clients)
-        {
-            auto clientChar = client->GetClientState()->GetCharacterState()
-                ->GetEntity();
-            if(clientChar->GetClan().GetUUID() == character->GetClan().GetUUID())
-            {
-                clanConnections.push_back(client);
-            }
-        }
-
-        libcomp::Packet packet;
-        packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_DATA);
-        packet.WriteS32Little(clanID);
-        packet.WriteS32Little(login->GetWorldCID());
-        packet.WriteS8(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC);
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_STATUS)
-        {
-            packet.WriteS8((int8_t)login->GetStatus());
-        }
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE)
-        {
-            packet.WriteS32Little((int32_t)login->GetZoneID());
-        }
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_CHANNEL)
-        {
-            packet.WriteS8(login->GetChannelID());
-        }
-
-        ChannelClientConnection::BroadcastPacket(clanConnections, packet);
-    }
-
-    // Update local party information
-    if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_FLAGS
-        && login->GetPartyID())
-    {
-        // Pull the local state if it still exists
-        uint32_t zoneID = login->GetZoneID();
-        auto state = ClientState::GetEntityClientState(login->GetWorldCID(), true);
-        int32_t localEntityID = state ? state->GetCharacterState()->GetEntityID() : -1;
-        int32_t localDemonEntityID = state ? state->GetDemonState()->GetEntityID() : -1;
-        auto localZone = state ? state->GetZone() : nullptr;
-
-        std::shared_ptr<ChannelClientConnection> selfConnection;
-        std::list<std::shared_ptr<ChannelClientConnection>> partyConnections;
-        std::list<std::shared_ptr<ChannelClientConnection>> sameZoneConnections;
-        std::list<std::shared_ptr<ChannelClientConnection>> differentZoneConnections;
-        for(auto client : clients)
-        {
-            auto otherState = client->GetClientState();
-            auto otherLogin = otherState->GetAccountLogin()->GetCharacterLogin();
-            if(state == otherState)
-            {
-                selfConnection = client;
-            }
-            else if(otherState->GetPartyID() == login->GetPartyID())
-            {
-                partyConnections.push_back(client);
-                if(localZone && otherState->GetZone() == localZone)
-                {
-                    sameZoneConnections.push_back(client);
-                }
-                else
-                {
-                    differentZoneConnections.push_back(client);
-                }
-            }
-        }
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE)
-        {
-            // Map connections by local entity visibility
-            std::unordered_map<bool, std::list<std::shared_ptr<ChannelClientConnection>>> cMap;
-            cMap[true] = sameZoneConnections;
-            cMap[false] = differentZoneConnections;
-
-            // The zone needs to be relayed back to the player (for some reason)
-            if(selfConnection)
-            {
-                cMap[true].push_back(selfConnection);
-            }
-
-            for(auto pair : cMap)
-            {
-                if(pair.second.size() == 0) continue;
-
-                libcomp::Packet packet;
-                packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_MEMBER_ZONE);
-                packet.WriteS32Little(pair.first ? localEntityID : -1);
-                packet.WriteS32Little((int32_t)zoneID);
-                packet.WriteS32Little(login->GetWorldCID());
-
-                ChannelClientConnection::BroadcastPacket(pair.second, packet);
-            }
-
-            if(differentZoneConnections.size() > 0)
-            {
-                libcomp::Packet packet;
-                packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_MEMBER_PARTNER);
-                packet.WriteS32Little(-1);
-                packet.WriteS32Little(-1);
-                packet.WriteU32Little(partyDemon->GetDemonType());
-                packet.WriteU16Little(0);
-                packet.WriteU16Little(0);
-                packet.WriteS32Little(login->GetWorldCID());
-
-                ChannelClientConnection::BroadcastPacket(differentZoneConnections, packet);
-            }
-        }
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO &&
-            sameZoneConnections.size() > 0)
-        {
-            libcomp::Packet packet;
-            packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_MEMBER_UPDATE);
-            packet.WriteS32Little(localEntityID);
-            packet.WriteU8(member->GetLevel());
-            packet.WriteU16Little((uint16_t)member->GetHP());
-            packet.WriteU16Little((uint16_t)member->GetMaxHP());
-            packet.WriteU16Little((uint16_t)member->GetMP());
-            packet.WriteU16Little((uint16_t)member->GetMaxMP());
-
-            int8_t unknownCount = 0;
-            packet.WriteS8(unknownCount);
-            for(int8_t i = 0; i < unknownCount; i++)
-            {
-                packet.WriteS32Little(0);    // Unknown
-            }
-
-            packet.WriteS32Little(login->GetWorldCID());
-            packet.WriteS8(0);  // Unknown
-
-            ChannelClientConnection::BroadcastPacket(sameZoneConnections, packet);
-        }
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO &&
-            sameZoneConnections.size() > 0)
-        {
-            libcomp::Packet packet;
-            packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_MEMBER_PARTNER);
-            packet.WriteS32Little(localEntityID);
-            packet.WriteS32Little(localDemonEntityID);
-            packet.WriteU32Little(partyDemon->GetDemonType());
-            packet.WriteU16Little((uint16_t)partyDemon->GetHP());
-            packet.WriteU16Little((uint16_t)partyDemon->GetMaxHP());
-            packet.WriteS32Little(login->GetWorldCID());
-
-            ChannelClientConnection::BroadcastPacket(sameZoneConnections, packet);
-        }
-
-        if(updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_ICON)
-        {
-            libcomp::Packet packet;
-            packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_MEMBER_ICON);
-            packet.WriteS32Little(localEntityID);
-            packet.WriteU8(0);
-            packet.WriteU8(0);
-            packet.WriteU8(0);
-            packet.WriteS8(0);
-
-            ChannelClientConnection::BroadcastPacket(partyConnections, packet);
-        }
-    }
-
+  if (clients.size() == 0) {
+    // Character(s) are not here anymore, exit now
     return true;
+  }
+
+  // Pull all the logins
+  auto worldDB = server->GetWorldDatabase();
+  auto login = std::make_shared<objects::CharacterLogin>();
+  if (!login->LoadPacket(p, false)) {
+    LogCharacterManagerErrorMsg(
+        "Invalid character info received for CharacterLogin.\n");
+
+    return false;
+  }
+
+  auto member = std::make_shared<objects::PartyCharacter>();
+  if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO &&
+      !member->LoadPacket(p, true)) {
+    LogCharacterManagerErrorMsg(
+        "Invalid party member character received for CharacterLogin.\n");
+
+    return false;
+  }
+
+  auto partyDemon = std::make_shared<objects::PartyMember>();
+  if (updateFlags &
+          (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO &&
+      !partyDemon->LoadPacket(p, true)) {
+    LogCharacterManagerErrorMsg(
+        "Invalid party member demon received for CharacterLogin.\n");
+
+    return false;
+  }
+
+  // Update friend information
+  if (updateFlags &
+      (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_FRIEND_FLAGS) {
+    auto fSettings = objects::FriendSettings::LoadFriendSettingsByCharacter(
+        worldDB, login->GetCharacter().GetUUID());
+    if (!fSettings) {
+      LogCharacterManagerError([&]() {
+        return libcomp::String("Character friend settings failed to load: %1\n")
+            .Arg(login->GetCharacter().GetUUID().ToString());
+      });
+
+      return true;
+    }
+
+    auto friends = fSettings->GetFriends();
+    std::list<std::shared_ptr<ChannelClientConnection>> friendConnections;
+    for (auto client : clients) {
+      auto uuid =
+          client->GetClientState()->GetCharacterState()->GetEntity()->GetUUID();
+      for (auto f : friends) {
+        if (f == uuid) {
+          friendConnections.push_back(client);
+          break;
+        }
+      }
+    }
+
+    libcomp::Packet packet;
+    packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FRIEND_DATA);
+    packet.WriteS32Little(login->GetWorldCID());
+    packet.WriteU8(updateFlags &
+                   (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_FRIEND_FLAGS);
+
+    if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_STATUS) {
+      packet.WriteS8((int8_t)login->GetStatus());
+    }
+
+    if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE) {
+      packet.WriteS32Little((int32_t)login->GetZoneID());
+    }
+
+    if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_CHANNEL) {
+      packet.WriteS8(login->GetChannelID());
+    }
+
+    if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_MESSAGE) {
+      packet.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                                 fSettings->GetFriendMessage(), true);
+    }
+
+    if (updateFlags &
+        (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_FRIEND_UNKNOWN) {
+      packet.WriteU32Little((uint32_t)login->GetWorldCID());
+      packet.WriteS8(0);  // Unknown
+    }
+
+    ChannelClientConnection::BroadcastPacket(friendConnections, packet);
+  }
+
+  // Update clan information
+  if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC) {
+    int32_t clanID = p.ReadS32Little();
+
+    // Load the character if they are not local
+    auto character = login->GetCharacter().Get(worldDB);
+
+    std::list<std::shared_ptr<ChannelClientConnection>> clanConnections;
+    for (auto client : clients) {
+      auto clientChar =
+          client->GetClientState()->GetCharacterState()->GetEntity();
+      if (clientChar->GetClan().GetUUID() == character->GetClan().GetUUID()) {
+        clanConnections.push_back(client);
+      }
+    }
+
+    libcomp::Packet packet;
+    packet.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_DATA);
+    packet.WriteS32Little(clanID);
+    packet.WriteS32Little(login->GetWorldCID());
+    packet.WriteS8(updateFlags &
+                   (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC);
+
+    if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_STATUS) {
+      packet.WriteS8((int8_t)login->GetStatus());
+    }
+
+    if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE) {
+      packet.WriteS32Little((int32_t)login->GetZoneID());
+    }
+
+    if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_CHANNEL) {
+      packet.WriteS8(login->GetChannelID());
+    }
+
+    ChannelClientConnection::BroadcastPacket(clanConnections, packet);
+  }
+
+  // Update local party information
+  if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_FLAGS &&
+      login->GetPartyID()) {
+    // Pull the local state if it still exists
+    uint32_t zoneID = login->GetZoneID();
+    auto state = ClientState::GetEntityClientState(login->GetWorldCID(), true);
+    int32_t localEntityID =
+        state ? state->GetCharacterState()->GetEntityID() : -1;
+    int32_t localDemonEntityID =
+        state ? state->GetDemonState()->GetEntityID() : -1;
+    auto localZone = state ? state->GetZone() : nullptr;
+
+    std::shared_ptr<ChannelClientConnection> selfConnection;
+    std::list<std::shared_ptr<ChannelClientConnection>> partyConnections;
+    std::list<std::shared_ptr<ChannelClientConnection>> sameZoneConnections;
+    std::list<std::shared_ptr<ChannelClientConnection>>
+        differentZoneConnections;
+    for (auto client : clients) {
+      auto otherState = client->GetClientState();
+      auto otherLogin = otherState->GetAccountLogin()->GetCharacterLogin();
+      if (state == otherState) {
+        selfConnection = client;
+      } else if (otherState->GetPartyID() == login->GetPartyID()) {
+        partyConnections.push_back(client);
+        if (localZone && otherState->GetZone() == localZone) {
+          sameZoneConnections.push_back(client);
+        } else {
+          differentZoneConnections.push_back(client);
+        }
+      }
+    }
+
+    if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_ZONE) {
+      // Map connections by local entity visibility
+      std::unordered_map<bool,
+                         std::list<std::shared_ptr<ChannelClientConnection>>>
+          cMap;
+      cMap[true] = sameZoneConnections;
+      cMap[false] = differentZoneConnections;
+
+      // The zone needs to be relayed back to the player (for some reason)
+      if (selfConnection) {
+        cMap[true].push_back(selfConnection);
+      }
+
+      for (auto pair : cMap) {
+        if (pair.second.size() == 0) continue;
+
+        libcomp::Packet packet;
+        packet.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_PARTY_MEMBER_ZONE);
+        packet.WriteS32Little(pair.first ? localEntityID : -1);
+        packet.WriteS32Little((int32_t)zoneID);
+        packet.WriteS32Little(login->GetWorldCID());
+
+        ChannelClientConnection::BroadcastPacket(pair.second, packet);
+      }
+
+      if (differentZoneConnections.size() > 0) {
+        libcomp::Packet packet;
+        packet.WritePacketCode(
+            ChannelToClientPacketCode_t::PACKET_PARTY_MEMBER_PARTNER);
+        packet.WriteS32Little(-1);
+        packet.WriteS32Little(-1);
+        packet.WriteU32Little(partyDemon->GetDemonType());
+        packet.WriteU16Little(0);
+        packet.WriteU16Little(0);
+        packet.WriteS32Little(login->GetWorldCID());
+
+        ChannelClientConnection::BroadcastPacket(differentZoneConnections,
+                                                 packet);
+      }
+    }
+
+    if (updateFlags &
+            (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_INFO &&
+        sameZoneConnections.size() > 0) {
+      libcomp::Packet packet;
+      packet.WritePacketCode(
+          ChannelToClientPacketCode_t::PACKET_PARTY_MEMBER_UPDATE);
+      packet.WriteS32Little(localEntityID);
+      packet.WriteU8(member->GetLevel());
+      packet.WriteU16Little((uint16_t)member->GetHP());
+      packet.WriteU16Little((uint16_t)member->GetMaxHP());
+      packet.WriteU16Little((uint16_t)member->GetMP());
+      packet.WriteU16Little((uint16_t)member->GetMaxMP());
+
+      int8_t unknownCount = 0;
+      packet.WriteS8(unknownCount);
+      for (int8_t i = 0; i < unknownCount; i++) {
+        packet.WriteS32Little(0);  // Unknown
+      }
+
+      packet.WriteS32Little(login->GetWorldCID());
+      packet.WriteS8(0);  // Unknown
+
+      ChannelClientConnection::BroadcastPacket(sameZoneConnections, packet);
+    }
+
+    if (updateFlags &
+            (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_DEMON_INFO &&
+        sameZoneConnections.size() > 0) {
+      libcomp::Packet packet;
+      packet.WritePacketCode(
+          ChannelToClientPacketCode_t::PACKET_PARTY_MEMBER_PARTNER);
+      packet.WriteS32Little(localEntityID);
+      packet.WriteS32Little(localDemonEntityID);
+      packet.WriteU32Little(partyDemon->GetDemonType());
+      packet.WriteU16Little((uint16_t)partyDemon->GetHP());
+      packet.WriteU16Little((uint16_t)partyDemon->GetMaxHP());
+      packet.WriteS32Little(login->GetWorldCID());
+
+      ChannelClientConnection::BroadcastPacket(sameZoneConnections, packet);
+    }
+
+    if (updateFlags &
+        (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_PARTY_ICON) {
+      libcomp::Packet packet;
+      packet.WritePacketCode(
+          ChannelToClientPacketCode_t::PACKET_PARTY_MEMBER_ICON);
+      packet.WriteS32Little(localEntityID);
+      packet.WriteU8(0);
+      packet.WriteU8(0);
+      packet.WriteU8(0);
+      packet.WriteS8(0);
+
+      ChannelClientConnection::BroadcastPacket(partyConnections, packet);
+    }
+  }
+
+  return true;
 }

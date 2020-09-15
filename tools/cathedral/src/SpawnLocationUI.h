@@ -26,40 +26,38 @@
 #define TOOLS_CATHEDRAL_SRC_SPAWNLOCATIONUI_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QWidget>
 
 // Standard C++11 Includes
 #include <memory>
 
-namespace objects
-{
+namespace objects {
 
 class SpawnLocation;
 
-} // namespace objects
+}  // namespace objects
 
-namespace Ui
-{
+namespace Ui {
 
 class SpawnLocation;
 
-} // namespace Ui
+}  // namespace Ui
 
-class SpawnLocation : public QWidget
-{
-    Q_OBJECT
+class SpawnLocation : public QWidget {
+  Q_OBJECT
 
-public:
-    explicit SpawnLocation(QWidget *pParent = 0);
-    virtual ~SpawnLocation();
+ public:
+  explicit SpawnLocation(QWidget *pParent = 0);
+  virtual ~SpawnLocation();
 
-    void Load(const std::shared_ptr<objects::SpawnLocation>& loc);
-    std::shared_ptr<objects::SpawnLocation> Save() const;
+  void Load(const std::shared_ptr<objects::SpawnLocation> &loc);
+  std::shared_ptr<objects::SpawnLocation> Save() const;
 
-protected:
-    Ui::SpawnLocation *prop;
+ protected:
+  Ui::SpawnLocation *prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_SPAWNLOCATIONUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_SPAWNLOCATIONUI_H

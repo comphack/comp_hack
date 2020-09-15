@@ -33,106 +33,87 @@
 
 using namespace logic;
 
-LogicWorker::LogicWorker() : libcomp::Worker()
-{
-    // Construct the managers.
-    auto amalaManager =
-        std::make_shared<AmalaManager>(this, GetMessageQueue());
-    auto connectionManager =
-        std::make_shared<ConnectionManager>(this, GetMessageQueue());
-    auto lobbyManager = std::make_shared<LobbyManager>(this, GetMessageQueue());
+LogicWorker::LogicWorker() : libcomp::Worker() {
+  // Construct the managers.
+  auto amalaManager = std::make_shared<AmalaManager>(this, GetMessageQueue());
+  auto connectionManager =
+      std::make_shared<ConnectionManager>(this, GetMessageQueue());
+  auto lobbyManager = std::make_shared<LobbyManager>(this, GetMessageQueue());
 
-    // Save pointers to the managers.
-    mAmalaManager = amalaManager.get();
-    mConnectionManager = connectionManager.get();
-    mLobbyManager = lobbyManager.get();
+  // Save pointers to the managers.
+  mAmalaManager = amalaManager.get();
+  mConnectionManager = connectionManager.get();
+  mLobbyManager = lobbyManager.get();
 
-    // Add the managers so they may process the queue.
-    AddManager(amalaManager);
-    AddManager(connectionManager);
-    AddManager(lobbyManager);
+  // Add the managers so they may process the queue.
+  AddManager(amalaManager);
+  AddManager(connectionManager);
+  AddManager(lobbyManager);
 }
 
-LogicWorker::~LogicWorker()
-{
-    mAmalaManager = nullptr;
-    mConnectionManager = nullptr;
-    mLobbyManager = nullptr;
+LogicWorker::~LogicWorker() {
+  mAmalaManager = nullptr;
+  mConnectionManager = nullptr;
+  mLobbyManager = nullptr;
 }
 
-bool LogicWorker::SendToGame(libcomp::Message::Message *pMessage)
-{
-    if(mGameMessageQueue)
-    {
-        mGameMessageQueue->Enqueue(pMessage);
+bool LogicWorker::SendToGame(libcomp::Message::Message *pMessage) {
+  if (mGameMessageQueue) {
+    mGameMessageQueue->Enqueue(pMessage);
 
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
-bool LogicWorker::SendToLogic(libcomp::Message::Message *pMessage)
-{
-    auto pMessageQueue = GetMessageQueue();
+bool LogicWorker::SendToLogic(libcomp::Message::Message *pMessage) {
+  auto pMessageQueue = GetMessageQueue();
 
-    if(pMessageQueue)
-    {
-        pMessageQueue->Enqueue(pMessage);
+  if (pMessageQueue) {
+    pMessageQueue->Enqueue(pMessage);
 
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void LogicWorker::SetGameQueue(
     const std::shared_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
-        &messageQueue)
-{
-    mGameMessageQueue = messageQueue;
+        &messageQueue) {
+  mGameMessageQueue = messageQueue;
 }
 
-void LogicWorker::SendPacket(libcomp::Packet &packet)
-{
-    mConnectionManager->SendPacket(packet);
+void LogicWorker::SendPacket(libcomp::Packet &packet) {
+  mConnectionManager->SendPacket(packet);
 }
 
-void LogicWorker::SendPacket(libcomp::ReadOnlyPacket &packet)
-{
-    mConnectionManager->SendPacket(packet);
+void LogicWorker::SendPacket(libcomp::ReadOnlyPacket &packet) {
+  mConnectionManager->SendPacket(packet);
 }
 
-void LogicWorker::SendPackets(const std::list<libcomp::Packet *> &packets)
-{
-    mConnectionManager->SendPackets(packets);
+void LogicWorker::SendPackets(const std::list<libcomp::Packet *> &packets) {
+  mConnectionManager->SendPackets(packets);
 }
 
 void LogicWorker::SendPackets(
-    const std::list<libcomp::ReadOnlyPacket *> &packets)
-{
-    mConnectionManager->SendPackets(packets);
+    const std::list<libcomp::ReadOnlyPacket *> &packets) {
+  mConnectionManager->SendPackets(packets);
 }
 
-void LogicWorker::SendBlankPacket(uint16_t commandCode)
-{
-    libcomp::Packet p;
-    p.WriteU16Little(commandCode);
+void LogicWorker::SendBlankPacket(uint16_t commandCode) {
+  libcomp::Packet p;
+  p.WriteU16Little(commandCode);
 
-    mConnectionManager->SendPacket(p);
+  mConnectionManager->SendPacket(p);
 }
 
-bool LogicWorker::SendObject(const std::shared_ptr<libcomp::Object> &obj)
-{
-    return mConnectionManager->SendObject(obj);
+bool LogicWorker::SendObject(const std::shared_ptr<libcomp::Object> &obj) {
+  return mConnectionManager->SendObject(obj);
 }
 
 bool LogicWorker::SendObjects(
-    const std::list<std::shared_ptr<libcomp::Object>> &objs)
-{
-    return mConnectionManager->SendObjects(objs);
+    const std::list<std::shared_ptr<libcomp::Object>> &objs) {
+  return mConnectionManager->SendObjects(objs);
 }

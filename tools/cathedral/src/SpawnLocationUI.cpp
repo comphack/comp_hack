@@ -28,45 +28,37 @@
 #include <SpawnLocation.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_SpawnLocation.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-SpawnLocation::SpawnLocation(QWidget *pParent) : QWidget(pParent)
-{
-    prop = new Ui::SpawnLocation;
-    prop->setupUi(this);
+#include "ui_SpawnLocation.h"
+
+SpawnLocation::SpawnLocation(QWidget* pParent) : QWidget(pParent) {
+  prop = new Ui::SpawnLocation;
+  prop->setupUi(this);
 }
 
-SpawnLocation::~SpawnLocation()
-{
-    delete prop;
+SpawnLocation::~SpawnLocation() { delete prop; }
+
+void SpawnLocation::Load(const std::shared_ptr<objects::SpawnLocation>& loc) {
+  if (loc) {
+    prop->x->setValue((double)loc->GetX());
+    prop->y->setValue((double)loc->GetY());
+    prop->width->setValue((double)loc->GetWidth());
+    prop->height->setValue((double)loc->GetHeight());
+  } else {
+    prop->x->setValue(0.0);
+    prop->y->setValue(0.0);
+    prop->width->setValue(0.0);
+    prop->height->setValue(0.0);
+  }
 }
 
-void SpawnLocation::Load(const std::shared_ptr<objects::SpawnLocation>& loc)
-{
-    if(loc)
-    {
-        prop->x->setValue((double)loc->GetX());
-        prop->y->setValue((double)loc->GetY());
-        prop->width->setValue((double)loc->GetWidth());
-        prop->height->setValue((double)loc->GetHeight());
-    }
-    else
-    {
-        prop->x->setValue(0.0);
-        prop->y->setValue(0.0);
-        prop->width->setValue(0.0);
-        prop->height->setValue(0.0);
-    }
-}
-
-std::shared_ptr<objects::SpawnLocation> SpawnLocation::Save() const
-{
-    auto obj = std::make_shared<objects::SpawnLocation>();
-    obj->SetX((float)prop->x->value());
-    obj->SetY((float)prop->y->value());
-    obj->SetWidth((float)prop->width->value());
-    obj->SetHeight((float)prop->height->value());
-    return obj;
+std::shared_ptr<objects::SpawnLocation> SpawnLocation::Save() const {
+  auto obj = std::make_shared<objects::SpawnLocation>();
+  obj->SetX((float)prop->x->value());
+  obj->SetY((float)prop->y->value());
+  obj->SetWidth((float)prop->width->value());
+  obj->SetHeight((float)prop->height->value());
+  return obj;
 }

@@ -28,66 +28,59 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionStageEffect.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionStageEffect::ActionStageEffect(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionStageEffect;
-    prop->setupUi(pWidget);
+ActionStageEffect::ActionStageEffect(ActionList *pList, MainWindow *pMainWindow,
+                                     QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionStageEffect;
+  prop->setupUi(pWidget);
 
-    ui->actionTitle->setText(tr("<b>Stage Effect</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Stage Effect</b>"));
+  ui->layoutMain->addWidget(pWidget);
 
-    prop->message->Setup(pMainWindow);
+  prop->message->Setup(pMainWindow);
 }
 
-ActionStageEffect::~ActionStageEffect()
-{
-    delete prop;
+ActionStageEffect::~ActionStageEffect() { delete prop; }
+
+void ActionStageEffect::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionStageEffect>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->message->SetValue((uint32_t)mAction->GetMessageID());
+  prop->effectType->setValue(mAction->GetEffectType());
+  prop->messageValue->setValue(mAction->GetMessageValue());
+  prop->includeMessage->setChecked(mAction->GetIncludeMessage());
 }
 
-void ActionStageEffect::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionStageEffect>(act);
+std::shared_ptr<objects::Action> ActionStageEffect::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetMessageID((int32_t)prop->message->GetValue());
+  mAction->SetEffectType((int8_t)prop->effectType->value());
+  mAction->SetMessageValue(prop->messageValue->value());
+  mAction->SetIncludeMessage(prop->includeMessage->isChecked());
 
-    prop->message->SetValue((uint32_t)mAction->GetMessageID());
-    prop->effectType->setValue(mAction->GetEffectType());
-    prop->messageValue->setValue(mAction->GetMessageValue());
-    prop->includeMessage->setChecked(mAction->GetIncludeMessage());
-}
-
-std::shared_ptr<objects::Action> ActionStageEffect::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetMessageID((int32_t)prop->message->GetValue());
-    mAction->SetEffectType((int8_t)prop->effectType->value());
-    mAction->SetMessageValue(prop->messageValue->value());
-    mAction->SetIncludeMessage(prop->includeMessage->isChecked());
-
-    return mAction;
+  return mAction;
 }

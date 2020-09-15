@@ -25,13 +25,18 @@
 #ifndef TOOLS_CAPGREP_SRC_FILTER_H
 #define TOOLS_CAPGREP_SRC_FILTER_H
 
-#include <PushIgnore.h>
-#include "ui_Filter.h"
+#include <stdint.h>
 
+// Ignore warnings
+#include <PushIgnore.h>
+
+// Qt Includes
 #include <QDialog>
+
+// Stop ignoring warnings
 #include <PopIgnore.h>
 
-#include <stdint.h>
+#include "ui_Filter.h"
 
 /**
  * Packet filter dialog. The filter dialog presents two lists of packets that
@@ -39,76 +44,75 @@
  * list will be displayed. If a packet is in the black list, it will not be
  * displayed.
  */
-class Filter : public QDialog
-{
-    Q_OBJECT
+class Filter : public QDialog {
+  Q_OBJECT
 
-public:
-    /**
-     * Construct the filter dialog.
-     * @parent Parent window (or null if this dialog isn't modal).
-     */
-    Filter(QWidget *parent = 0);
+ public:
+  /**
+   * Construct the filter dialog.
+   * @parent Parent window (or null if this dialog isn't modal).
+   */
+  Filter(QWidget *parent = 0);
 
-    /**
-     * Convert the given command code to a string representation.
-     * @arg cmd Command code to convert to a string.
-     * @return String representation of the command code.
-     */
-    static QString cmdStr(uint16_t cmd);
+  /**
+   * Convert the given command code to a string representation.
+   * @arg cmd Command code to convert to a string.
+   * @return String representation of the command code.
+   */
+  static QString cmdStr(uint16_t cmd);
 
-protected slots:
-    /**
-     * Save the settings and close the dialog.
-     */
-    void save();
+ protected slots:
+  /**
+   * Save the settings and close the dialog.
+   */
+  void save();
 
-    /**
-     * Discard any changes and close the dialog.
-     */
-    void cancel();
+  /**
+   * Discard any changes and close the dialog.
+   */
+  void cancel();
 
-    /**
-     * Prompt the user for a command code to add to the white list.
-     */
-    void addWhite();
+  /**
+   * Prompt the user for a command code to add to the white list.
+   */
+  void addWhite();
 
-    /**
-     * Prompt the user for a command code to add to the black list.
-     */
-    void addBlack();
+  /**
+   * Prompt the user for a command code to add to the black list.
+   */
+  void addBlack();
 
-    /**
-     * Remove the selected command from the white list.
-     */
-    void removeWhite();
+  /**
+   * Remove the selected command from the white list.
+   */
+  void removeWhite();
 
-    /**
-     * Remove the selected command from the black list.
-     */
-    void removeBlack();
+  /**
+   * Remove the selected command from the black list.
+   */
+  void removeBlack();
 
-    /**
-     * The white list selection has changed. This is used to check if the
-     * remove button should be enabled.
-     */
-    void whiteSelectionChanged();
+  /**
+   * The white list selection has changed. This is used to check if the
+   * remove button should be enabled.
+   */
+  void whiteSelectionChanged();
 
-    /**
-     * The black list selection has changed. This is used to check if the
-     * remove button should be enabled.
-     */
-    void blackSelectionChanged();
+  /**
+   * The black list selection has changed. This is used to check if the
+   * remove button should be enabled.
+   */
+  void blackSelectionChanged();
 
-protected:
-    /// List of command codes in the white list.
-    QList<uint16_t> mWhiteList;
+ protected:
+  /// List of command codes in the white list.
+  QList<uint16_t> mWhiteList;
 
-    /// List of command codes in the black list.
-    QList<uint16_t> mBlackList;
+  /// List of command codes in the black list.
+  QList<uint16_t> mBlackList;
 
-    /// Generated UI for the dialog.
-    Ui::Filter ui;
+  /// Generated UI for the dialog.
+  Ui::Filter ui;
 };
 
-#endif // TOOLS_CAPGREP_SRC_FILTER_H
+#endif  // TOOLS_CAPGREP_SRC_FILTER_H

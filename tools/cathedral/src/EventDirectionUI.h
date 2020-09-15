@@ -32,34 +32,33 @@
 #include <EventDirection.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class EventDirection;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class EventDirection : public Event
-{
-    Q_OBJECT
+class EventDirection : public Event {
+  Q_OBJECT
 
-public:
-    explicit EventDirection(MainWindow *pMainWindow, QWidget *pParent = 0);
-    virtual ~EventDirection();
+ public:
+  explicit EventDirection(MainWindow *pMainWindow, QWidget *pParent = 0);
+  virtual ~EventDirection();
 
-    void Load(const std::shared_ptr<objects::Event>& e) override;
-    std::shared_ptr<objects::Event> Save() const override;
+  void Load(const std::shared_ptr<objects::Event> &e) override;
+  std::shared_ptr<objects::Event> Save() const override;
 
-protected:
-    Ui::EventDirection *prop;
+ protected:
+  Ui::EventDirection *prop;
 
-    std::shared_ptr<objects::EventDirection> mEvent;
+  std::shared_ptr<objects::EventDirection> mEvent;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_EVENTDIRECTIONUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_EVENTDIRECTIONUI_H

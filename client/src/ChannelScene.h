@@ -33,65 +33,62 @@
 // libclient Includes
 #include <ClientManager.h>
 
-namespace game
-{
+namespace game {
 
 class GameWorker;
 
 /**
  * Scene to present the user with the channel.
  */
-class ChannelScene : public QWidget, public logic::ClientManager
-{
-    Q_OBJECT
+class ChannelScene : public QWidget, public logic::ClientManager {
+  Q_OBJECT
 
-public:
-    /**
-     * Construct the channel scene.
-     * @param pWorker The GameWorker for the UI.
-     * @param pParent Parent Qt widget for the dialog.
-     */
-    ChannelScene(GameWorker *pWorker, QWidget *pParent = nullptr);
+ public:
+  /**
+   * Construct the channel scene.
+   * @param pWorker The GameWorker for the UI.
+   * @param pParent Parent Qt widget for the dialog.
+   */
+  ChannelScene(GameWorker *pWorker, QWidget *pParent = nullptr);
 
-    /**
-     * Cleanup the scene.
-     */
-    ~ChannelScene() override;
+  /**
+   * Cleanup the scene.
+   */
+  ~ChannelScene() override;
 
-    /**
-     * Process a client message.
-     * @param pMessage Client message to process.
-     */
-    bool ProcessClientMessage(
-        const libcomp::Message::MessageClient *pMessage);
+  /**
+   * Process a client message.
+   * @param pMessage Client message to process.
+   */
+  bool ProcessClientMessage(const libcomp::Message::MessageClient *pMessage);
 
-protected:
-    /**
-     * Handle a close event on the scene.
-     * @param pEvent Close event to handle.
-     */
-    void closeEvent(QCloseEvent *pEvent) override;
+ protected:
+  /**
+   * Handle a close event on the scene.
+   * @param pEvent Close event to handle.
+   */
+  void closeEvent(QCloseEvent *pEvent) override;
 
-private slots:
-    /**
-     * Backup the account.
-     */
-    void backupAccount();
+ private slots:
+  /**
+   * Backup the account.
+   */
+  void backupAccount();
 
-private:
-    /**
-     * Handle account dump status message.
-     * @param pMessage Client message to process.
-     */
-    bool HandleAccountDumpStatus(const libcomp::Message::MessageClient *pMessage);
+ private:
+  /**
+   * Handle account dump status message.
+   * @param pMessage Client message to process.
+   */
+  bool HandleAccountDumpStatus(const libcomp::Message::MessageClient *pMessage);
 
-    /// Pointer to the GameWorker.
-    GameWorker *mGameWorker;
+  /// Pointer to the GameWorker.
+  GameWorker *mGameWorker;
 
-    /// UI for this scene.
-    Ui::ChannelScene ui;
+  /// UI for this scene.
+  Ui::ChannelScene ui;
 };
 
-} // namespace game
+}  // namespace game
 
-#endif // LIBCLIENT_SRC_CHANNELSCENE_H
+#endif  // LIBCLIENT_SRC_CHANNELSCENE_H

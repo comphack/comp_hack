@@ -31,30 +31,28 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
- // channel Includes
+// channel Includes
 #include "ChannelServer.h"
 #include "MatchManager.h"
 
 using namespace channel;
 
-bool Parsers::TeamLeave::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TeamLeave::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t teamID = p.ReadS32Little();
+  int32_t teamID = p.ReadS32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->GetMatchManager()->LeaveTeam(client, teamID);
+  server->GetMatchManager()->LeaveTeam(client, teamID);
 
-    return true;
+  return true;
 }

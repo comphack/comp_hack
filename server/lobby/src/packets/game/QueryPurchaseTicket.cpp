@@ -42,43 +42,39 @@
 
 using namespace lobby;
 
-bool Parsers::QueryPurchaseTicket::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::QueryPurchaseTicket::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 1)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 1) {
+    return false;
+  }
 
-    uint8_t code = p.ReadU8();
-    if(1 < code)
-    {
-        return false;
-    }
+  uint8_t code = p.ReadU8();
+  if (1 < code) {
+    return false;
+  }
 
-    if(code == 1)
-    {
-        auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-        auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(
-            server->GetConfig());
-        auto account = state(connection)->GetAccount();
+  if (code == 1) {
+    auto server =
+        std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+    auto config =
+        std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
+    auto account = state(connection)->GetAccount();
 
-        libcomp::Packet reply;
-        reply.WritePacketCode(
-            LobbyToClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET);
-        reply.WriteU32Little(static_cast<uint32_t>(0));
-        reply.WriteU8(1);
+    libcomp::Packet reply;
+    reply.WritePacketCode(
+        LobbyToClientPacketCode_t::PACKET_QUERY_PURCHASE_TICKET);
+    reply.WriteU32Little(static_cast<uint32_t>(0));
+    reply.WriteU8(1);
 
-        reply.WriteU32Little(config->GetCharacterTicketCost());
-        reply.WriteU32Little(account->GetCP());
+    reply.WriteU32Little(config->GetCharacterTicketCost());
+    reply.WriteU32Little(account->GetCP());
 
-        connection->SendPacket(reply);
-    }
-    else
-    {
-        //Request was cancelled, nothing to do
-    }
+    connection->SendPacket(reply);
+  } else {
+    // Request was cancelled, nothing to do
+  }
 
-    return true;
+  return true;
 }

@@ -28,66 +28,59 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionSetNPCState.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionSetNPCState::ActionSetNPCState(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionSetNPCState;
-    prop->setupUi(pWidget);
+ActionSetNPCState::ActionSetNPCState(ActionList *pList, MainWindow *pMainWindow,
+                                     QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionSetNPCState;
+  prop->setupUi(pWidget);
 
-    ui->actionTitle->setText(tr("<b>Set NPC State</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Set NPC State</b>"));
+  ui->layoutMain->addWidget(pWidget);
 
-    prop->actor->BindSelector(pMainWindow, "Actor", true);
+  prop->actor->BindSelector(pMainWindow, "Actor", true);
 }
 
-ActionSetNPCState::~ActionSetNPCState()
-{
-    delete prop;
+ActionSetNPCState::~ActionSetNPCState() { delete prop; }
+
+void ActionSetNPCState::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionSetNPCState>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->state->setValue(mAction->GetState());
+  prop->from->setValue(mAction->GetFrom());
+  prop->actor->SetValue((uint32_t)mAction->GetActorID());
+  prop->sourceClientOnly->setChecked(mAction->GetSourceClientOnly());
 }
 
-void ActionSetNPCState::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionSetNPCState>(act);
+std::shared_ptr<objects::Action> ActionSetNPCState::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetState((uint8_t)prop->state->value());
+  mAction->SetFrom((int16_t)prop->from->value());
+  mAction->SetActorID((int32_t)prop->actor->GetValue());
+  mAction->SetSourceClientOnly(prop->sourceClientOnly->isChecked());
 
-    prop->state->setValue(mAction->GetState());
-    prop->from->setValue(mAction->GetFrom());
-    prop->actor->SetValue((uint32_t)mAction->GetActorID());
-    prop->sourceClientOnly->setChecked(mAction->GetSourceClientOnly());
-}
-
-std::shared_ptr<objects::Action> ActionSetNPCState::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetState((uint8_t)prop->state->value());
-    mAction->SetFrom((int16_t)prop->from->value());
-    mAction->SetActorID((int32_t)prop->actor->GetValue());
-    mAction->SetSourceClientOnly(prop->sourceClientOnly->isChecked());
-
-    return mAction;
+  return mAction;
 }

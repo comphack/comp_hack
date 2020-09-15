@@ -43,187 +43,168 @@
 
 using namespace channel;
 
-bool Parsers::TriFusionJoin::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TriFusionJoin::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 1)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 1) {
+    return false;
+  }
+
+  int8_t unknown = p.ReadS8();
+  (void)unknown;
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto fusionManager = server->GetFusionManager();
+
+  auto partyClients =
+      server->GetManagerConnection()->GetPartyConnections(client, false, true);
+
+  ClientState* tfSessionOwner;
+  std::shared_ptr<objects::TriFusionHostSession> tfSession;
+  for (auto pClient : partyClients) {
+    auto pState = pClient->GetClientState();
+    tfSession = std::dynamic_pointer_cast<objects::TriFusionHostSession>(
+        pState->GetExchangeSession());
+    if (tfSession) {
+      tfSessionOwner = pState;
+      break;
+    }
+  }
+
+  if (tfSession) {
+    std::set<int32_t> existingParticipants;
+    existingParticipants.insert(
+        tfSessionOwner->GetCharacterState()->GetEntityID());
+    for (auto pState : tfSession->GetGuests()) {
+      existingParticipants.insert(pState->GetEntityID());
     }
 
-    int8_t unknown = p.ReadS8();
-    (void)unknown;
+    auto guestSession = std::make_shared<objects::PlayerExchangeSession>();
+    guestSession->SetSourceEntityID(state->GetCharacterState()->GetEntityID());
+    guestSession->SetType(
+        objects::PlayerExchangeSession::Type_t::TRIFUSION_GUEST);
+    guestSession->SetOtherCharacterState(tfSessionOwner->GetCharacterState());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
+    state->SetExchangeSession(guestSession);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
-    auto fusionManager = server->GetFusionManager();
-
-    auto partyClients = server->GetManagerConnection()
-        ->GetPartyConnections(client, false, true);
-
-    ClientState* tfSessionOwner;
-    std::shared_ptr<objects::TriFusionHostSession> tfSession;
-    for(auto pClient : partyClients)
-    {
-        auto pState = pClient->GetClientState();
-        tfSession = std::dynamic_pointer_cast<
-            objects::TriFusionHostSession>(pState->GetExchangeSession());
-        if(tfSession)
-        {
-            tfSessionOwner = pState;
-            break;
-        }
+    std::list<std::shared_ptr<objects::Demon>> sourceDemons;
+    for (auto d : cState->GetEntity()->GetCOMP()->GetDemons()) {
+      auto demon = d.Get();
+      if (fusionManager->IsTriFusionValid(demon)) {
+        sourceDemons.push_back(demon);
+      }
     }
 
-    if(tfSession)
-    {
-        std::set<int32_t> existingParticipants;
-        existingParticipants.insert(tfSessionOwner->GetCharacterState()
-            ->GetEntityID());
-        for(auto pState : tfSession->GetGuests())
-        {
-            existingParticipants.insert(pState->GetEntityID());
+    // Send current participants to self
+    for (auto pClient : partyClients) {
+      auto pState = pClient->GetClientState();
+      auto pCState = pState->GetCharacterState();
+
+      if (existingParticipants.find(pCState->GetEntityID()) ==
+          existingParticipants.end())
+        continue;
+
+      std::list<std::shared_ptr<objects::Demon>> demons;
+      for (auto d : pCState->GetEntity()->GetCOMP()->GetDemons()) {
+        auto demon = d.Get();
+        if (fusionManager->IsTriFusionValid(demon)) {
+          demons.push_back(demon);
+        }
+      }
+
+      auto exp = pCState->GetEntity()->GetExpertises(EXPERTISE_FUSION);
+
+      libcomp::Packet notify;
+      notify.WritePacketCode(
+          ChannelToClientPacketCode_t::PACKET_TRIFUSION_PARTICIPANT);
+      notify.WriteS32Little(pCState->GetEntityID());
+      notify.WriteS32Little(exp ? exp->GetPoints() : 0);
+
+      notify.WriteS8((int8_t)demons.size());
+      for (auto d : demons) {
+        auto cs = d->GetCoreStats().Get();
+
+        int64_t objID = state->GetObjectID(d->GetUUID());
+        if (objID <= 0) {
+          objID = server->GetNextObjectID();
+          state->SetObjectID(d->GetUUID(), objID);
         }
 
-        auto guestSession = std::make_shared<objects::PlayerExchangeSession>();
-        guestSession->SetSourceEntityID(state->GetCharacterState()->GetEntityID());
-        guestSession->SetType(
-            objects::PlayerExchangeSession::Type_t::TRIFUSION_GUEST);
-        guestSession->SetOtherCharacterState(tfSessionOwner->GetCharacterState());
+        notify.WriteS64Little(objID);
+        notify.WriteU32Little(d->GetType());
+        notify.WriteS8(cs ? cs->GetLevel() : 0);
+        notify.WriteU16Little(d->GetFamiliarity());
 
-        state->SetExchangeSession(guestSession);
-
-        std::list<std::shared_ptr<objects::Demon>> sourceDemons;
-        for(auto d : cState->GetEntity()->GetCOMP()->GetDemons())
-        {
-            auto demon = d.Get();
-            if(fusionManager->IsTriFusionValid(demon))
-            {
-                sourceDemons.push_back(demon);
-            }
+        std::list<uint32_t> skillIDs;
+        for (uint32_t skillID : d->GetLearnedSkills()) {
+          if (skillID != 0) {
+            skillIDs.push_back(skillID);
+          }
         }
 
-        // Send current participants to self
-        for(auto pClient : partyClients)
-        {
-            auto pState = pClient->GetClientState();
-            auto pCState = pState->GetCharacterState();
+        notify.WriteS8((int8_t)skillIDs.size());
+        for (uint32_t skillID : skillIDs) {
+          notify.WriteU32Little(skillID);
+        }
+      }
 
-            if(existingParticipants.find(pCState->GetEntityID()) ==
-                existingParticipants.end()) continue;
+      client->QueuePacket(notify);
 
-            std::list<std::shared_ptr<objects::Demon>> demons;
-            for(auto d : pCState->GetEntity()->GetCOMP()->GetDemons())
-            {
-                auto demon = d.Get();
-                if(fusionManager->IsTriFusionValid(demon))
-                {
-                    demons.push_back(demon);
-                }
-            }
+      exp = state->GetCharacterState()->GetEntity()->GetExpertises(
+          EXPERTISE_FUSION);
 
-            auto exp = pCState->GetEntity()->GetExpertises(EXPERTISE_FUSION);
+      // Notify existing participant of new participant
+      notify.Clear();
+      notify.WritePacketCode(
+          ChannelToClientPacketCode_t::PACKET_TRIFUSION_PARTICIPANT);
+      notify.WriteS32Little(state->GetCharacterState()->GetEntityID());
+      notify.WriteS32Little(exp ? exp->GetPoints() : 0);
 
-            libcomp::Packet notify;
-            notify.WritePacketCode(
-                ChannelToClientPacketCode_t::PACKET_TRIFUSION_PARTICIPANT);
-            notify.WriteS32Little(pCState->GetEntityID());
-            notify.WriteS32Little(exp ? exp->GetPoints() : 0);
+      notify.WriteS8((int8_t)sourceDemons.size());
+      for (auto d : sourceDemons) {
+        auto cs = d->GetCoreStats().Get();
 
-            notify.WriteS8((int8_t)demons.size());
-            for(auto d : demons)
-            {
-                auto cs = d->GetCoreStats().Get();
-
-                int64_t objID = state->GetObjectID(d->GetUUID());
-                if(objID <= 0)
-                {
-                    objID = server->GetNextObjectID();
-                    state->SetObjectID(d->GetUUID(), objID);
-                }
-
-                notify.WriteS64Little(objID);
-                notify.WriteU32Little(d->GetType());
-                notify.WriteS8(cs ? cs->GetLevel() : 0);
-                notify.WriteU16Little(d->GetFamiliarity());
-
-                std::list<uint32_t> skillIDs;
-                for(uint32_t skillID : d->GetLearnedSkills())
-                {
-                    if(skillID != 0)
-                    {
-                        skillIDs.push_back(skillID);
-                    }
-                }
-
-                notify.WriteS8((int8_t)skillIDs.size());
-                for(uint32_t skillID : skillIDs)
-                {
-                    notify.WriteU32Little(skillID);
-                }
-            }
-
-            client->QueuePacket(notify);
-
-            exp = state->GetCharacterState()->GetEntity()
-                ->GetExpertises(EXPERTISE_FUSION);
-
-            // Notify existing participant of new participant
-            notify.Clear();
-            notify.WritePacketCode(
-                ChannelToClientPacketCode_t::PACKET_TRIFUSION_PARTICIPANT);
-            notify.WriteS32Little(state->GetCharacterState()->GetEntityID());
-            notify.WriteS32Little(exp ? exp->GetPoints() : 0);
-
-            notify.WriteS8((int8_t)sourceDemons.size());
-            for(auto d : sourceDemons)
-            {
-                auto cs = d->GetCoreStats().Get();
-
-                int64_t objID = pState->GetObjectID(d->GetUUID());
-                if(objID <= 0)
-                {
-                    objID = server->GetNextObjectID();
-                    pState->SetObjectID(d->GetUUID(), objID);
-                }
-
-                notify.WriteS64Little(objID);
-                notify.WriteU32Little(d->GetType());
-                notify.WriteS8(cs ? cs->GetLevel() : 0);
-                notify.WriteU16Little(d->GetFamiliarity());
-
-                std::list<uint32_t> skillIDs;
-                for(uint32_t skillID : d->GetLearnedSkills())
-                {
-                    if(skillID != 0)
-                    {
-                        skillIDs.push_back(skillID);
-                    }
-                }
-
-                notify.WriteS8((int8_t)skillIDs.size());
-                for(uint32_t skillID : skillIDs)
-                {
-                    notify.WriteU32Little(skillID);
-                }
-            }
-
-            pClient->SendPacket(notify);
+        int64_t objID = pState->GetObjectID(d->GetUUID());
+        if (objID <= 0) {
+          objID = server->GetNextObjectID();
+          pState->SetObjectID(d->GetUUID(), objID);
         }
 
-        tfSession->AppendGuests(state->GetCharacterState());
+        notify.WriteS64Little(objID);
+        notify.WriteU32Little(d->GetType());
+        notify.WriteS8(cs ? cs->GetLevel() : 0);
+        notify.WriteU16Little(d->GetFamiliarity());
+
+        std::list<uint32_t> skillIDs;
+        for (uint32_t skillID : d->GetLearnedSkills()) {
+          if (skillID != 0) {
+            skillIDs.push_back(skillID);
+          }
+        }
+
+        notify.WriteS8((int8_t)skillIDs.size());
+        for (uint32_t skillID : skillIDs) {
+          notify.WriteU32Little(skillID);
+        }
+      }
+
+      pClient->SendPacket(notify);
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRIFUSION_JOIN);
-    reply.WriteS8(tfSession ? 0 : -1);
+    tfSession->AppendGuests(state->GetCharacterState());
+  }
 
-    client->SendPacket(reply);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRIFUSION_JOIN);
+  reply.WriteS8(tfSession ? 0 : -1);
 
-    return true;
+  client->SendPacket(reply);
+
+  return true;
 }

@@ -27,108 +27,107 @@
 #ifndef TOOLS_UPDATER_SRC_DOWNLOADER_H
 #define TOOLS_UPDATER_SRC_DOWNLOADER_H
 
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
+#include <QCryptographicHash>
 #include <QFile>
-#include <QMap>
 #include <QList>
+#include <QMap>
+#include <QNetworkReply>
 #include <QObject>
 #include <QString>
 #include <QStringList>
-#include <QCryptographicHash>
-#include <QNetworkReply>
-#include <PopIgnore.h>
 
 class QNetworkAccessManager;
 
-class FileData
-{
-public:
-    QString path;
-    QString compressed_hash;
-    QString uncompressed_hash;
+class FileData {
+ public:
+  QString path;
+  QString compressed_hash;
+  QString uncompressed_hash;
 
-    int compressed_size;
-    int uncompressed_size;
+  int compressed_size;
+  int uncompressed_size;
 };
 
-class Downloader : public QObject
-{
-    Q_OBJECT
+class Downloader : public QObject {
+  Q_OBJECT
 
-public:
-    Downloader(const QString& url, QObject *parent = 0);
-    ~Downloader();
+ public:
+  Downloader(const QString& url, QObject* parent = 0);
+  ~Downloader();
 
-    void triggerKill();
-    void setURL(const QString& url);
+  void triggerKill();
+  void setURL(const QString& url);
 
-signals:
-    void updateKilled();
-    void updateFinished();
-    void statusChanged(const QString& msg);
+ signals:
+  void updateKilled();
+  void updateFinished();
+  void statusChanged(const QString& msg);
 
-    void totalFilesChanged(int total);
-    void currentFileChanged(int current);
+  void totalFilesChanged(int total);
+  void currentFileChanged(int current);
 
-    void downloadSizeChanged(int total);
-    void downloadProgressChanged(int wrote);
+  void downloadSizeChanged(int total);
+  void downloadProgressChanged(int wrote);
 
-    void errorMessage(const QString& msg);
+  void errorMessage(const QString& msg);
 
-public slots:
-    void startUpdate();
+ public slots:
+  void startUpdate();
 
-protected slots:
-    void expressFinish(const QString& msg = QString());
-    void advanceToNextFile();
+ protected slots:
+  void expressFinish(const QString& msg = QString());
+  void advanceToNextFile();
 
-    void requestError(QNetworkReply::NetworkError code);
-    void requestReadyRead();
-    void requestFinished();
+  void requestError(QNetworkReply::NetworkError code);
+  void requestReadyRead();
+  void requestFinished();
 
-protected:
-    void startDownload(const QString& url, const QString& path = QString());
+ protected:
+  void startDownload(const QString& url, const QString& path = QString());
 
-    QByteArray uncompress(const QByteArray& data, int size) const;
-    QByteArray uncompressHashlist(const QByteArray& data) const;
-    int uncompressChunk(const void *src, void *dest,
-        int in_size, int chunk_size) const;
-    QMap<QString, FileData*> parseFileList(const QByteArray& d);
-    bool checkFile(const FileData *info);
-    void log(const QString& msg);
+  QByteArray uncompress(const QByteArray& data, int size) const;
+  QByteArray uncompressHashlist(const QByteArray& data) const;
+  int uncompressChunk(const void* src, void* dest, int in_size,
+                      int chunk_size) const;
+  QMap<QString, FileData*> parseFileList(const QByteArray& d);
+  bool checkFile(const FileData* info);
+  void log(const QString& msg);
 
-    int mStatusCode;
-    int mTotalFiles;
+  int mStatusCode;
+  int mTotalFiles;
 
-    QNetworkReply *mCurrentReq;
+  QNetworkReply* mCurrentReq;
 
-    QCryptographicHash *mFileHash;
+  QCryptographicHash* mFileHash;
 
-    QString mURL;
-    QString mPath;
-    QByteArray mData;
+  QString mURL;
+  QString mPath;
+  QByteArray mData;
 
-    QString mServerVersion;
-    QString mLastVersion;
-    bool mHaveVersion;
+  QString mServerVersion;
+  QString mLastVersion;
+  bool mHaveVersion;
 
-    bool mBare;
-    bool mKill;
-    bool mSaveFiles;
-    bool mUseClassic;
-    QStringList mWhiteList;
+  bool mBare;
+  bool mKill;
+  bool mSaveFiles;
+  bool mUseClassic;
+  QStringList mWhiteList;
 
-    QNetworkAccessManager *mConnection;
-    FileData *mCurrentFile;
+  QNetworkAccessManager* mConnection;
+  FileData* mCurrentFile;
 
-    QList<FileData*> mFiles;
-    QMap<QString, FileData*> mOldFiles;
+  QList<FileData*> mFiles;
+  QMap<QString, FileData*> mOldFiles;
 
-    QString mActiveURL;
-    QString mActivePath;
-    int mActiveRetries;
+  QString mActiveURL;
+  QString mActivePath;
+  int mActiveRetries;
 
-    QFile mLog;
+  QFile mLog;
 };
 
-#endif // TOOLS_UPDATER_SRC_DOWNLOADER_H
+#endif  // TOOLS_UPDATER_SRC_DOWNLOADER_H

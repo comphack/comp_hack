@@ -31,140 +31,129 @@
 #include <QSettings>
 
 #include "Downloader.h"
-#else // COMP_HACK_HEADLESS
-#include <QApplication>
-#include <QLibraryInfo>
-#include <QTranslator>
-
-#include <QFile>
-#include <QProcess>
-#include <QFileInfo>
-#include <QtPlugin>
+#else  // COMP_HACK_HEADLESS
 #include <PopIgnore.h>
+
+#include <QApplication>
+#include <QFile>
+#include <QFileInfo>
+#include <QLibraryInfo>
+#include <QProcess>
+#include <QTranslator>
+#include <QtPlugin>
 
 #ifdef STATIC
 Q_IMPORT_PLUGIN(qjpeg)
 Q_IMPORT_PLUGIN(qgif)
-#endif // STATIC
+#endif  // STATIC
 
 #ifdef Q_OS_WIN32
 #include <windows.h>
-#endif // Q_OS_WIN32
+#endif  // Q_OS_WIN32
 
 #include "LanguageSelection.h"
 #include "Updater.h"
 
-QList<QTranslator*> gTranslators;
-#endif // COMP_HACK_HEADLESS
+QList<QTranslator *> gTranslators;
+#endif  // COMP_HACK_HEADLESS
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 #ifdef COMP_HACK_HEADLESS
-    QCoreApplication app(argc, argv);
+  QCoreApplication app(argc, argv);
 
-    QString settingsPath = "ImagineUpdate.dat";
+  QString settingsPath = "ImagineUpdate.dat";
 
-    if(QFileInfo("ImagineUpdate-user.dat").exists())
-    {
-        settingsPath = "ImagineUpdate-user.dat";
-    }
+  if (QFileInfo("ImagineUpdate-user.dat").exists()) {
+    settingsPath = "ImagineUpdate-user.dat";
+  }
 
-    QSettings settings(settingsPath, QSettings::IniFormat);
-    QString url = settings.value("Setting/BaseURL1").toString();
+  QSettings settings(settingsPath, QSettings::IniFormat);
+  QString url = settings.value("Setting/BaseURL1").toString();
 
-    Downloader *dl = new Downloader(url);
-    dl->startUpdate();
+  Downloader *dl = new Downloader(url);
+  dl->startUpdate();
 
-    QObject::connect(dl, SIGNAL(updateFinished()), &app, SLOT(quit()));
+  QObject::connect(dl, SIGNAL(updateFinished()), &app, SLOT(quit()));
 
-    return app.exec();
-#else // COMP_HACK_HEADLESS
-    QApplication app(argc, argv);
-
-#ifdef Q_OS_WIN32
-    QString path = QApplication::applicationFilePath();
-    QString exe = QFileInfo(path).fileName();
-    path = QFileInfo(path).path();
-
-    Q_ASSERT( !path.isEmpty() && !exe.isEmpty() );
-
-    bool isCopy = false;
-    if(exe.left(1) == "_")
-    {
-        exe = exe.mid(1);
-        isCopy = true;
-    }
-
-    QString normal = QString("%1/%2").arg(path).arg(exe);
-    QString copy = QString("%1/_%2").arg(path).arg(exe);
-
-    if( app.arguments().contains("--delete") )
-        Sleep(3000);
-
-    // Delete the copy
-    if(!isCopy)
-        QFile(copy).remove();
-
-    // If we just want to delete the copy, exit now
-    if( app.arguments().contains("--delete") )
-        return 0;
-
-    // Make the copy, start it, and exit
-    if(!isCopy)
-    {
-        // Copy the updater
-        QFile(normal).copy(copy);
-
-        // Start the copy
-        QProcess::startDetached(copy, QStringList(), path);
-
-        // Exit
-        return 0;
-    }
-#endif // Q_OS_WIN32
-
-    QFile file("ImagineUpdate.lang");
-    QString locale;
-
-    if( file.open(QIODevice::ReadOnly | QIODevice::Text) )
-    {
-        locale = QString::fromLocal8Bit(file.readLine()).trimmed();
-    }
-
-    Updater *pUpdater = nullptr;
-
-    if(locale.isEmpty())
-    {
-        (new LanguageSelection)->show();
-    }
-    else
-    {
-        QTranslator *pTranslator = new QTranslator;
-        gTranslators.push_back(pTranslator);
-
-        pTranslator->load("qt_" + locale.split("_").first(),
-            QLibraryInfo::location(QLibraryInfo::TranslationsPath));
-
-        if(pTranslator->load("updater_" + locale,
-            QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
-        {
-            app.installTranslator(pTranslator);
-        }
-
-        pUpdater = new Updater;
-        pUpdater->show();
-    }
-
-    int ret = app.exec();
-
-    delete pUpdater;
+  return app.exec();
+#else  // COMP_HACK_HEADLESS
+  QApplication app(argc, argv);
 
 #ifdef Q_OS_WIN32
-    // Delete the copy now
-    if(isCopy)
-        QProcess::startDetached(normal, QStringList() << "--delete", path);
-#endif // Q_OS_WIN32
+  QString path = QApplication::applicationFilePath();
+  QString exe = QFileInfo(path).fileName();
+  path = QFileInfo(path).path();
 
-    return ret;
-#endif // COMP_HACK_HEADLESS
+  Q_ASSERT(!path.isEmpty() && !exe.isEmpty());
+
+  bool isCopy = false;
+  if (exe.left(1) == "_") {
+    exe = exe.mid(1);
+    isCopy = true;
+  }
+
+  QString normal = QString("%1/%2").arg(path).arg(exe);
+  QString copy = QString("%1/_%2").arg(path).arg(exe);
+
+  if (app.arguments().contains("--delete")) Sleep(3000);
+
+  // Delete the copy
+  if (!isCopy) QFile(copy).remove();
+
+  // If we just want to delete the copy, exit now
+  if (app.arguments().contains("--delete")) return 0;
+
+  // Make the copy, start it, and exit
+  if (!isCopy) {
+    // Copy the updater
+    QFile(normal).copy(copy);
+
+    // Start the copy
+    QProcess::startDetached(copy, QStringList(), path);
+
+    // Exit
+    return 0;
+  }
+#endif  // Q_OS_WIN32
+
+  QFile file("ImagineUpdate.lang");
+  QString locale;
+
+  if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    locale = QString::fromLocal8Bit(file.readLine()).trimmed();
+  }
+
+  Updater *pUpdater = nullptr;
+
+  if (locale.isEmpty()) {
+    (new LanguageSelection)->show();
+  } else {
+    QTranslator *pTranslator = new QTranslator;
+    gTranslators.push_back(pTranslator);
+
+    pTranslator->load("qt_" + locale.split("_").first(),
+                      QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+
+    if (pTranslator->load(
+            "updater_" + locale,
+            QLibraryInfo::location(QLibraryInfo::TranslationsPath))) {
+      app.installTranslator(pTranslator);
+    }
+
+    pUpdater = new Updater;
+    pUpdater->show();
+  }
+
+  int ret = app.exec();
+
+  delete pUpdater;
+
+#ifdef Q_OS_WIN32
+  // Delete the copy now
+  if (isCopy)
+    QProcess::startDetached(normal, QStringList() << "--delete", path);
+#endif  // Q_OS_WIN32
+
+  return ret;
+#endif  // COMP_HACK_HEADLESS
 }

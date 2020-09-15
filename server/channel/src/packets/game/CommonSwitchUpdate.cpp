@@ -36,46 +36,42 @@
 
 using namespace channel;
 
-bool Parsers::CommonSwitchUpdate::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CommonSwitchUpdate::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() < 2)
-    {
-        return false;
-    }
+  if (p.Size() < 2) {
+    return false;
+  }
 
-    uint16_t size = p.ReadU16Little();
-    if(size != 4 || p.Left() != 4)
-    {
-        return false;
-    }
+  uint16_t size = p.ReadU16Little();
+  if (size != 4 || p.Left() != 4) {
+    return false;
+  }
 
-    // Simply store the definition as a byte array
-    auto data = p.ReadArray(4);
+  // Simply store the definition as a byte array
+  auto data = p.ReadArray(4);
 
-    std::array<int8_t, 4> val;
-    for(size_t i = 0; i < 4; i++)
-    {
-        val[i] = data[i];
-    }
+  std::array<int8_t, 4> val;
+  for (size_t i = 0; i < 4; i++) {
+    val[i] = data[i];
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
 
-    character->SetCommonSwitch(val);
+  character->SetCommonSwitch(val);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_COMMON_SWITCH_UPDATE);
-    reply.WriteS32Little(0);
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_COMMON_SWITCH_UPDATE);
+  reply.WriteS32Little(0);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

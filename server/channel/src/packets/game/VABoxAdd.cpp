@@ -47,100 +47,89 @@
 
 using namespace channel;
 
-bool Parsers::VABoxAdd::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::VABoxAdd::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 12)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 12) {
+    return false;
+  }
+
+  int32_t unused = p.ReadS32Little();  // Always 0
+  int64_t itemID = p.ReadS64Little();
+  (void)unused;
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+
+  auto item = std::dynamic_pointer_cast<objects::Item>(
+      libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
+
+  auto itemDef =
+      item ? server->GetDefinitionManager()->GetItemData(item->GetType())
+           : nullptr;
+
+  int8_t slot = -1;
+
+  bool failure = item == nullptr || itemDef == nullptr ||
+                 itemDef->GetBasic()->GetEquipType() ==
+                     objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE;
+  if (!failure) {
+    auto restr = itemDef->GetRestriction();
+    failure = restr->GetGender() != GENDER_NA &&
+              cState->GetGender() != restr->GetGender();
+  }
+
+  if (!failure) {
+    for (size_t i = 0; i < 50; i++) {
+      if (character->GetVACloset(i) == 0) {
+        slot = (int8_t)i;
+        break;
+      }
     }
 
-    int32_t unused = p.ReadS32Little(); // Always 0
-    int64_t itemID = p.ReadS64Little();
-    (void)unused;
+    if (slot == -1) {
+      failure = true;
+    }
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+  if (!failure) {
+    bool removed = false;
+    for (uint32_t removeItemType : SVR_CONST.VA_ADD_ITEMS) {
+      std::unordered_map<uint32_t, uint32_t> remove;
+      remove[removeItemType] = 1;
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
-
-    auto itemDef = item ? server->GetDefinitionManager()
-        ->GetItemData(item->GetType()) : nullptr;
-
-    int8_t slot = -1;
-
-    bool failure = item == nullptr || itemDef == nullptr ||
-        itemDef->GetBasic()->GetEquipType() ==
-            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE;
-    if(!failure)
-    {
-        auto restr = itemDef->GetRestriction();
-        failure = restr->GetGender() != GENDER_NA &&
-            cState->GetGender() != restr->GetGender();
+      if (characterManager->AddRemoveItems(client, remove, false)) {
+        removed = true;
+        break;
+      }
     }
 
-    if(!failure)
-    {
-        for(size_t i = 0; i < 50; i++)
-        {
-            if(character->GetVACloset(i) == 0)
-            {
-                slot = (int8_t)i;
-                break;
-            }
-        }
-
-        if(slot == -1)
-        {
-            failure = true;
-        }
+    if (removed) {
+      character->SetVACloset((size_t)slot, item->GetType());
+    } else {
+      failure = true;
     }
+  }
 
-    if(!failure)
-    {
-        bool removed = false;
-        for(uint32_t removeItemType : SVR_CONST.VA_ADD_ITEMS)
-        {
-            std::unordered_map<uint32_t, uint32_t> remove;
-            remove[removeItemType] = 1;
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VA_BOX_ADD);
+  reply.WriteS32Little(failure ? -1 : 0);
+  reply.WriteS32Little(0);  // Unknown
+  reply.WriteS8(slot);
+  reply.WriteU32Little(item ? item->GetType() : 0);
 
-            if(characterManager->AddRemoveItems(client, remove, false))
-            {
-                removed = true;
-                break;
-            }
-        }
+  client->SendPacket(reply);
 
-        if(removed)
-        {
-            character->SetVACloset((size_t)slot, item->GetType());
-        }
-        else
-        {
-            failure = true;
-        }
-    }
+  if (!failure) {
+    server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VA_BOX_ADD);
-    reply.WriteS32Little(failure ? -1 : 0);
-    reply.WriteS32Little(0);    // Unknown
-    reply.WriteS8(slot);
-    reply.WriteU32Little(item ? item->GetType() : 0);
-
-    client->SendPacket(reply);
-
-    if(!failure)
-    {
-        server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
-    }
-
-    return true;
+  return true;
 }

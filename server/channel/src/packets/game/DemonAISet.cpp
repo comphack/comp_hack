@@ -37,35 +37,35 @@
 
 using namespace channel;
 
-bool Parsers::DemonAISet::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonAISet::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 2)
-    {
-        return false;
-    }
+  if (p.Size() != 2) {
+    return false;
+  }
 
-    uint16_t attackSettings = p.ReadU16Little();
+  uint16_t attackSettings = p.ReadU16Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto dState = state->GetDemonState();
-    auto demon = dState->GetEntity();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto dState = state->GetDemonState();
+  auto demon = dState->GetEntity();
 
-    if(!demon)
-    {
-        LogGeneralWarningMsg("Partner demon attack settings could not be saved"
-            " because no demon is summoned for the requesting client\n");
-        return true;
-    }
-
-    demon->SetAttackSettings(attackSettings);
-
-    server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
-
+  if (!demon) {
+    LogGeneralWarningMsg(
+        "Partner demon attack settings could not be saved because no demon is "
+        "summoned for the requesting client\n");
     return true;
+  }
+
+  demon->SetAttackSettings(attackSettings);
+
+  server->GetWorldDatabase()->QueueUpdate(demon, state->GetAccountUID());
+
+  return true;
 }

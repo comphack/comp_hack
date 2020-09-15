@@ -22,11 +22,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdint.h>
+
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <stdint.h>
 #include <string>
 
 // libcomp Includes
@@ -61,10 +62,9 @@
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 // Combine the magic into a single DWORD.
-#define NIF_MAGIC (((uint32_t)NIF_MAGIC4 << 24) | \
-    ((uint32_t)NIF_MAGIC3 << 16) | \
-    ((uint32_t)NIF_MAGIC2 << 8) | \
-     (uint32_t)NIF_MAGIC1)
+#define NIF_MAGIC                                                \
+  (((uint32_t)NIF_MAGIC4 << 24) | ((uint32_t)NIF_MAGIC3 << 16) | \
+   ((uint32_t)NIF_MAGIC2 << 8) | (uint32_t)NIF_MAGIC1)
 
 /**
  * Encrypt a background music file.
@@ -72,184 +72,59 @@
  * @param szOut Path to the output file to write.
  * @returns Standard exit code.
  */
-int EncryptFile(const char *szIn, const char *szOut)
-{
-    FILE *pIn = fopen(szIn, "rb");
-    FILE *pOut = fopen(szOut, "wb");
+int EncryptFile(const char *szIn, const char *szOut) {
+  FILE *pIn = fopen(szIn, "rb");
+  FILE *pOut = fopen(szOut, "wb");
 
-    if(!pIn)
-    {
-        fprintf(stderr, "Failed to open input file.\n");
+  if (!pIn) {
+    fprintf(stderr, "Failed to open input file.\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    if(!pOut)
-    {
-        fprintf(stderr, "Failed to open input file.\n");
+  if (!pOut) {
+    fprintf(stderr, "Failed to open input file.\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    if(0 != fseek(pIn, 0, SEEK_END))
-    {
-        fprintf(stderr, "Seek error in input file.\n");
+  if (0 != fseek(pIn, 0, SEEK_END)) {
+    fprintf(stderr, "Seek error in input file.\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Get the size of the file.
-    uint32_t sz = (uint32_t)ftell(pIn);
+  // Get the size of the file.
+  uint32_t sz = (uint32_t)ftell(pIn);
 
-    // Check the size of the file.
-    if(sz > 30000000)
-    {
-        fprintf(stderr, "Input file is too big!\n");
+  // Check the size of the file.
+  if (sz > 30000000) {
+    fprintf(stderr, "Input file is too big!\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Start over now that we have the size.
-    if(0 != fseek(pIn, 0, SEEK_SET))
-    {
-        fprintf(stderr, "Seek error in input file.\n");
+  // Start over now that we have the size.
+  if (0 != fseek(pIn, 0, SEEK_SET)) {
+    fprintf(stderr, "Seek error in input file.\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Allocate the buffer.
-    uint8_t *pData = new uint8_t[sz];
-    memset(pData, 0, sz);
+  // Allocate the buffer.
+  uint8_t *pData = new uint8_t[sz];
+  memset(pData, 0, sz);
 
-    // Calculate the max size of the compressed data.
-    int32_t maxSize = (int)((float)sz * 0.001f + 0.5f);
-    maxSize += (int32_t)sz + 12;
+  // Calculate the max size of the compressed data.
+  int32_t maxSize = (int)((float)sz * 0.001f + 0.5f);
+  maxSize += (int32_t)sz + 12;
 
-    // Allocate the output buffer.
-    uint8_t *pDataOut = new uint8_t[(uint32_t)maxSize];
+  // Allocate the output buffer.
+  uint8_t *pDataOut = new uint8_t[(uint32_t)maxSize];
 
-    // Read the file.
-    if(1 != fread(pData, sz, 1, pIn))
-    {
-        fprintf(stderr, "Failed to read input file.\n");
-
-        // Free the input and output buffers.
-        delete[] pData;
-        delete[] pDataOut;
-        pDataOut = 0;
-        pData = 0;
-
-        return EXIT_FAILURE;
-    }
-
-    // Attempt to compress the file.
-    int32_t compSize = libcomp::Compress::Compress(pData, pDataOut,
-        (int32_t)sz, maxSize, 9);
-
-    // Check if it compressed.
-    if(0 >= compSize)
-    {
-        fprintf(stderr, "Failed to compress NIF file!\n");
-        fprintf(stderr, "Size: %d\n", compSize);
-
-        // Free the input and output buffers.
-        delete[] pData;
-        delete[] pDataOut;
-        pDataOut = 0;
-        pData = 0;
-
-        return EXIT_FAILURE;
-    }
-
-    // Check the size of the file.
-    if(compSize > 30000000)
-    {
-        fprintf(stderr, "Input file is too big!\n");
-
-        // Free the input and output buffers.
-        delete[] pData;
-        delete[] pDataOut;
-        pDataOut = 0;
-        pData = 0;
-
-        return EXIT_FAILURE;
-    }
-
-    // Sanity check here.
-    if(compSize > (int32_t)sz)
-    {
-        fprintf(stderr, "Input file is too big!\n");
-
-        // Free the input and output buffers.
-        delete[] pData;
-        delete[] pDataOut;
-        pDataOut = 0;
-        pData = 0;
-
-        return EXIT_FAILURE;
-    }
-
-    // Encrypt the sizes.
-    uint32_t cryptDecompSize = sz ^ NIF_XOR_KEY1;
-    int32_t cryptCompSize = compSize ^ (int32_t)NIF_XOR_KEY2;
-
-    // Write the magic.
-    uint32_t magic = NIF_MAGIC;
-
-    if(1 != fwrite(&magic, 4, 1, pOut))
-    {
-        fprintf(stderr, "Failed to write output file.\n");
-
-        // Free the input and output buffers.
-        delete[] pData;
-        delete[] pDataOut;
-        pDataOut = 0;
-        pData = 0;
-
-        return EXIT_FAILURE;
-    }
-
-    // Write the uncompressed size.
-    if(1 != fwrite(&cryptDecompSize, 4, 1, pOut))
-    {
-        fprintf(stderr, "Failed to write output file.\n");
-
-        // Free the input and output buffers.
-        delete[] pData;
-        delete[] pDataOut;
-        pDataOut = 0;
-        pData = 0;
-
-        return EXIT_FAILURE;
-    }
-
-    // Write the compressed size.
-    if(1 != fwrite(&cryptCompSize, 4, 1, pOut))
-    {
-        fprintf(stderr, "Failed to write output file.\n");
-
-        // Free the input and output buffers.
-        delete[] pData;
-        delete[] pDataOut;
-        pDataOut = 0;
-        pData = 0;
-
-        return EXIT_FAILURE;
-    }
-
-    // Write the compressed data.
-    if(1 != fwrite(pDataOut, (size_t)compSize, 1, pOut))
-    {
-        fprintf(stderr, "Failed to write output file.\n");
-
-        // Free the input and output buffers.
-        delete[] pData;
-        delete[] pDataOut;
-        pDataOut = 0;
-        pData = 0;
-
-        return EXIT_FAILURE;
-    }
+  // Read the file.
+  if (1 != fread(pData, sz, 1, pIn)) {
+    fprintf(stderr, "Failed to read input file.\n");
 
     // Free the input and output buffers.
     delete[] pData;
@@ -257,11 +132,122 @@ int EncryptFile(const char *szIn, const char *szOut)
     pDataOut = 0;
     pData = 0;
 
-    // Close the files and cleanup.
-    fclose(pIn);
-    fclose(pOut);
+    return EXIT_FAILURE;
+  }
 
-    return EXIT_SUCCESS;
+  // Attempt to compress the file.
+  int32_t compSize =
+      libcomp::Compress::Compress(pData, pDataOut, (int32_t)sz, maxSize, 9);
+
+  // Check if it compressed.
+  if (0 >= compSize) {
+    fprintf(stderr, "Failed to compress NIF file!\n");
+    fprintf(stderr, "Size: %d\n", compSize);
+
+    // Free the input and output buffers.
+    delete[] pData;
+    delete[] pDataOut;
+    pDataOut = 0;
+    pData = 0;
+
+    return EXIT_FAILURE;
+  }
+
+  // Check the size of the file.
+  if (compSize > 30000000) {
+    fprintf(stderr, "Input file is too big!\n");
+
+    // Free the input and output buffers.
+    delete[] pData;
+    delete[] pDataOut;
+    pDataOut = 0;
+    pData = 0;
+
+    return EXIT_FAILURE;
+  }
+
+  // Sanity check here.
+  if (compSize > (int32_t)sz) {
+    fprintf(stderr, "Input file is too big!\n");
+
+    // Free the input and output buffers.
+    delete[] pData;
+    delete[] pDataOut;
+    pDataOut = 0;
+    pData = 0;
+
+    return EXIT_FAILURE;
+  }
+
+  // Encrypt the sizes.
+  uint32_t cryptDecompSize = sz ^ NIF_XOR_KEY1;
+  int32_t cryptCompSize = compSize ^ (int32_t)NIF_XOR_KEY2;
+
+  // Write the magic.
+  uint32_t magic = NIF_MAGIC;
+
+  if (1 != fwrite(&magic, 4, 1, pOut)) {
+    fprintf(stderr, "Failed to write output file.\n");
+
+    // Free the input and output buffers.
+    delete[] pData;
+    delete[] pDataOut;
+    pDataOut = 0;
+    pData = 0;
+
+    return EXIT_FAILURE;
+  }
+
+  // Write the uncompressed size.
+  if (1 != fwrite(&cryptDecompSize, 4, 1, pOut)) {
+    fprintf(stderr, "Failed to write output file.\n");
+
+    // Free the input and output buffers.
+    delete[] pData;
+    delete[] pDataOut;
+    pDataOut = 0;
+    pData = 0;
+
+    return EXIT_FAILURE;
+  }
+
+  // Write the compressed size.
+  if (1 != fwrite(&cryptCompSize, 4, 1, pOut)) {
+    fprintf(stderr, "Failed to write output file.\n");
+
+    // Free the input and output buffers.
+    delete[] pData;
+    delete[] pDataOut;
+    pDataOut = 0;
+    pData = 0;
+
+    return EXIT_FAILURE;
+  }
+
+  // Write the compressed data.
+  if (1 != fwrite(pDataOut, (size_t)compSize, 1, pOut)) {
+    fprintf(stderr, "Failed to write output file.\n");
+
+    // Free the input and output buffers.
+    delete[] pData;
+    delete[] pDataOut;
+    pDataOut = 0;
+    pData = 0;
+
+    return EXIT_FAILURE;
+  }
+
+  // Free the input and output buffers.
+  delete[] pData;
+  delete[] pDataOut;
+  pDataOut = 0;
+  pData = 0;
+
+  // Close the files and cleanup.
+  fclose(pIn);
+  fclose(pOut);
+
+  return EXIT_SUCCESS;
 }
 
 /**
@@ -270,160 +256,109 @@ int EncryptFile(const char *szIn, const char *szOut)
  * @param szOut Path to the output file to write.
  * @returns Standard exit code.
  */
-int DecryptFile(const char *szIn, const char *szOut)
-{
-    FILE *pIn = fopen(szIn, "rb");
-    FILE *pOut = fopen(szOut, "wb");
+int DecryptFile(const char *szIn, const char *szOut) {
+  FILE *pIn = fopen(szIn, "rb");
+  FILE *pOut = fopen(szOut, "wb");
 
-    if(!pIn)
-    {
-        fprintf(stderr, "Failed to open input file.\n");
+  if (!pIn) {
+    fprintf(stderr, "Failed to open input file.\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    if(!pOut)
-    {
-        fprintf(stderr, "Failed to open input file.\n");
+  if (!pOut) {
+    fprintf(stderr, "Failed to open input file.\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Read and check the magic is correct.
-    uint32_t magic = 0;
+  // Read and check the magic is correct.
+  uint32_t magic = 0;
 
-    if(1 != fread(&magic, 4, 1, pIn))
-    {
-        fprintf(stderr, "Failed to read input file.\n");
+  if (1 != fread(&magic, 4, 1, pIn)) {
+    fprintf(stderr, "Failed to read input file.\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    if(NIF_MAGIC != magic)
-    {
-        fprintf(stderr, "ERROR: File is not encrypted!\n");
+  if (NIF_MAGIC != magic) {
+    fprintf(stderr, "ERROR: File is not encrypted!\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Get the decompressed size.
-    uint32_t decompSize = 0;
+  // Get the decompressed size.
+  uint32_t decompSize = 0;
 
-    if(1 != fread(&decompSize, 4, 1, pIn))
-    {
-        fprintf(stderr, "Failed to read input file.\n");
+  if (1 != fread(&decompSize, 4, 1, pIn)) {
+    fprintf(stderr, "Failed to read input file.\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Decrypt the size and check it.
-    decompSize ^= NIF_XOR_KEY1;
+  // Decrypt the size and check it.
+  decompSize ^= NIF_XOR_KEY1;
 
-    if(decompSize > 30000000)
-    {
-        fprintf(stderr, "Input file is too big!\n");
+  if (decompSize > 30000000) {
+    fprintf(stderr, "Input file is too big!\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Get the compressed size.
-    uint32_t compSize = 0;
+  // Get the compressed size.
+  uint32_t compSize = 0;
 
-    if(1 != fread(&compSize, 4, 1, pIn))
-    {
-        fprintf(stderr, "Failed to read input file.\n");
+  if (1 != fread(&compSize, 4, 1, pIn)) {
+    fprintf(stderr, "Failed to read input file.\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    if(0 != fseek(pIn, 0, SEEK_END))
-    {
-        fprintf(stderr, "Seek error in input file.\n");
+  if (0 != fseek(pIn, 0, SEEK_END)) {
+    fprintf(stderr, "Seek error in input file.\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Get the size of the file.
-    uint32_t sz = (uint32_t)ftell(pIn);
+  // Get the size of the file.
+  uint32_t sz = (uint32_t)ftell(pIn);
 
-    // We don't read the magic, size and key as part of the file.
-    sz -= 4 * 3;
+  // We don't read the magic, size and key as part of the file.
+  sz -= 4 * 3;
 
-    // Check the size of the file.
-    if(sz > 30000000)
-    {
-        fprintf(stderr, "Input file is too big!\n");
+  // Check the size of the file.
+  if (sz > 30000000) {
+    fprintf(stderr, "Input file is too big!\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Decrypt and check the compressed size.
-    compSize ^= NIF_XOR_KEY2;
+  // Decrypt and check the compressed size.
+  compSize ^= NIF_XOR_KEY2;
 
-    if(compSize > sz)
-    {
-        fprintf(stderr, "Input file is too big!\n");
+  if (compSize > sz) {
+    fprintf(stderr, "Input file is too big!\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Start over now that we have the key.
-    if(0 != fseek(pIn, 4 * 3, SEEK_SET))
-    {
-        fprintf(stderr, "Seek error in input file.\n");
+  // Start over now that we have the key.
+  if (0 != fseek(pIn, 4 * 3, SEEK_SET)) {
+    fprintf(stderr, "Seek error in input file.\n");
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    // Allocate the buffer.
-    uint8_t *pData = new uint8_t[compSize];
-    memset(pData, 0, compSize);
+  // Allocate the buffer.
+  uint8_t *pData = new uint8_t[compSize];
+  memset(pData, 0, compSize);
 
-    // Allocate the output buffer.
-    uint8_t *pDataOut = new uint8_t[decompSize];
+  // Allocate the output buffer.
+  uint8_t *pDataOut = new uint8_t[decompSize];
 
-    // Read the file.
-    if(1 != fread(pData, compSize, 1, pIn))
-    {
-        fprintf(stderr, "Failed to read input file.\n");
-
-        // Free the input and output buffers.
-        delete[] pData;
-        delete[] pDataOut;
-        pDataOut = 0;
-        pData = 0;
-
-        return EXIT_FAILURE;
-    }
-
-    // Attempt to decompress the file.
-    if((int32_t)decompSize != libcomp::Compress::Decompress(pData, pDataOut,
-        (int32_t)compSize, (int32_t)decompSize))
-    {
-        fprintf(stderr, "Failed to decompress NIF file!\n");
-
-        // Free the input and output buffers.
-        delete[] pData;
-        delete[] pDataOut;
-        pDataOut = 0;
-        pData = 0;
-
-        return EXIT_FAILURE;
-    }
-
-    // Write the output file contents.
-    if(1 != fwrite(pDataOut, decompSize, 1, pOut))
-    {
-        fprintf(stderr, "Failed to write output file.\n");
-
-        // Free the input and output buffers.
-        delete[] pData;
-        delete[] pDataOut;
-        pDataOut = 0;
-        pData = 0;
-
-        return EXIT_FAILURE;
-    }
+  // Read the file.
+  if (1 != fread(pData, compSize, 1, pIn)) {
+    fprintf(stderr, "Failed to read input file.\n");
 
     // Free the input and output buffers.
     delete[] pData;
@@ -431,11 +366,48 @@ int DecryptFile(const char *szIn, const char *szOut)
     pDataOut = 0;
     pData = 0;
 
-    // Close the files and cleanup.
-    fclose(pIn);
-    fclose(pOut);
+    return EXIT_FAILURE;
+  }
 
-    return EXIT_SUCCESS;
+  // Attempt to decompress the file.
+  if ((int32_t)decompSize !=
+      libcomp::Compress::Decompress(pData, pDataOut, (int32_t)compSize,
+                                    (int32_t)decompSize)) {
+    fprintf(stderr, "Failed to decompress NIF file!\n");
+
+    // Free the input and output buffers.
+    delete[] pData;
+    delete[] pDataOut;
+    pDataOut = 0;
+    pData = 0;
+
+    return EXIT_FAILURE;
+  }
+
+  // Write the output file contents.
+  if (1 != fwrite(pDataOut, decompSize, 1, pOut)) {
+    fprintf(stderr, "Failed to write output file.\n");
+
+    // Free the input and output buffers.
+    delete[] pData;
+    delete[] pDataOut;
+    pDataOut = 0;
+    pData = 0;
+
+    return EXIT_FAILURE;
+  }
+
+  // Free the input and output buffers.
+  delete[] pData;
+  delete[] pDataOut;
+  pDataOut = 0;
+  pData = 0;
+
+  // Close the files and cleanup.
+  fclose(pIn);
+  fclose(pOut);
+
+  return EXIT_SUCCESS;
 }
 
 /**
@@ -444,21 +416,15 @@ int DecryptFile(const char *szIn, const char *szOut)
  * @param argv Array of command line arguments.
  * @returns Standard exit code.
  */
-int main(int argc, char *argv[])
-{
-    // Detect encrypt or decrypt mode or print usage.
-    if(argc == 4 && std::string("-d") == argv[1])
-    {
-        return DecryptFile(argv[2], argv[3]);
-    }
-    else if(argc == 3)
-    {
-        return EncryptFile(argv[1], argv[2]);
-    }
-    else
-    {
-        fprintf(stderr, "USAGE: %s [-d] IN OUT\n", argv[0]);
-    }
+int main(int argc, char *argv[]) {
+  // Detect encrypt or decrypt mode or print usage.
+  if (argc == 4 && std::string("-d") == argv[1]) {
+    return DecryptFile(argv[2], argv[3]);
+  } else if (argc == 3) {
+    return EncryptFile(argv[1], argv[2]);
+  } else {
+    fprintf(stderr, "USAGE: %s [-d] IN OUT\n", argv[0]);
+  }
 
-    return EXIT_FAILURE;
+  return EXIT_FAILURE;
 }

@@ -45,60 +45,58 @@
 
 using namespace lobby;
 
-bool Parsers::DeleteCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DeleteCharacter::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 1)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 1) {
+    return false;
+  }
 
-    uint8_t cid = p.ReadU8();
+  uint8_t cid = p.ReadU8();
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-    auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
-    auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
-    auto account = lobbyConnection->GetClientState()->GetAccount();
+  auto server =
+      std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+  auto config =
+      std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
+  auto lobbyConnection =
+      std::dynamic_pointer_cast<LobbyClientConnection>(connection);
+  auto account = lobbyConnection->GetClientState()->GetAccount();
 
-    //Every character should have already been loaded by the CharacterList
-    auto deleteCharacter = account->GetCharacters(cid);
-    if(deleteCharacter.Get())
-    {
-        auto world = server->GetWorldByID(deleteCharacter->GetWorldID());
-        auto worldDB = world->GetWorldDatabase();
+  // Every character should have already been loaded by the CharacterList
+  auto deleteCharacter = account->GetCharacters(cid);
+  if (deleteCharacter.Get()) {
+    auto world = server->GetWorldByID(deleteCharacter->GetWorldID());
+    auto worldDB = world->GetWorldDatabase();
 
-        server->QueueWork([](const std::shared_ptr<LobbyClientConnection> client,
-            uint8_t c, std::shared_ptr<LobbyServer> s)
-        {
-            libcomp::Packet reply;
-            reply.WritePacketCode(
-                LobbyToClientPacketCode_t::PACKET_DELETE_CHARACTER);
+    server->QueueWork(
+        [](const std::shared_ptr<LobbyClientConnection> client, uint8_t c,
+           std::shared_ptr<LobbyServer> s) {
+          libcomp::Packet reply;
+          reply.WritePacketCode(
+              LobbyToClientPacketCode_t::PACKET_DELETE_CHARACTER);
 
-            if(s->GetAccountManager()->UpdateKillTime(
-                client->GetClientState()->GetAccount()->GetUsername(), c, s))
-            {
-                reply.WriteS8((int8_t)c);
-            }
-            else
-            {
-                //Send failure
-                reply.WriteS8(-1);
-            }
+          if (s->GetAccountManager()->UpdateKillTime(
+                  client->GetClientState()->GetAccount()->GetUsername(), c,
+                  s)) {
+            reply.WriteS8((int8_t)c);
+          } else {
+            // Send failure
+            reply.WriteS8(-1);
+          }
 
-            client->SendPacket(reply);
-        }, lobbyConnection, cid, server);
-    }
-    else
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Client tried to delete character with "
-                "invalid CID %1\n").Arg(cid);
-        });
+          client->SendPacket(reply);
+        },
+        lobbyConnection, cid, server);
+  } else {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Client tried to delete character with invalid CID %1\n")
+          .Arg(cid);
+    });
 
-        connection->Close();
-    }
+    connection->Close();
+  }
 
-    return true;
+  return true;
 }

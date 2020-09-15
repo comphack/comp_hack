@@ -28,59 +28,52 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Event.h"
 #include "ui_EventPlayScene.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
 EventPlayScene::EventPlayScene(MainWindow *pMainWindow, QWidget *pParent)
-    : Event(pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::EventPlayScene;
-    prop->setupUi(pWidget);
+    : Event(pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::EventPlayScene;
+  prop->setupUi(pWidget);
 
-    ui->eventTitle->setText(tr("<b>Play Scene</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->eventTitle->setText(tr("<b>Play Scene</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-EventPlayScene::~EventPlayScene()
-{
-    delete prop;
+EventPlayScene::~EventPlayScene() { delete prop; }
+
+void EventPlayScene::Load(const std::shared_ptr<objects::Event> &e) {
+  Event::Load(e);
+
+  mEvent = std::dynamic_pointer_cast<objects::EventPlayScene>(e);
+
+  if (!mEvent) {
+    return;
+  }
+
+  prop->scene->setValue(mEvent->GetSceneID());
+  prop->eventLock->setChecked(mEvent->GetEventLock());
 }
 
-void EventPlayScene::Load(const std::shared_ptr<objects::Event>& e)
-{
-    Event::Load(e);
+std::shared_ptr<objects::Event> EventPlayScene::Save() const {
+  if (!mEvent) {
+    return nullptr;
+  }
 
-    mEvent = std::dynamic_pointer_cast<objects::EventPlayScene>(e);
+  Event::Save();
 
-    if(!mEvent)
-    {
-        return;
-    }
+  mEvent->SetSceneID(prop->scene->value());
+  mEvent->SetEventLock(prop->eventLock->isChecked());
 
-    prop->scene->setValue(mEvent->GetSceneID());
-    prop->eventLock->setChecked(mEvent->GetEventLock());
-}
-
-std::shared_ptr<objects::Event> EventPlayScene::Save() const
-{
-    if(!mEvent)
-    {
-        return nullptr;
-    }
-
-    Event::Save();
-
-    mEvent->SetSceneID(prop->scene->value());
-    mEvent->SetEventLock(prop->eventLock->isChecked());
-
-    return mEvent;
+  return mEvent;
 }

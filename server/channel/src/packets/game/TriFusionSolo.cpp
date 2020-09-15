@@ -38,45 +38,44 @@
 
 using namespace channel;
 
-bool Parsers::TriFusionSolo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TriFusionSolo::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 31)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 31) {
+    return false;
+  }
 
-    int32_t fusionType = p.ReadS32Little();
-    int64_t demonID1 = p.ReadS64Little();
-    int64_t demonID2 = p.ReadS64Little();
-    int64_t demonID3 = p.ReadS64Little();
-    uint16_t fusionItemType = p.ReadU16Little();
-    uint8_t unknown = p.ReadU8();
-    (void)fusionType;
-    (void)unknown;
+  int32_t fusionType = p.ReadS32Little();
+  int64_t demonID1 = p.ReadS64Little();
+  int64_t demonID2 = p.ReadS64Little();
+  int64_t demonID3 = p.ReadS64Little();
+  uint16_t fusionItemType = p.ReadU16Little();
+  uint8_t unknown = p.ReadU8();
+  (void)fusionType;
+  (void)unknown;
 
-    if(fusionItemType != 1)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Invalid solo TriFusion item type"
-                " supplied: %1\n").Arg(fusionItemType);
-        });
+  if (fusionItemType != 1) {
+    LogGeneralError([&]() {
+      return libcomp::String("Invalid solo TriFusion item type supplied: %1\n")
+          .Arg(fusionItemType);
+    });
 
-        return false;
-    }
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork([](const std::shared_ptr<ChannelServer> pServer,
-        const std::shared_ptr<ChannelClientConnection> pClient,
-        int64_t pDemonID1, int64_t pDemonID2, int64_t pDemonID3)
-        {
-            pServer->GetFusionManager()->HandleTriFusion(pClient, pDemonID1,
-                pDemonID2, pDemonID3, true);
-        }, server, client, demonID1, demonID2, demonID3);
+  server->QueueWork(
+      [](const std::shared_ptr<ChannelServer> pServer,
+         const std::shared_ptr<ChannelClientConnection> pClient,
+         int64_t pDemonID1, int64_t pDemonID2, int64_t pDemonID3) {
+        pServer->GetFusionManager()->HandleTriFusion(
+            pClient, pDemonID1, pDemonID2, pDemonID3, true);
+      },
+      server, client, demonID1, demonID2, demonID3);
 
-    return true;
+  return true;
 }

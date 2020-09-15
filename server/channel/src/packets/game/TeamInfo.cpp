@@ -39,54 +39,49 @@
 
 using namespace channel;
 
-bool Parsers::TeamInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TeamInfo::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t teamID = p.ReadS32Little();
+  int32_t teamID = p.ReadS32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto team = state->GetTeam();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto team = state->GetTeam();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_INFO);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_INFO);
 
-    if(team && team->GetID() == teamID)
-    {
-        reply.WriteS32Little(teamID);
-        reply.WriteS8((int8_t)TeamErrorCodes_t::SUCCESS);
+  if (team && team->GetID() == teamID) {
+    reply.WriteS32Little(teamID);
+    reply.WriteS8((int8_t)TeamErrorCodes_t::SUCCESS);
 
-        reply.WriteS32Little(team->GetLeaderCID());
-        reply.WriteS8(team->GetType());
+    reply.WriteS32Little(team->GetLeaderCID());
+    reply.WriteS8(team->GetType());
 
-        // It seems there was more planned for teams at one point but the
-        // client does not respond to any of the following fields
-        reply.WriteS8(0);
-        reply.WriteS8(0);
-        reply.WriteS8(0);
-        reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
-            "", true);
+    // It seems there was more planned for teams at one point but the
+    // client does not respond to any of the following fields
+    reply.WriteS8(0);
+    reply.WriteS8(0);
+    reply.WriteS8(0);
+    reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, "",
+                              true);
 
-        reply.WriteS32Little(team->GetSmallZiotite());
-        reply.WriteS8(team->GetLargeZiotite());
-        reply.WriteS8((int8_t)team->MemberIDsCount());
-    }
-    else
-    {
-        reply.WriteS32Little(teamID);
-        reply.WriteS8((int8_t)TeamErrorCodes_t::INVALID_TEAM);
-    }
+    reply.WriteS32Little(team->GetSmallZiotite());
+    reply.WriteS8(team->GetLargeZiotite());
+    reply.WriteS8((int8_t)team->MemberIDsCount());
+  } else {
+    reply.WriteS32Little(teamID);
+    reply.WriteS8((int8_t)TeamErrorCodes_t::INVALID_TEAM);
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

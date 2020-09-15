@@ -30,32 +30,30 @@
 // libcomp Includes
 #include <PacketParser.h>
 
-namespace lobby
-{
+namespace lobby {
 
-namespace Parsers
-{
+namespace Parsers {
 
-PACKET_PARSER_DECL(Login);               // 0x0003
-PACKET_PARSER_DECL(Auth);                // 0x0005
-PACKET_PARSER_DECL(StartGame);           // 0x0007
-PACKET_PARSER_DECL(CharacterList);       // 0x0009
-PACKET_PARSER_DECL(WorldList);           // 0x000B
-PACKET_PARSER_DECL(CreateCharacter);     // 0x000D
-PACKET_PARSER_DECL(DeleteCharacter);     // 0x000F
-PACKET_PARSER_DECL(QueryPurchaseTicket); // 0x0011
-PACKET_PARSER_DECL(PurchaseTicket);      // 0x0013
+PACKET_PARSER_DECL(Login);                // 0x0003
+PACKET_PARSER_DECL(Auth);                 // 0x0005
+PACKET_PARSER_DECL(StartGame);            // 0x0007
+PACKET_PARSER_DECL(CharacterList);        // 0x0009
+PACKET_PARSER_DECL(WorldList);            // 0x000B
+PACKET_PARSER_DECL(CreateCharacter);      // 0x000D
+PACKET_PARSER_DECL(DeleteCharacter);      // 0x000F
+PACKET_PARSER_DECL(QueryPurchaseTicket);  // 0x0011
+PACKET_PARSER_DECL(PurchaseTicket);       // 0x0013
 
-//Internal Packets
-PACKET_PARSER_DECL(SetWorldInfo);      // 0x1002
-PACKET_PARSER_DECL(SetChannelInfo);    // 0x1003
-PACKET_PARSER_DECL(AccountLogin);      // 0x1004
-PACKET_PARSER_DECL(AccountLogout);     // 0x1005
-PACKET_PARSER_DECL(DataSync);          // 0x1007
-PACKET_PARSER_DECL(WebGame);           // 0x100C
+// Internal Packets
+PACKET_PARSER_DECL(SetWorldInfo);    // 0x1002
+PACKET_PARSER_DECL(SetChannelInfo);  // 0x1003
+PACKET_PARSER_DECL(AccountLogin);    // 0x1004
+PACKET_PARSER_DECL(AccountLogout);   // 0x1005
+PACKET_PARSER_DECL(DataSync);        // 0x1007
+PACKET_PARSER_DECL(WebGame);         // 0x100C
 
-} // namespace Parsers
+}  // namespace Parsers
 
-} // namespace lobby
+}  // namespace lobby
 
-#endif // LIBCOMP_SRC_PACKETS_H
+#endif  // LIBCOMP_SRC_PACKETS_H

@@ -40,55 +40,51 @@
 
 using namespace channel;
 
-bool Parsers::PostGift::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PostGift::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto lobbyDB = server->GetLobbyDatabase();
+
+  int32_t postID = p.ReadS32Little();
+
+  auto itemUUID = state->GetLocalObjectUUID(postID);
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_POST_GIFT);
+  reply.WriteS32Little(postID);
+
+  bool success = false;
+  if (!itemUUID.IsNull()) {
+    auto postItem =
+        libcomp::PersistentObject::LoadObjectByUUID<objects::PostItem>(
+            lobbyDB, itemUUID);
+    if (postItem) {
+      reply.WriteS32Little(0);
+      reply.WriteS8(0);
+      reply.WriteString16Little(state->GetClientStringEncoding(),
+                                postItem->GetFromName(), true);
+      reply.WriteString16Little(state->GetClientStringEncoding(),
+                                postItem->GetGiftMessage(), true);
+
+      success = true;
     }
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  if (!success) {
+    reply.WriteS32Little(-1);
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto lobbyDB = server->GetLobbyDatabase();
+  client->SendPacket(reply);
 
-    int32_t postID = p.ReadS32Little();
-
-    auto itemUUID = state->GetLocalObjectUUID(postID);
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_POST_GIFT);
-    reply.WriteS32Little(postID);
-
-    bool success = false;
-    if(!itemUUID.IsNull())
-    {
-        auto postItem = libcomp::PersistentObject::LoadObjectByUUID<
-            objects::PostItem>(lobbyDB, itemUUID);
-        if(postItem)
-        {
-            reply.WriteS32Little(0);
-            reply.WriteS8(0);
-            reply.WriteString16Little(state->GetClientStringEncoding(),
-                postItem->GetFromName(), true);
-            reply.WriteString16Little(state->GetClientStringEncoding(),
-                postItem->GetGiftMessage(), true);
-
-            success = true;
-        }
-    }
-
-    if(!success)
-    {
-        reply.WriteS32Little(-1);
-    }
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

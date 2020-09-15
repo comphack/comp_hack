@@ -36,113 +36,95 @@
 
 using namespace channel;
 
-namespace libcomp
-{
-    template<>
-    ScriptEngine& ScriptEngine::Using<EnemyState>()
-    {
-        if(!BindingExists("EnemyState", true))
-        {
-            Using<ActiveEntityState>();
-            Using<objects::Enemy>();
+namespace libcomp {
+template <>
+ScriptEngine& ScriptEngine::Using<EnemyState>() {
+  if (!BindingExists("EnemyState", true)) {
+    Using<ActiveEntityState>();
+    Using<objects::Enemy>();
 
-            Sqrat::DerivedClass<EnemyState, ActiveEntityState,
-                Sqrat::NoConstructor<EnemyState>> binding(mVM, "EnemyState");
-            binding
-                .Func<std::shared_ptr<objects::Enemy>
-                (EnemyState::*)() const>(
-                    "GetEntity", &EnemyState::GetEntity)
-                .StaticFunc("Cast", &EnemyState::Cast);
+    Sqrat::DerivedClass<EnemyState, ActiveEntityState,
+                        Sqrat::NoConstructor<EnemyState>>
+        binding(mVM, "EnemyState");
+    binding
+        .Func<std::shared_ptr<objects::Enemy> (EnemyState::*)() const>(
+            "GetEntity", &EnemyState::GetEntity)
+        .StaticFunc("Cast", &EnemyState::Cast);
 
-            Bind<EnemyState>("EnemyState", binding);
-        }
+    Bind<EnemyState>("EnemyState", binding);
+  }
 
-        return *this;
-    }
+  return *this;
 }
+}  // namespace libcomp
 
-EnemyState::EnemyState()
-{
-}
+EnemyState::EnemyState() {}
 
 std::pair<int8_t, int8_t> EnemyState::GetTalkPoints(int32_t entityID,
-    bool& exists)
-{
-    exists = true;
+                                                    bool& exists) {
+  exists = true;
 
-    std::lock_guard<std::mutex> lock(mLock);
-    auto it = mTalkPoints.find(entityID);
-    if(it == mTalkPoints.end())
-    {
-        mTalkPoints[entityID] = std::pair<int8_t, int8_t>(0, 0);
-        exists = false;
-    }
+  std::lock_guard<std::mutex> lock(mLock);
+  auto it = mTalkPoints.find(entityID);
+  if (it == mTalkPoints.end()) {
+    mTalkPoints[entityID] = std::pair<int8_t, int8_t>(0, 0);
+    exists = false;
+  }
 
-    return mTalkPoints[entityID];
+  return mTalkPoints[entityID];
 }
 
 void EnemyState::SetTalkPoints(int32_t entityID,
-    const std::pair<int8_t, int8_t>& points)
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    mTalkPoints[entityID] = points;
+                               const std::pair<int8_t, int8_t>& points) {
+  std::lock_guard<std::mutex> lock(mLock);
+  mTalkPoints[entityID] = points;
 }
 
-std::shared_ptr<objects::EnemyBase> EnemyState::GetEnemyBase() const
-{
-    return GetEntity();
+std::shared_ptr<objects::EnemyBase> EnemyState::GetEnemyBase() const {
+  return GetEntity();
 }
 
 uint8_t EnemyState::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
-    std::shared_ptr<objects::MiSkillData> contextSkill)
-{
-    std::lock_guard<std::mutex> lock(mLock);
+    std::shared_ptr<objects::MiSkillData> contextSkill) {
+  std::lock_guard<std::mutex> lock(mLock);
 
-    auto entity = GetEntity();
-    if(!entity)
-    {
-        return true;
-    }
+  auto entity = GetEntity();
+  if (!entity) {
+    return true;
+  }
 
-    return RecalculateEnemyStats(definitionManager, calcState,
-        contextSkill);
+  return RecalculateEnemyStats(definitionManager, calcState, contextSkill);
 }
 
 std::set<uint32_t> EnemyState::GetAllSkills(
-    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
-{
-    return GetAllEnemySkills(definitionManager, includeTokusei);
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei) {
+  return GetAllEnemySkills(definitionManager, includeTokusei);
 }
 
-uint8_t EnemyState::GetLNCType()
-{
-    int16_t lncPoints = 0;
+uint8_t EnemyState::GetLNCType() {
+  int16_t lncPoints = 0;
 
-    auto entity = GetEntity();
-    auto demonData = GetDevilData();
-    if(entity && demonData)
-    {
-        lncPoints = demonData->GetBasic()->GetLNC();
-    }
+  auto entity = GetEntity();
+  auto demonData = GetDevilData();
+  if (entity && demonData) {
+    lncPoints = demonData->GetBasic()->GetLNC();
+  }
 
-    return CalculateLNCType(lncPoints);
+  return CalculateLNCType(lncPoints);
 }
 
-int8_t EnemyState::GetGender()
-{
-    auto demonData = GetDevilData();
-    if(demonData)
-    {
-        return (int8_t)demonData->GetBasic()->GetGender();
-    }
+int8_t EnemyState::GetGender() {
+  auto demonData = GetDevilData();
+  if (demonData) {
+    return (int8_t)demonData->GetBasic()->GetGender();
+  }
 
-    return GENDER_NA;
+  return GENDER_NA;
 }
 
 std::shared_ptr<EnemyState> EnemyState::Cast(
-    const std::shared_ptr<EntityStateObject>& obj)
-{
-    return std::dynamic_pointer_cast<EnemyState>(obj);
+    const std::shared_ptr<EntityStateObject>& obj) {
+  return std::dynamic_pointer_cast<EnemyState>(obj);
 }

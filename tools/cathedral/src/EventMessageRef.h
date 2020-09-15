@@ -27,32 +27,30 @@
 
 #include <ObjectSelectorBase.h>
 
-namespace Ui
-{
+namespace Ui {
 
 class EventMessageRef;
 
-} // namespace Ui
+}  // namespace Ui
 
-class EventMessageRef : public ObjectSelectorBase
-{
-    Q_OBJECT
+class EventMessageRef : public ObjectSelectorBase {
+  Q_OBJECT
 
-public:
-    explicit EventMessageRef(QWidget *pParent = 0);
-    virtual ~EventMessageRef();
+ public:
+  explicit EventMessageRef(QWidget *pParent = 0);
+  virtual ~EventMessageRef();
 
-    void Setup(MainWindow *pMainWindow,
-        const libcomp::String& objType = "CEventMessageData");
+  void Setup(MainWindow *pMainWindow,
+             const libcomp::String &objType = "CEventMessageData");
 
-    void SetValue(uint32_t value) override;
-    uint32_t GetValue() const override;
+  void SetValue(uint32_t value) override;
+  uint32_t GetValue() const override;
 
-private slots:
-    void MessageIDChanged();
+ private slots:
+  void MessageIDChanged();
 
-protected:
-    Ui::EventMessageRef *ui;
+ protected:
+  Ui::EventMessageRef *ui;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_EVENTMESSAGEREF_H
+#endif  // TOOLS_CATHEDRAL_SRC_EVENTMESSAGEREF_H

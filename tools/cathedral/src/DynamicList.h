@@ -26,9 +26,10 @@
 #define TOOLS_CATHEDRAL_SRC_DYNAMICLIST_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QWidget>
 
 // libcomp Includes
 #include <CString.h>
@@ -37,98 +38,97 @@
 #include <list>
 #include <memory>
 
-namespace libcomp
-{
+namespace libcomp {
 
 class Object;
 
-} // namespace libcomp
+}  // namespace libcomp
 
-namespace Ui
-{
+namespace Ui {
 
 class DynamicList;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-enum class DynamicItemType_t : uint8_t
-{
-    NONE,
-    PRIMITIVE_INT,
-    PRIMITIVE_UINT,
-    PRIMITIVE_STRING,
-    PRIMITIVE_MULTILINE_STRING,
-    COMPLEX_EVENT_MESSAGE,
-    COMPLEX_OBJECT_SELECTOR,
-    COMPLEX_SPOT,
-    OBJ_EVENT_BASE,
-    OBJ_EVENT_CHOICE,
-    OBJ_EVENT_CONDITION,
-    OBJ_EVENT_ITIME_CHOICE,
-    OBJ_ITEM_DROP,
-    OBJ_OBJECT_POSITION,
-    OBJ_SPAWN_LOCATION,
-    OBJ_ZONE_TRIGGER,
+enum class DynamicItemType_t : uint8_t {
+  NONE,
+  PRIMITIVE_INT,
+  PRIMITIVE_UINT,
+  PRIMITIVE_STRING,
+  PRIMITIVE_MULTILINE_STRING,
+  COMPLEX_EVENT_MESSAGE,
+  COMPLEX_OBJECT_SELECTOR,
+  COMPLEX_SPOT,
+  OBJ_EVENT_BASE,
+  OBJ_EVENT_CHOICE,
+  OBJ_EVENT_CONDITION,
+  OBJ_EVENT_ITIME_CHOICE,
+  OBJ_ITEM_DROP,
+  OBJ_OBJECT_POSITION,
+  OBJ_SPAWN_LOCATION,
+  OBJ_ZONE_TRIGGER,
 };
 
-class DynamicList : public QWidget
-{
-    Q_OBJECT
+class DynamicList : public QWidget {
+  Q_OBJECT
 
-public:
-    explicit DynamicList(QWidget *pParent = 0);
-    virtual ~DynamicList();
+ public:
+  explicit DynamicList(QWidget* pParent = 0);
+  virtual ~DynamicList();
 
-    void Setup(DynamicItemType_t type, MainWindow *pMainWindow,
-        const libcomp::String& objectSelectorType = "",
-        bool selectorServerData = false);
+  void Setup(DynamicItemType_t type, MainWindow* pMainWindow,
+             const libcomp::String& objectSelectorType = "",
+             bool selectorServerData = false);
 
-    void SetAddText(const libcomp::String& text);
+  void SetAddText(const libcomp::String& text);
 
-    bool AddInteger(int32_t val);
-    bool AddUnsignedInteger(uint32_t val);
-    bool AddString(const libcomp::String& val);
-    template<class T> bool AddObject(const std::shared_ptr<T>& obj);
+  bool AddInteger(int32_t val);
+  bool AddUnsignedInteger(uint32_t val);
+  bool AddString(const libcomp::String& val);
+  template <class T>
+  bool AddObject(const std::shared_ptr<T>& obj);
 
-    std::list<int32_t> GetIntegerList() const;
-    std::list<uint32_t> GetUnsignedIntegerList() const;
-    std::list<libcomp::String> GetStringList() const;
-    template<class T> std::list<std::shared_ptr<T>> GetObjectList() const;
+  std::list<int32_t> GetIntegerList() const;
+  std::list<uint32_t> GetUnsignedIntegerList() const;
+  std::list<libcomp::String> GetStringList() const;
+  template <class T>
+  std::list<std::shared_ptr<T>> GetObjectList() const;
 
-    void Clear();
+  void Clear();
 
-protected slots:
-    void AddRow();
-    void RemoveRow();
-    void MoveUp();
-    void MoveDown();
+ protected slots:
+  void AddRow();
+  void RemoveRow();
+  void MoveUp();
+  void MoveDown();
 
-signals:
-    void rowEdit();
+ signals:
+  void rowEdit();
 
-protected:
-    void AddItem(QWidget* ctrl, bool canReorder);
-    QWidget* GetIntegerWidget(int32_t val);
-    QWidget* GetUnsignedIntegerWidget(uint32_t val);
-    QWidget* GetStringWidget(const libcomp::String& val, bool multiline);
-    template<class T> QWidget* GetObjectWidget(const std::shared_ptr<T>& obj);
-    QWidget* GetEventMessageWidget(int32_t val);
-    QWidget* GetObjectSelectorWidget(uint32_t val);
-    QWidget* GetSpotWidget(uint32_t val);
+ protected:
+  void AddItem(QWidget* ctrl, bool canReorder);
+  QWidget* GetIntegerWidget(int32_t val);
+  QWidget* GetUnsignedIntegerWidget(uint32_t val);
+  QWidget* GetStringWidget(const libcomp::String& val, bool multiline);
+  template <class T>
+  QWidget* GetObjectWidget(const std::shared_ptr<T>& obj);
+  QWidget* GetEventMessageWidget(int32_t val);
+  QWidget* GetObjectSelectorWidget(uint32_t val);
+  QWidget* GetSpotWidget(uint32_t val);
 
-    void RefreshPositions();
+  void RefreshPositions();
 
-    Ui::DynamicList *ui;
+  Ui::DynamicList* ui;
 
-    MainWindow *mMainWindow;
+  MainWindow* mMainWindow;
 
-    DynamicItemType_t mType;
+  DynamicItemType_t mType;
 
-    libcomp::String mObjectSelectorType;
+  libcomp::String mObjectSelectorType;
 
-    bool mSelectorServerData;
+  bool mSelectorServerData;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_DYNAMICLIST_H
+#endif  // TOOLS_CATHEDRAL_SRC_DYNAMICLIST_H

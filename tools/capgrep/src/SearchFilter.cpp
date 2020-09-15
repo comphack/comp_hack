@@ -23,132 +23,110 @@
  */
 
 #include "SearchFilter.h"
-#include "PacketListModel.h"
-#include "PacketListFilter.h"
-#include "PacketData.h"
 
 #include <Convert.h>
-
-#include <PushIgnore.h>
-#include <QSettings>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-SearchFilter::SearchFilter(QObject *p) : QSortFilterProxyModel(p),
-    mSearchType(SearchType_None), mCommand(0)
-{
+#include <QSettings>
+
+#include "PacketData.h"
+#include "PacketListFilter.h"
+#include "PacketListModel.h"
+
+SearchFilter::SearchFilter(QObject* p)
+    : QSortFilterProxyModel(p), mSearchType(SearchType_None), mCommand(0) {}
+
+bool SearchFilter::filterAcceptsRow(int row, const QModelIndex& p) const {
+  Q_UNUSED(p)
+
+  PacketListFilter* filter = qobject_cast<PacketListFilter*>(sourceModel());
+  if (!filter) return false;
+
+  PacketListModel* model =
+      qobject_cast<PacketListModel*>(filter->sourceModel());
+  if (!model) return false;
+
+  PacketData* d = model->packetAt(filter->mapRow(row));
+  if (!d) return false;
+
+  switch (mSearchType) {
+    case SearchType_Binary:
+    case SearchType_Text:
+      return d->data.contains(mTerm);
+    case SearchType_Command:
+      return d->cmd == mCommand;
+    case SearchType_None:
+    default:
+      break;
+  }
+
+  return false;
 }
 
-bool SearchFilter::filterAcceptsRow(int row, const QModelIndex& p) const
-{
-    Q_UNUSED(p)
+void SearchFilter::reset() {
+  mSearchType = SearchType_None;
+  mTerm.clear();
+  mCommand = 0;
 
-    PacketListFilter *filter = qobject_cast<PacketListFilter*>(sourceModel());
-    if(!filter)
-        return false;
-
-    PacketListModel *model = qobject_cast<PacketListModel*>(
-        filter->sourceModel());
-    if(!model)
-        return false;
-
-    PacketData *d = model->packetAt(filter->mapRow(row));
-    if(!d)
-        return false;
-
-    switch(mSearchType)
-    {
-        case SearchType_Binary:
-        case SearchType_Text:
-            return d->data.contains(mTerm);
-        case SearchType_Command:
-            return d->cmd == mCommand;
-        case SearchType_None:
-        default:
-            break;
-    }
-
-    return false;
+  beginResetModel();
+  invalidateFilter();
+  endResetModel();
 }
 
-void SearchFilter::reset()
-{
-    mSearchType = SearchType_None;
-    mTerm.clear();
-    mCommand = 0;
+void SearchFilter::findBinary(const QByteArray& term) {
+  mSearchType = SearchType_Binary;
+  mTerm = term;
 
-    beginResetModel();
-    invalidateFilter();
-    endResetModel();
+  invalidateFilter();
 }
 
-void SearchFilter::findBinary(const QByteArray& term)
-{
-    mSearchType = SearchType_Binary;
-    mTerm = term;
+void SearchFilter::findText(const QString& encoding, const QString& text) {
+  mSearchType = SearchType_Text;
+  if ("CP1252" == encoding) {
+    std::vector<char> term = libcomp::Convert::ToEncoding(
+        libcomp::Convert::ENCODING_CP1252, text.toUtf8().constData());
+    mTerm = QByteArray(&term[0], static_cast<int>(term.size()));
+  } else if ("CP932" == encoding) {
+    std::vector<char> term = libcomp::Convert::ToEncoding(
+        libcomp::Convert::ENCODING_CP932, text.toUtf8().constData());
+    mTerm = QByteArray(&term[0], static_cast<int>(term.size()));
+  } else {
+    mTerm = text.toUtf8();
+  }
+  mTerm.chop(1);
 
-    invalidateFilter();
+  invalidateFilter();
 }
 
-void SearchFilter::findText(const QString& encoding, const QString& text)
-{
-    mSearchType = SearchType_Text;
-    if("CP1252" == encoding)
-    {
-        std::vector<char> term = libcomp::Convert::ToEncoding(
-            libcomp::Convert::ENCODING_CP1252, text.toUtf8().constData());
-        mTerm = QByteArray(&term[0], static_cast<int>(term.size()));
-    }
-    else if("CP932" == encoding)
-    {
-        std::vector<char> term = libcomp::Convert::ToEncoding(
-            libcomp::Convert::ENCODING_CP932, text.toUtf8().constData());
-        mTerm = QByteArray(&term[0], static_cast<int>(term.size()));
-    }
-    else
-    {
-        mTerm = text.toUtf8();
-    }
-    mTerm.chop(1);
+void SearchFilter::findCommand(uint16_t cmd) {
+  mSearchType = SearchType_Command;
+  mCommand = cmd;
 
-    invalidateFilter();
-}
-
-void SearchFilter::findCommand(uint16_t cmd)
-{
-    mSearchType = SearchType_Command;
-    mCommand = cmd;
-
-    invalidateFilter();
+  invalidateFilter();
 }
 
 bool SearchFilter::searchResult(const QModelIndex& idx, int& packet,
-    int& offset, QByteArray& term)
-{
-    PacketListFilter *filter = qobject_cast<PacketListFilter*>(sourceModel());
-    if(!filter)
-        return false;
+                                int& offset, QByteArray& term) {
+  PacketListFilter* filter = qobject_cast<PacketListFilter*>(sourceModel());
+  if (!filter) return false;
 
-    PacketListModel *model = qobject_cast<PacketListModel*>(
-        filter->sourceModel());
-    if(!model)
-        return false;
+  PacketListModel* model =
+      qobject_cast<PacketListModel*>(filter->sourceModel());
+  if (!model) return false;
 
-    packet = filter->mapToSource(mapToSource(idx)).row();
+  packet = filter->mapToSource(mapToSource(idx)).row();
 
-    PacketData *d = model->packetAt(packet);
-    if(!d)
-        return false;
+  PacketData* d = model->packetAt(packet);
+  if (!d) return false;
 
-    if(mSearchType == SearchType_Command)
-    {
-        term.clear();
-        offset = -1;
-    }
-    else
-    {
-        term = mTerm;
-        offset = d->data.indexOf(mTerm);
-    }
+  if (mSearchType == SearchType_Command) {
+    term.clear();
+    offset = -1;
+  } else {
+    term = mTerm;
+    offset = d->data.indexOf(mTerm);
+  }
 
-    return true;
+  return true;
 }

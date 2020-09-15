@@ -40,40 +40,39 @@
 #include <ItemBox.h>
 
 // channel Includes
-#include "ChannelServer.h"
 #include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 #include "CharacterManager.h"
 
 using namespace channel;
 
-bool Parsers::ItemBox::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ItemBox::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 9)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 9) {
+    return false;
+  }
 
-    int8_t type = p.ReadS8();
-    int64_t boxID = p.ReadS64Little();
+  int8_t type = p.ReadS8();
+  int64_t boxID = p.ReadS64Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto characterManager = server->GetCharacterManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto characterManager = server->GetCharacterManager();
 
-    auto itemBox = characterManager->GetItemBox(state, type, boxID);
-    if(nullptr != itemBox)
-    {
-        server->QueueWork([](
-            CharacterManager* pCharacterManager,
-            const std::shared_ptr<ChannelClientConnection>& pClient,
-            const std::shared_ptr<objects::ItemBox>& pBox)
-        {
-            pCharacterManager->SendItemBoxData(pClient, pBox);
-        }, characterManager, client, itemBox);
-    }
+  auto itemBox = characterManager->GetItemBox(state, type, boxID);
+  if (nullptr != itemBox) {
+    server->QueueWork(
+        [](CharacterManager* pCharacterManager,
+           const std::shared_ptr<ChannelClientConnection>& pClient,
+           const std::shared_ptr<objects::ItemBox>& pBox) {
+          pCharacterManager->SendItemBoxData(pClient, pBox);
+        },
+        characterManager, client, itemBox);
+  }
 
-    return true;
+  return true;
 }

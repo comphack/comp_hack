@@ -37,57 +37,51 @@
 // object Includes
 #include <LobbyConfig.h>
 
-namespace lobby
-{
+namespace lobby {
 
-class LobbyClientConnection : public libcomp::LobbyConnection
-{
-public:
-    LobbyClientConnection(asio::ip::tcp::socket& socket,
-        const std::shared_ptr<libcomp::Crypto::DiffieHellman>& diffieHellman);
-    virtual ~LobbyClientConnection();
+class LobbyClientConnection : public libcomp::LobbyConnection {
+ public:
+  LobbyClientConnection(
+      asio::ip::tcp::socket& socket,
+      const std::shared_ptr<libcomp::Crypto::DiffieHellman>& diffieHellman);
+  virtual ~LobbyClientConnection();
 
-    ClientState* GetClientState() const;
-    void SetClientState(const std::shared_ptr<ClientState>& state);
+  ClientState* GetClientState() const;
+  void SetClientState(const std::shared_ptr<ClientState>& state);
 
-private:
-    std::shared_ptr<ClientState> mClientState;
+ private:
+  std::shared_ptr<ClientState> mClientState;
 };
 
 static inline ClientState* state(
-    const std::shared_ptr<libcomp::TcpConnection>& connection)
-{
-    ClientState *pState = nullptr;
+    const std::shared_ptr<libcomp::TcpConnection>& connection) {
+  ClientState* pState = nullptr;
 
-    auto conn = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
+  auto conn = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
 
-    if(nullptr != conn)
-    {
-        pState = conn->GetClientState();
-    }
+  if (nullptr != conn) {
+    pState = conn->GetClientState();
+  }
 
-    return pState;
+  return pState;
 }
 
 static inline std::shared_ptr<objects::LobbyConfig> config(
-    libcomp::ManagerPacket *pPacketManager)
-{
-    std::shared_ptr<objects::LobbyConfig> pConfig;
+    libcomp::ManagerPacket* pPacketManager) {
+  std::shared_ptr<objects::LobbyConfig> pConfig;
 
-    if(nullptr != pPacketManager)
-    {
-        auto server = pPacketManager->GetServer();
+  if (nullptr != pPacketManager) {
+    auto server = pPacketManager->GetServer();
 
-        if(nullptr != server)
-        {
-            pConfig = std::dynamic_pointer_cast<objects::LobbyConfig>(
-                server->GetConfig());
-        }
+    if (nullptr != server) {
+      pConfig =
+          std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
     }
+  }
 
-    return pConfig;
+  return pConfig;
 }
 
-} // namespace lobby
+}  // namespace lobby
 
-#endif // SERVER_LOBBY_SRC_LOBBYCLIENTCONNECTION_H
+#endif  // SERVER_LOBBY_SRC_LOBBYCLIENTCONNECTION_H

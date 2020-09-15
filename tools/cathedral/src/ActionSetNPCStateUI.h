@@ -32,35 +32,34 @@
 #include <ActionSetNPCState.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionSetNPCState;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionSetNPCState : public Action
-{
-    Q_OBJECT
+class ActionSetNPCState : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionSetNPCState(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionSetNPCState();
+ public:
+  explicit ActionSetNPCState(ActionList *pList, MainWindow *pMainWindow,
+                             QWidget *pParent = 0);
+  virtual ~ActionSetNPCState();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionSetNPCState *prop;
+ protected:
+  Ui::ActionSetNPCState *prop;
 
-    std::shared_ptr<objects::ActionSetNPCState> mAction;
+  std::shared_ptr<objects::ActionSetNPCState> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONSETNPCSTATEUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONSETNPCSTATEUI_H

@@ -45,229 +45,184 @@
 
 using namespace channel;
 
-bool Parsers::DestinyLotto::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DestinyLotto::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 8)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 8) {
+    return false;
+  }
+
+  uint32_t assistItemType = p.ReadU32Little();
+  uint16_t bonusCount = p.ReadU16Little();
+
+  bool slotSpecified = p.ReadU16Little() == 1;
+
+  uint8_t itemSlot = 0;
+  if (slotSpecified) {
+    if (p.Left() == 1) {
+      itemSlot = p.ReadU8();
+    } else {
+      return false;
     }
+  }
 
-    uint32_t assistItemType = p.ReadU32Little();
-    uint16_t bonusCount = p.ReadU16Little();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
 
-    bool slotSpecified = p.ReadU16Little() == 1;
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto zone = state->GetZone();
+  auto instance = zone ? zone->GetInstance() : nullptr;
+  auto dBox =
+      instance ? instance->GetDestinyBox(state->GetWorldCID()) : nullptr;
 
-    uint8_t itemSlot = 0;
-    if(slotSpecified)
-    {
-        if(p.Left() == 1)
-        {
-            itemSlot = p.ReadU8();
-        }
-        else
-        {
-            return false;
-        }
-    }
+  bool success = false;
+  std::list<std::shared_ptr<objects::Loot>> loot;
+  std::shared_ptr<objects::Loot> specifiedLoot;
+  if (dBox) {
+    // Make sure the box is full, otherwise fail
+    success = true;
+    loot = dBox->GetLoot();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
-    auto characterManager = server->GetCharacterManager();
-
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto zone = state->GetZone();
-    auto instance = zone ? zone->GetInstance() : nullptr;
-    auto dBox = instance
-        ? instance->GetDestinyBox(state->GetWorldCID()) : nullptr;
-
-    bool success = false;
-    std::list<std::shared_ptr<objects::Loot>> loot;
-    std::shared_ptr<objects::Loot> specifiedLoot;
-    if(dBox)
-    {
-        // Make sure the box is full, otherwise fail
-        success = true;
-        loot = dBox->GetLoot();
-
-        uint8_t slot = 0;
-        for(auto l : dBox->GetLoot())
-        {
-            if(!l)
-            {
-                success = false;
-                break;
-            }
-            else if(slot == itemSlot && slotSpecified)
-            {
-                specifiedLoot = l;
-            }
-
-            slot = (uint8_t)(slot + 1);
-        }
-    }
-
-    if(success && assistItemType != static_cast<uint32_t>(-1))
-    {
-        auto it = SVR_CONST.ADJUSTMENT_ITEMS.find(assistItemType);
-        if(it == SVR_CONST.ADJUSTMENT_ITEMS.end() ||
-            it->second[0] != 2 || it->second[2] < (int32_t)bonusCount)
-        {
-            LogGeneralError([&]()
-            {
-                return libcomp::String("Invalid Destiny lotto item or bonus"
-                    " count supplied: %1\n")
-                    .Arg(state->GetAccountUID().ToString());
-            });
-
-            success = false;
-        }
-        else if(it->second[1] != 1 && slotSpecified)
-        {
-            LogGeneralError([&]()
-            {
-                return libcomp::String("Destiny lotto explicit selection"
-                    " attempted with invalid assist item selected: %1\n")
-                    .Arg(state->GetAccountUID().ToString());
-            });
-
-            success = false;
-        }
-        else
-        {
-            // Consume one assist item per bonus added (or one for slot
-            // specification)
-            std::unordered_map<uint32_t, uint32_t> items;
-            items[assistItemType] = slotSpecified == 1 ? 1 : bonusCount;
-            success = characterManager->AddRemoveItems(client, items, false);
-        }
-    }
-    else if(success && slotSpecified)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Destiny lotto explicit selection"
-                " attempted with no assist item selected: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
-
+    uint8_t slot = 0;
+    for (auto l : dBox->GetLoot()) {
+      if (!l) {
         success = false;
+        break;
+      } else if (slot == itemSlot && slotSpecified) {
+        specifiedLoot = l;
+      }
+
+      slot = (uint8_t)(slot + 1);
     }
-    else if(success && bonusCount)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Destiny bonus count supplied with no"
-                " assist item: %1\n").Arg(state->GetAccountUID().ToString());
-        });
+  }
 
-        success = false;
+  if (success && assistItemType != static_cast<uint32_t>(-1)) {
+    auto it = SVR_CONST.ADJUSTMENT_ITEMS.find(assistItemType);
+    if (it == SVR_CONST.ADJUSTMENT_ITEMS.end() || it->second[0] != 2 ||
+        it->second[2] < (int32_t)bonusCount) {
+      LogGeneralError([&]() {
+        return libcomp::String(
+                   "Invalid Destiny lotto item or bonus count supplied: %1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+
+      success = false;
+    } else if (it->second[1] != 1 && slotSpecified) {
+      LogGeneralError([&]() {
+        return libcomp::String(
+                   "Destiny lotto explicit selection attempted with invalid "
+                   "assist item selected: %1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+
+      success = false;
+    } else {
+      // Consume one assist item per bonus added (or one for slot
+      // specification)
+      std::unordered_map<uint32_t, uint32_t> items;
+      items[assistItemType] = slotSpecified == 1 ? 1 : bonusCount;
+      success = characterManager->AddRemoveItems(client, items, false);
     }
+  } else if (success && slotSpecified) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Destiny lotto explicit selection attempted with no assist "
+                 "item selected: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-    if(success)
-    {
-        std::set<uint8_t> removes;
-        for(uint8_t i = 0; i < (uint8_t)loot.size(); i++)
-        {
-            removes.insert(i);
-        }
+    success = false;
+  } else if (success && bonusCount) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Destiny bonus count supplied with no assist item: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        uint8_t newNext = 0;
-        std::list<std::shared_ptr<objects::Loot>> empty;
-        auto results = instance->UpdateDestinyBox(state->GetWorldCID(),
-            newNext, empty, removes);
-        if(removes.size() != loot.size())
-        {
-            success = false;
-        }
-        else if(specifiedLoot)
-        {
-            loot.clear();
-            loot.push_back(specifiedLoot);
-        }
-        else
-        {
-            std::set<std::shared_ptr<objects::Loot>> allLoot;
-            for(auto l : loot)
-            {
-                allLoot.insert(l);
-            }
+    success = false;
+  }
 
-            loot.clear();
-
-            size_t total = (size_t)(1 + bonusCount);
-            for(size_t i = 0; i < total && allLoot.size() > 0; i++)
-            {
-                auto l = libcomp::Randomizer::GetEntry(allLoot);
-                allLoot.erase(l);
-                loot.push_back(l);
-            }
-        }
-    }
-
-    std::list<std::shared_ptr<ChannelClientConnection>> clients;
-    if(dBox->GetOwnerCID() != 0 || !success)
-    {
-        clients.push_back(client);
-    }
-    else
-    {
-        // Everyone in the instance gets the items
-        clients = instance->GetConnections();
+  if (success) {
+    std::set<uint8_t> removes;
+    for (uint8_t i = 0; i < (uint8_t)loot.size(); i++) {
+      removes.insert(i);
     }
 
-    for(auto c : clients)
-    {
-        // Make sure the character can receive all the items
-        std::list<std::pair<uint32_t, uint16_t>> add;
-        if(success)
-        {
-            auto freeSlots = characterManager->GetFreeSlots(c);
-            for(auto l : loot)
-            {
-                if(add.size() == freeSlots.size()) break;
+    uint8_t newNext = 0;
+    std::list<std::shared_ptr<objects::Loot>> empty;
+    auto results = instance->UpdateDestinyBox(state->GetWorldCID(), newNext,
+                                              empty, removes);
+    if (removes.size() != loot.size()) {
+      success = false;
+    } else if (specifiedLoot) {
+      loot.clear();
+      loot.push_back(specifiedLoot);
+    } else {
+      std::set<std::shared_ptr<objects::Loot>> allLoot;
+      for (auto l : loot) {
+        allLoot.insert(l);
+      }
 
-                add.push_back(std::make_pair(l->GetType(), l->GetCount()));
-            }
-        }
+      loot.clear();
 
-        libcomp::Packet reply;
-        reply.WritePacketCode(
-            ChannelToClientPacketCode_t::PACKET_DESTINY_LOTTO);
-        reply.WriteS32Little(success ? 0 : -1);
-        reply.WriteS32Little((int32_t)add.size());
-        for(auto& pair : add)
-        {
-            reply.WriteU32Little(pair.first);
-            reply.WriteU16Little(pair.second);
-        }
+      size_t total = (size_t)(1 + bonusCount);
+      for (size_t i = 0; i < total && allLoot.size() > 0; i++) {
+        auto l = libcomp::Randomizer::GetEntry(allLoot);
+        allLoot.erase(l);
+        loot.push_back(l);
+      }
+    }
+  }
 
-        c->QueuePacket(reply);
+  std::list<std::shared_ptr<ChannelClientConnection>> clients;
+  if (dBox->GetOwnerCID() != 0 || !success) {
+    clients.push_back(client);
+  } else {
+    // Everyone in the instance gets the items
+    clients = instance->GetConnections();
+  }
 
-        if(success)
-        {
-            std::unordered_map<uint32_t, uint32_t> items;
-            for(auto& pair : add)
-            {
-                if(items.find(pair.first) != items.end())
-                {
-                    items[pair.first] = (uint32_t)(items[pair.first] +
-                        pair.second);
-                }
-                else
-                {
-                    items[pair.first] = (uint32_t)pair.second;
-                }
-            }
+  for (auto c : clients) {
+    // Make sure the character can receive all the items
+    std::list<std::pair<uint32_t, uint16_t>> add;
+    if (success) {
+      auto freeSlots = characterManager->GetFreeSlots(c);
+      for (auto l : loot) {
+        if (add.size() == freeSlots.size()) break;
 
-            characterManager->AddRemoveItems(c, items, true);
-        }
-
-        c->FlushOutgoing();
+        add.push_back(std::make_pair(l->GetType(), l->GetCount()));
+      }
     }
 
-    return true;
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DESTINY_LOTTO);
+    reply.WriteS32Little(success ? 0 : -1);
+    reply.WriteS32Little((int32_t)add.size());
+    for (auto& pair : add) {
+      reply.WriteU32Little(pair.first);
+      reply.WriteU16Little(pair.second);
+    }
+
+    c->QueuePacket(reply);
+
+    if (success) {
+      std::unordered_map<uint32_t, uint32_t> items;
+      for (auto& pair : add) {
+        if (items.find(pair.first) != items.end()) {
+          items[pair.first] = (uint32_t)(items[pair.first] + pair.second);
+        } else {
+          items[pair.first] = (uint32_t)pair.second;
+        }
+      }
+
+      characterManager->AddRemoveItems(c, items, true);
+    }
+
+    c->FlushOutgoing();
+  }
+
+  return true;
 }

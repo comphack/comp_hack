@@ -37,29 +37,24 @@
 
 using namespace channel;
 
-bool Parsers::PvPConfirm::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PvPConfirm::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 1)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 1) {
+    return false;
+  }
 
-    bool confirm = p.ReadS8() == 0;
+  bool confirm = p.ReadS8() == 0;
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
-    if(confirm)
-    {
-        server->GetMatchManager()->ConfirmMatch(client);
-    }
-    else
-    {
-        server->GetMatchManager()->RejectPvPMatch(client);
-    }
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  if (confirm) {
+    server->GetMatchManager()->ConfirmMatch(client);
+  } else {
+    server->GetMatchManager()->RejectPvPMatch(client);
+  }
 
-    return true;
+  return true;
 }

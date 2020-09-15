@@ -39,41 +39,37 @@
 
 using namespace channel;
 
-bool Parsers::DemonFamiliarity::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonFamiliarity::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 0)
-    {
-        return false;
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+
+  std::list<std::shared_ptr<objects::Demon>> demons;
+  for (auto d : character->GetCOMP()->GetDemons()) {
+    if (!d.IsNull()) {
+      demons.push_back(d.Get());
     }
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FAMILIARITY);
+  reply.WriteS8((int8_t)demons.size());
+  for (auto demon : demons) {
+    reply.WriteS64Little(state->GetObjectID(demon->GetUUID()));
+    reply.WriteU16Little(demon->GetFamiliarity());
+  }
 
-    std::list<std::shared_ptr<objects::Demon>> demons;
-    for(auto d : character->GetCOMP()->GetDemons())
-    {
-        if(!d.IsNull())
-        {
-            demons.push_back(d.Get());
-        }
-    }
-    
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_FAMILIARITY);
-    reply.WriteS8((int8_t)demons.size());
-    for(auto demon : demons)
-    {
-        reply.WriteS64Little(state->GetObjectID(demon->GetUUID()));
-        reply.WriteU16Little(demon->GetFamiliarity());
-    }
+  client->SendPacket(reply);
 
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

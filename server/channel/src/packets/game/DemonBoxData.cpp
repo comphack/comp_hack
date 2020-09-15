@@ -38,46 +38,45 @@
 #include <CharacterProgress.h>
 
 // channel Includes
-#include "ChannelServer.h"
 #include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 #include "CharacterManager.h"
 
 using namespace channel;
 
-bool Parsers::DemonBoxData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonBoxData::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 10)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 10) {
+    return false;
+  }
 
-    int8_t boxID = p.ReadS8();
-    int8_t slot = p.ReadS8();
-    int64_t demonID = p.ReadS64Little();
+  int8_t boxID = p.ReadS8();
+  int8_t slot = p.ReadS8();
+  int64_t demonID = p.ReadS64Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character->GetProgress();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character->GetProgress();
 
-    size_t maxSlots = boxID == 0 ? (size_t)progress->GetMaxCOMPSlots() : 50;
-    if(slot < 0 || (size_t)slot >= maxSlots)
-    {
-        LogDemonError([&]()
-        {
-            return libcomp::String("Demon box slot exceeded the maximum "
-                "available slots requested for demon data information.\n")
-                .Arg(slot);
-        });
+  size_t maxSlots = boxID == 0 ? (size_t)progress->GetMaxCOMPSlots() : 50;
+  if (slot < 0 || (size_t)slot >= maxSlots) {
+    LogDemonError([&]() {
+      return libcomp::String(
+                 "Demon box slot exceeded the maximum available slots "
+                 "requested for demon data information.\n")
+          .Arg(slot);
+    });
 
-        return false;
-    }
+    return false;
+  }
 
-    server->GetCharacterManager()->SendDemonData(client, boxID, slot, demonID);
+  server->GetCharacterManager()->SendDemonData(client, boxID, slot, demonID);
 
-    return true;
+  return true;
 }

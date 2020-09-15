@@ -37,22 +37,20 @@
 
 using namespace channel;
 
-bool Parsers::DestinyBoxData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DestinyBoxData::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->GetZoneManager()->SendDestinyBox(client, true);
+  server->GetZoneManager()->SendDestinyBox(client, true);
 
-    return true;
+  return true;
 }

@@ -32,34 +32,33 @@
 #include <EventNPCMessage.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class EventNPCMessage;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class EventNPCMessage : public Event
-{
-    Q_OBJECT
+class EventNPCMessage : public Event {
+  Q_OBJECT
 
-public:
-    explicit EventNPCMessage(MainWindow *pMainWindow, QWidget *pParent = 0);
-    virtual ~EventNPCMessage();
+ public:
+  explicit EventNPCMessage(MainWindow *pMainWindow, QWidget *pParent = 0);
+  virtual ~EventNPCMessage();
 
-    void Load(const std::shared_ptr<objects::Event>& e) override;
-    std::shared_ptr<objects::Event> Save() const override;
+  void Load(const std::shared_ptr<objects::Event> &e) override;
+  std::shared_ptr<objects::Event> Save() const override;
 
-protected:
-    Ui::EventNPCMessage *prop;
+ protected:
+  Ui::EventNPCMessage *prop;
 
-    std::shared_ptr<objects::EventNPCMessage> mEvent;
+  std::shared_ptr<objects::EventNPCMessage> mEvent;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_EVENTNPCMESSAGEUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_EVENTNPCMESSAGEUI_H

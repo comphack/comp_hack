@@ -28,103 +28,91 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionCreateLoot.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionCreateLoot::ActionCreateLoot(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionCreateLoot;
-    prop->setupUi(pWidget);
+ActionCreateLoot::ActionCreateLoot(ActionList *pList, MainWindow *pMainWindow,
+                                   QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionCreateLoot;
+  prop->setupUi(pWidget);
 
-    prop->drops->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
-    prop->drops->SetAddText("Add Drop");
+  prop->drops->Setup(DynamicItemType_t::OBJ_ITEM_DROP, pMainWindow);
+  prop->drops->SetAddText("Add Drop");
 
-    prop->dropSetIDs->Setup(DynamicItemType_t::COMPLEX_OBJECT_SELECTOR,
-        pMainWindow, "DropSet", true);
-    prop->dropSetIDs->SetAddText("Add Drop Set");
+  prop->dropSetIDs->Setup(DynamicItemType_t::COMPLEX_OBJECT_SELECTOR,
+                          pMainWindow, "DropSet", true);
+  prop->dropSetIDs->SetAddText("Add Drop Set");
 
-    prop->locations->Setup(DynamicItemType_t::OBJ_OBJECT_POSITION,
-        pMainWindow);
-    prop->locations->SetAddText("Add Location");
+  prop->locations->Setup(DynamicItemType_t::OBJ_OBJECT_POSITION, pMainWindow);
+  prop->locations->SetAddText("Add Location");
 
-    ui->actionTitle->setText(tr("<b>Create Loot</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Create Loot</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionCreateLoot::~ActionCreateLoot()
-{
-    delete prop;
+ActionCreateLoot::~ActionCreateLoot() { delete prop; }
+
+void ActionCreateLoot::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionCreateLoot>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  for (auto drop : mAction->GetDrops()) {
+    prop->drops->AddObject(drop);
+  }
+
+  for (uint32_t dropSetID : mAction->GetDropSetIDs()) {
+    prop->dropSetIDs->AddUnsignedInteger(dropSetID);
+  }
+
+  prop->isBossBox->setChecked(mAction->GetIsBossBox());
+  prop->expirationTime->setValue(mAction->GetExpirationTime());
+  prop->position->setCurrentIndex(to_underlying(mAction->GetPosition()));
+
+  prop->bossGroupID->setValue((int32_t)mAction->GetBossGroupID());
+
+  for (auto loc : mAction->GetLocations()) {
+    prop->locations->AddObject(loc);
+  }
 }
 
-void ActionCreateLoot::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionCreateLoot>(act);
+std::shared_ptr<objects::Action> ActionCreateLoot::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  auto drops = prop->drops->GetObjectList<objects::ItemDrop>();
+  mAction->SetDrops(drops);
 
-    for(auto drop : mAction->GetDrops())
-    {
-        prop->drops->AddObject(drop);
-    }
+  auto dropSetIDs = prop->dropSetIDs->GetUnsignedIntegerList();
+  mAction->SetDropSetIDs(dropSetIDs);
 
-    for(uint32_t dropSetID : mAction->GetDropSetIDs())
-    {
-        prop->dropSetIDs->AddUnsignedInteger(dropSetID);
-    }
+  mAction->SetIsBossBox(prop->isBossBox->isChecked());
+  mAction->SetExpirationTime((float)prop->expirationTime->value());
+  mAction->SetPosition(
+      (objects::ActionCreateLoot::Position_t)prop->position->currentIndex());
 
-    prop->isBossBox->setChecked(mAction->GetIsBossBox());
-    prop->expirationTime->setValue(mAction->GetExpirationTime());
-    prop->position->setCurrentIndex(to_underlying(
-        mAction->GetPosition()));
+  mAction->SetBossGroupID((uint32_t)prop->bossGroupID->value());
 
-    prop->bossGroupID->setValue((int32_t)mAction->GetBossGroupID());
+  auto locations = prop->locations->GetObjectList<objects::ObjectPosition>();
+  mAction->SetLocations(locations);
 
-    for(auto loc : mAction->GetLocations())
-    {
-        prop->locations->AddObject(loc);
-    }
-}
-
-std::shared_ptr<objects::Action> ActionCreateLoot::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    auto drops = prop->drops->GetObjectList<objects::ItemDrop>();
-    mAction->SetDrops(drops);
-
-    auto dropSetIDs = prop->dropSetIDs->GetUnsignedIntegerList();
-    mAction->SetDropSetIDs(dropSetIDs);
-
-    mAction->SetIsBossBox(prop->isBossBox->isChecked());
-    mAction->SetExpirationTime((float)prop->expirationTime->value());
-    mAction->SetPosition((objects::ActionCreateLoot::Position_t)
-        prop->position->currentIndex());
-
-    mAction->SetBossGroupID((uint32_t)prop->bossGroupID->value());
-
-    auto locations = prop->locations->GetObjectList<objects::ObjectPosition>();
-    mAction->SetLocations(locations);
-
-    return mAction;
+  return mAction;
 }

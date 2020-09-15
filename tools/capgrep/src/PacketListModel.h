@@ -25,59 +25,56 @@
 #ifndef TOOLS_CAPGREP_SRC_PACKETLISTMODEL_H
 #define TOOLS_CAPGREP_SRC_PACKETLISTMODEL_H
 
-#include <PushIgnore.h>
-#include <QAbstractListModel>
-
-#include <QIcon>
 #include <PopIgnore.h>
-
+#include <PushIgnore.h>
 #include <stdint.h>
+
+#include <QAbstractListModel>
+#include <QIcon>
 
 // Forward Declaration
 class PacketData;
 
-class PacketInfo
-{
-public:
-    uint16_t code;
-    uint8_t origin;
-    QString name, desc;
+class PacketInfo {
+ public:
+  uint16_t code;
+  uint8_t origin;
+  QString name, desc;
 };
 
-class PacketListModel : public QAbstractListModel
-{
-    Q_OBJECT
+class PacketListModel : public QAbstractListModel {
+  Q_OBJECT
 
-public:
-    PacketListModel(QObject *parent = 0);
+ public:
+  PacketListModel(QObject* parent = 0);
 
-    virtual int rowCount(const QModelIndex& parent = QModelIndex()) const;
-    virtual QVariant data(const QModelIndex& index,
-        int role = Qt::DisplayRole) const;
+  virtual int rowCount(const QModelIndex& parent = QModelIndex()) const;
+  virtual QVariant data(const QModelIndex& index,
+                        int role = Qt::DisplayRole) const;
 
-    PacketData* packetBefore(int index) const;
-    PacketData* packetAt(int index) const;
-    QModelIndex modelIndex(int index) const;
+  PacketData* packetBefore(int index) const;
+  PacketData* packetAt(int index) const;
+  QModelIndex modelIndex(int index) const;
 
-    void setPacketData(const QList<PacketData*>& packetData);
-    void addPacketData(const QList<PacketData*>& packetData);
-    void clear();
-    void reset();
+  void setPacketData(const QList<PacketData*>& packetData);
+  void addPacketData(const QList<PacketData*>& packetData);
+  void clear();
+  void reset();
 
-    int32_t packetLimit() const;
-    void setPacketLimit(int32_t limit);
+  int32_t packetLimit() const;
+  void setPacketLimit(int32_t limit);
 
-    static const PacketInfo* getPacketInfo(uint16_t code);
+  static const PacketInfo* getPacketInfo(uint16_t code);
 
-protected:
-    static void loadPacketInfo();
+ protected:
+  static void loadPacketInfo();
 
-    int32_t mPacketLimit;
+  int32_t mPacketLimit;
 
-    QList<QIcon> mIcons;
-    QList<PacketData*> mPacketData;
+  QList<QIcon> mIcons;
+  QList<PacketData*> mPacketData;
 
-    static QHash<uint16_t, PacketInfo*> mPacketInfo;
+  static QHash<uint16_t, PacketInfo*> mPacketInfo;
 };
 
-#endif // TOOLS_CAPGREP_SRC_PACKETLISTMODEL_H
+#endif  // TOOLS_CAPGREP_SRC_PACKETLISTMODEL_H

@@ -31,7 +31,7 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
- // object Includes
+// object Includes
 #include <Team.h>
 
 // channel Includes
@@ -39,32 +39,29 @@
 
 using namespace channel;
 
-bool Parsers::TeamMemberList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TeamMemberList::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t teamID = p.ReadS32Little();
+  int32_t teamID = p.ReadS32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_TEAM_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_LIST);
-    request.WriteS32Little(teamID);
-    request.WriteS32Little(state->GetWorldCID());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->GetManagerConnection()->GetWorldConnection()
-        ->SendPacket(request);
+  libcomp::Packet request;
+  request.WritePacketCode(InternalPacketCode_t::PACKET_TEAM_UPDATE);
+  request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_LIST);
+  request.WriteS32Little(teamID);
+  request.WriteS32Little(state->GetWorldCID());
 
-    return true;
+  server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+
+  return true;
 }

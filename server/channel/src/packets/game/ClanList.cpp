@@ -38,47 +38,44 @@
 
 using namespace channel;
 
-bool Parsers::ClanList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ClanList::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 5)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 5) {
+    return false;
+  }
 
-    std::list<int32_t> worldCIDs;
+  std::list<int32_t> worldCIDs;
 
-    int32_t unknown = p.ReadS32Little();
-    int8_t cidCount = p.ReadS8();
-    (void)unknown;
+  int32_t unknown = p.ReadS32Little();
+  int8_t cidCount = p.ReadS8();
+  (void)unknown;
 
-    if(p.Left() != (uint32_t)(cidCount * 4))
-    {
-        return false;
-    }
+  if (p.Left() != (uint32_t)(cidCount * 4)) {
+    return false;
+  }
 
-    for(int8_t i = 0; i < cidCount; i++)
-    {
-        worldCIDs.push_back(p.ReadS32Little());
-    }
+  for (int8_t i = 0; i < cidCount; i++) {
+    worldCIDs.push_back(p.ReadS32Little());
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_LIST);
-    request.WriteS32Little(state->GetWorldCID());
-    request.WriteU8(1); // Member level info
-    request.WriteU16Little((uint16_t)cidCount);
-    for(int32_t worldCID : worldCIDs)
-    {
-        request.WriteS32Little(worldCID);
-    }
+  libcomp::Packet request;
+  request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
+  request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_LIST);
+  request.WriteS32Little(state->GetWorldCID());
+  request.WriteU8(1);  // Member level info
+  request.WriteU16Little((uint16_t)cidCount);
+  for (int32_t worldCID : worldCIDs) {
+    request.WriteS32Little(worldCID);
+  }
 
-    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
 
-    return true;
+  return true;
 }

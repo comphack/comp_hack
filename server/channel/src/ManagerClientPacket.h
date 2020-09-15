@@ -30,31 +30,30 @@
 // libcomp Includes
 #include <ManagerPacket.h>
 
-namespace channel
-{
+namespace channel {
 
 /**
  * Manager class responsible for handling client side packets.
  */
-class ManagerClientPacket : public libcomp::ManagerPacket
-{
-public:
-    /**
-     * Create a new manager.
-     * @param server Pointer to the server that uses this manager
-     */
-    ManagerClientPacket(std::weak_ptr<libcomp::BaseServer> server);
+class ManagerClientPacket : public libcomp::ManagerPacket {
+ public:
+  /**
+   * Create a new manager.
+   * @param server Pointer to the server that uses this manager
+   */
+  ManagerClientPacket(std::weak_ptr<libcomp::BaseServer> server);
 
-    /**
-     * Clean up the manager.
-     */
-    virtual ~ManagerClientPacket();
+  /**
+   * Clean up the manager.
+   */
+  virtual ~ManagerClientPacket();
 
-protected:
-    virtual bool ValidateConnectionState(const std::shared_ptr<
-        libcomp::TcpConnection>& connection, libcomp::CommandCode_t commandCode) const;
+ protected:
+  virtual bool ValidateConnectionState(
+      const std::shared_ptr<libcomp::TcpConnection>& connection,
+      libcomp::CommandCode_t commandCode) const;
 };
 
-} // namespace world
+}  // namespace channel
 
-#endif // SERVER_CHANNEL_SRC_MANAGERCLIENTPACKET_H
+#endif  // SERVER_CHANNEL_SRC_MANAGERCLIENTPACKET_H

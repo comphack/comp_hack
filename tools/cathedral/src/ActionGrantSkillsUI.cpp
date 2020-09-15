@@ -28,97 +28,85 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionGrantSkills.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionGrantSkills::ActionGrantSkills(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionGrantSkills;
-    prop->setupUi(pWidget);
+ActionGrantSkills::ActionGrantSkills(ActionList *pList, MainWindow *pMainWindow,
+                                     QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionGrantSkills;
+  prop->setupUi(pWidget);
 
-    prop->skillIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT, pMainWindow);
-    prop->skillIDs->SetAddText("Add Skill");
+  prop->skillIDs->Setup(DynamicItemType_t::PRIMITIVE_UINT, pMainWindow);
+  prop->skillIDs->SetAddText("Add Skill");
 
-    ui->actionTitle->setText(tr("<b>Grant Skills</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Grant Skills</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionGrantSkills::~ActionGrantSkills()
-{
-    delete prop;
+ActionGrantSkills::~ActionGrantSkills() { delete prop; }
+
+void ActionGrantSkills::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionGrantSkills>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->targetType->setCurrentIndex(to_underlying(mAction->GetTargetType()));
+  prop->skillPoints->setValue(mAction->GetSkillPoints());
+
+  for (uint32_t skillID : mAction->GetSkillIDs()) {
+    prop->skillIDs->AddUnsignedInteger(skillID);
+  }
+
+  prop->expertiseMax->setValue(mAction->GetExpertiseMax());
+  prop->expertiseSet->setChecked(mAction->GetExpertiseSet());
+
+  std::unordered_map<uint32_t, int32_t> points;
+
+  for (auto pts : mAction->GetExpertisePoints()) {
+    points[pts.first] = pts.second;
+  }
+
+  prop->expertisePoints->Load(points);
 }
 
-void ActionGrantSkills::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionGrantSkills>(act);
+std::shared_ptr<objects::Action> ActionGrantSkills::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetTargetType((objects::ActionGrantSkills::TargetType_t)
+                             prop->targetType->currentIndex());
+  mAction->SetSkillPoints((uint16_t)prop->skillPoints->value());
 
-    prop->targetType->setCurrentIndex(to_underlying(
-        mAction->GetTargetType()));
-    prop->skillPoints->setValue(mAction->GetSkillPoints());
-    
-    for(uint32_t skillID : mAction->GetSkillIDs())
-    {
-        prop->skillIDs->AddUnsignedInteger(skillID);
-    }
+  mAction->ClearSkillIDs();
+  for (uint32_t skillID : prop->skillIDs->GetUnsignedIntegerList()) {
+    mAction->InsertSkillIDs(skillID);
+  }
 
-    prop->expertiseMax->setValue(mAction->GetExpertiseMax());
-    prop->expertiseSet->setChecked(mAction->GetExpertiseSet());
+  mAction->SetExpertiseMax((int8_t)prop->expertiseMax->value());
+  mAction->SetExpertiseSet(prop->expertiseSet->isChecked());
 
-    std::unordered_map<uint32_t, int32_t> points;
+  mAction->ClearExpertisePoints();
+  for (auto pair : prop->expertisePoints->SaveUnsigned()) {
+    mAction->SetExpertisePoints((uint8_t)pair.first, pair.second);
+  }
 
-    for(auto pts : mAction->GetExpertisePoints())
-    {
-        points[pts.first] = pts.second;
-    }
-
-    prop->expertisePoints->Load(points);
-}
-
-std::shared_ptr<objects::Action> ActionGrantSkills::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetTargetType((objects::ActionGrantSkills::TargetType_t)
-        prop->targetType->currentIndex());
-    mAction->SetSkillPoints((uint16_t)prop->skillPoints->value());
-
-    mAction->ClearSkillIDs();
-    for(uint32_t skillID : prop->skillIDs->GetUnsignedIntegerList())
-    {
-        mAction->InsertSkillIDs(skillID);
-    }
-
-    mAction->SetExpertiseMax((int8_t)prop->expertiseMax->value());
-    mAction->SetExpertiseSet(prop->expertiseSet->isChecked());
-
-    mAction->ClearExpertisePoints();
-    for(auto pair : prop->expertisePoints->SaveUnsigned())
-    {
-        mAction->SetExpertisePoints((uint8_t)pair.first, pair.second);
-    }
-
-    return mAction;
+  return mAction;
 }

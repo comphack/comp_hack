@@ -26,45 +26,44 @@
 #define TOOLS_CATHEDRAL_SRC_EVENTBASEUI_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QWidget>
 
 // objects Includes
 #include <EventBase.h>
 
-namespace Ui
-{
+namespace Ui {
 
 class EventBase;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class EventBase : public QWidget
-{
-    Q_OBJECT
+class EventBase : public QWidget {
+  Q_OBJECT
 
-public:
-    explicit EventBase(MainWindow *pMainWindow, QWidget *pParent = 0);
-    virtual ~EventBase();
+ public:
+  explicit EventBase(MainWindow *pMainWindow, QWidget *pParent = 0);
+  virtual ~EventBase();
 
-    void Load(const std::shared_ptr<objects::EventBase>& e);
-    std::shared_ptr<objects::EventBase> Save() const;
+  void Load(const std::shared_ptr<objects::EventBase> &e);
+  std::shared_ptr<objects::EventBase> Save() const;
 
-    bool GetSkipInvalid() const;
-    void SetSkipInvalid(bool skip);
+  bool GetSkipInvalid() const;
+  void SetSkipInvalid(bool skip);
 
-public slots:
-    virtual void ToggleBaseDisplay();
+ public slots:
+  virtual void ToggleBaseDisplay();
 
-protected:
-    Ui::EventBase *ui;
+ protected:
+  Ui::EventBase *ui;
 
-    MainWindow *mMainWindow;
+  MainWindow *mMainWindow;
 
-    std::shared_ptr<objects::EventBase> mEventBase;
+  std::shared_ptr<objects::EventBase> mEventBase;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_EVENTBASEUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_EVENTBASEUI_H

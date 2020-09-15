@@ -31,40 +31,38 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
- // channel Includes
+// channel Includes
 #include "ChannelServer.h"
 #include "ManagerConnection.h"
 
 using namespace channel;
 
-bool Parsers::TeamAnswer::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TeamAnswer::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 5)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 5) {
+    return false;
+  }
 
-    int32_t teamID = p.ReadS32Little();
-    bool accepted = p.ReadS8() == 1;
+  int32_t teamID = p.ReadS32Little();
+  bool accepted = p.ReadS8() == 1;
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_TEAM_UPDATE);
-    request.WriteU8(accepted
-        ? (int8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_YES
-        : (int8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO);
-    request.WriteS32Little(teamID);
-    request.WriteS32Little(state->GetWorldCID());
+  libcomp::Packet request;
+  request.WritePacketCode(InternalPacketCode_t::PACKET_TEAM_UPDATE);
+  request.WriteU8(
+      accepted ? (int8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_YES
+               : (int8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO);
+  request.WriteS32Little(teamID);
+  request.WriteS32Little(state->GetWorldCID());
 
-    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
 
-    return true;
+  return true;
 }

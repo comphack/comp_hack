@@ -37,19 +37,19 @@
 
 using namespace channel;
 
-bool Parsers::ValuableList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ValuableList::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->GetCharacterManager()->SendValuableFlags(client);
+  server->GetCharacterManager()->SendValuableFlags(client);
 
-    return true;
+  return true;
 }

@@ -25,23 +25,20 @@
 #ifndef TOOLS_CAPGREP_SRC_MAINWINDOW_H
 #define TOOLS_CAPGREP_SRC_MAINWINDOW_H
 
-#include <PushIgnore.h>
-#include "ui_MainWindow.h"
 #include <PopIgnore.h>
-
-#include "PacketListFilter.h"
-#include "PacketListModel.h"
-#include "PacketData.h"
-#include "Packet.h"
-#include "Find.h"
-
 #include <PushIgnore.h>
+#include <stdint.h>
+
 #include <QFile>
 #include <QHash>
 #include <QList>
-#include <PopIgnore.h>
 
-#include <stdint.h>
+#include "Find.h"
+#include "Packet.h"
+#include "PacketData.h"
+#include "PacketListFilter.h"
+#include "PacketListModel.h"
+#include "ui_MainWindow.h"
 
 class Find;
 
@@ -52,135 +49,129 @@ class QTcpSocket;
 class QDockWidget;
 class QListWidgetItem;
 
-class CaptureLoadState
-{
-public:
-    float servRate;
-    uint16_t packetSeqA, packetSeqB;
-    uint32_t lastTicks, nextTicks;
-    time_t lastUpdate, nextUpdate;
-    int client;
+class CaptureLoadState {
+ public:
+  float servRate;
+  uint16_t packetSeqA, packetSeqB;
+  uint32_t lastTicks, nextTicks;
+  time_t lastUpdate, nextUpdate;
+  int client;
 };
 
-class CaptureLoadData
-{
-public:
-    QFile *file;
-    QString path;
-    uint32_t ver;
-    uint64_t stamp;
-    uint64_t micro;
-    CaptureLoadState *state;
-    uint8_t buffer[1048576];
-    uint8_t source;
-    uint32_t sz;
+class CaptureLoadData {
+ public:
+  QFile *file;
+  QString path;
+  uint32_t ver;
+  uint64_t stamp;
+  uint64_t micro;
+  CaptureLoadState *state;
+  uint8_t buffer[1048576];
+  uint8_t source;
+  uint32_t sz;
 
-    CaptureLoadData() : file(0), state(0)
-    {
-    }
+  CaptureLoadData() : file(0), state(0) {}
 
-    ~CaptureLoadData()
-    {
-        delete file;
-        delete state;
-    }
+  ~CaptureLoadData() {
+    delete file;
+    delete state;
+  }
 };
 
-class MainWindow : public QMainWindow
-{
-    Q_OBJECT
+class MainWindow : public QMainWindow {
+  Q_OBJECT
 
-public:
-    MainWindow(QWidget *parent = 0);
+ public:
+  MainWindow(QWidget *parent = 0);
 
-    static MainWindow* getSingletonPtr();
+  static MainWindow *getSingletonPtr();
 
-    void loadCapture(const QString& path);
-    void showSelection(int packet, int start = -1, int stop = -1);
+  void loadCapture(const QString &path);
+  void showSelection(int packet, int start = -1, int stop = -1);
 
-    PacketData* currentPacket();
-    PacketListFilter* packetFilter() const;
-    PacketListModel* packetModel() const;
+  PacketData *currentPacket();
+  PacketListFilter *packetFilter() const;
+  PacketListModel *packetModel() const;
 
-    void addLogMessage(const QString& msg);
+  void addLogMessage(const QString &msg);
 
-protected slots:
-    void loadCaptures(const QStringList& paths);
-    bool loadCapturePacket(CaptureLoadData *d);
-    void packetContextMenu(const QPoint& pt);
-    void listContextMenu(const QPoint& pt);
+ protected slots:
+  void loadCaptures(const QStringList &paths);
+  bool loadCapturePacket(CaptureLoadData *d);
+  void packetContextMenu(const QPoint &pt);
+  void listContextMenu(const QPoint &pt);
 
-    void addPacket(uint8_t source, uint64_t stamp, uint64_t micro,
-        libcomp::Packet& p, CaptureLoadState *state = 0);
-    void createPacketData(QList<PacketData*>& packetData, uint8_t source,
-        uint64_t stamp, uint64_t micro, libcomp::Packet& p,
-        bool isLobby, CaptureLoadState *state = 0);
+  void addPacket(uint8_t source, uint64_t stamp, uint64_t micro,
+                 libcomp::Packet &p, CaptureLoadState *state = 0);
+  void createPacketData(QList<PacketData *> &packetData, uint8_t source,
+                        uint64_t stamp, uint64_t micro, libcomp::Packet &p,
+                        bool isLobby, CaptureLoadState *state = 0);
 
-    void packetLimitChanged(int limit);
+  void packetLimitChanged(int limit);
 
-    void showAbout();
-    void showSettings();
+  void showAbout();
+  void showSettings();
 
-    void updateRecentFiles();
-    void actionRecentFile();
+  void updateRecentFiles();
+  void actionRecentFile();
 
-    void addRecentFile(const QString& file);
+  void addRecentFile(const QString &file);
 
-    void itemSelectionChanged();
-    void showFiltersWindow();
-    void showFindWindow();
+  void itemSelectionChanged();
+  void showFiltersWindow();
+  void showFindWindow();
 
-    void showOpenDialog();
-    void showOpenMultiDialog();
+  void showOpenDialog();
+  void showOpenMultiDialog();
 
-    void updateValues();
-    void updateHexValues();
+  void updateValues();
+  void updateHexValues();
 
-    void startLiveMode();
-    void newConnection();
-    void clientLost();
-    void clientData();
+  void startLiveMode();
+  void newConnection();
+  void clientLost();
+  void clientData();
 
-    void actionFindSelected();
-    void actionClipboardCP1252();
-    void actionClipboardCP932();
-    void actionClipboardUTF8();
-    void actionClipboardCArray();
-    void actionClipboardHexDump();
-    void actionClipboardRawData();
-    void actionClipboardU32Array();
+  void actionFindSelected();
+  void actionClipboardCP1252();
+  void actionClipboardCP932();
+  void actionClipboardUTF8();
+  void actionClipboardCArray();
+  void actionClipboardHexDump();
+  void actionClipboardRawData();
+  void actionClipboardU32Array();
 
-    void actionAddToBlackList();
-    void actionAddToWhiteList();
-    void actionCopyToClipboard();
+  void actionAddToBlackList();
+  void actionAddToWhiteList();
+  void actionCopyToClipboard();
 
-    void toggleScroll(bool checked);
+  void toggleScroll(bool checked);
 
-protected:
-    virtual void closeEvent(QCloseEvent *evt);
+ protected:
+  virtual void closeEvent(QCloseEvent *evt);
 
-    Ui::MainWindow ui;
+  Ui::MainWindow ui;
 
-    PacketListFilter *mFilter;
-    PacketListModel *mModel;
+  PacketListFilter *mFilter;
+  PacketListModel *mModel;
 
-    Find *mFindWindow;
-    QMenu *mContextMenu;
-    QMenu *mListContextMenu;
-    QLabel *mStatusBar;
+  Find *mFindWindow;
+  QMenu *mContextMenu;
+  QMenu *mListContextMenu;
+  QLabel *mStatusBar;
 
-    QTextEdit *mLog;
-    QDockWidget *mDock;
+  QTextEdit *mLog;
+  QDockWidget *mDock;
 
-    QTcpServer *mLiveServer;
-    QList<QTcpSocket*> mLiveSockets;
+  QTcpServer *mLiveServer;
+  QList<QTcpSocket *> mLiveSockets;
 
-    QModelIndex mListContextItem;
-    QActionGroup *mStringEncodingGroup;
-    QHash<uint32_t, CopyFunc> mCopyActions;
-    QMap<int32_t, CaptureLoadState*> mLiveStates;
+  QModelIndex mListContextItem;
+  QActionGroup *mStringEncodingGroup;
+  QHash<uint32_t, CopyFunc> mCopyActions;
+  QMap<int32_t, CaptureLoadState *> mLiveStates;
 
-    CaptureLoadState mDefaultState;
+  CaptureLoadState mDefaultState;
 };
 
-#endif // TOOLS_CAPGREP_SRC_MAINWINDOW_H
+#endif  // TOOLS_CAPGREP_SRC_MAINWINDOW_H

@@ -32,87 +32,72 @@
 #include "ObjectSelectorWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_ObjectSelector.h"
-#include <PopIgnore.h>
 
 ObjectSelector::ObjectSelector(QWidget *pParent)
-    : ObjectSelectorBase(pParent), mServerData(false)
-{
-    ui = new Ui::ObjectSelector;
-    ui->setupUi(this);
+    : ObjectSelectorBase(pParent), mServerData(false) {
+  ui = new Ui::ObjectSelector;
+  ui->setupUi(this);
 
-    connect(ui->getItem, SIGNAL(clicked()), this, SLOT(GetItem()));
-    connect(ui->value, SIGNAL(valueChanged(int)), this,
-        SLOT(ValueChanged()));
+  connect(ui->getItem, SIGNAL(clicked()), this, SLOT(GetItem()));
+  connect(ui->value, SIGNAL(valueChanged(int)), this, SLOT(ValueChanged()));
 }
 
-ObjectSelector::~ObjectSelector()
-{
-    delete ui;
-}
+ObjectSelector::~ObjectSelector() { delete ui; }
 
 bool ObjectSelector::BindSelector(MainWindow *pMainWindow,
-    const libcomp::String& objType, bool serverData)
-{
-    if(mObjType != objType)
-    {
-        bool changed = Bind(pMainWindow, objType);
+                                  const libcomp::String &objType,
+                                  bool serverData) {
+  if (mObjType != objType) {
+    bool changed = Bind(pMainWindow, objType);
 
-        mServerData = serverData;
+    mServerData = serverData;
 
-        ValueChanged();
+    ValueChanged();
 
-        return changed;
+    return changed;
+  }
+
+  return false;
+}
+
+void ObjectSelector::SetValue(uint32_t value) {
+  ui->value->setValue((int32_t)value);
+}
+
+uint32_t ObjectSelector::GetValue() const {
+  return (uint32_t)ui->value->value();
+}
+
+void ObjectSelector::SetValueSigned(int32_t value) {
+  ui->value->setValue(value);
+}
+
+int32_t ObjectSelector::GetValueSigned() const { return ui->value->value(); }
+
+void ObjectSelector::SetMinimum(int32_t min) { ui->value->setMinimum(min); }
+
+void ObjectSelector::ValueChanged() {
+  uint32_t value = GetValue();
+
+  QString txt =
+      qs(value ? (mServerData ? "[Not loaded]" : "[Invalid]") : "[None]");
+  if (mMainWindow && value) {
+    auto dataset = std::dynamic_pointer_cast<BinaryDataNamedSet>(
+        mMainWindow->GetBinaryDataSet(mObjType));
+    auto obj = dataset ? dataset->GetObjectByID(value) : nullptr;
+    if (obj) {
+      txt = qs(dataset->GetName(obj)
+                   .Replace("\n", "  ")
+                   .Replace("\r", "  ")
+                   .Replace("    ", "  "));
     }
+  }
 
-    return false;
-}
-
-void ObjectSelector::SetValue(uint32_t value)
-{
-    ui->value->setValue((int32_t)value);
-}
-
-uint32_t ObjectSelector::GetValue() const
-{
-    return (uint32_t)ui->value->value();
-}
-
-void ObjectSelector::SetValueSigned(int32_t value)
-{
-    ui->value->setValue(value);
-}
-
-int32_t ObjectSelector::GetValueSigned() const
-{
-    return ui->value->value();
-}
-
-void ObjectSelector::SetMinimum(int32_t min)
-{
-    ui->value->setMinimum(min);
-}
-
-void ObjectSelector::ValueChanged()
-{
-    uint32_t value = GetValue();
-
-    QString txt = qs(value ? (mServerData ? "[Not loaded]" : "[Invalid]")
-        : "[None]");
-    if(mMainWindow && value)
-    {
-        auto dataset = std::dynamic_pointer_cast<BinaryDataNamedSet>(
-            mMainWindow->GetBinaryDataSet(mObjType));
-        auto obj = dataset ? dataset->GetObjectByID(value) : nullptr;
-        if(obj)
-        {
-            txt = qs(dataset->GetName(obj).Replace("\n", "  ")
-                .Replace("\r", "  ").Replace("    ", "  "));
-        }
-    }
-
-    ui->label->setText(txt);
+  ui->label->setText(txt);
 }

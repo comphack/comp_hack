@@ -41,60 +41,53 @@
 
 using namespace channel;
 
-bool Parsers::SearchEntryInfo::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SearchEntryInfo::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto syncManager = server->GetChannelSyncManager();
+  int32_t worldCID = client->GetClientState()->GetWorldCID();
+
+  std::set<int8_t> types;
+  std::set<int32_t> ids;
+
+  auto entries = syncManager->GetSearchEntries();
+  for (auto ePair : entries) {
+    for (auto entry : ePair.second) {
+      if (entry->GetSourceCID() == worldCID) {
+        // Owned entry exists
+        types.insert((int8_t)ePair.first);
+        ids.insert(entry->GetEntryID());
+      }
     }
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto syncManager = server->GetChannelSyncManager();
-    int32_t worldCID = client->GetClientState()->GetWorldCID();
-
-    std::set<int8_t> types;
-    std::set<int32_t> ids;
-
-    auto entries = syncManager->GetSearchEntries();
-    for(auto ePair : entries)
-    {
-        for(auto entry : ePair.second)
-        {
-            if(entry->GetSourceCID() == worldCID)
-            {
-                // Owned entry exists
-                types.insert((int8_t)ePair.first);
-                ids.insert(entry->GetEntryID());
-            }
-        }
+  // Loop through again and get applications to owned entries
+  for (auto ePair : entries) {
+    for (auto entry : ePair.second) {
+      if (entry->GetParentEntryID() &&
+          ids.find(entry->GetParentEntryID()) != ids.end()) {
+        types.insert((int8_t)ePair.first);
+        break;
+      }
     }
+  }
 
-    // Loop through again and get applications to owned entries
-    for(auto ePair : entries)
-    {
-        for(auto entry : ePair.second)
-        {
-            if(entry->GetParentEntryID() &&
-                ids.find(entry->GetParentEntryID()) != ids.end())
-            {
-                types.insert((int8_t)ePair.first);
-                break;
-            }
-        }
-    }
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SEARCH_ENTRY_INFO);
+  reply.WriteS8((int8_t)types.size());
+  for (int8_t type : types) {
+    reply.WriteS8(type);
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SEARCH_ENTRY_INFO);
-    reply.WriteS8((int8_t)types.size());
-    for(int8_t type : types)
-    {
-        reply.WriteS8(type);
-    }
+  client->SendPacket(reply);
 
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

@@ -32,35 +32,34 @@
 #include <ActionGrantXP.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionGrantXP;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionGrantXP : public Action
-{
-    Q_OBJECT
+class ActionGrantXP : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionGrantXP(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionGrantXP();
+ public:
+  explicit ActionGrantXP(ActionList *pList, MainWindow *pMainWindow,
+                         QWidget *pParent = 0);
+  virtual ~ActionGrantXP();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionGrantXP *prop;
+ protected:
+  Ui::ActionGrantXP *prop;
 
-    std::shared_ptr<objects::ActionGrantXP> mAction;
+  std::shared_ptr<objects::ActionGrantXP> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONGRANTXPUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONGRANTXPUI_H

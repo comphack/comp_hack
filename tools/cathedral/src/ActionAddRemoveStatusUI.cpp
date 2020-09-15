@@ -28,101 +28,90 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionAddRemoveStatus.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
 ActionAddRemoveStatus::ActionAddRemoveStatus(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionAddRemoveStatus;
-    prop->setupUi(pWidget);
+                                             MainWindow *pMainWindow,
+                                             QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionAddRemoveStatus;
+  prop->setupUi(pWidget);
 
-    prop->statusStacks->BindSelector(pMainWindow, "StatusData");
-    prop->statusStacks->SetValueName(tr("Stacks:"));
-    prop->statusStacks->SetMinMax(0, 255);
-    prop->statusStacks->SetAddText("Add Status Effect");
+  prop->statusStacks->BindSelector(pMainWindow, "StatusData");
+  prop->statusStacks->SetValueName(tr("Stacks:"));
+  prop->statusStacks->SetMinMax(0, 255);
+  prop->statusStacks->SetAddText("Add Status Effect");
 
-    prop->statusTimes->BindSelector(pMainWindow, "StatusData");
-    prop->statusTimes->SetValueName(tr("Time:"));
-    prop->statusTimes->SetAddText("Add Status Effect");
+  prop->statusTimes->BindSelector(pMainWindow, "StatusData");
+  prop->statusTimes->SetValueName(tr("Time:"));
+  prop->statusTimes->SetAddText("Add Status Effect");
 
-    ui->actionTitle->setText(tr("<b>Add/Remove Status</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Add/Remove Status</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionAddRemoveStatus::~ActionAddRemoveStatus()
-{
-    delete prop;
+ActionAddRemoveStatus::~ActionAddRemoveStatus() { delete prop; }
+
+void ActionAddRemoveStatus::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionAddRemoveStatus>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->targetType->setCurrentIndex(to_underlying(mAction->GetTargetType()));
+  prop->isReplace->setChecked(mAction->GetIsReplace());
+  prop->allowNull->setChecked(mAction->GetAllowNull());
+
+  std::unordered_map<uint32_t, int32_t> stacks;
+  std::unordered_map<uint32_t, int32_t> times;
+
+  for (auto stack : mAction->GetStatusStacks()) {
+    stacks[stack.first] = stack.second;
+  }
+
+  for (auto time : mAction->GetStatusTimes()) {
+    times[time.first] = (int32_t)time.second;
+  }
+
+  prop->statusStacks->Load(stacks);
+  prop->statusTimes->Load(times);
 }
 
-void ActionAddRemoveStatus::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionAddRemoveStatus>(act);
+std::shared_ptr<objects::Action> ActionAddRemoveStatus::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetTargetType((objects::ActionAddRemoveStatus::TargetType_t)
+                             prop->targetType->currentIndex());
+  mAction->SetIsReplace(prop->isReplace->isChecked());
+  mAction->SetAllowNull(prop->allowNull->isChecked());
 
-    prop->targetType->setCurrentIndex(to_underlying(
-        mAction->GetTargetType()));
-    prop->isReplace->setChecked(mAction->GetIsReplace());
-    prop->allowNull->setChecked(mAction->GetAllowNull());
+  mAction->ClearStatusStacks();
+  for (auto pair : prop->statusStacks->SaveUnsigned()) {
+    mAction->SetStatusStacks(pair.first, (int8_t)pair.second);
+  }
 
-    std::unordered_map<uint32_t, int32_t> stacks;
-    std::unordered_map<uint32_t, int32_t> times;
+  mAction->ClearStatusTimes();
+  for (auto pair : prop->statusTimes->SaveUnsigned()) {
+    mAction->SetStatusTimes(pair.first, (uint32_t)pair.second);
+  }
 
-    for(auto stack : mAction->GetStatusStacks())
-    {
-        stacks[stack.first] = stack.second;
-    }
-
-    for(auto time : mAction->GetStatusTimes())
-    {
-        times[time.first] = (int32_t)time.second;
-    }
-
-    prop->statusStacks->Load(stacks);
-    prop->statusTimes->Load(times);
-}
-
-std::shared_ptr<objects::Action> ActionAddRemoveStatus::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetTargetType((objects::ActionAddRemoveStatus::TargetType_t)
-        prop->targetType->currentIndex());
-    mAction->SetIsReplace(prop->isReplace->isChecked());
-    mAction->SetAllowNull(prop->allowNull->isChecked());
-
-    mAction->ClearStatusStacks();
-    for(auto pair : prop->statusStacks->SaveUnsigned())
-    {
-        mAction->SetStatusStacks(pair.first, (int8_t)pair.second);
-    }
-
-    mAction->ClearStatusTimes();
-    for(auto pair : prop->statusTimes->SaveUnsigned())
-    {
-        mAction->SetStatusTimes(pair.first, (uint32_t)pair.second);
-    }
-
-    return mAction;
+  return mAction;
 }

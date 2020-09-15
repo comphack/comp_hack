@@ -27,17 +27,17 @@
 
 #include "PacketData.h"
 
-void action0014(PacketData *data, libcomp::Packet& packet,
-    libcomp::Packet& packetBefore);
-void action0015(PacketData *data, libcomp::Packet& packet,
-    libcomp::Packet& packetBefore);
-void action0023(PacketData *data, libcomp::Packet& packet,
-    libcomp::Packet& packetBefore);
-void action00A7(PacketData *data, libcomp::Packet& packet,
-    libcomp::Packet& packetBefore);
-void action00AC(PacketData *data, libcomp::Packet& packet,
-    libcomp::Packet& packetBefore);
-void action00B9(PacketData *data, libcomp::Packet& packet,
-    libcomp::Packet& packetBefore);
+void action0014(PacketData* data, libcomp::Packet& packet,
+                libcomp::Packet& packetBefore);
+void action0015(PacketData* data, libcomp::Packet& packet,
+                libcomp::Packet& packetBefore);
+void action0023(PacketData* data, libcomp::Packet& packet,
+                libcomp::Packet& packetBefore);
+void action00A7(PacketData* data, libcomp::Packet& packet,
+                libcomp::Packet& packetBefore);
+void action00AC(PacketData* data, libcomp::Packet& packet,
+                libcomp::Packet& packetBefore);
+void action00B9(PacketData* data, libcomp::Packet& packet,
+                libcomp::Packet& packetBefore);
 
-#endif // TOOLS_CAPGREP_SRC_PACKETS_H
+#endif  // TOOLS_CAPGREP_SRC_PACKETS_H

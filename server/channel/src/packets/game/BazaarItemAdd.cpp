@@ -45,73 +45,69 @@
 
 using namespace channel;
 
-bool Parsers::BazaarItemAdd::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BazaarItemAdd::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 13)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 13) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+
+  int8_t slot = p.ReadS8();
+  int64_t itemID = p.ReadS64Little();
+  int32_t price = p.ReadS32Little();
+
+  auto item = std::dynamic_pointer_cast<objects::Item>(
+      libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_ITEM_ADD);
+  reply.WriteS8(slot);
+  reply.WriteS64Little(itemID);
+  reply.WriteS32Little(price);
+
+  int8_t oldSlot = item ? item->GetBoxSlot() : -1;
+  auto box =
+      item ? std::dynamic_pointer_cast<objects::ItemBox>(
+                 libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()))
+           : nullptr;
+  auto itemDef =
+      item ? server->GetDefinitionManager()->GetItemData(item->GetType())
+           : nullptr;
+
+  auto dbChanges = libcomp::DatabaseChangeSet::Create();
+  auto bState = state->GetBazaarState();
+  if (itemDef && (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_BAZAAR) != 0 &&
+      bState && bState->AddItem(state, slot, itemID, price, dbChanges)) {
+    // Unequip if its equipped
+    server->GetCharacterManager()->UnequipItem(client, item);
+
+    if (!server->GetWorldDatabase()->ProcessChangeSet(dbChanges)) {
+      LogBazaarError([&]() {
+        return libcomp::String("BazaarItemAdd failed to save: %1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+
+      client->Kill();
+      return true;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-
-    int8_t slot = p.ReadS8();
-    int64_t itemID = p.ReadS64Little();
-    int32_t price = p.ReadS32Little();
-
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_ITEM_ADD);
-    reply.WriteS8(slot);
-    reply.WriteS64Little(itemID);
-    reply.WriteS32Little(price);
-
-    int8_t oldSlot = item ? item->GetBoxSlot() : -1;
-    auto box = item ? std::dynamic_pointer_cast<objects::ItemBox>(
-        libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox())) : nullptr;
-    auto itemDef = item ? server->GetDefinitionManager()->GetItemData(
-        item->GetType())
-        : nullptr;
-
-    auto dbChanges = libcomp::DatabaseChangeSet::Create();
-    auto bState = state->GetBazaarState();
-    if(itemDef && (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_BAZAAR) != 0 &&
-        bState && bState->AddItem(state, slot, itemID, price, dbChanges))
-    {
-        // Unequip if its equipped
-        server->GetCharacterManager()->UnequipItem(client, item);
-
-        if(!server->GetWorldDatabase()->ProcessChangeSet(dbChanges))
-        {
-            LogBazaarError([&]()
-            {
-                return libcomp::String("BazaarItemAdd failed to save: %1\n")
-                    .Arg(state->GetAccountUID().ToString());
-            });
-
-            client->Kill();
-            return true;
-        }
-
-        if(box && oldSlot != -1)
-        {
-            server->GetCharacterManager()->SendItemBoxData(client, box,
-                { (uint16_t)oldSlot });
-        }
-
-        reply.WriteS32Little(0); // Success
-    }
-    else
-    {
-        reply.WriteS32Little(-1); // Failure
+    if (box && oldSlot != -1) {
+      server->GetCharacterManager()->SendItemBoxData(client, box,
+                                                     {(uint16_t)oldSlot});
     }
 
-    client->SendPacket(reply);
+    reply.WriteS32Little(0);  // Success
+  } else {
+    reply.WriteS32Little(-1);  // Failure
+  }
 
-    return true;
+  client->SendPacket(reply);
+
+  return true;
 }

@@ -29,96 +29,85 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QFileDialog>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QSettings>
 
 #include "ui_SettingsWindow.h"
-#include <PopIgnore.h>
 
 SettingsWindow::SettingsWindow(MainWindow* pMainWindow, bool initializing,
-    QWidget *pParent) : QDialog(pParent), mMainWindow(pMainWindow),
-    mInitializing(initializing)
-{
-    ui = new Ui::SettingsWindow;
-    ui->setupUi(this);
+                               QWidget* pParent)
+    : QDialog(pParent), mMainWindow(pMainWindow), mInitializing(initializing) {
+  ui = new Ui::SettingsWindow;
+  ui->setupUi(this);
 
-    QSettings settings;
+  QSettings settings;
 
-    ui->crashDump->setText(settings.value("crashDump").toString());
-    ui->datastore->setText(settings.value("datastore").toString());
+  ui->crashDump->setText(settings.value("crashDump").toString());
+  ui->datastore->setText(settings.value("datastore").toString());
 
-    connect(ui->crashDumpBrowse, SIGNAL(clicked(bool)), this,
-        SLOT(BrowseCrashDump()));
-    connect(ui->datastoreBrowse, SIGNAL(clicked(bool)), this,
-        SLOT(BrowseDatastore()));
+  connect(ui->crashDumpBrowse, SIGNAL(clicked(bool)), this,
+          SLOT(BrowseCrashDump()));
+  connect(ui->datastoreBrowse, SIGNAL(clicked(bool)), this,
+          SLOT(BrowseDatastore()));
 
-    connect(ui->save, SIGNAL(clicked(bool)), this, SLOT(Save()));
+  connect(ui->save, SIGNAL(clicked(bool)), this, SLOT(Save()));
 }
 
-SettingsWindow::~SettingsWindow()
-{
-    delete ui;
+SettingsWindow::~SettingsWindow() { delete ui; }
+
+void SettingsWindow::BrowseCrashDump() {
+  QString qPath = QFileDialog::getSaveFileName(
+      this, tr("Specify crash dump file"), "", tr("All files (*)"));
+  if (qPath.isEmpty()) {
+    return;
+  }
+
+  ui->crashDump->setText(qPath);
 }
 
-void SettingsWindow::BrowseCrashDump()
-{
-    QString qPath = QFileDialog::getSaveFileName(this,
-        tr("Specify crash dump file"), "", tr("All files (*)"));
-    if(qPath.isEmpty())
-    {
-        return;
-    }
+void SettingsWindow::BrowseDatastore() {
+  QString qPath = QFileDialog::getExistingDirectory(
+      this, tr("Load Event XML folder"), mMainWindow->GetDialogDirectory());
+  if (qPath.isEmpty()) {
+    return;
+  }
 
-    ui->crashDump->setText(qPath);
+  ui->datastore->setText(qPath);
 }
 
-void SettingsWindow::BrowseDatastore()
-{
-    QString qPath = QFileDialog::getExistingDirectory(this,
-        tr("Load Event XML folder"), mMainWindow->GetDialogDirectory());
-    if(qPath.isEmpty())
-    {
-        return;
-    }
+void SettingsWindow::Save() {
+  if (ui->datastore->text().isEmpty()) {
+    QMessageBox err;
+    err.setText("Please specify a datastore path");
+    err.exec();
+    return;
+  }
 
-    ui->datastore->setText(qPath);
-}
+  QSettings settings;
 
-void SettingsWindow::Save()
-{
-    if(ui->datastore->text().isEmpty())
-    {
-        QMessageBox err;
-        err.setText("Please specify a datastore path");
-        err.exec();
-        return;
-    }
+  auto oldDatastore = settings.value("datastore").toString();
+  if (!QDir(ui->datastore->text()).exists()) {
+    QMessageBox err;
+    err.setText("Please select a valid datastore path");
+    err.exec();
+    return;
+  } else if (!mInitializing && !oldDatastore.isEmpty() &&
+             oldDatastore != ui->datastore->text()) {
+    QMessageBox err;
+    err.setText(
+        "Please restart the application for the datastore update to take "
+        "effect");
+    err.exec();
+  }
 
-    QSettings settings;
+  settings.setValue("crashDump", ui->crashDump->text());
+  settings.setValue("datastore", ui->datastore->text());
+  settings.sync();
 
-    auto oldDatastore = settings.value("datastore").toString();
-    if(!QDir(ui->datastore->text()).exists())
-    {
-        QMessageBox err;
-        err.setText("Please select a valid datastore path");
-        err.exec();
-        return;
-    }
-    else if(!mInitializing && !oldDatastore.isEmpty() &&
-        oldDatastore != ui->datastore->text())
-    {
-        QMessageBox err;
-        err.setText("Please restart the application for the datastore"
-            " update to take effect");
-        err.exec();
-    }
-
-    settings.setValue("crashDump", ui->crashDump->text());
-    settings.setValue("datastore", ui->datastore->text());
-    settings.sync();
-
-    close();
+  close();
 }

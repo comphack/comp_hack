@@ -40,97 +40,86 @@
 using namespace channel;
 
 void HandleMitamaReset(const std::shared_ptr<ChannelServer> server,
-    const std::shared_ptr<ChannelClientConnection> client,
-    int8_t reunionIdx)
-{
-    auto characterManager = server->GetCharacterManager();
-    auto definitionManager = server->GetDefinitionManager();
+                       const std::shared_ptr<ChannelClientConnection> client,
+                       int8_t reunionIdx) {
+  auto characterManager = server->GetCharacterManager();
+  auto definitionManager = server->GetDefinitionManager();
 
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto dState = state->GetDemonState();
-    auto demon = dState->GetEntity();
-    auto demonData = dState->GetDevilData();
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto dState = state->GetDemonState();
+  auto demon = dState->GetEntity();
+  auto demonData = dState->GetDevilData();
 
-    bool isMitama = characterManager->IsMitamaDemon(demonData);
+  bool isMitama = characterManager->IsMitamaDemon(demonData);
 
-    bool success = demon && isMitama && reunionIdx >= 0 && reunionIdx < 12;
-    if(success)
-    {
-        uint8_t cleared = 0;
+  bool success = demon && isMitama && reunionIdx >= 0 && reunionIdx < 12;
+  if (success) {
+    uint8_t cleared = 0;
 
-        auto mReunion = demon->GetMitamaReunion();
-        for(size_t i = (size_t)(8 * reunionIdx);
-            i < (size_t)(8 * (reunionIdx + 1)); i++)
-        {
-            if(mReunion[i])
-            {
-                mReunion[i] = 0;
-                cleared++;
-            }
-        }
-
-        // Pay the cost
-        success = characterManager->PayMacca(client,
-            (uint64_t)(cleared * 30000));
-
-        if(success)
-        {
-            // Clear type and save
-            demon->SetMitamaReunion(mReunion);
-
-            auto dbChanges = libcomp::DatabaseChangeSet::Create(state
-                ->GetAccountUID());
-            dbChanges->Update(demon);
-
-            server->GetWorldDatabase()->QueueChangeSet(dbChanges);
-
-            dState->UpdateDemonState(definitionManager);
-            server->GetTokuseiManager()->Recalculate(cState, true,
-                std::set<int32_t>{ dState->GetEntityID() });
-            characterManager->RecalculateStats(dState, client);
-
-            // If the current event is a menu, handle the "next" event,
-            if(state->GetCurrentMenuShopID() != 0)
-            {
-                server->GetEventManager()->HandleResponse(client, -1);
-            }
-        }
+    auto mReunion = demon->GetMitamaReunion();
+    for (size_t i = (size_t)(8 * reunionIdx);
+         i < (size_t)(8 * (reunionIdx + 1)); i++) {
+      if (mReunion[i]) {
+        mReunion[i] = 0;
+        cleared++;
+      }
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_MITAMA_RESET);
-    reply.WriteS8(success ? 0 : -1);
-    reply.WriteS8(reunionIdx);
+    // Pay the cost
+    success = characterManager->PayMacca(client, (uint64_t)(cleared * 30000));
 
-    if(success)
-    {
-        characterManager->GetEntityStatsPacketData(reply,
-            demon->GetCoreStats().Get(), dState, 1);
-        reply.WriteS8(0);
+    if (success) {
+      // Clear type and save
+      demon->SetMitamaReunion(mReunion);
+
+      auto dbChanges =
+          libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+      dbChanges->Update(demon);
+
+      server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+
+      dState->UpdateDemonState(definitionManager);
+      server->GetTokuseiManager()->Recalculate(
+          cState, true, std::set<int32_t>{dState->GetEntityID()});
+      characterManager->RecalculateStats(dState, client);
+
+      // If the current event is a menu, handle the "next" event,
+      if (state->GetCurrentMenuShopID() != 0) {
+        server->GetEventManager()->HandleResponse(client, -1);
+      }
     }
+  }
 
-    client->SendPacket(reply);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MITAMA_RESET);
+  reply.WriteS8(success ? 0 : -1);
+  reply.WriteS8(reunionIdx);
+
+  if (success) {
+    characterManager->GetEntityStatsPacketData(
+        reply, demon->GetCoreStats().Get(), dState, 1);
+    reply.WriteS8(0);
+  }
+
+  client->SendPacket(reply);
 }
 
-bool Parsers::MitamaReset::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::MitamaReset::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 1)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 1) {
+    return false;
+  }
 
-    int8_t reunionIdx = p.ReadS8();
+  int8_t reunionIdx = p.ReadS8();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork(HandleMitamaReset, server, client, reunionIdx);
+  server->QueueWork(HandleMitamaReset, server, client, reunionIdx);
 
-    return true;
+  return true;
 }

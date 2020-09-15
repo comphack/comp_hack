@@ -28,53 +28,46 @@
 #include <ServerZoneTrigger.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_ZoneTrigger.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include "ui_ZoneTrigger.h"
 
 // libcomp Includes
 #include <PacketCodes.h>
 
-ZoneTrigger::ZoneTrigger(MainWindow *pMainWindow,
-    QWidget *pParent) : QWidget(pParent)
-{
-    prop = new Ui::ZoneTrigger;
-    prop->setupUi(this);
+ZoneTrigger::ZoneTrigger(MainWindow *pMainWindow, QWidget *pParent)
+    : QWidget(pParent) {
+  prop = new Ui::ZoneTrigger;
+  prop->setupUi(this);
 
-    prop->actions->SetMainWindow(pMainWindow);
+  prop->actions->SetMainWindow(pMainWindow);
 }
 
-ZoneTrigger::~ZoneTrigger()
-{
-    delete prop;
+ZoneTrigger::~ZoneTrigger() { delete prop; }
+
+void ZoneTrigger::Load(
+    const std::shared_ptr<objects::ServerZoneTrigger> &trigger) {
+  if (!trigger) {
+    return;
+  }
+
+  prop->trigger->setCurrentIndex(to_underlying(trigger->GetTrigger()));
+  prop->value->setValue(trigger->GetValue());
+
+  auto actions = trigger->GetActions();
+  prop->actions->Load(actions);
 }
 
-void ZoneTrigger::Load(const std::shared_ptr<
-    objects::ServerZoneTrigger>& trigger)
-{
-    if(!trigger)
-    {
-        return;
-    }
+std::shared_ptr<objects::ServerZoneTrigger> ZoneTrigger::Save() const {
+  auto obj = std::make_shared<objects::ServerZoneTrigger>();
 
-    prop->trigger->setCurrentIndex(to_underlying(
-        trigger->GetTrigger()));
-    prop->value->setValue(trigger->GetValue());
+  obj->SetTrigger(
+      (objects::ServerZoneTrigger::Trigger_t)prop->trigger->currentIndex());
+  obj->SetValue(prop->value->value());
 
-    auto actions = trigger->GetActions();
-    prop->actions->Load(actions);
-}
+  auto actions = prop->actions->Save();
+  obj->SetActions(actions);
 
-std::shared_ptr<objects::ServerZoneTrigger> ZoneTrigger::Save() const
-{
-    auto obj = std::make_shared<objects::ServerZoneTrigger>();
-
-    obj->SetTrigger((objects::ServerZoneTrigger::Trigger_t)
-        prop->trigger->currentIndex());
-    obj->SetValue(prop->value->value());
-
-    auto actions = prop->actions->Save();
-    obj->SetActions(actions);
-
-    return obj;
+  return obj;
 }

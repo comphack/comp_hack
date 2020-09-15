@@ -46,63 +46,61 @@
 
 using namespace channel;
 
-bool Parsers::BazaarMarketClose::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BazaarMarketClose::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto zone = cState->GetZone();
+
+  auto bState = state->GetBazaarState();
+  auto worldData = state->GetAccountWorldData().Get();
+  auto bazaarData = worldData->GetBazaarData().Get();
+  uint32_t marketID = bazaarData ? bazaarData->GetMarketID() : 0;
+
+  bool success = false;
+  if (bState && bState->GetCurrentMarket(marketID) == bazaarData) {
+    bazaarData->SetState(objects::BazaarData::State_t::BAZAAR_INACTIVE);
+    bState->SetCurrentMarket(marketID, nullptr);
+
+    if (!bazaarData->Update(server->GetWorldDatabase())) {
+      LogBazaarError([&]() {
+        return libcomp::String("BazaarMarketClose failed to save: %1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+
+      client->Kill();
+      return true;
     }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto zone = cState->GetZone();
+    success = true;
+  }
 
-    auto bState = state->GetBazaarState();
-    auto worldData = state->GetAccountWorldData().Get();
-    auto bazaarData = worldData->GetBazaarData().Get();
-    uint32_t marketID = bazaarData ? bazaarData->GetMarketID() : 0;
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_CLOSE);
+  reply.WriteS32Little(success ? 0 : -1);  // Success
 
-    bool success = false;
-    if(bState && bState->GetCurrentMarket(marketID) == bazaarData)
-    {
-        bazaarData->SetState(objects::BazaarData::State_t::BAZAAR_INACTIVE);
-        bState->SetCurrentMarket(marketID, nullptr);
+  client->SendPacket(reply);
 
-        if(!bazaarData->Update(server->GetWorldDatabase()))
-        {
-            LogBazaarError([&]()
-            {
-                return libcomp::String("BazaarMarketClose failed to save: %1\n")
-                    .Arg(state->GetAccountUID().ToString());
-            });
-
-            client->Kill();
-            return true;
-        }
-
-        success = true;
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_CLOSE);
-    reply.WriteS32Little(success ? 0 : -1);    // Success
+  if (success) {
+    reply.Clear();
+    reply.WritePacketCode(
+        ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_CLOSE);
+    reply.WriteS32Little(0);
 
     client->SendPacket(reply);
 
-    if(success)
-    {
-        reply.Clear();
-        reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_CLOSE);
-        reply.WriteS32Little(0);
+    server->GetZoneManager()->SendBazaarMarketData(zone, bState, marketID);
+  }
 
-        client->SendPacket(reply);
-
-        server->GetZoneManager()->SendBazaarMarketData(zone, bState, marketID);
-    }
-
-    return true;
+  return true;
 }

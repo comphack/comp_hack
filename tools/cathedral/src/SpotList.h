@@ -27,33 +27,31 @@
 
 #include "ObjectList.h"
 
-namespace Ui
-{
+namespace Ui {
 
 class SpotProperties;
 
-} // namespace Ui
+}  // namespace Ui
 
-class SpotList : public ObjectList
-{
-    Q_OBJECT
+class SpotList : public ObjectList {
+  Q_OBJECT
 
-public:
-    explicit SpotList(QWidget *pParent = 0);
-    virtual ~SpotList();
+ public:
+  explicit SpotList(QWidget* pParent = 0);
+  virtual ~SpotList();
 
-    virtual void SetMainWindow(MainWindow *pMainWindow);
+  virtual void SetMainWindow(MainWindow* pMainWindow);
 
-    QString GetObjectID(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
-    QString GetObjectName(const std::shared_ptr<
-        libcomp::Object>& obj) const override;
+  QString GetObjectID(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
+  QString GetObjectName(
+      const std::shared_ptr<libcomp::Object>& obj) const override;
 
-    void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
-    void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+  void LoadProperties(const std::shared_ptr<libcomp::Object>& obj) override;
+  void SaveProperties(const std::shared_ptr<libcomp::Object>& obj) override;
 
-protected:
-    Ui::SpotProperties *prop;
+ protected:
+  Ui::SpotProperties* prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_SPOTLIST_H
+#endif  // TOOLS_CATHEDRAL_SRC_SPOTLIST_H

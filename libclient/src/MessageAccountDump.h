@@ -34,103 +34,97 @@
 #include <CString.h>
 #include <MessageClient.h>
 
-namespace logic
-{
+namespace logic {
 
 /**
  * Message requesting to start an account dump.
  */
-class MessageAccountDump : public libcomp::Message::MessageClient
-{
-public:
-    /**
-     * Create the message.
-     * @param path Path to save the account to.
-     */
-    MessageAccountDump(const libcomp::String &path) :
-        libcomp::Message::MessageClient(), mPath(path) { }
+class MessageAccountDump : public libcomp::Message::MessageClient {
+ public:
+  /**
+   * Create the message.
+   * @param path Path to save the account to.
+   */
+  MessageAccountDump(const libcomp::String &path)
+      : libcomp::Message::MessageClient(), mPath(path) {}
 
-    /**
-     * Cleanup the message.
-     */
-    ~MessageAccountDump() override { }
+  /**
+   * Cleanup the message.
+   */
+  ~MessageAccountDump() override {}
 
-    /**
-     * Get the path to save the account to.
-     * @returns Path to save the account to.
-     */
-    libcomp::String GetPath() const { return mPath; }
+  /**
+   * Get the path to save the account to.
+   * @returns Path to save the account to.
+   */
+  libcomp::String GetPath() const { return mPath; }
 
-    /**
-     * Get the specific client message type.
-     * @return The message's client message type
-     */
-    libcomp::Message::MessageClientType GetMessageClientType() const override {
-        return libcomp::Message::MessageClientType::REQUEST_ACCOUNT_DUMP;
-    }
+  /**
+   * Get the specific client message type.
+   * @return The message's client message type
+   */
+  libcomp::Message::MessageClientType GetMessageClientType() const override {
+    return libcomp::Message::MessageClientType::REQUEST_ACCOUNT_DUMP;
+  }
 
-    /**
-     * Dump the message for logging.
-     * @return String representation of the message.
-     */
-    libcomp::String Dump() const override
-    {
-        return libcomp::String("Message: Account dump\nPath: %1")
-            .Arg(mPath);
-    }
+  /**
+   * Dump the message for logging.
+   * @return String representation of the message.
+   */
+  libcomp::String Dump() const override {
+    return libcomp::String("Message: Account dump\nPath: %1").Arg(mPath);
+  }
 
-protected:
-    /// Path to save the account to.
-    libcomp::String mPath;
+ protected:
+  /// Path to save the account to.
+  libcomp::String mPath;
 };
 
 /**
  * Message indicating the status of the account dump.
  */
-class MessageAccountDumpStatus : public libcomp::Message::MessageClient
-{
-public:
-    /**
-     * Create the message.
-     * @param success If the account dump was a success.
-     */
-    MessageAccountDumpStatus(bool success) :
-        libcomp::Message::MessageClient(), mSuccess(success) { }
+class MessageAccountDumpStatus : public libcomp::Message::MessageClient {
+ public:
+  /**
+   * Create the message.
+   * @param success If the account dump was a success.
+   */
+  MessageAccountDumpStatus(bool success)
+      : libcomp::Message::MessageClient(), mSuccess(success) {}
 
-    /**
-     * Cleanup the message.
-     */
-    ~MessageAccountDumpStatus() override { }
+  /**
+   * Cleanup the message.
+   */
+  ~MessageAccountDumpStatus() override {}
 
-    /**
-     * Get if the account dump was a success.
-     * @returns true if the account dump was a success; false otherwise.
-     */
-    bool IsSuccess() const { return mSuccess; }
+  /**
+   * Get if the account dump was a success.
+   * @returns true if the account dump was a success; false otherwise.
+   */
+  bool IsSuccess() const { return mSuccess; }
 
-    /**
-     * Get the specific client message type.
-     * @return The message's client message type
-     */
-    libcomp::Message::MessageClientType GetMessageClientType() const override {
-        return libcomp::Message::MessageClientType::ACCOUNT_DUMP_STATUS;
-    }
+  /**
+   * Get the specific client message type.
+   * @return The message's client message type
+   */
+  libcomp::Message::MessageClientType GetMessageClientType() const override {
+    return libcomp::Message::MessageClientType::ACCOUNT_DUMP_STATUS;
+  }
 
-    /**
-     * Dump the message for logging.
-     * @return String representation of the message.
-     */
-    libcomp::String Dump() const override
-    {
-        return libcomp::String("Message: Account dump status\nResult: %1")
-            .Arg(mSuccess ? "OK" : "FAILED");
-    }
+  /**
+   * Dump the message for logging.
+   * @return String representation of the message.
+   */
+  libcomp::String Dump() const override {
+    return libcomp::String("Message: Account dump status\nResult: %1")
+        .Arg(mSuccess ? "OK" : "FAILED");
+  }
 
-protected:
-    /// If the account dump was a success.
-    bool mSuccess;
+ protected:
+  /// If the account dump was a success.
+  bool mSuccess;
 };
 
-} // namespace logic
+}  // namespace logic
 
-#endif // LIBCLIENT_SRC_MESSAGEACCOUNTDUMP_H
+#endif  // LIBCLIENT_SRC_MESSAGEACCOUNTDUMP_H

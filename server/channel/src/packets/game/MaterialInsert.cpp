@@ -44,102 +44,94 @@
 
 using namespace channel;
 
-bool Parsers::MaterialInsert::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::MaterialInsert::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
+
+  int64_t itemID = p.ReadS64Little();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto definitionManager = server->GetDefinitionManager();
+
+  auto item = std::dynamic_pointer_cast<objects::Item>(
+      libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
+  uint32_t itemType = item ? item->GetType() : 0;
+
+  // Get the material definition and also check that a disassembly trigger
+  // exists for the item as each material type has one
+  std::shared_ptr<objects::MiTankData> mTank;
+  for (auto& pair : definitionManager->GetTankData()) {
+    if (pair.second->GetItemID() == itemType) {
+      mTank = pair.second;
+      break;
+    }
+  }
+
+  auto triggerDef = definitionManager->GetDisassemblyTriggerData(itemType);
+
+  bool playerHasTank = CharacterManager::HasValuable(
+      character, SVR_CONST.VALUABLE_MATERIAL_TANK);
+
+  int32_t inserted = 0;
+  bool success = false;
+  if (playerHasTank && mTank && triggerDef) {
+    // Unlike disassembly, direct material insertion will not remove stacks
+    // over the delta free for that type
+    int32_t maxStack = (int32_t)mTank->GetMaxStack();
+
+    int32_t newStack = character->GetMaterials(itemType) + item->GetStackSize();
+
+    if (newStack > maxStack) {
+      newStack = (int32_t)maxStack;
     }
 
-    int64_t itemID = p.ReadS64Little();
+    inserted = newStack - character->GetMaterials(itemType);
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+    if (inserted > 0) {
+      std::unordered_map<uint32_t, uint32_t> items;
+      items[itemType] = (uint32_t)inserted;
+      if (characterManager->AddRemoveItems(client, items, false, itemID)) {
+        character->SetMaterials(itemType, (uint16_t)newStack);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto definitionManager = server->GetDefinitionManager();
-
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
-    uint32_t itemType = item ? item->GetType() : 0;
-
-    // Get the material definition and also check that a disassembly trigger exists for
-    // the item as each material type has one
-    std::shared_ptr<objects::MiTankData> mTank;
-    for(auto& pair : definitionManager->GetTankData())
-    {
-        if(pair.second->GetItemID() == itemType)
-        {
-            mTank = pair.second;
-            break;
-        }
+        server->GetWorldDatabase()->QueueUpdate(character,
+                                                state->GetAccountUID());
+      }
     }
 
-    auto triggerDef = definitionManager->GetDisassemblyTriggerData(itemType);
+    success = true;
+  } else if (!triggerDef) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Player '%1' attempted to insert a non-material item into the "
+                 "material container: %2\n")
+          .Arg(state->GetAccountUID().ToString())
+          .Arg(itemType);
+    });
+  }
 
-    bool playerHasTank = CharacterManager::HasValuable(character,
-        SVR_CONST.VALUABLE_MATERIAL_TANK);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MATERIAL_INSERT);
+  reply.WriteS64Little(itemID);
+  reply.WriteS32Little(success ? 0 : -1);
+  reply.WriteS32Little(inserted);
 
-    int32_t inserted = 0;
-    bool success = false;
-    if(playerHasTank && mTank && triggerDef)
-    {
-        // Unlike disassembly, direct material insertion will not remove stacks
-        // over the delta free for that type
-        int32_t maxStack = (int32_t)mTank->GetMaxStack();
+  client->SendPacket(reply);
 
-        int32_t newStack = character->GetMaterials(itemType) + item->GetStackSize();
+  if (success) {
+    std::set<uint32_t> updates = {itemType};
+    characterManager->SendMaterials(client, updates);
+  }
 
-        if(newStack > maxStack)
-        {
-            newStack = (int32_t)maxStack;
-        }
-
-        inserted = newStack - character->GetMaterials(itemType);
-
-        if(inserted > 0)
-        {
-            std::unordered_map<uint32_t, uint32_t> items;
-            items[itemType] = (uint32_t)inserted;
-            if(characterManager->AddRemoveItems(client, items, false, itemID))
-            {
-                character->SetMaterials(itemType, (uint16_t)newStack);
-
-                server->GetWorldDatabase()
-                    ->QueueUpdate(character, state->GetAccountUID());
-            }
-        }
-
-        success = true;
-    }
-    else if(!triggerDef)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Player '%1' attempted to insert a "
-                "non-material item into the material container: %2\n")
-                .Arg(state->GetAccountUID().ToString()).Arg(itemType);
-        });
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MATERIAL_INSERT);
-    reply.WriteS64Little(itemID);
-    reply.WriteS32Little(success ? 0 : -1);
-    reply.WriteS32Little(inserted);
-
-    client->SendPacket(reply);
-
-    if(success)
-    {
-        std::set<uint32_t> updates = { itemType };
-        characterManager->SendMaterials(client, updates);
-    }
-
-    return true;
+  return true;
 }

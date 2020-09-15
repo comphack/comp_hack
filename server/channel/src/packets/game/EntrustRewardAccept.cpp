@@ -42,51 +42,52 @@
 
 using namespace channel;
 
-bool Parsers::EntrustRewardAccept::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::EntrustRewardAccept::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_REWARD_ACCEPT);
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_ENTRUST_REWARD_ACCEPT);
 
-    if(!exchangeSession)
-    {
-        reply.WriteS32Little(-1);
-
-        client->SendPacket(reply);
-
-        return true;
-    }
-
-    int32_t otherEntityID = exchangeSession->GetOtherCharacterState()->GetEntityID();
-    auto otherClient = otherEntityID != cState->GetEntityID()
-        ? server->GetManagerConnection()->GetEntityClient(otherEntityID, false) : nullptr;
-
-    bool success = exchangeSession->GetLocked() && otherClient;
-    reply.WriteS32Little(success ? 0 : -1);
-
-    if(success)
-    {
-        otherClient->SendPacketCopy(reply);
-    }
+  if (!exchangeSession) {
+    reply.WriteS32Little(-1);
 
     client->SendPacket(reply);
 
-    if(!otherClient)
-    {
-        server->GetCharacterManager()->EndExchange(client, 0);
-    }
-
     return true;
+  }
+
+  int32_t otherEntityID =
+      exchangeSession->GetOtherCharacterState()->GetEntityID();
+  auto otherClient = otherEntityID != cState->GetEntityID()
+                         ? server->GetManagerConnection()->GetEntityClient(
+                               otherEntityID, false)
+                         : nullptr;
+
+  bool success = exchangeSession->GetLocked() && otherClient;
+  reply.WriteS32Little(success ? 0 : -1);
+
+  if (success) {
+    otherClient->SendPacketCopy(reply);
+  }
+
+  client->SendPacket(reply);
+
+  if (!otherClient) {
+    server->GetCharacterManager()->EndExchange(client, 0);
+  }
+
+  return true;
 }

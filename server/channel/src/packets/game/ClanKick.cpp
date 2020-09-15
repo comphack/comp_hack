@@ -38,30 +38,30 @@
 
 using namespace channel;
 
-bool Parsers::ClanKick::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ClanKick::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    int32_t clanID = p.ReadS32Little();
-    int32_t targetCID = p.ReadS32Little();
+  int32_t clanID = p.ReadS32Little();
+  int32_t targetCID = p.ReadS32Little();
 
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_KICK);
-    request.WriteS32Little(state->GetWorldCID());
-    request.WriteS32Little(clanID);
-    request.WriteS32Little(targetCID);
+  libcomp::Packet request;
+  request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
+  request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_GROUP_KICK);
+  request.WriteS32Little(state->GetWorldCID());
+  request.WriteS32Little(clanID);
+  request.WriteS32Little(targetCID);
 
-    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
 
-    return true;
+  return true;
 }

@@ -55,501 +55,415 @@
 
 using namespace channel;
 
-namespace libcomp
-{
-    template<>
-    ScriptEngine& ScriptEngine::Using<DemonState>()
-    {
-        if(!BindingExists("DemonState", true))
-        {
-            Using<ActiveEntityState>();
-            Using<objects::Demon>();
+namespace libcomp {
+template <>
+ScriptEngine& ScriptEngine::Using<DemonState>() {
+  if (!BindingExists("DemonState", true)) {
+    Using<ActiveEntityState>();
+    Using<objects::Demon>();
 
-            Sqrat::DerivedClass<DemonState, ActiveEntityState,
-                Sqrat::NoConstructor<DemonState>> binding(mVM, "DemonState");
-            binding
-                .Func<std::shared_ptr<objects::Demon>
-                (DemonState::*)() const>(
-                    "GetEntity", &DemonState::GetEntity)
-                .StaticFunc("Cast", &DemonState::Cast);
+    Sqrat::DerivedClass<DemonState, ActiveEntityState,
+                        Sqrat::NoConstructor<DemonState>>
+        binding(mVM, "DemonState");
+    binding
+        .Func<std::shared_ptr<objects::Demon> (DemonState::*)() const>(
+            "GetEntity", &DemonState::GetEntity)
+        .StaticFunc("Cast", &DemonState::Cast);
 
-            Bind<DemonState>("DemonState", binding);
-        }
+    Bind<DemonState>("DemonState", binding);
+  }
 
-        return *this;
-    }
+  return *this;
+}
+}  // namespace libcomp
+
+DemonState::DemonState() { mCompendiumCount = 0; }
+
+uint16_t DemonState::GetCompendiumCount(uint8_t groupID, bool familyGroup) {
+  if (groupID == 0) {
+    return mCompendiumCount;
+  }
+
+  std::lock_guard<std::mutex> lock(mSharedLock);
+  if (familyGroup) {
+    auto it = mCompendiumFamilyCounts.find(groupID);
+    return it != mCompendiumFamilyCounts.end() ? it->second : 0;
+  } else {
+    auto it = mCompendiumRaceCounts.find(groupID);
+    return it != mCompendiumRaceCounts.end() ? it->second : 0;
+  }
 }
 
-DemonState::DemonState()
-{
-    mCompendiumCount = 0;
+std::list<int32_t> DemonState::GetCompendiumTokuseiIDs() const {
+  return mCompendiumTokuseiIDs;
 }
 
-uint16_t DemonState::GetCompendiumCount(uint8_t groupID, bool familyGroup)
-{
-    if(groupID == 0)
-    {
-        return mCompendiumCount;
-    }
-
-    std::lock_guard<std::mutex> lock(mSharedLock);
-    if(familyGroup)
-    {
-        auto it = mCompendiumFamilyCounts.find(groupID);
-        return it != mCompendiumFamilyCounts.end() ? it->second : 0;
-    }
-    else
-    {
-        auto it = mCompendiumRaceCounts.find(groupID);
-        return it != mCompendiumRaceCounts.end() ? it->second : 0;
-    }
+std::list<int32_t> DemonState::GetDemonTokuseiIDs() const {
+  return mDemonTokuseiIDs;
 }
 
-std::list<int32_t> DemonState::GetCompendiumTokuseiIDs() const
-{
-    return mCompendiumTokuseiIDs;
+bool DemonState::UpdateSharedState(
+    const std::shared_ptr<objects::Character>& character,
+    libcomp::DefinitionManager* definitionManager) {
+  std::set<uint32_t> cShiftValues;
+
+  bool compendium2 = CharacterManager::HasValuable(
+      character, SVR_CONST.VALUABLE_DEVIL_BOOK_V2);
+  bool compendium1 =
+      compendium2 || CharacterManager::HasValuable(
+                         character, SVR_CONST.VALUABLE_DEVIL_BOOK_V1);
+
+  if (compendium1) {
+    auto state = ClientState::GetEntityClientState(GetEntityID());
+    auto worldData = state ? state->GetAccountWorldData().Get() : nullptr;
+    if (worldData) {
+      auto devilBook = worldData->GetDevilBook();
+
+      const static size_t DBOOK_SIZE = devilBook.size();
+      for (size_t i = 0; i < DBOOK_SIZE; i++) {
+        uint8_t val = devilBook[i];
+        for (uint8_t k = 0; k < 8; k++) {
+          if ((val & (0x01 << k)) != 0) {
+            cShiftValues.insert((uint32_t)((i * 8) + k));
+          }
+        }
+      }
+    }
+  }
+
+  // With all shift values read, convert them into distinct entries
+  std::set<uint32_t> compendiumEntries;
+  std::unordered_map<uint8_t, uint16_t> compendiumFamilyCounts;
+  std::unordered_map<uint8_t, uint16_t> compendiumRaceCounts;
+  if (cShiftValues.size() > 0) {
+    for (auto& dbPair : definitionManager->GetDevilBookData()) {
+      auto dBook = dbPair.second;
+      if (cShiftValues.find(dBook->GetShiftValue()) != cShiftValues.end() &&
+          dBook->GetGroupID() &&
+          compendiumEntries.find(dBook->GetEntryID()) ==
+              compendiumEntries.end()) {
+        auto devilData = definitionManager->GetDevilData(dBook->GetBaseID1());
+        if (devilData) {
+          uint8_t familyID = (uint8_t)devilData->GetCategory()->GetFamily();
+          uint8_t raceID = (uint8_t)devilData->GetCategory()->GetRace();
+
+          if (compendiumFamilyCounts.find(familyID) ==
+              compendiumFamilyCounts.end()) {
+            compendiumFamilyCounts[familyID] = 1;
+          } else {
+            compendiumFamilyCounts[familyID]++;
+          }
+
+          if (compendiumRaceCounts.find(raceID) == compendiumRaceCounts.end()) {
+            compendiumRaceCounts[raceID] = 1;
+          } else {
+            compendiumRaceCounts[raceID]++;
+          }
+        }
+
+        compendiumEntries.insert(dBook->GetEntryID());
+      }
+    }
+  }
+
+  // Recalculate compendium based tokusei and set count
+  std::list<int32_t> compendiumTokuseiIDs;
+
+  if (compendium2 && compendiumEntries.size() > 0) {
+    for (auto bonusPair : SVR_CONST.DEMON_BOOK_BONUS) {
+      if (bonusPair.first <= compendiumEntries.size()) {
+        for (int32_t tokuseiID : bonusPair.second) {
+          compendiumTokuseiIDs.push_back(tokuseiID);
+        }
+      }
+    }
+  }
+
+  std::lock_guard<std::mutex> lock(mSharedLock);
+  mCompendiumTokuseiIDs = compendiumTokuseiIDs;
+  mCompendiumCount = (uint16_t)compendiumEntries.size();
+  mCompendiumFamilyCounts = compendiumFamilyCounts;
+  mCompendiumRaceCounts = compendiumRaceCounts;
+
+  return true;
 }
 
-std::list<int32_t> DemonState::GetDemonTokuseiIDs() const
-{
-    return mDemonTokuseiIDs;
-}
+bool DemonState::UpdateDemonState(
+    libcomp::DefinitionManager* definitionManager) {
+  auto demon = GetEntity();
 
-bool DemonState::UpdateSharedState(const std::shared_ptr<objects::Character>& character,
-    libcomp::DefinitionManager* definitionManager)
-{
-    std::set<uint32_t> cShiftValues;
+  std::lock_guard<std::mutex> lock(mLock);
 
-    bool compendium2 = CharacterManager::HasValuable(character,
-        SVR_CONST.VALUABLE_DEVIL_BOOK_V2);
-    bool compendium1 = compendium2 || CharacterManager::HasValuable(character,
-        SVR_CONST.VALUABLE_DEVIL_BOOK_V1);
+  mDemonTokuseiIDs.clear();
+  mCharacterBonuses.clear();
 
-    if(compendium1)
-    {
-        auto state = ClientState::GetEntityClientState(GetEntityID());
-        auto worldData = state ? state->GetAccountWorldData().Get() : nullptr;
-        if(worldData)
-        {
-            auto devilBook = worldData->GetDevilBook();
+  if (demon) {
+    bool updated = false;
 
-            const static size_t DBOOK_SIZE = devilBook.size();
-            for(size_t i = 0; i < DBOOK_SIZE; i++)
-            {
-                uint8_t val = devilBook[i];
-                for(uint8_t k = 0; k < 8; k++)
-                {
-                    if((val & (0x01 << k)) != 0)
-                    {
-                        cShiftValues.insert((uint32_t)((i * 8) + k));
-                    }
-                }
-            }
-        }
+    auto state = ClientState::GetEntityClientState(GetEntityID());
+    auto cState = state ? state->GetCharacterState() : nullptr;
+
+    if (demon->GetMitamaType()) {
+      bool exBonus =
+          cState && cState->SkillAvailable(SVR_CONST.MITAMA_SET_BOOST);
+
+      int8_t magReduction = 0;
+      mDemonTokuseiIDs = CharacterManager::GetMitamaIndirectSetBonuses(
+          demon, definitionManager, exBonus, magReduction);
+
+      updated = mDemonTokuseiIDs.size() > 0;
     }
 
-    // With all shift values read, convert them into distinct entries
-    std::set<uint32_t> compendiumEntries;
-    std::unordered_map<uint8_t, uint16_t> compendiumFamilyCounts;
-    std::unordered_map<uint8_t, uint16_t> compendiumRaceCounts;
-    if(cShiftValues.size() > 0)
-    {
-        for(auto& dbPair : definitionManager->GetDevilBookData())
-        {
-            auto dBook = dbPair.second;
-            if(cShiftValues.find(dBook->GetShiftValue()) !=
-                cShiftValues.end() && dBook->GetGroupID() &&
-                compendiumEntries.find(dBook->GetEntryID()) ==
-                compendiumEntries.end())
-            {
-                auto devilData = definitionManager->GetDevilData(
-                    dBook->GetBaseID1());
-                if(devilData)
-                {
-                    uint8_t familyID = (uint8_t)devilData->GetCategory()
-                        ->GetFamily();
-                    uint8_t raceID = (uint8_t)devilData->GetCategory()
-                        ->GetRace();
-
-                    if(compendiumFamilyCounts.find(familyID) ==
-                        compendiumFamilyCounts.end())
-                    {
-                        compendiumFamilyCounts[familyID] = 1;
-                    }
-                    else
-                    {
-                        compendiumFamilyCounts[familyID]++;
-                    }
-
-                    if(compendiumRaceCounts.find(raceID) ==
-                        compendiumRaceCounts.end())
-                    {
-                        compendiumRaceCounts[raceID] = 1;
-                    }
-                    else
-                    {
-                        compendiumRaceCounts[raceID]++;
-                    }
-                }
-
-                compendiumEntries.insert(dBook->GetEntryID());
-            }
+    for (uint16_t stackID : demon->GetForceStack()) {
+      auto exData = stackID ? definitionManager->GetDevilBoostExtraData(stackID)
+                            : nullptr;
+      if (exData) {
+        for (int32_t tokuseiID : exData->GetTokusei()) {
+          if (tokuseiID) {
+            mDemonTokuseiIDs.push_back(tokuseiID);
+            updated = true;
+          }
         }
+      }
     }
 
-    // Recalculate compendium based tokusei and set count
-    std::list<int32_t> compendiumTokuseiIDs;
+    if (cState) {
+      // Grant bonus XP based on expertise
+      uint8_t fRank = cState->GetExpertiseRank(EXPERTISE_FUSION);
+      uint8_t dRank = cState->GetExpertiseRank(EXPERTISE_DEMONOLOGY);
 
-    if(compendium2 && compendiumEntries.size() > 0)
-    {
-        for(auto bonusPair : SVR_CONST.DEMON_BOOK_BONUS)
-        {
-            if(bonusPair.first <= compendiumEntries.size())
-            {
-                for(int32_t tokuseiID : bonusPair.second)
-                {
-                    compendiumTokuseiIDs.push_back(tokuseiID);
-                }
-            }
-        }
+      int16_t xpBoost = (int16_t)(((fRank / 30) * 2) + ((dRank / 20) * 2));
+      if (xpBoost > 0) {
+        mCharacterBonuses[CorrectTbl::RATE_XP] = xpBoost;
+        updated = true;
+      }
     }
 
-    std::lock_guard<std::mutex> lock(mSharedLock);
-    mCompendiumTokuseiIDs = compendiumTokuseiIDs;
-    mCompendiumCount = (uint16_t)compendiumEntries.size();
-    mCompendiumFamilyCounts = compendiumFamilyCounts;
-    mCompendiumRaceCounts = compendiumRaceCounts;
+    return updated;
+  }
 
-    return true;
-}
-
-bool DemonState::UpdateDemonState(libcomp::DefinitionManager* definitionManager)
-{
-    auto demon = GetEntity();
-
-    std::lock_guard<std::mutex> lock(mLock);
-
-    mDemonTokuseiIDs.clear();
-    mCharacterBonuses.clear();
-
-    if(demon)
-    {
-        bool updated = false;
-
-        auto state = ClientState::GetEntityClientState(GetEntityID());
-        auto cState = state ? state->GetCharacterState() : nullptr;
-
-        if(demon->GetMitamaType())
-        {
-            bool exBonus = cState && cState->SkillAvailable(
-                SVR_CONST.MITAMA_SET_BOOST);
-
-            int8_t magReduction = 0;
-            mDemonTokuseiIDs = CharacterManager::GetMitamaIndirectSetBonuses(
-                demon, definitionManager, exBonus, magReduction);
-
-            updated = mDemonTokuseiIDs.size() > 0;
-        }
-
-        for(uint16_t stackID : demon->GetForceStack())
-        {
-            auto exData = stackID
-                ? definitionManager->GetDevilBoostExtraData(stackID) : nullptr;
-            if(exData)
-            {
-                for(int32_t tokuseiID : exData->GetTokusei())
-                {
-                    if(tokuseiID)
-                    {
-                        mDemonTokuseiIDs.push_back(tokuseiID);
-                        updated = true;
-                    }
-                }
-            }
-        }
-
-        if(cState)
-        {
-            // Grant bonus XP based on expertise
-            uint8_t fRank = cState->GetExpertiseRank(EXPERTISE_FUSION);
-            uint8_t dRank = cState->GetExpertiseRank(EXPERTISE_DEMONOLOGY);
-
-            int16_t xpBoost = (int16_t)(((fRank / 30) * 2) +
-                ((dRank / 20) * 2));
-            if(xpBoost > 0)
-            {
-                mCharacterBonuses[CorrectTbl::RATE_XP] = xpBoost;
-                updated = true;
-            }
-        }
-
-        return updated;
-    }
-
-    return false;
+  return false;
 }
 
 std::list<std::shared_ptr<objects::InheritedSkill>>
-    DemonState::GetLearningSkills(uint8_t affinity)
-{
-    std::lock_guard<std::mutex> lock(mLock);
-    auto it = mLearningSkills.find(affinity);
-    return it != mLearningSkills.end()
-        ? it->second : std::list<std::shared_ptr<objects::InheritedSkill>>();
+DemonState::GetLearningSkills(uint8_t affinity) {
+  std::lock_guard<std::mutex> lock(mLock);
+  auto it = mLearningSkills.find(affinity);
+  return it != mLearningSkills.end()
+             ? it->second
+             : std::list<std::shared_ptr<objects::InheritedSkill>>();
 }
 
-void DemonState::RefreshLearningSkills(uint8_t affinity,
-    libcomp::DefinitionManager* definitionManager)
-{
-    auto demon = GetEntity();
-    std::lock_guard<std::mutex> lock(mLock);
-    if(affinity == 0)
-    {
-        // Refresh all
-        mLearningSkills.clear();
-            
-        if(!demon) return;
+void DemonState::RefreshLearningSkills(
+    uint8_t affinity, libcomp::DefinitionManager* definitionManager) {
+  auto demon = GetEntity();
+  std::lock_guard<std::mutex> lock(mLock);
+  if (affinity == 0) {
+    // Refresh all
+    mLearningSkills.clear();
 
-        for(auto iSkill : demon->GetInheritedSkills())
-        {
-            if(iSkill->GetProgress() < MAX_INHERIT_SKILL)
-            {
-                auto iSkillData = definitionManager->GetSkillData(
-                    iSkill->GetSkill());
-                mLearningSkills[iSkillData->GetCommon()
-                    ->GetAffinity()].push_back(iSkill.Get());
-            }
-        }
+    if (!demon) return;
+
+    for (auto iSkill : demon->GetInheritedSkills()) {
+      if (iSkill->GetProgress() < MAX_INHERIT_SKILL) {
+        auto iSkillData = definitionManager->GetSkillData(iSkill->GetSkill());
+        mLearningSkills[iSkillData->GetCommon()->GetAffinity()].push_back(
+            iSkill.Get());
+      }
     }
-    else
-    {
-        // Refresh specific
-        mLearningSkills.erase(affinity);
+  } else {
+    // Refresh specific
+    mLearningSkills.erase(affinity);
 
-        // Shouldn't be used this way but whatever
-        if(!demon) return;
+    // Shouldn't be used this way but whatever
+    if (!demon) return;
 
-        for(auto iSkill : demon->GetInheritedSkills())
-        {
-            if(iSkill->GetProgress() < MAX_INHERIT_SKILL)
-            {
-                auto iSkillData = definitionManager->GetSkillData(
-                    iSkill->GetSkill());
-                if(iSkillData->GetCommon()->GetAffinity() == affinity)
-                {
-                    mLearningSkills[affinity].push_back(iSkill.Get());
-                }
-            }
+    for (auto iSkill : demon->GetInheritedSkills()) {
+      if (iSkill->GetProgress() < MAX_INHERIT_SKILL) {
+        auto iSkillData = definitionManager->GetSkillData(iSkill->GetSkill());
+        if (iSkillData->GetCommon()->GetAffinity() == affinity) {
+          mLearningSkills[affinity].push_back(iSkill.Get());
         }
+      }
     }
+  }
 }
 
-int16_t DemonState::UpdateLearningSkill(const std::shared_ptr<
-    objects::InheritedSkill>& iSkill, uint16_t points)
-{
-    std::lock_guard<std::mutex> lock(mLock);
+int16_t DemonState::UpdateLearningSkill(
+    const std::shared_ptr<objects::InheritedSkill>& iSkill, uint16_t points) {
+  std::lock_guard<std::mutex> lock(mLock);
 
-    int16_t progress = iSkill->GetProgress();
+  int16_t progress = iSkill->GetProgress();
 
-    // Check new value before casting in case of overflow
-    if((progress + points) > MAX_INHERIT_SKILL)
-    {
-        progress = MAX_INHERIT_SKILL;
-    }
-    else
-    {
-        progress = (int16_t)(progress + points);
-    }
+  // Check new value before casting in case of overflow
+  if ((progress + points) > MAX_INHERIT_SKILL) {
+    progress = MAX_INHERIT_SKILL;
+  } else {
+    progress = (int16_t)(progress + points);
+  }
 
-    iSkill->SetProgress(progress);
+  iSkill->SetProgress(progress);
 
-    return progress;
+  return progress;
 }
 
 bool DemonState::GetBaseStats(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
-    libcomp::DefinitionManager* definitionManager, bool readOnly)
-{
-    auto entity = GetEntity();
-    auto cs = GetCoreStats();
-    auto devilData = GetDevilData();
-    if(!entity || !cs || !devilData || !definitionManager)
-    {
-        return false;
-    }
+                              libcomp::DefinitionManager* definitionManager,
+                              bool readOnly) {
+  auto entity = GetEntity();
+  auto cs = GetCoreStats();
+  auto devilData = GetDevilData();
+  if (!entity || !cs || !devilData || !definitionManager) {
+    return false;
+  }
 
-    stats = CharacterManager::GetDemonBaseStats(devilData);
+  stats = CharacterManager::GetDemonBaseStats(devilData);
 
-    // Non-dependent stats will not change from growth calculation
-    stats[CorrectTbl::STR] = cs->GetSTR();
-    stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
-    stats[CorrectTbl::VIT] = cs->GetVIT();
-    stats[CorrectTbl::INT] = cs->GetINTEL();
-    stats[CorrectTbl::SPEED] = cs->GetSPEED();
-    stats[CorrectTbl::LUCK] = cs->GetLUCK();
+  // Non-dependent stats will not change from growth calculation
+  stats[CorrectTbl::STR] = cs->GetSTR();
+  stats[CorrectTbl::MAGIC] = cs->GetMAGIC();
+  stats[CorrectTbl::VIT] = cs->GetVIT();
+  stats[CorrectTbl::INT] = cs->GetINTEL();
+  stats[CorrectTbl::SPEED] = cs->GetSPEED();
+  stats[CorrectTbl::LUCK] = cs->GetLUCK();
 
-    // Set character gained bonuses
-    for(auto& pair : mCharacterBonuses)
-    {
-        stats[pair.first] = (int16_t)(stats[pair.first] + pair.second);
-    }
+  // Set character gained bonuses
+  for (auto& pair : mCharacterBonuses) {
+    stats[pair.first] = (int16_t)(stats[pair.first] + pair.second);
+  }
 
-    CharacterManager::AdjustDemonBaseStats(entity, stats, false, readOnly);
+  CharacterManager::AdjustDemonBaseStats(entity, stats, false, readOnly);
 
-    CharacterManager::AdjustMitamaStats(entity, stats, definitionManager,
-        2, GetEntityID());
+  CharacterManager::AdjustMitamaStats(entity, stats, definitionManager, 2,
+                                      GetEntityID());
 
-    auto levelRate = definitionManager->GetDevilLVUpRateData(
-        devilData->GetGrowth()->GetGrowthType());
-    CharacterManager::FamiliarityBoostStats(entity->GetFamiliarity(), stats,
-        levelRate);
+  auto levelRate = definitionManager->GetDevilLVUpRateData(
+      devilData->GetGrowth()->GetGrowthType());
+  CharacterManager::FamiliarityBoostStats(entity->GetFamiliarity(), stats,
+                                          levelRate);
 
-    return true;
+  return true;
 }
 
-const libobjgen::UUID DemonState::GetEntityUUID()
-{
-    auto entity = GetEntity();
-    return entity ? entity->GetUUID() : NULLUUID;
+const libobjgen::UUID DemonState::GetEntityUUID() {
+  auto entity = GetEntity();
+  return entity ? entity->GetUUID() : NULLUUID;
 }
 
 uint8_t DemonState::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
-    std::shared_ptr<objects::MiSkillData> contextSkill)
-{
-    std::lock_guard<std::mutex> lock(mLock);
+    std::shared_ptr<objects::MiSkillData> contextSkill) {
+  std::lock_guard<std::mutex> lock(mLock);
 
-    if(calcState == nullptr)
-    {
-        // Calculating default entity state
-        calcState = GetCalculatedState();
+  if (calcState == nullptr) {
+    // Calculating default entity state
+    calcState = GetCalculatedState();
 
-        auto previousSkills = GetCurrentSkills();
-        SetCurrentSkills(GetAllSkills(definitionManager, true));
+    auto previousSkills = GetCurrentSkills();
+    SetCurrentSkills(GetAllSkills(definitionManager, true));
 
-        bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
-        if(!skillsChanged)
-        {
-            for(uint32_t skillID : previousSkills)
-            {
-                if(!CurrentSkillsContains(skillID))
-                {
-                    skillsChanged = true;
-                    break;
-                }
-            }
+    bool skillsChanged = previousSkills.size() != CurrentSkillsCount();
+    if (!skillsChanged) {
+      for (uint32_t skillID : previousSkills) {
+        if (!CurrentSkillsContains(skillID)) {
+          skillsChanged = true;
+          break;
         }
+      }
     }
+  }
 
-    libcomp::EnumMap<CorrectTbl, int32_t> stats;
-    if(!GetBaseStats(stats, definitionManager, false))
-    {
-        return true;
-    }
+  libcomp::EnumMap<CorrectTbl, int32_t> stats;
+  if (!GetBaseStats(stats, definitionManager, false)) {
+    return true;
+  }
 
-    std::list<std::shared_ptr<objects::MiCorrectTbl>> adjustments;
-    return RecalculateDemonStats(definitionManager, stats, adjustments,
-        calcState, contextSkill);
+  std::list<std::shared_ptr<objects::MiCorrectTbl>> adjustments;
+  return RecalculateDemonStats(definitionManager, stats, adjustments, calcState,
+                               contextSkill);
 }
 
-bool DemonState::CopyToEnemy(
-    const std::shared_ptr<ActiveEntityState>& eState,
-    libcomp::DefinitionManager* definitionManager)
-{
-    if(!ActiveEntityState::CopyToEnemy(eState, definitionManager))
-    {
-        return false;
-    }
+bool DemonState::CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
+                             libcomp::DefinitionManager* definitionManager) {
+  if (!ActiveEntityState::CopyToEnemy(eState, definitionManager)) {
+    return false;
+  }
 
-    auto eBase = eState->GetEnemyBase();
-    auto extension = eBase->GetExtension();
+  auto eBase = eState->GetEnemyBase();
+  auto extension = eBase->GetExtension();
 
-    libcomp::EnumMap<CorrectTbl, int32_t> stats;
-    GetBaseStats(stats, definitionManager, true);
+  libcomp::EnumMap<CorrectTbl, int32_t> stats;
+  GetBaseStats(stats, definitionManager, true);
 
-    for(auto& cPair : stats)
-    {
-        extension->SetCorrectTbl((size_t)cPair.first, (int16_t)cPair.second);
-    }
+  for (auto& cPair : stats) {
+    extension->SetCorrectTbl((size_t)cPair.first, (int16_t)cPair.second);
+  }
 
-    // Non-character bonus tokusei are kept
-    for(int32_t tokuseiID : GetDemonTokuseiIDs())
-    {
-        eState->SetAdditionalTokusei(tokuseiID, 1);
-    }
+  // Non-character bonus tokusei are kept
+  for (int32_t tokuseiID : GetDemonTokuseiIDs()) {
+    eState->SetAdditionalTokusei(tokuseiID, 1);
+  }
 
-    return true;
+  return true;
 }
 
 std::set<uint32_t> DemonState::GetAllSkills(
-    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
-{
-    std::set<uint32_t> skillIDs;
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei) {
+  std::set<uint32_t> skillIDs;
 
-    auto entity = GetEntity();
-    if(entity)
-    {
-        for(uint32_t skillID : entity->GetLearnedSkills())
-        {
-            if(skillID)
-            {
-                skillIDs.insert(skillID);
-            }
-        }
-
-        auto demonData = GetDevilData();
-        for(uint32_t skillID : CharacterManager::GetTraitSkills(entity,
-            demonData, definitionManager))
-        {
-            skillIDs.insert(skillID);
-        }
-
-        if(includeTokusei)
-        {
-            for(uint32_t skillID : GetEffectiveTokuseiSkills(definitionManager))
-            {
-                skillIDs.insert(skillID);
-            }
-        }
+  auto entity = GetEntity();
+  if (entity) {
+    for (uint32_t skillID : entity->GetLearnedSkills()) {
+      if (skillID) {
+        skillIDs.insert(skillID);
+      }
     }
 
-    return skillIDs;
-}
-
-uint8_t DemonState::GetLNCType()
-{
-    int16_t lncPoints = 0;
-
-    auto entity = GetEntity();
     auto demonData = GetDevilData();
-    if(entity && demonData)
-    {
-        lncPoints = demonData->GetBasic()->GetLNC();
+    for (uint32_t skillID : CharacterManager::GetTraitSkills(
+             entity, demonData, definitionManager)) {
+      skillIDs.insert(skillID);
     }
 
-    return CalculateLNCType(lncPoints);
-}
-
-int8_t DemonState::GetGender()
-{
-    auto demonData = GetDevilData();
-    if(demonData)
-    {
-        return (int8_t)demonData->GetBasic()->GetGender();
+    if (includeTokusei) {
+      for (uint32_t skillID : GetEffectiveTokuseiSkills(definitionManager)) {
+        skillIDs.insert(skillID);
+      }
     }
+  }
 
-    return GENDER_NA;
+  return skillIDs;
 }
 
-bool DemonState::HasSpecialTDamage()
-{
-    auto calcState = GetCalculatedState();
-    return calcState->ExistingTokuseiAspectsContains((int8_t)
-        objects::TokuseiAspect::Type_t::FAMILIARITY_REGEN);
+uint8_t DemonState::GetLNCType() {
+  int16_t lncPoints = 0;
+
+  auto entity = GetEntity();
+  auto demonData = GetDevilData();
+  if (entity && demonData) {
+    lncPoints = demonData->GetBasic()->GetLNC();
+  }
+
+  return CalculateLNCType(lncPoints);
+}
+
+int8_t DemonState::GetGender() {
+  auto demonData = GetDevilData();
+  if (demonData) {
+    return (int8_t)demonData->GetBasic()->GetGender();
+  }
+
+  return GENDER_NA;
+}
+
+bool DemonState::HasSpecialTDamage() {
+  auto calcState = GetCalculatedState();
+  return calcState->ExistingTokuseiAspectsContains(
+      (int8_t)objects::TokuseiAspect::Type_t::FAMILIARITY_REGEN);
 }
 
 std::shared_ptr<DemonState> DemonState::Cast(
-    const std::shared_ptr<EntityStateObject>& obj)
-{
-    return std::dynamic_pointer_cast<DemonState>(obj);
+    const std::shared_ptr<EntityStateObject>& obj) {
+  return std::dynamic_pointer_cast<DemonState>(obj);
 }

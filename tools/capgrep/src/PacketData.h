@@ -26,37 +26,35 @@
 #define TOOLS_CAPGREP_SRC_PACKETDATA_H
 
 #include <Packet.h>
-
-#include <PushIgnore.h>
-#include <QString>
-#include <QMetaType>
-#include <QByteArray>
 #include <PopIgnore.h>
-
+#include <PushIgnore.h>
 #include <stdint.h>
+
+#include <QByteArray>
+#include <QMetaType>
+#include <QString>
 
 class PacketData;
 
-typedef void (*CopyFunc)(PacketData *data, libcomp::Packet& packet,
-    libcomp::Packet& packetBefore);
+typedef void (*CopyFunc)(PacketData* data, libcomp::Packet& packet,
+                         libcomp::Packet& packetBefore);
 
-class PacketData
-{
-public:
-    uint16_t seq;
-    uint16_t cmd;
-    uint8_t source;
-    uint32_t servTime;
-    uint64_t micro;
-    float servRate;
-    QString text;
-    QString desc;
-    QString shortName;
-    QByteArray data;
-    CopyFunc copyAction;
-    int client; // -1 = default, 0 = A, 1 = B, etc.
+class PacketData {
+ public:
+  uint16_t seq;
+  uint16_t cmd;
+  uint8_t source;
+  uint32_t servTime;
+  uint64_t micro;
+  float servRate;
+  QString text;
+  QString desc;
+  QString shortName;
+  QByteArray data;
+  CopyFunc copyAction;
+  int client;  // -1 = default, 0 = A, 1 = B, etc.
 };
 
 Q_DECLARE_METATYPE(PacketData*)
 
-#endif // TOOLS_CAPGREP_SRC_PACKETDATA_H
+#endif  // TOOLS_CAPGREP_SRC_PACKETDATA_H

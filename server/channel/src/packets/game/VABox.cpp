@@ -36,46 +36,42 @@
 
 using namespace channel;
 
-bool Parsers::VABox::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::VABox::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 4)
-    {
-        return false;
+  if (p.Size() != 4) {
+    return false;
+  }
+
+  int32_t unused = p.ReadS32Little();
+  (void)unused;
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+
+  std::set<size_t> slots;
+  for (size_t i = 0; i < 50; i++) {
+    if (character->GetVACloset(i) != 0) {
+      slots.insert(i);
     }
+  }
 
-    int32_t unused = p.ReadS32Little();
-    (void)unused;
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VA_BOX);
+  reply.WriteS32Little(0);
+  reply.WriteS32Little(0);
+  reply.WriteS32Little((int32_t)slots.size());
+  for (size_t slot : slots) {
+    reply.WriteS8((int8_t)slot);
+    reply.WriteU32Little(character->GetVACloset(slot));
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+  client->SendPacket(reply);
 
-    std::set<size_t> slots;
-    for(size_t i = 0; i < 50; i++)
-    {
-        if(character->GetVACloset(i) != 0)
-        {
-            slots.insert(i);
-        }
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VA_BOX);
-    reply.WriteS32Little(0);
-    reply.WriteS32Little(0);
-    reply.WriteS32Little((int32_t)slots.size());
-    for(size_t slot : slots)
-    {
-        reply.WriteS8((int8_t)slot);
-        reply.WriteU32Little(character->GetVACloset(slot));
-    }
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

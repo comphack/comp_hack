@@ -29,9 +29,10 @@
 #include "MainWindow.h"
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_ActionMap.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include "ui_ActionMap.h"
 
 // libcomp Includes
 #include <Log.h>
@@ -41,151 +42,126 @@
 #include <algorithm>
 #include <climits>
 
-ActionMap::ActionMap(QWidget *pParent) : QWidget(pParent), mMin(INT_MIN),
-    mMax(INT_MAX), mServerData(false)
-{
-    ui = new Ui::ActionMap;
-    ui->setupUi(this);
+ActionMap::ActionMap(QWidget* pParent)
+    : QWidget(pParent), mMin(INT_MIN), mMax(INT_MAX), mServerData(false) {
+  ui = new Ui::ActionMap;
+  ui->setupUi(this);
 
-    connect(ui->add, SIGNAL(clicked(bool)), this, SLOT(AddNewValue()));
+  connect(ui->add, SIGNAL(clicked(bool)), this, SLOT(AddNewValue()));
 }
 
-ActionMap::~ActionMap()
-{
-    delete ui;
-}
+ActionMap::~ActionMap() { delete ui; }
 
-void ActionMap::BindSelector(MainWindow *pMainWindow,
-    const libcomp::String& objectSelectorType, bool serverData)
-{
-    mMainWindow = pMainWindow;
+void ActionMap::BindSelector(MainWindow* pMainWindow,
+                             const libcomp::String& objectSelectorType,
+                             bool serverData) {
+  mMainWindow = pMainWindow;
 
-    if((!mObjectSelectorType.IsEmpty() || !objectSelectorType.IsEmpty()) &&
-        mObjectSelectorType != objectSelectorType)
-    {
-        mObjectSelectorType = objectSelectorType;
-        mServerData = serverData;
+  if ((!mObjectSelectorType.IsEmpty() || !objectSelectorType.IsEmpty()) &&
+      mObjectSelectorType != objectSelectorType) {
+    mObjectSelectorType = objectSelectorType;
+    mServerData = serverData;
 
-        // Rebind selectors for any existing values
-        for(auto pValue : mValues)
-        {
-            pValue->Setup(pValue->GetKey(), pValue->GetValue(),
-                objectSelectorType, mServerData, mMainWindow);
-        }
+    // Rebind selectors for any existing values
+    for (auto pValue : mValues) {
+      pValue->Setup(pValue->GetKey(), pValue->GetValue(), objectSelectorType,
+                    mServerData, mMainWindow);
     }
+  }
 }
 
-void ActionMap::SetAddText(const libcomp::String& text)
-{
-    ui->lblAddText->setText(qs(text));
+void ActionMap::SetAddText(const libcomp::String& text) {
+  ui->lblAddText->setText(qs(text));
 }
 
-void ActionMap::Load(const std::unordered_map<int32_t, int32_t>& values)
-{
-    ClearValues();
+void ActionMap::Load(const std::unordered_map<int32_t, int32_t>& values) {
+  ClearValues();
 
-    for(auto val : values)
-    {
-        auto item = new ActionMapItem(mValueName, this);
-        item->Setup(val.first, val.second, mObjectSelectorType,
-            mServerData, mMainWindow);
-        AddValue(item);
-    }
+  for (auto val : values) {
+    auto item = new ActionMapItem(mValueName, this);
+    item->Setup(val.first, val.second, mObjectSelectorType, mServerData,
+                mMainWindow);
+    AddValue(item);
+  }
 }
 
-void ActionMap::Load(const std::unordered_map<uint32_t, int32_t>& values)
-{
-    ClearValues();
+void ActionMap::Load(const std::unordered_map<uint32_t, int32_t>& values) {
+  ClearValues();
 
-    for(auto val : values)
-    {
-        auto item = new ActionMapItem(mValueName, this);
-        item->Setup((int32_t)val.first, val.second, mObjectSelectorType,
-            mServerData, mMainWindow);
-        AddValue(item);
-    }
+  for (auto val : values) {
+    auto item = new ActionMapItem(mValueName, this);
+    item->Setup((int32_t)val.first, val.second, mObjectSelectorType,
+                mServerData, mMainWindow);
+    AddValue(item);
+  }
 }
 
-std::unordered_map<int32_t, int32_t> ActionMap::SaveSigned() const
-{
-    std::unordered_map<int32_t, int32_t> values;
+std::unordered_map<int32_t, int32_t> ActionMap::SaveSigned() const {
+  std::unordered_map<int32_t, int32_t> values;
 
-    for(auto pValue : mValues)
-    {
-        values[pValue->GetKey()] = pValue->GetValue();
-    }
+  for (auto pValue : mValues) {
+    values[pValue->GetKey()] = pValue->GetValue();
+  }
 
-    return values;
+  return values;
 }
 
-std::unordered_map<uint32_t, int32_t> ActionMap::SaveUnsigned() const
-{
-    std::unordered_map<uint32_t, int32_t> values;
+std::unordered_map<uint32_t, int32_t> ActionMap::SaveUnsigned() const {
+  std::unordered_map<uint32_t, int32_t> values;
 
-    for(auto pValue : mValues)
-    {
-        values[(uint32_t)pValue->GetKey()] = pValue->GetValue();
-    }
+  for (auto pValue : mValues) {
+    values[(uint32_t)pValue->GetKey()] = pValue->GetValue();
+  }
 
-    return values;
+  return values;
 }
 
-void ActionMap::RemoveValue(ActionMapItem *pValue)
-{
+void ActionMap::RemoveValue(ActionMapItem* pValue) {
+  ui->actionMapLayout->removeWidget(pValue);
+
+  auto it = std::find(mValues.begin(), mValues.end(), pValue);
+
+  if (mValues.end() != it) {
+    mValues.erase(it);
+  }
+
+  pValue->deleteLater();
+
+  emit rowEdit();
+}
+
+void ActionMap::SetValueName(const QString& name) { mValueName = name; }
+
+void ActionMap::SetMinMax(int32_t min, int32_t max) {
+  mMin = min;
+  mMax = max;
+}
+
+void ActionMap::AddNewValue() {
+  auto item = new ActionMapItem(mValueName, this);
+  item->Setup(0, 0, mObjectSelectorType, mServerData, mMainWindow);
+
+  AddValue(item);
+}
+
+void ActionMap::AddValue(ActionMapItem* pValue) {
+  pValue->SetMinMax(mMin, mMax);
+
+  mValues.push_back(pValue);
+
+  ui->actionMapLayout->addWidget(pValue);
+
+  emit rowEdit();
+}
+
+void ActionMap::ClearValues() {
+  for (auto pValue : mValues) {
     ui->actionMapLayout->removeWidget(pValue);
 
-    auto it = std::find(mValues.begin(), mValues.end(), pValue);
+    delete pValue;
+  }
 
-    if(mValues.end() != it)
-    {
-        mValues.erase(it);
-    }
+  mValues.clear();
 
-    pValue->deleteLater();
-
-    emit rowEdit();
-}
-
-void ActionMap::SetValueName(const QString& name)
-{
-    mValueName = name;
-}
-
-void ActionMap::SetMinMax(int32_t min, int32_t max)
-{
-    mMin = min;
-    mMax = max;
-}
-
-void ActionMap::AddNewValue()
-{
-    auto item = new ActionMapItem(mValueName, this);
-    item->Setup(0, 0, mObjectSelectorType, mServerData, mMainWindow);
-
-    AddValue(item);
-}
-
-void ActionMap::AddValue(ActionMapItem *pValue)
-{
-    pValue->SetMinMax(mMin, mMax);
-
-    mValues.push_back(pValue);
-
-    ui->actionMapLayout->addWidget(pValue);
-
-    emit rowEdit();
-}
-
-void ActionMap::ClearValues()
-{
-    for(auto pValue : mValues)
-    {
-        ui->actionMapLayout->removeWidget(pValue);
-
-        delete pValue;
-    }
-
-    mValues.clear();
-
-    emit rowEdit();
+  emit rowEdit();
 }

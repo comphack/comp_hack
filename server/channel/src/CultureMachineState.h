@@ -32,64 +32,63 @@
 #include <EntityState.h>
 #include <ServerCultureMachineSet.h>
 
-namespace libcomp
-{
+namespace libcomp {
 class DatabaseChangeSet;
 }
 
-namespace channel
-{
+namespace channel {
 
 /**
  * Contains the state of a culture machine related to a channel.
  */
-class CultureMachineState : public EntityState<objects::ServerCultureMachineSet>
-{
-public:
-    /**
-     * Create a culture machine state
-     * @param machineID Machine ID
-     * @param cmSet Pointer to the machine set definition
-     */
-    CultureMachineState(uint32_t machineID,
-        const std::shared_ptr<objects::ServerCultureMachineSet>& cmSet);
+class CultureMachineState
+    : public EntityState<objects::ServerCultureMachineSet> {
+ public:
+  /**
+   * Create a culture machine state
+   * @param machineID Machine ID
+   * @param cmSet Pointer to the machine set definition
+   */
+  CultureMachineState(
+      uint32_t machineID,
+      const std::shared_ptr<objects::ServerCultureMachineSet>& cmSet);
 
-    /**
-     * Clean up the culture machine state
-     */
-    virtual ~CultureMachineState() { }
+  /**
+   * Clean up the culture machine state
+   */
+  virtual ~CultureMachineState() {}
 
-    /**
-     * Get the machine ID of the entity
-     * @return Machine ID
-     */
-    uint32_t GetMachineID();
+  /**
+   * Get the machine ID of the entity
+   * @return Machine ID
+   */
+  uint32_t GetMachineID();
 
-    /**
-     * Get the culture data associated to the person renting the machine
-     * @return Pointer to the culture data representing the rented machine
-     */
-    std::shared_ptr<objects::CultureData> GetRentalData();
+  /**
+   * Get the culture data associated to the person renting the machine
+   * @return Pointer to the culture data representing the rented machine
+   */
+  std::shared_ptr<objects::CultureData> GetRentalData();
 
-    /**
-     * Set the current market mapped to the supplied market ID
-     * @param data Pointer to the culture data representing the rented machine
-     * @return true if there was not already a rental active and the supplied
-     *  rental information will be used
-     */
-    bool SetRentalData(const std::shared_ptr<objects::CultureData>& data);
+  /**
+   * Set the current market mapped to the supplied market ID
+   * @param data Pointer to the culture data representing the rented machine
+   * @return true if there was not already a rental active and the supplied
+   *  rental information will be used
+   */
+  bool SetRentalData(const std::shared_ptr<objects::CultureData>& data);
 
-private:
-    /// Machine ID that exists in the defined machine set
-    uint32_t mMachineID;
+ private:
+  /// Machine ID that exists in the defined machine set
+  uint32_t mMachineID;
 
-    /// Pointer to the culture data representing the rented machine
-    std::shared_ptr<objects::CultureData> mRentalData;
+  /// Pointer to the culture data representing the rented machine
+  std::shared_ptr<objects::CultureData> mRentalData;
 
-    /// Lock for shared resources
-    std::mutex mLock;
+  /// Lock for shared resources
+  std::mutex mLock;
 };
 
-} // namespace channel
+}  // namespace channel
 
-#endif // SERVER_CHANNEL_SRC_CULTUREMACHINESTATE_H
+#endif  // SERVER_CHANNEL_SRC_CULTUREMACHINESTATE_H

@@ -28,69 +28,61 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionRunScript.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionRunScript::ActionRunScript(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionRunScript;
-    prop->setupUi(pWidget);
+ActionRunScript::ActionRunScript(ActionList *pList, MainWindow *pMainWindow,
+                                 QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionRunScript;
+  prop->setupUi(pWidget);
 
-    ui->actionTitle->setText(tr("<b>Run Script</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Run Script</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionRunScript::~ActionRunScript()
-{
-    delete prop;
+ActionRunScript::~ActionRunScript() { delete prop; }
+
+void ActionRunScript::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionRunScript>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->script->SetScriptID(mAction->GetScriptID());
+
+  auto params = mAction->GetParams();
+  prop->script->SetParams(params);
 }
 
-void ActionRunScript::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionRunScript>(act);
+std::shared_ptr<objects::Action> ActionRunScript::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetScriptID(prop->script->GetScriptID());
 
-    prop->script->SetScriptID(mAction->GetScriptID());
+  mAction->ClearParams();
+  if (!mAction->GetScriptID().IsEmpty()) {
+    // Ignore params if no script is set
+    auto params = prop->script->GetParams();
+    mAction->SetParams(params);
+  }
 
-    auto params = mAction->GetParams();
-    prop->script->SetParams(params);
-}
-
-std::shared_ptr<objects::Action> ActionRunScript::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetScriptID(prop->script->GetScriptID());
-
-    mAction->ClearParams();
-    if(!mAction->GetScriptID().IsEmpty())
-    {
-        // Ignore params if no script is set
-        auto params = prop->script->GetParams();
-        mAction->SetParams(params);
-    }
-
-    return mAction;
+  return mAction;
 }

@@ -28,75 +28,67 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionUpdateQuest.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionUpdateQuest::ActionUpdateQuest(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionUpdateQuest;
-    prop->setupUi(pWidget);
+ActionUpdateQuest::ActionUpdateQuest(ActionList *pList, MainWindow *pMainWindow,
+                                     QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionUpdateQuest;
+  prop->setupUi(pWidget);
 
-    prop->flagStates->SetValueName(tr("State:"));
-    prop->quest->BindSelector(pMainWindow, "CQuestData");
+  prop->flagStates->SetValueName(tr("State:"));
+  prop->quest->BindSelector(pMainWindow, "CQuestData");
 
-    ui->actionTitle->setText(tr("<b>Update Quest</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Update Quest</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionUpdateQuest::~ActionUpdateQuest()
-{
-    delete prop;
+ActionUpdateQuest::~ActionUpdateQuest() { delete prop; }
+
+void ActionUpdateQuest::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionUpdateQuest>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->quest->SetValue((uint32_t)mAction->GetQuestID());
+  prop->phase->setValue(mAction->GetPhase());
+  prop->forceUpdate->setChecked(mAction->GetForceUpdate());
+  prop->flagSetMode->setCurrentIndex(to_underlying(mAction->GetFlagSetMode()));
+
+  auto states = mAction->GetFlagStates();
+  prop->flagStates->Load(states);
 }
 
-void ActionUpdateQuest::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionUpdateQuest>(act);
+std::shared_ptr<objects::Action> ActionUpdateQuest::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetQuestID((int16_t)prop->quest->GetValue());
+  mAction->SetPhase((int8_t)prop->phase->value());
+  mAction->SetForceUpdate(prop->forceUpdate->isChecked());
+  mAction->SetFlagSetMode((objects::ActionUpdateQuest::FlagSetMode_t)
+                              prop->flagSetMode->currentIndex());
 
-    prop->quest->SetValue((uint32_t)mAction->GetQuestID());
-    prop->phase->setValue(mAction->GetPhase());
-    prop->forceUpdate->setChecked(mAction->GetForceUpdate());
-    prop->flagSetMode->setCurrentIndex(to_underlying(
-        mAction->GetFlagSetMode()));
+  auto states = prop->flagStates->SaveSigned();
+  mAction->SetFlagStates(states);
 
-    auto states = mAction->GetFlagStates();
-    prop->flagStates->Load(states);
-}
-
-std::shared_ptr<objects::Action> ActionUpdateQuest::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetQuestID((int16_t)prop->quest->GetValue());
-    mAction->SetPhase((int8_t)prop->phase->value());
-    mAction->SetForceUpdate(prop->forceUpdate->isChecked());
-    mAction->SetFlagSetMode((objects::ActionUpdateQuest::FlagSetMode_t)
-        prop->flagSetMode->currentIndex());
-
-    auto states = prop->flagStates->SaveSigned();
-    mAction->SetFlagStates(states);
-
-    return mAction;
+  return mAction;
 }

@@ -32,171 +32,144 @@
 #include "ObjectSelectorList.h"
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QCloseEvent>
-#include "ui_ObjectSelectorWindow.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QCloseEvent>
+
+#include "ui_ObjectSelectorWindow.h"
 
 ObjectSelectorWindow::ObjectSelectorWindow(MainWindow* pMainWindow,
-    QWidget *pParent) : QMainWindow(pParent), mMainWindow(pMainWindow),
-    mSelectorControl(0), mFindWindow(0)
-{
-    ui = new Ui::ObjectSelectorWindow;
-    ui->setupUi(this);
+                                           QWidget* pParent)
+    : QMainWindow(pParent),
+      mMainWindow(pMainWindow),
+      mSelectorControl(0),
+      mFindWindow(0) {
+  ui = new Ui::ObjectSelectorWindow;
+  ui->setupUi(this);
 
-    ui->select->setDisabled(true);
+  ui->select->setDisabled(true);
 
-    // Hide find button by default
-    ui->find->hide();
+  // Hide find button by default
+  ui->find->hide();
 
-    connect(ui->select, SIGNAL(clicked()), this, SLOT(ObjectSelected()));
-    connect(ui->find, SIGNAL(clicked()), this, SLOT(Find()));
+  connect(ui->select, SIGNAL(clicked()), this, SLOT(ObjectSelected()));
+  connect(ui->find, SIGNAL(clicked()), this, SLOT(Find()));
 }
 
-ObjectSelectorWindow::~ObjectSelectorWindow()
-{
-    delete ui;
+ObjectSelectorWindow::~ObjectSelectorWindow() { delete ui; }
+
+void ObjectSelectorWindow::Bind(ObjectSelectorList* listControl, bool findRef) {
+  auto existingControls = findChildren<ObjectSelectorList*>();
+  for (auto ctrl : existingControls) {
+    ui->listContainerLayout->removeWidget(ctrl);
+
+    ctrl->deleteLater();
+  }
+
+  if (findRef) {
+    ui->find->show();
+  }
+
+  ui->listContainerLayout->addWidget(listControl);
+
+  connect(listControl, SIGNAL(selectedObjectChanged()), this,
+          SLOT(SelectedObjectChanged()));
 }
 
-void ObjectSelectorWindow::Bind(ObjectSelectorList* listControl, bool findRef)
-{
-    auto existingControls = findChildren<ObjectSelectorList*>();
-    for(auto ctrl : existingControls)
-    {
-        ui->listContainerLayout->removeWidget(ctrl);
+void ObjectSelectorWindow::Open(ObjectSelectorBase* ctrl) {
+  mSelectorControl = ctrl;
 
-        ctrl->deleteLater();
+  uint32_t value = 0;
+  if (ctrl) {
+    value = ctrl->GetValue();
+    ui->select->show();
+  } else {
+    ui->select->hide();
+  }
+
+  // Load object list if needed
+  auto listControl = findChild<ObjectSelectorList*>();
+  if (listControl) {
+    listControl->LoadIfNeeded();
+
+    if (value) {
+      listControl->Select(value);
     }
+  }
 
-    if(findRef)
-    {
-        ui->find->show();
-    }
-
-    ui->listContainerLayout->addWidget(listControl);
-
-    connect(listControl, SIGNAL(selectedObjectChanged()), this,
-        SLOT(SelectedObjectChanged()));
+  show();
+  raise();
 }
 
-void ObjectSelectorWindow::Open(ObjectSelectorBase* ctrl)
-{
-    mSelectorControl = ctrl;
+bool ObjectSelectorWindow::CloseIfConnected(QWidget* topLevel) {
+  if (isVisible() && mSelectorControl) {
+    QObject* parent = mSelectorControl;
+    while (parent) {
+      if (parent == topLevel) {
+        mSelectorControl = nullptr;
+        close();
+        return true;
+      }
 
-    uint32_t value = 0;
-    if(ctrl)
-    {
-        value = ctrl->GetValue();
-        ui->select->show();
+      parent = parent->parent();
     }
-    else
-    {
-        ui->select->hide();
-    }
+  }
 
-    // Load object list if needed
-    auto listControl = findChild<ObjectSelectorList*>();
-    if(listControl)
-    {
-        listControl->LoadIfNeeded();
-
-        if(value)
-        {
-            listControl->Select(value);
-        }
-    }
-
-    show();
-    raise();
+  return false;
 }
 
-bool ObjectSelectorWindow::CloseIfConnected(QWidget* topLevel)
-{
-    if(isVisible() && mSelectorControl)
-    {
-        QObject* parent = mSelectorControl;
-        while(parent)
-        {
-            if(parent == topLevel)
-            {
-                mSelectorControl = nullptr;
-                close();
-                return true;
-            }
-
-            parent = parent->parent();
-        }
+void ObjectSelectorWindow::closeEvent(QCloseEvent* event) {
+  if (mFindWindow) {
+    if (!mFindWindow->close()) {
+      // Close failed (possibly searching) so ignore
+      event->ignore();
+      return;
     }
 
-    return false;
+    mFindWindow->deleteLater();
+    mFindWindow = 0;
+  }
 }
 
-void ObjectSelectorWindow::closeEvent(QCloseEvent* event)
-{
-    if(mFindWindow)
-    {
-        if(!mFindWindow->close())
-        {
-            // Close failed (possibly searching) so ignore
-            event->ignore();
-            return;
-        }
-
-        mFindWindow->deleteLater();
-        mFindWindow = 0;
+void ObjectSelectorWindow::ObjectSelected() {
+  auto listControl = findChild<ObjectSelectorList*>();
+  if (listControl && mSelectorControl) {
+    auto obj = listControl->GetSelectedObject();
+    if (obj) {
+      mSelectorControl->SetValue(
+          (uint32_t)listControl->GetObjectID(obj).toUInt());
+      mSelectorControl = nullptr;
+      close();
     }
+  }
 }
 
-void ObjectSelectorWindow::ObjectSelected()
-{
-    auto listControl = findChild<ObjectSelectorList*>();
-    if(listControl && mSelectorControl)
-    {
-        auto obj = listControl->GetSelectedObject();
-        if(obj)
-        {
-            mSelectorControl->SetValue((uint32_t)listControl
-                ->GetObjectID(obj).toUInt());
-            mSelectorControl = nullptr;
-            close();
-        }
+void ObjectSelectorWindow::SelectedObjectChanged() {
+  auto listControl = findChild<ObjectSelectorList*>();
+  if (listControl) {
+    auto obj = listControl->GetSelectedObject();
+    if (obj) {
+      ui->select->setDisabled(false);
+    } else {
+      ui->select->setDisabled(true);
     }
+  }
 }
 
-void ObjectSelectorWindow::SelectedObjectChanged()
-{
-    auto listControl = findChild<ObjectSelectorList*>();
-    if(listControl)
-    {
-        auto obj = listControl->GetSelectedObject();
-        if(obj)
-        {
-            ui->select->setDisabled(false);
-        }
-        else
-        {
-            ui->select->setDisabled(true);
-        }
+void ObjectSelectorWindow::Find() {
+  auto listControl = findChild<ObjectSelectorList*>();
+  if (listControl) {
+    if (!mFindWindow) {
+      mFindWindow = new FindRefWindow(mMainWindow);
     }
-}
 
-void ObjectSelectorWindow::Find()
-{
-    auto listControl = findChild<ObjectSelectorList*>();
-    if(listControl)
-    {
-        if(!mFindWindow)
-        {
-            mFindWindow = new FindRefWindow(mMainWindow);
-        }
-        
-        uint32_t val = 0;
-        auto obj = listControl->GetSelectedObject();
-        if(obj)
-        {
-            val = (uint32_t)listControl->GetObjectID(obj).toUInt();
-        }
-
-        mFindWindow->Open(listControl->GetObjectType(), val);
+    uint32_t val = 0;
+    auto obj = listControl->GetSelectedObject();
+    if (obj) {
+      val = (uint32_t)listControl->GetObjectID(obj).toUInt();
     }
+
+    mFindWindow->Open(listControl->GetObjectType(), val);
+  }
 }

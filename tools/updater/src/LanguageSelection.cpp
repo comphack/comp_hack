@@ -25,133 +25,119 @@
  */
 
 #include "LanguageSelection.h"
-#include "Updater.h"
 
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QDir>
 #include <QFile>
 #include <QLibraryInfo>
 #include <QMessageBox>
 #include <QTranslator>
-#include <PopIgnore.h>
 
-extern QList<QTranslator*> gTranslators;
+#include "Updater.h"
 
-LanguageSelection::LanguageSelection(QWidget *p) : QDialog(p,
-    Qt::WindowSystemMenuHint | Qt::WindowTitleHint |
-    Qt::WindowCloseButtonHint)
-{
-    ui.setupUi(this);
+extern QList<QTranslator *> gTranslators;
 
-    // We are modal and should delete when closed.
-    setWindowModality(Qt::WindowModal);
-    setAttribute(Qt::WA_DeleteOnClose);
+LanguageSelection::LanguageSelection(QWidget *p)
+    : QDialog(p, Qt::WindowSystemMenuHint | Qt::WindowTitleHint |
+                     Qt::WindowCloseButtonHint) {
+  ui.setupUi(this);
 
-    QStringList langs = QDir(QLibraryInfo::location(
-        QLibraryInfo::TranslationsPath)).entryList(
-        QStringList() << "updater_*.qm");
+  // We are modal and should delete when closed.
+  setWindowModality(Qt::WindowModal);
+  setAttribute(Qt::WA_DeleteOnClose);
 
-    foreach(QString lang, langs)
-    {
-        lang = lang.replace("updater_", QString()).replace(
-            ".qm", QString());
+  QStringList langs =
+      QDir(QLibraryInfo::location(QLibraryInfo::TranslationsPath))
+          .entryList(QStringList() << "updater_*.qm");
 
-        ui.langCombo->addItem(QLocale(lang).nativeLanguageName(), lang);
-    }
+  foreach (QString lang, langs) {
+    lang = lang.replace("updater_", QString()).replace(".qm", QString());
 
-    connect(ui.buttonBox, SIGNAL(accepted()), this, SLOT(Save()));
-    connect(ui.langCombo, SIGNAL(currentIndexChanged(int)),
-        this, SLOT(LanguageChanged()));
+    ui.langCombo->addItem(QLocale(lang).nativeLanguageName(), lang);
+  }
 
-    ui.langCombo->setCurrentText(
-        QLocale::system().nativeLanguageName());
+  connect(ui.buttonBox, SIGNAL(accepted()), this, SLOT(Save()));
+  connect(ui.langCombo, SIGNAL(currentIndexChanged(int)), this,
+          SLOT(LanguageChanged()));
+
+  ui.langCombo->setCurrentText(QLocale::system().nativeLanguageName());
 }
 
-LanguageSelection::~LanguageSelection()
-{
+LanguageSelection::~LanguageSelection() {}
+
+void LanguageSelection::LanguageChanged() {
+  QTranslator *pTranslator = new QTranslator;
+
+  QString locale = ui.langCombo->currentData().toString();
+
+  pTranslator->load("qt_" + locale.split("_").first(),
+                    QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+
+  if (pTranslator->load(
+          "updater_" + locale,
+          QLibraryInfo::location(QLibraryInfo::TranslationsPath))) {
+    foreach (QTranslator *pTrans, gTranslators) {
+      QCoreApplication::instance()->removeTranslator(pTrans);
+    }
+
+    gTranslators.push_back(pTranslator);
+
+    QCoreApplication::instance()->installTranslator(pTranslator);
+  } else {
+    delete pTranslator;
+  }
 }
 
-void LanguageSelection::LanguageChanged()
-{
-    QTranslator *pTranslator = new QTranslator;
+void LanguageSelection::Save() {
+  QString locale = ui.langCombo->currentData().toString();
 
-    QString locale = ui.langCombo->currentData().toString();
+  QFile file("ImagineUpdate.lang");
 
-    pTranslator->load("qt_" + locale.split("_").first(),
-        QLibraryInfo::location(QLibraryInfo::TranslationsPath));
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    QMessageBox::critical(this, tr("Save Error"),
+                          tr("Failed to save the language selection!"));
 
-    if(pTranslator->load("updater_" + locale,
-        QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
-    {
-        foreach(QTranslator *pTrans, gTranslators)
-        {
-            QCoreApplication::instance()->removeTranslator(pTrans);
-        }
+    return;
+  }
 
-        gTranslators.push_back(pTranslator);
+  file.write(locale.toLocal8Bit());
+  file.close();
 
-        QCoreApplication::instance()->installTranslator(pTranslator);
-    }
-    else
-    {
-        delete pTranslator;
-    }
+  if (!QFileInfo(tr("translations/ImagineUpdate_%1.dat").arg(locale))
+           .isReadable()) {
+    QMessageBox::critical(
+        this, tr("Save Error"),
+        tr("ImagineUpdate_%1.dat does not exist in the translations directory!")
+            .arg(locale));
+
+    return;
+  }
+
+  if (QFileInfo("ImagineUpdate.dat").exists() &&
+      !QFile::remove("ImagineUpdate.dat")) {
+    QMessageBox::critical(this, tr("Save Error"),
+                          tr("Failed to delete existing ImagineUpdate.dat!"));
+
+    return;
+  }
+
+  if (!QFile::copy(tr("translations/ImagineUpdate_%1.dat").arg(locale),
+                   "ImagineUpdate.dat")) {
+    QMessageBox::critical(this, tr("Save Error"),
+                          tr("Failed to save the updater URL!"));
+
+    return;
+  }
+
+  (new Updater)->show();
+
+  close();
 }
 
-void LanguageSelection::Save()
-{
-    QString locale = ui.langCombo->currentData().toString();
-
-    QFile file("ImagineUpdate.lang");
-
-    if(!file.open(QIODevice::WriteOnly | QIODevice::Text))
-    {
-        QMessageBox::critical(this, tr("Save Error"),
-            tr("Failed to save the language selection!"));
-
-        return;
-    }
-
-    file.write(locale.toLocal8Bit());
-    file.close();
-
-    if(!QFileInfo(tr("translations/ImagineUpdate_%1.dat").arg(
-        locale)).isReadable())
-    {
-        QMessageBox::critical(this, tr("Save Error"),
-            tr("ImagineUpdate_%1.dat does not exist in the "
-                "translations directory!").arg(locale));
-
-        return;
-    }
-
-    if(QFileInfo("ImagineUpdate.dat").exists() &&
-        !QFile::remove("ImagineUpdate.dat"))
-    {
-        QMessageBox::critical(this, tr("Save Error"),
-            tr("Failed to delete existing ImagineUpdate.dat!"));
-
-        return;
-    }
-
-    if(!QFile::copy(tr("translations/ImagineUpdate_%1.dat").arg(
-        locale), "ImagineUpdate.dat"))
-    {
-        QMessageBox::critical(this, tr("Save Error"),
-            tr("Failed to save the updater URL!"));
-
-        return;
-    }
-
-    (new Updater)->show();
-
-    close();
-}
-
-void LanguageSelection::changeEvent(QEvent *pEvent)
-{
-    if(QEvent::LanguageChange == pEvent->type())
-    {
-        ui.retranslateUi(this);
-    }
+void LanguageSelection::changeEvent(QEvent *pEvent) {
+  if (QEvent::LanguageChange == pEvent->type()) {
+    ui.retranslateUi(this);
+  }
 }

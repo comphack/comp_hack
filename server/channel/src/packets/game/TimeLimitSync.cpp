@@ -43,43 +43,38 @@
 
 using namespace channel;
 
-bool Parsers::TimeLimitSync::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TimeLimitSync::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    auto zone = state->GetZone();
-    auto instance = zone ? zone->GetInstance() : nullptr;
+  auto zone = state->GetZone();
+  auto instance = zone ? zone->GetInstance() : nullptr;
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_TIME_LIMIT_SYNC);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TIME_LIMIT_SYNC);
 
-    auto timeLimitData = instance ? instance->GetTimeLimitData() : nullptr;
-    if(timeLimitData)
-    {
-        float currentTime = state->ToClientTime(ChannelServer::GetServerTime());
-        float expireTime = state->ToClientTime(instance->GetTimerExpire());
+  auto timeLimitData = instance ? instance->GetTimeLimitData() : nullptr;
+  if (timeLimitData) {
+    float currentTime = state->ToClientTime(ChannelServer::GetServerTime());
+    float expireTime = state->ToClientTime(instance->GetTimerExpire());
 
-        reply.WriteS8(1);   // Timer exists
-        reply.WriteFloat(expireTime - currentTime);
-    }
-    else
-    {
-        reply.WriteS8(0);
-        reply.WriteFloat(0.f);
-    }
+    reply.WriteS8(1);  // Timer exists
+    reply.WriteFloat(expireTime - currentTime);
+  } else {
+    reply.WriteS8(0);
+    reply.WriteFloat(0.f);
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

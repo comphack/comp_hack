@@ -27,62 +27,61 @@
 #ifndef TOOLS_UPDATER_SRC_UPDATER_H
 #define TOOLS_UPDATER_SRC_UPDATER_H
 
+#include <PopIgnore.h>
 #include <PushIgnore.h>
-#include "ui_Updater.h"
 
 #include <QMap>
 #include <QThread>
-#include <PopIgnore.h>
+
+#include "ui_Updater.h"
 
 class Downloader;
 
-class VersionData
-{
-public:
-    QString title;
-    QString server;
-    QString tag;
+class VersionData {
+ public:
+  QString title;
+  QString server;
+  QString tag;
 
-    QMap<QString, QString> files;
+  QMap<QString, QString> files;
 };
 
-class Updater : public QWidget
-{
-    Q_OBJECT
+class Updater : public QWidget {
+  Q_OBJECT
 
-public:
-    Updater(QWidget *parent = 0);
-    ~Updater();
+ public:
+  Updater(QWidget* parent = 0);
+  ~Updater();
 
-    void ReloadURL();
+  void ReloadURL();
 
-protected slots:
-    void unlock();
-    void startGame();
-    void showSettings();
-    void showScreenshots();
-    void showDXDiag();
-    void recheck();
-    void retry();
+ protected slots:
+  void unlock();
+  void startGame();
+  void showSettings();
+  void showScreenshots();
+  void showDXDiag();
+  void recheck();
+  void retry();
 
-    void errorMessage(const QString& msg);
+  void errorMessage(const QString& msg);
 
-protected:
-    virtual void closeEvent(QCloseEvent *event);
+ protected:
+  virtual void closeEvent(QCloseEvent* event);
 
-    bool copyFile(const QString& src, const QString& dest);
+  bool copyFile(const QString& src, const QString& dest);
 
-    bool mDone;
+  bool mDone;
 
-    QString mURL;
-    QString mWebsite;
+  QString mURL;
+  QString mWebsite;
 
-    Downloader *mDL;
-    QThread mDownloadThread;
+  Downloader* mDL;
+  QThread mDownloadThread;
 
-    QMap<QString, VersionData*> mVersionMap;
+  QMap<QString, VersionData*> mVersionMap;
 
-    Ui::Updater ui;
+  Ui::Updater ui;
 };
 
-#endif // TOOLS_UPDATER_SRC_UPDATER_H
+#endif  // TOOLS_UPDATER_SRC_UPDATER_H

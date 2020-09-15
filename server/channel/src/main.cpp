@@ -41,84 +41,77 @@
 int ApplicationMain(int argc, const char *argv[])
 #else
 int main(int argc, const char *argv[])
-#endif // defined(_WIN32) && defined(WIN32_SERV)
+#endif  // defined(_WIN32) && defined(WIN32_SERV)
 {
-    libcomp::Exception::RegisterSignalHandler();
+  libcomp::Exception::RegisterSignalHandler();
 
-    libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
+  libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
-    libcomp::Config::LogVersion("COMP_hack Channel Server");
+  libcomp::Config::LogVersion("COMP_hack Channel Server");
 
-    std::string configPath = libcomp::BaseServer::GetDefaultConfigPath() +
-        "channel.xml";
+  std::string configPath =
+      libcomp::BaseServer::GetDefaultConfigPath() + "channel.xml";
 
-    // Command line argument parser.
-    auto parser = std::make_shared<libcomp::ServerCommandLineParser>();
+  // Command line argument parser.
+  auto parser = std::make_shared<libcomp::ServerCommandLineParser>();
 
-    // Parse the command line arguments.
-    if(!parser->Parse(argc, argv))
-    {
-        return EXIT_FAILURE;
+  // Parse the command line arguments.
+  if (!parser->Parse(argc, argv)) {
+    return EXIT_FAILURE;
+  }
+
+  auto arguments = parser->GetStandardArguments();
+
+  if (!arguments.empty()) {
+    configPath = arguments.front().ToUtf8();
+
+    LogGeneralDebug([&]() {
+      return libcomp::String("Using custom config path %1\n").Arg(configPath);
+    });
+
+    size_t pos = configPath.find_last_of("\\/");
+    if (std::string::npos != pos) {
+      libcomp::BaseServer::SetConfigPath(
+          configPath.substr(0, ((size_t)pos + 1)));
     }
+  }
 
-    auto arguments = parser->GetStandardArguments();
+  auto config = std::make_shared<objects::ChannelConfig>();
+  if (!libcomp::BaseServer::ReadConfig(config, configPath)) {
+    LogGeneralWarningMsg(
+        "Failed to load the channel config file. Default values will be "
+        "used.\n");
+  }
 
-    if(!arguments.empty())
-    {
-        configPath = arguments.front().ToUtf8();
+  if (!libcomp::PersistentObject::Initialize()) {
+    LogGeneralCriticalMsg(
+        "One or more persistent object definition failed to load.\n");
 
-        LogGeneralDebug([&]()
-        {
-            return libcomp::String("Using custom config path %1\n")
-                .Arg(configPath);
-        });
+    return EXIT_FAILURE;
+  }
 
-        size_t pos = configPath.find_last_of("\\/");
-        if(std::string::npos != pos)
-        {
-            libcomp::BaseServer::SetConfigPath(
-                configPath.substr(0, ((size_t)pos+1)));
-        }
-    }
+  auto server =
+      std::make_shared<channel::ChannelServer>(argv[0], config, parser);
 
-    auto config = std::make_shared<objects::ChannelConfig>();
-    if(!libcomp::BaseServer::ReadConfig(config, configPath))
-    {
-        LogGeneralWarningMsg("Failed to load the channel config file."
-            " Default values will be used.\n");
-    }
+  if (!server->Initialize()) {
+    LogGeneralCriticalMsg("The server could not be initialized.\n");
 
-    if(!libcomp::PersistentObject::Initialize())
-    {
-        LogGeneralCriticalMsg(
-            "One or more persistent object definition failed to load.\n");
+    return EXIT_FAILURE;
+  }
 
-        return EXIT_FAILURE;
-    }
+  // Set this for the signal handler.
+  libcomp::Shutdown::Configure(server.get());
 
-    auto server = std::make_shared<channel::ChannelServer>(
-        argv[0], config, parser);
+  // Start the main server loop (blocks until done).
+  int returnCode = server->Start(true);
 
-    if(!server->Initialize())
-    {
-        LogGeneralCriticalMsg("The server could not be initialized.\n");
+  // Complete the shutdown process.
+  libcomp::Shutdown::Complete();
 
-        return EXIT_FAILURE;
-    }
+  LogGeneralInfoMsg("Bye!\n");
 
-    // Set this for the signal handler.
-    libcomp::Shutdown::Configure(server.get());
+  // Stop the logger
+  delete libcomp::Log::GetSingletonPtr();
 
-    // Start the main server loop (blocks until done).
-    int returnCode = server->Start(true);
-
-    // Complete the shutdown process.
-    libcomp::Shutdown::Complete();
-
-    LogGeneralInfoMsg("Bye!\n");
-
-    // Stop the logger
-    delete libcomp::Log::GetSingletonPtr();
-
-    return returnCode;
+  return returnCode;
 }

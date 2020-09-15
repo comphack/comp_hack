@@ -38,58 +38,55 @@
 
 using namespace channel;
 
-bool Parsers::FriendAddRemove::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::FriendAddRemove::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 4)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 4) {
+    return false;
+  }
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+
+  bool add = p.Size() > 4;
+  if (add) {
+    if (p.Size() != (uint32_t)(p.PeekU16Little() + 6)) {
+      return false;
     }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto state = client->GetClientState();
+    libcomp::String targetName = p.ReadString16Little(
+        libcomp::Convert::Encoding_t::ENCODING_CP932, true);
 
-    bool add = p.Size() > 4;
-    if(add)
-    {
-        if(p.Size() != (uint32_t)(p.PeekU16Little() + 6))
-        {
-            return false;
-        }
+    // 0 = Accepted/add, 1 = rejected
+    int32_t mode = p.ReadS32Little();
 
-        libcomp::String targetName = p.ReadString16Little(
-            libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+    libcomp::Packet request;
+    request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
+    request.WriteU8(
+        mode == 0 ? (int8_t)InternalPacketAction_t::PACKET_ACTION_ADD
+                  : (int8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO);
+    request.WriteS32Little(state->GetWorldCID());
+    request.WriteString16Little(
+        libcomp::Convert::Encoding_t::ENCODING_UTF8,
+        state->GetCharacterState()->GetEntity()->GetName(), true);
+    request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                                targetName, true);
 
-        // 0 = Accepted/add, 1 = rejected
-        int32_t mode = p.ReadS32Little();
+    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  } else {
+    int32_t worldCID = p.ReadS32Little();
 
-        libcomp::Packet request;
-        request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
-        request.WriteU8(mode == 0
-            ? (int8_t)InternalPacketAction_t::PACKET_ACTION_ADD
-            : (int8_t)InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO);
-        request.WriteS32Little(state->GetWorldCID());
-        request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
-            state->GetCharacterState()->GetEntity()->GetName(), true);
-        request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
-            targetName, true);
+    libcomp::Packet request;
+    request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
+    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_REMOVE);
+    request.WriteS32Little(state->GetWorldCID());
+    request.WriteS32Little(worldCID);
 
-        server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
-    }
-    else
-    {
-        int32_t worldCID = p.ReadS32Little();
+    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  }
 
-        libcomp::Packet request;
-        request.WritePacketCode(InternalPacketCode_t::PACKET_FRIENDS_UPDATE);
-        request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_REMOVE);
-        request.WriteS32Little(state->GetWorldCID());
-        request.WriteS32Little(worldCID);
-
-        server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
-    }
-
-    return true;
+  return true;
 }

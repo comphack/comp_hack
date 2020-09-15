@@ -30,41 +30,36 @@
 // objects Includes
 #include <EntityStateObject.h>
 
-namespace channel
-{
+namespace channel {
 
 typedef objects::EntityStateObject::EntityType_t EntityType_t;
 
 /**
  * Contains the state of a non-active entity related to a channel.
  */
-template<typename T>
-class EntityState : public objects::EntityStateObject
-{
-public:
-    /**
-     * Create a new non-active entity state.
-     */
-    EntityState(const std::shared_ptr<T>& entity);
+template <typename T>
+class EntityState : public objects::EntityStateObject {
+ public:
+  /**
+   * Create a new non-active entity state.
+   */
+  EntityState(const std::shared_ptr<T>& entity);
 
-    /**
-     * Clean up the non-active entity state.
-     */
-    virtual ~EntityState() { }
+  /**
+   * Clean up the non-active entity state.
+   */
+  virtual ~EntityState() {}
 
-    /**
-     * Get the entity
-     * @return Pointer to the entity
-     */
-    std::shared_ptr<T> GetEntity()
-    {
-        return mEntity;
-    }
+  /**
+   * Get the entity
+   * @return Pointer to the entity
+   */
+  std::shared_ptr<T> GetEntity() { return mEntity; }
 
-private:
-    std::shared_ptr<T> mEntity;
+ private:
+  std::shared_ptr<T> mEntity;
 };
 
-} // namespace channel
+}  // namespace channel
 
-#endif // SERVER_CHANNEL_SRC_ENTITYSTATE_H
+#endif  // SERVER_CHANNEL_SRC_ENTITYSTATE_H

@@ -40,93 +40,83 @@
 
 using namespace channel;
 
-bool Parsers::TriFusionRewardAccept::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TriFusionRewardAccept::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 1)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 1) {
+    return false;
+  }
+
+  int8_t result = p.ReadS8();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto managerConnection = server->GetManagerConnection();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto tfSession = std::dynamic_pointer_cast<objects::TriFusionHostSession>(
+      state->GetExchangeSession());
+
+  bool success = false;
+  if (tfSession) {
+    tfSession->SetLocked(result == 1);
+    success = true;
+  }
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_TRIFUSION_REWARD_ACCEPT);
+  reply.WriteS8(success ? 0 : -1);
+
+  client->SendPacket(reply);
+
+  if (success) {
+    // Notify the rest of the session
+    std::set<int32_t> participantIDs;
+    participantIDs.insert(tfSession->GetSourceEntityID());
+    for (auto pState : tfSession->GetGuests()) {
+      participantIDs.insert(pState->GetEntityID());
     }
 
-    int8_t result = p.ReadS8();
+    participantIDs.erase(cState->GetEntityID());
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto managerConnection = server->GetManagerConnection();
-
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto tfSession = std::dynamic_pointer_cast<objects::TriFusionHostSession>(
-        state->GetExchangeSession());
-
-    bool success = false;
-    if(tfSession)
-    {
-        tfSession->SetLocked(result == 1);
-        success = true;
+    std::list<std::shared_ptr<ChannelClientConnection>> pClients;
+    for (int32_t pID : participantIDs) {
+      auto pClient = managerConnection->GetEntityClient(pID, false);
+      if (pClient) {
+        pClients.push_back(pClient);
+      }
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        ChannelToClientPacketCode_t::PACKET_TRIFUSION_REWARD_ACCEPT);
-    reply.WriteS8(success ? 0 : -1);
+    if (pClients.size() > 0) {
+      libcomp::Packet notify;
+      notify.WritePacketCode(
+          ChannelToClientPacketCode_t::PACKET_TRIFUSION_REWARD_ACCEPTED);
+      notify.WriteS32Little(cState->GetEntityID());
+      notify.WriteS8(result);
 
-    client->SendPacket(reply);
-
-    if(success)
-    {
-        // Notify the rest of the session
-        std::set<int32_t> participantIDs;
-        participantIDs.insert(tfSession->GetSourceEntityID());
-        for(auto pState : tfSession->GetGuests())
-        {
-            participantIDs.insert(pState->GetEntityID());
-        }
-
-        participantIDs.erase(cState->GetEntityID());
-
-        std::list<std::shared_ptr<ChannelClientConnection>> pClients;
-        for(int32_t pID : participantIDs)
-        {
-            auto pClient = managerConnection->GetEntityClient(pID,
-                false);
-            if(pClient)
-            {
-                pClients.push_back(pClient);
-            }
-        }
-
-        if(pClients.size() > 0)
-        {
-            libcomp::Packet notify;
-            notify.WritePacketCode(
-                ChannelToClientPacketCode_t::PACKET_TRIFUSION_REWARD_ACCEPTED);
-            notify.WriteS32Little(cState->GetEntityID());
-            notify.WriteS8(result);
-
-            ChannelClientConnection::BroadcastPacket(pClients, notify);
-        }
-
-        if(result != 1)
-        {
-            // Back out to pre-demon set
-            for(auto pClient : pClients)
-            {
-                auto pState = pClient->GetClientState();
-                auto exchange = pState->GetExchangeSession();
-                for(size_t i = 0; i < 4; i++)
-                {
-                    exchange->SetItems(i, NULLUUID);
-                }
-            }
-
-            tfSession->SetDemons(0, NULLUUID);
-            tfSession->SetDemons(1, NULLUUID);
-            tfSession->SetDemons(2, NULLUUID);
-            tfSession->SetSelectionID(0);
-        }
+      ChannelClientConnection::BroadcastPacket(pClients, notify);
     }
 
-    return true;
+    if (result != 1) {
+      // Back out to pre-demon set
+      for (auto pClient : pClients) {
+        auto pState = pClient->GetClientState();
+        auto exchange = pState->GetExchangeSession();
+        for (size_t i = 0; i < 4; i++) {
+          exchange->SetItems(i, NULLUUID);
+        }
+      }
+
+      tfSession->SetDemons(0, NULLUUID);
+      tfSession->SetDemons(1, NULLUUID);
+      tfSession->SetDemons(2, NULLUUID);
+      tfSession->SetSelectionID(0);
+    }
+  }
+
+  return true;
 }

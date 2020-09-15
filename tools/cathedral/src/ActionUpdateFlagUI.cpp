@@ -28,116 +28,100 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionUpdateFlag.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionUpdateFlag::ActionUpdateFlag(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionUpdateFlag;
-    prop->setupUi(pWidget);
+ActionUpdateFlag::ActionUpdateFlag(ActionList *pList, MainWindow *pMainWindow,
+                                   QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionUpdateFlag;
+  prop->setupUi(pWidget);
 
-    prop->idSelector->hide();
+  prop->idSelector->hide();
 
-    ui->actionTitle->setText(tr("<b>Update Flag</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Update Flag</b>"));
+  ui->layoutMain->addWidget(pWidget);
 
-    connect(prop->flagType, SIGNAL(currentIndexChanged(const QString&)), this,
-        SLOT(FlagTypeChanged()));
+  connect(prop->flagType, SIGNAL(currentIndexChanged(const QString &)), this,
+          SLOT(FlagTypeChanged()));
 }
 
-ActionUpdateFlag::~ActionUpdateFlag()
-{
-    delete prop;
+ActionUpdateFlag::~ActionUpdateFlag() { delete prop; }
+
+void ActionUpdateFlag::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionUpdateFlag>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->flagType->setCurrentIndex(to_underlying(mAction->GetFlagType()));
+  if (!prop->idNumeric->isHidden()) {
+    prop->idNumeric->setValue((int32_t)mAction->GetID());
+  } else {
+    prop->idSelector->SetValue(mAction->GetID());
+  }
+
+  prop->remove->setChecked(mAction->GetRemove());
 }
 
-void ActionUpdateFlag::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionUpdateFlag>(act);
+std::shared_ptr<objects::Action> ActionUpdateFlag::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetFlagType(
+      (objects::ActionUpdateFlag::FlagType_t)prop->flagType->currentIndex());
 
-    prop->flagType->setCurrentIndex(to_underlying(
-        mAction->GetFlagType()));
-    if(!prop->idNumeric->isHidden())
-    {
-        prop->idNumeric->setValue((int32_t)mAction->GetID());
-    }
-    else
-    {
-        prop->idSelector->SetValue(mAction->GetID());
-    }
+  if (!prop->idNumeric->isHidden()) {
+    mAction->SetID((uint16_t)prop->idNumeric->value());
+  } else {
+    mAction->SetID((uint16_t)prop->idSelector->GetValue());
+  }
 
-    prop->remove->setChecked(mAction->GetRemove());
+  mAction->SetRemove(prop->remove->isChecked());
+
+  return mAction;
 }
 
-std::shared_ptr<objects::Action> ActionUpdateFlag::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetFlagType((objects::ActionUpdateFlag::FlagType_t)
-        prop->flagType->currentIndex());
-
-    if(!prop->idNumeric->isHidden())
-    {
-        mAction->SetID((uint16_t)prop->idNumeric->value());
-    }
-    else
-    {
-        mAction->SetID((uint16_t)prop->idSelector->GetValue());
-    }
-
-    mAction->SetRemove(prop->remove->isChecked());
-
-    return mAction;
-}
-
-void ActionUpdateFlag::FlagTypeChanged()
-{
-    libcomp::String selectorType;
-    switch((objects::ActionUpdateFlag::FlagType_t)
-        prop->flagType->currentIndex())
-    {
+void ActionUpdateFlag::FlagTypeChanged() {
+  libcomp::String selectorType;
+  switch (
+      (objects::ActionUpdateFlag::FlagType_t)prop->flagType->currentIndex()) {
     case objects::ActionUpdateFlag::FlagType_t::PLUGIN:
-        selectorType = "CKeyItemData";
-        break;
+      selectorType = "CKeyItemData";
+      break;
     case objects::ActionUpdateFlag::FlagType_t::VALUABLE:
-        selectorType = "CValuablesData";
-        break;
+      selectorType = "CValuablesData";
+      break;
     case objects::ActionUpdateFlag::FlagType_t::TITLE:
-        selectorType = "TitleData";
-        break;
+      selectorType = "TitleData";
+      break;
     case objects::ActionUpdateFlag::FlagType_t::MAP:
     case objects::ActionUpdateFlag::FlagType_t::TIME_TRIAL:
     default:
-        break;
-    }
+      break;
+  }
 
-    prop->idSelector->BindSelector(mMainWindow, selectorType);
+  prop->idSelector->BindSelector(mMainWindow, selectorType);
 
-    prop->idNumeric->setHidden(!selectorType.IsEmpty());
-    prop->idSelector->setHidden(selectorType.IsEmpty());
+  prop->idNumeric->setHidden(!selectorType.IsEmpty());
+  prop->idSelector->setHidden(selectorType.IsEmpty());
 
-    prop->idNumeric->setValue(0);
-    prop->idSelector->SetValue(0);
+  prop->idNumeric->setValue(0);
+  prop->idSelector->SetValue(0);
 }

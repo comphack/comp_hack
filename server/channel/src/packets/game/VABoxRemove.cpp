@@ -38,68 +38,64 @@
 
 using namespace channel;
 
-bool Parsers::VABoxRemove::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::VABoxRemove::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 9)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 9) {
+    return false;
+  }
+
+  int32_t unused = p.ReadS32Little();  // Always 0
+  int8_t slot = p.ReadS8();
+  uint32_t itemType = p.ReadU32Little();
+  (void)unused;
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+
+  bool success = itemType != static_cast<uint32_t>(-1);
+  if (success && character->GetVACloset((size_t)slot) == itemType) {
+    character->SetVACloset((size_t)slot, 0);
+
+    success = true;
+  }
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VA_BOX_REMOVE);
+  reply.WriteS32Little(success ? 0 : -1);
+  reply.WriteS32Little(0);  // Unknown
+  reply.WriteS8(slot);
+  reply.WriteU32Little(itemType);
+
+  client->SendPacket(reply);
+
+  if (success) {
+    // If its equipped, remove it
+    for (auto vaPair : character->GetEquippedVA()) {
+      if (vaPair.second == itemType) {
+        character->RemoveEquippedVA((uint8_t)slot);
+
+        libcomp::Packet notify;
+        notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VA_CHANGED);
+        notify.WriteS32Little(cState->GetEntityID());
+        notify.WriteS32Little(1);  // Count
+        notify.WriteS8(slot);
+        notify.WriteU32Little(itemType);
+
+        server->GetZoneManager()->BroadcastPacket(client, notify, false);
+
+        break;
+      }
     }
 
-    int32_t unused = p.ReadS32Little(); // Always 0
-    int8_t slot = p.ReadS8();
-    uint32_t itemType = p.ReadU32Little();
-    (void)unused;
+    server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-
-    bool success = itemType != static_cast<uint32_t>(-1);
-    if(success && character->GetVACloset((size_t)slot) == itemType)
-    {
-        character->SetVACloset((size_t)slot, 0);
-
-        success = true;
-    }
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VA_BOX_REMOVE);
-    reply.WriteS32Little(success ? 0 : -1);
-    reply.WriteS32Little(0);    // Unknown
-    reply.WriteS8(slot);
-    reply.WriteU32Little(itemType);
-
-    client->SendPacket(reply);
-
-    if(success)
-    {
-        // If its equipped, remove it
-        for(auto vaPair : character->GetEquippedVA())
-        {
-            if(vaPair.second == itemType)
-            {
-                character->RemoveEquippedVA((uint8_t)slot);
-
-                libcomp::Packet notify;
-                notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_VA_CHANGED);
-                notify.WriteS32Little(cState->GetEntityID());
-                notify.WriteS32Little(1);   // Count
-                notify.WriteS8(slot);
-                notify.WriteU32Little(itemType);
-
-                server->GetZoneManager()->BroadcastPacket(client, notify, false);
-
-                break;
-            }
-        }
-
-        server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
-    }
-
-    return true;
+  return true;
 }

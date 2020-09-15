@@ -31,100 +31,96 @@
 #include "ServerScript.h"
 
 // Qt Includes
-#include <PushIgnore.h>
-#include "ui_EventBase.h"
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include "ui_EventBase.h"
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-EventChoice::EventChoice(MainWindow *pMainWindow, bool isITime,
-    QWidget *pParent) : EventBase(pMainWindow, pParent), mMessage(0),
-    mBranches(0), mBranchScript(0)
-{
-    mMessage = new EventMessageRef;
-    mBranchGroup = new QGroupBox;
-    mBranches = new DynamicList;
-    mBranchScript = new ServerScript;
+EventChoice::EventChoice(MainWindow* pMainWindow, bool isITime,
+                         QWidget* pParent)
+    : EventBase(pMainWindow, pParent),
+      mMessage(0),
+      mBranches(0),
+      mBranchScript(0) {
+  mMessage = new EventMessageRef;
+  mBranchGroup = new QGroupBox;
+  mBranches = new DynamicList;
+  mBranchScript = new ServerScript;
 
-    mMessage->Setup(pMainWindow, isITime
-        ? "CHouraiMessageData" : "CEventMessageData");
+  mMessage->Setup(pMainWindow,
+                  isITime ? "CHouraiMessageData" : "CEventMessageData");
 
-    mBranches->Setup(DynamicItemType_t::OBJ_EVENT_BASE, pMainWindow);
-    mBranches->SetAddText("Add Branch");
+  mBranches->Setup(DynamicItemType_t::OBJ_EVENT_BASE, pMainWindow);
+  mBranches->SetAddText("Add Branch");
 
-    ui->formCore->insertRow(0, "Message:", mMessage);
+  ui->formCore->insertRow(0, "Message:", mMessage);
 
-    QVBoxLayout* branchGroupLayout = new QVBoxLayout;
+  QVBoxLayout* branchGroupLayout = new QVBoxLayout;
 
-    branchGroupLayout->addWidget(mBranchScript);
-    branchGroupLayout->addWidget(mBranches);
+  branchGroupLayout->addWidget(mBranchScript);
+  branchGroupLayout->addWidget(mBranches);
 
-    mBranchGroup->setLayout(branchGroupLayout);
+  mBranchGroup->setLayout(branchGroupLayout);
 
-    mBranchGroup->setTitle("Branches");
+  mBranchGroup->setTitle("Branches");
 
-    ui->layoutBranch->addWidget(mBranchGroup);
+  ui->layoutBranch->addWidget(mBranchGroup);
 }
 
-EventChoice::~EventChoice()
-{
-    mMessage->deleteLater();
-    mBranchGroup->deleteLater();
-    mBranches->deleteLater();
-    mBranchScript->deleteLater();
+EventChoice::~EventChoice() {
+  mMessage->deleteLater();
+  mBranchGroup->deleteLater();
+  mBranches->deleteLater();
+  mBranchScript->deleteLater();
 }
 
-void EventChoice::Load(const std::shared_ptr<objects::EventChoice>& e)
-{
-    SetSkipInvalid(e->GetSkipInvalid());
+void EventChoice::Load(const std::shared_ptr<objects::EventChoice>& e) {
+  SetSkipInvalid(e->GetSkipInvalid());
 
-    EventBase::Load(e);
+  EventBase::Load(e);
 
-    if(!mEventBase)
-    {
-        return;
-    }
+  if (!mEventBase) {
+    return;
+  }
 
-    mMessage->SetValue((uint32_t)e->GetMessageID());
+  mMessage->SetValue((uint32_t)e->GetMessageID());
 
-    for(auto branch : e->GetBranches())
-    {
-        mBranches->AddObject(branch);
-    }
+  for (auto branch : e->GetBranches()) {
+    mBranches->AddObject(branch);
+  }
 
-    mBranchScript->SetScriptID(e->GetBranchScriptID());
+  mBranchScript->SetScriptID(e->GetBranchScriptID());
 
-    auto params = e->GetBranchScriptParams();
-    mBranchScript->SetParams(params);
+  auto params = e->GetBranchScriptParams();
+  mBranchScript->SetParams(params);
 }
 
-std::shared_ptr<objects::EventChoice> EventChoice::Save() const
-{
-    if(!mEventBase)
-    {
-        return nullptr;
-    }
+std::shared_ptr<objects::EventChoice> EventChoice::Save() const {
+  if (!mEventBase) {
+    return nullptr;
+  }
 
-    EventBase::Save();
+  EventBase::Save();
 
-    auto choice = std::dynamic_pointer_cast<objects::EventChoice>(mEventBase);
-    choice->SetMessageID((int32_t)mMessage->GetValue());
+  auto choice = std::dynamic_pointer_cast<objects::EventChoice>(mEventBase);
+  choice->SetMessageID((int32_t)mMessage->GetValue());
 
-    auto branches = mBranches->GetObjectList<objects::EventBase>();
-    choice->SetBranches(branches);
-    
-    choice->SetBranchScriptID(mBranchScript->GetScriptID());
-    choice->ClearBranchScriptParams();
-    if(!choice->GetBranchScriptID().IsEmpty())
-    {
-        // Ignore params if no script is set
-        auto params = mBranchScript->GetParams();
-        choice->SetBranchScriptParams(params);
-    }
+  auto branches = mBranches->GetObjectList<objects::EventBase>();
+  choice->SetBranches(branches);
 
-    choice->SetSkipInvalid(GetSkipInvalid());
+  choice->SetBranchScriptID(mBranchScript->GetScriptID());
+  choice->ClearBranchScriptParams();
+  if (!choice->GetBranchScriptID().IsEmpty()) {
+    // Ignore params if no script is set
+    auto params = mBranchScript->GetParams();
+    choice->SetBranchScriptParams(params);
+  }
 
-    return choice;
+  choice->SetSkipInvalid(GetSkipInvalid());
+
+  return choice;
 }

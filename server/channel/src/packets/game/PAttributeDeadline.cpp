@@ -37,25 +37,26 @@
 
 using namespace channel;
 
-bool Parsers::PAttributeDeadline::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PAttributeDeadline::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    int32_t deadline = server->GetPAttributeDeadline();
+  int32_t deadline = server->GetPAttributeDeadline();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PATTRIBUTE_DEADLINE);
-    reply.WriteS8(0);
-    reply.WriteS32Little(deadline);
+  libcomp::Packet reply;
+  reply.WritePacketCode(
+      ChannelToClientPacketCode_t::PACKET_PATTRIBUTE_DEADLINE);
+  reply.WriteS8(0);
+  reply.WriteS32Little(deadline);
 
-    connection->SendPacket(reply);
+  connection->SendPacket(reply);
 
-    return true;
+  return true;
 }

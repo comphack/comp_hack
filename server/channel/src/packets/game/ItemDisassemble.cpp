@@ -48,182 +48,162 @@
 
 using namespace channel;
 
-bool Parsers::ItemDisassemble::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ItemDisassemble::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 16)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 16) {
+    return false;
+  }
+
+  int64_t sourceItemID = p.ReadS64Little();
+  int64_t targetItemID = p.ReadS64Little();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto definitionManager = server->GetDefinitionManager();
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+
+  auto sourceItem = std::dynamic_pointer_cast<objects::Item>(
+      libcomp::PersistentObject::GetObjectByUUID(
+          state->GetObjectUUID(sourceItemID)));
+  uint32_t sourceItemType = sourceItem ? sourceItem->GetType() : 0;
+
+  auto targetItem = std::dynamic_pointer_cast<objects::Item>(
+      libcomp::PersistentObject::GetObjectByUUID(
+          state->GetObjectUUID(targetItemID)));
+  uint32_t targetItemType = targetItem ? targetItem->GetType() : 0;
+  auto disDef = definitionManager->GetDisassemblyDataByItemID(targetItemType);
+
+  bool playerHasTank = CharacterManager::HasValuable(
+      character, SVR_CONST.VALUABLE_MATERIAL_TANK);
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_DISASSEMBLE);
+  reply.WriteS64Little(sourceItemID);
+  reply.WriteS64Little(targetItemID);
+
+  std::map<uint32_t, int32_t> resultMaterials;
+
+  uint16_t disCount = 0;
+
+  bool success = false;
+  if (playerHasTank && sourceItem && targetItem && disDef) {
+    int8_t triggerIdx = -1;
+
+    auto rateIter = SVR_CONST.RATE_SCALING_ITEMS[0].begin();
+    for (size_t i = 0; i < SVR_CONST.RATE_SCALING_ITEMS[0].size(); i++) {
+      if (*rateIter == sourceItemType) {
+        triggerIdx = (int8_t)i;
+        break;
+      }
+
+      rateIter++;
     }
 
-    int64_t sourceItemID = p.ReadS64Little();
-    int64_t targetItemID = p.ReadS64Little();
+    if (triggerIdx >= 0) {
+      // Even if all materials fail to disassemble, this is still
+      // success at this point
+      success = true;
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto definitionManager = server->GetDefinitionManager();
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+      disCount = targetItem->GetStackSize();
+      if (sourceItem->GetStackSize() < disCount) {
+        disCount = sourceItem->GetStackSize();
+      }
 
-    auto sourceItem = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(sourceItemID)));
-    uint32_t sourceItemType = sourceItem ? sourceItem->GetType() : 0;
+      // For each material that can be obtained, check the success
+      // rate for the type and the disassembly item scaling
+      for (auto outMaterial : disDef->GetMaterials()) {
+        uint32_t outType = outMaterial->GetType();
 
-    auto targetItem = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(targetItemID)));
-    uint32_t targetItemType = targetItem ? targetItem->GetType() : 0;
-    auto disDef = definitionManager->GetDisassemblyDataByItemID(targetItemType);
+        if (outType == 0) continue;
 
-    bool playerHasTank = CharacterManager::HasValuable(character,
-        SVR_CONST.VALUABLE_MATERIAL_TANK);
+        int16_t successRate = outMaterial->GetSuccessRate();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_DISASSEMBLE);
-    reply.WriteS64Little(sourceItemID);
-    reply.WriteS64Little(targetItemID);
-
-    std::map<uint32_t, int32_t> resultMaterials;
-
-    uint16_t disCount = 0;
-
-    bool success = false;
-    if(playerHasTank && sourceItem && targetItem && disDef)
-    {
-        int8_t triggerIdx = -1;
-
-        auto rateIter = SVR_CONST.RATE_SCALING_ITEMS[0].begin();
-        for(size_t i = 0; i < SVR_CONST.RATE_SCALING_ITEMS[0].size(); i++)
-        {
-            if(*rateIter == sourceItemType)
-            {
-                triggerIdx = (int8_t)i;
-                break;
-            }
-
-            rateIter++;
+        if (successRate < 10000) {
+          // Scale with disassembly item value
+          auto triggerDef =
+              definitionManager->GetDisassemblyTriggerData(outType);
+          if (triggerDef) {
+            float scaling =
+                (float)triggerDef->GetRateScaling((size_t)triggerIdx) * 0.01f;
+            successRate = (int16_t)(successRate * scaling);
+          }
         }
 
-        if(triggerIdx >= 0)
-        {
-            // Even if all materials fail to disassemble, this is still
-            // success at this point
-            success = true;
-
-            disCount = targetItem->GetStackSize();
-            if(sourceItem->GetStackSize() < disCount)
-            {
-                disCount = sourceItem->GetStackSize();
+        // Check and add to sum for each stack item
+        for (uint16_t k = 0; k < disCount; k++) {
+          if (successRate >= 10000 || RNG(int32_t, 1, 10000) <= successRate) {
+            // Create material
+            auto it = resultMaterials.find(outType);
+            if (it != resultMaterials.end()) {
+              it->second += outMaterial->GetAmount();
+            } else {
+              resultMaterials[outType] = outMaterial->GetAmount();
             }
-
-            // For each material that can be obtained, check the success
-            // rate for the type and the disassembly item scaling
-            for(auto outMaterial : disDef->GetMaterials())
-            {
-                uint32_t outType = outMaterial->GetType();
-
-                if(outType == 0) continue;
-
-                int16_t successRate = outMaterial->GetSuccessRate();
-
-                if(successRate < 10000)
-                {
-                    // Scale with disassembly item value
-                    auto triggerDef = definitionManager
-                        ->GetDisassemblyTriggerData(outType);
-                    if(triggerDef)
-                    {
-                        float scaling = (float)triggerDef
-                            ->GetRateScaling((size_t)triggerIdx) * 0.01f;
-                        successRate = (int16_t)(successRate * scaling);
-                    }
-                }
-
-                // Check and add to sum for each stack item
-                for(uint16_t k = 0; k < disCount; k++)
-                {
-                    if(successRate >= 10000 ||
-                        RNG(int32_t, 1, 10000) <= successRate)
-                    {
-                        // Create material
-                        auto it = resultMaterials.find(outType);
-                        if(it != resultMaterials.end())
-                        {
-                            it->second += outMaterial->GetAmount();
-                        }
-                        else
-                        {
-                            resultMaterials[outType] =
-                                outMaterial->GetAmount();
-                        }
-                    }
-                }
-            }
-
-             std::unordered_map<std::shared_ptr<objects::Item>,
-                uint16_t> stackAdjustItems;
-             stackAdjustItems[sourceItem] = (uint16_t)(
-                 sourceItem->GetStackSize() - disCount);
-             stackAdjustItems[targetItem] = (uint16_t)(
-                 targetItem->GetStackSize() - disCount);
-
-             std::list<std::shared_ptr<objects::Item>> empty;
-            if(!characterManager->UpdateItems(client, false,
-                empty, stackAdjustItems))
-            {
-                success = false;
-            }
+          }
         }
+      }
+
+      std::unordered_map<std::shared_ptr<objects::Item>, uint16_t>
+          stackAdjustItems;
+      stackAdjustItems[sourceItem] =
+          (uint16_t)(sourceItem->GetStackSize() - disCount);
+      stackAdjustItems[targetItem] =
+          (uint16_t)(targetItem->GetStackSize() - disCount);
+
+      std::list<std::shared_ptr<objects::Item>> empty;
+      if (!characterManager->UpdateItems(client, false, empty,
+                                         stackAdjustItems)) {
+        success = false;
+      }
+    }
+  }
+
+  reply.WriteS32Little(success ? 0 : -1);
+
+  if (success) {
+    reply.WriteU16Little(disCount);
+
+    reply.WriteS32Little((int32_t)resultMaterials.size());
+    for (auto resultPair : resultMaterials) {
+      reply.WriteU32Little(resultPair.first);
+      reply.WriteS32Little(resultPair.second);
+    }
+  }
+
+  client->QueuePacket(reply);
+
+  // Now set the new material counts
+  if (success) {
+    std::set<uint32_t> updates;
+    for (auto resultPair : resultMaterials) {
+      uint32_t itemType = resultPair.first;
+      auto itemDef = definitionManager->GetItemData(itemType);
+
+      int32_t maxStack = (int32_t)itemDef->GetPossession()->GetStackSize();
+
+      int32_t newStack = character->GetMaterials(itemType) + resultPair.second;
+
+      if (newStack > maxStack) {
+        newStack = (int32_t)maxStack;
+      }
+
+      character->SetMaterials(itemType, (uint16_t)newStack);
+
+      updates.insert(itemType);
     }
 
-    reply.WriteS32Little(success ? 0 : -1);
+    server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
 
-    if(success)
-    {
-        reply.WriteU16Little(disCount);
+    characterManager->SendMaterials(client, updates);
+  }
 
-        reply.WriteS32Little((int32_t)resultMaterials.size());
-        for(auto resultPair : resultMaterials)
-        {
-            reply.WriteU32Little(resultPair.first);
-            reply.WriteS32Little(resultPair.second);
-        }
-    }
+  client->FlushOutgoing();
 
-    client->QueuePacket(reply);
-
-    // Now set the new material counts
-    if(success)
-    {
-        std::set<uint32_t> updates;
-        for(auto resultPair : resultMaterials)
-        {
-            uint32_t itemType = resultPair.first;
-            auto itemDef = definitionManager->GetItemData(itemType);
-
-            int32_t maxStack = (int32_t)itemDef->GetPossession()->GetStackSize();
-
-            int32_t newStack = character->GetMaterials(itemType) + resultPair.second;
-
-            if(newStack > maxStack)
-            {
-                newStack = (int32_t)maxStack;
-            }
-
-            character->SetMaterials(itemType, (uint16_t)newStack);
-
-            updates.insert(itemType);
-        }
-
-        server->GetWorldDatabase()
-            ->QueueUpdate(character, state->GetAccountUID());
-
-        characterManager->SendMaterials(client, updates);
-    }
-
-    client->FlushOutgoing();
-
-    return true;
+  return true;
 }

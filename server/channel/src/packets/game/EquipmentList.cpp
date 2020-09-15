@@ -26,7 +26,7 @@
 
 #include "Packets.h"
 
- // libcomp Includes
+// libcomp Includes
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
@@ -39,49 +39,44 @@
 #include <MiItemBasicData.h>
 
 // channel Includes
-#include "ChannelServer.h"
 #include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
-void SendEquipmentList(const std::shared_ptr<ChannelClientConnection>& client)
-{
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+void SendEquipmentList(const std::shared_ptr<ChannelClientConnection>& client) {
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EQUIPMENT_LIST);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_EQUIPMENT_LIST);
 
-    for(size_t i = 0; i < 15; i++)
-    {
-        auto equip = character->GetEquippedItems(i);
-        if(equip.IsNull())
-        {
-            reply.WriteS64Little(0);
-        }
-        else
-        {
-            reply.WriteS64Little(state->GetObjectID(equip.GetUUID()));
-        }
+  for (size_t i = 0; i < 15; i++) {
+    auto equip = character->GetEquippedItems(i);
+    if (equip.IsNull()) {
+      reply.WriteS64Little(0);
+    } else {
+      reply.WriteS64Little(state->GetObjectID(equip.GetUUID()));
     }
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 }
 
-bool Parsers::EquipmentList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::EquipmentList::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if (p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork(SendEquipmentList, client);
+  server->QueueWork(SendEquipmentList, client);
 
-    return true;
+  return true;
 }

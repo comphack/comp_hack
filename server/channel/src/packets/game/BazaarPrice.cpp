@@ -34,59 +34,56 @@
 #include <PacketCodes.h>
 
 // objects Includes
+#include <Item.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
-#include <Item.h>
 
 // channel Includes
 #include "ChannelServer.h"
 
 using namespace channel;
 
-bool Parsers::BazaarPrice::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BazaarPrice::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    int64_t itemID = p.ReadS64Little();
+  int64_t itemID = p.ReadS64Little();
 
-    auto item = std::dynamic_pointer_cast<objects::Item>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
+  auto item = std::dynamic_pointer_cast<objects::Item>(
+      libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_PRICE);
-    reply.WriteS64Little(itemID);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_PRICE);
+  reply.WriteS64Little(itemID);
 
-    if(item)
-    {
-        auto definitionManager = server->GetDefinitionManager();
-        auto itemData = definitionManager->GetItemData(item->GetType());
+  if (item) {
+    auto definitionManager = server->GetDefinitionManager();
+    auto itemData = definitionManager->GetItemData(item->GetType());
 
-        reply.WriteS32Little(0);   // Success
+    reply.WriteS32Little(0);  // Success
 
-        int32_t refPrice = itemData->GetBasic()->GetBuyPrice() *
-            (int32_t)item->GetStackSize();
+    int32_t refPrice =
+        itemData->GetBasic()->GetBuyPrice() * (int32_t)item->GetStackSize();
 
-        reply.WriteS32Little(refPrice); // Reference
+    reply.WriteS32Little(refPrice);  // Reference
 
-        // High/low suggestions default to +/-20% the reference price
-        reply.WriteS32Little((int32_t)((double)refPrice * 1.2));
-        reply.WriteS32Little((int32_t)((double)refPrice * 0.8));
-    }
-    else
-    {
-        reply.WriteS32Little(-1);   // Failure
-    }
+    // High/low suggestions default to +/-20% the reference price
+    reply.WriteS32Little((int32_t)((double)refPrice * 1.2));
+    reply.WriteS32Little((int32_t)((double)refPrice * 0.8));
+  } else {
+    reply.WriteS32Little(-1);  // Failure
+  }
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

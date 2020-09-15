@@ -28,69 +28,62 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionPlayBGM.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionPlayBGM::ActionPlayBGM(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionPlayBGM;
-    prop->setupUi(pWidget);
+ActionPlayBGM::ActionPlayBGM(ActionList *pList, MainWindow *pMainWindow,
+                             QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionPlayBGM;
+  prop->setupUi(pWidget);
 
-    prop->music->BindSelector(pMainWindow, "CSoundData");
+  prop->music->BindSelector(pMainWindow, "CSoundData");
 
-    // -1 does the same thing as the stop action
-    prop->music->SetMinimum(-1);
+  // -1 does the same thing as the stop action
+  prop->music->SetMinimum(-1);
 
-    ui->actionTitle->setText(tr("<b>Play BGM</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Play BGM</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionPlayBGM::~ActionPlayBGM()
-{
-    delete prop;
+ActionPlayBGM::~ActionPlayBGM() { delete prop; }
+
+void ActionPlayBGM::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionPlayBGM>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->isStop->setChecked(mAction->GetIsStop());
+  prop->music->SetValueSigned(mAction->GetMusicID());
+  prop->fadeInDelay->setValue(mAction->GetFadeInDelay());
+  prop->fadeOutDelay->setValue(mAction->GetFadeOutDelay());
 }
 
-void ActionPlayBGM::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionPlayBGM>(act);
+std::shared_ptr<objects::Action> ActionPlayBGM::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetIsStop(prop->isStop->isChecked());
+  mAction->SetMusicID(prop->music->GetValueSigned());
+  mAction->SetFadeInDelay(prop->fadeInDelay->value());
+  mAction->SetFadeOutDelay(prop->fadeOutDelay->value());
 
-    prop->isStop->setChecked(mAction->GetIsStop());
-    prop->music->SetValueSigned(mAction->GetMusicID());
-    prop->fadeInDelay->setValue(mAction->GetFadeInDelay());
-    prop->fadeOutDelay->setValue(mAction->GetFadeOutDelay());
-}
-
-std::shared_ptr<objects::Action> ActionPlayBGM::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetIsStop(prop->isStop->isChecked());
-    mAction->SetMusicID(prop->music->GetValueSigned());
-    mAction->SetFadeInDelay(prop->fadeInDelay->value());
-    mAction->SetFadeOutDelay(prop->fadeOutDelay->value());
-
-    return mAction;
+  return mAction;
 }

@@ -32,108 +32,101 @@
 #include <MessagePacket.h>
 #include <MessageQueue.h>
 
-namespace libcomp
-{
+namespace libcomp {
 
-namespace Message
-{
+namespace Message {
 
 class MessageClient;
 
-} // namespace Message
+}  // namespace Message
 
-} // namespace libcomp
+}  // namespace libcomp
 
-namespace packets
-{
-    class PacketLobbyWorldList;
-    class PacketLobbyCharacterList;
-} // namespace packets
+namespace packets {
+class PacketLobbyWorldList;
+class PacketLobbyCharacterList;
+}  // namespace packets
 
-namespace logic
-{
-    class LogicWorker;
+namespace logic {
+class LogicWorker;
 
-    /**
-     * Worker for client<==>server interaction.
-     */
-    class LobbyManager : public libcomp::Manager
-    {
-    public:
-        /**
-         * Create a new worker.
-         * @param messageQueue Message queue of the LogicWorker.
-         */
-        explicit LobbyManager(LogicWorker *pLogicWorker,
-            const std::weak_ptr<
-                libcomp::MessageQueue<libcomp::Message::Message *>>
-                &messageQueue);
+/**
+ * Worker for client<==>server interaction.
+ */
+class LobbyManager : public libcomp::Manager {
+ public:
+  /**
+   * Create a new worker.
+   * @param messageQueue Message queue of the LogicWorker.
+   */
+  explicit LobbyManager(
+      LogicWorker *pLogicWorker,
+      const std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
+          &messageQueue);
 
-        /**
-         * Cleanup the worker.
-         */
-        virtual ~LobbyManager();
+  /**
+   * Cleanup the worker.
+   */
+  virtual ~LobbyManager();
 
-        /**
-         * Get the different types of messages handled by the manager.
-         * @return List of message types handled by the manager
-         */
-        std::list<libcomp::Message::MessageType>
-            GetSupportedTypes() const override;
+  /**
+   * Get the different types of messages handled by the manager.
+   * @return List of message types handled by the manager
+   */
+  std::list<libcomp::Message::MessageType> GetSupportedTypes() const override;
 
-        /**
-         * Process a message from the queue.
-         * @param pMessage Message to be processed
-         * @return true on success, false on failure
-         */
-        bool ProcessMessage(const libcomp::Message::Message *pMessage) override;
+  /**
+   * Process a message from the queue.
+   * @param pMessage Message to be processed
+   * @return true on success, false on failure
+   */
+  bool ProcessMessage(const libcomp::Message::Message *pMessage) override;
 
-        /**
-         * Process a client message.
-         * @param pMessage Client message to process.
-         */
-        bool ProcessClientMessage(
-            const libcomp::Message::MessageClient *pMessage);
+  /**
+   * Process a client message.
+   * @param pMessage Client message to process.
+   */
+  bool ProcessClientMessage(const libcomp::Message::MessageClient *pMessage);
 
-    private:
-        /**
-         * Handle the incoming world list packet.
-         * @returns true if the packet was parsed correctly; false otherwise.
-         */
-        bool HandlePacketLobbyWorldList(libcomp::ReadOnlyPacket &p);
+ private:
+  /**
+   * Handle the incoming world list packet.
+   * @returns true if the packet was parsed correctly; false otherwise.
+   */
+  bool HandlePacketLobbyWorldList(libcomp::ReadOnlyPacket &p);
 
-        /**
-         * Handle the incoming character list packet.
-         * @returns true if the packet was parsed correctly; false otherwise.
-         */
-        bool HandlePacketLobbyCharacterList(libcomp::ReadOnlyPacket &p);
+  /**
+   * Handle the incoming character list packet.
+   * @returns true if the packet was parsed correctly; false otherwise.
+   */
+  bool HandlePacketLobbyCharacterList(libcomp::ReadOnlyPacket &p);
 
-        /**
-         * Handle the incoming start game packet.
-         * @returns true if the packet was parsed correctly; false otherwise.
-         */
-        bool HandlePacketLobbyStartGame(libcomp::ReadOnlyPacket &p);
+  /**
+   * Handle the incoming start game packet.
+   * @returns true if the packet was parsed correctly; false otherwise.
+   */
+  bool HandlePacketLobbyStartGame(libcomp::ReadOnlyPacket &p);
 
-        /**
-         * Process a packet message.
-         * @param pMessage Packet message to process.
-         */
-        bool ProcessPacketMessage(const libcomp::Message::Packet *pMessage);
+  /**
+   * Process a packet message.
+   * @param pMessage Packet message to process.
+   */
+  bool ProcessPacketMessage(const libcomp::Message::Packet *pMessage);
 
-        /// Pointer to the LogicWorker.
-        LogicWorker *mLogicWorker;
+  /// Pointer to the LogicWorker.
+  LogicWorker *mLogicWorker;
 
-        /// Message queue for the LogicWorker.
-        std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
-            mMessageQueue;
+  /// Message queue for the LogicWorker.
+  std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
+      mMessageQueue;
 
-        /// List of the worlds and channels.
-        std::shared_ptr<packets::PacketLobbyWorldList> mWorldList;
+  /// List of the worlds and channels.
+  std::shared_ptr<packets::PacketLobbyWorldList> mWorldList;
 
-        ///List of the characters.
-        std::shared_ptr<packets::PacketLobbyCharacterList> mCharacterList;
-    };
+  /// List of the characters.
+  std::shared_ptr<packets::PacketLobbyCharacterList> mCharacterList;
+};
 
-} // namespace logic
+}  // namespace logic
 
-#endif // LIBCLIENT_SRC_LOBBYMANAGER_H
+#endif  // LIBCLIENT_SRC_LOBBYMANAGER_H

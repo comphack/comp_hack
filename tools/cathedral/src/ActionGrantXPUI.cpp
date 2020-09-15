@@ -28,64 +28,56 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionGrantXP.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
-ActionGrantXP::ActionGrantXP(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionGrantXP;
-    prop->setupUi(pWidget);
+ActionGrantXP::ActionGrantXP(ActionList *pList, MainWindow *pMainWindow,
+                             QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionGrantXP;
+  prop->setupUi(pWidget);
 
-    ui->actionTitle->setText(tr("<b>Grant XP</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Grant XP</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionGrantXP::~ActionGrantXP()
-{
-    delete prop;
+ActionGrantXP::~ActionGrantXP() { delete prop; }
+
+void ActionGrantXP::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionGrantXP>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->targetType->setCurrentIndex(to_underlying(mAction->GetTargetType()));
+  prop->xp->setValue((int32_t)mAction->GetXP());
+  prop->adjustable->setChecked(mAction->GetAdjustable());
 }
 
-void ActionGrantXP::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionGrantXP>(act);
+std::shared_ptr<objects::Action> ActionGrantXP::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetTargetType(
+      (objects::ActionGrantXP::TargetType_t)prop->targetType->currentIndex());
+  mAction->SetXP(prop->xp->value());
+  mAction->SetAdjustable(prop->adjustable->isChecked());
 
-    prop->targetType->setCurrentIndex(to_underlying(
-        mAction->GetTargetType()));
-    prop->xp->setValue((int32_t)mAction->GetXP());
-    prop->adjustable->setChecked(mAction->GetAdjustable());
-}
-
-std::shared_ptr<objects::Action> ActionGrantXP::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetTargetType((objects::ActionGrantXP::TargetType_t)
-        prop->targetType->currentIndex());
-    mAction->SetXP(prop->xp->value());
-    mAction->SetAdjustable(prop->adjustable->isChecked());
-
-    return mAction;
+  return mAction;
 }

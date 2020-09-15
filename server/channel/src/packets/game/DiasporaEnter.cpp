@@ -43,53 +43,50 @@
 
 using namespace channel;
 
-bool Parsers::DiasporaEnter::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DiasporaEnter::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 1)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 1) {
+    return false;
+  }
 
-    int8_t confirmation = p.ReadS8();
+  int8_t confirmation = p.ReadS8();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    if(confirmation != 0)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Player set up to enter Disapora but"
-                " confirmation was not returned: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
-
-        return true;
-    }
-
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
-    auto zoneManager = server->GetZoneManager();
-
-    auto instAccess = zoneManager->GetInstanceAccess(state->GetWorldCID());
-    auto variant = instAccess ? server->GetServerDataManager()
-        ->GetZoneInstanceVariantData(instAccess->GetVariantID()) : nullptr;
-    if(variant && variant->GetInstanceType() == InstanceType_t::DIASPORA)
-    {
-        libcomp::Packet reply;
-        reply.WritePacketCode(
-            ChannelToClientPacketCode_t::PACKET_DIASPORA_ENTER);
-        reply.WriteS8(0);
-
-        client->QueuePacket(reply);
-
-        zoneManager->MoveToInstance(client, instAccess, true);
-
-        client->FlushOutgoing();
-    }
+  if (confirmation != 0) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Player set up to enter Disapora but confirmation was not "
+                 "returned: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
     return true;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto zoneManager = server->GetZoneManager();
+
+  auto instAccess = zoneManager->GetInstanceAccess(state->GetWorldCID());
+  auto variant =
+      instAccess ? server->GetServerDataManager()->GetZoneInstanceVariantData(
+                       instAccess->GetVariantID())
+                 : nullptr;
+  if (variant && variant->GetInstanceType() == InstanceType_t::DIASPORA) {
+    libcomp::Packet reply;
+    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DIASPORA_ENTER);
+    reply.WriteS8(0);
+
+    client->QueuePacket(reply);
+
+    zoneManager->MoveToInstance(client, instAccess, true);
+
+    client->FlushOutgoing();
+  }
+
+  return true;
 }

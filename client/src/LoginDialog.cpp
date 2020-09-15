@@ -46,250 +46,225 @@ using namespace game;
 
 using libcomp::Message::MessageClientType;
 
-LoginDialog::LoginDialog(GameWorker *pWorker, QWidget *pParent) :
-    QDialog(pParent), mGameWorker(pWorker)
-{
-    mDnsLookup = new QDnsLookup(this);
+LoginDialog::LoginDialog(GameWorker *pWorker, QWidget *pParent)
+    : QDialog(pParent), mGameWorker(pWorker) {
+  mDnsLookup = new QDnsLookup(this);
 
-    ui.setupUi(this);
+  ui.setupUi(this);
 
-    mOriginalStatus = ui.statusLabel->text();
+  mOriginalStatus = ui.statusLabel->text();
 
-    connect(mDnsLookup, SIGNAL(finished()),
-        this, SLOT(HaveDNS()));
+  connect(mDnsLookup, SIGNAL(finished()), this, SLOT(HaveDNS()));
 
-    connect(ui.loginButton, SIGNAL(clicked(bool)),
-        this, SLOT(Login()));
-    connect(ui.username, SIGNAL(textChanged(const QString&)),
-        this, SLOT(Validate()));
-    connect(ui.password, SIGNAL(textChanged(const QString&)),
-        this, SLOT(Validate()));
+  connect(ui.loginButton, SIGNAL(clicked(bool)), this, SLOT(Login()));
+  connect(ui.username, SIGNAL(textChanged(const QString &)), this,
+          SLOT(Validate()));
+  connect(ui.password, SIGNAL(textChanged(const QString &)), this,
+          SLOT(Validate()));
 
-    connect(ui.username, SIGNAL(returnPressed()),
-        this, SLOT(Login()));
-    connect(ui.password, SIGNAL(returnPressed()),
-        this, SLOT(Login()));
-    connect(ui.host, SIGNAL(returnPressed()),
-        this, SLOT(Login()));
-    connect(ui.connectionID, SIGNAL(returnPressed()),
-        this, SLOT(Login()));
+  connect(ui.username, SIGNAL(returnPressed()), this, SLOT(Login()));
+  connect(ui.password, SIGNAL(returnPressed()), this, SLOT(Login()));
+  connect(ui.host, SIGNAL(returnPressed()), this, SLOT(Login()));
+  connect(ui.connectionID, SIGNAL(returnPressed()), this, SLOT(Login()));
 
-    QSettings settings;
+  QSettings settings;
 
-    ui.username->setText(settings.value("username",
-        ui.username->text()).toString());
-    ui.host->setText(settings.value("host",
-        ui.host->text()).toString());
-    ui.port->setValue(settings.value("port",
-        ui.port->value()).toInt());
-    ui.connectionID->setText(settings.value("connectionID",
-        ui.connectionID->text()).toString());
-    ui.rememberUsername->setChecked(settings.value("rememberUsername",
-        ui.rememberUsername->isChecked()).toBool());
-    ui.clientVersion->setValue(settings.value("clientVersion",
-        (int)(ui.clientVersion->value() * 1000)).toInt() / 1000.0);
+  ui.username->setText(
+      settings.value("username", ui.username->text()).toString());
+  ui.host->setText(settings.value("host", ui.host->text()).toString());
+  ui.port->setValue(settings.value("port", ui.port->value()).toInt());
+  ui.connectionID->setText(
+      settings.value("connectionID", ui.connectionID->text()).toString());
+  ui.rememberUsername->setChecked(
+      settings.value("rememberUsername", ui.rememberUsername->isChecked())
+          .toBool());
+  ui.clientVersion->setValue(
+      settings.value("clientVersion", (int)(ui.clientVersion->value() * 1000))
+          .toInt() /
+      1000.0);
 
-    Validate();
+  Validate();
 
-    if(ui.username->text().length() < 3)
-    {
-        ui.username->setFocus();
-    }
-    else
-    {
-        ui.password->setFocus();
-    }
+  if (ui.username->text().length() < 3) {
+    ui.username->setFocus();
+  } else {
+    ui.password->setFocus();
+  }
 }
 
-LoginDialog::~LoginDialog()
-{
+LoginDialog::~LoginDialog() {}
+
+void LoginDialog::Validate() {
+  bool ok = true;
+
+  if (ui.username->text().length() < 3) {
+    ok = false;
+  }
+
+  if (ui.password->text().length() < 3) {
+    ok = false;
+  }
+
+  ui.loginButton->setEnabled(ok);
 }
 
-void LoginDialog::Validate()
-{
-    bool ok = true;
+void LoginDialog::Login() {
+  if (!ui.loginButton->isEnabled()) {
+    return;
+  }
 
-    if(ui.username->text().length() < 3)
-    {
-        ok = false;
-    }
+  // Disable the UI first.
+  setEnabled(false);
 
-    if(ui.password->text().length() < 3)
-    {
-        ok = false;
-    }
+  QString username = ui.username->text();
+  QString password = ui.password->text();
+  QString host = ui.host->text();
+  int port = ui.port->value();
+  QString connectionID = ui.connectionID->text();
+  bool rememberUsername = ui.rememberUsername->isChecked();
+  int clientVersion = (int)(ui.clientVersion->value() * 1000);
 
-    ui.loginButton->setEnabled(ok);
+  QSettings settings;
+
+  if (rememberUsername) {
+    settings.setValue("username", username);
+  } else {
+    settings.setValue("username", QString());
+  }
+
+  settings.setValue("host", host);
+  settings.setValue("port", port);
+  settings.setValue("connectionID", connectionID);
+  settings.setValue("rememberUsername", rememberUsername);
+  settings.setValue("clientVersion", clientVersion);
+
+  /// Resolve the DNS host name if needed.
+  if (QHostAddress(host).isNull()) {
+    // Do a DNS lookup.
+    mDnsLookup->setType(QDnsLookup::A);
+    mDnsLookup->setName(host);
+    mDnsLookup->lookup();
+
+    return;
+  }
+
+  auto machineUUID = libobjgen::UUID::Random();
+
+  // Forward the request to the logic thread.
+  mGameWorker->SendToLogic(new logic::MessageConnectToLobby(
+      username.toUtf8().constData(), password.toUtf8().constData(),
+      (uint32_t)clientVersion, connectionID.toUtf8().constData(),
+      host.toUtf8().constData(), (uint16_t)port, machineUUID));
 }
 
-void LoginDialog::Login()
-{
-    if(!ui.loginButton->isEnabled())
-    {
-        return;
-    }
+void LoginDialog::HaveDNS() {
+  if (mDnsLookup->error() != QDnsLookup::NoError) {
+    /// @todo Print the error.
+    setEnabled(true);
 
-    // Disable the UI first.
-    setEnabled(false);
+    return;
+  }
 
-    QString username = ui.username->text();
-    QString password = ui.password->text();
-    QString host = ui.host->text();
-    int port = ui.port->value();
-    QString connectionID = ui.connectionID->text();
-    bool rememberUsername = ui.rememberUsername->isChecked();
-    int clientVersion = (int)(ui.clientVersion->value() * 1000);
+  QString username = ui.username->text();
+  QString password = ui.password->text();
+  int port = ui.port->value();
+  QString connectionID = ui.connectionID->text();
+  int clientVersion = (int)(ui.clientVersion->value() * 1000);
 
-    QSettings settings;
+  const auto records = mDnsLookup->hostAddressRecords();
 
-    if(rememberUsername)
-    {
-        settings.setValue("username", username);
-    }
-    else
-    {
-        settings.setValue("username", QString());
-    }
+  if (records.isEmpty()) {
+    /// @todo Print the error.
+    setEnabled(true);
 
-    settings.setValue("host", host);
-    settings.setValue("port", port);
-    settings.setValue("connectionID", connectionID);
-    settings.setValue("rememberUsername", rememberUsername);
-    settings.setValue("clientVersion", clientVersion);
+    return;
+  }
 
-    /// Resolve the DNS host name if needed.
-    if(QHostAddress(host).isNull())
-    {
-        // Do a DNS lookup.
-        mDnsLookup->setType(QDnsLookup::A);
-        mDnsLookup->setName(host);
-        mDnsLookup->lookup();
+  QString host = records.first().value().toString();
 
-        return;
-    }
+  auto machineUUID = libobjgen::UUID::Random();
 
-    auto machineUUID = libobjgen::UUID::Random();
-
-    // Forward the request to the logic thread.
-    mGameWorker->SendToLogic(new logic::MessageConnectToLobby(
-        username.toUtf8().constData(), password.toUtf8().constData(),
-        (uint32_t)clientVersion, connectionID.toUtf8().constData(),
-        host.toUtf8().constData(), (uint16_t)port, machineUUID));
-}
-
-void LoginDialog::HaveDNS()
-{
-    if(mDnsLookup->error() != QDnsLookup::NoError)
-    {
-        /// @todo Print the error.
-        setEnabled(true);
-
-        return;
-    }
-
-    QString username = ui.username->text();
-    QString password = ui.password->text();
-    int port = ui.port->value();
-    QString connectionID = ui.connectionID->text();
-    int clientVersion = (int)(ui.clientVersion->value() * 1000);
-
-    const auto records = mDnsLookup->hostAddressRecords();
-
-    if(records.isEmpty())
-    {
-        /// @todo Print the error.
-        setEnabled(true);
-
-        return;
-    }
-
-    QString host = records.first().value().toString();
-
-    auto machineUUID = libobjgen::UUID::Random();
-
-    // Forward the request to the logic thread.
-    mGameWorker->SendToLogic(new logic::MessageConnectToLobby(
-        username.toUtf8().constData(), password.toUtf8().constData(),
-        (uint32_t)clientVersion, connectionID.toUtf8().constData(),
-        host.toUtf8().constData(), (uint16_t)port, machineUUID));
+  // Forward the request to the logic thread.
+  mGameWorker->SendToLogic(new logic::MessageConnectToLobby(
+      username.toUtf8().constData(), password.toUtf8().constData(),
+      (uint32_t)clientVersion, connectionID.toUtf8().constData(),
+      host.toUtf8().constData(), (uint16_t)port, machineUUID));
 }
 
 bool LoginDialog::ProcessClientMessage(
-    const libcomp::Message::MessageClient *pMessage)
-{
-    switch(to_underlying(pMessage->GetMessageClientType()))
-    {
-        case to_underlying(MessageClientType::CONNECTED_TO_LOBBY):
-            return HandleConnectedToLobby(pMessage);
-        default:
-            break;
-    }
+    const libcomp::Message::MessageClient *pMessage) {
+  switch (to_underlying(pMessage->GetMessageClientType())) {
+    case to_underlying(MessageClientType::CONNECTED_TO_LOBBY):
+      return HandleConnectedToLobby(pMessage);
+    default:
+      break;
+  }
 
-    return false;
+  return false;
 }
 
 bool LoginDialog::HandleConnectedToLobby(
-        const libcomp::Message::MessageClient *pMessage)
-{
-    const logic::MessageConnectedToLobby *pMsg = reinterpret_cast<
-        const logic::MessageConnectedToLobby*>(pMessage);
+    const libcomp::Message::MessageClient *pMessage) {
+  const logic::MessageConnectedToLobby *pMsg =
+      reinterpret_cast<const logic::MessageConnectedToLobby *>(pMessage);
 
-    if(ErrorCodes_t::SUCCESS == pMsg->GetErrorCode())
-    {
-        // Enable the dialog again and clear the password.
+  if (ErrorCodes_t::SUCCESS == pMsg->GetErrorCode()) {
+    // Enable the dialog again and clear the password.
+    setEnabled(true);
+
+    ui.password->setText(QString());
+    ui.statusLabel->setText(mOriginalStatus);
+
+    // Save the SID for later.
+    mSID = pMsg->GetSID();
+
+    // Show the lobby.
+    mGameWorker->GetLobbyScene()->show();
+    close();
+  } else {
+    QString errorMessage;
+
+    // Get and display the error message.
+    switch (to_underlying(pMsg->GetErrorCode())) {
+      case to_underlying(ErrorCodes_t::BAD_USERNAME_PASSWORD):
+        errorMessage = tr("Invalid username or password");
+        break;
+      case to_underlying(ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN):
+        errorMessage = tr("Account is still logged in");
+        break;
+      case to_underlying(ErrorCodes_t::SERVER_FULL):
+        errorMessage = tr("Server is full");
+        break;
+      case to_underlying(ErrorCodes_t::WRONG_CLIENT_VERSION):
+        errorMessage = tr("Please update your client");
+        break;
+      case to_underlying(ErrorCodes_t::CONNECTION_TIMEOUT):
+        errorMessage = tr("Connection to server has timed out");
+        break;
+      default:
+        errorMessage = tr("Unknown error");
+        break;
+    }
+
+    errorMessage =
+        QString("<font color=\"Red\"><b>%1</b></font>").arg(errorMessage);
+
+    ui.statusLabel->setText(errorMessage);
+
+    // Some error let you try again, some do not.
+    switch (to_underlying(pMsg->GetErrorCode())) {
+      case to_underlying(ErrorCodes_t::BAD_USERNAME_PASSWORD):
+      case to_underlying(ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN):
+      case to_underlying(ErrorCodes_t::SERVER_FULL):
+      case to_underlying(ErrorCodes_t::CONNECTION_TIMEOUT):
         setEnabled(true);
 
-        ui.password->setText(QString());
-        ui.statusLabel->setText(mOriginalStatus);
-
-        // Save the SID for later.
-        mSID = pMsg->GetSID();
-
-        // Show the lobby.
-        mGameWorker->GetLobbyScene()->show();
-        close();
+        ui.password->setFocus();
+        break;
+      default:
+        break;
     }
-    else
-    {
-        QString errorMessage;
+  }
 
-        // Get and display the error message.
-        switch(to_underlying(pMsg->GetErrorCode()))
-        {
-            case to_underlying(ErrorCodes_t::BAD_USERNAME_PASSWORD):
-                errorMessage = tr("Invalid username or password"); break;
-            case to_underlying(ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN):
-                errorMessage = tr("Account is still logged in"); break;
-            case to_underlying(ErrorCodes_t::SERVER_FULL):
-                errorMessage = tr("Server is full"); break;
-            case to_underlying(ErrorCodes_t::WRONG_CLIENT_VERSION):
-                errorMessage = tr("Please update your client"); break;
-            case to_underlying(ErrorCodes_t::CONNECTION_TIMEOUT):
-                errorMessage = tr("Connection to server has timed out"); break;
-            default:
-                errorMessage = tr("Unknown error"); break;
-        }
-
-        errorMessage = QString("<font color=\"Red\"><b>%1</b></font>").arg(
-            errorMessage);
-
-        ui.statusLabel->setText(errorMessage);
-
-        // Some error let you try again, some do not.
-        switch(to_underlying(pMsg->GetErrorCode()))
-        {
-            case to_underlying(ErrorCodes_t::BAD_USERNAME_PASSWORD):
-            case to_underlying(ErrorCodes_t::ACCOUNT_STILL_LOGGED_IN):
-            case to_underlying(ErrorCodes_t::SERVER_FULL):
-            case to_underlying(ErrorCodes_t::CONNECTION_TIMEOUT):
-                setEnabled(true);
-
-                ui.password->setFocus();
-                break;
-            default:
-                break;
-        }
-    }
-
-    return true;
+  return true;
 }

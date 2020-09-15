@@ -35,48 +35,40 @@
 
 using namespace lobby;
 
-ManagerClientPacket::ManagerClientPacket(std::weak_ptr<libcomp::BaseServer> server)
-    : libcomp::ManagerPacket(server)
-{
-}
+ManagerClientPacket::ManagerClientPacket(
+    std::weak_ptr<libcomp::BaseServer> server)
+    : libcomp::ManagerPacket(server) {}
 
-ManagerClientPacket::~ManagerClientPacket()
-{
-}
+ManagerClientPacket::~ManagerClientPacket() {}
 
-bool ManagerClientPacket::ValidateConnectionState(const std::shared_ptr<
-    libcomp::TcpConnection>& connection, libcomp::CommandCode_t commandCode) const
-{
-    auto client = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
-    auto state = client->GetClientState();
+bool ManagerClientPacket::ValidateConnectionState(
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    libcomp::CommandCode_t commandCode) const {
+  auto client = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    bool valid = false;
+  bool valid = false;
 
-    switch((ClientToLobbyPacketCode_t)commandCode)
-    {
-        case ClientToLobbyPacketCode_t::PACKET_LOGIN:
-        {
-            valid = true;
-            break;
-        }
-        case ClientToLobbyPacketCode_t::PACKET_AUTH:
-        {
-            valid = true;
-            break;
-        }
-        default:
-        {
-            valid = state->GetAuthenticated();
-
-            if(!valid)
-            {
-                LogConnectionErrorMsg("Client connection attempted to handle a "
-                    "request packet without authenticating and logging in "
-                    "first.\n");
-            }
-            break;
-        }
+  switch ((ClientToLobbyPacketCode_t)commandCode) {
+    case ClientToLobbyPacketCode_t::PACKET_LOGIN: {
+      valid = true;
+      break;
     }
+    case ClientToLobbyPacketCode_t::PACKET_AUTH: {
+      valid = true;
+      break;
+    }
+    default: {
+      valid = state->GetAuthenticated();
 
-    return valid;
+      if (!valid) {
+        LogConnectionErrorMsg(
+            "Client connection attempted to handle a request packet without "
+            "authenticating and logging in first.\n");
+      }
+      break;
+    }
+  }
+
+  return valid;
 }

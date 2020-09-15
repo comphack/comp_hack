@@ -43,79 +43,72 @@
 using namespace channel;
 
 void DismissDemon(const std::shared_ptr<ChannelServer> server,
-    const std::shared_ptr<ChannelClientConnection> client,
-    int64_t demonID)
-{
-    auto state = client->GetClientState();
-    auto dState = state->GetDemonState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto progress = character->GetProgress();
-    auto demon = std::dynamic_pointer_cast<objects::Demon>(
-        libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(demonID)));
-    auto characterManager = server->GetCharacterManager();
+                  const std::shared_ptr<ChannelClientConnection> client,
+                  int64_t demonID) {
+  auto state = client->GetClientState();
+  auto dState = state->GetDemonState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character->GetProgress();
+  auto demon = std::dynamic_pointer_cast<objects::Demon>(
+      libcomp::PersistentObject::GetObjectByUUID(
+          state->GetObjectUUID(demonID)));
+  auto characterManager = server->GetCharacterManager();
 
-    if(demon)
-    {
-        // Store it first if its summoned
-        if(dState->GetEntity() == demon)
-        {
-            characterManager->StoreDemon(client);
-        }
-
-        auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
-
-        int8_t slot = demon->GetBoxSlot();
-        auto box = std::dynamic_pointer_cast<objects::DemonBox>(
-            libcomp::PersistentObject::GetObjectByUUID(demon->GetDemonBox()));
-
-        characterManager->DeleteDemon(demon, dbChanges);
-        if(box)
-        {
-            characterManager->SendDemonBoxData(client, box->GetBoxID(),
-                { slot });
-        }
-
-        server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+  if (demon) {
+    // Store it first if its summoned
+    if (dState->GetEntity() == demon) {
+      characterManager->StoreDemon(client);
     }
-    else
-    {
-        LogDemonDebug([&]()
-        {
-            return libcomp::String("DemonDismiss request failed. Notifying"
-                " requestor: %1\n").Arg(state->GetAccountUID().ToString());
-        });
 
-        libcomp::Packet err;
-        err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);
-        err.WriteS32Little((int32_t)
-            ClientToChannelPacketCode_t::PACKET_DEMON_DISMISS);
-        err.WriteS32Little(-1);
+    auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
 
-        client->SendPacket(err);
+    int8_t slot = demon->GetBoxSlot();
+    auto box = std::dynamic_pointer_cast<objects::DemonBox>(
+        libcomp::PersistentObject::GetObjectByUUID(demon->GetDemonBox()));
+
+    characterManager->DeleteDemon(demon, dbChanges);
+    if (box) {
+      characterManager->SendDemonBoxData(client, box->GetBoxID(), {slot});
     }
+
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+  } else {
+    LogDemonDebug([&]() {
+      return libcomp::String(
+                 "DemonDismiss request failed. Notifying requestor: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    libcomp::Packet err;
+    err.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ERROR_COMP);
+    err.WriteS32Little(
+        (int32_t)ClientToChannelPacketCode_t::PACKET_DEMON_DISMISS);
+    err.WriteS32Little(-1);
+
+    client->SendPacket(err);
+  }
 }
 
-bool Parsers::DemonDismiss::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::DemonDismiss::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
 
-    int64_t demonID = p.ReadS64Little();
+  int64_t demonID = p.ReadS64Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    if(client->GetClientState()->GetObjectUUID(demonID).IsNull())
-    {
-        return false;
-    }
+  if (client->GetClientState()->GetObjectUUID(demonID).IsNull()) {
+    return false;
+  }
 
-    server->QueueWork(DismissDemon, server, client, demonID);
+  server->QueueWork(DismissDemon, server, client, demonID);
 
-    return true;
+  return true;
 }

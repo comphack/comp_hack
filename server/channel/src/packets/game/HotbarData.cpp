@@ -39,59 +39,56 @@
 #include <Hotbar.h>
 
 // channel Includes
-#include "ChannelServer.h"
 #include "ChannelClientConnection.h"
+#include "ChannelServer.h"
 
 using namespace channel;
 
 void SendHotbarData(const std::shared_ptr<ChannelClientConnection> client,
-    size_t page)
-{
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-    auto hotbar = character->GetHotbars(page).Get();
+                    size_t page) {
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto hotbar = character->GetHotbars(page).Get();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_HOTBAR_DATA);
-    reply.WriteS8((int8_t)page);
-    reply.WriteS32(0);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_HOTBAR_DATA);
+  reply.WriteS8((int8_t)page);
+  reply.WriteS32(0);
 
-    for(size_t i = 0; i < 16; i++)
-    {
-        auto type = hotbar != nullptr ? hotbar->GetItemTypes(i) : (int8_t)0;
-        auto itemUID = hotbar != nullptr ? hotbar->GetItems(i) : NULLUUID;
-        auto itemID = (int64_t)(hotbar != nullptr ? hotbar->GetItemIDs(i) : 0);
+  for (size_t i = 0; i < 16; i++) {
+    auto type = hotbar != nullptr ? hotbar->GetItemTypes(i) : (int8_t)0;
+    auto itemUID = hotbar != nullptr ? hotbar->GetItems(i) : NULLUUID;
+    auto itemID = (int64_t)(hotbar != nullptr ? hotbar->GetItemIDs(i) : 0);
 
-        if(!itemUID.IsNull())
-        {
-            itemID = state->GetObjectID(itemUID);
-        }
-
-        // Only clear the type value if a UID item fails to load (0 is a valid
-        // itemID for non-UID types)
-        reply.WriteS8(itemUID.IsNull() || itemID > 0 ? type : 0);
-        reply.WriteS64(itemID);
+    if (!itemUID.IsNull()) {
+      itemID = state->GetObjectID(itemUID);
     }
 
-    client->SendPacket(reply);
+    // Only clear the type value if a UID item fails to load (0 is a valid
+    // itemID for non-UID types)
+    reply.WriteS8(itemUID.IsNull() || itemID > 0 ? type : 0);
+    reply.WriteS64(itemID);
+  }
+
+  client->SendPacket(reply);
 }
 
-bool Parsers::HotbarData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::HotbarData::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 1)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 1) {
+    return false;
+  }
 
-    int8_t page = p.ReadS8();
+  int8_t page = p.ReadS8();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    server->QueueWork(SendHotbarData, client, (size_t)page);
+  server->QueueWork(SendHotbarData, client, (size_t)page);
 
-    return true;
+  return true;
 }

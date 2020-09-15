@@ -25,8 +25,13 @@
 #ifndef TOOLS_CAPGREP_SRC_FIND_H
 #define TOOLS_CAPGREP_SRC_FIND_H
 
+// Ignore warnings
 #include <PushIgnore.h>
+
+// UI Includes
 #include "ui_Find.h"
+
+// Stop ignoring warnings
 #include <PopIgnore.h>
 
 class SearchFilter;
@@ -44,53 +49,52 @@ class PacketListFilter;
  * packet/command in the main window. Note that the search results have the
  * sample command code filter as the list in the main window.
  */
-class Find : public QWidget
-{
-    Q_OBJECT
+class Find : public QWidget {
+  Q_OBJECT
 
-public:
-    /**
-     * Construct the find dialog.
-     * @arg model The item model to search.
-     * @parent Parent widget (or null if this widget is a window).
-     */
-    Find(PacketListFilter *model, QWidget *parent = 0);
+ public:
+  /**
+   * Construct the find dialog.
+   * @arg model The item model to search.
+   * @parent Parent widget (or null if this widget is a window).
+   */
+  Find(PacketListFilter *model, QWidget *parent = 0);
 
-public slots:
-    /**
-     * Find the current search term.
-     */
-    void findTerm();
+ public slots:
+  /**
+   * Find the current search term.
+   */
+  void findTerm();
 
-    /**
-     * Find the binary sequence.
-     */
-    void findTerm(const QByteArray& term);
+  /**
+   * Find the binary sequence.
+   */
+  void findTerm(const QByteArray &term);
 
-protected slots:
-    /**
-     * The 'Cancel' button was clicked, close the window.
-     */
-    void cancelSearch();
+ protected slots:
+  /**
+   * The 'Cancel' button was clicked, close the window.
+   */
+  void cancelSearch();
 
-    /**
-     * The search type has changed. The search type can be one of:
-     * command code, text, binary.
-     */
-    void termTypeChanged();
+  /**
+   * The search type has changed. The search type can be one of:
+   * command code, text, binary.
+   */
+  void termTypeChanged();
 
-    /**
-     * An item in the search results has been double-clicked. This method will
-     * display the matching data in the main window.
-     */
-    void doubleClicked(const QModelIndex& index);
+  /**
+   * An item in the search results has been double-clicked. This method will
+   * display the matching data in the main window.
+   */
+  void doubleClicked(const QModelIndex &index);
 
-protected:
-    /// Model to display the search results.
-    SearchFilter *mFilter;
+ protected:
+  /// Model to display the search results.
+  SearchFilter *mFilter;
 
-    /// Generated UI for the window.
-    Ui::Find ui;
+  /// Generated UI for the window.
+  Ui::Find ui;
 };
 
-#endif // TOOLS_CAPGREP_SRC_FIND_H
+#endif  // TOOLS_CAPGREP_SRC_FIND_H

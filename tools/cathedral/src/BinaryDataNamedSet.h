@@ -35,31 +35,29 @@
 // C++11 Standard Includes
 #include <vector>
 
-class BinaryDataNamedSet : public libcomp::BinaryDataSet
-{
-public:
-    BinaryDataNamedSet(std::function<uint32_t(
-            const std::shared_ptr<libcomp::Object>&)> mapper);
-    BinaryDataNamedSet(
-        std::function<std::shared_ptr<libcomp::Object>()> allocator,
-        std::function<uint32_t(
-		const std::shared_ptr<libcomp::Object>&)> mapper,
-        std::function<libcomp::String(
-			const std::shared_ptr<libcomp::Object>&)> namer);
-    virtual ~BinaryDataNamedSet();
+class BinaryDataNamedSet : public libcomp::BinaryDataSet {
+ public:
+  BinaryDataNamedSet(
+      std::function<uint32_t(const std::shared_ptr<libcomp::Object>&)> mapper);
+  BinaryDataNamedSet(
+      std::function<std::shared_ptr<libcomp::Object>()> allocator,
+      std::function<uint32_t(const std::shared_ptr<libcomp::Object>&)> mapper,
+      std::function<libcomp::String(const std::shared_ptr<libcomp::Object>&)>
+          namer);
+  virtual ~BinaryDataNamedSet();
 
-    uint32_t GetMapID(const std::shared_ptr<libcomp::Object>& obj) const;
+  uint32_t GetMapID(const std::shared_ptr<libcomp::Object>& obj) const;
 
-    libcomp::String GetName(const std::shared_ptr<libcomp::Object>& obj) const;
+  libcomp::String GetName(const std::shared_ptr<libcomp::Object>& obj) const;
 
-    void MapRecords(std::vector<std::shared_ptr<libcomp::Object>>& objs,
-        std::vector<libcomp::String>& explicitNames);
+  void MapRecords(std::vector<std::shared_ptr<libcomp::Object>>& objs,
+                  std::vector<libcomp::String>& explicitNames);
 
-private:
-    std::function<libcomp::String(const std::shared_ptr<
-        libcomp::Object>&)> mObjectNamer;
+ private:
+  std::function<libcomp::String(const std::shared_ptr<libcomp::Object>&)>
+      mObjectNamer;
 
-    std::unordered_map<uint32_t, libcomp::String> mExplicitNames;
+  std::unordered_map<uint32_t, libcomp::String> mExplicitNames;
 };
 
-#endif // LIBCOMP_SRC_BINARYDATANAMEDSET_H
+#endif  // LIBCOMP_SRC_BINARYDATANAMEDSET_H

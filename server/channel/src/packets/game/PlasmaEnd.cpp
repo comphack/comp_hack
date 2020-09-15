@@ -38,25 +38,23 @@
 
 using namespace channel;
 
-bool Parsers::PlasmaEnd::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::PlasmaEnd::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 5)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 5) {
+    return false;
+  }
 
-    int32_t plasmaID = p.ReadS32Little();
-    int8_t pointID = p.ReadS8();
+  int32_t plasmaID = p.ReadS32Little();
+  int8_t pointID = p.ReadS8();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-        ->GetServer());
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-    server->GetZoneManager()->FailPlasma(client, plasmaID, pointID);
+  server->GetZoneManager()->FailPlasma(client, plasmaID, pointID);
 
-    return true;
+  return true;
 }

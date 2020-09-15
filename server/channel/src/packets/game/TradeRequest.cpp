@@ -41,58 +41,59 @@
 
 using namespace channel;
 
-bool Parsers::TradeRequest::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TradeRequest::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    uint32_t targetEntityID = p.ReadU32Little();
+  uint32_t targetEntityID = p.ReadU32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto otherClient = server->GetManagerConnection()->GetEntityClient((int32_t)targetEntityID);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto otherClient =
+      server->GetManagerConnection()->GetEntityClient((int32_t)targetEntityID);
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_REQUEST);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_REQUEST);
 
-    if(!otherClient || state->GetExchangeSession() ||
-        otherClient->GetClientState()->GetExchangeSession())
-    {
-        reply.WriteS32Little(-1);
-        client->SendPacket(reply);
-        return true;
-    }
-
-    auto otherState = otherClient->GetClientState();
-
-    // Set the trade session info
-    auto exchangeSession = std::make_shared<objects::PlayerExchangeSession>();
-    exchangeSession->SetSourceEntityID(cState->GetEntityID());
-    exchangeSession->SetType(objects::PlayerExchangeSession::Type_t::TRADE);
-    exchangeSession->SetOtherCharacterState(otherState->GetCharacterState());
-    state->SetExchangeSession(exchangeSession);
-
-    auto otherSession = std::make_shared<objects::PlayerExchangeSession>();
-    exchangeSession->SetSourceEntityID(otherState->GetCharacterState()->GetEntityID());
-    otherSession->SetType(objects::PlayerExchangeSession::Type_t::TRADE);
-    otherSession->SetOtherCharacterState(cState);
-    otherState->SetExchangeSession(otherSession);
-
-    reply.WriteS32Little(0);
-
-    libcomp::Packet p2;
-    p2.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_REQUESTED);
-    p2.WriteS32Little(cState->GetEntityID());
-
-    otherClient->SendPacket(p2);
-
+  if (!otherClient || state->GetExchangeSession() ||
+      otherClient->GetClientState()->GetExchangeSession()) {
+    reply.WriteS32Little(-1);
     client->SendPacket(reply);
-
     return true;
+  }
+
+  auto otherState = otherClient->GetClientState();
+
+  // Set the trade session info
+  auto exchangeSession = std::make_shared<objects::PlayerExchangeSession>();
+  exchangeSession->SetSourceEntityID(cState->GetEntityID());
+  exchangeSession->SetType(objects::PlayerExchangeSession::Type_t::TRADE);
+  exchangeSession->SetOtherCharacterState(otherState->GetCharacterState());
+  state->SetExchangeSession(exchangeSession);
+
+  auto otherSession = std::make_shared<objects::PlayerExchangeSession>();
+  exchangeSession->SetSourceEntityID(
+      otherState->GetCharacterState()->GetEntityID());
+  otherSession->SetType(objects::PlayerExchangeSession::Type_t::TRADE);
+  otherSession->SetOtherCharacterState(cState);
+  otherState->SetExchangeSession(otherSession);
+
+  reply.WriteS32Little(0);
+
+  libcomp::Packet p2;
+  p2.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_REQUESTED);
+  p2.WriteS32Little(cState->GetEntityID());
+
+  otherClient->SendPacket(p2);
+
+  client->SendPacket(reply);
+
+  return true;
 }

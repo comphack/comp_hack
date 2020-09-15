@@ -8,50 +8,39 @@ using namespace libtester;
 
 #define PART_SIZE (1024)
 
-void ChannelClient::HandleAmalaAccountDumpPart(libcomp::ReadOnlyPacket& p)
-{
-    uint32_t partNumber = p.ReadU32Little();
-    uint32_t partSize = p.ReadU32Little();
+void ChannelClient::HandleAmalaAccountDumpPart(libcomp::ReadOnlyPacket &p) {
+  uint32_t partNumber = p.ReadU32Little();
+  uint32_t partSize = p.ReadU32Little();
 
-    mLastAccountDumpPart = partNumber;
+  mLastAccountDumpPart = partNumber;
 
-    char *szStart = &mAccountDumpData[(partNumber - 1) * PART_SIZE];
+  char *szStart = &mAccountDumpData[(partNumber - 1) * PART_SIZE];
 
-    p.ReadArray(szStart, partSize);
+  p.ReadArray(szStart, partSize);
 
-    if(partNumber == mAccountDumpParts)
-    {
-        libcomp::String checksum = libcomp::Crypto::SHA1(mAccountDumpData);
+  if (partNumber == mAccountDumpParts) {
+    libcomp::String checksum = libcomp::Crypto::SHA1(mAccountDumpData);
 
-        if(checksum == mAccountDumpChecksum)
-        {
-            FILE *out = fopen(libcomp::String("%1.xml").Arg(
-                mAccountDumpAccountName).C(), "wb");
+    if (checksum == mAccountDumpChecksum) {
+      FILE *out = fopen(
+          libcomp::String("%1.xml").Arg(mAccountDumpAccountName).C(), "wb");
 
-            if(!out || 1 != fwrite(&mAccountDumpData[0],
-                mAccountDumpData.size(), 1, out))
-            {
-                LogGeneralErrorMsg("Failed to write account dump to disk.\n");
-            }
-            else
-            {
-                LogGeneralInfo([&]()
-                {
-                    return libcomp::String("Wrote backup of account '%1' to "
-                        "'%2.xml'\n").Arg(mAccountDumpAccountName).Arg(
-                        mAccountDumpAccountName);
-                });
-            }
+      if (!out ||
+          1 != fwrite(&mAccountDumpData[0], mAccountDumpData.size(), 1, out)) {
+        LogGeneralErrorMsg("Failed to write account dump to disk.\n");
+      } else {
+        LogGeneralInfo([&]() {
+          return libcomp::String("Wrote backup of account '%1' to '%2.xml'\n")
+              .Arg(mAccountDumpAccountName)
+              .Arg(mAccountDumpAccountName);
+        });
+      }
 
-            if(out)
-            {
-                fclose(out);
-            }
-        }
-        else
-        {
-            LogGeneralErrorMsg(
-                "Failed to save account dump due to corruption!\n");
-        }
+      if (out) {
+        fclose(out);
+      }
+    } else {
+      LogGeneralErrorMsg("Failed to save account dump due to corruption!\n");
     }
+  }
 }

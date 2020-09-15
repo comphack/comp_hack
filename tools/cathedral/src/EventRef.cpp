@@ -29,67 +29,56 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_EventRef.h"
-#include <PopIgnore.h>
 
 std::list<libcomp::String> EventRef::sAllEventIDs;
 
-EventRef::EventRef(QWidget *pParent) : QWidget(pParent)
-{
-    ui = new Ui::EventRef;
-    ui->setupUi(this);
+EventRef::EventRef(QWidget* pParent) : QWidget(pParent) {
+  ui = new Ui::EventRef;
+  ui->setupUi(this);
 
-    for(auto& eventID : sAllEventIDs)
-    {
-        ui->eventID->addItem(qs(eventID));
-    }
+  for (auto& eventID : sAllEventIDs) {
+    ui->eventID->addItem(qs(eventID));
+  }
 
-    // Make sure nothing is selected by default
-    ui->eventID->setCurrentText("");
+  // Make sure nothing is selected by default
+  ui->eventID->setCurrentText("");
 
-    connect(ui->go, SIGNAL(clicked(bool)), this, SLOT(Go()));
+  connect(ui->go, SIGNAL(clicked(bool)), this, SLOT(Go()));
 }
 
-EventRef::~EventRef()
-{
-    delete ui;
+EventRef::~EventRef() { delete ui; }
+
+void EventRef::SetMainWindow(MainWindow* pMainWindow) {
+  mMainWindow = pMainWindow;
 }
 
-void EventRef::SetMainWindow(MainWindow *pMainWindow)
-{
-    mMainWindow = pMainWindow;
+void EventRef::SetEvent(const libcomp::String& event) {
+  ui->eventID->lineEdit()->setText(qs(event));
 }
 
-void EventRef::SetEvent(const libcomp::String& event)
-{
-    ui->eventID->lineEdit()->setText(qs(event));
+libcomp::String EventRef::GetEvent() const {
+  return libcomp::String(ui->eventID->currentText().toStdString());
 }
 
-libcomp::String EventRef::GetEvent() const
-{
-    return libcomp::String(ui->eventID->currentText().toStdString());
+void EventRef::RefreshAllEventIDs(MainWindow* pMainWindow) {
+  sAllEventIDs.clear();
+  for (auto& eventID : pMainWindow->GetEvents()->GetCurrentEventIDs()) {
+    sAllEventIDs.push_back(eventID);
+  }
+
+  sAllEventIDs.sort();
 }
 
-void EventRef::RefreshAllEventIDs(MainWindow *pMainWindow)
-{
-    sAllEventIDs.clear();
-    for(auto& eventID : pMainWindow->GetEvents()->GetCurrentEventIDs())
-    {
-        sAllEventIDs.push_back(eventID);
-    }
-
-    sAllEventIDs.sort();
-}
-
-void EventRef::Go()
-{
-    auto event = GetEvent();
-    if(mMainWindow && !event.IsEmpty())
-    {
-        auto eventWindow = mMainWindow->GetEvents();
-        eventWindow->GoToEvent(event);
-    }
+void EventRef::Go() {
+  auto event = GetEvent();
+  if (mMainWindow && !event.IsEmpty()) {
+    auto eventWindow = mMainWindow->GetEvents();
+    eventWindow->GoToEvent(event);
+  }
 }

@@ -28,44 +28,40 @@
 #define SERVER_LOBBY_SRC_LOGINHANDLERTHREAD_H
 
 // libcomp Includes
-#include <ScriptEngine.h>
 #include <CString.h>
+#include <ScriptEngine.h>
 
 // Standard C++11 Includes
 #include <memory>
 
-namespace objects
-{
+namespace objects {
 
 class LoginScriptRequest;
 class LoginScriptReply;
 
-} // namespace objects
+}  // namespace objects
 
-namespace lobby
-{
+namespace lobby {
 
+class LoginHandlerThread {
+ public:
+  LoginHandlerThread();
+  ~LoginHandlerThread();
 
-class LoginHandlerThread
-{
-public:
-    LoginHandlerThread();
-    ~LoginHandlerThread();
+  bool DidInit() const;
+  bool Init(const libcomp::String& script);
 
-    bool DidInit() const;
-    bool Init(const libcomp::String& script);
+  bool ProcessLoginRequest(
+      const std::shared_ptr<objects::LoginScriptRequest>& req);
+  bool ProcessLoginReply(
+      const std::shared_ptr<objects::LoginScriptReply>& reply);
 
-    bool ProcessLoginRequest(const std::shared_ptr<
-        objects::LoginScriptRequest>& req);
-    bool ProcessLoginReply(const std::shared_ptr<
-        objects::LoginScriptReply>& reply);
+ private:
+  bool mDidInit;
 
-private:
-    bool mDidInit;
-
-    libcomp::ScriptEngine mEngine;
+  libcomp::ScriptEngine mEngine;
 };
 
-} // namespace lobby
+}  // namespace lobby
 
-#endif // SERVER_LOBBY_SRC_LOGINHANDLERTHREAD_H
+#endif  // SERVER_LOBBY_SRC_LOGINHANDLERTHREAD_H

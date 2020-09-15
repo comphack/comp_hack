@@ -27,32 +27,29 @@
 #ifndef TOOLS_UPDATER_SRC_LANGUAGESELECTION_H
 #define TOOLS_UPDATER_SRC_LANGUAGESELECTION_H
 
-#include <PushIgnore.h>
-#include "ui_LanguageSelection.h"
-
-#include <QDialog>
 #include <PopIgnore.h>
-
 #include <PushIgnore.h>
 #include <d3d9.h>
-#include <PopIgnore.h>
 
-class LanguageSelection : public QDialog
-{
-    Q_OBJECT
+#include <QDialog>
 
-public:
-    LanguageSelection(QWidget *parent = 0);
-    ~LanguageSelection();
+#include "ui_LanguageSelection.h"
 
-protected slots:
-    void LanguageChanged();
-    void Save();
+class LanguageSelection : public QDialog {
+  Q_OBJECT
 
-protected:
-    virtual void changeEvent(QEvent *pEvent);
+ public:
+  LanguageSelection(QWidget *parent = 0);
+  ~LanguageSelection();
 
-    Ui::LanguageSelection ui;
+ protected slots:
+  void LanguageChanged();
+  void Save();
+
+ protected:
+  virtual void changeEvent(QEvent *pEvent);
+
+  Ui::LanguageSelection ui;
 };
 
-#endif // TOOLS_UPDATER_SRC_LANGUAGESELECTION_H
+#endif  // TOOLS_UPDATER_SRC_LANGUAGESELECTION_H

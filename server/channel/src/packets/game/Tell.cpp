@@ -38,32 +38,30 @@
 
 using namespace channel;
 
-bool Parsers::Tell::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::Tell::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 6)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 6) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
-    auto chatManager = server->GetChatManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto chatManager = server->GetChatManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    libcomp::String targetName = p.ReadString16Little(
-        state->GetClientStringEncoding(), true);
-    libcomp::String message = p.ReadString16Little(
-        state->GetClientStringEncoding(), true);
+  libcomp::String targetName =
+      p.ReadString16Little(state->GetClientStringEncoding(), true);
+  libcomp::String message =
+      p.ReadString16Little(state->GetClientStringEncoding(), true);
 
-    if(!chatManager->HandleGMand(client, message) &&
-        !chatManager->SendTellMessage(client, message, targetName))
-    {
-        LogChatManagerErrorMsg("Tell message could not be sent.\n");
-    }
+  if (!chatManager->HandleGMand(client, message) &&
+      !chatManager->SendTellMessage(client, message, targetName)) {
+    LogChatManagerErrorMsg("Tell message could not be sent.\n");
+  }
 
-    return true;
+  return true;
 }

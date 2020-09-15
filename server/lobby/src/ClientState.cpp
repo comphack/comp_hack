@@ -28,10 +28,6 @@
 
 using namespace lobby;
 
-ClientState::ClientState() : objects::ClientStateObject()
-{
-}
+ClientState::ClientState() : objects::ClientStateObject() {}
 
-ClientState::~ClientState()
-{
-}
+ClientState::~ClientState() {}

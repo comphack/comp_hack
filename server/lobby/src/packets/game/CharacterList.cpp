@@ -47,208 +47,190 @@
 
 using namespace lobby;
 
-bool Parsers::CharacterList::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::CharacterList::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    (void)pPacketManager;
+    libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
 
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
-    auto config = std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
-    auto accountManager = server->GetAccountManager();
-    auto lobbyDB = server->GetMainDatabase();
-    auto lobbyConnection = std::dynamic_pointer_cast<LobbyClientConnection>(connection);
-    auto account = lobbyConnection->GetClientState()->GetAccount().Get();
+  auto server =
+      std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
+  auto config =
+      std::dynamic_pointer_cast<objects::LobbyConfig>(server->GetConfig());
+  auto accountManager = server->GetAccountManager();
+  auto lobbyDB = server->GetMainDatabase();
+  auto lobbyConnection =
+      std::dynamic_pointer_cast<LobbyClientConnection>(connection);
+  auto account = lobbyConnection->GetClientState()->GetAccount().Get();
 
-    std::set<std::shared_ptr<objects::Character>> characters;
-    for(auto world : server->GetWorlds())
-    {
-        if(world->GetRegisteredWorld()->GetStatus()
-            == objects::RegisteredWorld::Status_t::INACTIVE) continue;
+  std::set<std::shared_ptr<objects::Character>> characters;
+  for (auto world : server->GetWorlds()) {
+    if (world->GetRegisteredWorld()->GetStatus() ==
+        objects::RegisteredWorld::Status_t::INACTIVE)
+      continue;
 
-        auto worldDB = world->GetWorldDatabase();
-        auto characterList = objects::Character::LoadCharacterListByAccount(
-            worldDB, account->GetUUID());
-        for(auto character : characterList)
-        {
-            // Always reload
-            bool loaded = character->GetCoreStats().Get(worldDB, true) != nullptr;
+    auto worldDB = world->GetWorldDatabase();
+    auto characterList = objects::Character::LoadCharacterListByAccount(
+        worldDB, account->GetUUID());
+    for (auto character : characterList) {
+      // Always reload
+      bool loaded = character->GetCoreStats().Get(worldDB, true) != nullptr;
 
-            if(loaded)
-            {
-                for(auto equip : character->GetEquippedItems())
-                {
-                    loaded &= equip.IsNull() || equip.Get(worldDB) != nullptr;
-                    if(!loaded) break;
-                }
-
-                if(!loaded)
-                {
-                    // This is not a hard failure, let the channel correct
-                    LogGeneralError([&]()
-                    {
-                        return libcomp::String("One or more equipped items"
-                            " failed to load: %1\n")
-                            .Arg(character->GetUUID().ToString());
-                    });
-                }
-
-                characters.insert(character);
-            }
-            else
-            {
-                // If stats can't load, we need to exclude the character
-                LogGeneralError([&]()
-                {
-                    return libcomp::String("Character stats coul not be"
-                        " loaded: %1\n").Arg(character->GetUUID().ToString());
-                });
-            }
+      if (loaded) {
+        for (auto equip : character->GetEquippedItems()) {
+          loaded &= equip.IsNull() || equip.Get(worldDB) != nullptr;
+          if (!loaded) break;
         }
-    }
 
-    auto deletes = accountManager->GetCharactersForDeletion(account);
-    if(deletes.size() > 0)
-    {
-        // Handle deletes before continuing
-        for(auto deleteChar : deletes)
-        {
-            accountManager->DeleteCharacter(account, deleteChar);
-            characters.erase(deleteChar);
+        if (!loaded) {
+          // This is not a hard failure, let the channel correct
+          LogGeneralError([&]() {
+            return libcomp::String(
+                       "One or more equipped items failed to load: %1\n")
+                .Arg(character->GetUUID().ToString());
+          });
         }
+
+        characters.insert(character);
+      } else {
+        // If stats can't load, we need to exclude the character
+        LogGeneralError([&]() {
+          return libcomp::String("Character stats coul not be loaded: %1\n")
+              .Arg(character->GetUUID().ToString());
+        });
+      }
+    }
+  }
+
+  auto deletes = accountManager->GetCharactersForDeletion(account);
+  if (deletes.size() > 0) {
+    // Handle deletes before continuing
+    for (auto deleteChar : deletes) {
+      accountManager->DeleteCharacter(account, deleteChar);
+      characters.erase(deleteChar);
+    }
+  }
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_CHARACTER_LIST);
+
+  // Time of last logout.
+  reply.WriteU32Little(account->GetLastLogout());
+
+  // Number of character tickets.
+  reply.WriteU8(account->GetTicketCount());
+
+  // Double back later and write the number of characters afer they
+  // have been successfully written to the packet
+  uint8_t charCount = 0;
+  reply.WriteU8(0);
+
+  for (uint8_t cid = 0; cid < MAX_CHARACTER; cid++) {
+    auto character = account->GetCharacters(cid).Get();
+
+    // Skip if the character is not in a connected world or otherwise
+    // not loaded
+    if (!character) continue;
+
+    auto stats = character->GetCoreStats().Get();
+
+    if (!stats) {
+      LogGeneralError([&]() {
+        return libcomp::String(
+                   "Character was loaded but stats are no longer loaded: %1\n")
+            .Arg(character->GetUUID().ToString());
+      });
+
+      continue;
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(
-        LobbyToClientPacketCode_t::PACKET_CHARACTER_LIST);
+    // Increase the count to write to the packet
+    charCount++;
 
-    // Time of last logout.
-    reply.WriteU32Little(account->GetLastLogout());
+    // Character ID.
+    reply.WriteU8(cid);
 
-    // Number of character tickets.
-    reply.WriteU8(account->GetTicketCount());
+    // World ID.
+    reply.WriteU8(character->GetWorldID());
 
-    // Double back later and write the number of characters afer they
-    // have been successfully written to the packet
-    uint8_t charCount = 0;
+    // Name.
+    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+                              character->GetName(), true);
+
+    // Gender.
+    reply.WriteU8((uint8_t)character->GetGender());
+
+    // Time when the character will be deleted.
+    reply.WriteU32Little(character->GetKillTime());
+
+    auto level = stats->GetLevel();
+
+    // "Initialized" (0 shows opening cutscene)
+    reply.WriteU32Little(level == -1 && config->GetPlayOpeningMovie() ? 0 : 1);
+
+    // Last channel used???
+    reply.WriteS8(-1);
+
+    // Level.
+    reply.WriteS8(static_cast<int8_t>(level != -1 ? level : 1));
+
+    // Skin type.
+    reply.WriteU8(character->GetSkinType());
+
+    // Hair type.
+    reply.WriteU8(character->GetHairType());
+
+    // Eye type.
+    reply.WriteU8(character->GetEyeType());
+
+    // Face type.
+    reply.WriteU8(character->GetFaceType());
+
+    // Hair color.
+    reply.WriteU8(character->GetHairColor());
+
+    // Right eye color.
+    reply.WriteU8(character->GetRightEyeColor());
+
+    // Left eye color.
+    reply.WriteU8(character->GetLeftEyeColor());
+
+    // Unknown values.
     reply.WriteU8(0);
+    reply.WriteU8(1);
 
-    for(uint8_t cid = 0; cid < MAX_CHARACTER; cid++)
-    {
-        auto character = account->GetCharacters(cid).Get();
+    // Equipment
+    for (size_t i = 0; i < 15; i++) {
+      auto equip = character->GetEquippedItems(i).Get();
 
-        // Skip if the character is not in a connected world or otherwise
-        // not loaded
-        if(!character) continue;
-
-        auto stats = character->GetCoreStats().Get();
-
-        if(!stats)
-        {
-            LogGeneralError([&]()
-            {
-                return libcomp::String("Character was loaded but stats are no"
-                    " longer loaded: %1\n").Arg(character->GetUUID().ToString());
-            });
-
-            continue;
-        }
-
-        // Increase the count to write to the packet
-        charCount++;
-
-        // Character ID.
-        reply.WriteU8(cid);
-
-        // World ID.
-        reply.WriteU8(character->GetWorldID());
-
-        // Name.
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
-            character->GetName(), true);
-
-        // Gender.
-        reply.WriteU8((uint8_t)character->GetGender());
-
-        // Time when the character will be deleted.
-        reply.WriteU32Little(character->GetKillTime());
-
-        auto level = stats->GetLevel();
-
-        // "Initialized" (0 shows opening cutscene)
-        reply.WriteU32Little(level == -1 && config->GetPlayOpeningMovie()
-            ? 0 : 1);
-
-        // Last channel used???
-        reply.WriteS8(-1);
-
-        // Level.
-        reply.WriteS8(static_cast<int8_t>(level != -1 ? level : 1));
-
-        // Skin type.
-        reply.WriteU8(character->GetSkinType());
-
-        // Hair type.
-        reply.WriteU8(character->GetHairType());
-
-        // Eye type.
-        reply.WriteU8(character->GetEyeType());
-
-        // Face type.
-        reply.WriteU8(character->GetFaceType());
-
-        // Hair color.
-        reply.WriteU8(character->GetHairColor());
-
-        // Right eye color.
-        reply.WriteU8(character->GetRightEyeColor());
-
-        // Left eye color.
-        reply.WriteU8(character->GetLeftEyeColor());
-
-        // Unknown values.
-        reply.WriteU8(0);
-        reply.WriteU8(1);
-
-        // Equipment
-        for(size_t i = 0; i < 15; i++)
-        {
-            auto equip = character->GetEquippedItems(i).Get();
-
-            if(equip)
-            {
-                reply.WriteU32Little(equip->GetType());
-            }
-            else
-            {
-                // None.
-                reply.WriteU32Little(static_cast<uint32_t>(-1));
-            }
-        }
-
-        // VA
-        reply.WriteS32Little((int32_t)character->EquippedVACount());
-        for(uint8_t i = 0; i <= MAX_VA_INDEX; i++)
-        {
-            uint32_t va = character->GetEquippedVA(i);
-            if(va)
-            {
-                reply.WriteS8((int8_t)i);
-                reply.WriteU32Little(va);
-            }
-        }
+      if (equip) {
+        reply.WriteU32Little(equip->GetType());
+      } else {
+        // None.
+        reply.WriteU32Little(static_cast<uint32_t>(-1));
+      }
     }
 
-    // Now write the character count
-    reply.Seek(7);
-    reply.WriteU8(charCount);
+    // VA
+    reply.WriteS32Little((int32_t)character->EquippedVACount());
+    for (uint8_t i = 0; i <= MAX_VA_INDEX; i++) {
+      uint32_t va = character->GetEquippedVA(i);
+      if (va) {
+        reply.WriteS8((int8_t)i);
+        reply.WriteU32Little(va);
+      }
+    }
+  }
 
-    connection->SendPacket(reply);
+  // Now write the character count
+  reply.Seek(7);
+  reply.WriteU8(charCount);
 
-    return true;
+  connection->SendPacket(reply);
+
+  return true;
 }

@@ -28,66 +28,59 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionDisplayMessage.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
 ActionDisplayMessage::ActionDisplayMessage(ActionList *pList,
-    MainWindow *pMainWindow, QWidget *pParent) : Action(pList,
-    pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionDisplayMessage;
-    prop->setupUi(pWidget);
+                                           MainWindow *pMainWindow,
+                                           QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionDisplayMessage;
+  prop->setupUi(pWidget);
 
-    prop->messageIDs->Setup(DynamicItemType_t::COMPLEX_EVENT_MESSAGE,
-        pMainWindow);
-    prop->messageIDs->SetAddText("Add Message");
+  prop->messageIDs->Setup(DynamicItemType_t::COMPLEX_EVENT_MESSAGE,
+                          pMainWindow);
+  prop->messageIDs->SetAddText("Add Message");
 
-    ui->actionTitle->setText(tr("<b>Display Message</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Display Message</b>"));
+  ui->layoutMain->addWidget(pWidget);
 }
 
-ActionDisplayMessage::~ActionDisplayMessage()
-{
-    delete prop;
+ActionDisplayMessage::~ActionDisplayMessage() { delete prop; }
+
+void ActionDisplayMessage::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionDisplayMessage>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  for (int32_t messageID : mAction->GetMessageIDs()) {
+    prop->messageIDs->AddInteger(messageID);
+  }
 }
 
-void ActionDisplayMessage::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionDisplayMessage>(act);
+std::shared_ptr<objects::Action> ActionDisplayMessage::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  auto messageIDs = prop->messageIDs->GetIntegerList();
+  mAction->SetMessageIDs(messageIDs);
 
-    for(int32_t messageID : mAction->GetMessageIDs())
-    {
-        prop->messageIDs->AddInteger(messageID);
-    }
-}
-
-std::shared_ptr<objects::Action> ActionDisplayMessage::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    auto messageIDs = prop->messageIDs->GetIntegerList();
-    mAction->SetMessageIDs(messageIDs);
-
-    return mAction;
+  return mAction;
 }

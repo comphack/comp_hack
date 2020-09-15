@@ -35,15 +35,13 @@
 // object Includes
 #include <SearchEntry.h>
 
-namespace objects
-{
+namespace objects {
 class Account;
 class Character;
 class CharacterProgress;
-}
+}  // namespace objects
 
-namespace lobby
-{
+namespace lobby {
 
 class LobbyServer;
 
@@ -51,68 +49,68 @@ class LobbyServer;
  * Lobby specific implementation of the DataSyncManager in charge of
  * performing server side update operations.
  */
-class LobbySyncManager : public libcomp::DataSyncManager
-{
-public:
-    /**
-     * Create a new LobbySyncManager
-     * @param server Pointer back to the channel server this belongs to.
-     */
-    LobbySyncManager(const std::weak_ptr<LobbyServer>& server);
+class LobbySyncManager : public libcomp::DataSyncManager {
+ public:
+  /**
+   * Create a new LobbySyncManager
+   * @param server Pointer back to the channel server this belongs to.
+   */
+  LobbySyncManager(const std::weak_ptr<LobbyServer>& server);
 
-    /**
-     * Clean up the LobbySyncManager
-     */
-    virtual ~LobbySyncManager();
+  /**
+   * Clean up the LobbySyncManager
+   */
+  virtual ~LobbySyncManager();
 
-    /**
-     * Initialize the LobbySyncManager after the server has been initialized.
-     * @return false if any errors were encountered and the server should
-     *  be shut down.
-     */
-    bool Initialize();
+  /**
+   * Initialize the LobbySyncManager after the server has been initialized.
+   * @return false if any errors were encountered and the server should
+   *  be shut down.
+   */
+  bool Initialize();
 
-    /**
-     * Server specific handler for explicit types of non-persistent records
-     * being updated.
-     * @param type Type name of the object being updated
-     * @param obj Pointer to the record definition
-     * @param isRemove true if the record is being removed, false if it is
-     *  either an insert or an update
-     * @param source Source server identifier
-     * @return Response codes matching the internal DataSyncManager set
-     */
-    template<class T> int8_t Update(const libcomp::String& type,
-        const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
-        const libcomp::String& source);
+  /**
+   * Server specific handler for explicit types of non-persistent records
+   * being updated.
+   * @param type Type name of the object being updated
+   * @param obj Pointer to the record definition
+   * @param isRemove true if the record is being removed, false if it is
+   *  either an insert or an update
+   * @param source Source server identifier
+   * @return Response codes matching the internal DataSyncManager set
+   */
+  template <class T>
+  int8_t Update(const libcomp::String& type,
+                const std::shared_ptr<libcomp::Object>& obj, bool isRemove,
+                const libcomp::String& source);
 
-private:
-    /**
-     * Sync the supplied account.
-     * @param account Pointer to the account record to sync
-     */
-    void SyncAccount(const std::shared_ptr<objects::Account>& account);
+ private:
+  /**
+   * Sync the supplied account.
+   * @param account Pointer to the account record to sync
+   */
+  void SyncAccount(const std::shared_ptr<objects::Account>& account);
 
-    /**
-     * Sync the supplied character progress.
-     * @param progress Pointer to the character progress record to sync
-     */
-    void SyncCharacterProgress(const std::shared_ptr<
-        objects::CharacterProgress>& progress);
+  /**
+   * Sync the supplied character progress.
+   * @param progress Pointer to the character progress record to sync
+   */
+  void SyncCharacterProgress(
+      const std::shared_ptr<objects::CharacterProgress>& progress);
 
-    /**
-     * Sync the supplied character, should be used for all delete requests.
-     * @param character Pointer to the character record to sync
-     * @param isRemove true if the update is a remove, false if it is an
-     *  insert or update
-     */
-    void SyncCharacter(const std::shared_ptr<objects::Character>& character,
-        bool isRemove);
+  /**
+   * Sync the supplied character, should be used for all delete requests.
+   * @param character Pointer to the character record to sync
+   * @param isRemove true if the update is a remove, false if it is an
+   *  insert or update
+   */
+  void SyncCharacter(const std::shared_ptr<objects::Character>& character,
+                     bool isRemove);
 
-    /// Pointer to the lobby server.
-    std::weak_ptr<LobbyServer> mServer;
+  /// Pointer to the lobby server.
+  std::weak_ptr<LobbyServer> mServer;
 };
 
-} // namespace lobby
+}  // namespace lobby
 
-#endif // SERVER_WORLD_SRC_LOBBYSYNCMANAGER_H
+#endif  // SERVER_WORLD_SRC_LOBBYSYNCMANAGER_H

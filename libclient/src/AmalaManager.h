@@ -32,108 +32,102 @@
 #include <MessagePacket.h>
 #include <MessageQueue.h>
 
-namespace libcomp
-{
+namespace libcomp {
 
-namespace Message
-{
+namespace Message {
 
 class MessageClient;
 
-} // namespace Message
+}  // namespace Message
 
-} // namespace libcomp
+}  // namespace libcomp
 
-namespace logic
-{
-    class LogicWorker;
+namespace logic {
+class LogicWorker;
 
-    /**
-     * Worker for client<==>server interaction.
-     */
-    class AmalaManager : public libcomp::Manager
-    {
-    public:
-        /**
-         * Create a new worker.
-         * @param messageQueue Message queue of the LogicWorker.
-         */
-        explicit AmalaManager(LogicWorker *pLogicWorker,
-            const std::weak_ptr<
-                libcomp::MessageQueue<libcomp::Message::Message *>>
-                &messageQueue);
+/**
+ * Worker for client<==>server interaction.
+ */
+class AmalaManager : public libcomp::Manager {
+ public:
+  /**
+   * Create a new worker.
+   * @param messageQueue Message queue of the LogicWorker.
+   */
+  explicit AmalaManager(
+      LogicWorker *pLogicWorker,
+      const std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
+          &messageQueue);
 
-        /**
-         * Cleanup the worker.
-         */
-        virtual ~AmalaManager();
+  /**
+   * Cleanup the worker.
+   */
+  virtual ~AmalaManager();
 
-        /**
-         * Get the different types of messages handled by the manager.
-         * @return List of message types handled by the manager
-         */
-        std::list<libcomp::Message::MessageType>
-            GetSupportedTypes() const override;
+  /**
+   * Get the different types of messages handled by the manager.
+   * @return List of message types handled by the manager
+   */
+  std::list<libcomp::Message::MessageType> GetSupportedTypes() const override;
 
-        /**
-         * Process a message from the queue.
-         * @param pMessage Message to be processed
-         * @return true on success, false on failure
-         */
-        bool ProcessMessage(const libcomp::Message::Message *pMessage) override;
+  /**
+   * Process a message from the queue.
+   * @param pMessage Message to be processed
+   * @return true on success, false on failure
+   */
+  bool ProcessMessage(const libcomp::Message::Message *pMessage) override;
 
-        /**
-         * Process a client message.
-         * @param pMessage Client message to process.
-         */
-        bool ProcessClientMessage(
-            const libcomp::Message::MessageClient *pMessage);
+  /**
+   * Process a client message.
+   * @param pMessage Client message to process.
+   */
+  bool ProcessClientMessage(const libcomp::Message::MessageClient *pMessage);
 
-    private:
-        /**
-         * Handle the incoming account dump.
-         * @returns true if the packet was parsed correctly; false otherwise.
-         */
-        bool HandlePacketChannelAmalaAccountDumpHeader(libcomp::ReadOnlyPacket &p);
+ private:
+  /**
+   * Handle the incoming account dump.
+   * @returns true if the packet was parsed correctly; false otherwise.
+   */
+  bool HandlePacketChannelAmalaAccountDumpHeader(libcomp::ReadOnlyPacket &p);
 
-        /**
-         * Handle the incoming account dump.
-         * @returns true if the packet was parsed correctly; false otherwise.
-         */
-        bool HandlePacketChannelAmalaAccountDumpPart(libcomp::ReadOnlyPacket &p);
+  /**
+   * Handle the incoming account dump.
+   * @returns true if the packet was parsed correctly; false otherwise.
+   */
+  bool HandlePacketChannelAmalaAccountDumpPart(libcomp::ReadOnlyPacket &p);
 
-        /**
-         * Process a packet message.
-         * @param pMessage Packet message to process.
-         */
-        bool ProcessPacketMessage(const libcomp::Message::Packet *pMessage);
+  /**
+   * Process a packet message.
+   * @param pMessage Packet message to process.
+   */
+  bool ProcessPacketMessage(const libcomp::Message::Packet *pMessage);
 
-        /// Pointer to the LogicWorker.
-        LogicWorker *mLogicWorker;
+  /// Pointer to the LogicWorker.
+  LogicWorker *mLogicWorker;
 
-        /// Message queue for the LogicWorker.
-        std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
-            mMessageQueue;
+  /// Message queue for the LogicWorker.
+  std::weak_ptr<libcomp::MessageQueue<libcomp::Message::Message *>>
+      mMessageQueue;
 
-        /// Account dump SHA1 hash.
-        libcomp::String mAccountDumpSHA1;
+  /// Account dump SHA1 hash.
+  libcomp::String mAccountDumpSHA1;
 
-        /// Account dump account name.
-        libcomp::String mAccountDumpName;
+  /// Account dump account name.
+  libcomp::String mAccountDumpName;
 
-        /// Account dump SHA1 hash.
-        std::vector<char> mAccountDump;
+  /// Account dump SHA1 hash.
+  std::vector<char> mAccountDump;
 
-        /// Size of the account dump.
-        uint32_t mAccountDumpSize;
+  /// Size of the account dump.
+  uint32_t mAccountDumpSize;
 
-        /// Number of parts.
-        uint32_t mAccountDumpPartCount;
+  /// Number of parts.
+  uint32_t mAccountDumpPartCount;
 
-        /// Account dump file path.
-        libcomp::String mAccountDumpPath;
-    };
+  /// Account dump file path.
+  libcomp::String mAccountDumpPath;
+};
 
-} // namespace logic
+}  // namespace logic
 
-#endif // LIBCLIENT_SRC_AMALAMANAGER_H
+#endif  // LIBCLIENT_SRC_AMALAMANAGER_H

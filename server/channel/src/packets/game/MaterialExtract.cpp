@@ -45,103 +45,94 @@
 
 using namespace channel;
 
-bool Parsers::MaterialExtract::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::MaterialExtract::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 8)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 8) {
+    return false;
+  }
+
+  uint32_t itemType = p.ReadU32Little();
+  int32_t stackCount = p.ReadS32Little();
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
+  auto definitionManager = server->GetDefinitionManager();
+
+  auto itemDef = definitionManager->GetItemData(itemType);
+
+  // Ignore material tank valuable check (since there seems to only be the
+  // inventory full error message). If they somehow have materials, no tank and
+  // can send this packet, let them have it :P
+
+  int32_t stacksAdded = 0;
+  bool success = false;
+  int32_t existingCount = (int32_t)character->GetMaterials(itemType);
+  if (existingCount >= stackCount && itemDef) {
+    auto inventory = character->GetItemBoxes(0).Get();
+    int32_t maxStack = (int32_t)itemDef->GetPossession()->GetStackSize();
+
+    // If a free slot exists in the inventory, any amount can be added
+    int32_t addStacks = stackCount;
+    bool canAdd = false;
+    for (auto item : inventory->GetItems()) {
+      if (item.IsNull()) {
+        canAdd = true;
+        break;
+      }
     }
 
-    uint32_t itemType = p.ReadU32Little();
-    int32_t stackCount = p.ReadS32Little();
+    // If a free slot does not exist in the inventory, check if existing
+    // stacks can be added to
+    if (!canAdd) {
+      addStacks = 0;
+      for (auto existing :
+           characterManager->GetExistingItems(character, itemType, inventory)) {
+        addStacks += (int32_t)(maxStack - existing->GetStackSize());
+      }
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
+      if (addStacks > stackCount) {
+        addStacks = stackCount;
+      }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
-    auto definitionManager = server->GetDefinitionManager();
-
-    auto itemDef = definitionManager->GetItemData(itemType);
-
-    // Ignore material tank valuable check (since there seems to only be the inventory
-    // full error message). If they somehow have materials, no tank and can send this
-    // packet, let them have it :P
-
-    int32_t stacksAdded = 0;
-    bool success = false;
-    int32_t existingCount = (int32_t)character->GetMaterials(itemType);
-    if(existingCount >= stackCount && itemDef)
-    {
-        auto inventory = character->GetItemBoxes(0).Get();
-        int32_t maxStack = (int32_t)itemDef->GetPossession()->GetStackSize();
-        
-        // If a free slot exists in the inventory, any amount can be added
-        int32_t addStacks = stackCount;
-        bool canAdd = false;
-        for(auto item : inventory->GetItems())
-        {
-            if(item.IsNull())
-            {
-                canAdd = true;
-                break;
-            }
-        }
-
-        // If a free slot does not exist in the inventory, check if existing
-        // stacks can be added to
-        if(!canAdd)
-        {
-            addStacks = 0;
-            for(auto existing : characterManager->GetExistingItems(character,
-                itemType, inventory))
-            {
-                addStacks += (int32_t)(maxStack - existing->GetStackSize());
-            }
-
-            if(addStacks > stackCount)
-            {
-                addStacks = stackCount;
-            }
-
-            canAdd = addStacks > 0;
-        }
-
-        if(canAdd)
-        {
-            std::unordered_map<uint32_t, uint32_t> items;
-            items[itemType] = (uint32_t)addStacks;
-            if(characterManager->AddRemoveItems(client, items, true))
-            {
-                character->SetMaterials(itemType, (uint16_t)(
-                    existingCount - addStacks));
-                success = true;
-                stacksAdded = addStacks;
-
-                server->GetWorldDatabase()
-                    ->QueueUpdate(character, state->GetAccountUID());
-            }
-        }
+      canAdd = addStacks > 0;
     }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MATERIAL_EXTRACT);
-    reply.WriteU32Little(itemType);
-    reply.WriteS32Little(stackCount);
-    reply.WriteS32Little(success ? 0 : 1);
-    reply.WriteS32Little(stacksAdded);
+    if (canAdd) {
+      std::unordered_map<uint32_t, uint32_t> items;
+      items[itemType] = (uint32_t)addStacks;
+      if (characterManager->AddRemoveItems(client, items, true)) {
+        character->SetMaterials(itemType,
+                                (uint16_t)(existingCount - addStacks));
+        success = true;
+        stacksAdded = addStacks;
 
-    client->SendPacket(reply);
-
-    if(success)
-    {
-        std::set<uint32_t> updates = { itemType };
-        characterManager->SendMaterials(client, updates);
+        server->GetWorldDatabase()->QueueUpdate(character,
+                                                state->GetAccountUID());
+      }
     }
+  }
 
-    return true;
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_MATERIAL_EXTRACT);
+  reply.WriteU32Little(itemType);
+  reply.WriteS32Little(stackCount);
+  reply.WriteS32Little(success ? 0 : 1);
+  reply.WriteS32Little(stacksAdded);
+
+  client->SendPacket(reply);
+
+  if (success) {
+    std::set<uint32_t> updates = {itemType};
+    characterManager->SendMaterials(client, updates);
+  }
+
+  return true;
 }

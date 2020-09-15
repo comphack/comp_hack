@@ -29,77 +29,70 @@
 #include "MainWindow.h"
 
 // Qt Includes
+#include <PopIgnore.h>
 #include <PushIgnore.h>
+
 #include <QLineEdit>
 
 #include "ui_Action.h"
 #include "ui_ActionStartEvent.h"
-#include <PopIgnore.h>
 
 // libcomp Includes
 #include <Log.h>
 #include <PacketCodes.h>
 
 ActionStartEvent::ActionStartEvent(ActionList *pList, MainWindow *pMainWindow,
-    QWidget *pParent) : Action(pList, pMainWindow, pParent)
-{
-    QWidget *pWidget = new QWidget;
-    prop = new Ui::ActionStartEvent;
-    prop->setupUi(pWidget);
+                                   QWidget *pParent)
+    : Action(pList, pMainWindow, pParent) {
+  QWidget *pWidget = new QWidget;
+  prop = new Ui::ActionStartEvent;
+  prop->setupUi(pWidget);
 
-    prop->eventTransformScriptParams->Setup(
-        DynamicItemType_t::PRIMITIVE_STRING, nullptr);
-    prop->eventTransformScriptParams->SetAddText("Add Param");
+  prop->eventTransformScriptParams->Setup(DynamicItemType_t::PRIMITIVE_STRING,
+                                          nullptr);
+  prop->eventTransformScriptParams->SetAddText("Add Param");
 
-    ui->actionTitle->setText(tr("<b>Start Event</b>"));
-    ui->layoutMain->addWidget(pWidget);
+  ui->actionTitle->setText(tr("<b>Start Event</b>"));
+  ui->layoutMain->addWidget(pWidget);
 
-    prop->event->SetMainWindow(pMainWindow);
+  prop->event->SetMainWindow(pMainWindow);
 }
 
-ActionStartEvent::~ActionStartEvent()
-{
-    delete prop;
+ActionStartEvent::~ActionStartEvent() { delete prop; }
+
+void ActionStartEvent::Load(const std::shared_ptr<objects::Action> &act) {
+  mAction = std::dynamic_pointer_cast<objects::ActionStartEvent>(act);
+
+  if (!mAction) {
+    return;
+  }
+
+  LoadBaseProperties(mAction);
+
+  prop->event->SetEvent(mAction->GetEventID());
+  prop->allowInterrupt->setCurrentIndex(
+      to_underlying(mAction->GetAllowInterrupt()));
+  prop->autoOnly->setChecked(mAction->GetAutoOnly());
+
+  for (auto param : mAction->GetEventTransformScriptParams()) {
+    prop->eventTransformScriptParams->AddString(param);
+  }
 }
 
-void ActionStartEvent::Load(const std::shared_ptr<objects::Action>& act)
-{
-    mAction = std::dynamic_pointer_cast<objects::ActionStartEvent>(act);
+std::shared_ptr<objects::Action> ActionStartEvent::Save() const {
+  if (!mAction) {
+    return nullptr;
+  }
 
-    if(!mAction)
-    {
-        return;
-    }
+  SaveBaseProperties(mAction);
 
-    LoadBaseProperties(mAction);
+  mAction->SetEventID(prop->event->GetEvent());
+  mAction->SetAllowInterrupt((objects::ActionStartEvent::AllowInterrupt_t)
+                                 prop->allowInterrupt->currentIndex());
+  mAction->SetAutoOnly(prop->autoOnly->isChecked());
 
-    prop->event->SetEvent(mAction->GetEventID());
-    prop->allowInterrupt->setCurrentIndex(to_underlying(
-        mAction->GetAllowInterrupt()));
-    prop->autoOnly->setChecked(mAction->GetAutoOnly());
+  mAction->SetEventTransformScriptParams(
+      prop->eventTransformScriptParams->GetStringList());
 
-    for(auto param : mAction->GetEventTransformScriptParams())
-    {
-        prop->eventTransformScriptParams->AddString(param);
-    }
-}
-
-std::shared_ptr<objects::Action> ActionStartEvent::Save() const
-{
-    if(!mAction)
-    {
-        return nullptr;
-    }
-
-    SaveBaseProperties(mAction);
-
-    mAction->SetEventID(prop->event->GetEvent());
-    mAction->SetAllowInterrupt((objects::ActionStartEvent::AllowInterrupt_t)
-        prop->allowInterrupt->currentIndex());
-    mAction->SetAutoOnly(prop->autoOnly->isChecked());
-
-    mAction->SetEventTransformScriptParams(
-        prop->eventTransformScriptParams->GetStringList());
-
-    return mAction;
+  return mAction;
 }

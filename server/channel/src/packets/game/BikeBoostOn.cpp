@@ -44,68 +44,57 @@
 
 using namespace channel;
 
-bool Parsers::BikeBoostOn::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BikeBoostOn::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto zone = cState->GetZone();
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BIKE_BOOST_ON);
+
+  // Boost activateable if on a bike, not boosting already
+  if (cState->Ready(true) && zone &&
+      cState->StatusEffectActive(SVR_CONST.STATUS_BIKE) &&
+      !cState->AdditionalTokuseiKeyExists(SVR_CONST.TOKUSEI_BIKE_BOOST)) {
+    if (!zone->GetDefinition()->GetBikeBoostEnabled()) {
+      // Boost not enabled for the zone
+      reply.WriteS32Little(-3);
+    } else {
+      // Boost valid
+      reply.WriteS32Little(0);
+
+      state->SetBikeBoosting(true);
+      cState->SetAdditionalTokusei(SVR_CONST.TOKUSEI_BIKE_BOOST, 1);
+
+      server->GetTokuseiManager()->Recalculate(cState, true);
+
+      // Hide/remove for other players if configured
+      if (server->GetWorldSharedConfig()->GetBikeBoostHide()) {
+        cState->SetDisplayState(ActiveDisplayState_t::BIKE_BOOST);
+
+        auto zoneManager = server->GetZoneManager();
+        auto zConnections = zoneManager->GetZoneConnections(client, false);
+
+        zoneManager->RemoveEntities(zConnections, {cState->GetEntityID()}, 17);
+      }
     }
+  } else {
+    // Generic failure
+    reply.WriteS32Little(-1);
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(
-        pPacketManager->GetServer());
+  client->SendPacket(reply);
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto zone = cState->GetZone();
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BIKE_BOOST_ON);
-
-    // Boost activateable if on a bike, not boosting already
-    if(cState->Ready(true) && zone &&
-        cState->StatusEffectActive(SVR_CONST.STATUS_BIKE) &&
-        !cState->AdditionalTokuseiKeyExists(SVR_CONST.TOKUSEI_BIKE_BOOST))
-    {
-        if(!zone->GetDefinition()->GetBikeBoostEnabled())
-        {
-            // Boost not enabled for the zone
-            reply.WriteS32Little(-3);
-        }
-        else
-        {
-            // Boost valid
-            reply.WriteS32Little(0);
-
-            state->SetBikeBoosting(true);
-            cState->SetAdditionalTokusei(SVR_CONST.TOKUSEI_BIKE_BOOST, 1);
-
-            server->GetTokuseiManager()->Recalculate(cState, true);
-
-            // Hide/remove for other players if configured
-            if(server->GetWorldSharedConfig()->GetBikeBoostHide())
-            {
-                cState->SetDisplayState(ActiveDisplayState_t::BIKE_BOOST);
-
-                auto zoneManager = server->GetZoneManager();
-                auto zConnections = zoneManager->GetZoneConnections(client,
-                    false);
-
-                zoneManager->RemoveEntities(zConnections,
-                    { cState->GetEntityID() }, 17);
-            }
-        }
-    }
-    else
-    {
-        // Generic failure
-        reply.WriteS32Little(-1);
-    }
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

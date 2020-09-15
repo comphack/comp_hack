@@ -36,90 +36,75 @@
 
 using namespace channel;
 
-namespace libcomp
-{
-    template<>
-    ScriptEngine& ScriptEngine::Using<AllyState>()
-    {
-        if(!BindingExists("AllyState", true))
-        {
-            Using<ActiveEntityState>();
-            Using<objects::Ally>();
+namespace libcomp {
+template <>
+ScriptEngine& ScriptEngine::Using<AllyState>() {
+  if (!BindingExists("AllyState", true)) {
+    Using<ActiveEntityState>();
+    Using<objects::Ally>();
 
-            Sqrat::DerivedClass<AllyState, ActiveEntityState,
-                Sqrat::NoConstructor<AllyState>> binding(mVM, "AllyState");
-            binding
-                .Func<std::shared_ptr<objects::Ally>
-                (AllyState::*)() const>(
-                    "GetEntity", &AllyState::GetEntity)
-                .StaticFunc("Cast", &AllyState::Cast);
+    Sqrat::DerivedClass<AllyState, ActiveEntityState,
+                        Sqrat::NoConstructor<AllyState>>
+        binding(mVM, "AllyState");
+    binding
+        .Func<std::shared_ptr<objects::Ally> (AllyState::*)() const>(
+            "GetEntity", &AllyState::GetEntity)
+        .StaticFunc("Cast", &AllyState::Cast);
 
-            Bind<AllyState>("AllyState", binding);
-        }
+    Bind<AllyState>("AllyState", binding);
+  }
 
-        return *this;
-    }
+  return *this;
 }
+}  // namespace libcomp
 
-AllyState::AllyState()
-{
-}
+AllyState::AllyState() {}
 
-std::shared_ptr<objects::EnemyBase> AllyState::GetEnemyBase() const
-{
-    return GetEntity();
+std::shared_ptr<objects::EnemyBase> AllyState::GetEnemyBase() const {
+  return GetEntity();
 }
 
 std::set<uint32_t> AllyState::GetAllSkills(
-    libcomp::DefinitionManager* definitionManager, bool includeTokusei)
-{
-    return GetAllEnemySkills(definitionManager, includeTokusei);
+    libcomp::DefinitionManager* definitionManager, bool includeTokusei) {
+  return GetAllEnemySkills(definitionManager, includeTokusei);
 }
 
 uint8_t AllyState::RecalculateStats(
     libcomp::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
-    std::shared_ptr<objects::MiSkillData> contextSkill)
-{
-    std::lock_guard<std::mutex> lock(mLock);
+    std::shared_ptr<objects::MiSkillData> contextSkill) {
+  std::lock_guard<std::mutex> lock(mLock);
 
-    auto entity = GetEntity();
-    if(!entity)
-    {
-        return true;
-    }
+  auto entity = GetEntity();
+  if (!entity) {
+    return true;
+  }
 
-    return RecalculateEnemyStats(definitionManager, calcState,
-        contextSkill);
+  return RecalculateEnemyStats(definitionManager, calcState, contextSkill);
 }
 
-uint8_t AllyState::GetLNCType()
-{
-    int16_t lncPoints = 0;
+uint8_t AllyState::GetLNCType() {
+  int16_t lncPoints = 0;
 
-    auto entity = GetEntity();
-    auto demonData = GetDevilData();
-    if(entity && demonData)
-    {
-        lncPoints = demonData->GetBasic()->GetLNC();
-    }
+  auto entity = GetEntity();
+  auto demonData = GetDevilData();
+  if (entity && demonData) {
+    lncPoints = demonData->GetBasic()->GetLNC();
+  }
 
-    return CalculateLNCType(lncPoints);
+  return CalculateLNCType(lncPoints);
 }
 
-int8_t AllyState::GetGender()
-{
-    auto demonData = GetDevilData();
-    if(demonData)
-    {
-        return (int8_t)demonData->GetBasic()->GetGender();
-    }
+int8_t AllyState::GetGender() {
+  auto demonData = GetDevilData();
+  if (demonData) {
+    return (int8_t)demonData->GetBasic()->GetGender();
+  }
 
-    return GENDER_NA;
+  return GENDER_NA;
 }
 
 std::shared_ptr<AllyState> AllyState::Cast(
-    const std::shared_ptr<EntityStateObject>& obj)
-{
-    return std::dynamic_pointer_cast<AllyState>(obj);
+    const std::shared_ptr<EntityStateObject>& obj) {
+  return std::dynamic_pointer_cast<AllyState>(obj);
 }

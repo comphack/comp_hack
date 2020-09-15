@@ -41,51 +41,50 @@
 
 using namespace channel;
 
-bool Parsers::SyncCharacter::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SyncCharacter::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    int32_t entityID = p.ReadS32Little();
+  int32_t entityID = p.ReadS32Little();
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto eState = state->GetEntityState(entityID);
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto eState = state->GetEntityState(entityID);
 
-    if(eState == nullptr)
-    {
-        LogGeneralError([&]()
-        {
-            return libcomp::String("Entity not belonging to the client"
-                " requested for SyncCharacter: %1\n").Arg(entityID);
-        });
-
-        return true;
-    }
-
-    auto cs = eState->GetCoreStats();
-    auto statusEffects = eState->GetCurrentStatusEffectStates();
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC_CHARACTER);
-    reply.WriteS32Little(entityID);
-    reply.WriteU32Little((uint32_t)cs->GetHP());
-    reply.WriteU32Little((uint32_t)cs->GetMP());
-    reply.WriteU8((uint8_t)statusEffects.size());
-    for (auto ePair : statusEffects)
-    {
-        reply.WriteU32Little(ePair.first->GetEffect());
-        reply.WriteS32Little((int32_t)ePair.second);
-        reply.WriteU8(ePair.first->GetStack());
-    }
-
-    // Send back to the whole zone just in case
-    server->GetZoneManager()->BroadcastPacket(client, reply);
+  if (eState == nullptr) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Entity not belonging to the client requested for "
+                 "SyncCharacter: %1\n")
+          .Arg(entityID);
+    });
 
     return true;
+  }
+
+  auto cs = eState->GetCoreStats();
+  auto statusEffects = eState->GetCurrentStatusEffectStates();
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYNC_CHARACTER);
+  reply.WriteS32Little(entityID);
+  reply.WriteU32Little((uint32_t)cs->GetHP());
+  reply.WriteU32Little((uint32_t)cs->GetMP());
+  reply.WriteU8((uint8_t)statusEffects.size());
+  for (auto ePair : statusEffects) {
+    reply.WriteU32Little(ePair.first->GetEffect());
+    reply.WriteS32Little((int32_t)ePair.second);
+    reply.WriteU8(ePair.first->GetStack());
+  }
+
+  // Send back to the whole zone just in case
+  server->GetZoneManager()->BroadcastPacket(client, reply);
+
+  return true;
 }

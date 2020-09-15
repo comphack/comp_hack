@@ -26,9 +26,10 @@
 #define TOOLS_CATHEDRAL_SRC_SERVERSCRIPT_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QWidget>
 
 // libcomp Includes
 #include <CString.h>
@@ -36,32 +37,30 @@
 // Standard C++11 Includes
 #include <list>
 
-namespace Ui
-{
+namespace Ui {
 
 class ServerScript;
 
-} // namespace Ui
+}  // namespace Ui
 
-class ServerScript : public QWidget
-{
-    Q_OBJECT
+class ServerScript : public QWidget {
+  Q_OBJECT
 
-public:
-    explicit ServerScript(QWidget *pParent = 0);
-    virtual ~ServerScript();
+ public:
+  explicit ServerScript(QWidget* pParent = 0);
+  virtual ~ServerScript();
 
-    void SetScriptID(const libcomp::String& scriptID);
-    libcomp::String GetScriptID() const;
+  void SetScriptID(const libcomp::String& scriptID);
+  libcomp::String GetScriptID() const;
 
-    void SetParams(std::list<libcomp::String>& params);
-    std::list<libcomp::String> GetParams() const;
+  void SetParams(std::list<libcomp::String>& params);
+  std::list<libcomp::String> GetParams() const;
 
-protected slots:
-    void ScriptIDChanged();
+ protected slots:
+  void ScriptIDChanged();
 
-protected:
-    Ui::ServerScript *ui;
+ protected:
+  Ui::ServerScript* ui;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_SERVERSCRIPT_H
+#endif  // TOOLS_CATHEDRAL_SRC_SERVERSCRIPT_H

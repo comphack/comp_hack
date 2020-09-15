@@ -41,50 +41,46 @@
 
 using namespace channel;
 
-bool Parsers::BazaarClerkSet::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::BazaarClerkSet::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 2)
-    {
-        return false;
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 2) {
+    return false;
+  }
+
+  int16_t npcType = p.ReadS16Little();
+
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto bState = state->GetBazaarState();
+  auto cState = state->GetCharacterState();
+  auto zone = cState->GetZone();
+
+  auto worldData = state->GetAccountWorldData().Get();
+  auto bazaarData = worldData->GetBazaarData().Get();
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_CLERK_SET);
+
+  if (bazaarData && bState) {
+    if (bazaarData->GetNPCType() != npcType) {
+      bazaarData->SetNPCType(npcType);
+
+      server->GetZoneManager()->SendBazaarMarketData(zone, bState,
+                                                     bazaarData->GetMarketID());
+
+      server->GetWorldDatabase()->QueueUpdate(bazaarData);
     }
 
-    int16_t npcType = p.ReadS16Little();
+    reply.WriteS32Little(0);
+  } else {
+    reply.WriteS32Little(-1);
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto bState = state->GetBazaarState();
-    auto cState = state->GetCharacterState();
-    auto zone = cState->GetZone();
+  client->SendPacket(reply);
 
-    auto worldData = state->GetAccountWorldData().Get();
-    auto bazaarData = worldData->GetBazaarData().Get();
-
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_BAZAAR_CLERK_SET);
-
-    if(bazaarData && bState)
-    {
-        if(bazaarData->GetNPCType() != npcType)
-        {
-            bazaarData->SetNPCType(npcType);
-
-            server->GetZoneManager()->SendBazaarMarketData(zone, bState,
-                bazaarData->GetMarketID());
-
-            server->GetWorldDatabase()->QueueUpdate(bazaarData);
-        }
-
-        reply.WriteS32Little(0);
-    }
-    else
-    {
-        reply.WriteS32Little(-1);
-    }
-
-    client->SendPacket(reply);
-
-    return true;
+  return true;
 }

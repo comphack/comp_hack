@@ -31,57 +31,52 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
- // objects Includes
+// objects Includes
 #include <UBMatch.h>
 
- // channel Includes
+// channel Includes
 #include "ChannelServer.h"
 #include "MatchManager.h"
 #include "ZoneManager.h"
 
 using namespace channel;
 
-bool Parsers::UBLeave::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::UBLeave::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 4)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 4) {
+    return false;
+  }
 
-    uint32_t matchSubType = p.ReadU32Little();
+  uint32_t matchSubType = p.ReadU32Little();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(
-        connection);
-    auto state = client->GetClientState();
-    auto zone = state->GetZone();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto zone = state->GetZone();
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_UB_LEAVE);
-    reply.WriteU32Little(matchSubType);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_UB_LEAVE);
+  reply.WriteU32Little(matchSubType);
 
-    auto ubMatch = zone ? zone->GetUBMatch() : nullptr;
-    if(ubMatch && ubMatch->GetSubType() == matchSubType)
-    {
-        reply.WriteS32Little(0);    // Success
+  auto ubMatch = zone ? zone->GetUBMatch() : nullptr;
+  if (ubMatch && ubMatch->GetSubType() == matchSubType) {
+    reply.WriteS32Little(0);  // Success
 
-        client->QueuePacket(reply);
+    client->QueuePacket(reply);
 
-        auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager
-            ->GetServer());
-        auto zoneManager = server->GetZoneManager();
+    auto server =
+        std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto zoneManager = server->GetZoneManager();
 
-        zoneManager->MoveToLobby(client);
+    zoneManager->MoveToLobby(client);
 
-        client->FlushOutgoing();
-    }
-    else
-    {
-        reply.WriteS32Little(-1);    // Failure
+    client->FlushOutgoing();
+  } else {
+    reply.WriteS32Little(-1);  // Failure
 
-        client->SendPacket(reply);
-    }
+    client->SendPacket(reply);
+  }
 
-    return true;
+  return true;
 }

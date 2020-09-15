@@ -39,37 +39,37 @@
 
 using namespace channel;
 
-bool Parsers::ClanData::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::ClanData::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 8)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 8) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
 
-    int32_t clanID = p.ReadS32Little();
-    int8_t unknown1 = p.ReadS8();
-    int8_t unknown2 = p.ReadS8();
-    libcomp::String message = p.ReadString16Little(
-        state->GetClientStringEncoding(), true);
-    (void)unknown1;
-    (void)unknown2;
+  int32_t clanID = p.ReadS32Little();
+  int8_t unknown1 = p.ReadS8();
+  int8_t unknown2 = p.ReadS8();
+  libcomp::String message =
+      p.ReadString16Little(state->GetClientStringEncoding(), true);
+  (void)unknown1;
+  (void)unknown2;
 
-    libcomp::Packet request;
-    request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
-    request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_UPDATE);
-    request.WriteS32Little(state->GetWorldCID());
-    request.WriteS32Little(clanID);
-    request.WriteS8((int8_t)CharacterLoginStateFlag_t::CHARLOGIN_MESSAGE);
-    request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
-        message, true);
+  libcomp::Packet request;
+  request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);
+  request.WriteU8((int8_t)InternalPacketAction_t::PACKET_ACTION_UPDATE);
+  request.WriteS32Little(state->GetWorldCID());
+  request.WriteS32Little(clanID);
+  request.WriteS8((int8_t)CharacterLoginStateFlag_t::CHARLOGIN_MESSAGE);
+  request.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
+                              message, true);
 
-    server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
+  server->GetManagerConnection()->GetWorldConnection()->SendPacket(request);
 
-    return true;
+  return true;
 }

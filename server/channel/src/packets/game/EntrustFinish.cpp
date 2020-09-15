@@ -42,46 +42,44 @@
 
 using namespace channel;
 
-bool Parsers::EntrustFinish::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::EntrustFinish::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
 
-    if(!exchangeSession)
-    {
-        // Nothing to do
-        return true;
-    }
-
-    characterManager->EndExchange(client, -3);
-    
-    // Since either character can cancel it, check both entities
-    auto otherCState = std::dynamic_pointer_cast<CharacterState>(
-        exchangeSession->GetOtherCharacterState());
-    if(otherCState != cState ||
-        exchangeSession->GetSourceEntityID() != cState->GetEntityID())
-    {
-        auto connectionManager = server->GetManagerConnection();
-        auto otherClient = connectionManager->GetEntityClient(
-            otherCState != cState ? otherCState->GetEntityID()
-            : exchangeSession->GetSourceEntityID(), false);
-        if(otherClient)
-        {
-            characterManager->EndExchange(otherClient, -3);
-        }
-    }
-
+  if (!exchangeSession) {
+    // Nothing to do
     return true;
+  }
+
+  characterManager->EndExchange(client, -3);
+
+  // Since either character can cancel it, check both entities
+  auto otherCState = std::dynamic_pointer_cast<CharacterState>(
+      exchangeSession->GetOtherCharacterState());
+  if (otherCState != cState ||
+      exchangeSession->GetSourceEntityID() != cState->GetEntityID()) {
+    auto connectionManager = server->GetManagerConnection();
+    auto otherClient = connectionManager->GetEntityClient(
+        otherCState != cState ? otherCState->GetEntityID()
+                              : exchangeSession->GetSourceEntityID(),
+        false);
+    if (otherClient) {
+      characterManager->EndExchange(otherClient, -3);
+    }
+  }
+
+  return true;
 }

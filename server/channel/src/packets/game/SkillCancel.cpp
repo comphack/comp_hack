@@ -36,43 +36,44 @@
 
 using namespace channel;
 
-bool Parsers::SkillCancel::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::SkillCancel::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() < 5)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() < 5) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto skillManager = server->GetSkillManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto skillManager = server->GetSkillManager();
 
-    int32_t sourceEntityID = p.ReadS32Little();
-    int8_t activationID = p.ReadS8();
+  int32_t sourceEntityID = p.ReadS32Little();
+  int8_t activationID = p.ReadS8();
 
-    // Load the player entity and let the processer handle it not being ready
-    auto source = state->GetEntityState(sourceEntityID, false);
-    if(!source)
-    {
-        LogSkillManagerError([&]()
-        {
-            return libcomp::String("Invalid skill source sent from client for"
-                " skill cancellation: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-        });
+  // Load the player entity and let the processer handle it not being ready
+  auto source = state->GetEntityState(sourceEntityID, false);
+  if (!source) {
+    LogSkillManagerError([&]() {
+      return libcomp::String(
+                 "Invalid skill source sent from client for skill "
+                 "cancellation: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
 
-        client->Close();
-        return true;
-    }
-
-    server->QueueWork([](SkillManager* pSkillManager, const std::shared_ptr<
-        ActiveEntityState> pSource, int8_t pActivationID)
-        {
-            pSkillManager->CancelSkill(pSource, pActivationID);
-        }, skillManager, source, activationID);
-
+    client->Close();
     return true;
+  }
+
+  server->QueueWork(
+      [](SkillManager* pSkillManager,
+         const std::shared_ptr<ActiveEntityState> pSource,
+         int8_t pActivationID) {
+        pSkillManager->CancelSkill(pSource, pActivationID);
+      },
+      skillManager, source, activationID);
+
+  return true;
 }

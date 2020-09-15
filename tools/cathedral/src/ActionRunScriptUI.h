@@ -32,35 +32,34 @@
 #include <ActionRunScript.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionRunScript;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionRunScript : public Action
-{
-    Q_OBJECT
+class ActionRunScript : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionRunScript(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionRunScript();
+ public:
+  explicit ActionRunScript(ActionList *pList, MainWindow *pMainWindow,
+                           QWidget *pParent = 0);
+  virtual ~ActionRunScript();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected:
-    Ui::ActionRunScript *prop;
+ protected:
+  Ui::ActionRunScript *prop;
 
-    std::shared_ptr<objects::ActionRunScript> mAction;
+  std::shared_ptr<objects::ActionRunScript> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONRUNSCRIPTUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONRUNSCRIPTUI_H

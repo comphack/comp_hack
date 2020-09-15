@@ -44,50 +44,51 @@
 
 using namespace channel;
 
-bool Parsers::TradeLock::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::TradeLock::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
 
-    bool success = false;
+  bool success = false;
 
-    auto otherCState = exchangeSession ? std::dynamic_pointer_cast<CharacterState>(
-        exchangeSession->GetOtherCharacterState()) : nullptr;
-    auto otherClient = otherCState ? server->GetManagerConnection()->GetEntityClient(
-        otherCState->GetEntityID(), false) : nullptr;
-    if(otherClient)
-    {
-        exchangeSession->SetLocked(true);
+  auto otherCState = exchangeSession
+                         ? std::dynamic_pointer_cast<CharacterState>(
+                               exchangeSession->GetOtherCharacterState())
+                         : nullptr;
+  auto otherClient = otherCState
+                         ? server->GetManagerConnection()->GetEntityClient(
+                               otherCState->GetEntityID(), false)
+                         : nullptr;
+  if (otherClient) {
+    exchangeSession->SetLocked(true);
 
-        libcomp::Packet notify;
-        notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_LOCKED);
+    libcomp::Packet notify;
+    notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_LOCKED);
 
-        otherClient->SendPacket(notify);
+    otherClient->SendPacket(notify);
 
-        success = true;
-    }
-    else
-    {
-        characterManager->EndExchange(client);
-    }
+    success = true;
+  } else {
+    characterManager->EndExchange(client);
+  }
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_LOCK);
-    reply.WriteS32Little(success ? 0 : -1);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_LOCK);
+  reply.WriteS32Little(success ? 0 : -1);
 
-    client->SendPacket(reply);
+  client->SendPacket(reply);
 
-    return true;
+  return true;
 }

@@ -42,86 +42,75 @@
 
 using namespace channel;
 
-bool Parsers::EntrustAccept::Parse(libcomp::ManagerPacket *pPacketManager,
+bool Parsers::EntrustAccept::Parse(
+    libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const
-{
-    if(p.Size() != 0)
-    {
-        return false;
-    }
+    libcomp::ReadOnlyPacket& p) const {
+  if (p.Size() != 0) {
+    return false;
+  }
 
-    auto server = std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-    auto characterManager = server->GetCharacterManager();
+  auto server =
+      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto characterManager = server->GetCharacterManager();
 
-    auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto exchangeSession = state->GetExchangeSession();
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto exchangeSession = state->GetExchangeSession();
 
-    auto otherClient = exchangeSession &&
-        exchangeSession->GetSourceEntityID() != cState->GetEntityID()
-        ? server->GetManagerConnection()->GetEntityClient(
-            exchangeSession->GetSourceEntityID(), false) : nullptr;
+  auto otherClient = exchangeSession && exchangeSession->GetSourceEntityID() !=
+                                            cState->GetEntityID()
+                         ? server->GetManagerConnection()->GetEntityClient(
+                               exchangeSession->GetSourceEntityID(), false)
+                         : nullptr;
 
-    EntrustErrorCodes_t responseCode = EntrustErrorCodes_t::SUCCESS;
+  EntrustErrorCodes_t responseCode = EntrustErrorCodes_t::SUCCESS;
 
-    libcomp::Packet reply;
-    reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_ACCEPT);
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_ACCEPT);
 
-    if(!otherClient ||
-        otherClient->GetClientState()->GetExchangeSession() != exchangeSession ||
-        exchangeSession->GetOtherCharacterState() != cState)
-    {
-        responseCode = EntrustErrorCodes_t::SYSTEM_ERROR;
-    }
-    else if(exchangeSession->GetType() == objects::PlayerExchangeSession::Type_t::CRYSTALLIZE)
-    {
-        auto demon = state->GetDemonState()->GetEntity();
-        if(!demon)
-        {
-            responseCode = EntrustErrorCodes_t::INVALID_CHAR_STATE;
+  if (!otherClient ||
+      otherClient->GetClientState()->GetExchangeSession() != exchangeSession ||
+      exchangeSession->GetOtherCharacterState() != cState) {
+    responseCode = EntrustErrorCodes_t::SYSTEM_ERROR;
+  } else if (exchangeSession->GetType() ==
+             objects::PlayerExchangeSession::Type_t::CRYSTALLIZE) {
+    auto demon = state->GetDemonState()->GetEntity();
+    if (!demon) {
+      responseCode = EntrustErrorCodes_t::INVALID_CHAR_STATE;
+    } else if (characterManager->GetFamiliarityRank(demon->GetFamiliarity()) <
+               3) {
+      responseCode = EntrustErrorCodes_t::INVALID_DEMON_TARGET;
+    } else {
+      // Make sure the demon has not been reunioned
+      for (int8_t reunionRank : demon->GetReunion()) {
+        if (reunionRank) {
+          responseCode = EntrustErrorCodes_t::INVALID_DEMON_TARGET;
+          break;
         }
-        else if(characterManager->GetFamiliarityRank(demon->GetFamiliarity()) < 3)
-        {
-            responseCode = EntrustErrorCodes_t::INVALID_DEMON_TARGET;
-        }
-        else
-        {
-            // Make sure the demon has not been reunioned
-            for(int8_t reunionRank : demon->GetReunion())
-            {
-                if(reunionRank)
-                {
-                    responseCode = EntrustErrorCodes_t::INVALID_DEMON_TARGET;
-                    break;
-                }
-            }
-        }
+      }
     }
+  }
 
-    reply.WriteS32Little((int32_t)responseCode);
+  reply.WriteS32Little((int32_t)responseCode);
 
-    client->QueuePacketCopy(reply);
+  client->QueuePacketCopy(reply);
 
-    if(responseCode == EntrustErrorCodes_t::SUCCESS)
-    {
-        otherClient->SendPacketCopy(reply);
+  if (responseCode == EntrustErrorCodes_t::SUCCESS) {
+    otherClient->SendPacketCopy(reply);
 
-        characterManager->SetStatusIcon(client, 8);
-        characterManager->SetStatusIcon(otherClient, 8);
+    characterManager->SetStatusIcon(client, 8);
+    characterManager->SetStatusIcon(otherClient, 8);
+  } else {
+    characterManager->EndExchange(client);
+
+    if (otherClient) {
+      characterManager->EndExchange(otherClient);
     }
-    else
-    {
-        characterManager->EndExchange(client);
+  }
 
-        if(otherClient)
-        {
-            characterManager->EndExchange(otherClient);
-        }
-    }
+  client->FlushOutgoing();
 
-    client->FlushOutgoing();
-
-    return true;
+  return true;
 }

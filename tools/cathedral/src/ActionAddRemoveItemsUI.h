@@ -32,38 +32,37 @@
 #include <ActionAddRemoveItems.h>
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
 
-namespace Ui
-{
+#include <QWidget>
+
+namespace Ui {
 
 class ActionAddRemoveItems;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ActionAddRemoveItems : public Action
-{
-    Q_OBJECT
+class ActionAddRemoveItems : public Action {
+  Q_OBJECT
 
-public:
-    explicit ActionAddRemoveItems(ActionList *pList, MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ActionAddRemoveItems();
+ public:
+  explicit ActionAddRemoveItems(ActionList *pList, MainWindow *pMainWindow,
+                                QWidget *pParent = 0);
+  virtual ~ActionAddRemoveItems();
 
-    void Load(const std::shared_ptr<objects::Action>& act) override;
-    std::shared_ptr<objects::Action> Save() const override;
+  void Load(const std::shared_ptr<objects::Action> &act) override;
+  std::shared_ptr<objects::Action> Save() const override;
 
-protected slots:
-    void ModeChanged();
+ protected slots:
+  void ModeChanged();
 
-protected:
-    Ui::ActionAddRemoveItems *prop;
+ protected:
+  Ui::ActionAddRemoveItems *prop;
 
-    std::shared_ptr<objects::ActionAddRemoveItems> mAction;
+  std::shared_ptr<objects::ActionAddRemoveItems> mAction;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ACTIONADDREMOVEITEMSUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ACTIONADDREMOVEITEMSUI_H

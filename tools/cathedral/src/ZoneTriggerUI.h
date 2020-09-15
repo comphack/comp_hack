@@ -26,43 +26,40 @@
 #define TOOLS_CATHEDRAL_SRC_ZONETRIGGERUI_H
 
 // Qt Includes
-#include <PushIgnore.h>
-#include <QWidget>
 #include <PopIgnore.h>
+#include <PushIgnore.h>
+
+#include <QWidget>
 
 // Standard C++11 Includes
 #include <memory>
 
-namespace objects
-{
+namespace objects {
 
 class ServerZoneTrigger;
 
-} // namespace objects
+}  // namespace objects
 
-namespace Ui
-{
+namespace Ui {
 
 class ZoneTrigger;
 
-} // namespace Ui
+}  // namespace Ui
 
 class MainWindow;
 
-class ZoneTrigger : public QWidget
-{
-    Q_OBJECT
+class ZoneTrigger : public QWidget {
+  Q_OBJECT
 
-public:
-    explicit ZoneTrigger(MainWindow *pMainWindow,
-        QWidget *pParent = 0);
-    virtual ~ZoneTrigger();
+ public:
+  explicit ZoneTrigger(MainWindow *pMainWindow, QWidget *pParent = 0);
+  virtual ~ZoneTrigger();
 
-    void Load(const std::shared_ptr<objects::ServerZoneTrigger>& trigger);
-    std::shared_ptr<objects::ServerZoneTrigger> Save() const;
+  void Load(const std::shared_ptr<objects::ServerZoneTrigger> &trigger);
+  std::shared_ptr<objects::ServerZoneTrigger> Save() const;
 
-protected:
-    Ui::ZoneTrigger *prop;
+ protected:
+  Ui::ZoneTrigger *prop;
 };
 
-#endif // TOOLS_CATHEDRAL_SRC_ZONETRIGGERUI_H
+#endif  // TOOLS_CATHEDRAL_SRC_ZONETRIGGERUI_H

@@ -26,33 +26,29 @@
 
 #include <Crypto.h>
 
-#include <iostream>
 #include <cstdlib>
+#include <iostream>
 
-int main(int argc, char *argv[])
-{
-    if(3 != argc)
-    {
-        std::cerr << "USAGE: " << argv[0] << " IN OUT" << std::endl;
+int main(int argc, char *argv[]) {
+  if (3 != argc) {
+    std::cerr << "USAGE: " << argv[0] << " IN OUT" << std::endl;
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    std::vector<char> data = libcomp::Crypto::LoadFile(argv[1]);
+  std::vector<char> data = libcomp::Crypto::LoadFile(argv[1]);
 
-    if(data.empty())
-    {
-        std::cerr << "Failed to load input file." << std::endl;
+  if (data.empty()) {
+    std::cerr << "Failed to load input file." << std::endl;
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    if(!libcomp::Crypto::EncryptFile(argv[2], data))
-    {
-        std::cerr << "Failed to write output file." << std::endl;
+  if (!libcomp::Crypto::EncryptFile(argv[2], data)) {
+    std::cerr << "Failed to write output file." << std::endl;
 
-        return EXIT_FAILURE;
-    }
+    return EXIT_FAILURE;
+  }
 
-    return EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }

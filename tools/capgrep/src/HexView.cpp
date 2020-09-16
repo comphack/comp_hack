@@ -67,6 +67,7 @@ HexView::HexView(QWidget *p) : QWidget(p), mSelectionActive(false) {
 void HexView::initState(HexViewPaintState &state) const {
   QFontMetrics metrics(mFont);
 
+#if QT_VERSION >= 0x050B00
   state.addrWidth = mMargin.left() + mLinePadding.left();
   state.addrWidth +=
       mAddrPadding.left() + metrics.horizontalAdvance("00000000");
@@ -77,6 +78,17 @@ void HexView::initState(HexViewPaintState &state) const {
 
   state.charWidth = mCharPadding.left() + metrics.horizontalAdvance("0");
   state.charWidth += mCharPadding.right();
+#else
+  state.addrWidth = mMargin.left() + mLinePadding.left();
+  state.addrWidth += mAddrPadding.left() + metrics.width("00000000");
+  state.addrWidth += mAddrPadding.right();
+
+  state.byteWidth = mBytePadding.left() + metrics.width("00");
+  state.byteWidth += mBytePadding.right();
+
+  state.charWidth = mCharPadding.left() + metrics.width("0");
+  state.charWidth += mCharPadding.right();
+#endif
 
   state.binaryX = state.addrWidth + 1 + mBytesPadding.left();
   state.lineHeight = metrics.height();

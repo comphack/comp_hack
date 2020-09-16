@@ -4368,8 +4368,8 @@ bool CharacterManager::UpdateExperience(
 
       int32_t points = 0;
       int32_t bonusCount = 0;
-      for (int8_t lvl = startingLevel; lvl < level; lvl++) {
-        points = points + (int32_t)(floorl((float)lvl / 5) + 2);
+      for (int8_t lvl = (int8_t)(startingLevel + 1); lvl <= level; lvl++) {
+        points = points + (int32_t)((lvl / 5) + 2);
 
         if (bonusChance > 0.f) {
           for (uint8_t i = 0; i < bonusMax; i++) {

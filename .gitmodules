@@ -9,3 +9,6 @@
 	path = libcomp
 	url = ../libcomp.git
 	branch = develop
+[submodule "datastore"]
+	path = datastore
+	url = ../datastore.git

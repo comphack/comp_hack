@@ -43,8 +43,11 @@
 #include "LoggerServer.h"
 
 #ifdef Q_OS_WIN32
-#include <wincrypt.h>
+// Windows Includes
 #include <windows.h>
+
+// Windows Crypto Includes
+#include <wincrypt.h>
 #endif  // Q_OS_WIN32
 
 // Connection magic sent by the client to the server requesting to start the

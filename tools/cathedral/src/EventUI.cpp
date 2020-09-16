@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file tools/cathedral/src/EventUI.cpp
  * @ingroup cathedral
  *

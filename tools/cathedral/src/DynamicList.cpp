@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file tools/cathedral/src/DynamicList.cpp
  * @ingroup cathedral
  *

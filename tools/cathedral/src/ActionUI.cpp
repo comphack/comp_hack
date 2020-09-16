@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file tools/cathedral/src/ActionUI.cpp
  * @ingroup cathedral
  *

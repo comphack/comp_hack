@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file tools/cathedral/src/EventConditionUI.cpp
  * @ingroup cathedral
  *

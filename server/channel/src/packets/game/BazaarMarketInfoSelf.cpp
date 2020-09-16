@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file server/channel/src/packets/game/BazaarMarketInfoSelf.cpp
  * @ingroup channel
  *

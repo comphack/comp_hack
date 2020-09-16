@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file server/channel/src/Zone.cpp
  * @ingroup channel
  *

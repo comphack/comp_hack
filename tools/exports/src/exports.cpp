@@ -36,7 +36,9 @@
 #include <ctime>
 
 // Standard C++ Includes
+#include <array>
 #include <iostream>
+#include <string>
 
 /// Macro to access either the 32-bit or 64-bit PE header.
 #define FileHdr \

@@ -1548,8 +1548,13 @@ void ZoneWindow::ResetNavPoints() {
       QLineF path(point1->GetX(), point1->GetY(), point2->GetX(),
                   point2->GetY());
       for (auto& line : lines) {
+#if QT_VERSION >= 0x050E00
         if (path.intersects(line, &collision) ==
             QLineF::IntersectType::BoundedIntersection) {
+#else
+        if (path.intersect(line, &collision) ==
+            QLineF::IntersectType::BoundedIntersection) {
+#endif
           collides = true;
           break;
         }

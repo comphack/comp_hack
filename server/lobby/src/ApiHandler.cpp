@@ -2007,7 +2007,7 @@ bool ApiHandler::handlePost(CivetServer* pServer,
     if (!session_username.IsEmpty()) {
       // Normal API sessions are stored per username
       {
-        mSessionLock.lock();
+        std::lock_guard<std::mutex> guard(mSessionLock);
 
         auto sessionIterator = mSessions.find(session_username);
 
@@ -2019,8 +2019,6 @@ bool ApiHandler::handlePost(CivetServer* pServer,
 
           mSessions[session_username] = session;
         }
-
-        mSessionLock.unlock();
       }
 
       if ("/auth/get_challenge" == method || "/account/register" == method ||
@@ -2058,13 +2056,11 @@ bool ApiHandler::handlePost(CivetServer* pServer,
       auto app = parts.front();
       auto appMethod = parts.back();
 
-      session->requestLock->lock();
+      std::lock_guard<std::mutex> guard(*session->requestLock);
 
       if (!WebApp_Request(app, appMethod, obj, response, session)) {
         badRequest = true;
       }
-
-      session->requestLock->unlock();
     } else {
       badRequest = true;
     }
@@ -2086,7 +2082,7 @@ bool ApiHandler::handlePost(CivetServer* pServer,
     }
 
     // Lock the mutex while processing the request
-    session->requestLock->lock();
+    std::lock_guard<std::mutex> guard(*session->requestLock);
 
     if (!it->second(*this, obj, response, session)) {
       mg_printf(pConnection,
@@ -2094,8 +2090,6 @@ bool ApiHandler::handlePost(CivetServer* pServer,
 
       return true;
     }
-
-    session->requestLock->unlock();
   }
 
   JsonBox::Value responseValue(response);

@@ -69,6 +69,13 @@ Q_IMPORT_PLUGIN(qgif)
 QList<QTranslator *> gTranslators;
 #endif  // COMP_HACK_HEADLESS
 
+#ifdef _WIN32
+extern "C" {
+__declspec(dllexport) int NvOptimusEnablement = 1;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+#endif
+
 int main(int argc, char *argv[]) {
 #ifdef COMP_HACK_HEADLESS
   QCoreApplication app(argc, argv);

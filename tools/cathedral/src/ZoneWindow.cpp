@@ -736,7 +736,8 @@ bool ZoneWindow::eventFilter(QObject* o, QEvent* e) {
        o == ui.mapScrollArea->verticalScrollBar())) {
     // Override mouse wheel to zoom for scroll area
     QWheelEvent* we = static_cast<QWheelEvent*>(e);
-    ui.zoomSlider->setValue(ui.zoomSlider->value() + (we->delta() / 20));
+    ui.zoomSlider->setValue(ui.zoomSlider->value() +
+                            (we->angleDelta().y() / 20));
 
     return true;
   }
@@ -1547,7 +1548,7 @@ void ZoneWindow::ResetNavPoints() {
       QLineF path(point1->GetX(), point1->GetY(), point2->GetX(),
                   point2->GetY());
       for (auto& line : lines) {
-        if (path.intersect(line, &collision) ==
+        if (path.intersects(line, &collision) ==
             QLineF::IntersectType::BoundedIntersection) {
           collides = true;
           break;
@@ -2196,10 +2197,10 @@ QTreeWidgetItem* ZoneWindow::GetBoundaryNode(
     item->setText(5, libcomp::String("%1").Arg(boundary->NavPointsCount()).C());
 
     if (boundary->LinesCount() > 50) {
-      item->setTextColor(4, QColor(Qt::red));
+      item->setForeground(4, QColor(Qt::red));
     }
   } else {
-    item->setTextColor(0, QColor(Qt::red));
+    item->setForeground(0, QColor(Qt::red));
   }
 
   return item;

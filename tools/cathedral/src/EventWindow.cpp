@@ -309,7 +309,7 @@ bool EventWindow::GoToEvent(const libcomp::String& eventID) {
         ui->treeWidget->blockSignals(old);
 
         // Select new item and display (if not already)
-        ui->treeWidget->setItemSelected(treeItem, true);
+        treeItem->setSelected(true);
 
         // Expand everything above the node then scroll to it
         auto parent = treeItem->parent();
@@ -2079,7 +2079,7 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
             1, qs(libcomp::String("External Reference to %1").Arg(it->second)));
       } else {
         item->setText(1, "Event not found");
-        item->setTextColor(1, QColor(255, 0, 0));
+        item->setForeground(1, QColor(255, 0, 0));
       }
     }
 
@@ -2115,7 +2115,7 @@ void EventWindow::AddEventToTree(const libcomp::String& id,
     item->FirstFileRef = true;
 
     item->setText(0, qs(libcomp::String("%1 [Duplicate]").Arg(id)));
-    item->setTextColor(0, QColor(255, 0, 0));
+    item->setForeground(0, QColor(255, 0, 0));
 
     if ((*eIter)->HasUpdates) {
       QFont font;

@@ -116,7 +116,7 @@ std::set<uint32_t> ZonePartialSelector::Select() {
   int rowCount = ui->tableWidget->rowCount();
   for (int i = 0; i < rowCount; i++) {
     auto item = ui->tableWidget->item(i, 0);
-    if (ui->tableWidget->isItemSelected(item)) {
+    if (item->isSelected()) {
       selection.insert(item->text().toUInt());
     }
   }

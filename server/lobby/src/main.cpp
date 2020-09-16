@@ -156,7 +156,7 @@ int main(int argc, const char *argv[])
     pWebServer->addHandler("/", pLoginHandler);
     pWebServer->addHandler("/api", pApiHandler);
     pWebServer->addHandler("/import", pImportHandler);
-  } catch (CivetException e) {
+  } catch (const CivetException &e) {
     LogGeneralCritical([&]() {
       return libcomp::String(
                  "The lobby API server failed to start with the following "

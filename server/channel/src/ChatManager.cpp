@@ -2894,7 +2894,7 @@ bool ChatManager::GMCommand_Quest(
   auto server = mServer.lock();
   auto definitionManager = server->GetDefinitionManager();
 
-  uint32_t questID;
+  uint32_t questID = 0;
   bool validQuestID = GetIntegerArg<uint32_t>(questID, argsCopy);
   auto questData =
       validQuestID ? definitionManager->GetQuestData(questID) : nullptr;

@@ -68,13 +68,14 @@ void HexView::initState(HexViewPaintState &state) const {
   QFontMetrics metrics(mFont);
 
   state.addrWidth = mMargin.left() + mLinePadding.left();
-  state.addrWidth += mAddrPadding.left() + metrics.width("00000000");
+  state.addrWidth +=
+      mAddrPadding.left() + metrics.horizontalAdvance("00000000");
   state.addrWidth += mAddrPadding.right();
 
-  state.byteWidth = mBytePadding.left() + metrics.width("00");
+  state.byteWidth = mBytePadding.left() + metrics.horizontalAdvance("00");
   state.byteWidth += mBytePadding.right();
 
-  state.charWidth = mCharPadding.left() + metrics.width("0");
+  state.charWidth = mCharPadding.left() + metrics.horizontalAdvance("0");
   state.charWidth += mCharPadding.right();
 
   state.binaryX = state.addrWidth + 1 + mBytesPadding.left();

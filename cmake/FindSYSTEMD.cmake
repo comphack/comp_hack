@@ -24,7 +24,7 @@
 #=============================================================================
 
 include(FeatureSummary)
-set_package_properties(Systemd PROPERTIES
+set_package_properties(SYSTEMD PROPERTIES
    URL "http://freedesktop.org/wiki/Software/systemd/"
    DESCRIPTION "System and Service Manager")
 

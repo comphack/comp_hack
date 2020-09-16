@@ -40,7 +40,7 @@
 // Stop ignoring warnings
 #include <PopIgnore.h>
 
-#define tr(s) QObject::trUtf8(s)
+#define tr(s) QObject::tr(s)
 
 void action0014(PacketData* d, libcomp::Packet& p,
                 libcomp::Packet& packetBefore) {

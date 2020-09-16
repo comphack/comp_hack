@@ -24,6 +24,9 @@ REMOVE_COMPILER_FLAGS(AUTO -Wextra -Wconversion -Wsign-conversion)
 # 'GetVersionExA': was declared deprecated
 ADD_COMPILER_FLAGS(AUTO /wd4996)
 
+# Don't warn about this
+ADD_COMPILER_FLAGS(AUTO -Wno-return-local-addr)
+
 ADD_LIBRARY(${PROJECT_NAME} STATIC sqlite3.c)
 
 TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} INTERFACE

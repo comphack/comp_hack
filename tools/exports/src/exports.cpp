@@ -102,12 +102,12 @@ bool MyPEFile::WriteExports(std::vector<char> &file) {
 
   std::vector<char> strData;
 
-  std::array<std::string, 3> strings = {
+  std::array<std::string, 3> strings = {{
       // "ImagineOption.exe",
       "ImagineClient.exe",
       "AmdPowerXpressRequestHighPerformance",
       "NvOptimusEnablement",
-  };
+  }};
 
   uint32_t strRVAs[] = {
       0,

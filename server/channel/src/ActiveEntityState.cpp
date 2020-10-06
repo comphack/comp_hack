@@ -1818,7 +1818,7 @@ void ActiveEntityState::ResetAIIgnored() {
 void ActiveEntityState::SetNextEffectTime(uint32_t effectType, uint32_t time) {
   // Only erase if a non-system effect
   if (effectType) {
-    for (auto pair : mNextEffectTimes) {
+    for (auto& pair : mNextEffectTimes) {
       // Skip non-system times
       if (pair.first <= 3) continue;
 

@@ -20,7 +20,7 @@ IF(USE_EXTERNAL_BINARIES)
 
     ADD_CUSTOM_TARGET(jsonbox-ex)
 
-    SET(INSTALL_DIR "${CMAKE_SOURCE_DIR}/binaries/jsonbox")
+    SET(INSTALL_DIR "${BINARIES_PATH}/jsonbox")
 
     SET(JSONBOX_INCLUDE_DIRS "${INSTALL_DIR}/include")
 

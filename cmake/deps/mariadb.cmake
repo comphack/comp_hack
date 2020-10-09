@@ -36,7 +36,7 @@ ELSEIF(USE_EXTERNAL_BINARIES)
 
     ADD_CUSTOM_TARGET(mariadb)
 
-    SET(INSTALL_DIR "${CMAKE_SOURCE_DIR}/binaries/mariadb")
+    SET(INSTALL_DIR "${BINARIES_PATH}/mariadb")
 
     SET(MARIADB_INCLUDE_DIRS "${INSTALL_DIR}/include/mariadb")
 

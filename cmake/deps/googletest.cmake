@@ -20,7 +20,7 @@ IF(USE_EXTERNAL_BINARIES)
 
     ADD_CUSTOM_TARGET(googletest)
 
-    SET(INSTALL_DIR "${CMAKE_SOURCE_DIR}/binaries/googletest")
+    SET(INSTALL_DIR "${BINARIES_PATH}/googletest")
 
     SET(GTEST_INCLUDE_DIRS "${INSTALL_DIR}/include")
 

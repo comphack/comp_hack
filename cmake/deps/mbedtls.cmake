@@ -20,7 +20,7 @@ IF(USE_EXTERNAL_BINARIES)
 
     ADD_CUSTOM_TARGET(mbedtls-ex)
 
-    SET(INSTALL_DIR "${CMAKE_SOURCE_DIR}/binaries/mbedtls")
+    SET(INSTALL_DIR "${BINARIES_PATH}/mbedtls")
 
     SET(MBEDTLS_INCLUDE_DIRS "${INSTALL_DIR}/include")
 

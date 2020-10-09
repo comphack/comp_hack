@@ -108,6 +108,9 @@ void SendStateData(std::shared_ptr<ChannelServer> server,
 
     chatManager->SendChatMessage(
         client, ChatType_t::CHAT_SELF,
+        "This server runs on the COMP_hack open source software.");
+    chatManager->SendChatMessage(
+        client, ChatType_t::CHAT_SELF,
         "Type @version or @license for more information.");
   }
 

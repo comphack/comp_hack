@@ -302,6 +302,20 @@ void Downloader::requestFinished() {
   mFileHash->addData(data);
   mData.append(data);
 
+  if (mData.isEmpty()) {
+    // For some reason we got no data
+    log(tr("-- BEGIN HEADER --"));
+    for (auto header : mCurrentReq->rawHeaderList()) {
+      log(tr("Header: %1").arg(QString::fromUtf8(header)));
+    }
+    log(tr("-- END HEADER --"));
+    log(tr("Connection closed but no bytes received"));
+
+    requestError(QNetworkReply::TimeoutError);
+    mCurrentReq = 0;
+    return;
+  }
+
   if (!data.isEmpty()) {
     log(tr("Read %1 bytes of data").arg(data.size()));
   }
@@ -619,8 +633,9 @@ void Downloader::startDownload(const QString &url, const QString &path) {
 
   mStatusCode = 0;
 
-  if (mActiveURL == url || mActivePath == path) {
+  if (mActiveURL == url && mActivePath == path) {
     mActiveRetries--;
+    log(tr("There is %1 retries left before giving up").arg(mActiveRetries));
   } else {
     mActiveRetries = 5;
     mActiveURL = url;
@@ -657,4 +672,5 @@ void Downloader::log(const QString &msg) {
                  .arg(QDateTime::currentDateTime().toString(Qt::ISODate))
                  .arg(msg)
                  .toLocal8Bit());
+  mLog.flush();
 }

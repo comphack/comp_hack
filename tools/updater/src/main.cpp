@@ -47,6 +47,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QLibraryInfo>
+#include <QMessageBox>
 #include <QProcess>
 #include <QTranslator>
 #include <QtPlugin>
@@ -124,8 +125,15 @@ int main(int argc, char *argv[]) {
 
   // Make the copy, start it, and exit
   if (!isCopy) {
-    // Copy the updater
-    QFile(normal).copy(copy);
+    // Copy the updater and warn if that failed.
+    if (!QFile(normal).copy(copy)) {
+      QMessageBox::critical(
+          0, QObject::tr("Failed Start"),
+          QObject::tr("Failed to start the updater. Make sure the "
+                      "_ImagineUpdate.exe file is deleted and try again."));
+
+      return 0;
+    }
 
     // Start the copy
     QProcess::startDetached(copy, QStringList(), path);

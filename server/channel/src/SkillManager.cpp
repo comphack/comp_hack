@@ -8322,7 +8322,7 @@ uint8_t SkillManager::GetCritLevel(
 
     critRate = (float)((floor((float)critValue * 0.2f) *
                         (1.f + ((float)critValue * 0.01f)) /
-                        (float)(critDef1 * critDef2)) *
+                        (float)(std::max((critDef1 * critDef2), 1))) *
                            100.f +
                        (float)critFinal);
   } else {

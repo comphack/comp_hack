@@ -1618,12 +1618,28 @@ bool SkillManager::ValidateActivationItem(
     if (!itemDef) {
       return false;
     }
+    auto state = ClientState::GetEntityClientState(source->GetEntityID());
 
     auto restr = itemDef->GetRestriction();
     if (restr->GetLevel()) {
       if (restr->GetLevel() > 100) {
-        // Level must be less than or equal to limit - 100
-        valid &= source->GetLevel() <= (int8_t)(restr->GetLevel() - 100);
+        // Maximum level restriction; check if equippable.
+        auto equipType = itemDef->GetBasic()->GetEquipType();
+
+        if(equipType != objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE) {
+          // Equippable; check if the item is equipped.
+          if(state) {
+            if (state->GetCharacterState()->GetEntity()->GetEquippedItems((size_t)equipType).Get() != item) {
+              // Not equipped; level must be less than or equal to limit - 100
+              valid &= source->GetLevel() <= (int8_t)(restr->GetLevel() - 100);
+            }
+          } else {
+            return false;
+          }
+        } else {
+          // Not equippable; level must be less than or equal to limit - 100
+          valid &= source->GetLevel() <= (int8_t)(restr->GetLevel() - 100);
+        }
       } else {
         // Level must be greater than or equal to limit
         valid &= source->GetLevel() >= (int8_t)restr->GetLevel();
@@ -1650,7 +1666,6 @@ bool SkillManager::ValidateActivationItem(
 
     auto pvp = itemDef->GetPvp();
     if (pvp->GetGPRequirement() > 0) {
-      auto state = ClientState::GetEntityClientState(source->GetEntityID());
       if (state) {
         auto pvpData =
             state->GetCharacterState()->GetEntity()->GetPvPData().Get();

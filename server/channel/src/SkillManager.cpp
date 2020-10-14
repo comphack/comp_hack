@@ -1618,26 +1618,29 @@ bool SkillManager::ValidateActivationItem(
     if (!itemDef) {
       return false;
     }
-    auto state = ClientState::GetEntityClientState(source->GetEntityID());
 
     auto restr = itemDef->GetRestriction();
     if (restr->GetLevel()) {
       if (restr->GetLevel() > 100) {
-        // Maximum level restriction; check if equippable.
+        // Maximum level restriction; check if equipped.
+        bool equipped = false;
         auto equipType = itemDef->GetBasic()->GetEquipType();
 
-        if(equipType != objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE) {
+        if (equipType !=
+            objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE) {
           // Equippable; check if the item is equipped.
-          if(state) {
-            if (state->GetCharacterState()->GetEntity()->GetEquippedItems((size_t)equipType).Get() != item) {
-              // Not equipped; level must be less than or equal to limit - 100
-              valid &= source->GetLevel() <= (int8_t)(restr->GetLevel() - 100);
-            }
+          auto state = ClientState::GetEntityClientState(source->GetEntityID());
+          if (state) {
+            equipped = state->GetCharacterState()
+                           ->GetEntity()
+                           ->GetEquippedItems((size_t)equipType)
+                           .Get() == item;
           } else {
-            return false;
+            valid = false;
           }
-        } else {
-          // Not equippable; level must be less than or equal to limit - 100
+        }
+        if (!equipped) {
+          // Not equipped; level must be less than or equal to limit - 100
           valid &= source->GetLevel() <= (int8_t)(restr->GetLevel() - 100);
         }
       } else {
@@ -1666,6 +1669,7 @@ bool SkillManager::ValidateActivationItem(
 
     auto pvp = itemDef->GetPvp();
     if (pvp->GetGPRequirement() > 0) {
+      auto state = ClientState::GetEntityClientState(source->GetEntityID());
       if (state) {
         auto pvpData =
             state->GetCharacterState()->GetEntity()->GetPvPData().Get();

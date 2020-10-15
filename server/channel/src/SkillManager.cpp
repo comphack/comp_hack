@@ -5688,7 +5688,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
       if (statusAdjusts.size() > 0) {
         double rateBoost = 0.0;
         // A STATUS_INFLICT_ADJUST value of 0 boosts all inflicts
-        auto it = statusAdjusts.find((int32_t)0);
+        auto it = statusAdjusts.find(0);
         if (it != statusAdjusts.end()) {
           rateBoost += it->second;
         }

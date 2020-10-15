@@ -2,6 +2,7 @@
 
 export ROOT_DIR="${TRAVIS_BUILD_DIR}"
 export CACHE_DIR="${TRAVIS_BUILD_DIR}/cache"
+export CHECKSUM_DIR="${TRAVIS_BUILD_DIR}/ci/checksums"
 
 export DOXYGEN_VERSION=1.8.14
 export DOXYGEN_EXTERNAL_RELEASE=external-25
@@ -104,4 +105,16 @@ function dropbox_upload {
 
 function dropbox_upload_rel {
     dropbox-deployment -d -e "$DROPBOX_ENV" -u comp_hack -a "$1" --max-files 2 --max-days 5
+}
+
+function check_or_download {
+    if ! sha1sum -c "${CHECKSUM_DIR}/$2.sha1" &> /dev/null; then
+        echo "Downloading $2"
+        rm -f "$2"
+        curl -L -o "$2" "$1"
+        if ! sha1sum -c "${CHECKSUM_DIR}/$2.sha1" &> /dev/null; then
+            echo "Failed to download $2"
+            exit 1
+        fi
+    fi
 }

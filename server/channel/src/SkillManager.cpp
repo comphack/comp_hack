@@ -1619,44 +1619,63 @@ bool SkillManager::ValidateActivationItem(
       return false;
     }
 
-    auto restr = itemDef->GetRestriction();
-    if (restr->GetLevel()) {
-      if (restr->GetLevel() > 100) {
-        // Level must be less than or equal to limit - 100
-        valid &= source->GetLevel() <= (int8_t)(restr->GetLevel() - 100);
+    // Id item is already equipped, allow it to be unequipped.
+    bool equipped = false;
+    auto equipType = itemDef->GetBasic()->GetEquipType();
+    if (equipType != objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE) {
+      // Equippable; check if the item is equipped.
+      auto state = ClientState::GetEntityClientState(source->GetEntityID());
+      if (state) {
+        equipped = state->GetCharacterState()
+                       ->GetEntity()
+                       ->GetEquippedItems((size_t)equipType)
+                       .Get() == item;
       } else {
-        // Level must be greater than or equal to limit
-        valid &= source->GetLevel() >= (int8_t)restr->GetLevel();
+        valid = false;
       }
     }
 
-    switch (restr->GetAlignment()) {
-      case objects::MiUseRestrictionsData::Alignment_t::LAW:
-        valid &= source->GetLNCType() == LNC_LAW;
-        break;
-      case objects::MiUseRestrictionsData::Alignment_t::NEUTRAL:
-        valid &= source->GetLNCType() == LNC_NEUTRAL;
-        break;
-      case objects::MiUseRestrictionsData::Alignment_t::CHAOS:
-        valid &= source->GetLNCType() == LNC_CHAOS;
-        break;
-      default:
-        break;
-    }
+    // The item is not currently equipped, so check restrictions.
+    if (valid && !equipped) {
+      auto restr = itemDef->GetRestriction();
+      if (restr->GetLevel()) {
+        if (restr->GetLevel() > 100) {
+          // Level must be less than or equal to limit - 100
+          valid &= source->GetLevel() <= (int8_t)(restr->GetLevel() - 100);
+        } else {
+          // Level must be greater than or equal to limit
+          valid &= source->GetLevel() >= (int8_t)restr->GetLevel();
+        }
+      }
 
-    if (restr->GetGender() != GENDER_NA) {
-      valid &= source->GetGender() == restr->GetGender();
-    }
+      switch (restr->GetAlignment()) {
+        case objects::MiUseRestrictionsData::Alignment_t::LAW:
+          valid &= source->GetLNCType() == LNC_LAW;
+          break;
+        case objects::MiUseRestrictionsData::Alignment_t::NEUTRAL:
+          valid &= source->GetLNCType() == LNC_NEUTRAL;
+          break;
+        case objects::MiUseRestrictionsData::Alignment_t::CHAOS:
+          valid &= source->GetLNCType() == LNC_CHAOS;
+          break;
+        default:
+          break;
+      }
 
-    auto pvp = itemDef->GetPvp();
-    if (pvp->GetGPRequirement() > 0) {
-      auto state = ClientState::GetEntityClientState(source->GetEntityID());
-      if (state) {
-        auto pvpData =
-            state->GetCharacterState()->GetEntity()->GetPvPData().Get();
-        valid &= pvpData && pvpData->GetGP() >= pvp->GetGPRequirement();
-      } else {
-        valid = false;
+      if (restr->GetGender() != GENDER_NA) {
+        valid &= source->GetGender() == restr->GetGender();
+      }
+
+      auto pvp = itemDef->GetPvp();
+      if (pvp->GetGPRequirement() > 0) {
+        auto state = ClientState::GetEntityClientState(source->GetEntityID());
+        if (state) {
+          auto pvpData =
+              state->GetCharacterState()->GetEntity()->GetPvPData().Get();
+          valid &= pvpData && pvpData->GetGP() >= pvp->GetGPRequirement();
+        } else {
+          valid = false;
+        }
       }
     }
 
@@ -5667,9 +5686,15 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
       }
 
       if (statusAdjusts.size() > 0) {
-        // Boost success by direct inflict adjust
         double rateBoost = 0.0;
-        auto it = statusAdjusts.find((int32_t)effectID);
+        // A STATUS_INFLICT_ADJUST value of 0 boosts all inflicts
+        auto it = statusAdjusts.find(0);
+        if (it != statusAdjusts.end()) {
+          rateBoost += it->second;
+        }
+
+        // Boost success by direct inflict adjust
+        it = statusAdjusts.find((int32_t)effectID);
         if (it != statusAdjusts.end()) {
           rateBoost += it->second;
         }
@@ -8322,7 +8347,7 @@ uint8_t SkillManager::GetCritLevel(
 
     critRate = (float)((floor((float)critValue * 0.2f) *
                         (1.f + ((float)critValue * 0.01f)) /
-                        (float)(critDef1 * critDef2)) *
+                        (float)(std::max((critDef1 * critDef2), 1))) *
                            100.f +
                        (float)critFinal);
   } else {

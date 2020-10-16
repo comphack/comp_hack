@@ -108,11 +108,11 @@ function dropbox_upload_rel {
 }
 
 function check_or_download {
-    if ! sha1sum -c "${CHECKSUM_DIR}/$2.sha1" &> /dev/null; then
+    if ! sha1sum -c "${CHECKSUM_DIR}/$2.sha1"; then
         rm -f "$2"
         echo "Downloading $2 from $1"
         curl -L -o "$2" "$1"
-        if ! sha1sum -c "${CHECKSUM_DIR}/$2.sha1" &> /dev/null; then
+        if ! sha1sum -c "${CHECKSUM_DIR}/$2.sha1"; then
             echo "Failed to download $2"
             exit 1
         fi

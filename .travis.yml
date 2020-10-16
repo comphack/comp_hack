@@ -4,6 +4,9 @@ cache:
   directories:
     - cache
 
+git:
+  autocrlf: false
+
 env:
   global:
     # Encrypt using a similar command:

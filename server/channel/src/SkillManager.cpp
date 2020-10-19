@@ -3581,8 +3581,8 @@ void SkillManager::ProcessSkillResultFinal(
                                TokuseiAspectType::KNOCKBACK_NULL, targetCalc) *
                            100;
 
-          if (!(kbNull &&
-                (kbNull >= 10000 || RNG(int32_t, 1, 10000) <= kbNull))) {
+          if (!kbNull ||
+                !(kbNull >= 10000 || RNG(int32_t, 1, 10000) <= kbNull)) {
             // Knockback not nullified, apply knockback itself
             target.Flags1 |= FLAG1_KNOCKBACK;
             target.EffectCancellations |= EFFECT_CANCEL_KNOCKBACK;

@@ -296,6 +296,7 @@ class channel::SkillTargetResult {
   uint8_t NRAAffinity = 0;
   bool CanHitstun = false;
   bool CanKnockback = false;
+  bool applyKnockbackStatuses = false;
   bool AutoProtect = false;
   bool ClenchOverflow = false;
   uint16_t GuardModifier = 0;
@@ -3548,12 +3549,6 @@ void SkillManager::ProcessSkillResultFinal(
               source, TokuseiAspectType::KNOCKBACK_REMOVE, calcState) *
           100;
 
-      // Check if the target nulls knockback
-      int32_t kbNull = (int32_t)tokuseiManager->GetAspectSum(
-                           target.EntityState,
-                           TokuseiAspectType::KNOCKBACK_NULL, targetCalc) *
-                       100;
-
       target.CanKnockback = true;
       if (target.EntityState->StatusRestrictKnockbackCount() > 0) {
         // Target knockback locked by status
@@ -3561,10 +3556,6 @@ void SkillManager::ProcessSkillResultFinal(
       } else if (kbRemove &&
                  (kbRemove >= 10000 || RNG(int32_t, 1, 10000) <= kbRemove)) {
         // Source nulls knockback
-        target.CanKnockback = false;
-      } else if (kbNull &&
-                 (kbNull >= 10000 || RNG(int32_t, 1, 10000) <= kbNull)) {
-        // Target nulls knockback
         target.CanKnockback = false;
       }
 
@@ -3575,14 +3566,29 @@ void SkillManager::ProcessSkillResultFinal(
                         TokuseiAspectType::KNOCKBACK_RECOVERY, targetCalc) *
                     0.01);
 
-        // Hard strikes are instant knockbacks if we get here
+        // Hard strikes are instant knockbacks if we get here, provided the
+        // target does not null knockback
         float kb = target.EntityState->UpdateKnockback(
             now, skill.HardStrike ? -1.f : kbMod, kbRecoverBoost);
         if (kb == 0.f) {
-          target.Flags1 |= FLAG1_KNOCKBACK;
-          target.EffectCancellations |= EFFECT_CANCEL_KNOCKBACK;
-          target.CanHitstun = true;
-          knockbackExists = true;
+          // STATUS_ADD_KNOCKBACK effects will apply, regardless if target nulls
+          // knockback
+          target.applyKnockbackStatuses = true;
+
+          // Check if the target nulls knockback
+          int32_t kbNull = (int32_t)tokuseiManager->GetAspectSum(
+                               target.EntityState,
+                               TokuseiAspectType::KNOCKBACK_NULL, targetCalc) *
+                           100;
+
+          if (!(kbNull &&
+                (kbNull >= 10000 || RNG(int32_t, 1, 10000) <= kbNull))) {
+            // Knockback not nullified, apply knockback itself
+            target.Flags1 |= FLAG1_KNOCKBACK;
+            target.EffectCancellations |= EFFECT_CANCEL_KNOCKBACK;
+            target.CanHitstun = true;
+            knockbackExists = true;
+          }
         }
       }
     }
@@ -5527,8 +5533,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
   std::set<uint32_t> maxRates;
   for (auto addStatus : directStatuses) {
     uint32_t effectID = addStatus->GetStatusID();
-    if (!addStatus->GetOnKnockback() ||
-        (target.Flags1 & FLAG1_KNOCKBACK) != 0) {
+    if (!addStatus->GetOnKnockback() || target.applyKnockbackStatuses) {
       addStatusMap[effectID] = (double)addStatus->GetSuccessRate();
       addStatusDefs[effectID] = addStatus;
       if (addStatus->GetSuccessRate() >= 100) {
@@ -5556,7 +5561,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
   }
 
   // If a knockback occurred, add bonus knockback status effects from tokusei
-  if ((target.Flags1 & FLAG1_KNOCKBACK) != 0) {
+  if (target.applyKnockbackStatuses) {
     for (auto addStatus : mServer.lock()->GetTokuseiManager()->GetAspectMap(
              source, TokuseiAspectType::KNOCKBACK_STATUS_ADD, sourceCalc)) {
       uint32_t effectID = (uint32_t)addStatus.first;

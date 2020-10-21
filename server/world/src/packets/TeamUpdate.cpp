@@ -301,10 +301,10 @@ bool Parsers::TeamUpdate::Parse(
     } break;
     case InternalPacketAction_t::PACKET_ACTION_GROUP_LEAVE: {
       // Leave current team and party
-      if(cLogin->GetPartyID()) {
+      characterManager->TeamLeave(cLogin);
+      if (cLogin->GetPartyID()) {
         characterManager->PartyLeave(cLogin, connection);
       }
-      characterManager->TeamLeave(cLogin);
     } break;
     case InternalPacketAction_t::PACKET_ACTION_GROUP_LEADER_UPDATE: {
       // Update team leader

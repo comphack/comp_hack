@@ -1791,7 +1791,7 @@ void CharacterManager::TeamKick(std::shared_ptr<objects::CharacterLogin> cLogin,
         // Remove them from their party, as the only way they are in one is if
         // they're part of a Cathedral team
         if (targetLogin->GetPartyID()) {
-          PartyKick(cLogin, targetCID);
+          PartyLeave(targetLogin, nullptr);
         }
       }
     }

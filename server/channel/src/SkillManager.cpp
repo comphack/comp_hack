@@ -295,7 +295,6 @@ class channel::SkillTargetResult {
   bool HitAbsorb = false;
   uint8_t NRAAffinity = 0;
   bool CanHitstun = false;
-  bool CanKnockback = false;
   bool ApplyAddedKnockbackEffects = false;
   bool AutoProtect = false;
   bool ClenchOverflow = false;
@@ -3549,17 +3548,9 @@ void SkillManager::ProcessSkillResultFinal(
               source, TokuseiAspectType::KNOCKBACK_REMOVE, calcState) *
           100;
 
-      target.CanKnockback = true;
-      if (target.EntityState->StatusRestrictKnockbackCount() > 0) {
-        // Target knockback locked by status
-        target.CanKnockback = false;
-      } else if (kbRemove &&
-                 (kbRemove >= 10000 || RNG(int32_t, 1, 10000) <= kbRemove)) {
-        // Source nulls knockback
-        target.CanKnockback = false;
-      }
-
-      if (target.CanKnockback) {
+      if (!kbRemove ||
+          !(kbRemove >= 10000 || RNG(int32_t, 1, 10000) <= kbRemove)) {
+        // Source does not remove knockback, so continue
         float kbRecoverBoost =
             (float)(tokuseiManager->GetAspectSum(
                         target.EntityState,
@@ -3581,9 +3572,11 @@ void SkillManager::ProcessSkillResultFinal(
                                TokuseiAspectType::KNOCKBACK_NULL, targetCalc) *
                            100;
 
-          if (!kbNull ||
-              !(kbNull >= 10000 || RNG(int32_t, 1, 10000) <= kbNull)) {
-            // Knockback not nullified, apply knockback itself
+          if (target.EntityState->StatusRestrictKnockbackCount() <= 0 &&
+              (!kbNull ||
+               !(kbNull >= 10000 || RNG(int32_t, 1, 10000) <= kbNull))) {
+            // Knockback not restricted by target's status or nullified by the
+            // target, apply knockback itself
             target.Flags1 |= FLAG1_KNOCKBACK;
             target.EffectCancellations |= EFFECT_CANCEL_KNOCKBACK;
             target.CanHitstun = true;

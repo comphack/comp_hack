@@ -303,7 +303,7 @@ bool Parsers::TeamUpdate::Parse(
       // Leave current team and party
       characterManager->TeamLeave(cLogin);
       if (cLogin->GetPartyID()) {
-        characterManager->PartyLeave(cLogin, connection);
+        characterManager->PartyLeave(cLogin, nullptr);
       }
     } break;
     case InternalPacketAction_t::PACKET_ACTION_GROUP_LEADER_UPDATE: {

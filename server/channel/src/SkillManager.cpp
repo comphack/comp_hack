@@ -296,7 +296,7 @@ class channel::SkillTargetResult {
   uint8_t NRAAffinity = 0;
   bool CanHitstun = false;
   bool CanKnockback = false;
-  bool applyKnockbackStatuses = false;
+  bool ApplyAddedKnockbackEffects = false;
   bool AutoProtect = false;
   bool ClenchOverflow = false;
   uint16_t GuardModifier = 0;
@@ -3573,7 +3573,7 @@ void SkillManager::ProcessSkillResultFinal(
         if (kb == 0.f) {
           // STATUS_ADD_KNOCKBACK effects will apply, regardless if target nulls
           // knockback
-          target.applyKnockbackStatuses = true;
+          target.ApplyAddedKnockbackEffects = true;
 
           // Check if the target nulls knockback
           int32_t kbNull = (int32_t)tokuseiManager->GetAspectSum(
@@ -3582,7 +3582,7 @@ void SkillManager::ProcessSkillResultFinal(
                            100;
 
           if (!kbNull ||
-                !(kbNull >= 10000 || RNG(int32_t, 1, 10000) <= kbNull)) {
+              !(kbNull >= 10000 || RNG(int32_t, 1, 10000) <= kbNull)) {
             // Knockback not nullified, apply knockback itself
             target.Flags1 |= FLAG1_KNOCKBACK;
             target.EffectCancellations |= EFFECT_CANCEL_KNOCKBACK;
@@ -5533,7 +5533,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
   std::set<uint32_t> maxRates;
   for (auto addStatus : directStatuses) {
     uint32_t effectID = addStatus->GetStatusID();
-    if (!addStatus->GetOnKnockback() || target.applyKnockbackStatuses) {
+    if (!addStatus->GetOnKnockback() || target.ApplyAddedKnockbackEffects) {
       addStatusMap[effectID] = (double)addStatus->GetSuccessRate();
       addStatusDefs[effectID] = addStatus;
       if (addStatus->GetSuccessRate() >= 100) {
@@ -5561,7 +5561,7 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
   }
 
   // If a knockback occurred, add bonus knockback status effects from tokusei
-  if (target.applyKnockbackStatuses) {
+  if (target.ApplyAddedKnockbackEffects) {
     for (auto addStatus : mServer.lock()->GetTokuseiManager()->GetAspectMap(
              source, TokuseiAspectType::KNOCKBACK_STATUS_ADD, sourceCalc)) {
       uint32_t effectID = (uint32_t)addStatus.first;

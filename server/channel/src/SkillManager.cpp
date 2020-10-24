@@ -3572,7 +3572,7 @@ void SkillManager::ProcessSkillResultFinal(
                                TokuseiAspectType::KNOCKBACK_NULL, targetCalc) *
                            100;
 
-          if (target.EntityState->StatusRestrictKnockbackCount() <= 0 &&
+          if (!target.EntityState->StatusRestrictKnockbackCount() &&
               (!kbNull ||
                !(kbNull >= 10000 || RNG(int32_t, 1, 10000) <= kbNull))) {
             // Knockback not restricted by target's status or nullified by the

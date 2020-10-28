@@ -455,35 +455,28 @@ bool CharacterManager::AddToParty(
 
       success = true;
     }
+  }
 
-    if (success) {
-      LogPartyDebug([login, partyID]() {
-        return libcomp::String("Adding member to party %1: %2\n")
-            .Arg(partyID)
-            .Arg(login->GetCharacter().GetUUID().ToString());
-      });
+  if (success) {
+    LogPartyDebug([login, partyID]() {
+      return libcomp::String("Adding member to party %1: %2\n")
+          .Arg(partyID)
+          .Arg(login->GetCharacter().GetUUID().ToString());
+    });
 
-      if (partyID) {
-        // When joining a party, all non-Cathedral teams must be left, so check
-        // for membership in the leader's team (non-Cathedral teams were broken
-        // on party creation)
-        auto teamID = login->GetTeamID();
-        auto leader = GetCharacterLogin(it->second->GetLeaderCID());
-        if (leader) {
-          auto leaderTeamID = leader->GetTeamID();
+    // When joining a party, all non-Cathedral teams must be left, so check
+    // for membership in the leader's team (non-Cathedral teams were broken
+    // on party creation)
+    auto party = partyID ? GetParty(partyID) : 0;
+    auto leader = party ? GetCharacterLogin(party->GetLeaderCID()) : 0;
+    auto leaderTeamID = leader ? leader->GetTeamID() : 0;
+    auto teamID = login->GetTeamID();
 
-          if ((teamID || leaderTeamID) && (teamID != leaderTeamID)) {
-            // New party member is not on the leader's team, revoke all team
-            // memberships of the party members
-            auto partyMemberList = it->second->GetMemberIDsList();
-            for (auto& partyMember : partyMemberList) {
-              auto partyMemberLogin = GetCharacterLogin(partyMember);
-              if (partyMemberLogin) {
-                TeamLeave(partyMemberLogin);
-              }
-            }
-          }
-        }
+    if ((teamID || leaderTeamID) && (teamID != leaderTeamID)) {
+      // New party member is not on the leader's team, revoke all team
+      // memberships of the party members
+      for (auto& partyMember : party->GetMemberIDsList()) {
+        TeamLeave(GetCharacterLogin(partyMember));
       }
     }
   }
@@ -610,6 +603,10 @@ bool CharacterManager::PartyRecruit(
 void CharacterManager::PartyLeave(
     std::shared_ptr<objects::CharacterLogin> cLogin,
     std::shared_ptr<libcomp::TcpConnection> requestConnection) {
+  if (!cLogin) {
+    return;
+  }
+  
   uint32_t partyID = cLogin->GetPartyID();
   auto party = GetParty(partyID);
   if (!party && !requestConnection) {
@@ -1596,6 +1593,10 @@ bool CharacterManager::TeamJoin(
 
 void CharacterManager::TeamLeave(
     std::shared_ptr<objects::CharacterLogin> cLogin) {
+  if (!cLogin) {
+    return;
+  }
+
   int32_t teamID = cLogin->GetTeamID();
   auto team = GetTeam(teamID);
   if (!team) {

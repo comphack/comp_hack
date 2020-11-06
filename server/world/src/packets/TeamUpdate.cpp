@@ -300,8 +300,9 @@ bool Parsers::TeamUpdate::Parse(
       connection->SendPacket(reply);
     } break;
     case InternalPacketAction_t::PACKET_ACTION_GROUP_LEAVE: {
-      // Leave current team
+      // Leave current team and party
       characterManager->TeamLeave(cLogin);
+      characterManager->PartyLeave(cLogin, nullptr);
     } break;
     case InternalPacketAction_t::PACKET_ACTION_GROUP_LEADER_UPDATE: {
       // Update team leader
@@ -319,7 +320,7 @@ bool Parsers::TeamUpdate::Parse(
       characterManager->TeamLeaderUpdate(teamID, cid, connection, targetCID);
     } break;
     case InternalPacketAction_t::PACKET_ACTION_GROUP_KICK: {
-      // Kick a member
+      // Kick a member from both team and party
       if (p.Left() < 4) {
         LogTeamError([&]() {
           return libcomp::String(

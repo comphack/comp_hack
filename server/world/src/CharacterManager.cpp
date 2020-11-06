@@ -463,11 +463,22 @@ bool CharacterManager::AddToParty(
           .Arg(partyID)
           .Arg(login->GetCharacter().GetUUID().ToString());
     });
-  }
 
-  if (success && partyID && login->GetTeamID()) {
-    // When joining a party, all teams must be left
-    TeamLeave(login);
+    // When joining a party, all non-Cathedral teams must be left, so check
+    // for membership in the leader's team (non-Cathedral teams were broken
+    // on party creation)
+    auto party = partyID ? GetParty(partyID) : nullptr;
+    auto partyLeader = party ? GetCharacterLogin(party->GetLeaderCID()) : nullptr;
+    auto partyLeaderTeamID = partyLeader ? partyLeader->GetTeamID() : 0;
+    auto teamID = login->GetTeamID();
+
+    if (party && (teamID || partyLeaderTeamID) && (teamID != partyLeaderTeamID)) {
+      // New party member is not on the leader's team, revoke all team
+      // memberships of the party members
+      for (auto partyMember : party->GetMemberIDs()) {
+        TeamLeave(GetCharacterLogin(partyMember));
+      }
+    }
   }
 
   return success;
@@ -592,6 +603,10 @@ bool CharacterManager::PartyRecruit(
 void CharacterManager::PartyLeave(
     std::shared_ptr<objects::CharacterLogin> cLogin,
     std::shared_ptr<libcomp::TcpConnection> requestConnection) {
+  if (!cLogin) {
+    return;
+  }
+  
   uint32_t partyID = cLogin->GetPartyID();
   auto party = GetParty(partyID);
   if (!party && !requestConnection) {
@@ -1051,8 +1066,9 @@ void CharacterManager::ClanDisband(
 
   std::list<std::shared_ptr<objects::CharacterLogin>> clanLogins;
   if (requestConnection) {
-    // If the disband request came from a player (instead of being a side-effect
-    // from a leave for example) check that they are the clan master
+    // If the disband request came from a player (instead of being a
+    // side-effect from a leave for example) check that they are the clan
+    // master
     auto source = GetCharacterLogin(sourceCID);
     auto souceMember =
         source ? clanInfo->GetMemberMap(sourceCID).Get() : nullptr;
@@ -1577,6 +1593,10 @@ bool CharacterManager::TeamJoin(
 
 void CharacterManager::TeamLeave(
     std::shared_ptr<objects::CharacterLogin> cLogin) {
+  if (!cLogin) {
+    return;
+  }
+
   int32_t teamID = cLogin->GetTeamID();
   auto team = GetTeam(teamID);
   if (!team) {
@@ -1770,6 +1790,10 @@ void CharacterManager::TeamKick(std::shared_ptr<objects::CharacterLogin> cLogin,
         SendToCharacters(relay, {targetLogin}, cidOffset);
 
         errorCode = (int8_t)TeamErrorCodes_t::SUCCESS;
+
+        // Remove them from their party, as the only way they are in one is if
+        // they're part of a Cathedral team
+        PartyLeave(targetLogin, nullptr);
       }
     }
   }
@@ -1932,9 +1956,13 @@ uint32_t CharacterManager::CreateParty(
     });
   }
 
-  if (partyID && login->GetTeamID()) {
-    // When creating a party, all teams must be left
-    TeamLeave(login);
+  auto teamID = login->GetTeamID();
+  if (teamID && partyID) {
+    // Break the party creator's team if it's not a Cathedral team
+    auto team = GetTeam(teamID);
+    if (team && team->GetCategory() != objects::Team::Category_t::CATHEDRAL) {
+      TeamLeave(login);
+    }
   }
 
   return partyID;

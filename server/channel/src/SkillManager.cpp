@@ -5493,6 +5493,11 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
     const std::shared_ptr<ActiveEntityState>& source, SkillTargetResult& target,
     const std::shared_ptr<channel::ProcessingSkill>& pSkill) {
   std::set<uint32_t> cancelOnKill;
+  if ((target.Flags2 & FLAG2_IMPOSSIBLE) != 0) {
+    // The target cannot be affected by the skill in any way,
+    // return an empty set
+    return cancelOnKill;
+  }
 
   // Gather status effects from the skill
   auto directStatuses = pSkill->Definition->GetDamage()->GetAddStatuses();

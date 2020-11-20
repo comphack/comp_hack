@@ -1729,33 +1729,24 @@ bool WorldSyncManager::EndMatch(
     match->SetEndTime((uint32_t)std::time(0));
   }
 
-  // Rank teams
-  std::list<std::pair<size_t, int32_t>> ranks;
+  // Rank teams, from highest points earned to lowest
+  std::vector<std::pair<size_t, int32_t>> ranks;
   for (size_t i = 0; i < 5; i++) {
     ranks.push_back(std::make_pair(i, match->GetPoints(i)));
   }
 
-  ranks.sort(
+  std::sort(
+      ranks.begin(), ranks.end(),
       [](const std::pair<size_t, int32_t>& a,
          const std::pair<size_t, int32_t>& b) { return a.second > b.second; });
 
-  int32_t pointsFirst = 0;
-  int32_t pointsSecond = 0;
+  int32_t pointsFirst = ranks[0].second;
+  int32_t pointsSecond = ranks[1].second;
 
   uint8_t bestRank = 1;
-  while (ranks.size() > 0) {
-    auto top = ranks.back();
-
-    if (ranks.size() == 5) {
-      pointsFirst = top.second;
-    } else if (ranks.size() == 4) {
-      pointsSecond = top.second;
-    }
-
-    ranks.pop_back();
-
-    match->SetRankings(top.first, bestRank);
-    if (ranks.size() > 0 && ranks.back().second != top.second) {
+  for (size_t i = 0; i < 5; i++) {
+    match->SetRankings(ranks[i].first, bestRank);
+    if (i != 4 && ranks[i+1].second != ranks[i].second) {
       bestRank++;
     }
   }
@@ -1789,7 +1780,7 @@ bool WorldSyncManager::EndMatch(
 
   int32_t winningBethel = 0;
   for (auto entry : entries) {
-    if (match->GetRankings((uint8_t)(entry->GetTeam() - 1)) == 1) {
+    if (match->GetRankings((uint8_t) entry->GetTeam()) == 1) {
       winningBethel += entry->GetBethel();
     }
   }
@@ -1800,7 +1791,7 @@ bool WorldSyncManager::EndMatch(
   for (auto entry : entries) {
     if (!entry->GetActive()) continue;
 
-    uint8_t rank = match->GetRankings((uint8_t)(entry->GetTeam() - 1));
+    uint8_t rank = match->GetRankings((uint8_t) entry->GetTeam());
     if (rank == 1 || payoutAll) {
       // Player was on winning team or all teams being paid
       auto progress =

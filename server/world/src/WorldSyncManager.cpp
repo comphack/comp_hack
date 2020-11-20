@@ -1740,9 +1740,6 @@ bool WorldSyncManager::EndMatch(
       [](const std::pair<size_t, int32_t>& a,
          const std::pair<size_t, int32_t>& b) { return a.second > b.second; });
 
-  int32_t pointsFirst = ranks[0].second;
-  int32_t pointsSecond = ranks[1].second;
-
   uint8_t bestRank = 1;
   for (size_t i = 0; i < 5; i++) {
     match->SetRankings(ranks[i].first, bestRank);
@@ -1753,8 +1750,8 @@ bool WorldSyncManager::EndMatch(
 
   // Calculate base gain from how much 1st place won by
   double cowrieGain =
-      pointsFirst > 0
-          ? ((double)(pointsFirst - pointsSecond) / (double)pointsFirst)
+      ranks[0].second > 0
+          ? ((double)(ranks[0].second - ranks[1].second) / (double)ranks[0].second)
           : 0.0;
 
   auto sharedConfig = std::dynamic_pointer_cast<objects::WorldConfig>(

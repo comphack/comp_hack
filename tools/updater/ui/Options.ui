@@ -6,219 +6,443 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>255</width>
-    <height>222</height>
+    <width>386</width>
+    <height>355</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Shin Megami Tensei IMAGINE - Game Option Configuration</string>
+   <string>Shin Megami Tensei IMAGINE - Settings</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
-    <layout class="QFormLayout" name="formLayout">
-     <item row="1" column="0">
-      <widget class="QLabel" name="modeLabel">
-       <property name="text">
-        <string>Mode:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QComboBox" name="modeCombo">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="generalTab">
+      <attribute name="title">
+       <string>General</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <property name="text">
-         <string>Window</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Full Screen</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="videoCardLabel">
-       <property name="text">
-        <string>Video Card:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QComboBox" name="videoCardCombo"/>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="screenSizeLabel">
-       <property name="text">
-        <string>Screen Size:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="chatTextSizeLabel">
-       <property name="text">
-        <string>Chat Text Size:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <widget class="QRadioButton" name="screenPreset">
-         <property name="text">
-          <string>Preset</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <spacer name="horizontalSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Fixed</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>10</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QComboBox" name="screenSizeCombo"/>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="screenCustom">
-         <property name="text">
-          <string>Custom</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <item>
-          <spacer name="horizontalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Fixed</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>10</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="screenX">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="maximum">
-            <number>4096</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="screenByLabel">
+        <layout class="QFormLayout" name="formLayout">
+         <item row="2" column="0">
+          <widget class="QLabel" name="modeLabel">
            <property name="text">
-            <string>x</string>
+            <string>Mode:</string>
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QSpinBox" name="screenY">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="maximum">
-            <number>4096</number>
+         <item row="2" column="1">
+          <widget class="QComboBox" name="modeCombo">
+           <item>
+            <property name="text">
+             <string>Window</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Full Screen</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="videoCardLabel">
+           <property name="text">
+            <string>Video Card:</string>
            </property>
           </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QComboBox" name="videoCardCombo"/>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="screenSizeLabel">
+           <property name="text">
+            <string>Screen Size:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="chatTextSizeLabel">
+           <property name="text">
+            <string>Chat Text Size:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <layout class="QVBoxLayout" name="verticalLayout">
+           <item>
+            <widget class="QRadioButton" name="screenPreset">
+             <property name="text">
+              <string>Preset</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <spacer name="horizontalSpacer">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>10</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QComboBox" name="screenSizeCombo"/>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QRadioButton" name="screenCustom">
+             <property name="text">
+              <string>Custom</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <item>
+              <spacer name="horizontalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>10</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="screenX">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximum">
+                <number>4096</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="screenByLabel">
+               <property name="text">
+                <string>x</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="screenY">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximum">
+                <number>4096</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+         <item row="5" column="1">
+          <widget class="QComboBox" name="chatTextCombo">
+           <item>
+            <property name="text">
+             <string>Small (12pt)</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Medium (14pt)</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Large (16pt)</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Small (12pt no antialiasing)</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Medium (14pt no antialiasing)</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Large (16pt no antialiasing)</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="langLabel">
+           <property name="text">
+            <string>Language:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="langCombo"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="soundtrackLabel">
+           <property name="text">
+            <string>Soundtrack:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QComboBox" name="soundtrackList"/>
+         </item>
+         <item row="6" column="1">
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::MinimumExpanding</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>3</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </item>
       </layout>
-     </item>
-     <item row="4" column="1">
-      <widget class="QComboBox" name="chatTextCombo">
+     </widget>
+     <widget class="QWidget" name="patchesTab">
+      <attribute name="title">
+       <string>Patches</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
-        <property name="text">
-         <string>Small (12pt)</string>
-        </property>
+        <widget class="QScrollArea" name="scrollArea">
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <widget class="QWidget" name="scrollAreaWidgetContents">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>325</width>
+            <height>340</height>
+           </rect>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_5">
+           <item>
+            <widget class="QCheckBox" name="patchTranslation">
+             <property name="toolTip">
+              <string>Apply translations from the translation.xml file.</string>
+             </property>
+             <property name="text">
+              <string>Client Translation</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchLocale">
+             <property name="toolTip">
+              <string>Set the locale used by the client. This can be used in place of AppLocale / Local Emulator.</string>
+             </property>
+             <property name="text">
+              <string>Apply Locale Settings</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchInfiniteZoom">
+             <property name="toolTip">
+              <string>Removes the maximum zoom restriction. Careful, zooming too far out may crash the client!</string>
+             </property>
+             <property name="text">
+              <string>Infinite Zoom</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchCustomPackets">
+             <property name="toolTip">
+              <string>Automatically dump a backup of your account when logging in with a character. For large accounts this may fail. In that case, use the test client to backup your character instead.</string>
+             </property>
+             <property name="text">
+              <string>Enable Account Dump</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchUpdaterCheck">
+             <property name="toolTip">
+              <string>Check that the client was started through the updater. Useful to make sure players are up-to-date.</string>
+             </property>
+             <property name="text">
+              <string>Updater Check</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchExtendedBuffTimerDisplay">
+             <property name="toolTip">
+              <string>Extends buff timer tooltips that show a clock to display seconds.</string>
+             </property>
+             <property name="text">
+              <string>Extended Buff Timer Display</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchExtendedEXPDisplay">
+             <property name="toolTip">
+              <string>Corrects the experience points messages for large amounts of experience point gain.</string>
+             </property>
+             <property name="text">
+              <string>Experience Points Message Fix</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchLobbyIME">
+             <property name="toolTip">
+              <string>Prevent the input method from being switched to Japanese during character creation (if you have the IME installed).</string>
+             </property>
+             <property name="text">
+              <string>Prevent Input Method Switching</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchSoundtrack">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Disable the ability to load a different CSoundData file. Instead of disabling this patch, set the soundtrack to &quot;Original&quot;.</string>
+             </property>
+             <property name="text">
+              <string>Soundtrack Selection</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchChannelTransfer">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Restore the channel transfer dialog to the UI. This was used to switch between channels back in the day.</string>
+             </property>
+             <property name="text">
+              <string>Restore Channel Transfer UI</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchCharacterNameCheck">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Disable the checks for valid character names during character creation. This allows players to type non-Japanese character names.</string>
+             </property>
+             <property name="text">
+              <string>Disable Character Creation Checks</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchBlowfishKey">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>This replaces the encryption key used for the BinaryData (and a few other things) to match the key used by the COMP_hack tools.</string>
+             </property>
+             <property name="text">
+              <string>Updated Client Encryption Key</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchServerPrime">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Updates the public key for the server to the default one used by COMP_hack. This key does not seem to be used by the client.</string>
+             </property>
+             <property name="text">
+              <string>Updated Server Public Key</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchNoWebAuth">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>This patch will disable the web-based authentication dialog and revert to the classic login method.</string>
+             </property>
+             <property name="text">
+              <string>Disable Web Authentication</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>230</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </widget>
        </item>
        <item>
-        <property name="text">
-         <string>Medium (14pt)</string>
-        </property>
+        <widget class="QPushButton" name="breakClientButton">
+         <property name="text">
+          <string>I want to break my client</string>
+         </property>
+        </widget>
        </item>
-       <item>
-        <property name="text">
-         <string>Large (16pt)</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Small (12pt no antialiasing)</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Medium (14pt no antialiasing)</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Large (16pt no antialiasing)</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="langLabel">
-       <property name="text">
-        <string>Language:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="langCombo"/>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>3</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item>
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item>

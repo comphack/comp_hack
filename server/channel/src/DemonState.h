@@ -66,11 +66,30 @@ class DemonState : public ActiveEntityStateImp<objects::Demon> {
   uint16_t GetCompendiumCount(uint8_t groupID = 0, bool familyGroup = true);
 
   /**
+   * Get the current unique entry count in the Mitama-Enhanced section of the
+   * compendium or count specific to entries matching a supplied race or family
+   * ID
+   * @param groupID If specified, instead return the number of entries that
+   *  match a family or race ID
+   * @param familyGroup If true the groupID is a family ID, if false the
+   *  groupID is a race ID
+   * @return Unique entry count in the compendium
+   */
+  uint16_t GetMitamaCompendiumCount(uint8_t groupID = 0, bool familyGroup = true);
+
+  /**
    * Get the set of tokusei effect IDs granted by compendium
    * completion
    * @return List of tokusei effect IDs
    */
   std::list<int32_t> GetCompendiumTokuseiIDs() const;
+
+  /**
+   * Get the set of tokusei effect IDs granted by compendium
+   * completion, for Mitama-Enhanced demons
+   * @return List of tokusei effect IDs
+   */
+  std::list<int32_t> GetMitamaCompendiumTokuseiIDs() const;
 
   /**
    * Get the set of tokusei effect IDs granted to the current demon
@@ -189,6 +208,22 @@ class DemonState : public ActiveEntityStateImp<objects::Demon> {
   /// Quick access count representing the number of entries in the
   /// demonic compendium by race
   std::unordered_map<uint8_t, uint16_t> mCompendiumRaceCounts;
+
+  /// Tokusei effect IDs available due to the character's demonic
+  /// compendium completion level, for Mitama-Enhanced demons
+  std::list<int32_t> mMitamaCompendiumTokuseiIDs;
+
+  /// Quick access count representing the number of unique entries
+  /// in the demonic compendium, of Mitama-Enhanced demons
+  uint16_t mMitamaCompendiumCount;
+
+  /// Quick access count representing the number of entries in the
+  /// demonic compendium by family, of Mitama-Enhanced demons
+  std::unordered_map<uint8_t, uint16_t> mMitamaCompendiumFamilyCounts;
+
+  /// Quick access count representing the number of entries in the
+  /// demonic compendium by race, of Mitama-Enhanced demons
+  std::unordered_map<uint8_t, uint16_t> mMitamaCompendiumRaceCounts;
 
   /// Map of bonus stats gained from the character
   libcomp::EnumMap<CorrectTbl, int16_t> mCharacterBonuses;

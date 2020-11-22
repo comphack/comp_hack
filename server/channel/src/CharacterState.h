@@ -69,6 +69,14 @@ class CharacterState : public ActiveEntityStateImp<objects::Character> {
   std::list<int32_t> GetEquipmentTokuseiIDs() const;
 
   /**
+   * Get the tokusei effects IDs that are applied to the character from the
+   * character's number of completed entries in the Demonic Compendium
+   * @return Tokusei effect IDs that are applied to the character from the
+   * character's number of completed entries in the Demonic Compendium
+   */
+  std::list<int32_t> GetCompendiumTokuseiIDs() const;
+
+  /**
    * Get the conditional tokusei effect definitions from the character's
    * current equipment
    * @return Conditional tokusei effect definitions from the character's
@@ -153,6 +161,13 @@ class CharacterState : public ActiveEntityStateImp<objects::Character> {
    * @return true if equipment has expired, false if it has not
    */
   bool EquipmentExpired(uint32_t now);
+
+  /**
+   * Update the IDs of tokusei that apply to the character due to the number of
+   * entries completed in the Demonic Compendium
+   * @param tokuseiIDs List of tokusei
+   */
+  void UpdateCompendiumTokuseiIDs(std::list<int32_t> tokuseiIDs);
 
   /**
    * Determine the quest bonus effects gained for the character based
@@ -289,6 +304,10 @@ class CharacterState : public ActiveEntityStateImp<objects::Character> {
   /// equipment. Sources contain mod slots, equipment sets and
   /// enchantments. Can contain duplicates.
   std::list<int32_t> mEquipmentTokuseiIDs;
+
+  /// Tokusei effect IDs that affect the character that are available due to
+  /// number of entries in the character's Demonic Compendium
+  std::list<int32_t> mCompendiumTokuseiIDs;
 
   /// List of tokusei conditions that apply based upon the state
   /// of the character other than base stats

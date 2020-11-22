@@ -976,6 +976,11 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
       // Default to tokusei from equipment
       tokuseiIDs = cState->GetEquipmentTokuseiIDs();
 
+      // Add tokusei from Demonic Compendium bonuses
+      for (int32_t tokuseiID : cState->GetCompendiumTokuseiIDs()) {
+        tokuseiIDs.push_back(tokuseiID);
+      }
+
       // Add Magic Control tokusei
       uint8_t mcClass =
           (uint8_t)(cState->GetExpertiseRank(EXPERTISE_MAGIC_CONTROL) / 10);
@@ -1053,6 +1058,14 @@ std::list<std::shared_ptr<objects::Tokusei>> TokuseiManager::GetDirectTokusei(
         tokuseiIDs = dState->GetDemonTokuseiIDs();
         for (int32_t tokuseiID : dState->GetCompendiumTokuseiIDs()) {
           tokuseiIDs.push_back(tokuseiID);
+        }
+
+        if (demon->GetMitamaType()) {
+          // It's a Mitama-Enhanced demon, so it gets the bonus from the mitama
+          // demon section of the compendium
+          for (int32_t tokuseiID : dState->GetMitamaCompendiumTokuseiIDs()) {
+            tokuseiIDs.push_back(tokuseiID);
+          }
         }
       }
 
@@ -1594,6 +1607,60 @@ double TokuseiManager::CalculateAttributeValue(
             uint8_t raceID = (uint8_t)devilData->GetCategory()->GetRace();
             result = result *
                      floor((double)dState->GetCompendiumCount(raceID, false) /
+                           (double)multValue);
+          } else {
+            result = 0.0;
+          }
+        }
+        break;
+
+      case objects::TokuseiAttributes::MultiplierType_t::MITAMA_DEMON_BOOK_DIVIDE:
+        // Divide the value times the number of unique entries in the compendium
+        // by the multiplier
+        {
+          auto state =
+              ClientState::GetEntityClientState(eState->GetEntityID(), false);
+          auto dState = state ? state->GetDemonState() : nullptr;
+
+          result = dState
+                       ? (result * floor((double)dState->GetMitamaCompendiumCount() /
+                                         (double)multValue))
+                       : 0.0;
+        }
+        break;
+      case objects::TokuseiAttributes::MultiplierType_t::
+          MITAMA_DEMON_BOOK_FAMILY_DIVIDE:
+        // Divide the value times the number of unique entries in the compendium
+        // (of the current demon's family) by the multiplier
+        {
+          auto state =
+              ClientState::GetEntityClientState(eState->GetEntityID(), false);
+          auto dState = state ? state->GetDemonState() : nullptr;
+          auto devilData = dState ? dState->GetDevilData() : nullptr;
+
+          if (devilData) {
+            uint8_t familyID = (uint8_t)devilData->GetCategory()->GetFamily();
+            result = result *
+                     floor((double)dState->GetMitamaCompendiumCount(familyID, true) /
+                           (double)multValue);
+          } else {
+            result = 0.0;
+          }
+        }
+        break;
+      case objects::TokuseiAttributes::MultiplierType_t::MITAMA_DEMON_BOOK_RACE_DIVIDE:
+        // Divide the value times the number of unique entries in the compendium
+        // (of the current demon's race) by the multiplier
+        {
+          auto state =
+              ClientState::GetEntityClientState(eState->GetEntityID(), false);
+          auto dState = state ? state->GetDemonState() : nullptr;
+          auto devilData = dState ? dState->GetDevilData() : nullptr;
+
+          if (devilData) {
+            uint8_t raceID = (uint8_t)devilData->GetCategory()->GetRace();
+            result = result *
+                     floor((double)dState->GetMitamaCompendiumCount(raceID, false) /
                            (double)multValue);
           } else {
             result = 0.0;

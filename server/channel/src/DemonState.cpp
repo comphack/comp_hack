@@ -95,7 +95,8 @@ uint16_t DemonState::GetCompendiumCount(uint8_t groupID, bool familyGroup) {
   }
 }
 
-uint16_t DemonState::GetMitamaCompendiumCount(uint8_t groupID, bool familyGroup) {
+uint16_t DemonState::GetMitamaCompendiumCount(uint8_t groupID,
+                                              bool familyGroup) {
   if (groupID == 0) {
     return mMitamaCompendiumCount;
   }
@@ -168,7 +169,7 @@ bool DemonState::UpdateSharedState(
         if (devilData) {
           uint8_t familyID = (uint8_t)devilData->GetCategory()->GetFamily();
           uint8_t raceID = (uint8_t)devilData->GetCategory()->GetRace();
-          auto mitamaDemonID = devilData->GetUnionData()->GetBaseDemonID();
+          auto mitamaDemonID = devilData->GetUnionData()->GetMitamaFusionID();
 
           if (dBook->GetID() == mitamaDemonID) {
             // This entry is for the mitama version. Add to the mitama book's

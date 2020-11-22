@@ -532,10 +532,14 @@
     </constant>
     <constant name="DEMON_BOOK_BONUS">
         <!-- Format: entry count => tokusei ID list -->
-        <!-- This replaces the partially functional DevilBookBonusData.sbin; applies to summoned demon -->
+        <!-- This replaces the partially functional DevilBookBonusData.sbin -->
         <pair>
             <key>0</key>
             <value>20000000,20000001</value>
+        </pair>
+		<pair>
+            <key>15</key>
+            <value>20000002</value>
         </pair>
         <pair>
             <key>30</key>
@@ -568,10 +572,6 @@
         <pair>
             <key>135</key>
             <value>20000010</value>
-        </pair>
-        <pair>
-            <key>150</key>
-            <value>20000011</value>
         </pair>
         <pair>
             <key>160</key>
@@ -616,10 +616,26 @@
     </constant>
     <constant name="DEMON_BOOK_SUMMONER_BONUS">
         <!-- Format: entry count => tokusei ID list -->
-        <!-- This replaces the partially functional DevilBookBonusData.sbin; applies to summoner -->
-        <pair>
-            <key>15</key>
-            <value>20000002</value>
+        <!-- This replaces the partially functional DevilBookBonusData.sbin -->
+		<pair>
+            <key>1</key>
+            <value>20000011</value>
+        </pair>
+    </constant>
+	<constant name="MITAMA_DEMON_BOOK_BONUS">
+        <!-- Format: entry count => tokusei ID list -->
+        <!-- This replaces the partially functional DevilBookBonusMitamaData.sbin -->
+		<pair>
+            <key>1</key>
+            <value>9999000</value>
+        </pair>
+    </constant>
+	<constant name="MITAMA_DEMON_BOOK_SUMMONER_BONUS">
+        <!-- Format: entry count => tokusei ID list -->
+        <!-- This replaces the partially functional DevilBookBonusMitamaData.sbin -->
+		<pair>
+            <key>1</key>
+            <value>20000011</value>
         </pair>
     </constant>
     <constant name="DEMON_CRYSTALS">

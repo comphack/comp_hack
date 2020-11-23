@@ -581,11 +581,6 @@ bool CharacterState::EquipmentExpired(uint32_t now) {
 }
 
 void CharacterState::UpdateCompendiumTokuseiIDs(std::list<int32_t> tokuseiIDs) {
-  auto character = GetEntity();
-  if (!character) {
-    return;
-  }
-  
   mCompendiumTokuseiIDs = tokuseiIDs;
 }
 

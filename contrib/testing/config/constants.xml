@@ -532,12 +532,12 @@
     </constant>
     <constant name="DEMON_BOOK_BONUS">
         <!-- Format: entry count => tokusei ID list -->
-        <!-- This replaces the partially functional DevilBookBonusData.sbin -->
+        <!-- This replaces the partially functional DevilBookBonusData.sbin; tokusei for summoned demons -->
         <pair>
             <key>0</key>
             <value>20000000,20000001</value>
         </pair>
-		<pair>
+        <pair>
             <key>15</key>
             <value>20000002</value>
         </pair>
@@ -616,26 +616,26 @@
     </constant>
     <constant name="DEMON_BOOK_SUMMONER_BONUS">
         <!-- Format: entry count => tokusei ID list -->
-        <!-- This replaces the partially functional DevilBookBonusData.sbin -->
-		<pair>
-            <key>1</key>
+        <!-- This replaces the partially functional DevilBookBonusData.sbin; tokusei for summoners -->
+        <pair>
+            <key>150</key>
             <value>20000011</value>
         </pair>
     </constant>
-	<constant name="MITAMA_DEMON_BOOK_BONUS">
+    <constant name="MITAMA_DEMON_BOOK_BONUS">
         <!-- Format: entry count => tokusei ID list -->
-        <!-- This replaces the partially functional DevilBookBonusMitamaData.sbin -->
+        <!-- This replaces the partially functional DevilBookBonusMitamaData.sbin;tokusei for summoned Mitama-Enhanced demons based on the Mitama Demon Compendium -->
 		<pair>
             <key>1</key>
             <value>9999000</value>
         </pair>
     </constant>
-	<constant name="MITAMA_DEMON_BOOK_SUMMONER_BONUS">
+    <constant name="MITAMA_DEMON_BOOK_SUMMONER_BONUS">
         <!-- Format: entry count => tokusei ID list -->
-        <!-- This replaces the partially functional DevilBookBonusMitamaData.sbin -->
+        <!-- This replaces the partially functional DevilBookBonusMitamaData.sbin; tokusei for summoners based on the Mitama Demon Compendium -->
 		<pair>
             <key>1</key>
-            <value>20000011</value>
+            <value>9999000</value>
         </pair>
     </constant>
     <constant name="DEMON_CRYSTALS">

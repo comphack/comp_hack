@@ -123,6 +123,10 @@ std::list<int32_t> CharacterState::GetEquipmentTokuseiIDs() const {
   return mEquipmentTokuseiIDs;
 }
 
+std::list<int32_t> CharacterState::GetCompendiumTokuseiIDs() const {
+  return mCompendiumTokuseiIDs;
+}
+
 std::list<std::shared_ptr<objects::MiSpecialConditionData>>
 CharacterState::GetConditionalTokusei() const {
   return mConditionalTokusei;
@@ -574,6 +578,10 @@ void CharacterState::RecalcEquipState(
 bool CharacterState::EquipmentExpired(uint32_t now) {
   std::lock_guard<std::mutex> lock(mLock);
   return mNextEquipmentExpiration && mNextEquipmentExpiration <= now;
+}
+
+void CharacterState::UpdateCompendiumTokuseiIDs(std::list<int32_t> tokuseiIDs) {
+  mCompendiumTokuseiIDs = tokuseiIDs;
 }
 
 bool CharacterState::UpdateQuestState(

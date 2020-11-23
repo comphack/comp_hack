@@ -40,6 +40,7 @@ IF(WIN32)
                ${CMAKE_CURRENT_BINARY_DIR}/Version.h @ONLY)
 
     SET(${PROJECT_NAME}_SRCS
+        src/ClientPatches.cpp
         src/Downloader.cpp
         src/LanguageSelection.cpp
         src/Options.cpp
@@ -49,6 +50,7 @@ IF(WIN32)
     )
 
     SET(${PROJECT_NAME}_HDRS
+        src/ClientPatches.h
         src/Downloader.h
         src/LanguageSelection.h
         src/Options.h

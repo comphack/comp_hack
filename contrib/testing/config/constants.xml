@@ -532,7 +532,7 @@
     </constant>
     <constant name="DEMON_BOOK_BONUS">
         <!-- Format: entry count => tokusei ID list -->
-        <!-- This replaces the partially functional DevilBookBonusData.sbin -->
+        <!-- This replaces the partially functional DevilBookBonusData.sbin; tokusei for summoned demons -->
         <pair>
             <key>0</key>
             <value>20000000,20000001</value>
@@ -574,10 +574,6 @@
             <value>20000010</value>
         </pair>
         <pair>
-            <key>150</key>
-            <value>20000011</value>
-        </pair>
-        <pair>
             <key>160</key>
             <value>20000012</value>
         </pair>
@@ -616,6 +612,30 @@
         <pair>
             <key>300</key>
             <value>20000021</value>
+        </pair>
+    </constant>
+    <constant name="DEMON_BOOK_SUMMONER_BONUS">
+        <!-- Format: entry count => tokusei ID list -->
+        <!-- This replaces the partially functional DevilBookBonusData.sbin; tokusei for summoners -->
+        <pair>
+            <key>150</key>
+            <value>20000011</value>
+        </pair>
+    </constant>
+    <constant name="MITAMA_DEMON_BOOK_BONUS">
+        <!-- Format: entry count => tokusei ID list -->
+        <!-- This replaces the partially functional DevilBookBonusMitamaData.sbin;tokusei for summoned Mitama-Enhanced demons based on the Mitama Demon Compendium -->
+		<pair>
+            <key>1</key>
+            <value>9999000</value>
+        </pair>
+    </constant>
+    <constant name="MITAMA_DEMON_BOOK_SUMMONER_BONUS">
+        <!-- Format: entry count => tokusei ID list -->
+        <!-- This replaces the partially functional DevilBookBonusMitamaData.sbin; tokusei for summoners based on the Mitama Demon Compendium -->
+		<pair>
+            <key>1</key>
+            <value>9999000</value>
         </pair>
     </constant>
     <constant name="DEMON_CRYSTALS">

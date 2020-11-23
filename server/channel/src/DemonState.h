@@ -75,7 +75,8 @@ class DemonState : public ActiveEntityStateImp<objects::Demon> {
    *  groupID is a race ID
    * @return Unique entry count in the compendium
    */
-  uint16_t GetMitamaCompendiumCount(uint8_t groupID = 0, bool familyGroup = true);
+  uint16_t GetMitamaCompendiumCount(uint8_t groupID = 0,
+                                    bool familyGroup = true);
 
   /**
    * Get the set of tokusei effect IDs granted by compendium

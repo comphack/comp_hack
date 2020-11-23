@@ -1317,8 +1317,9 @@ uint8_t ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
         if (mAlive) {
           tDamageSpecial = HasSpecialTDamage();
 
+          bool skipHPRegen = false;
+          bool skipMPRegen = false;
           if (doRegen) {
-            bool skipHPRegen = false;
             auto calcState = GetCalculatedState();
             if (calcState->ExistingTokuseiAspectsContains(
                     (int8_t)TokuseiAspectType::ZONE_INSTANCE_POISON)) {
@@ -1333,14 +1334,6 @@ uint8_t ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
                                           0.01f * (float)GetMaxHP());
               }
             }
-
-            if (!skipHPRegen) {
-              hpTDamage =
-                  (int32_t)(hpTDamage - GetCorrectValue(CorrectTbl::HP_REGEN));
-            }
-
-            mpTDamage =
-                (int32_t)(mpTDamage - GetCorrectValue(CorrectTbl::MP_REGEN));
           }
 
           // Apply T-damage
@@ -1350,7 +1343,9 @@ uint8_t ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
             if (se) {
               auto damage = se->GetEffect()->GetDamage();
 
+              skipHPRegen = damage->GetHPDamage() > 0 ? true : skipHPRegen;
               hpTDamage = (int32_t)(hpTDamage + damage->GetHPDamage());
+              skipMPRegen = damage->GetMPDamage() > 0 ? true : skipMPRegen;
               mpTDamage = (int32_t)(mpTDamage + damage->GetMPDamage());
             } else {
               LogCharacterManagerError([&]() {
@@ -1361,6 +1356,16 @@ uint8_t ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
                     .Arg(effectType);
               });
             }
+          }
+
+          if (!skipHPRegen) {
+            hpTDamage =
+                (int32_t)(hpTDamage - GetCorrectValue(CorrectTbl::HP_REGEN));
+          }
+
+          if (!skipMPRegen) {
+            mpTDamage =
+                (int32_t)(mpTDamage - GetCorrectValue(CorrectTbl::MP_REGEN));
           }
         }
 

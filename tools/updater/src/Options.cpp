@@ -48,7 +48,9 @@ extern QList<QTranslator *> gTranslators;
 
 Options::Options(QWidget *p)
     : QDialog(p, Qt::WindowSystemMenuHint | Qt::WindowTitleHint |
-                     Qt::WindowCloseButtonHint) {
+                     Qt::WindowCloseButtonHint),
+      mBasePatches(&mDefaultPatches),
+      mUserPatches(&mBasePatches) {
   ui.setupUi(this);
 
   // We are modal and should delete when closed.
@@ -80,10 +82,13 @@ Options::Options(QWidget *p)
   connect(ui.screenCustom, SIGNAL(toggled(bool)), this,
           SLOT(UpdateCustomToggle(bool)));
   connect(ui.buttonBox, SIGNAL(accepted()), this, SLOT(Save()));
+  connect(ui.breakClientButton, SIGNAL(clicked(bool)), this,
+          SLOT(EnableAllPatchSettings()));
 
   ui.screenPreset->setChecked(true);
 
   PopulateAdapterModes();
+  PopulateSoundtrackOptions();
 
   ui.screenSizeCombo->setCurrentText(tr("%1 x %2").arg(1024).arg(768));
   ui.chatTextCombo->setCurrentIndex(2);
@@ -161,6 +166,26 @@ void Options::PopulateAdapterModes() {
   }
 }
 
+void Options::PopulateSoundtrackOptions() {
+  ui.soundtrackList->clear();
+
+  QDir binaryDataClient("BinaryData/Client");
+  for (auto file : binaryDataClient.entryList(
+           QStringList() << "CSoundData*.bin", QDir::Files, QDir::Name)) {
+    auto name = QFileInfo(file).baseName().mid(strlen("CSoundData"));
+
+    if (!name.isEmpty() && '_' == name.at(0)) {
+      name = name.mid(1);
+    }
+
+    if (name.isEmpty()) {
+      ui.soundtrackList->addItem(tr("Original"));
+    } else {
+      ui.soundtrackList->addItem(name, "BinaryData/Client/" + file);
+    }
+  }
+}
+
 void Options::Load() {
   QFile file("OutsideOption.txt");
 
@@ -226,6 +251,29 @@ void Options::Load() {
 
   ui.chatTextCombo->setCurrentIndex(chatFontSizeType);
   ui.modeCombo->setCurrentIndex(fullScreen ? 1 : 0);
+
+  mBasePatches.Load("comp_client.xml");
+  mUserPatches.Load("comp_client-user.xml");
+
+  ui.patchBlowfishKey->setChecked(mUserPatches.GetBlowfishKey());
+  ui.patchNoWebAuth->setChecked(mUserPatches.GetNoWebAuth());
+  ui.patchExtendedBuffTimerDisplay->setChecked(
+      mUserPatches.GetExtendedBuffTimerDisplay());
+  ui.patchExtendedEXPDisplay->setChecked(mUserPatches.GetExtendedEXPDisplay());
+  ui.patchInfiniteZoom->setChecked(mUserPatches.GetInfiniteZoom());
+  ui.patchCharacterNameCheck->setChecked(mUserPatches.GetCharacterNameCheck());
+  ui.patchLobbyIME->setChecked(mUserPatches.GetLobbyIME());
+  ui.patchServerPrime->setChecked(mUserPatches.GetServerPrime());
+  ui.patchTranslation->setChecked(mUserPatches.GetTranslation());
+  ui.patchChannelTransfer->setChecked(mUserPatches.GetChannelTransfer());
+  ui.patchCustomPackets->setChecked(mUserPatches.GetCustomPackets());
+  ui.patchUpdaterCheck->setChecked(mUserPatches.GetUpdaterCheck());
+  ui.patchLocale->setChecked(mUserPatches.GetLocale());
+  ui.patchSoundtrack->setChecked(mUserPatches.GetSoundtrackPatch());
+
+  int soundtrackIndex =
+      ui.soundtrackList->findData(mUserPatches.GetSoundtrack());
+  ui.soundtrackList->setCurrentIndex(soundtrackIndex < 0 ? 0 : soundtrackIndex);
 }
 
 void Options::Save() {
@@ -302,6 +350,31 @@ void Options::Save() {
     return;
   }
 
+  mUserPatches.SetBlowfishKey(ui.patchBlowfishKey->isChecked());
+  mUserPatches.SetNoWebAuth(ui.patchNoWebAuth->isChecked());
+  mUserPatches.SetExtendedBuffTimerDisplay(
+      ui.patchExtendedBuffTimerDisplay->isChecked());
+  mUserPatches.SetExtendedEXPDisplay(ui.patchExtendedEXPDisplay->isChecked());
+  mUserPatches.SetInfiniteZoom(ui.patchInfiniteZoom->isChecked());
+  mUserPatches.SetCharacterNameCheck(ui.patchCharacterNameCheck->isChecked());
+  mUserPatches.SetLobbyIME(ui.patchLobbyIME->isChecked());
+  mUserPatches.SetServerPrime(ui.patchServerPrime->isChecked());
+  mUserPatches.SetTranslation(ui.patchTranslation->isChecked());
+  mUserPatches.SetChannelTransfer(ui.patchChannelTransfer->isChecked());
+  mUserPatches.SetCustomPackets(ui.patchCustomPackets->isChecked());
+  mUserPatches.SetUpdaterCheck(ui.patchUpdaterCheck->isChecked());
+  mUserPatches.SetLocale(ui.patchLocale->isChecked());
+  mUserPatches.SetSoundtrackPatch(ui.patchSoundtrack->isChecked());
+
+  mUserPatches.SetSoundtrack(ui.soundtrackList->currentData().toString());
+
+  if (!mUserPatches.Save("comp_client-user.xml")) {
+    QMessageBox::critical(this, tr("Save Error"),
+                          tr("Failed to save the client patch options!"));
+
+    return;
+  }
+
   ((Updater *)parent())->ReloadURL();
 
   close();
@@ -334,6 +407,16 @@ void Options::changeEvent(QEvent *pEvent) {
   if (QEvent::LanguageChange == pEvent->type()) {
     ui.retranslateUi(this);
   }
+}
+
+void Options::EnableAllPatchSettings() {
+  ui.breakClientButton->setEnabled(false);
+  ui.patchBlowfishKey->setEnabled(true);
+  ui.patchNoWebAuth->setEnabled(true);
+  ui.patchCharacterNameCheck->setEnabled(true);
+  ui.patchServerPrime->setEnabled(true);
+  ui.patchChannelTransfer->setEnabled(true);
+  ui.patchSoundtrack->setEnabled(true);
 }
 
 #endif  // Q_OS_WIN32

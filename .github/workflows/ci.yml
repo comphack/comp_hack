@@ -17,6 +17,7 @@ jobs:
   linux-gcc-build:
     name: Ubuntu Linux (GCC)
     runs-on: ubuntu-latest
+    needs: clang-format
     steps:
     - name: Checkout Code
       uses: actions/checkout@v2
@@ -35,6 +36,7 @@ jobs:
   linux-clang-build:
     name: Ubuntu Linux (Clang)
     runs-on: ubuntu-latest
+    needs: clang-format
     steps:
     - name: Checkout Code
       uses: actions/checkout@v2
@@ -53,6 +55,7 @@ jobs:
   win32-msvc2017-build:
     name: Windows 32-bit (MSVC 2017)
     runs-on: windows-2016
+    needs: clang-format
     steps:
     - name: Checkout Code
       uses: actions/checkout@v2
@@ -98,6 +101,7 @@ jobs:
   win64-msvc2017-build:
     name: Windows 64-bit (MSVC 2017)
     runs-on: windows-2016
+    needs: clang-format
     steps:
     - name: Checkout Code
       uses: actions/checkout@v2

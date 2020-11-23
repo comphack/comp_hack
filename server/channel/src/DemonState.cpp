@@ -48,6 +48,7 @@
 #include <MiNPCBasicData.h>
 #include <MiSkillData.h>
 #include <MiSkillItemStatusCommonData.h>
+#include <MiUnionData.h>
 #include <TokuseiAspect.h>
 
 // libcomp Includes
@@ -94,8 +95,28 @@ uint16_t DemonState::GetCompendiumCount(uint8_t groupID, bool familyGroup) {
   }
 }
 
+uint16_t DemonState::GetMitamaCompendiumCount(uint8_t groupID,
+                                              bool familyGroup) {
+  if (groupID == 0) {
+    return mMitamaCompendiumCount;
+  }
+
+  std::lock_guard<std::mutex> lock(mSharedLock);
+  if (familyGroup) {
+    auto it = mMitamaCompendiumFamilyCounts.find(groupID);
+    return it != mMitamaCompendiumFamilyCounts.end() ? it->second : 0;
+  } else {
+    auto it = mMitamaCompendiumRaceCounts.find(groupID);
+    return it != mMitamaCompendiumRaceCounts.end() ? it->second : 0;
+  }
+}
+
 std::list<int32_t> DemonState::GetCompendiumTokuseiIDs() const {
   return mCompendiumTokuseiIDs;
+}
+
+std::list<int32_t> DemonState::GetMitamaCompendiumTokuseiIDs() const {
+  return mMitamaCompendiumTokuseiIDs;
 }
 
 std::list<int32_t> DemonState::GetDemonTokuseiIDs() const {
@@ -113,8 +134,8 @@ bool DemonState::UpdateSharedState(
       compendium2 || CharacterManager::HasValuable(
                          character, SVR_CONST.VALUABLE_DEVIL_BOOK_V1);
 
+  auto state = ClientState::GetEntityClientState(GetEntityID());
   if (compendium1) {
-    auto state = ClientState::GetEntityClientState(GetEntityID());
     auto worldData = state ? state->GetAccountWorldData().Get() : nullptr;
     if (worldData) {
       auto devilBook = worldData->GetDevilBook();
@@ -135,55 +156,118 @@ bool DemonState::UpdateSharedState(
   std::set<uint32_t> compendiumEntries;
   std::unordered_map<uint8_t, uint16_t> compendiumFamilyCounts;
   std::unordered_map<uint8_t, uint16_t> compendiumRaceCounts;
+  std::set<uint32_t> mitamaCompendiumEntries;
+  std::unordered_map<uint8_t, uint16_t> mitamaCompendiumFamilyCounts;
+  std::unordered_map<uint8_t, uint16_t> mitamaCompendiumRaceCounts;
   if (cShiftValues.size() > 0) {
     for (auto& dbPair : definitionManager->GetDevilBookData()) {
       auto dBook = dbPair.second;
+
       if (cShiftValues.find(dBook->GetShiftValue()) != cShiftValues.end() &&
-          dBook->GetGroupID() &&
-          compendiumEntries.find(dBook->GetEntryID()) ==
-              compendiumEntries.end()) {
+          dBook->GetGroupID()) {
         auto devilData = definitionManager->GetDevilData(dBook->GetBaseID1());
         if (devilData) {
           uint8_t familyID = (uint8_t)devilData->GetCategory()->GetFamily();
           uint8_t raceID = (uint8_t)devilData->GetCategory()->GetRace();
+          auto mitamaDemonID = devilData->GetUnionData()->GetMitamaFusionID();
 
-          if (compendiumFamilyCounts.find(familyID) ==
-              compendiumFamilyCounts.end()) {
-            compendiumFamilyCounts[familyID] = 1;
-          } else {
-            compendiumFamilyCounts[familyID]++;
+          if (dBook->GetID() == mitamaDemonID) {
+            // This entry is for the mitama version. Add to the mitama book's
+            // family and race count.
+            if (mitamaCompendiumFamilyCounts.find(familyID) ==
+                mitamaCompendiumFamilyCounts.end()) {
+              mitamaCompendiumFamilyCounts[familyID] = 1;
+            } else {
+              mitamaCompendiumFamilyCounts[familyID]++;
+            }
+
+            if (mitamaCompendiumRaceCounts.find(raceID) ==
+                mitamaCompendiumRaceCounts.end()) {
+              mitamaCompendiumRaceCounts[raceID] = 1;
+            } else {
+              mitamaCompendiumRaceCounts[raceID]++;
+            }
+
+            mitamaCompendiumEntries.insert(dBook->GetEntryID());
           }
 
-          if (compendiumRaceCounts.find(raceID) == compendiumRaceCounts.end()) {
-            compendiumRaceCounts[raceID] = 1;
-          } else {
-            compendiumRaceCounts[raceID]++;
+          if (compendiumEntries.find(dBook->GetEntryID()) ==
+              compendiumEntries.end()) {
+            // Add to the regular Compendium.
+            if (compendiumFamilyCounts.find(familyID) ==
+                compendiumFamilyCounts.end()) {
+              compendiumFamilyCounts[familyID] = 1;
+            } else {
+              compendiumFamilyCounts[familyID]++;
+            }
+
+            if (compendiumRaceCounts.find(raceID) ==
+                compendiumRaceCounts.end()) {
+              compendiumRaceCounts[raceID] = 1;
+            } else {
+              compendiumRaceCounts[raceID]++;
+            }
+
+            compendiumEntries.insert(dBook->GetEntryID());
           }
         }
-
-        compendiumEntries.insert(dBook->GetEntryID());
       }
     }
   }
 
   // Recalculate compendium based tokusei and set count
-  std::list<int32_t> compendiumTokuseiIDs;
+  std::list<int32_t> compendiumTokuseiIDs_Demon;
+  std::list<int32_t> compendiumTokuseiIDs_Summoner;
+  std::list<int32_t> mitamaCompendiumTokuseiIDs_Demon;
+  std::list<int32_t> mitamaCompendiumTokuseiIDs_Summoner;
 
   if (compendium2 && compendiumEntries.size() > 0) {
     for (auto bonusPair : SVR_CONST.DEMON_BOOK_BONUS) {
       if (bonusPair.first <= compendiumEntries.size()) {
         for (int32_t tokuseiID : bonusPair.second) {
-          compendiumTokuseiIDs.push_back(tokuseiID);
+          compendiumTokuseiIDs_Demon.push_back(tokuseiID);
+        }
+      }
+    }
+
+    for (auto bonusPair : SVR_CONST.DEMON_BOOK_SUMMONER_BONUS) {
+      if (bonusPair.first <= compendiumEntries.size()) {
+        for (int32_t tokuseiID : bonusPair.second) {
+          compendiumTokuseiIDs_Summoner.push_back(tokuseiID);
+        }
+      }
+    }
+  }
+
+  if (compendium2 && mitamaCompendiumEntries.size() > 0) {
+    for (auto bonusPair : SVR_CONST.MITAMA_DEMON_BOOK_BONUS) {
+      if (bonusPair.first <= mitamaCompendiumEntries.size()) {
+        for (int32_t tokuseiID : bonusPair.second) {
+          mitamaCompendiumTokuseiIDs_Demon.push_back(tokuseiID);
+        }
+      }
+    }
+
+    for (auto bonusPair : SVR_CONST.MITAMA_DEMON_BOOK_SUMMONER_BONUS) {
+      if (bonusPair.first <= mitamaCompendiumEntries.size()) {
+        for (int32_t tokuseiID : bonusPair.second) {
+          compendiumTokuseiIDs_Summoner.push_back(tokuseiID);
         }
       }
     }
   }
 
   std::lock_guard<std::mutex> lock(mSharedLock);
-  mCompendiumTokuseiIDs = compendiumTokuseiIDs;
+  mCompendiumTokuseiIDs = compendiumTokuseiIDs_Demon;
   mCompendiumCount = (uint16_t)compendiumEntries.size();
   mCompendiumFamilyCounts = compendiumFamilyCounts;
   mCompendiumRaceCounts = compendiumRaceCounts;
+  mMitamaCompendiumTokuseiIDs = mitamaCompendiumTokuseiIDs_Demon;
+  mMitamaCompendiumCount = (uint16_t)mitamaCompendiumEntries.size();
+  mMitamaCompendiumFamilyCounts = mitamaCompendiumFamilyCounts;
+  mMitamaCompendiumRaceCounts = mitamaCompendiumRaceCounts;
+  state->GetCharacterState()->UpdateCompendiumTokuseiIDs(
+      compendiumTokuseiIDs_Summoner);
 
   return true;
 }

@@ -1614,7 +1614,8 @@ double TokuseiManager::CalculateAttributeValue(
         }
         break;
 
-      case objects::TokuseiAttributes::MultiplierType_t::MITAMA_DEMON_BOOK_DIVIDE:
+      case objects::TokuseiAttributes::MultiplierType_t::
+          MITAMA_DEMON_BOOK_DIVIDE:
         // Divide the value times the number of unique entries in the compendium
         // by the multiplier
         {
@@ -1622,10 +1623,11 @@ double TokuseiManager::CalculateAttributeValue(
               ClientState::GetEntityClientState(eState->GetEntityID(), false);
           auto dState = state ? state->GetDemonState() : nullptr;
 
-          result = dState
-                       ? (result * floor((double)dState->GetMitamaCompendiumCount() /
-                                         (double)multValue))
-                       : 0.0;
+          result =
+              dState
+                  ? (result * floor((double)dState->GetMitamaCompendiumCount() /
+                                    (double)multValue))
+                  : 0.0;
         }
         break;
       case objects::TokuseiAttributes::MultiplierType_t::
@@ -1640,15 +1642,16 @@ double TokuseiManager::CalculateAttributeValue(
 
           if (devilData) {
             uint8_t familyID = (uint8_t)devilData->GetCategory()->GetFamily();
-            result = result *
-                     floor((double)dState->GetMitamaCompendiumCount(familyID, true) /
-                           (double)multValue);
+            result = result * floor((double)dState->GetMitamaCompendiumCount(
+                                        familyID, true) /
+                                    (double)multValue);
           } else {
             result = 0.0;
           }
         }
         break;
-      case objects::TokuseiAttributes::MultiplierType_t::MITAMA_DEMON_BOOK_RACE_DIVIDE:
+      case objects::TokuseiAttributes::MultiplierType_t::
+          MITAMA_DEMON_BOOK_RACE_DIVIDE:
         // Divide the value times the number of unique entries in the compendium
         // (of the current demon's race) by the multiplier
         {
@@ -1659,9 +1662,9 @@ double TokuseiManager::CalculateAttributeValue(
 
           if (devilData) {
             uint8_t raceID = (uint8_t)devilData->GetCategory()->GetRace();
-            result = result *
-                     floor((double)dState->GetMitamaCompendiumCount(raceID, false) /
-                           (double)multValue);
+            result = result * floor((double)dState->GetMitamaCompendiumCount(
+                                        raceID, false) /
+                                    (double)multValue);
           } else {
             result = 0.0;
           }

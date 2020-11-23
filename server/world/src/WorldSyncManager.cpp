@@ -1746,7 +1746,7 @@ bool WorldSyncManager::EndMatch(
   uint8_t bestRank = 1;
   for (size_t i = 0; i < 5; i++) {
     match->SetRankings(ranks[i].first, bestRank);
-    if (i != 4 && ranks[i+1].second != ranks[i].second) {
+    if (i != 4 && ranks[i + 1].second != ranks[i].second) {
       bestRank++;
     }
   }
@@ -1780,7 +1780,7 @@ bool WorldSyncManager::EndMatch(
 
   int32_t winningBethel = 0;
   for (auto entry : entries) {
-    if (match->GetRankings((uint8_t) entry->GetTeam()) == 1) {
+    if (match->GetRankings((uint8_t)entry->GetTeam()) == 1) {
       winningBethel += entry->GetBethel();
     }
   }
@@ -1791,7 +1791,7 @@ bool WorldSyncManager::EndMatch(
   for (auto entry : entries) {
     if (!entry->GetActive()) continue;
 
-    uint8_t rank = match->GetRankings((uint8_t) entry->GetTeam());
+    uint8_t rank = match->GetRankings((uint8_t)entry->GetTeam());
     if (rank == 1 || payoutAll) {
       // Player was on winning team or all teams being paid
       auto progress =

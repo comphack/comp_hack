@@ -6079,11 +6079,9 @@ std::list<Point> ZoneManager::GetShortestPath(const std::shared_ptr<Zone>& zone,
         }
 
         points.sort(
-            [source](
-                const std::pair<float, std::shared_ptr<objects::QmpNavPoint>>&
-                    a,
-                const std::pair<float, std::shared_ptr<objects::QmpNavPoint>>&
-                    b) { return a.first < b.first; });
+            [](const std::pair<float, std::shared_ptr<objects::QmpNavPoint>>& a,
+               const std::pair<float, std::shared_ptr<objects::QmpNavPoint>>&
+                   b) { return a.first < b.first; });
 
         for (auto& pair : points) {
           Line l(p,

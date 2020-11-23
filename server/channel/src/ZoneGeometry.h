@@ -146,6 +146,11 @@ class ZoneShape {
    */
   ZoneShape();
 
+  /*
+   * Destruct a shape.
+   */
+  virtual ~ZoneShape();
+
   /**
    * Determines if the supplied path collides with the shape
    * @param path Line representing a path
@@ -186,6 +191,11 @@ class ZoneQmpShape : public ZoneShape {
    */
   ZoneQmpShape();
 
+  /**
+   * Destruct a QMP shape.
+   */
+  virtual ~ZoneQmpShape();
+
   virtual bool Collides(const Line& path, Point& point, Line& surface) const;
 
   /// ID of the shape generated from a QMP file
@@ -210,6 +220,11 @@ class ZoneSpotShape : public ZoneShape {
    * Create a new spot based shape
    */
   ZoneSpotShape();
+
+  /**
+   * Destruct a spot based shape.
+   */
+  virtual ~ZoneSpotShape();
 
   /// Pointer to the binary data spot definition
   std::shared_ptr<objects::MiSpotData> Definition;

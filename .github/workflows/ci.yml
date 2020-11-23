@@ -1,0 +1,156 @@
+name: C/C++ CI
+
+on: [push, pull_request]
+
+jobs:
+  clang-format:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+    - name: Check Formatting
+      run: ci/clang-format.sh
+
+  linux-gcc-build:
+    name: Ubuntu Linux (GCC)
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+    - name: Build Project
+      env:
+        CC: gcc
+        CXX: g++
+        PLATFORM: linux
+        COMPILER: gcc
+        GENERATOR: Unix Makefiles
+        EXTERNAL_RELEASE: external-42
+      run: ci/linux-build.sh
+
+  linux-clang-build:
+    name: Ubuntu Linux (Clang)
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+    - name: Build Project
+      env:
+        CC: clang
+        CXX: clang++
+        PLATFORM: linux
+        COMPILER: clang
+        GENERATOR: Ninja
+        EXTERNAL_RELEASE: external-42
+      run: ci/linux-build.sh
+
+  win32-msvc2017-build:
+    name: Windows 32-bit (MSVC 2017)
+    runs-on: windows-2016
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+    - name: Build Project
+      env:
+        PLATFORM: win32
+        COMPILER: msvc2017
+        MSPLATFORM: Win32
+        GENERATOR: Visual Studio 15 2017
+        CONFIGURATION: RelWithDebInfo
+        OPENSSL_ROOT_DIR: C:/Program Files (x86)/OpenSSL-Win32
+        QT_EXTRACT_DIR: C:/Qt/5.12.3
+        CMAKE_PREFIX_PATH: C:/Qt/5.12.3/msvc2017
+        OPENSSL_URL: https://github.com/comphack/external/releases/download/external-25/Win32OpenSSL-1_1_1h.msi
+        DOXYGEN_URL: https://github.com/comphack/external/releases/download/external-25/doxygen-1.8.14.windows.x64.bin.zip
+        QT_URL: https://github.com/comphack/external/releases/download/external-25/qt-5.12.3-win32.7z
+        EXTERNAL_RELEASE: external-42
+      run: .\ci\windows-updater-build.ps1
+    - name: Get Release
+      id: get_release
+      uses: bruceadams/get-release@v1.2.2
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Get ZIP Asset Filename
+      id: get_zip_asset_filename
+      if: startsWith(github.ref, 'refs/tags/')
+      run: Write-Output "::set-output name=filename::$(Split-Path $(Get-ChildItem build\comp_hack-*.zip) -leaf)"
+    - name: Upload Release Asset
+      id: upload_release_asset
+      uses: actions/upload-release-asset@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release.outputs.upload_url }}
+        asset_path: build/${{ steps.get_zip_asset_filename.outputs.filename }}
+        asset_name: ${{ steps.get_zip_asset_filename.outputs.filename }}
+        asset_content_type: application/zip
+
+  win64-msvc2017-build:
+    name: Windows 64-bit (MSVC 2017)
+    runs-on: windows-2016
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+    - name: Build Project
+      env:
+        PLATFORM: win64
+        COMPILER: msvc2017
+        MSPLATFORM: x64
+        GENERATOR: Visual Studio 15 2017 Win64
+        CONFIGURATION: RelWithDebInfo
+        OPENSSL_ROOT_DIR: C:/Program Files/OpenSSL-Win64
+        QT_EXTRACT_DIR: C:/Qt/5.12.3
+        CMAKE_PREFIX_PATH: C:/Qt/5.12.3/msvc2017_64
+        OPENSSL_URL: https://github.com/comphack/external/releases/download/external-25/Win64OpenSSL-1_1_1h.msi
+        DOXYGEN_URL: https://github.com/comphack/external/releases/download/external-25/doxygen-1.8.14.windows.x64.bin.zip
+        QT_URL: https://github.com/comphack/external/releases/download/external-25/qt-5.12.3-win64.7z
+        EXTERNAL_RELEASE: external-42
+      run: .\ci\windows-build.ps1
+    - name: Get Release
+      id: get_release
+      uses: bruceadams/get-release@v1.2.2
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Get ZIP Asset Filename
+      id: get_zip_asset_filename
+      if: startsWith(github.ref, 'refs/tags/')
+      run: Write-Output "::set-output name=filename::$(Split-Path $(Get-ChildItem build\comp_hack-*.zip) -leaf)"
+    - name: Upload ZIP Release Asset
+      id: upload_zip_release_asset
+      uses: actions/upload-release-asset@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release.outputs.upload_url }}
+        asset_path: build/${{ steps.get_zip_asset_filename.outputs.filename }}
+        asset_name: ${{ steps.get_zip_asset_filename.outputs.filename }}
+        asset_content_type: application/zip
+    - name: Get MSI Asset Filename
+      id: get_msi_asset_filename
+      if: startsWith(github.ref, 'refs/tags/')
+      run: Write-Output "::set-output name=filename::$(Split-Path $(Get-ChildItem build\comp_hack-*.msi) -leaf)"
+    - name: Upload MSI Release Asset
+      id: upload_msi_release_asset
+      uses: actions/upload-release-asset@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release.outputs.upload_url }}
+        asset_path: build/${{ steps.get_msi_asset_filename.outputs.filename }}
+        asset_name: ${{ steps.get_msi_asset_filename.outputs.filename }}
+        asset_content_type: application/zip

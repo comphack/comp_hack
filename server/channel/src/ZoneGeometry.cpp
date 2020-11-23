@@ -98,6 +98,8 @@ bool Line::Intersect(const Line& other, Point& point, float& dist) const {
 
 ZoneShape::ZoneShape() : IsLine(true), OneWay(false) {}
 
+ZoneShape::~ZoneShape() {}
+
 bool ZoneShape::Collides(const Line& path, Point& point, Line& surface) const {
   // If the path is outside of the boundary rectangle and doesn't cross
   // through the max/min boundary points, no collision can exist
@@ -142,6 +144,8 @@ bool ZoneShape::Collides(const Line& path, Point& point, Line& surface) const {
 
 ZoneQmpShape::ZoneQmpShape() : ShapeID(0), InstanceID(0), Active(true) {}
 
+ZoneQmpShape::~ZoneQmpShape() {}
+
 bool ZoneQmpShape::Collides(const Line& path, Point& point,
                             Line& surface) const {
   if (Active) {
@@ -152,6 +156,8 @@ bool ZoneQmpShape::Collides(const Line& path, Point& point,
 }
 
 ZoneSpotShape::ZoneSpotShape() {}
+
+ZoneSpotShape::~ZoneSpotShape() {}
 
 bool ZoneGeometry::Collides(const Line& path, Point& point, Line& surface,
                             std::shared_ptr<ZoneShape>& shape,

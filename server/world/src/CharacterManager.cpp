@@ -468,11 +468,13 @@ bool CharacterManager::AddToParty(
     // for membership in the leader's team (non-Cathedral teams were broken
     // on party creation)
     auto party = partyID ? GetParty(partyID) : nullptr;
-    auto partyLeader = party ? GetCharacterLogin(party->GetLeaderCID()) : nullptr;
+    auto partyLeader =
+        party ? GetCharacterLogin(party->GetLeaderCID()) : nullptr;
     auto partyLeaderTeamID = partyLeader ? partyLeader->GetTeamID() : 0;
     auto teamID = login->GetTeamID();
 
-    if (party && (teamID || partyLeaderTeamID) && (teamID != partyLeaderTeamID)) {
+    if (party && (teamID || partyLeaderTeamID) &&
+        (teamID != partyLeaderTeamID)) {
       // New party member is not on the leader's team, revoke all team
       // memberships of the party members
       for (auto partyMember : party->GetMemberIDs()) {
@@ -606,7 +608,7 @@ void CharacterManager::PartyLeave(
   if (!cLogin) {
     return;
   }
-  
+
   uint32_t partyID = cLogin->GetPartyID();
   auto party = GetParty(partyID);
   if (!party && !requestConnection) {

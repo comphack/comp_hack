@@ -27,6 +27,9 @@
 #ifndef TOOLS_UPDATER_SRC_OPTIONS_H
 #define TOOLS_UPDATER_SRC_OPTIONS_H
 
+// Updater Includes
+#include "ClientPatches.h"
+
 // Ignore warnings
 #include <PushIgnore.h>
 
@@ -63,15 +66,21 @@ class Options : public QDialog {
   void Save();
 
   void LanguageChanged();
+  void EnableAllPatchSettings();
 
  protected:
   virtual void changeEvent(QEvent *pEvent);
 
   void PopulateAdapterModes();
+  void PopulateSoundtrackOptions();
 
   IDirect3D9 *mD3D9;
 
   QList<QPair<int, int> > mScreenSizes;
+
+  ClientPatches mDefaultPatches;
+  ClientPatches mBasePatches;
+  ClientPatches mUserPatches;
 
   Ui::Options ui;
 };

@@ -859,9 +859,9 @@ bool ApiHandler::Admin_MessageWorld(
 
     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHAT);
     relay.WriteU16Little((uint16_t)ChatType_t::CHAT_SELF);
-    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                               from, true);
-    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                               message, true);
   } else if (type.ToLower() == "ticker") {
     int8_t mode = 0;
@@ -882,7 +882,7 @@ bool ApiHandler::Admin_MessageWorld(
     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYSTEM_MSG);
     relay.WriteS8(mode);
     relay.WriteS8(subMode);
-    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                               message, true);
   } else {
     response["error"] = "Invalid message type specified.";

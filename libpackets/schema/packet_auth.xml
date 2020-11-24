@@ -3,11 +3,11 @@
     <object name="PacketLobbyAuth" persistent="false" namespace="packets">
         <member type="u16" name="PacketCode"/>
         <!-- Encoding was set to ensure the string is zero padded. -->
-        <member type="string" name="Hash" lensz="2" encoding="cp932"/>
+        <member type="string" name="Hash" lensz="2" encoding="default"/>
     </object>
     <object name="PacketChannelAuth" persistent="false" namespace="packets">
         <member type="u16" name="PacketCode"/>
         <!-- Encoding was set to ensure the string is zero padded. -->
-        <member type="string" name="Hash" lensz="2" encoding="cp932"/>
+        <member type="string" name="Hash" lensz="2" encoding="default"/>
     </object>
 </objgen>

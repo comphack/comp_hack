@@ -60,11 +60,11 @@ bool Parsers::FriendInfo::Parse(
 
   libcomp::Packet reply;
   reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FRIEND_INFO_SELF);
-  reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+  reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                             character->GetName(), true);
   reply.WriteU32Little((uint32_t)cLogin->GetWorldCID());
   reply.WriteS8(0);
-  reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+  reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                             fSettings->GetFriendMessage(), true);
 
   auto privacySet = fSettings->GetPublicToZone();

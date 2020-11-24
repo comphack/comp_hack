@@ -292,6 +292,37 @@ static Sqrat::Object GetRecursiveFiles(const libcomp::String& path) {
   }
 }
 
+static Sqrat::Object AvailableEncodings() {
+  auto encodings = libcomp::Convert::AvailableEncodings();
+
+  Sqrat::Array arr(gTranslator->engine.GetVM(), (SQInteger)encodings.size());
+
+  int i = 0;
+
+  for (auto enc : encodings) {
+    arr.SetValue(i++, enc);
+  }
+
+  return arr;
+}
+
+static libcomp::String GetEncoding() {
+  return libcomp::Convert::EncodingToString(
+      libcomp::Convert::GetDefaultEncoding());
+}
+
+static bool SetEncoding(const libcomp::String& enc) {
+  libcomp::Convert::Encoding_t encoding =
+      libcomp::Convert::EncodingFromString(enc);
+  if (libcomp::Convert::Encoding_t::ENCODING_DEFAULT != encoding) {
+    libcomp::Convert::SetDefaultEncoding(encoding);
+
+    return true;
+  }
+
+  return false;
+}
+
 static void LogInfo(const libcomp::String& msg) { LogGeneralInfoMsg(msg); }
 
 static void LogError(const libcomp::String& msg) {
@@ -475,6 +506,10 @@ Translator::Translator(const char* szProgram)
   Sqrat::RootTable(engine.GetVM()).Func("_DecryptFile", DecryptFile);
   Sqrat::RootTable(engine.GetVM()).Func("_Include", Include);
   Sqrat::RootTable(engine.GetVM()).Func("_ReplaceText", ReplaceText);
+  Sqrat::RootTable(engine.GetVM())
+      .Func("AvailableEncodings", AvailableEncodings);
+  Sqrat::RootTable(engine.GetVM()).Func("GetEncoding", GetEncoding);
+  Sqrat::RootTable(engine.GetVM()).Func("_SetEncoding", SetEncoding);
 
   binaryTypes = EnumerateBinaryDataTypes();
 }

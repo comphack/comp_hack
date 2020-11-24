@@ -87,14 +87,14 @@ void SendFriendInfo(
     }
 
     reply.WriteS32Little(login->GetWorldCID());
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+    reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                               character->GetName(), true);
     reply.WriteU32Little((uint32_t)login->GetWorldCID());
     reply.WriteS8(0);  // Unknown
     reply.WriteS8((int8_t)login->GetStatus());
     reply.WriteS32Little((int32_t)login->GetZoneID());
     reply.WriteS8(login->GetChannelID());
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+    reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                               fSettings->GetFriendMessage(), true);
 
     client->QueuePacket(reply);
@@ -160,7 +160,7 @@ bool Parsers::FriendsUpdate::Parse(
 
       // Send the requesting character name
       request.WriteString16Little(
-          libcomp::Convert::Encoding_t::ENCODING_CP932,
+          libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
           p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_UTF8,
                                true),
           true);
@@ -189,7 +189,7 @@ bool Parsers::FriendsUpdate::Parse(
       reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FRIEND_REQUEST);
 
       // Send the reqeusted character name back
-      reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+      reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                                 charName, true);
       reply.WriteS32Little(success ? 0 : -1);
       client->SendPacket(reply);

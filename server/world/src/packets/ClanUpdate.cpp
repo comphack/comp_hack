@@ -147,10 +147,10 @@ void ClanInvite(std::shared_ptr<WorldServer> server,
               ChannelToClientPacketCode_t::PACKET_CLAN_INVITED);
           relay.WriteS32Little(cLogin->GetWorldCID());
           relay.WriteString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932,
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
               clanInfo->GetClan()->GetName(), true);
           relay.WriteString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932,
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
               cLogin->GetCharacter()->GetName(), true);
           relay.WriteS32Little(clanID);
 

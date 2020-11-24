@@ -109,6 +109,10 @@ OPTION(IMPORT_CHANNEL "Import the channel without building." OFF)
 # Option to use mbedtls instead of OpenSSL for the main applications.
 OPTION(USE_MBED_TLS "Use mbedtls instead of OpenSSL for the main apps." OFF)
 
+# Option to compress and otherwise reduce the size of PDBs.
+# See: https://devblogs.microsoft.com/cppblog/shrink-my-program-database-pdb-file/
+OPTION(COMPRESS_PDB "Compress the PDB files (Windows builds)." OFF)
+
 IF(WIN32)
     IF(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
         SET(CPACK_PACKAGE_FILE_NAME "comp_hack-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_CODENAME_C}-win32")
@@ -382,6 +386,11 @@ ENDIF(EXISTS "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
 
 # PDB not found for library.
 ADD_LINKER_FLAGS(AUTO /ignore:4099)
+
+# Shrink the size of PDBs.
+IF(COMPRESS_PDB)
+    ADD_LINKER_FLAGS(AUTO /incremental:no /Gy /Gw /opt:ref /opt:icf /pdbcompress)
+ENDIF(COMPRESS_PDB)
 
 # Object file level parallelism for MSVC.
 ADD_COMPILER_FLAGS(AUTO /MP)

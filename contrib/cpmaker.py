@@ -21,7 +21,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import urllib2
+from urllib.request import urlopen
+
+import os
 import re
 
 # Whether to use normal Unicode mapping or "best fit".
@@ -29,10 +31,34 @@ USE_BESTFIT = True
 
 # Generate the URLs to download the Unicode mapping files from.
 URL_BASE = "http://www.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/"
+URL_CP874 = URL_BASE + ("WindowsBestFit/bestfit874.txt" \
+	if USE_BESTFIT else "WINDOWS/CP874.TXT")
 URL_CP932 = URL_BASE + ("WindowsBestFit/bestfit932.txt" \
 	if USE_BESTFIT else "WINDOWS/CP932.TXT")
+URL_CP936 = URL_BASE + ("WindowsBestFit/bestfit936.txt" \
+	if USE_BESTFIT else "WINDOWS/CP936.TXT")
+URL_CP949 = URL_BASE + ("WindowsBestFit/bestfit949.txt" \
+	if USE_BESTFIT else "WINDOWS/CP949.TXT")
+URL_CP950 = URL_BASE + "WINDOWS/CP950.TXT"
+URL_CP1250 = URL_BASE + ("WindowsBestFit/bestfit1250.txt" \
+	if USE_BESTFIT else "WINDOWS/CP1250.TXT")
+URL_CP1251 = URL_BASE + ("WindowsBestFit/bestfit1251.txt" \
+	if USE_BESTFIT else "WINDOWS/CP1251.TXT")
 URL_CP1252 = URL_BASE + ("WindowsBestFit/bestfit1252.txt" \
 	if USE_BESTFIT else "WINDOWS/CP1252.TXT")
+URL_CP1253 = URL_BASE + ("WindowsBestFit/bestfit1253.txt" \
+	if USE_BESTFIT else "WINDOWS/CP1253.TXT")
+URL_CP1254 = URL_BASE + ("WindowsBestFit/bestfit1254.txt" \
+	if USE_BESTFIT else "WINDOWS/CP1254.TXT")
+URL_CP1255 = URL_BASE + ("WindowsBestFit/bestfit1255.txt" \
+	if USE_BESTFIT else "WINDOWS/CP1255.TXT")
+URL_CP1256 = URL_BASE + ("WindowsBestFit/bestfit1256.txt" \
+	if USE_BESTFIT else "WINDOWS/CP1256.TXT")
+URL_CP1257 = URL_BASE + ("WindowsBestFit/bestfit1257.txt" \
+	if USE_BESTFIT else "WINDOWS/CP1257.TXT")
+URL_CP1258 = URL_BASE + ("WindowsBestFit/bestfit1258.txt" \
+	if USE_BESTFIT else "WINDOWS/CP1258.TXT")
+URL_CP1361 = URL_BASE + "WindowsBestFit/bestfit1361.txt"
 
 # This should appear at the beginning of the file. All instances of %CP% will
 # be replaced with the code page number.
@@ -139,7 +165,7 @@ def generateLookup(url, cpnum):
 		# For a detailed description of the format, see this page: http://www.
 		# unicode.org/Public/MAPPINGS/VENDORS/MICSFT/WindowsBestFit/readme.txt
 		#
-		for line in urllib2.urlopen(url).read().split('\n'):
+		for line in urlopen(url).read().decode('utf-8', 'ignore').split('\n'):
 			# Debug print the current state and the line being parsed.
 			# print str(parseState) + ": " + line
 
@@ -290,7 +316,7 @@ def generateLookup(url, cpnum):
 		# simpy two hex values with white space in between.
 		mappingRegExp = re.compile(r"^0x([0-9a-fA-F]+)\s+0x([0-9a-fA-F]+).*$")
 
-		for line in urllib2.urlopen(url).read().split('\n'):
+		for line in urlopen(url).read().split('\n'):
 			if len(line) and line[0] == '#':
 				continue
 
@@ -314,7 +340,7 @@ def generateLookup(url, cpnum):
 	# header replacing all instances of %CP% with the same code page value that
 	# was passed into the method. Finally, write a tab to start the first line
 	# of the Unicode to Windows code page mapping portion of the array.
-	lookupFile = open("LookupTableCP%d.h" % cpnum, "w")
+	lookupFile = open("LookupTableCP%d.h" % cpnum, "w", newline='\n')
 	lookupFile.write(FILE_HEADER.replace("%CP%", str(cpnum)))
 	lookupFile.write('\t')
 
@@ -353,8 +379,21 @@ def generateLookup(url, cpnum):
 	# characters before writing the footer then write the footer replacing all
 	# instances of %CP% with the same code page value that was passed into the
 	# method.
-	lookupFile.seek(-3, 1)
-	lookupFile.write(FILE_FOOTER.replace("%CP%", "932"))
+	lookupFile.seek(lookupFile.tell() - 3, os.SEEK_SET)
+	lookupFile.write(FILE_FOOTER.replace("%CP%", str(cpnum)))
 
+generateLookup(URL_CP874, 874)
 generateLookup(URL_CP932, 932)
+generateLookup(URL_CP936, 936)
+generateLookup(URL_CP949, 949)
+generateLookup(URL_CP950, 950)
+generateLookup(URL_CP1250, 1250)
+generateLookup(URL_CP1251, 1251)
 generateLookup(URL_CP1252, 1252)
+generateLookup(URL_CP1253, 1253)
+generateLookup(URL_CP1254, 1254)
+generateLookup(URL_CP1255, 1255)
+generateLookup(URL_CP1256, 1256)
+generateLookup(URL_CP1257, 1257)
+generateLookup(URL_CP1258, 1258)
+generateLookup(URL_CP1361, 1361)

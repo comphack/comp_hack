@@ -7,7 +7,7 @@
     <object name="PacketLobbyCharacterListEntry" persistent="false" namespace="packets">
         <member type="u8" name="CharacterID"/>
         <member type="u8" name="WorldID"/>
-        <member type="string" name="Name" lensz="2" encoding="cp932"/>
+        <member type="string" name="Name" lensz="2" encoding="default"/>
         <member type="u8" name="Gender"/>
         <member type="u32" name="KillTime"/>
         <member type="u32" name="PlayOpeningMovie"/>

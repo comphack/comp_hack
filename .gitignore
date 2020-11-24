@@ -5,6 +5,8 @@ debian/*.log
 deps/*.zip
 deps/libcomp/
 binaries/
+binaries32/
+binaries64/
 
 *.sublime-project
 

@@ -130,7 +130,7 @@ SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
 SET(CPACK_PACKAGE_VERSION_MAJOR ${VERSION_MAJOR})
 SET(CPACK_PACKAGE_VERSION_MINOR ${VERSION_MINOR})
 SET(CPACK_PACKAGE_VERSION_PATCH ${VERSION_PATCH})
-SET(CPACK_COMPONENTS_ALL runtime lobby world channel tools config webroot datastore docs)
+SET(CPACK_COMPONENTS_ALL runtime lobby world channel tools config webroot datastore docs schema)
 
 SET(CPACK_COMPONENT_RUNTIME_DISPLAY_NAME "C++ Runtime Library")
 SET(CPACK_COMPONENT_RUNTIME_DESCRIPTION "Runtime library needed by the software.")
@@ -153,6 +153,8 @@ SET(CPACK_COMPONENT_DATASTORE_DESCRIPTION "Server-side content (datastore) that 
 SET(CPACK_COMPONENT_DATASTORE_DEPENDS channel)
 SET(CPACK_COMPONENT_DOCS_DISPLAY_NAME "Documentation")
 SET(CPACK_COMPONENT_DOCS_DESCRIPTION "Documentation for the server.")
+SET(CPACK_COMPONENT_SCHEMA_DISPLAY_NAME "BinaryData XML Schema")
+SET(CPACK_COMPONENT_SCHEMA_DESCRIPTION "XML schema files (xsd) to validate BinaryData.")
 
 SET(CPACK_COMPONENT_LOBBY_GROUP servers)
 SET(CPACK_COMPONENT_WORLD_GROUP servers)
@@ -879,7 +881,7 @@ MACRO(OBJGEN_XML outfiles xml)
         IF(ex MATCHES "xml") # XML schema file
             # Add the xml schema file as a dependency.
             SET(deps ${deps} "${fp}")
-        ELSEIF(ex MATCHES "cpp" OR ex MATCHES "h") # Source or header file
+        ELSEIF(ex MATCHES "cpp" OR ex MATCHES "h" OR ex MATCHES "xsd") # Source or header or schema file
             # Add the source or header file as a generated output that must
             # then be compiled.
             SET(outs ${outs} "${CMAKE_CURRENT_BINARY_DIR}/objgen/${it}")
@@ -890,6 +892,15 @@ MACRO(OBJGEN_XML outfiles xml)
                     "${CMAKE_CURRENT_BINARY_DIR}/objgen/ObjectCollection.cpp.in"
                     "#include \"${it}\"\n")
             ENDIF(SINGLE_OBJGEN AND ex MATCHES "cpp")
+
+            # Mark the schema file to be installed
+            IF(ex MATCHES "xsd")
+                INSTALL(
+                    FILES "${CMAKE_CURRENT_BINARY_DIR}/objgen/${it}"
+                    DESTINATION schema
+                    COMPONENT schema
+                )
+            ENDIF(ex MATCHES "xsd")
         ELSE() # Everything else is assumed to be a directory
             # Add the directory as a search path for other xml schema files.
             SET(incs ${incs} "-I" "${fp}")

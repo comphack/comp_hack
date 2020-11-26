@@ -53,6 +53,8 @@
 // Stop ignoring warnings
 #include <PopIgnore.h>
 
+libcomp::String gLintPath = "xmllint";
+
 struct Translator {
   Translator(const char* szProgram);
 
@@ -487,6 +489,88 @@ static bool ReplaceText(Sqrat::Table replacementsTable,
   return true;
 }
 
+static void SetLintPath(const libcomp::String& path) { gLintPath = path; }
+
+static bool HaveLint() {
+  char szBuffer[10 * 1024];
+
+  auto cmd = libcomp::String("%1 --version 2>&1").Arg(gLintPath);
+
+#ifdef _WIN32
+  FILE* pPipe = _popen(cmd.C(), "rt");
+#else
+  FILE* pPipe = popen(cmd.C(), "rt");
+#endif
+
+  while (fgets(szBuffer, sizeof(szBuffer), pPipe)) {
+    // do nothing with it
+  }
+
+  if (feof(pPipe)) {
+#ifdef _WIN32
+    int ret = _pclose(pPipe);
+#else
+    int ret = pclose(pPipe);
+#endif
+
+    return 0 == ret;
+  } else {
+    // Broken pipe.
+#ifdef _WIN32
+    _pclose(pPipe);
+#else
+    pclose(pPipe);
+#endif
+
+    return false;
+  }
+}
+
+static int LintXml(const libcomp::String& schema, const libcomp::String& xml) {
+  char szBuffer[10 * 1024];
+  std::list<libcomp::String> output;
+
+  auto cmd = libcomp::String("%1 -schema %2 %3 --noout 2>&1")
+                 .Arg(gLintPath)
+                 .Arg(schema)
+                 .Arg(xml);
+
+#ifdef _WIN32
+  FILE* pPipe = _popen(cmd.C(), "rt");
+#else
+  FILE* pPipe = popen(cmd.C(), "rt");
+#endif
+
+  while (fgets(szBuffer, sizeof(szBuffer), pPipe)) {
+    output.push_back(szBuffer);
+  }
+
+  if (feof(pPipe)) {
+#ifdef _WIN32
+    int ret = _pclose(pPipe);
+#else
+    int ret = pclose(pPipe);
+#endif
+
+    if (0 != ret) {
+      for (auto line : output) {
+        LogError(line);
+      }
+    }
+
+    return ret;
+  } else {
+    // Broken pipe.
+#ifdef _WIN32
+    _pclose(pPipe);
+#else
+    pclose(pPipe);
+#endif
+
+    return -1;
+  }
+}
+
 Translator::Translator(const char* szProgram)
     : store(szProgram), engine(true), didError(false) {
   Sqrat::RootTable(engine.GetVM()).Func("LogInfo", LogInfo);
@@ -510,6 +594,9 @@ Translator::Translator(const char* szProgram)
       .Func("AvailableEncodings", AvailableEncodings);
   Sqrat::RootTable(engine.GetVM()).Func("GetEncoding", GetEncoding);
   Sqrat::RootTable(engine.GetVM()).Func("_SetEncoding", SetEncoding);
+  Sqrat::RootTable(engine.GetVM()).Func("_LintXml", LintXml);
+  Sqrat::RootTable(engine.GetVM()).Func("SetLintPath", SetLintPath);
+  Sqrat::RootTable(engine.GetVM()).Func("HaveLint", HaveLint);
 
   binaryTypes = EnumerateBinaryDataTypes();
 }

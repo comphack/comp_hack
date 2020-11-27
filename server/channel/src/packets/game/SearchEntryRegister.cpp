@@ -126,7 +126,7 @@ bool Parsers::SearchEntryRegister::Parse(
           }
 
           libcomp::String comment = p.ReadString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
 
           (void)unknown1;
           (void)unknown2;
@@ -150,7 +150,7 @@ bool Parsers::SearchEntryRegister::Parse(
           }
 
           libcomp::String comment = p.ReadString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
           int8_t partySize = p.ReadS8();
 
           (void)unknown1;
@@ -177,7 +177,7 @@ bool Parsers::SearchEntryRegister::Parse(
           }
 
           libcomp::String comment = p.ReadString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
           int8_t preferredDemonRace = p.ReadS8();
 
           entry->SetData(SEARCH_IDX_PLAYSTYLE, playStyle);
@@ -218,7 +218,7 @@ bool Parsers::SearchEntryRegister::Parse(
           }
 
           libcomp::String comment = p.ReadString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
           int8_t preferredDemonRace = p.ReadS8();
 
           if (p.Left() < (uint32_t)(3 + p.PeekU16Little())) {
@@ -226,7 +226,7 @@ bool Parsers::SearchEntryRegister::Parse(
           }
 
           libcomp::String catchphrase = p.ReadString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
           int8_t image = p.ReadS8();
 
           entry->SetData(SEARCH_IDX_PLAYSTYLE, playStyle);
@@ -274,7 +274,7 @@ bool Parsers::SearchEntryRegister::Parse(
           }
 
           libcomp::String comment = p.ReadString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
 
           int16_t durability = p.ReadS16Little();
 
@@ -336,7 +336,7 @@ bool Parsers::SearchEntryRegister::Parse(
           }
 
           libcomp::String comment = p.ReadString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
 
           int8_t slotCount = p.ReadS8();
           int8_t mainCategory = p.ReadS8();
@@ -364,7 +364,7 @@ bool Parsers::SearchEntryRegister::Parse(
           }
 
           libcomp::String comment = p.ReadString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
 
           entry->SetData(SEARCH_IDX_GOAL, goal);
           entry->SetTextData(SEARCH_IDX_COMMENT, comment);
@@ -384,7 +384,7 @@ bool Parsers::SearchEntryRegister::Parse(
           }
 
           libcomp::String comment = p.ReadString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
 
           int32_t parentID = p.ReadS32Little();
 

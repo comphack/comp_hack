@@ -160,8 +160,8 @@ bool Parsers::ShopData::Parse(
 
     if (disabledTabs.find(i) != disabledTabs.end()) continue;
 
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932, tab->GetName(),
-                              true);
+    reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
+                              tab->GetName(), true);
 
     // There used to be several other flags that were supported here
     // but they appear to have been disabled. Some required multiple

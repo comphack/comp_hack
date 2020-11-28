@@ -68,8 +68,8 @@ ELSE(USE_EXTERNAL_BINARIES)
         )
     ELSE()
         SET(CIVET_URL
-            URL https://github.com/comphack/civetweb/archive/comp_hack-20200402.zip
-            URL_HASH SHA1=d032dbe54a370aa255066b6920b96dced9a10356
+            URL https://github.com/comphack/civetweb/archive/comp_hack-20201128.zip
+            URL_HASH SHA1=2501b0296c41d7b2a0375fa3772d56ea175450fe
         )
     ENDIF()
 

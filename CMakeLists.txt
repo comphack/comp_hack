@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.2.3)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 
 # Option to build the dream (if the folder is there).
 OPTION(BUILD_DREAM "Build the dream." ON)
@@ -642,20 +642,20 @@ MACRO(GENERATE_DOCS_EX doxyfile targetname)
     # Only do something if we have Doxygen.
     If(DOXYGEN_FOUND AND GENERATE_DOCUMENTATION)
         # Replace CMake variables in the input Doxyfile.
-        CONFIGURE_FILE(${doxyfile} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+        CONFIGURE_FILE("${doxyfile}" "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile" @ONLY)
 
         # Create the target that will run Doxygen. The working directory is
         # the build directory so all the documentation ends up in the same
         # directory structure.
         IF(${targetname} MATCHES "libcomp")
             ADD_CUSTOM_TARGET(doc-${targetname} ${DOXYGEN_EXECUTABLE}
-                ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY
-                ${CMAKE_BINARY_DIR} COMMENT
+                "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile" WORKING_DIRECTORY
+                "${CMAKE_BINARY_DIR}" COMMENT
                 "Generating ${PROJECT_NAME} API documentation" VERBATIM)
         ELSE(${targetname} MATCHES "libcomp")
             ADD_CUSTOM_TARGET(doc-${targetname} ${DOXYGEN_EXECUTABLE}
-                ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY
-                ${CMAKE_BINARY_DIR} DEPENDS doc-libcomp COMMENT
+                "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile" WORKING_DIRECTORY
+                "${CMAKE_BINARY_DIR}" DEPENDS doc-libcomp COMMENT
                 "Generating ${targetname} API documentation" VERBATIM)
         ENDIF(${targetname} MATCHES "libcomp")
 
@@ -683,8 +683,8 @@ IF(WIN32 AND NOT MSVC AND NOT DISABLE_UPX)
 
     # Add a command to run UPX passing a compression of 9 and the path to
     # the target executable.
-    ADD_CUSTOM_COMMAND(TARGET ${exefile} POST_BUILD
-        COMMAND upx -9 ${exefile_path} 1> nul 2>&1)
+    ADD_CUSTOM_COMMAND(TARGET "${exefile}" POST_BUILD
+        COMMAND upx -9 "${exefile_path}" 1> nul 2>&1 VERBATIM)
 ENDIF(WIN32 AND NOT MSVC AND NOT DISABLE_UPX)
 ENDMACRO(UPX_WRAP exefile)
 
@@ -912,9 +912,10 @@ MACRO(OBJGEN_XML outfiles xml)
     # or the objgen application change.
     FOREACH(out ${outs})
         ADD_CUSTOM_COMMAND(OUTPUT ${out}
-            COMMAND comp_objgen ${incs} -o ${out} ${xml_abs}
-            COMMAND cmake -E touch ${out}
-            DEPENDS comp_objgen ${deps})
+            COMMAND comp_objgen ${incs} -o "${out}" "${xml_abs}"
+            COMMAND cmake -E touch "${out}"
+            DEPENDS comp_objgen ${deps}
+            VERBATIM)
     ENDFOREACH(out ${outs})
 
     # Set the list of output files to be generated, compiled, and linked.
@@ -922,7 +923,7 @@ MACRO(OBJGEN_XML outfiles xml)
         ADD_CUSTOM_COMMAND(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/objgen/ObjectCollection.cpp"
             COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/objgen/ObjectCollection.cpp.in"
             "${CMAKE_CURRENT_BINARY_DIR}/objgen/ObjectCollection.cpp"
-            DEPENDS ${outs})
+            DEPENDS ${outs} VERBATIM)
 
         SET(${outfiles} ${${outfiles}} "${CMAKE_CURRENT_BINARY_DIR}/objgen/ObjectCollection.cpp")
     ELSE(SINGLE_OBJGEN)
@@ -1066,7 +1067,8 @@ FUNCTION(BINARY_DATA_COMMAND bdtype inpath encrypt)
             "${outpath}"
             DEPENDS "${indir}/${inpath}"
             DEPENDS comp_bdpatch
-            COMMENT "Generating ${outpath}")
+            COMMENT "Generating ${outpath}"
+            VERBATIM)
     ELSE()
         ADD_CUSTOM_COMMAND(OUTPUT "${outpath}"
             COMMAND comp_bdpatch save "${bdtype}"
@@ -1074,7 +1076,8 @@ FUNCTION(BINARY_DATA_COMMAND bdtype inpath encrypt)
             "${outpath}"
             DEPENDS "${indir}/${inpath}"
             DEPENDS comp_bdpatch
-            COMMENT "Generating ${pre_outpath}")
+            COMMENT "Generating ${pre_outpath}"
+            VERBATIM)
     ENDIF()
 
     IF(encrypt)
@@ -1084,7 +1087,8 @@ FUNCTION(BINARY_DATA_COMMAND bdtype inpath encrypt)
             "${encpath}"
             DEPENDS "${outpath}"
             DEPENDS comp_encrypt
-            COMMENT "Generating ${pre_encpath}")
+            COMMENT "Generating ${pre_encpath}"
+            VERBATIM)
     ELSE()
     ENDIF()
 ENDFUNCTION(BINARY_DATA_COMMAND)

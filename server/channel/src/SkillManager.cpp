@@ -3157,8 +3157,13 @@ bool SkillManager::ProcessSkillResult(
                    (deadOnly == target->IsAlive());
           });
 
-      if (validType == objects::MiEffectiveRangeData::ValidType_t::PARTY ||
-          validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY) {
+      // Work around CAVE setting a validtype of PARTY while setting a
+      // targetype of ALLY by skipping further target removal in that case
+      if (skillData->GetTarget()->GetType() !=
+              objects::MiTargetData::Type_t::ALLY &&
+          (validType == objects::MiEffectiveRangeData::ValidType_t::PARTY ||
+           validType ==
+               objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY)) {
         // This will result in an empty list if cast by an enemy, though
         // technically it should in that instance
         auto sourceState =

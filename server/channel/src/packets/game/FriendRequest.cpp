@@ -45,8 +45,8 @@ bool Parsers::FriendRequest::Parse(
     return false;
   }
 
-  libcomp::String targetName =
-      p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+  libcomp::String targetName = p.ReadString16Little(
+      libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto server =
@@ -70,7 +70,7 @@ bool Parsers::FriendRequest::Parse(
   } else {
     libcomp::Packet reply;
     reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_FRIEND_REQUEST);
-    reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+    reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                               targetName, true);
     reply.WriteS32Little(-1);
     client->SendPacket(reply);

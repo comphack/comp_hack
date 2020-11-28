@@ -45,8 +45,8 @@ bool Parsers::PartyRecruitReply::Parse(
     return false;
   }
 
-  libcomp::String targetName =
-      p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+  libcomp::String targetName = p.ReadString16Little(
+      libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto server =
@@ -72,7 +72,7 @@ bool Parsers::PartyRecruitReply::Parse(
     libcomp::Packet reply;
     reply.WritePacketCode(
         ChannelToClientPacketCode_t::PACKET_PARTY_RECRUIT_REPLY);
-    reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+    reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                               targetName, true);
     reply.WriteU16Little((uint16_t)PartyErrorCodes_t::INVALID_OR_OFFLINE);
     client->SendPacket(reply);

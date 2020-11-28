@@ -33,6 +33,7 @@
 #include <map>
 
 // libcomp Includes
+#include <ArgumentParser.h>
 #include <Constants.h>
 #include <Log.h>
 #include <Object.h>
@@ -46,15 +47,62 @@
 // Stop ignoring warnings
 #include <PopIgnore.h>
 
+/**
+ * Class to handle parsing command line arguments for a server.
+ */
+class CommandLineParser : public libcomp::ArgumentParser {
+ public:
+  CommandLineParser();
+  virtual ~CommandLineParser();
+};
+
+CommandLineParser::CommandLineParser() : libcomp::ArgumentParser() {
+  RegisterArgument(
+      'e', "encoding", ArgumentType::REQUIRED,
+      std::bind(
+          [](CommandLineParser* pParser, ArgumentParser::Argument* pArg,
+             const libcomp::String& arg) -> bool {
+            (void)pParser;
+            (void)pArg;
+
+            libcomp::Convert::Encoding_t encoding =
+                libcomp::Convert::EncodingFromString(arg);
+
+            bool ok =
+                libcomp::Convert::Encoding_t::ENCODING_DEFAULT != encoding;
+
+            if (ok) {
+              libcomp::Convert::SetDefaultEncoding(encoding);
+            } else {
+              std::cerr << "Unknown character encoding: " << arg << std::endl;
+              std::cerr << "Valid encodings: " << arg << std::endl;
+
+              for (auto enc : libcomp::Convert::AvailableEncodings()) {
+                std::cerr << "- " << enc << std::endl;
+              }
+
+              std::cerr << std::endl;
+            }
+
+            return ok;
+          },
+          this, std::placeholders::_1, std::placeholders::_2));
+}
+
+CommandLineParser::~CommandLineParser() {}
+
 int Usage(
     const char* szAppName,
     const std::map<
         std::string,
         std::pair<std::string, std::function<libcomp::BinaryDataSet*(void)>>>&
         binaryTypes) {
-  std::cerr << "USAGE: " << szAppName << " load TYPE IN OUT" << std::endl;
-  std::cerr << "USAGE: " << szAppName << " save TYPE IN OUT" << std::endl;
-  std::cerr << "USAGE: " << szAppName << " flatten TYPE IN OUT" << std::endl;
+  std::cerr << "USAGE: " << szAppName << " [OPTION]... load TYPE IN OUT"
+            << std::endl;
+  std::cerr << "USAGE: " << szAppName << " [OPTION]... save TYPE IN OUT"
+            << std::endl;
+  std::cerr << "USAGE: " << szAppName << " [OPTION]... flatten TYPE IN OUT"
+            << std::endl;
   std::cerr << std::endl;
   std::cerr << "TYPE indicates the format of the BinaryData and can "
             << "be one of:" << std::endl;
@@ -73,22 +121,39 @@ int Usage(
   std::cerr << "Mode 'flatten' will take the input BinaryData file and "
             << "write the output text file." << std::endl;
 
+  std::cerr << std::endl;
+  std::cerr << "Mandatory arguments to long options are mandatory for short "
+               "options too."
+            << std::endl;
+  std::cerr << "  -e, --encoding=ENC          set encoding used for conversion "
+               "(default=cp932)"
+            << std::endl;
+  std::cerr << std::endl;
+  std::cerr << "Valid encodings:" << std::endl;
+
+  for (auto enc : libcomp::Convert::AvailableEncodings()) {
+    std::cerr << "- " << enc << std::endl;
+  }
+
   return EXIT_FAILURE;
 }
 
 int main(int argc, char* argv[]) {
+  CommandLineParser args;
+
   auto binaryTypes = EnumerateBinaryDataTypes();
 
-  if (5 != argc) {
+  if (!args.Parse(argc, argv) || (4 != args.GetStandardArguments().size())) {
     return Usage(argv[0], binaryTypes);
   }
 
   libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
 
-  libcomp::String mode = argv[1];
-  libcomp::String bdType = argv[2];
-  const char* szInPath = argv[3];
-  const char* szOutPath = argv[4];
+  auto standardArgs = args.GetStandardArguments();
+  libcomp::String mode = standardArgs[0];
+  libcomp::String bdType = standardArgs[1];
+  libcomp::String inPath = standardArgs[2];
+  libcomp::String outPath = standardArgs[3];
 
   if ("load" != mode && "save" != mode && "flatten" != mode) {
     return Usage(argv[0], binaryTypes);
@@ -109,22 +174,21 @@ int main(int argc, char* argv[]) {
   if ("qmp" == bdType && ("load" == mode || "flatten" == mode)) {
     // Manually load single record
     std::ifstream file;
-    file.open(szInPath, std::ifstream::binary);
+    file.open(inPath.C(), std::ifstream::binary);
 
     // Read and discard magic
     uint32_t magic;
     file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
 
     if (magic != QMP_FORMAT_MAGIC) {
-      std::cerr << "File magic invlalid for Qmp file: " << szInPath
-                << std::endl;
+      std::cerr << "File magic invlalid for Qmp file: " << inPath << std::endl;
 
       return EXIT_FAILURE;
     }
 
     auto qmp = std::make_shared<objects::QmpFile>();
     if (!qmp->Load(file)) {
-      std::cerr << "Failed to load Qmp file: " << szInPath << std::endl;
+      std::cerr << "Failed to load Qmp file: " << inPath << std::endl;
 
       return EXIT_FAILURE;
     }
@@ -135,64 +199,64 @@ int main(int argc, char* argv[]) {
   if ("load" == mode) {
     if ("qmp" != bdType) {
       std::ifstream file;
-      file.open(szInPath, std::ifstream::binary);
+      file.open(inPath.C(), std::ifstream::binary);
 
       if (!pSet->Load(file)) {
-        std::cerr << "Failed to load file: " << szInPath << std::endl;
+        std::cerr << "Failed to load file: " << inPath << std::endl;
 
         return EXIT_FAILURE;
       }
     }
 
     std::ofstream out;
-    out.open(szOutPath);
+    out.open(outPath.C());
 
     out << pSet->GetXml().c_str();
 
     if (!out.good()) {
-      std::cerr << "Failed to save file: " << szOutPath << std::endl;
+      std::cerr << "Failed to save file: " << outPath << std::endl;
 
       return EXIT_FAILURE;
     }
   } else if ("flatten" == mode) {
     if ("qmp" != bdType) {
       std::ifstream file;
-      file.open(szInPath, std::ifstream::binary);
+      file.open(inPath.C(), std::ifstream::binary);
 
       if (!pSet->Load(file)) {
-        std::cerr << "Failed to load file: " << szInPath << std::endl;
+        std::cerr << "Failed to load file: " << inPath << std::endl;
 
         return EXIT_FAILURE;
       }
     }
 
     std::ofstream out;
-    out.open(szOutPath);
+    out.open(outPath.C());
 
     out << pSet->GetTabular().c_str();
 
     if (!out.good()) {
-      std::cerr << "Failed to save file: " << szOutPath << std::endl;
+      std::cerr << "Failed to save file: " << outPath << std::endl;
 
       return EXIT_FAILURE;
     }
   } else if ("save" == mode) {
     tinyxml2::XMLDocument doc;
 
-    if (tinyxml2::XML_SUCCESS != doc.LoadFile(szInPath)) {
-      std::cerr << "Failed to parse file: " << szInPath << std::endl;
+    if (tinyxml2::XML_SUCCESS != doc.LoadFile(inPath.C())) {
+      std::cerr << "Failed to parse file: " << inPath << std::endl;
 
       return EXIT_FAILURE;
     }
 
     if (!pSet->LoadXml(doc)) {
-      std::cerr << "Failed to load file: " << szInPath << std::endl;
+      std::cerr << "Failed to load file: " << inPath << std::endl;
 
       return EXIT_FAILURE;
     }
 
     std::ofstream out;
-    out.open(szOutPath, std::ofstream::binary);
+    out.open(outPath.C(), std::ofstream::binary);
 
     if ("qmp" == bdType) {
       // Write magic
@@ -202,14 +266,14 @@ int main(int argc, char* argv[]) {
       // Write (single) entry manually
       for (auto obj : pSet->GetObjects()) {
         if (!obj->Save(out) || !out.good()) {
-          std::cerr << "Failed to save QMP file: " << szOutPath << std::endl;
+          std::cerr << "Failed to save QMP file: " << outPath << std::endl;
 
           return EXIT_FAILURE;
         }
       }
     } else {
       if (!pSet->Save(out)) {
-        std::cerr << "Failed to save file: " << szOutPath << std::endl;
+        std::cerr << "Failed to save file: " << outPath << std::endl;
 
         return EXIT_FAILURE;
       }

@@ -32,6 +32,23 @@ jobs:
         GENERATOR: Unix Makefiles
         EXTERNAL_RELEASE: external-42
       run: ci/linux-build.sh
+    - name: Get Release
+      id: get_release
+      uses: bruceadams/get-release@v1.2.2
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload Release Asset
+      id: upload_release_asset
+      uses: actions/upload-release-asset@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release.outputs.upload_url }}
+        asset_path: build/bin/comp_translator.bz2
+        asset_name: comp_translator.bz2
+        asset_content_type: application/x-bzip2
 
   linux-clang-build:
     name: Ubuntu Linux (Clang)
@@ -75,6 +92,8 @@ jobs:
         DOXYGEN_URL: https://github.com/comphack/external/releases/download/external-25/doxygen-1.8.14.windows.x64.bin.zip
         QT_URL: https://github.com/comphack/external/releases/download/external-25/qt-5.12.3-win32.7z
         EXTERNAL_RELEASE: external-42
+        BUILD_OUTSIDE: YES
+        COMPRESS_PDB: OFF
       run: .\ci\windows-updater-build.ps1
     - name: Get Release
       id: get_release
@@ -121,6 +140,8 @@ jobs:
         DOXYGEN_URL: https://github.com/comphack/external/releases/download/external-25/doxygen-1.8.14.windows.x64.bin.zip
         QT_URL: https://github.com/comphack/external/releases/download/external-25/qt-5.12.3-win64.7z
         EXTERNAL_RELEASE: external-42
+        BUILD_OUTSIDE: YES
+        COMPRESS_PDB: OFF
       run: .\ci\windows-build.ps1
     - name: Get Release
       id: get_release

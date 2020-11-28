@@ -585,9 +585,9 @@ bool ChatManager::GMCommand_Announce(
   libcomp::Packet p;
   p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHAT);
   p.WriteU16Little((uint16_t)ChatType_t::CHAT_SELF);
-  p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, "",
+  p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT, "",
                         true);  // Not used
-  p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, message,
+  p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT, message,
                         true);
 
   server->GetManagerConnection()->BroadcastPacketToClients(p);

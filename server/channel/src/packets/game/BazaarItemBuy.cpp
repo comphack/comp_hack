@@ -219,7 +219,7 @@ bool Parsers::BazaarItemBuy::Parse(
     characterManager->GetItemDetailPacketData(relay, item, 1);
 
     // Purchased by
-    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                               cState->GetEntity()->GetName(), true);
 
     server->GetManagerConnection()->GetWorldConnection()->SendPacket(relay);

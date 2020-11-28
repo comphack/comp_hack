@@ -75,7 +75,7 @@ ClientState::~ClientState() {
 
 libcomp::Convert::Encoding_t ClientState::GetClientStringEncoding() {
   /// @todo: Return UTF-8 for US Client
-  return libcomp::Convert::Encoding_t::ENCODING_CP932;
+  return libcomp::Convert::Encoding_t::ENCODING_DEFAULT;
 }
 
 std::shared_ptr<CharacterState> ClientState::GetCharacterState() {

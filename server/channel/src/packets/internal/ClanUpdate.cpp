@@ -206,8 +206,8 @@ bool Parsers::ClanUpdate::Parse(
             request.WritePacketCode(
                 ChannelToClientPacketCode_t::PACKET_CLAN_NAME_UPDATED);
             request.WriteS32Little(cState->GetEntityID());
-            request.WriteString16Little(libcomp::Convert::ENCODING_CP932, name,
-                                        true);
+            request.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
+                                        name, true);
 
             zoneManager->BroadcastPacket(client, request);
           }

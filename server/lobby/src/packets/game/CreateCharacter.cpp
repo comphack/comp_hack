@@ -64,7 +64,8 @@ bool Parsers::CreateCharacter::Parse(
     return false;
   }
 
-  libcomp::String name = p.ReadString16Little(libcomp::Convert::ENCODING_CP932);
+  libcomp::String name =
+      p.ReadString16Little(libcomp::Convert::ENCODING_DEFAULT);
 
   auto server =
       std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());

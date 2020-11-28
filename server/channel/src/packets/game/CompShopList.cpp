@@ -68,7 +68,7 @@ bool Parsers::CompShopList::Parse(
       auto shop = serverDataManager->GetShopData(compShopID);
       libcomp::String name = shop ? shop->GetName() : "";
 
-      reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+      reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                 !name.IsEmpty() ? name : "?", true);
       reply.WriteS8(idx++);
       reply.WriteS32Little(0);  // New item flag

@@ -69,7 +69,7 @@ bool Parsers::BazaarMarketInfoSelf::Parse(
   reply.WritePacketCode(
       ChannelToClientPacketCode_t::PACKET_BAZAAR_MARKET_INFO_SELF);
   reply.WriteS32Little(0);  // Success
-  reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+  reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                             character ? character->GetName() : "", true);
   reply.WriteS8(bazaarData ? (int8_t)bazaarData->GetChannelID() : -1);
   reply.WriteU32Little(bazaarData ? bazaarData->GetZone() : 0);

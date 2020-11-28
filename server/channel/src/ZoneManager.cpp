@@ -2144,7 +2144,7 @@ void ZoneManager::SendBazaarMarketData(
   p.WriteS32Little((int32_t)marketID);
   p.WriteS32Little(market ? (int32_t)market->GetNPCType() : -1);
   p.WriteS32Little(market ? (int32_t)market->GetState() : 0);
-  p.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+  p.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                         market ? market->GetComment() : "", true);
 
   BroadcastPacket(zone, p);
@@ -5138,7 +5138,7 @@ void ZoneManager::EndInstanceTimer(
               libcomp::Packet p;
               p.WritePacketCode(
                   ChannelToClientPacketCode_t::PACKET_DUNGEON_RECORDS_UPDATE);
-              p.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+              p.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                     character->GetName(), true);
 
               ChannelClientConnection::BroadcastPacket(connections, p);
@@ -5608,7 +5608,7 @@ void ZoneManager::MultiZoneBossKilled(const std::shared_ptr<Zone>& zone,
       p.WritePacketCode(
           ChannelToClientPacketCode_t::PACKET_MULTIZONE_BOSS_KILLED);
       p.WriteU32Little(type);
-      p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+      p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                             cState->GetEntity()->GetName(), true);
 
       ChannelClientConnection::BroadcastPacket(clients, p);

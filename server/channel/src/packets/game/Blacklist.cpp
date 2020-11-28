@@ -63,7 +63,7 @@ bool Parsers::Blacklist::Parse(
 
   reply.WriteS32Little((int32_t)blacklist.size());
   for (auto& entry : blacklist) {
-    reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+    reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                               entry, true);
   }
 

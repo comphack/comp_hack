@@ -158,7 +158,7 @@ bool Parsers::CharacterList::Parse(
     reply.WriteU8(character->GetWorldID());
 
     // Name.
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+    reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                               character->GetName(), true);
 
     // Gender.

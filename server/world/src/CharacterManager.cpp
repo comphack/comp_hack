@@ -524,7 +524,7 @@ bool CharacterManager::PartyJoin(
           relay.WritePacketCode(
               ChannelToClientPacketCode_t::PACKET_PARTY_INVITED);
           relay.WriteString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932, member->GetName(),
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT, member->GetName(),
               true);
           relay.WriteU32Little(0);
 
@@ -538,7 +538,7 @@ bool CharacterManager::PartyJoin(
     libcomp::Packet relay;
     WorldServer::GetRelayPacket(relay, member->GetWorldCID());
     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_JOIN);
-    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                               targetName, true);
     relay.WriteU16Little(responseCode);
 
@@ -586,7 +586,7 @@ bool CharacterManager::PartyRecruit(
     libcomp::Packet relay;
     WorldServer::GetRelayPacket(relay, member->GetWorldCID());
     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_RECRUIT);
-    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                               targetName, true);
     relay.WriteU16Little(responseCode);
 
@@ -967,7 +967,7 @@ bool CharacterManager::ClanJoin(std::shared_ptr<objects::CharacterLogin> cLogin,
   relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CLAN_JOIN);
   relay.WriteS32Little(clanInfo->GetID());
   relay.WriteS32Little(cLogin->GetWorldCID());
-  relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+  relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                             cLogin->GetCharacter()->GetName(), true);
   relay.WriteS8((int8_t)cLogin->GetStatus());
   relay.WriteU32Little(cLogin->GetZoneID());
@@ -1290,9 +1290,9 @@ void CharacterManager::SendClanDetails(
       auto memberChar = memberLogin->LoadCharacter(worldDB);
       auto stats = memberChar ? memberChar->LoadCoreStats(worldDB) : nullptr;
 
-      relay.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+      relay.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                 memberChar ? memberChar->GetName() : "", true);
-      relay.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+      relay.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                 member->GetClanMessage(), true);
       relay.WriteU8((uint8_t)member->GetMemberType());
       relay.WriteU8(1);  // Always 1
@@ -1320,7 +1320,7 @@ void CharacterManager::SendClanDetails(
       auto clan = clanInfo->GetClan().Get();
 
       relay.WriteS32Little(clanInfo->GetID());
-      relay.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+      relay.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                 clan->GetName(), true);
       relay.WriteS32Little((int32_t)clan->GetBaseZoneID());
 
@@ -1452,7 +1452,7 @@ void CharacterManager::SendClanMemberInfo(
     }
 
     if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_MESSAGE) {
-      relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+      relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                                 member->GetClanMessage(), true);
     }
 
@@ -1578,7 +1578,7 @@ bool CharacterManager::TeamJoin(
     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_MEMBER_ADD);
     relay.WriteS32Little(teamID);
     relay.WriteS32Little(worldCID);
-    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                               cLogin->GetCharacter()->GetName(), true);
 
     SendToRelatedCharacters(relay, worldCID, cidOffset, RELATED_TEAM, true);

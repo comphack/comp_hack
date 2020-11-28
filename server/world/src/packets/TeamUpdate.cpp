@@ -94,7 +94,7 @@ void TeamForm(std::shared_ptr<WorldServer> server,
     relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_MEMBER_ADD);
     relay.WriteS32Little(teamID);
     relay.WriteS32Little(cLogin->GetWorldCID());
-    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+    relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                               cLogin->GetCharacter()->GetName(), true);
 
     characterManager->SendToRelatedCharacters(relay, cLogin->GetWorldCID(),
@@ -140,9 +140,9 @@ void TeamInvite(std::shared_ptr<WorldServer> server,
         WorldServer::GetRelayPacket(relay, targetLogin->GetWorldCID());
         relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_INVITED);
         relay.WriteS32Little(teamID);
-        relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
-                                  inviterChar ? inviterChar->GetName() : "",
-                                  true);
+        relay.WriteString16Little(
+            libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
+            inviterChar ? inviterChar->GetName() : "", true);
         relay.WriteS8(0);
         relay.WriteS8(team->GetType());
 
@@ -184,7 +184,7 @@ void TeamCancel(std::shared_ptr<WorldServer> server,
       relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TEAM_ANSWERED);
       relay.WriteS32Little(teamID);
       relay.WriteS8(0);  // No error
-      relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+      relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                                 targetChar ? targetChar->GetName() : "", true);
       relay.WriteS8(team->GetType());
 
@@ -289,7 +289,7 @@ bool Parsers::TeamUpdate::Parse(
               memberLogin ? memberLogin->GetCharacter().Get() : nullptr;
           reply.WriteS32Little(worldCID);
           reply.WriteString16Little(
-              libcomp::Convert::Encoding_t::ENCODING_CP932,
+              libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
               memberChar ? memberChar->GetName() : "", true);
         }
       } else {

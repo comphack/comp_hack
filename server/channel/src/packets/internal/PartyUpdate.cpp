@@ -77,7 +77,7 @@ void QueuePartyMemberInfo(std::shared_ptr<ChannelClientConnection> client,
     }
 
     reply.WriteS32Little(localEntityID);
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+    reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                               member->GetName(), true);
     reply.WriteU8(memberInfo.IsLeader ? 1 : 0);
     reply.WriteU8(member->GetLevel());
@@ -109,7 +109,7 @@ void QueuePartyMemberInfo(std::shared_ptr<ChannelClientConnection> client,
   } else {
     // Not in the same zone, send minimal info
     reply.WriteS32Little(-1);
-    reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+    reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                               member->GetName(), true);
     reply.WriteU8(memberInfo.IsLeader ? 1 : 0);
     reply.WriteBlank(10);

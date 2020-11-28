@@ -75,7 +75,7 @@ bool Parsers::FriendData::Parse(
     }
 
     libcomp::String message = p.ReadString16Little(
-        libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+        libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
     fSettings->SetFriendMessage(message);
   }
 

@@ -3607,6 +3607,18 @@ void SkillManager::ProcessSkillResultFinal(
       }
     }
 
+    // Now that damage, knockback, and status effects have been calculated for
+    // the target, cancel any status effects on the source (which were not just
+    // added) that expire on skill execution
+    auto selfTarget = GetSelfTarget(source, pSkill->Targets, true, false);
+    std::set<uint32_t> ignore;
+    if (selfTarget) {
+      for (auto& added : selfTarget->AddedStatuses) {
+        ignore.insert(added.first);
+      }
+    }
+    source->CancelStatusEffects(EFFECT_CANCEL_SKILL, ignore);
+
     // If death is applied, kill the target and stop HP damage
     bool targetKilled = false;
     int32_t hpAdjustedSum = 0, mpAdjusted = 0;
@@ -8612,10 +8624,8 @@ int32_t SkillManager::AdjustDamageRates(
   int32_t dependencyTaken = 100;
   if (isHeal) {
     // Heal uses its own rates when it applies
-    if (source != target) {
-      dependencyDealt =
-          (int32_t)calcState->GetCorrectTbl((size_t)CorrectTbl::RATE_HEAL);
-    }
+    dependencyDealt =
+        (int32_t)calcState->GetCorrectTbl((size_t)CorrectTbl::RATE_HEAL);
 
     dependencyTaken = (int32_t)targetState->GetCorrectTbl(
         (size_t)CorrectTbl::RATE_HEAL_TAKEN);
@@ -8708,8 +8718,10 @@ int32_t SkillManager::AdjustDamageRates(
     // Multiply by entity rate taken
     rateTaken.push_back(
         (float)(GetEntityRate(source, targetState, true) * 0.01));
+  }
 
-    // Multiply by dependency rate dealt
+  // Multiply by dependency rate dealt even to source if it is a heal
+  if (isHeal || source != target) {
     calc = calc * (float)(dependencyDealt * 0.01);
   }
 
@@ -9250,18 +9262,6 @@ void SkillManager::FinalizeSkillExecution(
     characterManager->UpdateExpertise(
         client, pSkill->SkillID, activated->GetExpertiseBoost(), multiplier);
   }
-
-  // Cancel any status effects (not just added) that expire on
-  // skill execution
-  auto selfTarget = GetSelfTarget(source, pSkill->Targets, true, false);
-  std::set<uint32_t> ignore;
-  if (selfTarget) {
-    for (auto& added : selfTarget->AddedStatuses) {
-      ignore.insert(added.first);
-    }
-  }
-
-  source->CancelStatusEffects(EFFECT_CANCEL_SKILL, ignore);
 }
 
 std::shared_ptr<objects::ActivatedAbility> SkillManager::FinalizeSkill(
@@ -10478,8 +10478,8 @@ bool SkillManager::Mooch(
     return false;
   }
 
-  // Skills of this type add a "cooldown status effect". If the player character
-  // already has it, do not allow the skill's usage
+  // Skills of this type add a "cooldown status effect". If the player
+  // character already has it, do not allow the skill's usage
   auto statusEffects = cState->GetStatusEffects();
   for (auto addStatus : skillData->GetDamage()->GetAddStatuses()) {
     if (statusEffects.find(addStatus->GetStatusID()) != statusEffects.end()) {
@@ -11504,7 +11504,8 @@ bool SkillManager::AdjustScriptCosts(
   if (!result || (*result != 0 && *result != 1)) {
     LogSkillManagerError([source, pSkill]() {
       return libcomp::String(
-                 "Script cost adjustment failed for %1 when using skill: %2.\n")
+                 "Script cost adjustment failed for %1 when using skill: "
+                 "%2.\n")
           .Arg(source->GetEntityLabel())
           .Arg(pSkill->SkillID);
     });

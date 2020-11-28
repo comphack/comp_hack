@@ -8607,10 +8607,8 @@ int32_t SkillManager::AdjustDamageRates(
   int32_t dependencyTaken = 100;
   if (isHeal) {
     // Heal uses its own rates when it applies
-    if (source != target) {
-      dependencyDealt =
-          (int32_t)calcState->GetCorrectTbl((size_t)CorrectTbl::RATE_HEAL);
-    }
+    dependencyDealt =
+        (int32_t)calcState->GetCorrectTbl((size_t)CorrectTbl::RATE_HEAL);
 
     dependencyTaken = (int32_t)targetState->GetCorrectTbl(
         (size_t)CorrectTbl::RATE_HEAL_TAKEN);
@@ -8703,8 +8701,10 @@ int32_t SkillManager::AdjustDamageRates(
     // Multiply by entity rate taken
     rateTaken.push_back(
         (float)(GetEntityRate(source, targetState, true) * 0.01));
+  }
 
-    // Multiply by dependency rate dealt
+  // Multiply by dependency rate dealt even to source if it is a heal
+  if (isHeal || source != target) {
     calc = calc * (float)(dependencyDealt * 0.01);
   }
 

@@ -148,7 +148,7 @@ void CharacterManager::SendCharacterData(
   reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_CHARACTER_DATA);
 
   reply.WriteS32Little(cState->GetEntityID());
-  reply.WriteString16Little(libcomp::Convert::ENCODING_CP932, c->GetName(),
+  reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT, c->GetName(),
                             true);
   reply.WriteU32Little(0);  // Demon Title (works poorly with titles/clans)
   reply.WriteU8((uint8_t)c->GetGender());
@@ -300,7 +300,7 @@ void CharacterManager::SendOtherCharacterData(
       ChannelToClientPacketCode_t::PACKET_OTHER_CHARACTER_DATA);
 
   reply.WriteS32Little(cState->GetEntityID());
-  reply.WriteString16Little(libcomp::Convert::ENCODING_CP932, c->GetName(),
+  reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT, c->GetName(),
                             true);
   reply.WriteU32Little(0);  // Demon Title (works poorly with titles/clans)
   reply.WriteS32Little(otherState->GetDemonState()->GetEntityID());
@@ -355,7 +355,7 @@ void CharacterManager::SendOtherCharacterData(
   reply.WriteS8(c && c->GetSupportDisplay() ? 10 : 0);
 
   auto clan = c->GetClan().Get();
-  reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+  reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                             clan ? clan->GetName() : "", true);
   reply.WriteS8(otherState->GetStatusIcon());
   reply.WriteS8(0);  // Unknown

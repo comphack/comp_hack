@@ -301,7 +301,7 @@ bool LobbyClient::GetCharacterList() {
     c->cid = reply.ReadU8();
     c->wid = reply.ReadU8();
 
-    c->name = reply.ReadString16Little(libcomp::Convert::ENCODING_CP932);
+    c->name = reply.ReadString16Little(libcomp::Convert::ENCODING_DEFAULT);
 
     c->gender = reply.ReadU8();
     c->killTime = reply.ReadU32Little();
@@ -388,7 +388,7 @@ bool LobbyClient::CreateCharacter(const libcomp::String& name) {
   libcomp::Packet p;
   p.WritePacketCode(ClientToLobbyPacketCode_t::PACKET_CREATE_CHARACTER);
   p.WriteS8(world);
-  p.WriteString16Little(libcomp::Convert::ENCODING_CP932, name, true);
+  p.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT, name, true);
   p.WriteS8(to_underlying(gender));
   p.WriteU32Little(skinType);
   p.WriteU32Little(faceType);

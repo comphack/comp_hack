@@ -17,7 +17,7 @@ using namespace libtester;
 
 void ChannelClient::HandleCharacterData(libcomp::ReadOnlyPacket& p) {
   mEntityID = p.ReadS32Little();
-  mCharacter->SetName(p.ReadString16Little(libcomp::Convert::ENCODING_CP932));
+  mCharacter->SetName(p.ReadString16Little(libcomp::Convert::ENCODING_DEFAULT));
   p.ReadU32Little();  // demon title
   mCharacter->SetGender(static_cast<objects::Character::Gender_t>(p.ReadU8()));
   mCharacter->SetSkinType(p.ReadU8());

@@ -156,7 +156,7 @@ bool Parsers::CharacterLogin::Parse(
     }
 
     if (updateFlags & (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_MESSAGE) {
-      packet.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+      packet.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                  fSettings->GetFriendMessage(), true);
     }
 

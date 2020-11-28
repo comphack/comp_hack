@@ -164,7 +164,7 @@ bool Parsers::SearchEntryUpdate::Parse(
           if (specified == 1) {
             if (p.Left() >= (uint32_t)(2 + p.PeekU16Little())) {
               libcomp::String comment = p.ReadString16Little(
-                  libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+                  libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
 
               entry->SetTextData(SEARCH_IDX_COMMENT, comment);
             } else {
@@ -183,7 +183,7 @@ bool Parsers::SearchEntryUpdate::Parse(
             if (specified == 1) {
               if (p.Left() >= (uint32_t)(2 + p.PeekU16Little())) {
                 libcomp::String catchphrase = p.ReadString16Little(
-                    libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+                    libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
 
                 entry->SetTextData(SEARCH_IDX_CLAN_CATCHPHRASE, catchphrase);
               } else {

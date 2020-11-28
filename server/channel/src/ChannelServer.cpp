@@ -1165,7 +1165,7 @@ bool ChannelServer::SendSystemMessage(
   p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SYSTEM_MSG);
   p.WriteS8(type);
   p.WriteS8(0);  // Appears to be some kind of sub-mode that is not used
-  p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, message,
+  p.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT, message,
                         true);
 
   if (!sendToAll) {

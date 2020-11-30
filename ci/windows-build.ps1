@@ -17,6 +17,8 @@ Remove-Item "external-${env:PLATFORM}-${env:COMPILER}.zip"
 Move-Item external* binaries
 Write-Output "Installed external dependencies"
 
+$DOXYGEN_EXECUTABLE = "C:/Program Files/doxygen/bin/doxygen.exe"
+
 if ("${env:INSTALL_TOOLS}" -eq "YES") {
     Write-Output "Installing OpenSSL"
     Invoke-WebRequest "${env:OPENSSL_URL}" -OutFile "OpenSSL.msi"
@@ -33,6 +35,8 @@ if ("${env:INSTALL_TOOLS}" -eq "YES") {
     Remove-Item doxygen.zip
     Set-Location "${ROOT_DIR}"
     Write-Output "Installed Doxygen"
+
+    $DOXYGEN_EXECUTABLE = "${ROOT_DIR}/doxygen/doxygen.exe"
 
     Write-Output "Installing Qt"
     New-Item -ItemType directory -Path "${env:QT_EXTRACT_DIR}" | Out-Null
@@ -52,7 +56,7 @@ if ("${env:BUILD_OUTSIDE}" -eq "YES") {
 }
 
 Write-Output "Running cmake"
-cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" -DDOXYGEN_EXECUTABLE="${ROOT_DIR}/doxygen/doxygen.exe" -DGENERATE_DOCUMENTATION=ON -DWINDOWS_SERVICE=ON -DCMAKE_CUSTOM_CONFIGURATION_TYPES="${env:CONFIGURATION}" -DCOMPRESS_PDB="${env:COMPRESS_PDB}" -DOPENSSL_ROOT_DIR="${env:OPENSSL_ROOT_DIR}" -DUSE_SYSTEM_OPENSSL=ON -G"${env:GENERATOR}" "${ROOT_DIR}"
+cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" -DDOXYGEN_EXECUTABLE="${DOXYGEN_EXECUTABLE}" -DGENERATE_DOCUMENTATION=ON -DWINDOWS_SERVICE=ON -DCMAKE_CUSTOM_CONFIGURATION_TYPES="${env:CONFIGURATION}" -DCOMPRESS_PDB="${env:COMPRESS_PDB}" -DOPENSSL_ROOT_DIR="${env:OPENSSL_ROOT_DIR}" -DUSE_SYSTEM_OPENSSL=ON -G"${env:GENERATOR}" "${ROOT_DIR}"
 
 Write-Output "Running build"
 cmake --build . --config "${env:CONFIGURATION}"

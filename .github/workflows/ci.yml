@@ -31,6 +31,7 @@ jobs:
         COMPILER: gcc
         GENERATOR: Unix Makefiles
         EXTERNAL_RELEASE: external-42
+        INSTALL_TOOLS: YES
       run: ci/linux-build.sh
     - name: Get Release
       id: get_release
@@ -67,6 +68,7 @@ jobs:
         COMPILER: clang
         GENERATOR: Ninja
         EXTERNAL_RELEASE: external-42
+        INSTALL_TOOLS: YES
       run: ci/linux-build.sh
 
   win32-msvc2017-build:
@@ -94,6 +96,8 @@ jobs:
         EXTERNAL_RELEASE: external-42
         BUILD_OUTSIDE: YES
         COMPRESS_PDB: OFF
+        INSTALL_TOOLS: YES
+        WIX_VALIDATION: ON
       run: .\ci\windows-updater-build.ps1
     - name: Get Release
       id: get_release
@@ -142,6 +146,8 @@ jobs:
         EXTERNAL_RELEASE: external-42
         BUILD_OUTSIDE: YES
         COMPRESS_PDB: OFF
+        INSTALL_TOOLS: YES
+        WIX_VALIDATION: ON
       run: .\ci\windows-build.ps1
     - name: Get Release
       id: get_release

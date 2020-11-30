@@ -113,6 +113,10 @@ OPTION(USE_MBED_TLS "Use mbedtls instead of OpenSSL for the main apps." OFF)
 # See: https://devblogs.microsoft.com/cppblog/shrink-my-program-database-pdb-file/
 OPTION(COMPRESS_PDB "Compress the PDB files (Windows builds)." OFF)
 
+# WiX Fails with ICE errors when running CI under a normal user account.
+# See: https://stackoverflow.com/questions/1064580/wix-3-0-throws-error-217-while-being-executed-by-continuous-integration
+OPTION(WIX_VALIDATION "Enable or disable validation when generating the MSI." ON)
+
 IF(WIN32)
     IF(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
         SET(CPACK_PACKAGE_FILE_NAME "comp_hack-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_CODENAME_C}-win32")
@@ -181,6 +185,10 @@ IF(WIN32)
     SET(CPACK_WIX_PROGRAM_MENU_FOLDER "COMP_hack")
     SET(CPACK_WIX_PROPERTY_ARPHELPLINK "https://github.com/comphack/comp_hack")
     SET(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/contrib/services.wxs")
+
+    IF(NOT WIX_VALIDATION)
+        SET(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval")
+    ENDIF(NOT WIX_VALIDATION)
 
     SET(CPACK_WIX_EXTENSIONS "WixFirewallExtension")
     SET(CPACK_PACKAGE_INSTALL_DIRECTORY "COMP_hack")

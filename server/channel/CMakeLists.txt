@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-
 # Add a target to generate API documentation.
 FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/api/server/channel)
 GENERATE_DOCS_EX(doc/Doxyfile.in comp_channel)

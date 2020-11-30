@@ -31,6 +31,7 @@
 #include <ManagerPacket.h>
 #include <Packet.h>
 #include <PacketCodes.h>
+#include <Randomizer.h>
 
 // object Includes
 #include <CharacterProgress.h>
@@ -176,7 +177,7 @@ bool Parsers::LootItem::Parse(
     if (demonType != 0) {
       characterManager->ContractDemon(
           client, definitionManager->GetDevilData(demonType),
-          lState->GetEntityID());
+          lState->GetEntityID(), RNG(uint16_t, 1000, 2500));
     }
 
     bool remove = true;

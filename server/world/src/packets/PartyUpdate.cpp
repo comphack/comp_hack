@@ -74,8 +74,9 @@ void PartyInvite(std::shared_ptr<WorldServer> server,
         WorldServer::GetRelayPacket(relay, targetLogin->GetWorldCID());
         relay.WritePacketCode(
             ChannelToClientPacketCode_t::PACKET_PARTY_INVITED);
-        relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
-                                  member->GetName(), true);
+        relay.WriteString16Little(
+            libcomp::Convert::Encoding_t::ENCODING_DEFAULT, member->GetName(),
+            true);
         relay.WriteU32Little(cLogin->GetPartyID());
 
         channel->SendPacket(relay);
@@ -88,7 +89,7 @@ void PartyInvite(std::shared_ptr<WorldServer> server,
   libcomp::Packet relay;
   WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
   relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_INVITE);
-  relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+  relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                             targetName, true);
   relay.WriteU16Little(responseCode);
 
@@ -109,7 +110,7 @@ void PartyCancel(std::shared_ptr<WorldServer> server,
       libcomp::Packet relay;
       WorldServer::GetRelayPacket(relay, targetLogin->GetWorldCID());
       relay.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PARTY_CANCEL);
-      relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+      relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                                 sourceName, true);
 
       channel->SendPacket(relay);
@@ -180,8 +181,9 @@ void PartyRecruitJoin(std::shared_ptr<WorldServer> server,
         WorldServer::GetRelayPacket(relay, targetLogin->GetWorldCID());
         relay.WritePacketCode(
             ChannelToClientPacketCode_t::PACKET_PARTY_RECRUIT_REPLIED);
-        relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
-                                  member->GetName(), true);
+        relay.WriteString16Little(
+            libcomp::Convert::Encoding_t::ENCODING_DEFAULT, member->GetName(),
+            true);
         relay.WriteU32Little(party ? party->GetID() : 0);
 
         channel->SendPacket(relay);
@@ -195,7 +197,7 @@ void PartyRecruitJoin(std::shared_ptr<WorldServer> server,
   WorldServer::GetRelayPacket(relay, cLogin->GetWorldCID());
   relay.WritePacketCode(
       ChannelToClientPacketCode_t::PACKET_PARTY_RECRUIT_REPLY);
-  relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932,
+  relay.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
                             targetName, true);
   relay.WriteU16Little(responseCode);
 

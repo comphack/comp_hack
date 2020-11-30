@@ -44,8 +44,8 @@ bool Parsers::PartyJoin::Parse(
     return false;
   }
 
-  libcomp::String targetName =
-      p.ReadString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+  libcomp::String targetName = p.ReadString16Little(
+      libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
   uint32_t partyID = p.ReadU32Little();
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);

@@ -134,7 +134,7 @@ bool Parsers::ItemPromo::Parse(
 
   libcomp::Packet reply;
   reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ITEM_PROMO);
-  reply.WriteString16Little(libcomp::Convert::ENCODING_CP932, code, true);
+  reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT, code, true);
   reply.WriteS32Little(success ? 0 : 1);
 
   // Apart from success/fail, nothing in this packet changes anything

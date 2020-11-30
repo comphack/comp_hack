@@ -164,7 +164,7 @@ bool Parsers::SearchAppReply::Parse(
         if (actionType == 0 && state->GetClanID()) {
           if (p.Left() == (uint32_t)(2 + p.PeekU16Little())) {
             libcomp::String targetName = p.ReadString16Little(
-                libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+                libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
 
             libcomp::Packet request;
             request.WritePacketCode(InternalPacketCode_t::PACKET_CLAN_UPDATE);

@@ -81,14 +81,14 @@ bool Parsers::SearchEntryData::Parse(
 
     switch ((objects::SearchEntry::Type_t)type) {
       case objects::SearchEntry::Type_t::PARTY_JOIN: {
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         auto character =
             libcomp::PersistentObject::LoadObjectByUUID<objects::Character>(
                 worldDB, entry->GetRelatedTo());
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   character ? character->GetName() : "", true);
 
         reply.WriteS32Little((int32_t)entry->GetPostTime());
@@ -98,14 +98,14 @@ bool Parsers::SearchEntryData::Parse(
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_LOCATION));
       } break;
       case objects::SearchEntry::Type_t::PARTY_RECRUIT: {
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         auto character =
             libcomp::PersistentObject::LoadObjectByUUID<objects::Character>(
                 worldDB, entry->GetRelatedTo());
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   character ? character->GetName() : "", true);
 
         reply.WriteS32Little((int32_t)entry->GetPostTime());
@@ -120,14 +120,14 @@ bool Parsers::SearchEntryData::Parse(
       case objects::SearchEntry::Type_t::CLAN_JOIN: {
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_SERIES));
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON));
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         auto character =
             libcomp::PersistentObject::LoadObjectByUUID<objects::Character>(
                 worldDB, entry->GetRelatedTo());
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   character ? character->GetName() : "", true);
 
         reply.WriteS32Little(
@@ -144,7 +144,7 @@ bool Parsers::SearchEntryData::Parse(
       case objects::SearchEntry::Type_t::CLAN_RECRUIT: {
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_SERIES));
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON));
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_TIME_FROM));
@@ -173,9 +173,9 @@ bool Parsers::SearchEntryData::Parse(
                                   worldDB, masterMember->GetCharacter())
                             : nullptr;
 
-          reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+          reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                     clan->GetName(), true);
-          reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+          reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                     master ? master->GetName() : "", true);
 
           uint8_t memberCount = 0;
@@ -210,14 +210,14 @@ bool Parsers::SearchEntryData::Parse(
         reply.WriteS32Little(0);  // Unknown
         reply.WriteS32Little(entry->GetData(SEARCH_IDX_LOCATION));
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         auto character =
             libcomp::PersistentObject::LoadObjectByUUID<objects::Character>(
                 worldDB, entry->GetRelatedTo());
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   character ? character->GetName() : "", true);
 
         reply.WriteS32Little((int32_t)entry->GetPostTime());
@@ -243,14 +243,14 @@ bool Parsers::SearchEntryData::Parse(
         reply.WriteS32Little(0);  // Unknown
         reply.WriteS32Little(entry->GetData(SEARCH_IDX_LOCATION));
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         auto character =
             libcomp::PersistentObject::LoadObjectByUUID<objects::Character>(
                 worldDB, entry->GetRelatedTo());
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   character ? character->GetName() : "", true);
 
         reply.WriteS32Little((int32_t)entry->GetPostTime());
@@ -258,14 +258,14 @@ bool Parsers::SearchEntryData::Parse(
         reply.WriteS32Little(entry->GetData(SEARCH_IDX_PRICE));
       } break;
       case objects::SearchEntry::Type_t::FREE_RECRUIT: {
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         auto character =
             libcomp::PersistentObject::LoadObjectByUUID<objects::Character>(
                 worldDB, entry->GetRelatedTo());
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   character ? character->GetName() : "", true);
 
         reply.WriteS32Little((int32_t)entry->GetPostTime());
@@ -278,14 +278,14 @@ bool Parsers::SearchEntryData::Parse(
       case objects::SearchEntry::Type_t::CLAN_RECRUIT_APP:
       case objects::SearchEntry::Type_t::TRADE_SELLING_APP:
       case objects::SearchEntry::Type_t::TRADE_BUYING_APP: {
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         auto character =
             libcomp::PersistentObject::LoadObjectByUUID<objects::Character>(
                 worldDB, entry->GetRelatedTo());
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   character ? character->GetName() : "", true);
 
         reply.WriteS32Little((int32_t)entry->GetPostTime());

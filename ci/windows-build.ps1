@@ -2,6 +2,9 @@ $ErrorActionPreference = "Stop"
 
 $ROOT_DIR = $(Get-Location).Path
 
+# Report disk space
+Get-CimInstance -Class CIM_LogicalDisk | Select-Object @{Name = "Size(GB)"; Expression = { $_.size / 1gb } }, @{Name = "Free Space(GB)"; Expression = { $_.freespace / 1gb } }, @{Name = "Free (%)"; Expression = { "{0,6:P0}" -f (($_.freespace / 1gb) / ($_.size / 1gb)) } }, DeviceID, DriveType | Where-Object DriveType -EQ '3'
+
 Write-Output "Platform      = ${env:PLATFORM}"
 Write-Output "MS Platform   = ${env:MSPLATFORM}"
 Write-Output "Configuration = ${env:CONFIGURATION}"
@@ -40,14 +43,33 @@ Set-Location "${ROOT_DIR}"
 Write-Output "Installed Qt"
 
 New-Item -ItemType directory -Path build | Out-Null
-Set-Location build
+
+if ("${env:BUILD_OUTSIDE}" -eq "YES") {
+    New-Item -ItemType directory -Path C:\build-outside | Out-Null
+    Set-Location C:\build-outside
+}
 
 Write-Output "Running cmake"
-cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" -DDOXYGEN_EXECUTABLE="${ROOT_DIR}/doxygen/doxygen.exe" -DGENERATE_DOCUMENTATION=ON -DWINDOWS_SERVICE=ON -DCMAKE_CUSTOM_CONFIGURATION_TYPES="${env:CONFIGURATION}" -DOPENSSL_ROOT_DIR="${env:OPENSSL_ROOT_DIR}" -DUSE_SYSTEM_OPENSSL=ON -G"${env:GENERATOR}" ..
+cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" -DDOXYGEN_EXECUTABLE="${ROOT_DIR}/doxygen/doxygen.exe" -DGENERATE_DOCUMENTATION=ON -DWINDOWS_SERVICE=ON -DCMAKE_CUSTOM_CONFIGURATION_TYPES="${env:CONFIGURATION}" -DCOMPRESS_PDB="${env:COMPRESS_PDB}" -DOPENSSL_ROOT_DIR="${env:OPENSSL_ROOT_DIR}" -DUSE_SYSTEM_OPENSSL=ON -G"${env:GENERATOR}" "${ROOT_DIR}"
 
 Write-Output "Running build"
 cmake --build . --config "${env:CONFIGURATION}"
+
+# This actually causes the build to start over...
+# Write-Output "Clean build"
+# cmake --build . --config "${env:CONFIGURATION}" --target clean
+
+# Report disk space
+Get-CimInstance -Class CIM_LogicalDisk | Select-Object @{Name = "Size(GB)"; Expression = { $_.size / 1gb } }, @{Name = "Free Space(GB)"; Expression = { $_.freespace / 1gb } }, @{Name = "Free (%)"; Expression = { "{0,6:P0}" -f (($_.freespace / 1gb) / ($_.size / 1gb)) } }, DeviceID, DriveType | Where-Object DriveType -EQ '3'
+
+Write-Output "Package build"
 cmake --build . --config "${env:CONFIGURATION}" --target package
 
-# Write-Output "Cleaning build"
-# cmake --build . --config "${env:CONFIGURATION}" --target clean
+# Report disk space
+Get-CimInstance -Class CIM_LogicalDisk | Select-Object @{Name = "Size(GB)"; Expression = { $_.size / 1gb } }, @{Name = "Free Space(GB)"; Expression = { $_.freespace / 1gb } }, @{Name = "Free (%)"; Expression = { "{0,6:P0}" -f (($_.freespace / 1gb) / ($_.size / 1gb)) } }, DeviceID, DriveType | Where-Object DriveType -EQ '3'
+
+# Move the packages to be found by the atrifact process
+if ("${env:BUILD_OUTSIDE}" -eq "YES") {
+    Move-Item -Path *.zip -Destination "${ROOT_DIR}\build"
+    Move-Item -Path *.msi -Destination "${ROOT_DIR}\build"
+}

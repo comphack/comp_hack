@@ -22,7 +22,7 @@ FIND_LIBRARY(TINYXML2_LIBRARIES tinyxml2
     /usr/lib/)
 
 INCLUDE(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(tinyxml2
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(TinyXML2
     "tinyxml2 library cannot be found.  Consider set TINYXML2_PATH environment variable"
     TINYXML2_INCLUDE_DIRS
     TINYXML2_LIBRARIES)

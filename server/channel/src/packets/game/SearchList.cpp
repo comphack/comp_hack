@@ -257,7 +257,7 @@ bool Parsers::SearchList::Parse(
                 objects::EntityStats>(worldDB,
                                       character->GetCoreStats().GetUUID());
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+            reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                       character->GetName(), true);
 
             reply.WriteS8(stats ? stats->GetLevel() : 0);
@@ -267,7 +267,7 @@ bool Parsers::SearchList::Parse(
 
           reply.WriteS8(0);  // Unknown
 
-          reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+          reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                     entry->GetTextData(SEARCH_IDX_COMMENT),
                                     true);
         }
@@ -286,14 +286,14 @@ bool Parsers::SearchList::Parse(
                 objects::EntityStats>(worldDB,
                                       character->GetCoreStats().GetUUID());
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+            reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                       character->GetName(), true);
             reply.WriteS8(stats ? stats->GetLevel() : 0);
           } else {
             reply.WriteBlank(3);
           }
 
-          reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+          reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                     entry->GetTextData(SEARCH_IDX_COMMENT),
                                     true);  // Comment
 
@@ -337,11 +337,11 @@ bool Parsers::SearchList::Parse(
                              worldDB, master->GetCoreStats().GetUUID())
                        : nullptr;
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+            reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                       clan->GetName(), true);
             reply.WriteS32Little((int32_t)clan->MembersCount());
             reply.WriteString16Little(
-                libcomp::Convert::ENCODING_CP932,
+                libcomp::Convert::ENCODING_DEFAULT,
                 entry->GetTextData(SEARCH_IDX_CLAN_CATCHPHRASE), true);
 
             reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_CLAN_IMAGE));
@@ -377,7 +377,7 @@ bool Parsers::SearchList::Parse(
               libcomp::PersistentObject::LoadObjectByUUID<objects::Character>(
                   worldDB, entry->GetRelatedTo());
 
-          reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+          reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                     character ? character->GetName() : "",
                                     true);
 
@@ -426,7 +426,7 @@ bool Parsers::SearchList::Parse(
               libcomp::PersistentObject::LoadObjectByUUID<objects::Character>(
                   worldDB, entry->GetRelatedTo());
 
-          reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+          reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                     character ? character->GetName() : "",
                                     true);
 
@@ -449,7 +449,7 @@ bool Parsers::SearchList::Parse(
                 objects::EntityStats>(worldDB,
                                       character->GetCoreStats().GetUUID());
 
-            reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+            reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                       character->GetName(), true);
 
             reply.WriteS8(stats ? stats->GetLevel() : 0);
@@ -459,7 +459,7 @@ bool Parsers::SearchList::Parse(
 
           reply.WriteS8(0);  // Unknown
 
-          reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+          reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                     entry->GetTextData(SEARCH_IDX_COMMENT),
                                     true);
         }
@@ -477,7 +477,7 @@ bool Parsers::SearchList::Parse(
               libcomp::PersistentObject::LoadObjectByUUID<objects::Character>(
                   worldDB, entry->GetRelatedTo());
 
-          reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+          reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                     character ? character->GetName() : "",
                                     true);
 

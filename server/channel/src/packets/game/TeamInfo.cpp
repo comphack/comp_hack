@@ -70,8 +70,8 @@ bool Parsers::TeamInfo::Parse(
     reply.WriteS8(0);
     reply.WriteS8(0);
     reply.WriteS8(0);
-    reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_CP932, "",
-                              true);
+    reply.WriteString16Little(libcomp::Convert::Encoding_t::ENCODING_DEFAULT,
+                              "", true);
 
     reply.WriteS32Little(team->GetSmallZiotite());
     reply.WriteS8(team->GetLargeZiotite());

@@ -14,14 +14,16 @@ Remove-Item "external-${env:PLATFORM}-${env:COMPILER}.zip"
 Move-Item external* binaries
 Write-Output "Installed external dependencies"
 
-Write-Output "Installing Qt"
-New-Item -ItemType directory -Path "${env:QT_EXTRACT_DIR}" | Out-Null
-Set-Location "${env:QT_EXTRACT_DIR}"
-Invoke-WebRequest "${env:QT_URL}" -OutFile "Qt.7z"
-7z x "Qt.7z"
-Remove-Item Qt.7z
-Set-Location "${ROOT_DIR}"
-Write-Output "Installed Qt"
+if ("${env:INSTALL_TOOLS}" -eq "YES") {
+    Write-Output "Installing Qt"
+    New-Item -ItemType directory -Path "${env:QT_EXTRACT_DIR}" | Out-Null
+    Set-Location "${env:QT_EXTRACT_DIR}"
+    Invoke-WebRequest "${env:QT_URL}" -OutFile "Qt.7z"
+    7z x "Qt.7z"
+    Remove-Item Qt.7z
+    Set-Location "${ROOT_DIR}"
+    Write-Output "Installed Qt"
+}
 
 New-Item -ItemType directory -Path build | Out-Null
 Set-Location build

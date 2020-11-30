@@ -1424,15 +1424,12 @@ int8_t SkillManager::ValidateSkillTarget(
     const std::shared_ptr<ActiveEntityState> source,
     const std::shared_ptr<objects::MiSkillData>& skillData,
     const std::shared_ptr<ActiveEntityState>& target) {
-  if (!target) {
-    return (int8_t)SkillErrorCodes_t::SILENT_FAIL;
-  }
-
   // Target must be ready (ignore display state for skills targeting
   // hidden sources)
-  if (!target->Ready(target == source && source->GetDisplayState() ==
-                                             ActiveDisplayState_t::ACTIVE)) {
-    return (int8_t)SkillErrorCodes_t::TARGET_INVALID;
+  if (!target ||
+      !target->Ready(target == source && source->GetDisplayState() ==
+                                           ActiveDisplayState_t::ACTIVE)) {
+    return (int8_t)SkillErrorCodes_t::SILENT_FAIL;
   }
 
   uint16_t functionID = skillData->GetDamage()->GetFunctionID();

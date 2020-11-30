@@ -8,7 +8,7 @@ Write-Output "Configuration = ${env:CONFIGURATION}"
 Write-Output "Generator     = ${env:GENERATOR}"
 
 Write-Output "Installing external dependencies"
-Write-Output Invoke-WebRequest "https://github.com/comphack/external/releases/download/${env:EXTERNAL_RELEASE}/external-${env:PLATFORM}-${env:COMPILER}.zip" -OutFile "external-${env:PLATFORM}-${env:COMPILER}.zip"
+Invoke-WebRequest "https://github.com/comphack/external/releases/download/${env:EXTERNAL_RELEASE}/external-${env:PLATFORM}-${env:COMPILER}.zip" -OutFile "external-${env:PLATFORM}-${env:COMPILER}.zip"
 7z x "external-${env:PLATFORM}-${env:COMPILER}.zip"
 Remove-Item "external-${env:PLATFORM}-${env:COMPILER}.zip"
 Move-Item external* binaries

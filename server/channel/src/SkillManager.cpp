@@ -1428,7 +1428,7 @@ int8_t SkillManager::ValidateSkillTarget(
   // hidden sources)
   if (!target ||
       !target->Ready(target == source && source->GetDisplayState() ==
-                                           ActiveDisplayState_t::ACTIVE)) {
+                                             ActiveDisplayState_t::ACTIVE)) {
     return (int8_t)SkillErrorCodes_t::SILENT_FAIL;
   }
 

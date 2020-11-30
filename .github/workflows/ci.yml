@@ -97,6 +97,7 @@ jobs:
         BUILD_OUTSIDE: YES
         COMPRESS_PDB: OFF
         INSTALL_TOOLS: YES
+        WIX_VALIDATION: ON
       run: .\ci\windows-updater-build.ps1
     - name: Get Release
       id: get_release
@@ -146,6 +147,7 @@ jobs:
         BUILD_OUTSIDE: YES
         COMPRESS_PDB: OFF
         INSTALL_TOOLS: YES
+        WIX_VALIDATION: ON
       run: .\ci\windows-build.ps1
     - name: Get Release
       id: get_release

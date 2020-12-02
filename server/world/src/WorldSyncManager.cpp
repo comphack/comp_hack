@@ -723,9 +723,13 @@ int8_t WorldSyncManager::Update<objects::PentalphaMatch>(
     const libcomp::String& type, const std::shared_ptr<libcomp::Object>& obj,
     bool isRemove, const libcomp::String& source) {
   (void)type;
-  (void)obj;
-  (void)isRemove;
   (void)source;
+
+  auto match = std::dynamic_pointer_cast<objects::PentalphaMatch>(obj);
+  if (!mPentalphaMatch ||
+      (match->GetPrevious() == mPentalphaMatch->GetUUID() && !isRemove)) {
+    mPentalphaMatch = match;
+  }
 
   // Let all changes through
   return SYNC_UPDATED;

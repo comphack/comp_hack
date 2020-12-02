@@ -729,8 +729,7 @@ int8_t WorldSyncManager::Update<objects::PentalphaMatch>(
   if (!mPentalphaMatch ||
       (match->GetPrevious() == mPentalphaMatch->GetUUID() && !isRemove)) {
     mPentalphaMatch = match;
-  }
-  else if(isRemove) {
+  } else if (isRemove) {
     mPentalphaMatch = nullptr;
   }
 

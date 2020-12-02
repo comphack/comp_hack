@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.2.3)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 
 # Option to build the dream (if the folder is there).
 OPTION(BUILD_DREAM "Build the dream." ON)
@@ -109,6 +109,14 @@ OPTION(IMPORT_CHANNEL "Import the channel without building." OFF)
 # Option to use mbedtls instead of OpenSSL for the main applications.
 OPTION(USE_MBED_TLS "Use mbedtls instead of OpenSSL for the main apps." OFF)
 
+# Option to compress and otherwise reduce the size of PDBs.
+# See: https://devblogs.microsoft.com/cppblog/shrink-my-program-database-pdb-file/
+OPTION(COMPRESS_PDB "Compress the PDB files (Windows builds)." OFF)
+
+# WiX Fails with ICE errors when running CI under a normal user account.
+# See: https://stackoverflow.com/questions/1064580/wix-3-0-throws-error-217-while-being-executed-by-continuous-integration
+OPTION(WIX_VALIDATION "Enable or disable validation when generating the MSI." ON)
+
 IF(WIN32)
     IF(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
         SET(CPACK_PACKAGE_FILE_NAME "comp_hack-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_CODENAME_C}-win32")
@@ -126,7 +134,7 @@ SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
 SET(CPACK_PACKAGE_VERSION_MAJOR ${VERSION_MAJOR})
 SET(CPACK_PACKAGE_VERSION_MINOR ${VERSION_MINOR})
 SET(CPACK_PACKAGE_VERSION_PATCH ${VERSION_PATCH})
-SET(CPACK_COMPONENTS_ALL runtime lobby world channel tools config webroot datastore docs)
+SET(CPACK_COMPONENTS_ALL runtime lobby world channel tools config webroot datastore docs schema)
 
 SET(CPACK_COMPONENT_RUNTIME_DISPLAY_NAME "C++ Runtime Library")
 SET(CPACK_COMPONENT_RUNTIME_DESCRIPTION "Runtime library needed by the software.")
@@ -149,6 +157,8 @@ SET(CPACK_COMPONENT_DATASTORE_DESCRIPTION "Server-side content (datastore) that 
 SET(CPACK_COMPONENT_DATASTORE_DEPENDS channel)
 SET(CPACK_COMPONENT_DOCS_DISPLAY_NAME "Documentation")
 SET(CPACK_COMPONENT_DOCS_DESCRIPTION "Documentation for the server.")
+SET(CPACK_COMPONENT_SCHEMA_DISPLAY_NAME "BinaryData XML Schema")
+SET(CPACK_COMPONENT_SCHEMA_DESCRIPTION "XML schema files (xsd) to validate BinaryData.")
 
 SET(CPACK_COMPONENT_LOBBY_GROUP servers)
 SET(CPACK_COMPONENT_WORLD_GROUP servers)
@@ -175,6 +185,10 @@ IF(WIN32)
     SET(CPACK_WIX_PROGRAM_MENU_FOLDER "COMP_hack")
     SET(CPACK_WIX_PROPERTY_ARPHELPLINK "https://github.com/comphack/comp_hack")
     SET(CPACK_WIX_PATCH_FILE "${CMAKE_SOURCE_DIR}/contrib/services.wxs")
+
+    IF(NOT WIX_VALIDATION)
+        SET(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval")
+    ENDIF(NOT WIX_VALIDATION)
 
     SET(CPACK_WIX_EXTENSIONS "WixFirewallExtension")
     SET(CPACK_PACKAGE_INSTALL_DIRECTORY "COMP_hack")
@@ -382,6 +396,11 @@ ENDIF(EXISTS "${CMAKE_SOURCE_DIR}/dream" AND BUILD_DREAM)
 
 # PDB not found for library.
 ADD_LINKER_FLAGS(AUTO /ignore:4099)
+
+# Shrink the size of PDBs.
+IF(COMPRESS_PDB)
+    ADD_LINKER_FLAGS(AUTO /incremental:no /Gy /Gw /opt:ref /opt:icf /pdbcompress)
+ENDIF(COMPRESS_PDB)
 
 # Object file level parallelism for MSVC.
 ADD_COMPILER_FLAGS(AUTO /MP)
@@ -631,20 +650,20 @@ MACRO(GENERATE_DOCS_EX doxyfile targetname)
     # Only do something if we have Doxygen.
     If(DOXYGEN_FOUND AND GENERATE_DOCUMENTATION)
         # Replace CMake variables in the input Doxyfile.
-        CONFIGURE_FILE(${doxyfile} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+        CONFIGURE_FILE("${doxyfile}" "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile" @ONLY)
 
         # Create the target that will run Doxygen. The working directory is
         # the build directory so all the documentation ends up in the same
         # directory structure.
         IF(${targetname} MATCHES "libcomp")
             ADD_CUSTOM_TARGET(doc-${targetname} ${DOXYGEN_EXECUTABLE}
-                ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY
-                ${CMAKE_BINARY_DIR} COMMENT
+                "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile" WORKING_DIRECTORY
+                "${CMAKE_BINARY_DIR}" COMMENT
                 "Generating ${PROJECT_NAME} API documentation" VERBATIM)
         ELSE(${targetname} MATCHES "libcomp")
             ADD_CUSTOM_TARGET(doc-${targetname} ${DOXYGEN_EXECUTABLE}
-                ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY
-                ${CMAKE_BINARY_DIR} DEPENDS doc-libcomp COMMENT
+                "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile" WORKING_DIRECTORY
+                "${CMAKE_BINARY_DIR}" DEPENDS doc-libcomp COMMENT
                 "Generating ${targetname} API documentation" VERBATIM)
         ENDIF(${targetname} MATCHES "libcomp")
 
@@ -672,8 +691,8 @@ IF(WIN32 AND NOT MSVC AND NOT DISABLE_UPX)
 
     # Add a command to run UPX passing a compression of 9 and the path to
     # the target executable.
-    ADD_CUSTOM_COMMAND(TARGET ${exefile} POST_BUILD
-        COMMAND upx -9 ${exefile_path} 1> nul 2>&1)
+    ADD_CUSTOM_COMMAND(TARGET "${exefile}" POST_BUILD
+        COMMAND upx -9 "${exefile_path}" 1> nul 2>&1 VERBATIM)
 ENDIF(WIN32 AND NOT MSVC AND NOT DISABLE_UPX)
 ENDMACRO(UPX_WRAP exefile)
 
@@ -870,7 +889,7 @@ MACRO(OBJGEN_XML outfiles xml)
         IF(ex MATCHES "xml") # XML schema file
             # Add the xml schema file as a dependency.
             SET(deps ${deps} "${fp}")
-        ELSEIF(ex MATCHES "cpp" OR ex MATCHES "h") # Source or header file
+        ELSEIF(ex MATCHES "cpp" OR ex MATCHES "h" OR ex MATCHES "xsd") # Source or header or schema file
             # Add the source or header file as a generated output that must
             # then be compiled.
             SET(outs ${outs} "${CMAKE_CURRENT_BINARY_DIR}/objgen/${it}")
@@ -881,6 +900,15 @@ MACRO(OBJGEN_XML outfiles xml)
                     "${CMAKE_CURRENT_BINARY_DIR}/objgen/ObjectCollection.cpp.in"
                     "#include \"${it}\"\n")
             ENDIF(SINGLE_OBJGEN AND ex MATCHES "cpp")
+
+            # Mark the schema file to be installed
+            IF(ex MATCHES "xsd")
+                INSTALL(
+                    FILES "${CMAKE_CURRENT_BINARY_DIR}/objgen/${it}"
+                    DESTINATION schema
+                    COMPONENT schema
+                )
+            ENDIF(ex MATCHES "xsd")
         ELSE() # Everything else is assumed to be a directory
             # Add the directory as a search path for other xml schema files.
             SET(incs ${incs} "-I" "${fp}")
@@ -892,9 +920,10 @@ MACRO(OBJGEN_XML outfiles xml)
     # or the objgen application change.
     FOREACH(out ${outs})
         ADD_CUSTOM_COMMAND(OUTPUT ${out}
-            COMMAND comp_objgen ${incs} -o ${out} ${xml_abs}
-            COMMAND cmake -E touch ${out}
-            DEPENDS comp_objgen ${deps})
+            COMMAND comp_objgen ${incs} -o "${out}" "${xml_abs}"
+            COMMAND cmake -E touch "${out}"
+            DEPENDS comp_objgen ${deps}
+            VERBATIM)
     ENDFOREACH(out ${outs})
 
     # Set the list of output files to be generated, compiled, and linked.
@@ -902,7 +931,7 @@ MACRO(OBJGEN_XML outfiles xml)
         ADD_CUSTOM_COMMAND(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/objgen/ObjectCollection.cpp"
             COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/objgen/ObjectCollection.cpp.in"
             "${CMAKE_CURRENT_BINARY_DIR}/objgen/ObjectCollection.cpp"
-            DEPENDS ${outs})
+            DEPENDS ${outs} VERBATIM)
 
         SET(${outfiles} ${${outfiles}} "${CMAKE_CURRENT_BINARY_DIR}/objgen/ObjectCollection.cpp")
     ELSE(SINGLE_OBJGEN)
@@ -1046,7 +1075,8 @@ FUNCTION(BINARY_DATA_COMMAND bdtype inpath encrypt)
             "${outpath}"
             DEPENDS "${indir}/${inpath}"
             DEPENDS comp_bdpatch
-            COMMENT "Generating ${outpath}")
+            COMMENT "Generating ${outpath}"
+            VERBATIM)
     ELSE()
         ADD_CUSTOM_COMMAND(OUTPUT "${outpath}"
             COMMAND comp_bdpatch save "${bdtype}"
@@ -1054,7 +1084,8 @@ FUNCTION(BINARY_DATA_COMMAND bdtype inpath encrypt)
             "${outpath}"
             DEPENDS "${indir}/${inpath}"
             DEPENDS comp_bdpatch
-            COMMENT "Generating ${pre_outpath}")
+            COMMENT "Generating ${pre_outpath}"
+            VERBATIM)
     ENDIF()
 
     IF(encrypt)
@@ -1064,7 +1095,8 @@ FUNCTION(BINARY_DATA_COMMAND bdtype inpath encrypt)
             "${encpath}"
             DEPENDS "${outpath}"
             DEPENDS comp_encrypt
-            COMMENT "Generating ${pre_encpath}")
+            COMMENT "Generating ${pre_encpath}"
+            VERBATIM)
     ELSE()
     ENDIF()
 ENDFUNCTION(BINARY_DATA_COMMAND)

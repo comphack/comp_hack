@@ -1240,7 +1240,7 @@ bool MatchManager::EndPvPMatch(uint32_t instanceID) {
       p.WriteS32Little(oldGP);
       p.WriteS32Little(newGP);
       p.WriteS8(ranked ? 1 : 0);
-      p.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+      p.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                             character ? character->GetName() : "", true);
       p.WriteU16Little((uint16_t)(stats->GetKills() + stats->GetDemonKills()));
       p.WriteU16Little(stats->GetDemonKills());
@@ -1377,7 +1377,7 @@ void MatchManager::EnterPvP(
     for (auto teamChar : team) {
       auto character = teamChar->GetEntity();
       p.WriteS32Little(teamChar->GetEntityID());
-      p.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+      p.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                             character->GetName(), true);
       p.WriteS8(teamChar->GetLevel());
 
@@ -1451,7 +1451,7 @@ void MatchManager::EnterDiaspora(
     p.WriteS32Little(bState->GetEntityID());
     p.WriteFloat(bState->GetCurrentX());
     p.WriteFloat(bState->GetCurrentY());
-    p.WriteString16Little(libcomp::Convert::ENCODING_CP932, def->GetName(),
+    p.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT, def->GetName(),
                           true);
     p.WriteU32Little(def->GetCaptureItem());
     p.WriteFloat(timeLeft);
@@ -2768,7 +2768,7 @@ void MatchManager::SendPvPLocation(
 
   if (enter) {
     auto character = cState->GetEntity();
-    p.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+    p.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                           character ? character->GetName() : "", true);
     p.WriteS8(cState->GetLevel());
 
@@ -2833,7 +2833,7 @@ void MatchManager::SendDiasporaLocation(
       auto character = cState->GetEntity();
 
       p.WriteS32Little(cState->GetEntityID());
-      p.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+      p.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                             character ? character->GetName() : "", true);
     }
   }
@@ -4357,7 +4357,7 @@ void MatchManager::SendUltimateBattleMembers(
     auto character = cState->GetEntity();
 
     notify.WriteS32Little(cState->GetEntityID());
-    notify.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+    notify.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                character ? character->GetName() : "", true);
   }
 

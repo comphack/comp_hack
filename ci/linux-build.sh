@@ -30,12 +30,14 @@ function check_or_download {
 }
 
 # Install packages
-sudo apt-get update -q
-sudo apt-get install libssl-dev docbook-xsl doxygen texlive-font-utils \
-    xmlto libqt5webkit5-dev unzip -y
+if [ "${INSTALL_TOOLS}" == "YES" ]; then
+    sudo apt-get update -q
+    sudo apt-get install libssl-dev docbook-xsl doxygen texlive-font-utils \
+        xmlto libqt5webkit5-dev unzip -y
 
-if [ "${GENERATOR}" == "Ninja" ]; then
-    sudo apt-get install ninja-build -y
+    if [ "${GENERATOR}" == "Ninja" ]; then
+        sudo apt-get install ninja-build -y
+    fi
 fi
 
 #
@@ -78,3 +80,7 @@ cmake --build . --target doc
 # cp -R ../contrib/pages ../pages
 # cp -R api ../pages/
 # find "${ROOT_DIR}/pages" -type d
+
+if [ "${COMPILER}" == "gcc" ]; then
+    bzip2 -k bin/comp_translator
+fi

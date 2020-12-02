@@ -58,7 +58,7 @@ bool Parsers::FriendAddRemove::Parse(
     }
 
     libcomp::String targetName = p.ReadString16Little(
-        libcomp::Convert::Encoding_t::ENCODING_CP932, true);
+        libcomp::Convert::Encoding_t::ENCODING_DEFAULT, true);
 
     // 0 = Accepted/add, 1 = rejected
     int32_t mode = p.ReadS32Little();

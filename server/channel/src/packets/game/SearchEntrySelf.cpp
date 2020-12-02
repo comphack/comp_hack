@@ -81,7 +81,7 @@ bool Parsers::SearchEntrySelf::Parse(
 
         reply.WriteS32Little((int32_t)entry->GetPostTime());
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
       }
       break;
@@ -94,7 +94,7 @@ bool Parsers::SearchEntrySelf::Parse(
 
         reply.WriteS32Little((int32_t)entry->GetPostTime());
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PARTY_SIZE));
@@ -110,7 +110,7 @@ bool Parsers::SearchEntrySelf::Parse(
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_SERIES));
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON));
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON_RACE));
@@ -129,13 +129,13 @@ bool Parsers::SearchEntrySelf::Parse(
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_SERIES));
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON));
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_PREF_DEMON_RACE));
 
         reply.WriteString16Little(
-            libcomp::Convert::ENCODING_CP932,
+            libcomp::Convert::ENCODING_DEFAULT,
             entry->GetTextData(SEARCH_IDX_CLAN_CATCHPHRASE), true);
 
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_CLAN_IMAGE));
@@ -162,7 +162,7 @@ bool Parsers::SearchEntrySelf::Parse(
         reply.WriteS32Little(0);  // Unknown
         reply.WriteS32Little(entry->GetData(SEARCH_IDX_LOCATION));
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         reply.WriteS16Little((int16_t)entry->GetData(SEARCH_IDX_DURABILITY));
@@ -191,7 +191,7 @@ bool Parsers::SearchEntrySelf::Parse(
         reply.WriteS32Little(0);  // Unknown
         reply.WriteS32Little(entry->GetData(SEARCH_IDX_LOCATION));
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         reply.WriteS32Little((int32_t)entry->GetPostTime());
@@ -205,7 +205,7 @@ bool Parsers::SearchEntrySelf::Parse(
 
         reply.WriteS8((int8_t)entry->GetData(SEARCH_IDX_GOAL));
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
 
         reply.WriteS32Little((int32_t)entry->GetPostTime());
@@ -222,7 +222,7 @@ bool Parsers::SearchEntrySelf::Parse(
 
         reply.WriteS32Little(entry->GetParentEntryID());
 
-        reply.WriteString16Little(libcomp::Convert::ENCODING_CP932,
+        reply.WriteString16Little(libcomp::Convert::ENCODING_DEFAULT,
                                   entry->GetTextData(SEARCH_IDX_COMMENT), true);
       }
       break;

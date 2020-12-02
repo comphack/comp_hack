@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-
 PROJECT(comp_lobby)
 
 MESSAGE("** Configuring ${PROJECT_NAME} **")
@@ -125,16 +123,17 @@ ENDIF(SINGLE_SOURCE_PACKETS)
 
 ADD_CUSTOM_COMMAND(
     OUTPUT
-        ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.c
-        ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.h
+        "${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.c"
+        "${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.h"
     COMMAND ${CMAKE_COMMAND} -E make_directory
-        ${CMAKE_CURRENT_BINARY_DIR}/res/login
-    COMMAND ${TTVFS_GEN_PATH} ResourceLogin ResourceLoginSize
-        ${CMAKE_CURRENT_SOURCE_DIR}/res/login
-        ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.c
-        ${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.h
+        "${CMAKE_CURRENT_BINARY_DIR}/res/login"
+    COMMAND "${TTVFS_GEN_PATH}" ResourceLogin ResourceLoginSize
+        "${CMAKE_CURRENT_SOURCE_DIR}/res/login"
+        "${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.c"
+        "${CMAKE_CURRENT_BINARY_DIR}/res/login/ResourceLogin.h"
     DEPENDS ttvfs-ex
     COMMENT "Generating resource file for the login screen"
+    VERBATIM
 )
 
 COVERALLS_SOURCES(

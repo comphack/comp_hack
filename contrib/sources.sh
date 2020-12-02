@@ -10,7 +10,7 @@ curl -L --url https://github.com/comphack/openssl/archive/comp_hack-20180424.zip
 curl -L --url https://github.com/comphack/mariadb/archive/comp_hack-20190603.zip --output mariadb.zip
 curl -L --url https://github.com/comphack/ttvfs/archive/comp_hack-20180424.zip --output ttvfs.zip
 curl -L --url https://github.com/comphack/physfs/archive/comp_hack-20180424.zip --output physfs.zip
-curl -L --url https://github.com/comphack/civetweb/archive/comp_hack-20200402.zip --output civetweb.zip
+curl -L --url https://github.com/comphack/civetweb/archive/comp_hack-20201128.zip --output civetweb.zip
 curl -L --url https://github.com/comphack/squirrel3/archive/comp_hack-20200402.zip --output squirrel3.zip
 curl -L --url https://github.com/comphack/asio/archive/comp_hack-20200402.zip --output asio.zip
 curl -L --url https://github.com/comphack/tinyxml2/archive/comp_hack-20200318.zip --output tinyxml2.zip

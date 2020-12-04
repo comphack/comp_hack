@@ -1658,6 +1658,16 @@ bool Zone::DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
 
   std::set<uint32_t> disabled;
   for (uint32_t sgID : spawnGroupIDs) {
+    if (deactivate &&
+        mDeactivatedSpawnGroups.find(sgID) == mDeactivatedSpawnGroups.end()) {
+      mDeactivatedSpawnGroups.insert(sgID);
+      LogZoneManagerDebug([&]() {
+        return libcomp::String("Deactivating spawn group %1 in zone %2\n")
+            .Arg(sgID)
+            .Arg(GetDefinitionID());
+      });
+    }
+
     if (mDisabledSpawnGroups.find(sgID) == mDisabledSpawnGroups.end()) {
       auto gIter = mSpawnGroups.find(sgID);
       if (gIter != mSpawnGroups.end()) {
@@ -1678,10 +1688,6 @@ bool Zone::DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
 
       mDisabledSpawnGroups.insert(sgID);
       disabled.insert(sgID);
-
-      if (deactivate) {
-        mDeactivatedSpawnGroups.insert(sgID);
-      }
     }
   }
 

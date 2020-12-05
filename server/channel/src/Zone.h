@@ -27,6 +27,9 @@
 #ifndef SERVER_CHANNEL_SRC_ZONE_H
 #define SERVER_CHANNEL_SRC_ZONE_H
 
+// libcomp Includes
+#include <ScriptEngine.h>
+
 // channel Includes
 #include "ActiveEntityState.h"
 #include "AllyState.h"
@@ -598,7 +601,8 @@ class Zone : public objects::ZoneObject {
    * @return true if any updates were performed that the zone manager needs
    *  to react to, false if none occurred or they can be processed later
    */
-  bool EnableDisableSpawnGroup(uint32_t spawnGroupID, bool enable);
+  bool EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
+                               const WorldClock& clock);
 
   /**
    * Get the set of spawn location groups that need to be respawned.

@@ -1104,15 +1104,31 @@ bool Zone::UpdateTimedSpawns(const WorldClock& clock, bool initializing) {
   return updated;
 }
 
-bool Zone::EnableDisableSpawnGroup(uint32_t spawnGroupID, bool enable) {
-  std::set<uint32_t> spawnGroupIDs = {spawnGroupID};
+bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
+                                   const WorldClock& clock) {
+  std::set<uint32_t> spawnGroupIDSet;
+  auto definition = GetDefinition();
+
+  for (auto i = 0; i < (int)spawnGroupIDArray.GetSize(); ++i) {
+    bool ok = false;
+    auto sgID =
+        spawnGroupIDArray.GetValue<libcomp::String>(i)->ToInteger<uint32_t>(
+            &ok);
+    auto sg = ok ? definition->GetSpawnGroups(sgID) : nullptr;
+    auto restriction = sg ? sg->GetRestrictions() : nullptr;
+
+    if (!enable ||
+        (enable && restriction && TimeRestrictionActive(clock, restriction))) {
+      spawnGroupIDSet.insert(sgID);
+    }
+  }
 
   std::lock_guard<std::mutex> lock(mLock);
   if (enable) {
-    EnableSpawnGroups(spawnGroupIDs, false, true);
+    EnableSpawnGroups(spawnGroupIDSet, false, true);
     return false;
   } else {
-    return DisableSpawnGroups(spawnGroupIDs, false, true);
+    return DisableSpawnGroups(spawnGroupIDSet, false, true);
   }
 }
 

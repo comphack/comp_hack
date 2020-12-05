@@ -1106,29 +1106,31 @@ bool Zone::UpdateTimedSpawns(const WorldClock& clock, bool initializing) {
 
 bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
                                    const WorldClock& clock) {
-  std::set<uint32_t> spawnGroupIDSet;
+  std::set<uint32_t> spawnGroupIDs;
   auto definition = GetDefinition();
 
   for (auto i = 0; i < (int)spawnGroupIDArray.GetSize(); ++i) {
     bool ok = false;
-    auto sgID =
-        spawnGroupIDArray.GetValue<libcomp::String>(i)->ToInteger<uint32_t>(
-            &ok);
+    auto sgIDString = spawnGroupIDArray.GetValue<libcomp::String>(i);
+    uint32_t sgID = sgIDString ? sgIDString->ToInteger<uint32_t>(&ok) : 0;
     auto sg = ok ? definition->GetSpawnGroups(sgID) : nullptr;
     auto restriction = sg ? sg->GetRestrictions() : nullptr;
 
     if (!enable ||
         (enable && restriction && TimeRestrictionActive(clock, restriction))) {
-      spawnGroupIDSet.insert(sgID);
+      spawnGroupIDs.insert(sgID);
+    } else if (enable) {
+      // Allow these spawngroups to be respawned based on time later
+      mDeactivatedSpawnGroups.erase(sgID);
     }
   }
 
   std::lock_guard<std::mutex> lock(mLock);
   if (enable) {
-    EnableSpawnGroups(spawnGroupIDSet, false, true);
+    EnableSpawnGroups(spawnGroupIDs, false, true);
     return false;
   } else {
-    return DisableSpawnGroups(spawnGroupIDSet, false, true);
+    return DisableSpawnGroups(spawnGroupIDs, false, true);
   }
 }
 

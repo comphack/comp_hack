@@ -5643,15 +5643,25 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
         continue;
       }
 
-      if (nraStatusNull && affinity) {
-        // Optional server setting to nullify status effects with
-        // an affinity type that the target could potentially NRA
-        // (this does not take NRA shields into account since nothing
-        // is "consumed" by this)
+      if (affinity) {
+        // Roll NRA chances; if they succeed don't even bother doing the
+        // status infliction math to see if it'd hit. If the server
+        // setting NRAStatusNull is true, rolls to nullify status effects
+        // with an affinity type that the target could potentially NRA
+        // automatically succeed (this does not take NRA shields into account
+        // since nothing is "consumed" by this)
+        bool nraSuccess = false;
         CorrectTbl nraType = (CorrectTbl)(affinity + NRA_OFFSET);
-        if (eState->GetNRAChance(NRA_NULL, nraType, targetCalc) > 0 ||
-            eState->GetNRAChance(NRA_REFLECT, nraType, targetCalc) > 0 ||
-            eState->GetNRAChance(NRA_ABSORB, nraType, targetCalc) > 0) {
+        for (auto nraIdx : {NRA_ABSORB, NRA_REFLECT, NRA_NULL}) {
+          int16_t chance =
+              eState->GetNRAChance((uint8_t)nraIdx, nraType, targetCalc);
+          if (chance >= 100 || (chance > 0 && (nraStatusNull || RNG(int16_t, 1, 100) <= chance))) {
+            nraSuccess = true;
+            break;
+          }
+        }
+        
+        if(nraSuccess) {
           continue;
         }
       }

@@ -1104,8 +1104,33 @@ bool Zone::UpdateTimedSpawns(const WorldClock& clock, bool initializing) {
   return updated;
 }
 
-bool Zone::EnableDisableSpawnGroup(uint32_t spawnGroupID, bool enable) {
-  std::set<uint32_t> spawnGroupIDs = {spawnGroupID};
+bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
+                                   const WorldClock& clock) {
+  std::set<uint32_t> spawnGroupIDs;
+
+  for (auto i = 0; i < (int)spawnGroupIDArray.GetSize(); ++i) {
+    bool ok = false;
+    auto sgIDString = spawnGroupIDArray.GetValue<libcomp::String>(i);
+    uint32_t sgID = sgIDString ? sgIDString->ToInteger<uint32_t>(&ok) : 0;
+
+    if (!ok) {
+      continue;
+    }
+
+    if (enable) {
+      auto sg = GetDefinition()->GetSpawnGroups(sgID);
+      auto restriction = sg ? sg->GetRestrictions() : nullptr;
+
+      if (restriction && TimeRestrictionActive(clock, restriction)) {
+        spawnGroupIDs.insert(sgID);
+      } else {
+        // Allow these spawngroups to be respawned based on time later
+        mDeactivatedSpawnGroups.erase(sgID);
+      }
+    } else {
+      spawnGroupIDs.insert(sgID);
+    }
+  }
 
   std::lock_guard<std::mutex> lock(mLock);
   if (enable) {
@@ -1658,6 +1683,16 @@ bool Zone::DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
 
   std::set<uint32_t> disabled;
   for (uint32_t sgID : spawnGroupIDs) {
+    if (deactivate &&
+        mDeactivatedSpawnGroups.find(sgID) == mDeactivatedSpawnGroups.end()) {
+      mDeactivatedSpawnGroups.insert(sgID);
+      LogZoneManagerDebug([&]() {
+        return libcomp::String("Deactivating spawn group %1 in zone %2\n")
+            .Arg(sgID)
+            .Arg(GetDefinitionID());
+      });
+    }
+
     if (mDisabledSpawnGroups.find(sgID) == mDisabledSpawnGroups.end()) {
       auto gIter = mSpawnGroups.find(sgID);
       if (gIter != mSpawnGroups.end()) {
@@ -1678,10 +1713,6 @@ bool Zone::DisableSpawnGroups(const std::set<uint32_t>& spawnGroupIDs,
 
       mDisabledSpawnGroups.insert(sgID);
       disabled.insert(sgID);
-
-      if (deactivate) {
-        mDeactivatedSpawnGroups.insert(sgID);
-      }
     }
   }
 

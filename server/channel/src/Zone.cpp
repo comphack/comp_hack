@@ -1107,7 +1107,6 @@ bool Zone::UpdateTimedSpawns(const WorldClock& clock, bool initializing) {
 bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
                                    const WorldClock& clock) {
   std::set<uint32_t> spawnGroupIDs;
-  auto definition = GetDefinition();
 
   for (auto i = 0; i < (int)spawnGroupIDArray.GetSize(); ++i) {
     bool ok = false;
@@ -1119,7 +1118,7 @@ bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
     }
 
     if (enable) {
-      auto sg = definition->GetSpawnGroups(sgID);
+      auto sg = GetDefinition()->GetSpawnGroups(sgID);
       auto restriction = sg ? sg->GetRestrictions() : nullptr;
 
       if (restriction && TimeRestrictionActive(clock, restriction)) {

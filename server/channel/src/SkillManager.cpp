@@ -11320,6 +11320,19 @@ bool SkillManager::Traesto(
 
   auto server = mServer.lock();
   auto zoneManager = server->GetZoneManager();
+  int32_t targetEntityID = (int32_t)activated->GetTargetObjectID();
+  auto targetConnection =
+      (targetEntityID > 0)
+          ? server->GetManagerConnection()->GetEntityClient(targetEntityID)
+          : nullptr;
+  auto state = targetConnection ? targetConnection->GetClientState() : nullptr;
+  auto tState = state ? state->GetCharacterState() : nullptr;
+  auto target = tState ? tState->GetEntity() : nullptr;
+
+  if (!target) {
+    SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+    return false;
+  }
 
   auto pSkill = GetProcessingSkill(activated, ctx);
   auto skillData = pSkill->Definition;
@@ -11328,12 +11341,8 @@ bool SkillManager::Traesto(
   uint32_t zoneID = 0;
   uint32_t spotID = 0;
   if (functionID == SVR_CONST.SKILL_TRAESTO) {
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-
-    zoneID = character->GetHomepointZone();
-    spotID = character->GetHomepointSpotID();
+    zoneID = target->GetHomepointZone();
+    spotID = target->GetHomepointSpotID();
   } else if (functionID == (uint16_t)SVR_CONST.SKILL_TRAESTO_ARCADIA[0]) {
     zoneID = SVR_CONST.SKILL_TRAESTO_ARCADIA[1];
     spotID = SVR_CONST.SKILL_TRAESTO_ARCADIA[2];
@@ -11371,8 +11380,9 @@ bool SkillManager::Traesto(
   }
 
   if (ProcessSkillResult(activated, ctx) &&
-      zoneManager->EnterZone(client, zoneID, zoneDef->GetDynamicMapID(), xCoord,
-                             yCoord, rot, true)) {
+      zoneManager->EnterZone(targetConnection, zoneID,
+                             zoneDef->GetDynamicMapID(), xCoord, yCoord, rot,
+                             true)) {
     return true;
   } else {
     SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC_USE);

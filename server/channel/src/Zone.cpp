@@ -1113,15 +1113,23 @@ bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
     bool ok = false;
     auto sgIDString = spawnGroupIDArray.GetValue<libcomp::String>(i);
     uint32_t sgID = sgIDString ? sgIDString->ToInteger<uint32_t>(&ok) : 0;
-    auto sg = ok ? definition->GetSpawnGroups(sgID) : nullptr;
-    auto restriction = sg ? sg->GetRestrictions() : nullptr;
 
-    if (!enable ||
-        (enable && restriction && TimeRestrictionActive(clock, restriction))) {
+    if (!ok) {
+      continue;
+    }
+
+    if (enable) {
+      auto sg = definition->GetSpawnGroups(sgID);
+      auto restriction = sg ? sg->GetRestrictions() : nullptr;
+
+      if (restriction && TimeRestrictionActive(clock, restriction)) {
+        spawnGroupIDs.insert(sgID);
+      } else {
+        // Allow these spawngroups to be respawned based on time later
+        mDeactivatedSpawnGroups.erase(sgID);
+      }
+    } else {
       spawnGroupIDs.insert(sgID);
-    } else if (enable) {
-      // Allow these spawngroups to be respawned based on time later
-      mDeactivatedSpawnGroups.erase(sgID);
     }
   }
 

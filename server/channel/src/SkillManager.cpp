@@ -5655,13 +5655,15 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
         for (auto nraIdx : {NRA_ABSORB, NRA_REFLECT, NRA_NULL}) {
           int16_t chance =
               eState->GetNRAChance((uint8_t)nraIdx, nraType, targetCalc);
-          if (chance >= 100 || (chance > 0 && (nraStatusNull || RNG(int16_t, 1, 100) <= chance))) {
+          if (chance >= 100 ||
+              (chance > 0 &&
+               (nraStatusNull || RNG(int16_t, 1, 100) <= chance))) {
             nraSuccess = true;
             break;
           }
         }
-        
-        if(nraSuccess) {
+
+        if (nraSuccess) {
           continue;
         }
       }

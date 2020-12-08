@@ -2570,7 +2570,6 @@ bool SkillManager::DetermineNormalCosts(
   // Only characters and partner demons have to pay item costs
   bool noItem = source->GetEntityType() != EntityType_t::CHARACTER &&
                 source->GetEntityType() != EntityType_t::PARTNER_DEMON;
-
   uint32_t hpCostPercent = 0, mpCostPercent = 0;
   for (auto cost : skillData->GetCondition()->GetCosts()) {
     auto num = cost->GetCost();
@@ -2634,11 +2633,14 @@ bool SkillManager::DetermineNormalCosts(
                                               (float)source->GetMaxHP()));
 
     double multiplier = 1.0;
-    for (double adjust :
-         mServer.lock()->GetTokuseiManager()->GetAspectValueList(
-             source, TokuseiAspectType::HP_COST_ADJUST, calcState)) {
-      multiplier =
-          adjust <= -100.0 ? 0.0 : (multiplier * (1.0 + adjust * 0.01));
+    if ((skillData->GetCast()->GetBasic()->GetAdjustRestrictions() &
+         SKILL_FIXED_HP_COST) == 0) {
+      for (double adjust :
+           mServer.lock()->GetTokuseiManager()->GetAspectValueList(
+               source, TokuseiAspectType::HP_COST_ADJUST, calcState)) {
+        multiplier =
+            adjust <= -100.0 ? 0.0 : (multiplier * (1.0 + adjust * 0.01));
+      }
     }
 
     hpCost = (int32_t)ceil((double)hpCost * multiplier);
@@ -2654,11 +2656,14 @@ bool SkillManager::DetermineNormalCosts(
                                               (float)source->GetMaxMP()));
 
     double multiplier = 1.0;
-    for (double adjust :
-         mServer.lock()->GetTokuseiManager()->GetAspectValueList(
-             source, TokuseiAspectType::MP_COST_ADJUST, calcState)) {
-      multiplier =
-          adjust <= -100.0 ? 0.0 : (multiplier * (1.0 + adjust * 0.01));
+    if ((skillData->GetCast()->GetBasic()->GetAdjustRestrictions() &
+         SKILL_FIXED_MP_COST) == 0) {
+      for (double adjust :
+           mServer.lock()->GetTokuseiManager()->GetAspectValueList(
+               source, TokuseiAspectType::MP_COST_ADJUST, calcState)) {
+        multiplier =
+            adjust <= -100.0 ? 0.0 : (multiplier * (1.0 + adjust * 0.01));
+      }
     }
 
     mpCost = (int32_t)ceil((double)mpCost * multiplier);

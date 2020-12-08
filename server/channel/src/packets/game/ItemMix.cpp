@@ -313,18 +313,17 @@ bool Parsers::ItemMix::Parse(
       float item1MaxScale = 1.f;
       float item2MaxScale = 1.f;
       for (auto blendExtData : extItemDefs) {
-        successRateScale -= (1.f - blendExtData->GetProbabilities(0));
-        gSuccessRateScale -= (1.f - blendExtData->GetProbabilities(1));
+        successRateScale *= blendExtData->GetProbabilities(0);
+        gSuccessRateScale *= blendExtData->GetProbabilities(1);
 
-        expSuccessBoostScale -= (1.f - blendExtData->GetExpertSuccessBoost());
-        expGSuccessBoostScale -=
-            (1.f - blendExtData->GetExpertGreatSuccessBoost());
+        expSuccessBoostScale *= blendExtData->GetExpertSuccessBoost();
+        expGSuccessBoostScale *= blendExtData->GetExpertGreatSuccessBoost();
 
-        expSuccessUpScale -= (1.f - blendExtData->GetSuccessExpertUp());
-        expGSuccessUpScale -= (1.f - blendExtData->GetGreatSuccessExpertUp());
-        expFailUpScale -= (1.f - blendExtData->GetFailExpertUp());
+        expSuccessUpScale *= blendExtData->GetSuccessExpertUp();
+        expGSuccessUpScale *= blendExtData->GetGreatSuccessExpertUp();
+        expFailUpScale *= blendExtData->GetFailExpertUp();
 
-        lossRateScale -= (1.f - blendExtData->GetMaterialLoss());
+        lossRateScale *= blendExtData->GetMaterialLoss();
 
         auto mod1 = blendExtData->GetDstItems(0);
         auto mod2 = blendExtData->GetDstItems(1);
@@ -336,11 +335,11 @@ bool Parsers::ItemMix::Parse(
                         ? mod2->GetItemID()
                         : item2Type;
 
-        item1MinScale -= (1.f - mod1->GetMinScale());
-        item2MinScale -= (1.f - mod2->GetMinScale());
+        item1MinScale *= mod1->GetMinScale();
+        item2MinScale *= mod2->GetMinScale();
 
-        item1MaxScale -= (1.f - mod1->GetMaxScale());
-        item2MaxScale -= (1.f - mod2->GetMaxScale());
+        item1MaxScale *= mod1->GetMaxScale();
+        item2MaxScale *= mod2->GetMaxScale();
       }
 
       if (successRateScale < 0.f) successRateScale = 0.f;

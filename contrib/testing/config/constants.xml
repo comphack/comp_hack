@@ -625,17 +625,89 @@
     <constant name="MITAMA_DEMON_BOOK_BONUS">
         <!-- Format: entry count => tokusei ID list -->
         <!-- This replaces the partially functional DevilBookBonusMitamaData.sbin;tokusei for summoned Mitama-Enhanced demons based on the Mitama Demon Compendium -->
-		<pair>
-            <key>1</key>
-            <value>9999000</value>
+        <pair>
+            <key>0</key>
+            <value>20000022,20000023</value>
+        </pair>
+        <pair>
+            <key>15</key>
+            <value>20000024</value>
+        </pair>
+        <pair>
+            <key>30</key>
+            <value>20000025</value>
+        </pair>
+        <pair>
+            <key>45</key>
+            <value>20000026</value>
+        </pair>
+        <pair>
+            <key>60</key>
+            <value>20000027</value>
+        </pair>
+        <pair>
+            <key>75</key>
+            <value>20000028</value>
+        </pair>
+        <pair>
+            <key>90</key>
+            <value>20000029</value>
+        </pair>
+        <pair>
+            <key>120</key>
+            <value>20000030</value>
+        </pair>
+        <pair>
+            <key>135</key>
+            <value>20000031</value>
+        </pair>
+        <pair>
+            <key>160</key>
+            <value>20000032</value>
+        </pair>
+        <pair>
+            <key>170</key>
+            <value>20000033</value>
+        </pair>
+        <pair>
+            <key>180</key>
+            <value>20000034</value>
+        </pair>
+        <pair>
+            <key>190</key>
+            <value>20000035</value>
+        </pair>
+        <pair>
+            <key>200</key>
+            <value>20000036</value>
+        </pair>
+        <pair>
+            <key>220</key>
+            <value>20000037</value>
+        </pair>
+        <pair>
+            <key>240</key>
+            <value>20000038</value>
+        </pair>
+        <pair>
+            <key>260</key>
+            <value>20000039</value>
+        </pair>
+        <pair>
+            <key>280</key>
+            <value>20000040</value>
+        </pair>
+        <pair>
+            <key>300</key>
+            <value>20000041</value>
         </pair>
     </constant>
     <constant name="MITAMA_DEMON_BOOK_SUMMONER_BONUS">
         <!-- Format: entry count => tokusei ID list -->
         <!-- This replaces the partially functional DevilBookBonusMitamaData.sbin; tokusei for summoners based on the Mitama Demon Compendium -->
-		<pair>
-            <key>1</key>
-            <value>9999000</value>
+        <pair>
+            <key>0</key>
+            <value>0</value>
         </pair>
     </constant>
     <constant name="DEMON_CRYSTALS">

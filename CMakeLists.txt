@@ -620,13 +620,13 @@ MACRO(COVERALLS_SOURCES)
         IF(IS_ABSOLUTE "${it}")
             FILE(RELATIVE_PATH filePath "${CMAKE_SOURCE_DIR}"
                 "${it}")
-            MESSAGE("CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} it=${it} filePath=${filePath}")
+
             SET(COVERALLS_SRCS ${COVERALLS_SRCS} "${filePath}"
                 CACHE INTERNAL "Coverage source files")
         ELSE()
             FILE(RELATIVE_PATH filePath "${CMAKE_SOURCE_DIR}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/${it}")
-            MESSAGE("CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} it=${it} filePath=${filePath}")
+
             SET(COVERALLS_SRCS ${COVERALLS_SRCS} "${filePath}"
                 CACHE INTERNAL "Coverage source files")
         ENDIF()

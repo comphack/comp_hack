@@ -355,6 +355,9 @@ INCLUDE(${COMP_MODULE_PATH}/DetermineOS.cmake)
 # If code coverage should be generated.
 OPTION(COVERALLS "Generate coveralls code coverage data." OFF)
 
+# If code coverage should be uploaded.
+OPTION(COVERALLS_UPLOAD "Upload coverage results after collecting them." OFF)
+
 IF(COVERALLS)
     INCLUDE(Coveralls)
 ENDIF(COVERALLS)
@@ -614,11 +617,19 @@ SET(COVERALLS_SRCS "" CACHE INTERNAL "Coverage source files")
 # Add sources to the coverage source list.
 MACRO(COVERALLS_SOURCES)
     FOREACH(it ${ARGN})
-        FILE(RELATIVE_PATH filePath "${CMAKE_SOURCE_DIR}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/${it}")
+        IF(IS_ABSOLUTE "${it}")
+            FILE(RELATIVE_PATH filePath "${CMAKE_SOURCE_DIR}"
+                "${it}")
 
-        SET(COVERALLS_SRCS ${COVERALLS_SRCS} "${filePath}"
-            CACHE INTERNAL "Coverage source files")
+            SET(COVERALLS_SRCS ${COVERALLS_SRCS} "${filePath}"
+                CACHE INTERNAL "Coverage source files")
+        ELSE()
+            FILE(RELATIVE_PATH filePath "${CMAKE_SOURCE_DIR}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/${it}")
+
+            SET(COVERALLS_SRCS ${COVERALLS_SRCS} "${filePath}"
+                CACHE INTERNAL "Coverage source files")
+        ENDIF()
     ENDFOREACH()
 ENDMACRO()
 
@@ -1042,7 +1053,7 @@ FILE(COPY "${CMAKE_SOURCE_DIR}/contrib/testing"
     DESTINATION "${CMAKE_BINARY_DIR}")
 
 IF(COVERALLS)
-    coveralls_setup("${COVERALLS_SRCS}" ON)
+    coveralls_setup("${COVERALLS_SRCS}" ${COVERALLS_UPLOAD})
 ENDIF(COVERALLS)
 
 # Make sure we have Doxygen.

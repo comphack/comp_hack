@@ -499,8 +499,12 @@ static bool HaveLint() {
 #ifdef _WIN32
   FILE* pPipe = _popen(cmd.C(), "rt");
 #else
-  FILE* pPipe = popen(cmd.C(), "rt");
+  FILE* pPipe = popen(cmd.C(), "r");
 #endif
+
+  if (!pPipe) {
+    return false;
+  }
 
   while (fgets(szBuffer, sizeof(szBuffer), pPipe)) {
     // do nothing with it
@@ -538,8 +542,12 @@ static int LintXml(const libcomp::String& schema, const libcomp::String& xml) {
 #ifdef _WIN32
   FILE* pPipe = _popen(cmd.C(), "rt");
 #else
-  FILE* pPipe = popen(cmd.C(), "rt");
+  FILE* pPipe = popen(cmd.C(), "r");
 #endif
+
+  if (!pPipe) {
+    return -1;
+  }
 
   while (fgets(szBuffer, sizeof(szBuffer), pPipe)) {
     output.push_back(szBuffer);

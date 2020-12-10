@@ -215,6 +215,10 @@ class channel::ProcessingSkill {
   SkillExecutionContext* ExecutionContext = 0;
   uint16_t Modifier1 = 0;
   uint16_t Modifier2 = 0;
+  int8_t TalkAffSuccess = 0;
+  int8_t TalkAffFailure = 0;
+  int8_t TalkFearSuccess = 0;
+  int8_t TalkFearFailure = 0;
   uint8_t BaseAffinity = 0;
   uint8_t EffectiveAffinity = 0;
   uint8_t WeaponAffinity = 0;
@@ -502,9 +506,14 @@ void SkillManager::LoadScripts() {
           // during preaction
           .Var("Modifier1", &ProcessingSkill::Modifier1)
           .Var("Modifier2", &ProcessingSkill::Modifier2)
-          // Remaining vars are not modifiable and should be used for
-          // logic only
-          .ConstVar("Activated", &ProcessingSkill::Activated)
+          .Var("TalkAffSuccess", &ProcessingSkill::TalkAffSuccess)
+          .Var("TalkAffFailure", &ProcessingSkill::TalkAffFailure)
+          .Var("TalkFearSuccess", &ProcessingSkill::TalkFearSuccess)
+          .Var("TalkFearFailure", &ProcessingSkill::TalkFearFailure)
+      // Remaining vars are not modifiable and should be used for
+      // logic only
+      .ConstVar("Activated", &ProcessingSkill::Activated)
+          .ConstVar("Definition", &ProcessingSkill::Definition)
           .ConstVar("EffectiveSource", &ProcessingSkill::EffectiveSource)
           .ConstVar("PrimaryTarget", &ProcessingSkill::PrimaryTarget)
           .ConstVar("SourceExecutionState",
@@ -2791,11 +2800,6 @@ bool SkillManager::ProcessSkillResult(
     return false;
   }
 
-  if (!ExecuteScriptPreActions(pSkill)) {
-    Fizzle(ctx);
-    return false;
-  }
-
   if (pSkill->PrimaryTarget &&
       (pSkill->PrimaryTarget->GetEntityType() == EntityType_t::CHARACTER ||
        pSkill->PrimaryTarget->GetEntityType() == EntityType_t::PARTNER_DEMON)) {
@@ -3245,6 +3249,11 @@ bool SkillManager::ProcessSkillResult(
 
         return false;
       });
+
+  if (!ExecuteScriptPreActions(pSkill, effectiveTargets)) {
+    Fizzle(ctx);
+    return false;
+  }
 
   // Filter down to all valid targets
   uint16_t aoeReflect = 0;
@@ -4463,6 +4472,7 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   auto server = mServer.lock();
   auto definitionManager = server->GetDefinitionManager();
   auto skillData = activated->GetSkillData();
+  auto talkDamage = skillData->GetDamage()->GetNegotiationDamage();
   auto source = std::dynamic_pointer_cast<ActiveEntityState>(
       activated->GetSourceEntity());
   auto cSource = std::dynamic_pointer_cast<CharacterState>(source);
@@ -4473,6 +4483,10 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   skill->Activated = activated;
   skill->Modifier1 = skillData->GetDamage()->GetBattleDamage()->GetModifier1();
   skill->Modifier2 = skillData->GetDamage()->GetBattleDamage()->GetModifier2();
+  skill->TalkAffSuccess = talkDamage->GetSuccessAffability();
+  skill->TalkAffFailure = talkDamage->GetFailureAffability();
+  skill->TalkFearSuccess = talkDamage->GetSuccessFear();
+  skill->TalkFearFailure = talkDamage->GetFailureFear();
   skill->BaseAffinity = skill->EffectiveAffinity =
       skillData->GetCommon()->GetAffinity();
   skill->EffectiveDependencyType = skillData->GetBasic()->GetDependencyType();
@@ -7023,12 +7037,6 @@ bool SkillManager::ApplyNegotiationDamage(
     return false;
   }
 
-  auto talkDamage = pSkill->Definition->GetDamage()->GetNegotiationDamage();
-  int8_t talkAffSuccess = talkDamage->GetSuccessAffability();
-  int8_t talkAffFailure = talkDamage->GetFailureAffability();
-  int8_t talkFearSuccess = talkDamage->GetSuccessFear();
-  int8_t talkFearFailure = talkDamage->GetFailureFear();
-
   auto spawn = enemy->GetSpawnSource();
   if (enemy->GetCoreStats()->GetLevel() > source->GetLevel()) {
     // Enemies that are a higher level cannot be negotiated with
@@ -7082,8 +7090,9 @@ bool SkillManager::ApplyNegotiationDamage(
   bool isTalkAction = IsTalkSkill(pSkill->Definition, true);
   bool avoided =
       (target.Flags1 & FLAG1_GUARDED) != 0 || (target.Flags1 & FLAG1_DODGED);
-  bool autoJoin = isTalkAction && !talkAffSuccess && !avoided &&
-                  !talkAffFailure && !talkFearSuccess && !talkFearFailure;
+  bool autoJoin = isTalkAction && !pSkill->TalkAffSuccess && !avoided &&
+                  !pSkill->TalkAffFailure && !pSkill->TalkFearSuccess &&
+                  !pSkill->TalkFearFailure;
 
   bool success = false;
   if (autoJoin) {
@@ -7117,10 +7126,12 @@ bool SkillManager::ApplyNegotiationDamage(
 
     success =
         talkSuccess > 0.0 && RNG(uint16_t, 1, 100) <= (uint16_t)talkSuccess;
-    int16_t aff = (int16_t)(talkPoints.first +
-                            (success ? talkAffSuccess : talkAffFailure));
-    int16_t fear = (int16_t)(talkPoints.second +
-                             (success ? talkFearSuccess : talkFearFailure));
+    int16_t aff =
+        (int16_t)(talkPoints.first +
+                  (success ? pSkill->TalkAffSuccess : pSkill->TalkAffFailure));
+    int16_t fear =
+        (int16_t)(talkPoints.second + (success ? pSkill->TalkFearSuccess
+                                               : pSkill->TalkFearFailure));
 
     // Don't let the sums drop below 0 or go over the threshold
     if (aff > affThreshold) {
@@ -11524,7 +11535,8 @@ bool SkillManager::AdjustScriptCosts(
 }
 
 bool SkillManager::ExecuteScriptPreActions(
-    const std::shared_ptr<channel::ProcessingSkill>& pSkill) {
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+    std::list<std::shared_ptr<channel::ActiveEntityState>> targets) {
   if (!pSkill->FunctionID) {
     // Nothing to do
     return true;
@@ -11541,14 +11553,19 @@ bool SkillManager::ExecuteScriptPreActions(
   auto state = source ? ClientState::GetEntityClientState(source->GetEntityID())
                       : nullptr;
 
-  Sqrat::Function f(
-      Sqrat::RootTable(mSkillLogicScripts[pSkill->FunctionID]->GetVM()),
-      "preAction");
+  auto vm = mSkillLogicScripts[pSkill->FunctionID]->GetVM();
+  Sqrat::Array targetStates(vm);
+  // std::list<SkillTargetResult*> directTargets;
+  for (auto& targetState : targets) {
+    targetStates.Append(targetState);
+  }
+
+  Sqrat::Function f(Sqrat::RootTable(vm), "preAction");
   auto result = !f.IsNull()
                     ? f.Evaluate<int32_t>(
                           source, state ? state->GetCharacterState() : nullptr,
                           state ? state->GetDemonState() : nullptr, pSkill,
-                          pSkill->CurrentZone, mServer.lock())
+                          pSkill->CurrentZone, targetStates, mServer.lock())
                     : 0;
 
   // Print error if cost calculation was not successful (0) and not requested

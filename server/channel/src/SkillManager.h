@@ -1407,10 +1407,12 @@ class SkillManager {
   /**
    * Run applicable script pre-actions during execution.
    * @param pSkill Current skill processing state
+   * @param targets List of target states before skill NRA calculation, etc
    * @return false if an error occurred or the skill should fizzle
    */
   bool ExecuteScriptPreActions(
-      const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+      const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+      std::list<std::shared_ptr<channel::ActiveEntityState>> targets);
 
   /**
    * Run applicable script post-actions during execution.

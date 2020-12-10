@@ -510,9 +510,9 @@ void SkillManager::LoadScripts() {
           .Var("TalkAffFailure", &ProcessingSkill::TalkAffFailure)
           .Var("TalkFearSuccess", &ProcessingSkill::TalkFearSuccess)
           .Var("TalkFearFailure", &ProcessingSkill::TalkFearFailure)
-      // Remaining vars are not modifiable and should be used for
-      // logic only
-      .ConstVar("Activated", &ProcessingSkill::Activated)
+          // Remaining vars are not modifiable and should be used for
+          // logic only
+          .ConstVar("Activated", &ProcessingSkill::Activated)
           .ConstVar("Definition", &ProcessingSkill::Definition)
           .ConstVar("EffectiveSource", &ProcessingSkill::EffectiveSource)
           .ConstVar("PrimaryTarget", &ProcessingSkill::PrimaryTarget)

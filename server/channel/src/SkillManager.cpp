@@ -11555,7 +11555,6 @@ bool SkillManager::ExecuteScriptPreActions(
 
   auto vm = mSkillLogicScripts[pSkill->FunctionID]->GetVM();
   Sqrat::Array targetStates(vm);
-  // std::list<SkillTargetResult*> directTargets;
   for (auto& targetState : targets) {
     targetStates.Append(targetState);
   }

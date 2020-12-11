@@ -50,6 +50,7 @@
 #include <MiCancelData.h>
 #include <MiCategoryData.h>
 #include <MiCorrectTbl.h>
+#include <MiDCategoryData.h>
 #include <MiDevilBattleData.h>
 #include <MiDevilData.h>
 #include <MiDoTDamageData.h>

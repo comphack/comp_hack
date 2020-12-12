@@ -1411,6 +1411,8 @@ uint8_t ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
 
 bool ActiveEntityState::HasSpecialTDamage() { return false; }
 
+libobjgen::UUID ActiveEntityState::GetResponsibleEntity() const { return {}; }
+
 bool ActiveEntityState::ResetUpkeep() {
   std::lock_guard<std::mutex> lock(mLock);
 

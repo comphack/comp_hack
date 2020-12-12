@@ -1509,6 +1509,25 @@ class SkillManager {
    */
   bool IFramesEnabled();
 
+  /**
+   * Check if an entity is responsible for this spawn and if the creation of the
+   * spawn should be denied.
+   * @param responsibleEntity Will be set to the UUID of the responsible entity
+   * or NULL if there is none.
+   * @param activated The skill activation.
+   * @param client Client connection.
+   * @param zone Zone the skill was casted in.
+   * @param source Entity that wishes to create the spawn.
+   * @returns true if the spawn may be created; false otherwise
+   * @note If this method returns false, an error has already been sent.
+   */
+  bool CheckResponsibility(
+      libobjgen::UUID& responsibleEntity,
+      const std::shared_ptr<objects::ActivatedAbility>& activated,
+      const std::shared_ptr<ChannelClientConnection>& client,
+      const std::shared_ptr<Zone>& zone,
+      const std::shared_ptr<ActiveEntityState>& source);
+
   /// Pointer to the channel server
   std::weak_ptr<ChannelServer> mServer;
 

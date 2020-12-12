@@ -128,3 +128,11 @@ std::shared_ptr<EnemyState> EnemyState::Cast(
     const std::shared_ptr<EntityStateObject>& obj) {
   return std::dynamic_pointer_cast<EnemyState>(obj);
 }
+
+libobjgen::UUID EnemyState::GetResponsibleEntity() const {
+  return mResponsibleEntity;
+}
+
+void EnemyState::SetResponsibleEntity(const libobjgen::UUID& uuid) {
+  mResponsibleEntity = uuid;
+}

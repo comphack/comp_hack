@@ -731,6 +731,12 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
   virtual bool HasSpecialTDamage();
 
   /**
+   * Get the UUID of the entity responsible for creating this entity.
+   * @returns UUID of entity responsible for creating this entity.
+   */
+  virtual libobjgen::UUID GetResponsibleEntity() const;
+
+  /**
    * Clear or reset any active skill upkeep costs timer
    * @return true if an upkeep is active, false if there is no active upkeep
    */

@@ -10970,11 +10970,14 @@ bool SkillManager::Spawn(
   }
 
   libobjgen::UUID responsibleEntity;
+  int32_t managedCountForEntity;
 
-  if (!CheckResponsibility(responsibleEntity, activated, client, zone,
-                           source)) {
+  if (!CheckResponsibility(responsibleEntity, managedCountForEntity, activated,
+                           client, zone, source)) {
     return false;
   }
+
+  int32_t managedCountForEntityAfter = managedCountForEntity;
 
   auto server = mServer.lock();
   auto definitionManager = server->GetDefinitionManager();
@@ -11065,6 +11068,7 @@ bool SkillManager::Spawn(
           // be considered part of that group for that zone.
           // eBase->SetSpawnGroupID(spawnGroup->GetID());
 
+          managedCountForEntityAfter++;
           enemies.push_back(enemy);
         } else {
           LogSkillManagerError([&]() {
@@ -11098,6 +11102,19 @@ bool SkillManager::Spawn(
     }
   }
 
+  if ((managedCountForEntityAfter / 10) != (managedCountForEntity / 10)) {
+    auto username = client->GetClientState()
+                        ->GetAccountLogin()
+                        ->GetAccount()
+                        ->GetUsername();
+
+    LogSkillManagerWarning([&]() {
+      return libcomp::String("Account %1 now has %2 managed spawns.")
+          .Arg(username)
+          .Arg(managedCountForEntityAfter);
+    });
+  }
+
   return true;
 }
 
@@ -11116,11 +11133,14 @@ bool SkillManager::SpawnZone(
   }
 
   libobjgen::UUID responsibleEntity;
+  int32_t managedCountForEntity;
 
-  if (!CheckResponsibility(responsibleEntity, activated, client, zone,
-                           source)) {
+  if (!CheckResponsibility(responsibleEntity, managedCountForEntity, activated,
+                           client, zone, source)) {
     return false;
   }
+
+  int32_t managedCountForEntityAfter = managedCountForEntity;
 
   auto skillData = activated->GetSkillData();
   auto params = skillData->GetSpecial()->GetSpecialParams();
@@ -11197,6 +11217,7 @@ bool SkillManager::SpawnZone(
           eBase->SetSpawnSource(spawn);
           eBase->SetSpawnGroupID(spawnGroup->GetID());
           eBase->SetSpawnLocation(spawnLoc);
+          managedCountForEntityAfter++;
           enemies.push_back(enemy);
         } else {
           LogSkillManagerError([&]() {
@@ -11228,6 +11249,19 @@ bool SkillManager::SpawnZone(
       server->GetActionManager()->PerformActions(
           nullptr, spawnGroup->GetSpawnActions(), 0, zone, options);
     }
+  }
+
+  if ((managedCountForEntityAfter / 10) != (managedCountForEntity / 10)) {
+    auto username = client->GetClientState()
+                        ->GetAccountLogin()
+                        ->GetAccount()
+                        ->GetUsername();
+
+    LogSkillManagerWarning([&]() {
+      return libcomp::String("Account %1 now has %2 managed spawns.")
+          .Arg(username)
+          .Arg(managedCountForEntityAfter);
+    });
   }
 
   return true;
@@ -11967,11 +12001,13 @@ bool SkillManager::IFramesEnabled() {
 }
 
 bool SkillManager::CheckResponsibility(
-    libobjgen::UUID& responsibleEntity,
+    libobjgen::UUID& responsibleEntity, int32_t& managedCountForEntity,
     const std::shared_ptr<objects::ActivatedAbility>& activated,
     const std::shared_ptr<ChannelClientConnection>& client,
     const std::shared_ptr<Zone>& zone,
     const std::shared_ptr<ActiveEntityState>& source) {
+  managedCountForEntity = 0;
+
   bool playerEntity = source->GetEntityType() == EntityType_t::CHARACTER;
   int32_t managedZoneEntityCap = 0;
   int32_t managedEntityCap = 0;
@@ -12033,8 +12069,11 @@ bool SkillManager::CheckResponsibility(
     return false;
   }
 
-  if (managedEntityCap &&
-      zone->GetEntitiesManagedBy(responsibleEntity) >= managedEntityCap) {
+  if (managedEntityCap) {
+    managedCountForEntity = zone->GetEntitiesManagedBy(responsibleEntity);
+  }
+
+  if (managedEntityCap && managedCountForEntity >= managedEntityCap) {
     LogSkillManagerError([&]() {
       auto username = client->GetClientState()
                           ->GetAccountLogin()
@@ -12045,7 +12084,7 @@ bool SkillManager::CheckResponsibility(
                  "Account %1 tried to spawn more enemies but they already "
                  "spawned %2 in zone %3 with a cap of %4.\n")
           .Arg(username)
-          .Arg(zone->GetEntitiesManagedBy(responsibleEntity))
+          .Arg(managedCountForEntity)
           .Arg(zone->GetDefinitionID())
           .Arg(managedEntityCap);
     });

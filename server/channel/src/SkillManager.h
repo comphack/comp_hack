@@ -1514,6 +1514,8 @@ class SkillManager {
    * spawn should be denied.
    * @param responsibleEntity Will be set to the UUID of the responsible entity
    * or NULL if there is none.
+   * @param managedCountForEntity Output for the current number of spawns
+   * managed by this entity.
    * @param activated The skill activation.
    * @param client Client connection.
    * @param zone Zone the skill was casted in.
@@ -1522,7 +1524,7 @@ class SkillManager {
    * @note If this method returns false, an error has already been sent.
    */
   bool CheckResponsibility(
-      libobjgen::UUID& responsibleEntity,
+      libobjgen::UUID& responsibleEntity, int32_t& managedCountForEntity,
       const std::shared_ptr<objects::ActivatedAbility>& activated,
       const std::shared_ptr<ChannelClientConnection>& client,
       const std::shared_ptr<Zone>& zone,

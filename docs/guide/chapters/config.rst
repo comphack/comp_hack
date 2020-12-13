@@ -1848,7 +1848,7 @@ AutobanSpawnSpammers
 
 **Type:** boolean
 
-**Default:** true
+**Default:** false
 
 If a user (that is not at or above the `SpawnSpamUserLevel` level)
 attempts to spawn more enemies after reaching their soft cap for

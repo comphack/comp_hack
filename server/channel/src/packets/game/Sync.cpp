@@ -88,26 +88,45 @@ bool Parsers::Sync::Parse(
 
     if (threshold > 0.0f && skew >= threshold) {
       auto account = state->GetAccountLogin()->GetAccount();
+      auto skewCount = state->GetClockSkewCount();
 
-      LogGeneralError([&]() {
-        auto username = account->GetUsername();
+      if (skewCount >= worldSharedConfig->GetClockSkewCount()) {
+        LogGeneralError([&]() {
+          auto username = account->GetUsername();
 
-        return libcomp::String(
-                   "Account %1 is running a clock that is %2x normal. This is "
-                   "over the limit and they have been kicked/banned.\n")
-            .Arg(username)
-            .Arg(skew / serverDeltaF);
-      });
+          return libcomp::String(
+                     "Account %1 is running a clock that is %2x normal. This "
+                     "is over the limit and they have been kicked/banned.\n")
+              .Arg(username)
+              .Arg(skew / serverDeltaF);
+        });
 
-      if (worldSharedConfig->GetAutobanClockSkew()) {
-        account->SetEnabled(false);
-        account->SetBanReason(
-            "Account is running the client too fast (possible cheating).");
-        account->SetBanInitiator("<channel server>");
-        account->Update(server->GetLobbyDatabase());
+        if (worldSharedConfig->GetAutobanClockSkew()) {
+          account->SetEnabled(false);
+          account->SetBanReason(
+              "Account is running the client too fast (possible cheating).");
+          account->SetBanInitiator("<channel server>");
+          account->Update(server->GetLobbyDatabase());
+        }
+
+        client->Close();
+      } else {
+        skewCount++;
+
+        LogGeneralInfo([&]() {
+          auto username = account->GetUsername();
+
+          return libcomp::String(
+                     "Account %1 is running a clock that is %2x normal. This "
+                     "is over the limit. This has happened %3/%4 times.\n")
+              .Arg(username)
+              .Arg(skew / serverDeltaF)
+              .Arg(skewCount)
+              .Arg(worldSharedConfig->GetClockSkewCount());
+        });
+
+        state->SetClockSkewCount(skewCount);
       }
-
-      client->Close();
     }
   }
 

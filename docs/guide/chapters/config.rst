@@ -1880,12 +1880,29 @@ Example
 
     <member name="ClockSkewThreshold">1.5</member><!-- 1.5x normal -->
 
+ClockSkewCount
+^^^^^^^^^^^^^^
+
+**Type:** integer
+
+**Default:** 5
+
+Number of times a user may go over the `ClockSkewThreshold` before
+they are kicked or banned depending on the `AutobanClockSkew` setting.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="ClockSkewCount">5</member>
+
 AutobanClockSkew
 ^^^^^^^^^^^^^^^^
 
 **Type:** boolean
 
-**Default:** true
+**Default:** false
 
 Users who have a client time that increases at a faster than normal
 rate that is at or above the `ClockSkewThreshold` threshold will be

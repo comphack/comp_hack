@@ -1,6 +1,12 @@
 name: C/C++ CI
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - "docs/**"
+  pull_request:
+    paths-ignore:
+      - "docs/**"
 
 jobs:
   clang-format:

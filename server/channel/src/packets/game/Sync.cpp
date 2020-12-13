@@ -80,13 +80,13 @@ bool Parsers::Sync::Parse(
 
     float serverDeltaF = (float)serverDelta;
     float clientDeltaF = (float)clientDelta;
-    float delta = serverDeltaF - clientDeltaF;
+    float delta = clientDeltaF;  // - serverDeltaF;
 
     auto worldSharedConfig = server->GetWorldSharedConfig();
     float threshold = worldSharedConfig->GetClockSkewThreshold() * serverDeltaF;
-    float skew = delta + serverDeltaF;
+    float skew = delta;  // + serverDeltaF;
 
-    if (skew >= threshold) {
+    if (threshold > 0.0f && skew >= threshold) {
       auto account = state->GetAccountLogin()->GetAccount();
 
       LogGeneralError([&]() {

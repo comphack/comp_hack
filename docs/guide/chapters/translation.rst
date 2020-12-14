@@ -13,7 +13,8 @@ Setting up the directory for comp_translator
 
 Before running ``comp_translator``, it needs to have file directories next to it filled with XML files which can eb downloaded from the translation git repository. Generally, the directory tree will look something like this:
 
-.. code-block:: javascript
+.. code-block:: none
+    :force: 
 
     comp_translator directory
     ├── comp_translator.exe (on Windows)
@@ -32,7 +33,7 @@ Before running ``comp_translator``, it needs to have file directories next to it
 Running comp_translator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-After running ``comp_translator``, two things will be generated: a ``build`` directory and a logging file named ``build.log.`` It is recommended to examine build.log
+After running ``comp_translator``, two things will be generated: a ``build`` directory and a logging file named ``build.log.`` It is recommended to examine build.log for any errors before applying any translation. "Build Successful" should be on the bottom.
 
 Editing build.nut
 -----------------

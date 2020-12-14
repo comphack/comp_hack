@@ -2016,7 +2016,7 @@ bool ActionManager::UpdatePoints(ActionContext& ctx) {
     } break;
     case objects::ActionUpdatePoints::PointType_t::SOUL_POINTS: {
       mServer.lock()->GetCharacterManager()->UpdateSoulPoints(
-          ctx.Client, (int32_t)act->GetValue(), false, !act->GetIsSet());
+          ctx.Client, (int32_t)act->GetValue(), true, !act->GetIsSet());
     } break;
     case objects::ActionUpdatePoints::PointType_t::COINS: {
       mServer.lock()->GetCharacterManager()->UpdateCoinTotal(

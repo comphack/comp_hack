@@ -41,6 +41,8 @@
 #include <math.h>
 
 // object Includes
+#include <Account.h>
+#include <AccountLogin.h>
 #include <AccountWorldData.h>
 #include <ActionSpawn.h>
 #include <ActivatedAbility.h>
@@ -135,6 +137,7 @@
 #include "ActionManager.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "ChatManager.h"
 #include "EventManager.h"
 #include "ManagerConnection.h"
 #include "MatchManager.h"
@@ -10966,6 +10969,16 @@ bool SkillManager::Spawn(
     return false;
   }
 
+  libobjgen::UUID responsibleEntity;
+  int32_t managedCountForEntity;
+
+  if (!CheckResponsibility(responsibleEntity, managedCountForEntity, activated,
+                           client, zone, source)) {
+    return false;
+  }
+
+  int32_t managedCountForEntityAfter = managedCountForEntity;
+
   auto server = mServer.lock();
   auto definitionManager = server->GetDefinitionManager();
   auto serverDataManager = server->GetServerDataManager();
@@ -11042,8 +11055,9 @@ bool SkillManager::Spawn(
                                          center.GetDistance(sp), false, zone);
 
         float rot = ZoneManager::GetRandomRotation();
-        auto enemy = zoneManager->CreateEnemy(zone, spawn->GetEnemyType(), 0, 0,
-                                              sp.x, sp.y, rot);
+        auto enemy =
+            zoneManager->CreateEnemy(zone, spawn->GetEnemyType(), 0, 0, sp.x,
+                                     sp.y, rot, responsibleEntity);
         if (enemy) {
           auto eBase = enemy->GetEnemyBase();
           eBase->SetSpawnSource(spawn);
@@ -11054,6 +11068,7 @@ bool SkillManager::Spawn(
           // be considered part of that group for that zone.
           // eBase->SetSpawnGroupID(spawnGroup->GetID());
 
+          managedCountForEntityAfter++;
           enemies.push_back(enemy);
         } else {
           LogSkillManagerError([&]() {
@@ -11087,6 +11102,19 @@ bool SkillManager::Spawn(
     }
   }
 
+  if ((managedCountForEntityAfter / 10) != (managedCountForEntity / 10)) {
+    auto username = client->GetClientState()
+                        ->GetAccountLogin()
+                        ->GetAccount()
+                        ->GetUsername();
+
+    LogSkillManagerWarning([&]() {
+      return libcomp::String("Account %1 now has %2 managed spawns.")
+          .Arg(username)
+          .Arg(managedCountForEntityAfter);
+    });
+  }
+
   return true;
 }
 
@@ -11103,6 +11131,16 @@ bool SkillManager::SpawnZone(
     SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
     return false;
   }
+
+  libobjgen::UUID responsibleEntity;
+  int32_t managedCountForEntity;
+
+  if (!CheckResponsibility(responsibleEntity, managedCountForEntity, activated,
+                           client, zone, source)) {
+    return false;
+  }
+
+  int32_t managedCountForEntityAfter = managedCountForEntity;
 
   auto skillData = activated->GetSkillData();
   auto params = skillData->GetSpecial()->GetSpecialParams();
@@ -11171,13 +11209,15 @@ bool SkillManager::SpawnZone(
                                          center.GetDistance(sp), false, zone);
 
         float rot = ZoneManager::GetRandomRotation();
-        auto enemy = zoneManager->CreateEnemy(
-            zone, spawn->GetEnemyType(), spawn->GetID(), 0, sp.x, sp.y, rot);
+        auto enemy = zoneManager->CreateEnemy(zone, spawn->GetEnemyType(),
+                                              spawn->GetID(), 0, sp.x, sp.y,
+                                              rot, responsibleEntity);
         if (enemy) {
           auto eBase = enemy->GetEnemyBase();
           eBase->SetSpawnSource(spawn);
           eBase->SetSpawnGroupID(spawnGroup->GetID());
           eBase->SetSpawnLocation(spawnLoc);
+          managedCountForEntityAfter++;
           enemies.push_back(enemy);
         } else {
           LogSkillManagerError([&]() {
@@ -11209,6 +11249,19 @@ bool SkillManager::SpawnZone(
       server->GetActionManager()->PerformActions(
           nullptr, spawnGroup->GetSpawnActions(), 0, zone, options);
     }
+  }
+
+  if ((managedCountForEntityAfter / 10) != (managedCountForEntity / 10)) {
+    auto username = client->GetClientState()
+                        ->GetAccountLogin()
+                        ->GetAccount()
+                        ->GetUsername();
+
+    LogSkillManagerWarning([&]() {
+      return libcomp::String("Account %1 now has %2 managed spawns.")
+          .Arg(username)
+          .Arg(managedCountForEntityAfter);
+    });
   }
 
   return true;
@@ -11945,4 +11998,119 @@ bool SkillManager::IFramesEnabled() {
   const static bool enabled =
       mServer.lock()->GetWorldSharedConfig()->GetIFramesEnabled();
   return enabled;
+}
+
+bool SkillManager::CheckResponsibility(
+    libobjgen::UUID& responsibleEntity, int32_t& managedCountForEntity,
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<Zone>& zone,
+    const std::shared_ptr<ActiveEntityState>& source) {
+  managedCountForEntity = 0;
+
+  bool playerEntity = source->GetEntityType() == EntityType_t::CHARACTER;
+  int32_t managedZoneEntityCap = 0;
+  int32_t managedEntityCap = 0;
+
+  if (playerEntity) {
+    responsibleEntity = client->GetClientState()->GetAccountUID();
+  }
+
+  LogSkillManagerDebug([&]() {
+    return libcomp::String("Responsible entity: %1\n")
+        .Arg(responsibleEntity.ToString());
+  });
+
+  auto server = mServer.lock();
+  auto worldSharedConfig = server->GetWorldSharedConfig();
+
+  if (playerEntity) {
+    LogSkillManagerDebug([&]() {
+      return libcomp::String("Player user level: %1\n")
+          .Arg(client->GetClientState()->GetUserLevel());
+    });
+
+    if (worldSharedConfig->GetSpawnSpamUserLevel() <
+        client->GetClientState()->GetUserLevel()) {
+      responsibleEntity = {};
+    } else {
+      if (zone->GetInstance()) {
+        managedZoneEntityCap = worldSharedConfig->GetSpawnSpamInstanceZoneMax();
+      } else {
+        managedZoneEntityCap = worldSharedConfig->GetSpawnSpamGlobalZoneMax();
+      }
+
+      managedEntityCap = worldSharedConfig->GetSpawnSpamUserMax();
+    }
+  }
+
+  if (managedZoneEntityCap &&
+      zone->GetManagedEntities() >= managedZoneEntityCap) {
+    LogSkillManagerError([&]() {
+      auto username = client->GetClientState()
+                          ->GetAccountLogin()
+                          ->GetAccount()
+                          ->GetUsername();
+
+      return libcomp::String(
+                 "Account %1 tried to spawn more enemies but there is already "
+                 "%2 in zone %3 with a cap of %4.\n")
+          .Arg(username)
+          .Arg(zone->GetManagedEntities())
+          .Arg(zone->GetDefinitionID())
+          .Arg(managedZoneEntityCap);
+    });
+
+    server->GetChatManager()->SendChatMessage(
+        client, ChatType_t::CHAT_SELF,
+        "Zone has reached the maximum number of player spawns.");
+
+    SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::SILENT_FAIL);
+    return false;
+  }
+
+  if (managedEntityCap) {
+    managedCountForEntity = zone->GetEntitiesManagedBy(responsibleEntity);
+  }
+
+  if (managedEntityCap && managedCountForEntity >= managedEntityCap) {
+    LogSkillManagerError([&]() {
+      auto username = client->GetClientState()
+                          ->GetAccountLogin()
+                          ->GetAccount()
+                          ->GetUsername();
+
+      return libcomp::String(
+                 "Account %1 tried to spawn more enemies but they already "
+                 "spawned %2 in zone %3 with a cap of %4.\n")
+          .Arg(username)
+          .Arg(managedCountForEntity)
+          .Arg(zone->GetDefinitionID())
+          .Arg(managedEntityCap);
+    });
+
+    if (worldSharedConfig->GetAutobanSpawnSpammers()) {
+      auto targetAccount =
+          client->GetClientState()->GetAccountLogin()->GetAccount();
+      targetAccount->SetEnabled(false);
+      targetAccount->SetBanReason(
+          libcomp::String(
+              "Account tried to spawn more than %1 enemies into a zone.")
+              .Arg(managedEntityCap));
+      targetAccount->SetBanInitiator("<channel server>");
+      targetAccount->Update(server->GetLobbyDatabase());
+      client->Close();
+
+      return false;
+    }
+
+    server->GetChatManager()->SendChatMessage(
+        client, ChatType_t::CHAT_SELF,
+        "You may not spawn more enemies. Kill the enemies you spawned.");
+
+    SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::SILENT_FAIL);
+    return false;
+  }
+
+  return true;
 }

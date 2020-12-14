@@ -6,6 +6,7 @@
             nulldefault="true"/>
         <member type="Match*" name="Match" nulldefault="true"/>
         <member type="bool" name="Invalid"/>
+        <member type="s32" name="ManagedEntities"/>
         <member type="list" name="ZoneChangeTriggers">
             <element type="ServerZoneTrigger*"/>
         </member>

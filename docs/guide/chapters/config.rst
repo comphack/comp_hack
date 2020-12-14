@@ -1754,6 +1754,167 @@ Example
 
     <member name="IFramesEnabled">false</member>
 
+SpawnSpamUserLevel
+^^^^^^^^^^^^^^^^^^
+
+**Type:** integer
+
+**Default:** 500
+
+Users below this account level will be subject to spawn limitations.
+This means spawns through skills or items (demon eggs) will be
+limited and potentially ban the user.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="SpawnSpamUserLevel">500</member>
+
+SpawnSpamUserMax
+^^^^^^^^^^^^^^^^
+
+**Type:** integer
+
+**Default:** 30
+
+Maximum number of enemies a user may have spawned in a given zone
+before they are prevented from spawning more enemies. This is a
+soft cap. If a skill or item spawns multiple enemies it is possible
+to go over this cap; however, another skill or item cannot be used
+to spawn enemies again until the number of enemies spawned drops
+below the cap again.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="SpawnSpamUserMax">30</member>
+
+SpawnSpamGlobalZoneMax
+^^^^^^^^^^^^^^^^^^^^^^
+
+**Type:** integer
+
+**Default:** 100
+
+Maximum number of enemies that may have spawned through an item
+or skill in a given global zone before users are prevented from
+spawning more enemies. This is a soft cap. If a skill or item
+spawns multiple enemies it is possible to go over this cap;
+however, another skill or item cannot be used to spawn enemies
+again until the number of enemies spawned drops below the cap
+again. Note that users at or above the `SpawnSpamUserLevel`
+level may still spawn enemies. These will count towards the
+soft cap and so other users must await until the total count
+goes below the soft cap before they can spawn new enemies.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="SpawnSpamGlobalZoneMax">100</member>
+
+SpawnSpamInstanceZoneMax
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Type:** integer
+
+**Default:** 30
+
+Maximum number of enemies that may have spawned through an item
+or skill in a given instanced zone before users are prevented
+from spawning more enemies. This is a soft cap. If a skill or
+item spawns multiple enemies it is possible to go over this cap;
+however, another skill or item cannot be used to spawn enemies
+again until the number of enemies spawned drops below the cap
+again. Note that users at or above the `SpawnSpamUserLevel`
+level may still spawn enemies. These will count towards the
+soft cap and so other users must await until the total count
+goes below the soft cap before they can spawn new enemies.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="SpawnSpamInstanceZoneMax">30</member>
+
+AutobanSpawnSpammers
+^^^^^^^^^^^^^^^^^^^^
+
+**Type:** boolean
+
+**Default:** false
+
+If a user (that is not at or above the `SpawnSpamUserLevel` level)
+attempts to spawn more enemies after reaching their soft cap for
+the zone (`SpawnSpamUserMax`) they will be automatically banned.
+The reason will be recorded for GMs to later ajudicate the ban.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="AutobanSpawnSpammers">true</member>
+
+ClockSkewThreshold
+^^^^^^^^^^^^^^^^^^
+
+**Type:** float
+
+**Default:** 1.5
+
+Users who have a client time that increases at a faster than normal
+rate that is at or above this threshold will be either kicked or
+banned depending on the `AutobanClockSkew` configuration option.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="ClockSkewThreshold">1.5</member><!-- 1.5x normal -->
+
+ClockSkewCount
+^^^^^^^^^^^^^^
+
+**Type:** integer
+
+**Default:** 5
+
+Number of times a user may go over the `ClockSkewThreshold` before
+they are kicked or banned depending on the `AutobanClockSkew` setting.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="ClockSkewCount">5</member>
+
+AutobanClockSkew
+^^^^^^^^^^^^^^^^
+
+**Type:** boolean
+
+**Default:** false
+
+Users who have a client time that increases at a faster than normal
+rate that is at or above the `ClockSkewThreshold` threshold will be
+automatically banned. The reason will be recorded for GMs to later
+ajudicate the ban.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="AutobanClockSkew">true</member>
 
 Database Configuration
 ----------------------

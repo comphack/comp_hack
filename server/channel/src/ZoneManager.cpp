@@ -139,7 +139,8 @@ ScriptEngine& ScriptEngine::Using<ZoneManager>() {
         .Func("CreateAlly", &ZoneManager::CreateAlly)
         .Func<std::shared_ptr<ActiveEntityState> (ZoneManager::*)(
             const std::shared_ptr<Zone>&, uint32_t, uint32_t, uint32_t, float,
-            float, float)>("CreateEnemy", &ZoneManager::CreateEnemy)
+            float, float, const libobjgen::UUID&)>("CreateEnemy",
+                                                   &ZoneManager::CreateEnemy)
         .Func<bool (ZoneManager::*)(
             std::list<std::shared_ptr<ActiveEntityState>>,
             const std::shared_ptr<Zone>&, bool, bool, const libcomp::String&)>(
@@ -2882,7 +2883,8 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateAlly(
 
 std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
     const std::shared_ptr<Zone>& zone, uint32_t demonID, uint32_t spawnID,
-    uint32_t spotID, float x, float y, float rot) {
+    uint32_t spotID, float x, float y, float rot,
+    const libobjgen::UUID& responsibleEntity) {
   auto spawn = zone->GetDefinition()->GetSpawns(spawnID);
   if (!spawn && spawnID) {
     LogZoneManagerError([&]() {
@@ -2923,7 +2925,8 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
     }
   }
 
-  auto eState = CreateEnemy(zone, demonID, spawn, x, y, rot);
+  auto eState =
+      CreateEnemy(zone, demonID, spawn, x, y, rot, false, responsibleEntity);
   if (eState) {
     eState->GetEnemyBase()->SetSpawnSpotID(spotID);
   }
@@ -3967,7 +3970,7 @@ void ZoneManager::SyncInstanceAccess(
 std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
     const std::shared_ptr<Zone>& zone, uint32_t demonID,
     const std::shared_ptr<objects::Spawn>& spawn, float x, float y, float rot,
-    bool asAlly) {
+    bool asAlly, const libobjgen::UUID& responsibleEntity) {
   auto server = mServer.lock();
   auto definitionManager = server->GetDefinitionManager();
   auto def = definitionManager->GetDevilData(demonID);
@@ -4011,6 +4014,7 @@ std::shared_ptr<ActiveEntityState> ZoneManager::CreateEnemy(
     eBase = enemy;
 
     auto eState = std::make_shared<EnemyState>();
+    eState->SetResponsibleEntity(responsibleEntity);
     eState->SetEntity(enemy, definitionManager);
     state = eState;
   } else {

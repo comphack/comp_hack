@@ -33,8 +33,14 @@
 #include <ReadOnlyPacket.h>
 #include <TcpConnection.h>
 
+// object Includes
+#include <Account.h>
+#include <AccountLogin.h>
+#include <WorldSharedConfig.h>
+
 // channel Includes
 #include "ChannelServer.h"
+#include "ManagerPacket.h"
 
 using namespace channel;
 
@@ -60,6 +66,72 @@ bool Parsers::Sync::Parse(
   reply.WriteFloat(currentClientTime);
 
   connection->SendPacket(reply);
+
+  ServerTime currentClientTimeInServerTime = (ServerTime)timeFromClient * 1000;
+  ServerTime lastServerTime = state->GetLastServerTimestamp();
+  ServerTime lastClientTime = state->GetLastClientTimestamp();
+
+  if (lastServerTime) {
+    auto server =
+        std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+
+    ServerTime serverDelta = currentServerTime - lastServerTime;
+    ServerTime clientDelta = currentClientTimeInServerTime - lastClientTime;
+
+    float serverDeltaF = (float)serverDelta;
+    float clientDeltaF = (float)clientDelta;
+    float delta = clientDeltaF;  // - serverDeltaF;
+
+    auto worldSharedConfig = server->GetWorldSharedConfig();
+    float threshold = worldSharedConfig->GetClockSkewThreshold() * serverDeltaF;
+    float skew = delta;  // + serverDeltaF;
+
+    if (threshold > 0.0f && skew >= threshold) {
+      auto account = state->GetAccountLogin()->GetAccount();
+      auto skewCount = state->GetClockSkewCount();
+
+      if (skewCount >= worldSharedConfig->GetClockSkewCount()) {
+        LogGeneralError([&]() {
+          auto username = account->GetUsername();
+
+          return libcomp::String(
+                     "Account %1 is running a clock that is %2x normal. This "
+                     "is over the limit and they have been kicked/banned.\n")
+              .Arg(username)
+              .Arg(skew / serverDeltaF);
+        });
+
+        if (worldSharedConfig->GetAutobanClockSkew()) {
+          account->SetEnabled(false);
+          account->SetBanReason(
+              "Account is running the client too fast (possible cheating).");
+          account->SetBanInitiator("<channel server>");
+          account->Update(server->GetLobbyDatabase());
+        }
+
+        client->Close();
+      } else {
+        skewCount++;
+
+        LogGeneralInfo([&]() {
+          auto username = account->GetUsername();
+
+          return libcomp::String(
+                     "Account %1 is running a clock that is %2x normal. This "
+                     "is over the limit. This has happened %3/%4 times.\n")
+              .Arg(username)
+              .Arg(skew / serverDeltaF)
+              .Arg(skewCount)
+              .Arg(worldSharedConfig->GetClockSkewCount());
+        });
+
+        state->SetClockSkewCount(skewCount);
+      }
+    }
+  }
+
+  state->SetLastServerTimestamp(currentServerTime);
+  state->SetLastClientTimestamp(currentClientTimeInServerTime);
 
   return true;
 }

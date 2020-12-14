@@ -14,6 +14,9 @@
         <member type="u64" name="LogoutTimer"/>
         <member type="u64" name="ZoneInTime"/>
         <member type="u64" name="SoundDelayTime"/>
+        <member type="u64" name="LastClientTimestamp"/>
+        <member type="u64" name="LastServerTimestamp"/>
+        <member type="u32" name="ClockSkewCount"/>
         <member type="AccountLogin*" name="AccountLogin"/>
         <member type="ChannelLogin*" name="ChannelLogin"
             nulldefault="true"/>

@@ -1,0 +1,26 @@
+name: Check Documentation
+
+on:
+  push:
+    paths:
+      - "docs/**"
+  pull_request:
+    paths:
+      - "docs/**"
+
+jobs:
+  docs:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+        architecture: 'x64'
+    - name: Install Dependencies
+      run: pip install -r docs/guide/requirements.txt
+    - name: Build Documentation
+      run: cd docs/guide && make html SPHINXOPTS=-nWT

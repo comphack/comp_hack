@@ -250,6 +250,8 @@ bool ApiHandler::Account_GetDetails(
   response["user_level"] = (int)account->GetUserLevel();
   response["enabled"] = account->GetEnabled();
   response["last_login"] = (int)account->GetLastLogin();
+  response["ban_reason"] = account->GetBanReason().ToUtf8();
+  response["ban_initiator"] = account->GetBanInitiator().ToUtf8();
 
   int count = 0;
 
@@ -507,6 +509,8 @@ bool ApiHandler::Admin_GetAccounts(const JsonBox::Object& request,
     obj["user_level"] = (int)account->GetUserLevel();
     obj["enabled"] = account->GetEnabled();
     obj["last_login"] = (int)account->GetLastLogin();
+    obj["ban_reason"] = account->GetBanReason().ToUtf8();
+    obj["ban_initiator"] = account->GetBanInitiator().ToUtf8();
 
     int count = 0;
 
@@ -568,6 +572,8 @@ bool ApiHandler::Admin_GetAccount(const JsonBox::Object& request,
   response["user_level"] = (int)account->GetUserLevel();
   response["enabled"] = account->GetEnabled();
   response["last_login"] = (int)account->GetLastLogin();
+  response["ban_reason"] = account->GetBanReason().ToUtf8();
+  response["ban_initiator"] = account->GetBanInitiator().ToUtf8();
 
   int count = 0;
 

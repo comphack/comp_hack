@@ -62,7 +62,7 @@ SET(VERSION_MAJOR 4)
 SET(VERSION_MINOR 12)
 
 # Patch version (a hotfix).
-SET(VERSION_PATCH 1)
+SET(VERSION_PATCH 2)
 
 # Codename for the version.
 SET(VERSION_CODENAME "Wyrd")

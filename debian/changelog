@@ -1,3 +1,53 @@
+comphack (4.12.2) xenial; urgency=low
+
+  * Improved updater logging
+  * Added the ability to select a soundtrack in the updater
+  * Added the ability to configure the client DLL in the updater
+  * Added feature to updater to notify it was used to start the game
+  * Added detection of a high performance GPU for laptops (to the updater)
+    * This feature requires an updated ImagineClient.exe and ImagineOption.exe which should be obtained elsewhere
+  * Datastore has been added into the Windows installer and Linux packages
+    * Updates can now be downloaded here: https://github.com/comphack/datastore
+  * Added comp_translator - a cross-platform tool to automate building translated BinaryData files
+  * Added generation of XML Schema Definitions (XSD files) for BinaryData
+    * These can be used with comp_translator to validate the XML prior to conversion
+    * These have been added to the installer
+  * Added support for additional encodings to comp_bdpatch/comp_translator
+    * See the usage of comp_bdpatch (or call AvailableEncodings in a comp_translator script) for the full list of encodings
+    * Note that some encodings may not function properly in the client which expects a Multi-Byte Character Set (MBCS)
+  * Look at the documentation of WorldSharedConfig for additional configuration options
+  * Added acount dump capability to the test client
+  * Crash when a team invite fails (#1230)
+  * Skills with a DigitizeWeaponType restriction are applying the restriction on non-digitalize skills (#1226)
+  * Issue where one stat point is lost every 5 levels (#1236)
+    * Note that this includes a database migration (20200712_wyrd_stat_points.nut) to correct the stat points for all players. Migration will blindly apply additional points so make sure it is run only once.
+  * Digi skills consider the normal weapon type as well (#1237)
+  * Fixed crash when using the API which is mostly for casino games and account managment (#1252)
+  * Crash on zone change when status effect was not properly removed (#1262)
+  * Critical hits not occuring if target Critical Defense turned negative (#1266)
+  * Items with a level restriction can not be unequipped when above the maximum level (#1263)
+  * Tokusei aspect STATUS_INFLICT_ADJUST adjustments with a value of 0 do not affect all status effects (#1269)
+  * Joining a party (with team members) after joining a Cathedral team kicks everyone involved out of the team (#1267)
+    * Now they will only disband the team if somebody doesn't belong to it.
+  * Enemies with 0% RATE_PC_TAKEN/RATE_DEMON_TAKEN are still affected by ailments on damage skills (#1246)
+  * Demonic Compendium Summon Synchro length bonus does not apply; Mitama Demonic Compendium bonuses are inactive (#1245)
+  * Pentalpha rankings and payouts are incorrect (#1281)
+  * Damage-dealing status effects do not stop HP/MP Regeneration (#1244)
+  * KNOCKBACK_STATUS_ADD should affect skills with a non-zero knockback modifier (#1256)
+  * Demon friendship set to 0 if recruited via negotiation or event (#1292)
+  * Status effects that are removed on skill usage and affect damage calculation are non-functional (#1261)
+  * RATE_HEAL and RATE_HEAL_TAKEN are not applying if the user heals themselves (#1284)
+  * Some skills used on spawns with a Category of ALLY do not process (#1257)
+  * Entities with Status 901 (stealth) do not silently suppress targeting (#1283)
+  * SpawnRestrictions on SpawnGroups were ignored when SpawnGroups were spawned by Squirrel scripting (#1300)
+  * The server setting NRAStatusNull being false results in NRA not being checked at all for status ailments (#1306)
+  * Incorrect formulae for multiple Item Mix extra items (#1309)
+  * Add additional Flag values for the adjustRestrictions field of SkillData, for fixed HP/MP Costs (#1258)
+  * Additional Sqrat binding for negotiation damage (#1239)
+  * ActionUpdatePoints "isSet" property sets SOUL_POINTS to a value rather than giving a fixed amount (#1319)
+
+ -- COMP Omega <compomega@tutanota.com>  Mon, 14 Dec 2020 11:04:29 -0700
+
 comphack (4.12.1) xenial; urgency=low
 
   * QMP and pathing generation support

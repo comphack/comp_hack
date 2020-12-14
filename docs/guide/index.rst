@@ -13,6 +13,7 @@ Online: IMAGINE*.
    chapters/setup
    chapters/config
    chapters/content
+   chapters/translation
    chapters/hacking
 
 Legal

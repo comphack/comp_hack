@@ -13,7 +13,7 @@ Setting up the directory for comp_translator
 
 Before running ``comp_translator``, it needs to have file directories next to it filled with XML files which can eb downloaded from the translation git repository. Generally, the directory tree will look something like this:
 
-.. code-block:: Squirrel
+.. code-block:: javascript
 
     comp_translator directory
     ├── comp_translator.exe (on Windows)

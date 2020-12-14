@@ -38,7 +38,7 @@ After running ``comp_translator``, two things will be generated: a ``build`` dir
 Editing build.nut
 -----------------
 
-build.nut is editable using any number of text editors, with something like Notepad++ being recommended if using Microsoft Windows. Below is an example of the relevant sections of build.nut that a user might wish to edit.
+``build.nut`` is editable using any number of text editors, with something like Notepad++ being recommended if using Microsoft Windows. Below is an example of the relevant sections of build.nut that a user might wish to edit.
 
 Sample
 ^^^^^^
@@ -60,7 +60,7 @@ OUT_DIR
 
 **Type:** string
 
-This variable defines the name of the directory that comp_translator will deposit built binary files to. The contents of this directory can be copied directly to the actual game directory, in order to translate client-side game content.
+This variable defines the name of the directory that ``comp_translator`` will deposit built binary files to. The contents of this directory can be copied directly to the actual game directory, in order to translate client-side game content.
 
 Example
 #######
@@ -76,7 +76,7 @@ CLIENT_FILES
 
 **Type:** string pairs
 
-This list of string pairs, separated by a comma, defines the name of an XML file (without extension) and what format it shall be encoded in to build the equivalent bin file for the game.
+This list of string pairs, separated by a comma, defines the name of an XML file located in BinaryData/Client, along with what binary data format it shall be encoded in to build the equivalent bin file for the game.
 
 Example
 #######
@@ -94,7 +94,7 @@ SHIELD_FILES
 
 **Type:** string pairs
 
-This list of string pairs, separated by a comma, defines the name of an XML file (without extension) inside the subdirectory BinaryData/Shield and what format it shall be encoded in to build the equivalent bin file for the game.
+This list of string pairs, separated by a comma, defines the name of an XML file located in BinaryData/Shield, along with what binary data format it shall be encoded in to build the equivalent bin file for the game.
 
 Example
 #######

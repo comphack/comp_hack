@@ -1213,6 +1213,11 @@ bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
       } else {
         // Allow these spawngroups to be respawned based on time later
         mDeactivatedSpawnGroups.erase(sgID);
+        LogZoneManagerDebug([&]() {
+          return libcomp::String("Reactivating spawn group %1 in zone %2\n")
+              .Arg(sgID)
+              .Arg(GetDefinitionID());
+        });
       }
     } else {
       spawnGroupIDs.insert(sgID);

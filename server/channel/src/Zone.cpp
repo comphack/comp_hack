@@ -1207,14 +1207,15 @@ bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
       auto sg = GetDefinition()->GetSpawnGroups(sgID);
       auto restriction = sg ? sg->GetRestrictions() : nullptr;
 
-      if (!restriction ||
-          (restriction && TimeRestrictionActive(clock, restriction))) {
+      if (restriction && TimeRestrictionActive(clock, restriction)) {
         spawnGroupIDs.insert(sgID);
       } else {
-        // Allow these spawngroups to be respawned based on time later
+        // Allow these spawngroups to be respawned later
+        mDisabledSpawnGroups.erase(sgID);
         mDeactivatedSpawnGroups.erase(sgID);
+
         LogZoneManagerDebug([&]() {
-          return libcomp::String("Reactivating spawn group %1 in zone %2\n")
+          return libcomp::String("Activating spawn group %1 in zone %2\n")
               .Arg(sgID)
               .Arg(GetDefinitionID());
         });

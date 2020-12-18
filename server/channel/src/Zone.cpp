@@ -1206,8 +1206,9 @@ bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
     if (enable) {
       auto sg = GetDefinition()->GetSpawnGroups(sgID);
       auto restriction = sg ? sg->GetRestrictions() : nullptr;
-
-      if (restriction && TimeRestrictionActive(clock, restriction)) {
+ 
+      if (!restriction ||
+          (restriction && TimeRestrictionActive(clock, restriction))) {
         spawnGroupIDs.insert(sgID);
       } else {
         // Allow these spawngroups to be respawned based on time later

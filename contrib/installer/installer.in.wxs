@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="aa6bc406-27b6-47b4-8fa5-01f9b29f3b9e" UpgradeCode="8c1f8ebc-7524-4024-9c7a-b8695df0ed31" Name="Shin Megami Tensei: IMAGINE" Version="2.000" Manufacturer="COMP_hack" Language="1033">
+    <Package InstallerVersion="200" Compressed="yes" Comments="Windows Installer Package" InstallScope="perUser" InstallPrivileges="limited"/>
+
+    @MEDIA@
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      @FILES@
+
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ProgramMenuSubfolder" Name="Shin Megami Tensei IMAGINE">
+          <Component Id="ApplicationShortcuts" Guid="8184ea7a-092f-4268-b6b6-dd9e2027a6fb">
+            <Shortcut Id="ApplicationShortcut1" Name="Shin Megami Tensei IMAGINE" Description="Shin Megami Tensei IMAGINE" Target="[TARGETDIR]ImagineUpdate.exe" WorkingDirectory="TARGETDIR"/>
+            <RegistryValue Root="HKCU" Key="Software\COMP_hack\Shin Megami Tensei IMAGINE" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+            <RemoveFolder Id="ProgramMenuSubfolder" On="uninstall"/>
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Property Id="ARPPRODUCTICON">ProductIcon.ico</Property>
+    <Icon Id="ProductIcon.ico" SourceFile="wix-icon.ico"/>
+    <WixVariable Id="WixUIBannerBmp" Value="wix-banner.png"/>
+    <WixVariable Id="WixUIDialogBmp" Value="wix-background.png"/>
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf"/>
+
+    <SetDirectory Id="TARGETDIR" Value="[WindowsVolume]\Games\test"/>
+    <Property Id="WIXUI_INSTALLDIR" Value="TARGETDIR"/>
+    <UIRef Id="WixUI_InstallDir"/>
+
+    <Feature Id="DefaultFeature" Level="1">
+      @COMPONENT_REFS@
+      <ComponentRef Id="ApplicationShortcuts"/>
+    </Feature>
+  </Product>
+</Wix>

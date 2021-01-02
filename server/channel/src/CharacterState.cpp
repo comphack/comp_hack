@@ -408,7 +408,7 @@ void CharacterState::RecalcEquipState(
           ? 1
           : 0;
 
-  std::set<int16_t> allEffects;
+  std::set<int16_t> soulFusionEffects;
   std::list<std::shared_ptr<objects::MiSpecialConditionData>> conditions;
   std::set<std::shared_ptr<objects::MiEquipmentSetData>> activeEquipSets;
   for (size_t i = 0; i < 15; i++) {
@@ -466,7 +466,9 @@ void CharacterState::RecalcEquipState(
     for (auto pair : stMap) {
       if (pair.second == 0) continue;
 
-      allEffects.insert(pair.second);
+      if(!pair.first) {
+      soulFusionEffects.insert(pair.second);
+      }
 
       auto enchantData = definitionManager->GetEnchantData(pair.second);
       if (enchantData) {
@@ -529,14 +531,14 @@ void CharacterState::RecalcEquipState(
 
   // Apply enchant sets
   std::set<std::shared_ptr<objects::EnchantSetData>> activeEnchantSets;
-  for (int16_t effectID : allEffects) {
+  for (int16_t effectID : soulFusionEffects) {
     auto enchantSets = definitionManager->GetEnchantSetDataByEffect(effectID);
     for (auto s : enchantSets) {
       bool invalid = activeEnchantSets.find(s) != activeEnchantSets.end() &&
-                     s->EffectsCount() <= allEffects.size();
+                     s->EffectsCount() <= soulFusionEffects.size();
       if (!invalid) {
         for (int16_t setEffectID : s->GetEffects()) {
-          if (allEffects.find(setEffectID) == allEffects.end()) {
+          if (soulFusionEffects.find(setEffectID) == soulFusionEffects.end()) {
             invalid = true;
             break;
           }

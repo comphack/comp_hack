@@ -466,8 +466,8 @@ void CharacterState::RecalcEquipState(
     for (auto pair : stMap) {
       if (pair.second == 0) continue;
 
-      if(!pair.first) {
-      soulFusionEffects.insert(pair.second);
+      if (!pair.first) {
+        soulFusionEffects.insert(pair.second);
       }
 
       auto enchantData = definitionManager->GetEnchantData(pair.second);

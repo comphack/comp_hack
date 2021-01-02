@@ -1823,7 +1823,7 @@ bool WorldSyncManager::EndMatch(
       entry->SetCowrie((int32_t)cowrieGained);
 
       auto expl = std::make_shared<libcomp::DBExplicitUpdate>(progress);
-      expl->Add<int32_t>("Cowrie", cowrieGained);
+      expl->Add<int32_t>("Cowrie", (int32_t)cowrieGained);
       opChangeset->AddOperation(expl);
 
       progresses.insert(progress);

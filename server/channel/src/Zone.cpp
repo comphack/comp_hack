@@ -111,6 +111,7 @@ ScriptEngine& ScriptEngine::Using<Zone>() {
         .Func<std::shared_ptr<PlasmaState> (Zone::*)(uint32_t)>(
             "GetPlasma", &Zone::GetPlasma)
         .Func("EnableDisableSpawnGroup", &Zone::EnableDisableSpawnGroup)
+        .Func("RespawnSpawnGroup", &Zone::RespawnSpawnGroup)
         .Func("SpawnedAtSpot", &Zone::SpawnedAtSpot);
 
     Bind<Zone>("Zone", binding);
@@ -1232,6 +1233,24 @@ bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
   } else {
     return DisableSpawnGroups(spawnGroupIDs, false, true);
   }
+}
+
+void Zone::RespawnSpawnGroup(Sqrat::Array spawnGroupIDArray) {
+  std::set<uint32_t> spawnGroupIDs;
+
+  for (auto i = 0; i < (int)spawnGroupIDArray.GetSize(); ++i) {
+    bool ok = false;
+    auto sgIDString = spawnGroupIDArray.GetValue<libcomp::String>(i);
+    uint32_t sgID = sgIDString ? sgIDString->ToInteger<uint32_t>(&ok) : 0;
+
+    if (!ok) {
+      continue;
+    }
+
+    spawnGroupIDs.insert(sgID);
+  }
+
+  EnableSpawnGroups(spawnGroupIDs, false, true);
 }
 
 std::set<uint32_t> Zone::GetRespawnLocations(uint64_t now) {

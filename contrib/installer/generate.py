@@ -87,7 +87,7 @@ def GenerateFileList(root, indent = 0):
 
     return (xml, component_ids, disk_ids)
 
-(VARS['@FILES@'], component_ids, disk_ids) = GenerateFileList("files", 6)
+(VARS['@FILES@'], component_ids, disk_ids) = GenerateFileList("files", 8)
 
 for component_id in set(component_ids):
     VARS['@COMPONENT_REFS@'] += '      <ComponentRef Id="{}"/>\n'.format(component_id)

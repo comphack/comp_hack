@@ -6,7 +6,9 @@
     @MEDIA@
 
     <Directory Id="TARGETDIR" Name="SourceDir">
-      @FILES@
+      <Directory Id="INSTALL_ROOT" Name="test">
+        @FILES@
+      </Directory>
 
       <Directory Id="ProgramMenuFolder">
         <Directory Id="ProgramMenuSubfolder" Name="Shin Megami Tensei IMAGINE">
@@ -25,8 +27,8 @@
     <WixVariable Id="WixUIDialogBmp" Value="wix-background.png"/>
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf"/>
 
-    <SetDirectory Id="TARGETDIR" Value="[WindowsVolume]\Games\test"/>
-    <Property Id="WIXUI_INSTALLDIR" Value="TARGETDIR"/>
+    <SetDirectory Id="TARGETDIR" Value="[WindowsVolume]\Games"/>
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALL_ROOT"/>
     <UIRef Id="WixUI_InstallDir"/>
 
     <Feature Id="DefaultFeature" Level="1">

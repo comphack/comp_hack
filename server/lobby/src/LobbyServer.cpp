@@ -317,7 +317,7 @@ void LobbyServer::PromptCreateAccount() {
     std::cin >> pass;
 
     libcomp::String password1 = libcomp::String(pass);
-#else  // !WIN32
+#else   // !WIN32
     libcomp::String password1 = libcomp::String(getpass("Password: "));
 #endif  // WIN32
 
@@ -330,7 +330,7 @@ void LobbyServer::PromptCreateAccount() {
       std::cin >> pass;
 
       password1 = libcomp::String(pass);
-#else  // !WIN32
+#else   // !WIN32
       password1 = libcomp::String(getpass("Password: "));
 #endif  // WIN32
     }
@@ -341,7 +341,7 @@ void LobbyServer::PromptCreateAccount() {
     std::cin >> pass;
 
     libcomp::String password2 = libcomp::String(pass);
-#else  // !WIN32
+#else   // !WIN32
     libcomp::String password2 = libcomp::String(getpass("Verify Password: "));
 #endif  // WIN32
 

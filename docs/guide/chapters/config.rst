@@ -1572,7 +1572,7 @@ PentalphaMinMaxPayout
 
 Set of two values that specify the minimum and maximum base
 cowrie payout values respectively upon paying a Pentalpha match.
-Negative values default to limits of 100 min, 2000 max.
+Negative values default to limits of 100 min, 300 max.
 
 Example
 """""""

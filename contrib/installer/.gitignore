@@ -1,0 +1,5 @@
+files/
+*.msi
+*.wixobj
+*.wixpdb
+installer.wxs

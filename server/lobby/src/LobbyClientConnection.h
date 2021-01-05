@@ -39,7 +39,7 @@
 
 namespace lobby {
 
-class LobbyClientConnection : public libcomp::LobbyConnection {
+class LobbyClientConnection : public libhack::LobbyConnection {
  public:
   LobbyClientConnection(
       asio::ip::tcp::socket& socket,

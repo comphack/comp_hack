@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ReportedPlayer" location="world">
+        <member type="string" name="PlayerName" key="true" unique="false"/>
+        <member type="Character*" name="Player" key="true" unique="false"/>
+        <member type="Account*" name="Reporter" key="true" unique="false"/>
+        <member type="string" name="Location"/>
+        <member type="enum" name="Subject" underlying="int8_t">
+            <value>UNSPECIFIED</value>
+            <value>CHAT_HARASSMENT</value>
+            <value>ABUSIVE_ACTION</value>
+            <value>PROGRESS_OBSTRUCTION</value>
+            <value>CHEATING</value>
+            <value>ILLEGAL_TOOL_USE</value>
+            <value>REAL_MONEY_TRADE</value>
+            <value>MISC_HARASSMENT</value>
+        </member>
+        <member type="string" name="Comment"/>
+        <member type="bool" name="Resolved" key="true" unique="false"/>
+        <member type="Account*" name="Resolver" key="true" unique="false"/>
+        <member type="u32" name="ReportTime"/>
+        <member type="u32" name="ResolveTime"/>
+    </object>
+</objgen>

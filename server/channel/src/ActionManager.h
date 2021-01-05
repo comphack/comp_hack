@@ -38,7 +38,7 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 
-namespace libcomp {
+namespace libhack {
 class ScriptEngine;
 }
 
@@ -133,7 +133,7 @@ class ActionManager {
    * Bind all action types to the supplied script engine
    * @param engine ScriptEngine to bind to
    */
-  void BindAllActionTypes(const std::shared_ptr<libcomp::ScriptEngine>& engine);
+  void BindAllActionTypes(const std::shared_ptr<libhack::ScriptEngine>& engine);
 
  private:
   struct ActionContext {
@@ -370,7 +370,7 @@ class ActionManager {
       // Make a copy and transform
       ptr = std::make_shared<T>(*ptr);
 
-      auto engine = std::make_shared<libcomp::ScriptEngine>();
+      auto engine = std::make_shared<libhack::ScriptEngine>();
       engine->Using<T>();
       if (PrepareTransformScript(ctx, engine)) {
         // Store the action for transformation
@@ -419,7 +419,7 @@ class ActionManager {
    * @return true on success, false on failure
    */
   bool PrepareTransformScript(ActionContext& ctx,
-                              std::shared_ptr<libcomp::ScriptEngine> engine);
+                              std::shared_ptr<libhack::ScriptEngine> engine);
 
   /**
    * Finish preparing and execute the tranformation script configured
@@ -429,7 +429,7 @@ class ActionManager {
    * @return true on success, false on failure
    */
   bool TransformAction(ActionContext& ctx,
-                       std::shared_ptr<libcomp::ScriptEngine> engine);
+                       std::shared_ptr<libhack::ScriptEngine> engine);
 
   /// Pointer to the channel server.
   std::weak_ptr<ChannelServer> mServer;

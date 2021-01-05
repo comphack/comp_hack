@@ -87,7 +87,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<CharacterState>() {
+BaseScriptEngine& BaseScriptEngine::Using<CharacterState>() {
   if (!BindingExists("CharacterState", true)) {
     Using<ActiveEntityState>();
     Using<objects::Character>();
@@ -149,7 +149,7 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::GetDigitalizeState()
 
 std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
     const std::shared_ptr<objects::Demon>& demon,
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   std::lock_guard<std::mutex> lock(mLock);
 
   auto devilData =
@@ -351,7 +351,7 @@ uint8_t CharacterState::GetDigitalizeAbilityLevel() {
 }
 
 bool CharacterState::GetEquipmentStats(
-    libcomp::DefinitionManager* definitionManager,
+    libhack::DefinitionManager* definitionManager,
     std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
     std::list<std::shared_ptr<objects::MiCorrectTbl>>& nraAdjustments) {
   auto c = GetEntity();
@@ -387,7 +387,7 @@ bool CharacterState::GetEquipmentStats(
 }
 
 void CharacterState::RecalcEquipState(
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   auto character = GetEntity();
   if (!character) {
     return;
@@ -408,7 +408,7 @@ void CharacterState::RecalcEquipState(
           ? 1
           : 0;
 
-  std::set<int16_t> allEffects;
+  std::set<int16_t> soulFusionEffects;
   std::list<std::shared_ptr<objects::MiSpecialConditionData>> conditions;
   std::set<std::shared_ptr<objects::MiEquipmentSetData>> activeEquipSets;
   for (size_t i = 0; i < 15; i++) {
@@ -466,7 +466,9 @@ void CharacterState::RecalcEquipState(
     for (auto pair : stMap) {
       if (pair.second == 0) continue;
 
-      allEffects.insert(pair.second);
+      if (!pair.first) {
+        soulFusionEffects.insert(pair.second);
+      }
 
       auto enchantData = definitionManager->GetEnchantData(pair.second);
       if (enchantData) {
@@ -529,14 +531,14 @@ void CharacterState::RecalcEquipState(
 
   // Apply enchant sets
   std::set<std::shared_ptr<objects::EnchantSetData>> activeEnchantSets;
-  for (int16_t effectID : allEffects) {
+  for (int16_t effectID : soulFusionEffects) {
     auto enchantSets = definitionManager->GetEnchantSetDataByEffect(effectID);
     for (auto s : enchantSets) {
       bool invalid = activeEnchantSets.find(s) != activeEnchantSets.end() &&
-                     s->EffectsCount() <= allEffects.size();
+                     s->EffectsCount() <= soulFusionEffects.size();
       if (!invalid) {
         for (int16_t setEffectID : s->GetEffects()) {
-          if (allEffects.find(setEffectID) == allEffects.end()) {
+          if (soulFusionEffects.find(setEffectID) == soulFusionEffects.end()) {
             invalid = true;
             break;
           }
@@ -585,7 +587,7 @@ void CharacterState::UpdateCompendiumTokuseiIDs(std::list<int32_t> tokuseiIDs) {
 }
 
 bool CharacterState::UpdateQuestState(
-    libcomp::DefinitionManager* definitionManager, uint32_t completedQuestID) {
+    libhack::DefinitionManager* definitionManager, uint32_t completedQuestID) {
   auto character = GetEntity();
   auto progress = character ? character->GetProgress().Get() : nullptr;
   if (!progress) {
@@ -655,7 +657,7 @@ bool CharacterState::UpdateQuestState(
 }
 
 int32_t CharacterState::GetExpertisePoints(
-    uint32_t expertiseID, libcomp::DefinitionManager* definitionManager) {
+    uint32_t expertiseID, libhack::DefinitionManager* definitionManager) {
   int32_t pointSum = 0;
 
   auto expData = definitionManager
@@ -688,7 +690,7 @@ int32_t CharacterState::GetExpertisePoints(
 }
 
 uint8_t CharacterState::GetExpertiseRank(
-    uint32_t expertiseID, libcomp::DefinitionManager* definitionManager) {
+    uint32_t expertiseID, libhack::DefinitionManager* definitionManager) {
   return (uint8_t)(GetExpertisePoints(expertiseID, definitionManager) / 10000);
 }
 
@@ -781,7 +783,7 @@ uint32_t CharacterState::GetReunionPoints(bool mitama) {
 }
 
 bool CharacterState::RecalcDisabledSkills(
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   auto character = GetEntity();
   if (!character) {
     return false;
@@ -837,7 +839,7 @@ const libobjgen::UUID CharacterState::GetEntityUUID() {
 }
 
 uint8_t CharacterState::RecalculateStats(
-    libcomp::DefinitionManager* definitionManager,
+    libhack::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
     std::shared_ptr<objects::MiSkillData> contextSkill) {
   uint8_t result = 0;
@@ -963,7 +965,7 @@ uint8_t CharacterState::RecalculateStats(
 
 bool CharacterState::CopyToEnemy(
     const std::shared_ptr<ActiveEntityState>& eState,
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   if (!ActiveEntityState::CopyToEnemy(eState, definitionManager)) {
     return false;
   }
@@ -1047,7 +1049,7 @@ bool CharacterState::CopyToEnemy(
 }
 
 std::set<uint32_t> CharacterState::GetAllSkills(
-    libcomp::DefinitionManager* definitionManager, bool includeTokusei) {
+    libhack::DefinitionManager* definitionManager, bool includeTokusei) {
   // If skills are gained from digitalize they are NOT included here
   std::set<uint32_t> skillIDs;
 
@@ -1091,7 +1093,7 @@ std::shared_ptr<CharacterState> CharacterState::Cast(
 }
 
 void CharacterState::AdjustFuseBonus(
-    libcomp::DefinitionManager* definitionManager,
+    libhack::DefinitionManager* definitionManager,
     std::shared_ptr<objects::Item> equipment) {
   const size_t GROWTH_TABLE_SIZE = 16;
 

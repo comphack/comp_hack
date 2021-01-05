@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCreateAreaIdTbl" persistent="false">
+        <member type="u32" name="ID"/>
+    </object>
+    <object name="MiChannelTbl" persistent="false">
+        <member type="u32" name="unknown1"/>
+        <member type="u32" name="unknown2"/>
+        <member type="string" length="36" name="name" encoding="default"/>
+    </object>
+    <object name="MiWorldData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="unknown1"/>
+        <member type="list" name="createAreaIdTbl">
+            <element type="MiCreateAreaIdTbl*"/>
+        </member>
+        <member type="list" name="channelTbl">
+            <element type="MiChannelTbl*"/>
+        </member>
+    </object>
+</objgen>

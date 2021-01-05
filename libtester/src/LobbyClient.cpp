@@ -63,7 +63,7 @@ LobbyClient::LobbyClient()
       mTicketCount(0),
       mTicketCost(0),
       mCP(0) {
-  SetConnection(std::make_shared<libcomp::LobbyConnection>(mService));
+  SetConnection(std::make_shared<libhack::LobbyConnection>(mService));
 }
 
 LobbyClient::LobbyClient(const LobbyClient& other) : TestClient(other) {
@@ -504,7 +504,7 @@ void LobbyClient::SetWaitForLogout(bool wait) { mWaitForLogout = wait; }
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<LobbyClient>() {
+BaseScriptEngine& BaseScriptEngine::Using<LobbyClient>() {
   if (!BindingExists("LobbyClient")) {
     // Include the base class
     Using<TestClient>();

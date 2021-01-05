@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="EnemyExtension" persistent="false" scriptenabled="true">
+        <member type="bool" name="OverrideStats"/>
+        <member type="array" name="CorrectTbl" size="126">
+            <element type="s16"/>
+        </member>
+        <member type="list" name="StatBoosts">
+            <element type="MiCorrectTbl*"/>
+        </member>
+        <member type="bool" name="NoDefaultSkills"/>
+        <member type="set" name="AddedSkills">
+            <element type="u32"/>
+        </member>
+    </object>
+    <object name="EnemyBase" persistent="false" scriptenabled="true">
+        <member type="u32" name="Type"/>
+        <member type="u32" name="VariantType"/>
+
+        <!-- Spawn information -->
+        <member type="Spawn*" name="SpawnSource" nulldefault="true"/>
+        <member type="SpawnLocation*" name="SpawnLocation"
+            nulldefault="true"/>
+        <member type="u32" name="SpawnSpotID"/>
+        <member type="u32" name="SpawnGroupID"/>
+        <member type="u32" name="SpawnLocationGroupID"/>
+        <member type="u32" name="EncounterID"/>
+        <member type="s32" name="SummonerID" default="-1"/>
+        <member type="set" name="MinionIDs">
+            <element type="s32"/>
+        </member>
+        <member type="bool" name="CanRevive"/>
+
+        <!-- Sub-sections -->
+        <member type="EntityStats*" name="CoreStats"/>
+        <member type="EnemyExtension*" name="Extension" nulldefault="true"/>
+    </object>
+    <object name="Enemy" persistent="false" baseobject="EnemyBase"
+        scriptenabled="true">
+        <member type="map" name="DamageSources">
+            <key type="s32"/>
+            <value type="u64"/>
+        </member>
+    </object>
+    <object name="Ally" persistent="false" baseobject="EnemyBase"
+        scriptenabled="true"/>
+</objgen>

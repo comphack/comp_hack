@@ -257,7 +257,7 @@ bool Parsers::DemonForce::Parse(
 
       // If base stat is not sent, the value will drop to 0. Oddly
       // enough, this doesn't happen if multiple stats update at once.
-      switch ((CorrectTbl)libcomp::DEMON_FORCE_CONVERSION[bPair.first]) {
+      switch ((CorrectTbl)libhack::DEMON_FORCE_CONVERSION[bPair.first]) {
         case CorrectTbl::STR:
           reply.WriteS16(demon->GetCoreStats()->GetSTR());
           break;

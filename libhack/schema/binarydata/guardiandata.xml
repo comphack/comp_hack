@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiGuardianAssistData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u8" name="raceID"/>
+        <member type="enum" name="type" underlying="uint8_t" pad="2">
+            <value num="0">STAT_RATE</value>
+            <value num="1">ACTIVES</value>
+            <value num="2">PASSIVES</value>
+            <value num="3">TRAITS</value>
+            <value num="4">AFFINITIES</value>
+            <value num="5">FORCE_STACK</value>
+            <value num="6">MITAMA_SET</value>
+            <value num="7">EXTEND_TIME</value>
+            <value num="8">REDUCE_WAIT</value>
+        </member>
+        <member type="s32" name="value"/>
+    </object>
+    <object name="MiGuardianLevelDataEntry" persistent="false">
+        <member type="u32" name="nextXP"/>
+        <member type="bool" name="hasAssist" pad="3"/>
+        <member type="array" size="4" name="assists">
+            <element type="u32"/>
+        </member>
+        <member type="array" size="4" name="demonIDs">
+            <element type="u32"/>
+        </member>
+        <member type="u32" name="extendSkillID"/>
+    </object>
+    <object name="MiGuardianLevelData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="16" name="levels">
+            <element type="MiGuardianLevelDataEntry*"/>
+        </member>
+    </object>
+    <object name="MiGuardianSpecialData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="16" name="requirements">
+            <element type="u8"/>
+        </member>
+    </object>
+    <object name="MiGuardianUnlockData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="16" name="requirements">
+            <element type="u8"/>
+        </member>
+    </object>
+</objgen>

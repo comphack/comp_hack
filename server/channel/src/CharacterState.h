@@ -122,7 +122,7 @@ class CharacterState : public ActiveEntityStateImp<objects::Character> {
    */
   std::shared_ptr<objects::DigitalizeState> Digitalize(
       const std::shared_ptr<objects::Demon>& demon,
-      libcomp::DefinitionManager* definitionManager);
+      libhack::DefinitionManager* definitionManager);
 
   /**
    * Get the current valuable based ability level of the character to
@@ -141,7 +141,7 @@ class CharacterState : public ActiveEntityStateImp<objects::Character> {
    * @return true if the stats were retrieved, false if they were not
    */
   bool GetEquipmentStats(
-      libcomp::DefinitionManager* definitionManager,
+      libhack::DefinitionManager* definitionManager,
       std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
       std::list<std::shared_ptr<objects::MiCorrectTbl>>& nraAdjustments);
 
@@ -151,7 +151,7 @@ class CharacterState : public ActiveEntityStateImp<objects::Character> {
    * @param definitionManager Pointer to the definition manager to use
    *  for determining equipment effects
    */
-  void RecalcEquipState(libcomp::DefinitionManager* definitionManager);
+  void RecalcEquipState(libhack::DefinitionManager* definitionManager);
 
   /**
    * Determine if any equipment on the character is set to expire but has
@@ -182,7 +182,7 @@ class CharacterState : public ActiveEntityStateImp<objects::Character> {
    * @return true if the recalculation resulted in more quest bonuses being
    *  applied or increased
    */
-  bool UpdateQuestState(libcomp::DefinitionManager* definitionManager,
+  bool UpdateQuestState(libhack::DefinitionManager* definitionManager,
                         uint32_t completedQuestID = 0);
 
   /**
@@ -196,7 +196,7 @@ class CharacterState : public ActiveEntityStateImp<objects::Character> {
    */
   int32_t GetExpertisePoints(
       uint32_t expertiseID,
-      libcomp::DefinitionManager* definitionManager = nullptr);
+      libhack::DefinitionManager* definitionManager = nullptr);
 
   /**
    * Determine the character's current expertise rank for the
@@ -209,7 +209,7 @@ class CharacterState : public ActiveEntityStateImp<objects::Character> {
    */
   uint8_t GetExpertiseRank(
       uint32_t expertiseID,
-      libcomp::DefinitionManager* definitionManager = nullptr);
+      libhack::DefinitionManager* definitionManager = nullptr);
 
   /**
    * Determine if the character (or account) has a specific action cooldown
@@ -263,20 +263,20 @@ class CharacterState : public ActiveEntityStateImp<objects::Character> {
    * @return true if the set of disabled skills has been updated, false if it
    *  has not
    */
-  bool RecalcDisabledSkills(libcomp::DefinitionManager* definitionManager);
+  bool RecalcDisabledSkills(libhack::DefinitionManager* definitionManager);
 
   virtual const libobjgen::UUID GetEntityUUID();
 
   virtual uint8_t RecalculateStats(
-      libcomp::DefinitionManager* definitionManager,
+      libhack::DefinitionManager* definitionManager,
       std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr,
       std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
 
   virtual bool CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
-                           libcomp::DefinitionManager* definitionManager);
+                           libhack::DefinitionManager* definitionManager);
 
   virtual std::set<uint32_t> GetAllSkills(
-      libcomp::DefinitionManager* definitionManager, bool includeTokusei);
+      libhack::DefinitionManager* definitionManager, bool includeTokusei);
 
   virtual uint8_t GetLNCType();
 
@@ -297,7 +297,7 @@ class CharacterState : public ActiveEntityStateImp<objects::Character> {
    *  for determining equipment info
    * @param equipment Pointer to the equipment to calculate bonuses for
    */
-  void AdjustFuseBonus(libcomp::DefinitionManager* definitionManager,
+  void AdjustFuseBonus(libhack::DefinitionManager* definitionManager,
                        std::shared_ptr<objects::Item> equipment);
 
   /// Tokusei effect IDs available due to the character's current

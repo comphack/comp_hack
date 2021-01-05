@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCDevilDungeonData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" length="128" name="filterFile" encoding="default"/>
+        <member type="float" name="fadeInTransparency"/>
+        <member type="float" name="fadeOutTransparency"/>
+        <member type="float" name="fadeInterval"/>
+    </object>
+</objgen>

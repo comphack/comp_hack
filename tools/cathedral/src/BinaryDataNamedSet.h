@@ -35,7 +35,7 @@
 // C++11 Standard Includes
 #include <vector>
 
-class BinaryDataNamedSet : public libcomp::BinaryDataSet {
+class BinaryDataNamedSet : public libhack::BinaryDataSet {
  public:
   BinaryDataNamedSet(
       std::function<uint32_t(const std::shared_ptr<libcomp::Object>&)> mapper);

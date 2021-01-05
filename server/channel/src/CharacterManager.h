@@ -1346,7 +1346,7 @@ class CharacterManager {
    */
   static libcomp::EnumMap<CorrectTbl, int32_t> GetDemonBaseStats(
       const std::shared_ptr<objects::MiDevilData>& demonData,
-      libcomp::DefinitionManager* definitionManager, uint8_t growthType,
+      libhack::DefinitionManager* definitionManager, uint8_t growthType,
       int8_t level);
 
   /**
@@ -1387,7 +1387,7 @@ class CharacterManager {
    */
   static void AdjustMitamaStats(const std::shared_ptr<objects::Demon>& demon,
                                 libcomp::EnumMap<CorrectTbl, int32_t>& stats,
-                                libcomp::DefinitionManager* definitionManager,
+                                libhack::DefinitionManager* definitionManager,
                                 uint8_t reunionMode, int32_t entityID = 0,
                                 bool includeSetBonuses = true);
 
@@ -1403,7 +1403,7 @@ class CharacterManager {
    *  active
    */
   static bool GetMitamaBonuses(const std::shared_ptr<objects::Demon>& demon,
-                               libcomp::DefinitionManager* definitionManager,
+                               libhack::DefinitionManager* definitionManager,
                                std::unordered_map<uint8_t, uint8_t>& bonuses,
                                std::set<uint32_t>& setBonuses,
                                bool excludeTokusei);
@@ -1421,7 +1421,7 @@ class CharacterManager {
    */
   static std::list<int32_t> GetMitamaIndirectSetBonuses(
       const std::shared_ptr<objects::Demon>& demon,
-      libcomp::DefinitionManager* definitionManager, bool exBonus,
+      libhack::DefinitionManager* definitionManager, bool exBonus,
       int8_t& magReduction);
 
   /**
@@ -1449,7 +1449,7 @@ class CharacterManager {
   static std::set<uint32_t> GetTraitSkills(
       const std::shared_ptr<objects::Demon>& demon,
       const std::shared_ptr<objects::MiDevilData>& demonData,
-      libcomp::DefinitionManager* definitionManager);
+      libhack::DefinitionManager* definitionManager);
 
   /**
    * Retrieve a map of correct table indexes to corresponding stat values.

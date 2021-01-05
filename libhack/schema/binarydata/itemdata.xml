@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <include path="binarydata/shared.xml"/>
+
+    <object name="MiItemBasicData" persistent="false" scriptenabled="true">
+        <member type="u32" name="baseID"/>
+        <member type="s32" name="buyPrice"/>
+        <member type="s32" name="sellPrice"/>
+        <member type="s32" name="repairPrice"/>
+        <member type="s16" name="appearanceID"/>
+        <member type="enum" name="weaponType" underlying="uint8_t">
+            <value>CLOSE_RANGE</value>
+            <value>LONG_RANGE</value>
+            <value>NONE</value>
+        </member>
+        <member type="enum" name="equipType" underlying="int8_t">
+            <value num="-1">EQUIP_TYPE_NONE</value>
+            <value num="0">EQUIP_TYPE_HEAD</value>
+            <value num="1">EQUIP_TYPE_FACE</value>
+            <value num="2">EQUIP_TYPE_NECK</value>
+            <value num="3">EQUIP_TYPE_TOP</value>
+            <value num="4">EQUIP_TYPE_ARMS</value>
+            <value num="5">EQUIP_TYPE_BOTTOM</value>
+            <value num="6">EQUIP_TYPE_FEET</value>
+            <value num="7">EQUIP_TYPE_COMP</value>
+            <value num="8">EQUIP_TYPE_RING</value>
+            <value num="9">EQUIP_TYPE_EARRING</value>
+            <value num="10">EQUIP_TYPE_EXTRA</value>
+            <value num="11">EQUIP_TYPE_BACK</value>
+            <value num="12">EQUIP_TYPE_TALISMAN</value>
+            <value num="13">EQUIP_TYPE_WEAPON</value>
+            <value num="14">EQUIP_TYPE_BULLETS</value>
+
+            <!-- Non-equipment appearance modification types below -->
+            <value num="15">VIS_SKIN_TYPE</value>
+            <value num="16">VIS_HAIR_STYLE</value>
+            <value num="17">VIS_EYE_TYPE</value>
+            <value num="18">VIS_FACE_TYPE</value>
+            <value num="19">VIS_EYE_COLOR_LEFT</value>
+            <value num="20">VIS_UNUSED1</value>
+            <value num="21">VIS_UNUSED2</value>
+            <value num="22">VIS_HAIR_COLOR</value>
+            <value num="23">VIS_EYE_COLOR_RIGHT</value>
+            <value num="24">VIS_EYE_COLOR_BOTH</value>
+        </member>
+        <member type="u32" name="flags"/>
+    </object>
+    <object name="MiPossessionData" persistent="false" scriptenabled="true">
+        <member type="u8" name="type"/>
+        <member type="u8" name="durability"/>
+        <member type="u16" name="stackSize"/>
+        <member type="u32" name="useSkill"/>
+    </object>
+    <object name="MiUseRestrictionsData" persistent="false" scriptenabled="true">
+        <member type="u8" name="gender"/>
+        <member type="u8" name="level"/>
+        <member type="enum" name="alignment" underlying="uint8_t" pad="1">
+            <value>ALL</value>
+            <value>LAW</value>
+            <value>NEUTRAL</value>
+            <value>CHAOS</value>
+        </member>
+        <member type="list" name="skillTbl">
+            <element type="MiSkillTbl*"/>
+        </member>
+        <member type="u8" name="modSlots"/>
+        <member type="u8" name="stock" pad="2"/>
+    </object>
+    <object name="MiItemPvPData" persistent="false" scriptenabled="true">
+        <member type="s16" name="GPRequirement" pad="2"/>
+    </object>
+    <object name="MiRentalData" persistent="false" scriptenabled="true">
+        <member type="s32" name="rental"/>
+    </object>
+    <object name="MiItemData" persistent="false" scriptenabled="true">
+        <member name="common" type="MiSkillItemStatusCommonData*"/>
+        <member name="basic" type="MiItemBasicData*"/>
+        <member name="possession" type="MiPossessionData*"/>
+        <member name="restriction" type="MiUseRestrictionsData*"/>
+        <member name="pvp" type="MiItemPvPData*"/>
+        <member name="rental" type="MiRentalData*"/>
+    </object>
+</objgen>

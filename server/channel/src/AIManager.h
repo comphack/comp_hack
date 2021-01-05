@@ -32,7 +32,7 @@
 #include "ActiveEntityState.h"
 #include "ClientState.h"
 
-namespace libcomp {
+namespace libhack {
 class ScriptEngine;
 }
 
@@ -490,7 +490,7 @@ class AIManager {
 
   /// Static map of scripts that have been loaded and compiled
   /// by AI type name
-  static std::unordered_map<std::string, std::shared_ptr<libcomp::ScriptEngine>>
+  static std::unordered_map<std::string, std::shared_ptr<libhack::ScriptEngine>>
       sPreparedScripts;
 
   /// Pointer to the channel server.

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiDevilBookBonusMitamaData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="s32" name="unknown1"/>
+        <member type="s16" name="unknown2"/>
+        <member type="s16" name="unknown3"/>
+        <member type="s16" name="unknown4"/>
+        <member type="s16" name="unknown5"/>
+        <member type="s16" name="unknown6"/>
+        <member type="s16" name="unknown7"/>
+        <member type="s32" name="unknown8"/>
+    </object>
+</objgen>

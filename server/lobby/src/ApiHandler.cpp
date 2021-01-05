@@ -26,6 +26,9 @@
 
 #include "ApiHandler.h"
 
+// libhack Includes
+#include <Constants.h>
+
 // libcomp Includes
 #include <AccountManager.h>
 #include <BaseServer.h>
@@ -99,12 +102,12 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
 
   LogWebAPIDebugMsg("Loading API binary definitions...\n");
 
-  mDefinitionManager = new libcomp::DefinitionManager;
+  mDefinitionManager = new libhack::DefinitionManager;
 
   mDefinitionManager->LoadData<objects::MiShopProductData>(
       server->GetDataStore());
 
-  auto serverDataManager = new libcomp::ServerDataManager;
+  auto serverDataManager = new libhack::ServerDataManager;
   bool scriptsLoaded = false;
 
   LogWebAPIDebugMsg("Loading web apps...\n");
@@ -1417,7 +1420,7 @@ bool ApiHandler::WebApp_Request(const libcomp::String& appName,
     return false;
   }
 
-  auto app = std::make_shared<libcomp::ScriptEngine>();
+  auto app = std::make_shared<libhack::ScriptEngine>();
   app->Using<libcomp::Randomizer>();
   app->Using<objects::Account>();
   app->Using<objects::AccountWorldData>();
@@ -1574,7 +1577,7 @@ bool ApiHandler::WebGame_Start(const JsonBox::Object& request,
     return true;
   }
 
-  webGameSession->gameState = std::make_shared<libcomp::ScriptEngine>();
+  webGameSession->gameState = std::make_shared<libhack::ScriptEngine>();
   webGameSession->gameState->Using<libcomp::Randomizer>();
   webGameSession->gameState->Using<objects::Character>();
   webGameSession->gameState->Using<objects::PostItem>();

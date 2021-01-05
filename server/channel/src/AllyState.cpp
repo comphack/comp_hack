@@ -38,7 +38,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<AllyState>() {
+BaseScriptEngine& BaseScriptEngine::Using<AllyState>() {
   if (!BindingExists("AllyState", true)) {
     Using<ActiveEntityState>();
     Using<objects::Ally>();
@@ -65,12 +65,12 @@ std::shared_ptr<objects::EnemyBase> AllyState::GetEnemyBase() const {
 }
 
 std::set<uint32_t> AllyState::GetAllSkills(
-    libcomp::DefinitionManager* definitionManager, bool includeTokusei) {
+    libhack::DefinitionManager* definitionManager, bool includeTokusei) {
   return GetAllEnemySkills(definitionManager, includeTokusei);
 }
 
 uint8_t AllyState::RecalculateStats(
-    libcomp::DefinitionManager* definitionManager,
+    libhack::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
     std::shared_ptr<objects::MiSkillData> contextSkill) {
   std::lock_guard<std::mutex> lock(mLock);

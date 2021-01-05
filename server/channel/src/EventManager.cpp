@@ -835,7 +835,7 @@ bool EventManager::EvaluateEventCondition(
               .Arg(scriptCondition->GetScriptID());
         });
       } else if (script && script->Type.ToLower() == "eventcondition") {
-        auto engine = std::make_shared<libcomp::ScriptEngine>();
+        auto engine = std::make_shared<libhack::ScriptEngine>();
         engine->Using<CharacterState>();
         engine->Using<DemonState>();
         engine->Using<Zone>();
@@ -3140,7 +3140,7 @@ void EventManager::AddDemonQuestRewards(
   int8_t cLvl = character->GetCoreStats()->GetLevel();
   if (cLvl < 99) {
     // Formula estimated from collected data, not 100% accurate
-    double lvlXP = (double)libcomp::LEVEL_XP_REQUIREMENTS[(size_t)cLvl];
+    double lvlXP = (double)libhack::LEVEL_XP_REQUIREMENTS[(size_t)cLvl];
     double normalXP = floor(((0.00000691775 * (double)(cLvl * cLvl)) -
                              (0.001384 * (double)cLvl) + 0.06922) *
                             lvlXP);
@@ -3717,7 +3717,7 @@ void EventManager::HandleNext(EventContext& ctx) {
           nextEventID = iState->GetNext();
         }
 
-        auto engine = std::make_shared<libcomp::ScriptEngine>();
+        auto engine = std::make_shared<libhack::ScriptEngine>();
         engine->Using<CharacterState>();
         engine->Using<DemonState>();
         engine->Using<Zone>();
@@ -4276,7 +4276,7 @@ bool EventManager::HandleWebGame(
 }
 
 bool EventManager::PrepareTransformScript(
-    EventContext& ctx, std::shared_ptr<libcomp::ScriptEngine> engine) {
+    EventContext& ctx, std::shared_ptr<libhack::ScriptEngine> engine) {
   auto server = mServer.lock();
   auto serverDataManager = server->GetServerDataManager();
   auto e = ctx.EventInstance->GetEvent();
@@ -4308,7 +4308,7 @@ bool EventManager::PrepareTransformScript(
 }
 
 bool EventManager::TransformEvent(
-    EventContext& ctx, std::shared_ptr<libcomp::ScriptEngine> engine) {
+    EventContext& ctx, std::shared_ptr<libhack::ScriptEngine> engine) {
   auto e = ctx.EventInstance->GetEvent();
 
   Sqrat::Array sqParams(engine->GetVM());

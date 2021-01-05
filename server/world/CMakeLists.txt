@@ -60,6 +60,7 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
 
     # Include paths
     schema
+    ../../libhack/schema
     ../../libcomp/libcomp/schema
 
     # Output files
@@ -106,8 +107,8 @@ TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} config comp
-    tinyxml2 civetweb-cxx civetweb)
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} config hack
+    comp tinyxml2 civetweb-cxx civetweb)
 
 IF(USE_COTIRE)
     cotire(${PROJECT_NAME})

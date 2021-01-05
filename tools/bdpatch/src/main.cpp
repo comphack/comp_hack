@@ -95,7 +95,7 @@ int Usage(
     const char* szAppName,
     const std::map<
         std::string,
-        std::pair<std::string, std::function<libcomp::BinaryDataSet*(void)>>>&
+        std::pair<std::string, std::function<libhack::BinaryDataSet*(void)>>>&
         binaryTypes) {
   std::cerr << "USAGE: " << szAppName << " [OPTION]... load TYPE IN OUT"
             << std::endl;
@@ -147,7 +147,7 @@ int main(int argc, char* argv[]) {
     return Usage(argv[0], binaryTypes);
   }
 
-  libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
+  libhack::Log::GetSingletonPtr()->AddStandardOutputHook();
 
   auto standardArgs = args.GetStandardArguments();
   libcomp::String mode = standardArgs[0];
@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
     return Usage(argv[0], binaryTypes);
   }
 
-  libcomp::BinaryDataSet* pSet = nullptr;
+  libhack::BinaryDataSet* pSet = nullptr;
 
   auto match = binaryTypes.find(bdType.ToUtf8());
 
@@ -282,7 +282,7 @@ int main(int argc, char* argv[]) {
 
 #ifndef EXOTIC_PLATFORM
   // Stop the logger
-  delete libcomp::Log::GetSingletonPtr();
+  delete libhack::Log::GetSingletonPtr();
 #endif  // !EXOTIC_PLATFORM
 
   return EXIT_SUCCESS;

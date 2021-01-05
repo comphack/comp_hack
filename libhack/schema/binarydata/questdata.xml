@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiQuestUpperCondition" persistent="false">
+        <member type="u32" name="clauseCount"/>
+        <member type="array" name="clauses" size="10">
+            <element type="EventConditionData*"/>
+        </member>
+    </object>
+    <!-- Custom -->
+    <object name="QuestPhaseRequirement" persistent="false">
+        <member type="enum" name="type" underlying="uint32_t">
+            <value num="0">NONE</value>
+            <value num="1">ITEM</value>
+            <value num="3">SUMMON</value>
+            <value num="4">KILL</value>
+            <value num="12">KILL_HIDDEN</value>
+        </member>
+        <member type="u32" name="objectID"/>
+        <member type="u32" name="objectCount"/>
+    </object>
+    <object name="MiQuestPhaseData" persistent="false">
+        <member type="u32" name="phaseNumber"/>
+        <member type="u32" name="requirementCount"/>
+        <member type="array" name="requirements" size="8">
+            <element type="QuestPhaseRequirement*"/>
+        </member>
+    </object>
+    <object name="MiQuestData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="enum" name="type" underlying="uint32_t">
+            <value num="0">NORMAL</value>
+            <value num="1">REPEATABLE</value>
+            <value num="2">EPISODE</value>
+            <value num="3">INACTIVE</value>
+            <value num="4">EVENT</value>
+            <value num="5">ITIME</value>
+        </member>
+        <member type="u32" name="groupID"/>
+        <member type="enum" name="episodeType" underlying="uint32_t">
+            <value num="0">NONE</value>
+            <value num="1">MAIN</value>
+            <value num="2">COC</value>
+        </member>
+        <member type="bool" name="bonusEnabled" pad="3"/>
+        <member type="u32" name="conditionsExist"/>
+        <member type="array" name="conditions" size="4">
+            <element type="MiQuestUpperCondition*"/>
+        </member>
+        <member type="string" name="restrictionText" round="4"
+            encoding="default"/>
+        <member type="u32" name="phaseCount"/>
+        <member type="array" name="phases" size="8">
+            <element type="MiQuestPhaseData*"/>
+        </member>
+    </object>
+    <object name="MiQuestBonusCodeData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="s32" name="count"/>
+        <member type="s32" name="titleID"/>
+    </object>
+</objgen>

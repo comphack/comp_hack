@@ -52,10 +52,10 @@ namespace objects {
 class WebGameSession;
 }
 
-namespace libobjects {
+namespace libhack {
 class DefinitionManager;
 class ScriptEngine;
-}  // namespace libobjects
+}  // namespace libhack
 
 namespace lobby {
 
@@ -80,7 +80,7 @@ class ApiSession {
 class WebGameApiSession : public ApiSession {
  public:
   std::shared_ptr<objects::WebGameSession> webGameSession;
-  std::shared_ptr<libcomp::ScriptEngine> gameState;
+  std::shared_ptr<libhack::ScriptEngine> gameState;
 };
 
 class ApiHandler : public CivetHandler {
@@ -208,14 +208,14 @@ class ApiHandler : public CivetHandler {
   std::shared_ptr<objects::LobbyConfig> mConfig;
   std::shared_ptr<lobby::LobbyServer> mServer;
 
-  std::unordered_map<libcomp::String, std::shared_ptr<libcomp::ServerScript>>
+  std::unordered_map<libcomp::String, std::shared_ptr<libhack::ServerScript>>
       mAppDefinitions;
 
-  std::unordered_map<libcomp::String, std::shared_ptr<libcomp::ServerScript>>
+  std::unordered_map<libcomp::String, std::shared_ptr<libhack::ServerScript>>
       mGameDefinitions;
 
   AccountManager* mAccountManager;
-  libcomp::DefinitionManager* mDefinitionManager;
+  libhack::DefinitionManager* mDefinitionManager;
 
   std::mutex mSessionLock;
 };

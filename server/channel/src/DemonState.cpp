@@ -58,7 +58,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<DemonState>() {
+BaseScriptEngine& BaseScriptEngine::Using<DemonState>() {
   if (!BindingExists("DemonState", true)) {
     Using<ActiveEntityState>();
     Using<objects::Demon>();
@@ -125,7 +125,7 @@ std::list<int32_t> DemonState::GetDemonTokuseiIDs() const {
 
 bool DemonState::UpdateSharedState(
     const std::shared_ptr<objects::Character>& character,
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   std::set<uint32_t> cShiftValues;
 
   bool compendium2 = CharacterManager::HasValuable(
@@ -273,7 +273,7 @@ bool DemonState::UpdateSharedState(
 }
 
 bool DemonState::UpdateDemonState(
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   auto demon = GetEntity();
 
   std::lock_guard<std::mutex> lock(mLock);
@@ -339,7 +339,7 @@ DemonState::GetLearningSkills(uint8_t affinity) {
 }
 
 void DemonState::RefreshLearningSkills(
-    uint8_t affinity, libcomp::DefinitionManager* definitionManager) {
+    uint8_t affinity, libhack::DefinitionManager* definitionManager) {
   auto demon = GetEntity();
   std::lock_guard<std::mutex> lock(mLock);
   if (affinity == 0) {
@@ -392,7 +392,7 @@ int16_t DemonState::UpdateLearningSkill(
 }
 
 bool DemonState::GetBaseStats(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
-                              libcomp::DefinitionManager* definitionManager,
+                              libhack::DefinitionManager* definitionManager,
                               bool readOnly) {
   auto entity = GetEntity();
   auto cs = GetCoreStats();
@@ -435,7 +435,7 @@ const libobjgen::UUID DemonState::GetEntityUUID() {
 }
 
 uint8_t DemonState::RecalculateStats(
-    libcomp::DefinitionManager* definitionManager,
+    libhack::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
     std::shared_ptr<objects::MiSkillData> contextSkill) {
   std::lock_guard<std::mutex> lock(mLock);
@@ -469,7 +469,7 @@ uint8_t DemonState::RecalculateStats(
 }
 
 bool DemonState::CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
-                             libcomp::DefinitionManager* definitionManager) {
+                             libhack::DefinitionManager* definitionManager) {
   if (!ActiveEntityState::CopyToEnemy(eState, definitionManager)) {
     return false;
   }
@@ -493,7 +493,7 @@ bool DemonState::CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
 }
 
 std::set<uint32_t> DemonState::GetAllSkills(
-    libcomp::DefinitionManager* definitionManager, bool includeTokusei) {
+    libhack::DefinitionManager* definitionManager, bool includeTokusei) {
   std::set<uint32_t> skillIDs;
 
   auto entity = GetEntity();

@@ -579,7 +579,7 @@ std::shared_ptr<objects::ServerZone> ZoneWindow::LoadZoneFromFile(
     return nullptr;
   }
 
-  libcomp::BinaryDataSet pSet(
+  libhack::BinaryDataSet pSet(
       []() { return std::make_shared<objects::ServerZone>(); },
 
       [](const std::shared_ptr<libcomp::Object>& obj) {
@@ -1971,7 +1971,7 @@ void ZoneWindow::UpdateMergedZone(bool redraw) {
 
           for (uint32_t partialID : mSelectedPartials) {
             auto partial = mZonePartials[partialID];
-            libcomp::ServerDataManager::ApplyZonePartial(copyZone, partial,
+            libhack::ServerDataManager::ApplyZonePartial(copyZone, partial,
                                                          true);
           }
 
@@ -1999,7 +1999,7 @@ void ZoneWindow::UpdateMergedZone(bool redraw) {
           newZone->SetDynamicMapID(mMergedZone->CurrentZone->GetDynamicMapID());
 
           auto partial = mZonePartials[(uint32_t)viewing];
-          libcomp::ServerDataManager::ApplyZonePartial(newZone, partial, false);
+          libhack::ServerDataManager::ApplyZonePartial(newZone, partial, false);
 
           mMergedZone->Definition = newZone;
           mMergedZone->CurrentPartial = partial;
@@ -3158,7 +3158,7 @@ QPointF ZoneWindow::GetNavPointLocation(QPointF p1, QPointF vert, QPointF p2,
                (p2.y() - vert.y()) * (vert.y() - p1.y());
   double radians = atan2(cProd, dProd);
 
-  if (radians == libcomp::PI) {
+  if (radians == libhack::PI) {
     // Straight line
     valid = false;
     return QPointF();
@@ -3169,10 +3169,10 @@ QPointF ZoneWindow::GetNavPointLocation(QPointF p1, QPointF vert, QPointF p2,
 
   if (radians < 0.0) {
     // Obtuse angle
-    radians = libcomp::PI / 2.0 - radians / 2.0;
+    radians = libhack::PI / 2.0 - radians / 2.0;
   } else {
     // Acute angle
-    radians = libcomp::PI * 1.5 - radians / 2.0;
+    radians = libhack::PI * 1.5 - radians / 2.0;
   }
 
   return RotatePoint(p, vert, radians);

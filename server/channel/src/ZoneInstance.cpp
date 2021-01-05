@@ -44,7 +44,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<ZoneInstance>() {
+BaseScriptEngine& BaseScriptEngine::Using<ZoneInstance>() {
   if (!BindingExists("ZoneInstance", true)) {
     Using<objects::ZoneInstanceObject>();
     Using<ActiveEntityState>();

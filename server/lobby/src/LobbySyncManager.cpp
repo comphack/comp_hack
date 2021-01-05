@@ -48,7 +48,9 @@
 using namespace lobby;
 
 LobbySyncManager::LobbySyncManager(const std::weak_ptr<LobbyServer>& server)
-    : mServer(server) {}
+    : libcomp::DataSyncManager(
+          to_underlying(InternalPacketCode_t::PACKET_DATA_SYNC)),
+      mServer(server) {}
 
 LobbySyncManager::~LobbySyncManager() {}
 

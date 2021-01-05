@@ -27,9 +27,12 @@
 
 #include "WorldSyncManager.h"
 
+// libhack Includes
+#include <Constants.h>
+#include <PacketCodes.h>
+
 // libcomp Includes
 #include <Log.h>
-#include <PacketCodes.h>
 #include <Randomizer.h>
 
 // Standard C++11 Includes
@@ -62,7 +65,10 @@
 using namespace world;
 
 WorldSyncManager::WorldSyncManager(const std::weak_ptr<WorldServer>& server)
-    : mNextMatchID(0), mServer(server) {
+    : libcomp::DataSyncManager(
+          to_underlying(InternalPacketCode_t::PACKET_DATA_SYNC)),
+      mNextMatchID(0),
+      mServer(server) {
   mPvPReadyTimes[0] = {{0, 0}};
   mPvPReadyTimes[1] = {{0, 0}};
   mUBRecalcMin = {{0, 0, 0}};
@@ -1747,7 +1753,9 @@ bool WorldSyncManager::EndMatch(
          const std::pair<size_t, int32_t>& b) { return a.second > b.second; });
 
   int32_t pointsFirst = ranks[0].second;
-  int32_t pointsSecond = ranks[1].second;
+  // While this variable can legitimately be negative, it should be floored to 0
+  // for use in calculations
+  int32_t pointsSecond = ranks[1].second > 0 ? ranks[1].second : 0;
 
   uint8_t bestRank = 1;
   for (size_t i = 0; i < 5; i++) {
@@ -1775,11 +1783,9 @@ bool WorldSyncManager::EndMatch(
     payoutRange[0] = payoutRange[1] = -1;
   }
 
-  // Calculate gain from range
+  // Set minimum and maximum gain
   int32_t min = payoutRange[0] >= 0 ? payoutRange[0] : 100;
-  int32_t max = payoutRange[1] >= 0 ? payoutRange[1] : 2000;
-
-  cowrieGain = (double)min + (double)(max - min) * cowrieGain;
+  int32_t max = payoutRange[1] >= 0 ? payoutRange[1] : 300;
 
   auto entries = objects::PentalphaEntry::LoadPentalphaEntryListByMatch(
       db, match->GetUUID());
@@ -1807,23 +1813,23 @@ bool WorldSyncManager::EndMatch(
         return false;
       }
 
-      int32_t cowrieGained = (int32_t)cowrieGain;
+      auto cowrieGained = cowrieGain;
       if (winningBethel > 0) {
-        cowrieGained =
-            (int32_t)(cowrieGain * (1.0 + (double)entry->GetBethel() /
-                                              (double)winningBethel));
+        // Give cowries based on proportion of points the winning team earned
+        cowrieGained *= ((double)entry->GetBethel() / (double)winningBethel);
 
         if (rank != 1) {
           // Reduce by 10% per rank
-          cowrieGained = (int32_t)((double)cowrieGained *
-                                   (1.0 - ((double)(rank - 1) * 0.1)));
+          cowrieGained *= (1.0 - ((double)(rank - 1) * 0.1));
         }
       }
+      // Bound by max or min
+      cowrieGained = (double)min + (double)(max - min) * cowrieGained;
 
-      entry->SetCowrie(cowrieGained);
+      entry->SetCowrie((int32_t)cowrieGained);
 
       auto expl = std::make_shared<libcomp::DBExplicitUpdate>(progress);
-      expl->Add<int32_t>("Cowrie", cowrieGained);
+      expl->Add<int32_t>("Cowrie", (int32_t)cowrieGained);
       opChangeset->AddOperation(expl);
 
       progresses.insert(progress);

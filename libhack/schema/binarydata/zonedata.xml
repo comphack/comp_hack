@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiZoneBasicData" persistent="false" scriptenabled="true">
+        <member type="u32" name="id" caps="true"/>
+        <member type="string" name="name" encoding="default" length="36"/>
+        <member type="enum" name="type" underlying="uint8_t" pad="1">
+            <value num="0">TOWN</value>
+            <value num="2">FIELD</value>
+            <value num="3">PUBLIC</value>
+            <value num="4">DUNGEON</value>
+            <value num="5">SHOP</value>
+            <value num="7">PVP</value>
+        </member>
+        <member type="u16" name="flags"/>
+        <member type="u32" name="parentID"/>
+        <member type="u32" name="startingSpot" pad="4"/>
+    </object>
+    <object name="MiZoneFileData" persistent="false" scriptenabled="true">
+        <member type="string" length="36" name="modelFile" encoding="default"/>
+        <member type="string" length="36" name="nameFile" encoding="default"/>
+        <member type="string" length="36" name="qmpFile" encoding="default"/>
+        <member type="string" length="36" name="spotFile" encoding="default"/>
+        <member type="string" length="36" name="enemyFile" encoding="default"/>
+        <member type="string" length="36" name="npcFile" encoding="default"/>
+        <member type="string" length="36" name="eventFile" encoding="default"/>
+        <member type="string" length="36" name="unused1" encoding="default"/>
+        <member type="string" length="36" name="unused2" encoding="default"/>
+        <member type="string" length="36" name="groupFile" encoding="default"/>
+        <member type="string" length="36" name="unitFile" encoding="default"/>
+        <member type="string" length="36" name="unused3" encoding="default"/>
+        <member type="string" length="36" name="unused4" encoding="default"/>
+        <member type="string" length="36" name="unused5" encoding="default"/>
+        <member type="string" length="36" name="unused6" encoding="default"/>
+        <member type="string" length="36" name="unused7" encoding="default"/>
+        <member type="string" length="36" name="unused8" encoding="default"/>
+        <member type="string" length="36" name="unused9" encoding="default"/>
+        <member type="string" length="36" name="unused10" encoding="default"/>
+    </object>
+    <object name="MiZoneFogData" persistent="false" scriptenabled="true">
+        <member type="bool" name="enabled"/>
+        <member type="array" name="dayColor" size="3">
+            <element type="u8"/>
+        </member>
+        <member type="f32" name="dayDistanceStart"/>
+        <member type="f32" name="dayDistanceEnd" pad="1"/>
+        <member type="array" name="nightColor" size="3">
+            <element type="u8"/>
+        </member>
+        <member type="f32" name="nightDistanceStart"/>
+        <member type="f32" name="nightDistanceEnd"/>
+    </object>
+    <object name="MiZoneCameraData" persistent="false" scriptenabled="true">
+        <member type="f32" name="maxDrawDistance"/>
+    </object>
+    <object name="MiZoneSkyData" persistent="false" scriptenabled="true">
+        <member type="bool" name="enableSkybox"/>
+        <member type="bool" name="enableSunMoon" pad="2"/>
+        <member type="string" length="36" name="skyDoomFile" encoding="default"/>
+        <member type="string" length="36" name="starFile" encoding="default"/>
+        <member type="string" length="36" name="sunFile" encoding="default"/>
+        <member type="string" length="36" name="alwaysFile" encoding="default"/>
+        <member type="string" length="36" name="mistFile" encoding="default"/>
+        <member type="string" length="36" name="cloudFile" encoding="default"/>
+        <member type="string" length="36" name="always2File" encoding="default"/>
+        <member type="string" length="36" name="lightFile" encoding="default"/>
+    </object>
+    <object name="MiZoneGouraudData" persistent="false" scriptenabled="true">
+        <member type="bool" name="enabled" pad="3"/>
+        <member type="f32" name="bloomScale"/>
+        <member type="f32" name="bloomBrightness"/>
+        <member type="array" name="shading" size="4">
+            <element type="f32"/>
+        </member>
+        <member type="f32" name="unused"/>
+        <member type="f32" name="blur"/>
+    </object>
+    <object name="MiZoneLensFlareLayerData" persistent="false" scriptenabled="true">
+        <member type="bool" name="enabled" pad="3"/>
+        <member type="f32" name="distance"/>
+        <member type="f32" name="outerScale"/>
+        <member type="f32" name="innerScale"/>
+        <member type="f32" name="opacity"/>
+    </object>
+    <object name="MiZoneLensFlareData" persistent="false" scriptenabled="true">
+        <member type="bool" name="enabled" pad="3"/>
+        <member type="f32" name="reduction"/>
+        <member type="array" name="layers" size="7">
+            <element type="MiZoneLensFlareLayerData*"/>
+        </member>
+    </object>
+    <object name="MiZoneBGMData" persistent="false" scriptenabled="true">
+        <member type="u32" name="zoneSoundID"/>
+        <member type="u32" name="battleSoundID"/>
+    </object>
+    <object name="MiZoneOtherData" persistent="false" scriptenabled="true">
+        <!-- Formerly contained several "other" values that did not appear to be used -->
+        <member type="f32" name="unused" pad="28"/>
+        <member type="array" name="characterLighting" size="3" pad="24">
+            <element type="f32"/>
+        </member>
+    </object>
+    <object name="MiZoneData" persistent="false" scriptenabled="true">
+        <member type="MiZoneBasicData*" name="basic"/>
+        <member type="MiZoneFileData*" name="file"/>
+        <!-- MiZoneClientData below -->
+        <member type="MiZoneFogData*" name="fog"/>
+        <member type="MiZoneCameraData*" name="camera"/>
+        <member type="MiZoneSkyData*" name="sky"/>
+        <member type="MiZoneGouraudData*" name="gouraud"/>
+        <member type="MiZoneLensFlareData*" name="flare"/>
+        <member type="MiZoneBGMData*" name="bgm" caps="true"/>
+        <member type="MiZoneOtherData*" name="other"/>
+    </object>
+</objgen>

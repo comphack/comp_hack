@@ -37,7 +37,7 @@
 namespace libcomp {
 
 template <>
-ScriptEngine& ScriptEngine::Using<objects::LoginScriptRequest>() {
+BaseScriptEngine& BaseScriptEngine::Using<objects::LoginScriptRequest>() {
   if (!BindingExists("LoginScriptRequest")) {
     Sqrat::Enumeration op(mVM);
     op.Const("OPERATION_GET",
@@ -86,7 +86,7 @@ ScriptEngine& ScriptEngine::Using<objects::LoginScriptRequest>() {
 }
 
 template <>
-ScriptEngine& ScriptEngine::Using<objects::LoginScriptReply>() {
+BaseScriptEngine& BaseScriptEngine::Using<objects::LoginScriptReply>() {
   if (!BindingExists("LoginScriptReply")) {
     Sqrat::Class<objects::LoginScriptReply> binding(mVM, "LoginScriptReply");
     binding

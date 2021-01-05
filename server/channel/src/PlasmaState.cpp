@@ -43,7 +43,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<PlasmaState>() {
+BaseScriptEngine& BaseScriptEngine::Using<PlasmaState>() {
   if (!BindingExists("PlasmaState", true)) {
     Using<objects::EntityStateObject>();
 

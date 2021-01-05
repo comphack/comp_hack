@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiTriUnionSpecialData" persistent="false">
+        <member type="u16" name="ID" pad="2"/>
+        <member type="bool" name="isTriFusion"/>
+        <member type="u8" name="triunion4"/>
+        <member type="bool" name="enabled" pad="1"/>
+        <member type="u32" name="resultID"/>
+        <member type="u8" name="pluginID" pad="3"/>
+        <member type="u8" name="variant1Allowed" pad="3"/>
+        <member type="u32" name="sourceID1"/>
+        <member type="u8" name="variant2Allowed" pad="3"/>
+        <member type="u32" name="sourceID2"/>
+        <member type="u8" name="variant3Allowed" pad="3"/>
+        <member type="u32" name="sourceID3" pad="28"/>
+        <!-- There appears to be room for 4/5 way fusion but the
+             structure is not the same as above -->
+    </object>
+</objgen>

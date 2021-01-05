@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiTimeLimitData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u16" name="duration"/>
+        <member type="u16" name="warningTime"/>
+        <member type="string" name="startMessage" encoding="default"
+            length="104"/>
+        <member type="string" name="warningMessage" encoding="default"
+            length="104"/>
+        <member type="string" name="successMessage" encoding="default"
+            length="104"/>
+        <member type="string" name="failureMessage" encoding="default"
+            length="104"/>
+        <member type="u8" name="timeLimit8"/>
+        <member type="u8" name="timeLimit9"/>
+        <member type="u8" name="timeLimit10"/>
+        <member type="u8" name="timeLimit11"/>
+    </object>
+</objgen>

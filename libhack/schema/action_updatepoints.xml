@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionUpdatePoints" baseobject="Action" persistent="false"
+        scriptenabled="true">
+        <member type="enum" name="actionType" inherited="true" default="UPDATE_POINTS"/>
+        <member type="enum" name="pointType" underlying="uint8_t">
+            <value>CP</value>
+            <value>SOUL_POINTS</value>
+            <value>DIGITALIZE_POINTS</value>
+            <value>COINS</value>
+            <value>ITIME</value>
+            <value>BP</value>
+            <value>KILL_VALUE</value>
+            <value>PVP_POINTS</value>
+            <value>UB_POINTS</value>
+            <value>COWRIE</value>
+            <value>BETHEL</value>
+            <value>ZIOTITE</value>
+            <value>REUNION_POINTS</value>
+            <value>FAMILIARITY</value>
+            <value>DURABILITY</value>
+            <value>FUSION_GAUGE</value>
+        </member>
+        <member type="s64" name="value"/>
+        <member type="s8" name="modifier"/>
+        <member type="bool" name="isSet"/>
+    </object>
+</objgen>

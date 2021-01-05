@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="WorldSharedConfig" persistent="false">
+        <member type="s32" name="TimeOffset" default="540"/>
+        <member type="string" name="GreetMessage"
+           default="Welcome to the COMP_hack Server!"/>
+        <member type="string" name="COMPShopMessage"
+           default="Welcome to the COMP Shop!"/>
+        <member type="bool" name="MoveCorrection" default="true"/>
+        <member type="bool" name="AutoCompressCurrency"/>
+        <member type="bool" name="NRAStatusNull" default="true"/>
+        <member type="bool" name="DeathPenaltyDisabled"/>
+        <member type="bool" name="DeadTokuseiDisabled"/>
+        <member type="float" name="DropLuckScalingCap" default="-1.0"/>
+        <member type="float" name="XPBonus"/>
+        <member type="float" name="ExpertiseBonus"/>
+        <member type="float" name="DropRateBonus"/>
+        <member type="float" name="LoginPointBonus"/>
+        <member type="float" name="FusionGaugeBonus" default="3.0"/>
+        <member type="float" name="BethelBonus"/>
+        <member type="float" name="DigitalizePointBonus"/>
+        <member type="float" name="LevelUpBonusChance" default="20.0"/>
+        <member type="u8" name="LevelUpBonusMax" default="1"/>
+        <member type="u16" name="EnabledDemonQuests" default="0x0777"
+            max="0x07FF"/>
+        <member type="u32" name="BazaarMarketCost" default="0"/>
+        <member type="u32" name="BazaarMarketTime" default="0"/>
+        <member type="float" name="CritDefenseReduction" default="1.0"
+            min="0.0" max="1.0"/>
+        <member type="s8" name="LevelCap" min="1" max="99" default="99"/>
+        <member type="u8" name="ReunionMax" min="9" max="99"/>
+        <member type="bool" name="BikeBoostHide" default="true"/>
+        <member type="u16" name="PvPQueueWait" default="120"/>
+        <member type="array" name="PvPGhosts" size="2">
+            <element type="u8"/>
+        </member>
+        <member type="bool" name="PentalphaPayoutAll" default="false"/>
+        <member type="array" name="PentalphaMinMaxPayout" size="2">
+            <element type="s32" default="-1"/>
+        </member>
+        <member type="u16" name="DailyGPLoss" default="3"/>
+        <member type="map" name="ChannelDistribution">
+            <key type="u32"/>
+            <value type="u8"/>
+        </member>
+        <member type="enum" name="AIAggroLimit">
+            <value>PLAYER_SHARED</value>
+            <value>INDEPENDENT</value>
+            <value>NONE</value>
+        </member>
+        <member type="bool" name="AICombatStagger" default="true"/>
+        <member type="bool" name="AIEstomaBossIgnore" default="false"/>
+        <member type="bool" name="AIEstomaChargeIgnore" default="false"/>
+        <member type="u16" name="AIEstomaDuration" default="30"/>
+        <member type="bool" name="AILazyPathing" default="true"/>
+        <member type="bool" name="IFramesEnabled" default="true"/>
+        <member type="u16" name="SpawnSpamUserLevel" default="500"/>
+        <member type="s32" name="SpawnSpamUserMax" default="30"/>
+        <member type="s32" name="SpawnSpamGlobalZoneMax" default="100"/>
+        <member type="s32" name="SpawnSpamInstanceZoneMax" default="30"/>
+        <member type="bool" name="AutobanSpawnSpammers" default="false"/>
+        <member type="f32" name="ClockSkewThreshold" default="1.5"/>
+        <member type="u32" name="ClockSkewCount" default="5"/>
+        <member type="bool" name="AutobanClockSkew" default="false"/>
+    </object>
+</objgen>

@@ -1249,7 +1249,8 @@ void Zone::RespawnSpawnGroup(Sqrat::Array spawnGroupIDArray) {
 
     spawnGroupIDs.insert(sgID);
   }
-
+  
+  std::lock_guard<std::mutex> lock(mLock);
   EnableSpawnGroups(spawnGroupIDs, false, true);
 }
 

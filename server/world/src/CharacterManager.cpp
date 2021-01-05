@@ -1237,7 +1237,7 @@ void CharacterManager::RecalculateClanLevel(int32_t clanID, bool sendUpdate) {
     uint32_t newLevel = 0;
     for (newLevel = 10; newLevel > 1; newLevel--) {
       size_t idx = (size_t)(newLevel - 1);
-      if (libcomp::CLAN_POINT_REQUIREMENT[idx] <= totalPoints) {
+      if (libhack::CLAN_POINT_REQUIREMENT[idx] <= totalPoints) {
         break;
       }
     }

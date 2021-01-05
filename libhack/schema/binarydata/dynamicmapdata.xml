@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiDynamicMapData" persistent="false" scriptenabled="true">
+        <member type="u32" name="id" caps="true"/>
+        <member type="string" length="36" name="spotDataFile" encoding="default"/>
+        <member type="string" length="36" name="enemyFile" encoding="default"/>
+        <member type="string" length="36" name="npcFile" encoding="default"/>
+        <member type="string" length="36" name="eventFile" encoding="default"/>
+        <member type="string" length="36" name="eventFile2" encoding="default"/>
+        <member type="string" length="36" name="groupFile" encoding="default"/>
+        <member type="string" length="36" name="unitFile" encoding="default"/>
+    </object>
+</objgen>

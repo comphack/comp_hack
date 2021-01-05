@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiExpertTitleData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="48" name="unknown">
+            <element type="u8"/>
+        </member>
+    </object>
+</objgen>

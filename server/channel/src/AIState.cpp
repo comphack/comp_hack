@@ -37,7 +37,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<AIState>() {
+BaseScriptEngine& BaseScriptEngine::Using<AIState>() {
   if (!BindingExists("AIState", true)) {
     Using<objects::AIStateObject>();
 
@@ -154,12 +154,12 @@ void AIState::ResetStatusChanged() {
   mStatusChanged = false;
 }
 
-std::shared_ptr<libcomp::ScriptEngine> AIState::GetScript() const {
+std::shared_ptr<libhack::ScriptEngine> AIState::GetScript() const {
   return mAIScript;
 }
 
 void AIState::SetScript(
-    const std::shared_ptr<libcomp::ScriptEngine>& aiScript) {
+    const std::shared_ptr<libhack::ScriptEngine>& aiScript) {
   mAIScript = aiScript;
 }
 
@@ -170,7 +170,7 @@ float AIState::GetAggroValue(uint8_t mode, bool fov, float defaultVal) {
                            : (mode == 1 ? aiData->GetAggroNight()
                                         : aiData->GetAggroCast());
 
-    float val = fov ? ((float)fInfo->GetFOV() / 360.f * (float)libcomp::PI)
+    float val = fov ? ((float)fInfo->GetFOV() / 360.f * (float)libhack::PI)
                     : (float)fInfo->GetDistance() * 10.f;
     return val * GetAwareness();
   }

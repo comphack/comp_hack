@@ -71,25 +71,28 @@ int VerifyServerData(int argc, char *argv[]) {
     return Usage(argv[0], argv[1]);
   }
 
-  auto log = libcomp::Log::GetSingletonPtr();
+  auto log = libhack::Log::GetSingletonPtr();
 
-  libcomp::Log::Level_t logLevel;
+  libcomp::BaseLog::Level_t logLevel;
 
   if (argv[3] == std::string("DEBUG")) {
-    logLevel = libcomp::Log::LOG_LEVEL_DEBUG;
+    logLevel = libcomp::BaseLog::LOG_LEVEL_DEBUG;
   } else if (argv[3] == std::string("INFO")) {
-    logLevel = libcomp::Log::LOG_LEVEL_INFO;
+    logLevel = libcomp::BaseLog::LOG_LEVEL_INFO;
   } else if (argv[3] == std::string("WARNING")) {
-    logLevel = libcomp::Log::LOG_LEVEL_WARNING;
+    logLevel = libcomp::BaseLog::LOG_LEVEL_WARNING;
   } else if (argv[3] == std::string("ERROR")) {
-    logLevel = libcomp::Log::LOG_LEVEL_ERROR;
+    logLevel = libcomp::BaseLog::LOG_LEVEL_ERROR;
   } else {
     return Usage(argv[0], argv[1]);
   }
 
-  log->SetLogLevel(libcomp::LogComponent_t::General, logLevel);
-  log->SetLogLevel(libcomp::LogComponent_t::DefinitionManager, logLevel);
-  log->SetLogLevel(libcomp::LogComponent_t::ServerDataManager, logLevel);
+  log->SetLogLevel(to_underlying(libcomp::BaseLogComponent_t::General),
+                   logLevel);
+  log->SetLogLevel(to_underlying(libhack::LogComponent_t::DefinitionManager),
+                   logLevel);
+  log->SetLogLevel(to_underlying(libhack::LogComponent_t::ServerDataManager),
+                   logLevel);
 
   log->AddStandardOutputHook();
 
@@ -104,8 +107,8 @@ int VerifyServerData(int argc, char *argv[]) {
   }
 
   if (!fail) {
-    libcomp::DefinitionManager definitionManager;
-    libcomp::ServerDataManager serverDataManager;
+    libhack::DefinitionManager definitionManager;
+    libhack::ServerDataManager serverDataManager;
 
     if (!definitionManager.LoadAllData(&datastore) ||
         !serverDataManager.LoadData(&datastore, &definitionManager)) {
@@ -118,7 +121,7 @@ int VerifyServerData(int argc, char *argv[]) {
 
 #ifndef EXOTIC_PLATFORM
   // Stop the logger
-  delete libcomp::Log::GetSingletonPtr();
+  delete libcomp::BaseLog::GetBaseSingletonPtr();
 #endif  // !EXOTIC_PLATFORM
 
   return fail ? EXIT_FAILURE : EXIT_SUCCESS;

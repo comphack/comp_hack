@@ -125,7 +125,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<ZoneManager>() {
+BaseScriptEngine& BaseScriptEngine::Using<ZoneManager>() {
   if (!BindingExists("ZoneManager", true)) {
     Using<Zone>();
 
@@ -5858,7 +5858,7 @@ Point ZoneManager::GetRandomSpotPoint(
 }
 
 float ZoneManager::GetRandomRotation() {
-  return (float)RNG_DEC(double, -libcomp::PI, libcomp::PI, 2);
+  return (float)RNG_DEC(double, -libhack::PI, libhack::PI, 2);
 }
 
 Point ZoneManager::GetLinearPoint(float sourceX, float sourceY, float targetX,

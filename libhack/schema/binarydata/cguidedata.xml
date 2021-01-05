@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiGuideArrowData" persistent="false">
+        <member type="u32" name="unknown1"/>
+        <member type="u32" name="unknown2"/>
+        <member type="f32" name="unknown3"/>
+        <member type="f32" name="unknown4"/>
+    </object>
+    <object name="MiCGuideData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="8" name="arrows">
+            <element type="MiGuideArrowData*"/>
+        </member>
+    </object>
+</objgen>

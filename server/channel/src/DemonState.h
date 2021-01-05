@@ -107,7 +107,7 @@ class DemonState : public ActiveEntityStateImp<objects::Demon> {
    * @return true if an update occurred, false if one did not
    */
   bool UpdateSharedState(const std::shared_ptr<objects::Character>& character,
-                         libcomp::DefinitionManager* definitionManager);
+                         libhack::DefinitionManager* definitionManager);
 
   /**
    * Update all state information that pertains to the current partner.
@@ -116,7 +116,7 @@ class DemonState : public ActiveEntityStateImp<objects::Demon> {
    *  when calculating demon data
    * @return true if an update occurred, false if one did not
    */
-  bool UpdateDemonState(libcomp::DefinitionManager* definitionManager);
+  bool UpdateDemonState(libhack::DefinitionManager* definitionManager);
 
   /**
    * Get list of skills currently being learned by affinity ID
@@ -134,7 +134,7 @@ class DemonState : public ActiveEntityStateImp<objects::Demon> {
    *  when determining skill affinity
    */
   void RefreshLearningSkills(uint8_t affinity,
-                             libcomp::DefinitionManager* definitionManager);
+                             libhack::DefinitionManager* definitionManager);
 
   /**
    * Update an InheritedSkill skill's progress points
@@ -154,21 +154,21 @@ class DemonState : public ActiveEntityStateImp<objects::Demon> {
    * @return true if the stats were retrieved, false if they were not
    */
   bool GetBaseStats(libcomp::EnumMap<CorrectTbl, int32_t>& stats,
-                    libcomp::DefinitionManager* definitionManager,
+                    libhack::DefinitionManager* definitionManager,
                     bool readOnly);
 
   virtual const libobjgen::UUID GetEntityUUID();
 
   virtual uint8_t RecalculateStats(
-      libcomp::DefinitionManager* definitionManager,
+      libhack::DefinitionManager* definitionManager,
       std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr,
       std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
 
   virtual bool CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
-                           libcomp::DefinitionManager* definitionManager);
+                           libhack::DefinitionManager* definitionManager);
 
   virtual std::set<uint32_t> GetAllSkills(
-      libcomp::DefinitionManager* definitionManager, bool includeTokusei);
+      libhack::DefinitionManager* definitionManager, bool includeTokusei);
 
   virtual uint8_t GetLNCType();
 

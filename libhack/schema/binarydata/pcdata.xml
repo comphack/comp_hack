@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <include path="binarydata/shared.xml"/>
+
+    <object name="MiUnionTbl" persistent="false">
+        <member type="u32" name="unknown1"/>
+        <member type="u32" name="unknown2"/>
+    </object>
+    <object name="MiPCBattleData" persistent="false">
+        <member type="u32" name="unknown1"/>
+        <member type="u32" name="unknown2"/>
+        <member type="u8" name="unknown3"/>
+        <member type="u8" name="unknown4"/>
+        <member type="u16" name="unknown5"/>
+        <member type="array" size="84" name="unknown6">
+            <element type="s16"/>
+        </member>
+    </object>
+    <object name="MiPCBasicData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u8" name="unknown1"/>
+        <member type="u8" name="unknown2"/>
+        <member type="s8" name="unknown3"/>
+        <member type="s8" name="unknown4"/>
+        <member type="u8" name="unknown5"/>
+        <member type="u8" name="unknown6"/>
+        <member type="u16" name="unknown7"/>
+    </object>
+    <object name="MiAppearanceData" persistent="false">
+        <member type="u8" name="appearance1"/>
+        <member type="u8" name="appearance2"/>
+        <member type="u8" name="appearance3"/>
+        <member type="u8" name="appearance4"/>
+        <member type="u8" name="appearance5"/>
+        <member type="u8" name="appearance6"/>
+        <member type="u8" name="appearance7"/>
+        <member type="u8" name="appearance8"/>
+        <member type="bool" name="appearance9"/>
+        <member type="u8" name="appearance10"/>
+        <member type="u16" name="appearance11"/>
+    </object>
+    <object name="MiPCData" persistent="false">
+        <member type="MiPCBasicData*" name="basic"/>
+        <member type="MiAppearanceData*" name="appearance"/>
+        <!-- MiEquipmentData -->
+        <member type="array" size="15" name="equipment">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="unionTbl">
+            <element type="MiUnionTbl*"/>
+        </member>
+        <member type="list" name="skillTbl">
+            <element type="MiSkillTbl*"/>
+        </member>
+        <member type="MiPCBattleData*" name="battle"/>
+    </object>
+</objgen>

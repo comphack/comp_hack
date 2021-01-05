@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCultureItemData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="points"/>
+    </object>
+</objgen>

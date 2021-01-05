@@ -32,14 +32,14 @@
 
 BinaryDataNamedSet::BinaryDataNamedSet(
     std::function<uint32_t(const std::shared_ptr<libcomp::Object>&)> mapper)
-    : libcomp::BinaryDataSet(nullptr, mapper), mObjectNamer(nullptr) {}
+    : libhack::BinaryDataSet(nullptr, mapper), mObjectNamer(nullptr) {}
 
 BinaryDataNamedSet::BinaryDataNamedSet(
     std::function<std::shared_ptr<libcomp::Object>()> allocator,
     std::function<uint32_t(const std::shared_ptr<libcomp::Object>&)> mapper,
     std::function<libcomp::String(const std::shared_ptr<libcomp::Object>&)>
         namer)
-    : libcomp::BinaryDataSet(allocator, mapper), mObjectNamer(namer) {}
+    : libhack::BinaryDataSet(allocator, mapper), mObjectNamer(namer) {}
 
 BinaryDataNamedSet::~BinaryDataNamedSet() {}
 

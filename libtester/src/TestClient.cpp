@@ -264,7 +264,7 @@ void TestClient::HandlePacket(ChannelToClientPacketCode_t cmd,
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<TestClient>() {
+BaseScriptEngine& BaseScriptEngine::Using<TestClient>() {
   if (!BindingExists("TestClient")) {
     Sqrat::Class<TestClient> binding(mVM, "TestClient");
     binding.Func("Disconnect", &TestClient::Disconnect);

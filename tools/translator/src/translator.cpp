@@ -59,10 +59,10 @@ struct Translator {
   Translator(const char* szProgram);
 
   libcomp::DataStore store;
-  libcomp::ScriptEngine engine;
+  libhack::ScriptEngine engine;
   bool didError;
   std::map<std::string,
-           std::pair<std::string, std::function<libcomp::BinaryDataSet*(void)>>>
+           std::pair<std::string, std::function<libhack::BinaryDataSet*(void)>>>
       binaryTypes;
 };
 
@@ -108,7 +108,7 @@ static bool CreateDirectory(const libcomp::String& path) {
 static bool CompileFile(const libcomp::String& bdType,
                         const libcomp::String& inPath,
                         const libcomp::String& outPath) {
-  libcomp::BinaryDataSet* pSet = nullptr;
+  libhack::BinaryDataSet* pSet = nullptr;
 
   auto match = gTranslator->binaryTypes.find(bdType.ToUtf8());
 
@@ -155,7 +155,7 @@ static bool CompileFile(const libcomp::String& bdType,
 static bool DecompileFile(const libcomp::String& bdType,
                           const libcomp::String& inPath,
                           const libcomp::String& outPath) {
-  libcomp::BinaryDataSet* pSet = nullptr;
+  libhack::BinaryDataSet* pSet = nullptr;
 
   auto match = gTranslator->binaryTypes.find(bdType.ToUtf8());
 
@@ -361,7 +361,7 @@ static bool CompileSplitFiles(const libcomp::String& bdType,
     return false;
   }
 
-  libcomp::BinaryDataSet* pSet = nullptr;
+  libhack::BinaryDataSet* pSet = nullptr;
 
   auto match = gTranslator->binaryTypes.find(bdType.ToUtf8());
 
@@ -632,10 +632,10 @@ static bool LoadAndRunScriptFile(const char* szScriptFile) {
 }
 
 int main(int argc, char* argv[]) {
-  libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
-  std::unique_ptr<libcomp::Log> log(libcomp::Log::GetSingletonPtr());
-  log->SetLogLevel(libcomp::LogComponent_t::ScriptEngine,
-                   libcomp::Log::Level_t::LOG_LEVEL_INFO);
+  libhack::Log::GetSingletonPtr()->AddStandardOutputHook();
+  std::unique_ptr<libcomp::BaseLog> log(libhack::Log::GetSingletonPtr());
+  log->SetLogLevel(to_underlying(libcomp::BaseLogComponent_t::ScriptEngine),
+                   libcomp::BaseLog::Level_t::LOG_LEVEL_INFO);
   log->SetLogPath("build.log", true);
 
   gTranslator.reset(new Translator(argv[0]));

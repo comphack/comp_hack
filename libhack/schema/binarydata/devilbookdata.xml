@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiDevilBookData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="shiftValue"/>
+        <member type="u32" name="baseID1"/>
+        <member type="u16" name="baseID2"/>
+        <member type="u8" name="groupID" pad="1"/>
+        <member type="u32" name="entryID"/>
+        <member type="array" name="unused" size="8">
+            <element type="u8"/>
+        </member>
+    </object>
+</objgen>

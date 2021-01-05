@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="UBTournament" location="world" scriptenabled="true">
+        <member type="u32" name="StartTime" key="true" unique="false"/>
+        <member type="u32" name="EndTime" key="true" unique="false"/>
+        <member type="pref" name="Previous"/>
+    </object>
+    <object name="UBResult" location="world" scriptenabled="true">
+        <member type="UBTournament*" name="Tournament" key="true" unique="false"/>
+        <member type="pref" name="Character" key="true" unique="false"/>
+        <member type="u32" name="Points"/>
+        <member type="u32" name="TopPoints"/>
+        <member type="s32" name="Matches"/>
+        <member type="u8" name="TournamentRank"/>
+        <member type="u8" name="AllTimeRank"/>
+        <member type="u8" name="TopPointRank"/>
+        <member type="bool" name="Ranked" key="true" unique="false"/>
+    </object>
+</objgen>

@@ -30,8 +30,10 @@
 // Standard C++11 Includes
 #include <map>
 
+// libhack Includes
+#include <Server.h>
+
 // libcomp Includes
-#include <BaseServer.h>
 #include <InternalConnection.h>
 #include <ManagerConnection.h>
 #include <Worker.h>
@@ -46,7 +48,7 @@ class AccountManager;
 class CharacterManager;
 class WorldSyncManager;
 
-class WorldServer : public libcomp::BaseServer {
+class WorldServer : public libhack::Server {
  public:
   /**
    * Create a new world server.

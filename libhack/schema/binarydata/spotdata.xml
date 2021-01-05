@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiSpotData" persistent="false" scriptenabled="true">
+        <member type="u32" name="id" caps="true"/>
+        <member type="bool" name="enabled"/>
+        <member type="enum" name="type" underlying="uint8_t" pad="2">
+            <value num="1">SPAWN_LOCATION</value>
+            <value num="2">ZONE_CHANGE</value>
+            <value num="3">ZONE_IN_POINT</value>
+            <value num="5">START_EVENT</value>
+            <value num="6">AMBIENT_SOUND</value>
+            <value num="7">NPC_POSITION</value>
+            <value num="8">BAZAAR_MARKET</value>
+            <value num="9">SPAWN_TRIGGER</value>
+            <value num="11">NPC_STATE_TRIGGER</value>
+            <value num="12">SECTION_BOUNDARY</value>
+            <value num="13">PLASMA</value>
+            <value num="14">INSTANCE_BASE</value>
+            <value num="15">DIASPORA_ZONE_IN</value>
+            <value num="16">ZONE_IN_EVENT</value>
+        </member>
+        <member type="float" name="centerX"/>
+        <member type="float" name="centerY"/>
+        <member type="float" name="centerZ"/>
+        <member type="float" name="rotation"/>
+        <member type="float" name="spanX"/>
+        <member type="float" name="spanY"/>
+        <member type="array" name="args" size="4">
+            <element type="s32"/>
+        </member>
+    </object>
+</objgen>

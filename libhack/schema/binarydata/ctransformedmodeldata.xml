@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCTransformedModelEntry" persistent="false">
+        <member type="s8" name="location" pad="3"/>
+        <member type="string" length="36" name="file" encoding="default"/>
+    </object>
+    <object name="MiCTransformedModelData" persistent="false">
+        <member type="u32" name="itemID"/>
+        <member type="array" size="8" name="statusEffectIDs">
+            <element type="u32"/>
+        </member>
+        <member type="array" size="26" name="entries">
+            <element type="MiCTransformedModelEntry*"/>
+        </member>
+        <member type="u32" name="walkAnimationID"/>
+        <member type="u32" name="runAnimationID"/>
+        <member type="u32" name="idleAnimationID"/>
+        <member type="u32" name="combatIdleAnimationID"/>
+    </object>
+</objgen>

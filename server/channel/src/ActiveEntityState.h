@@ -97,7 +97,7 @@ const uint8_t STATUS_WAITING = 0x40;
 /// Entity is ignoring other entities and will not be seen by searching AI
 const uint8_t STATUS_IGNORE = 0x80;
 
-namespace libcomp {
+namespace libhack {
 class DefinitionManager;
 }
 
@@ -214,7 +214,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    *  0x04) ENTITY_CALC_SKILL = skill set has changed (character only)
    */
   virtual uint8_t RecalculateStats(
-      libcomp::DefinitionManager* definitionManager,
+      libhack::DefinitionManager* definitionManager,
       std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr,
       std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
 
@@ -226,7 +226,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    * @return false if an error occurred
    */
   virtual bool CopyToEnemy(const std::shared_ptr<ActiveEntityState>& eState,
-                           libcomp::DefinitionManager* definitionManager);
+                           libhack::DefinitionManager* definitionManager);
 
   /**
    * Check if the entity has the supplied skill learned and not currently
@@ -269,7 +269,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    * @return Set of all skill IDs the entity currently has available
    */
   virtual std::set<uint32_t> GetAllSkills(
-      libcomp::DefinitionManager* definitionManager, bool includeTokusei);
+      libhack::DefinitionManager* definitionManager, bool includeTokusei);
 
   /**
    * Get the core stats associated to the active entity.
@@ -619,7 +619,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    */
   void SetStatusEffects(
       const std::list<std::shared_ptr<objects::StatusEffect>>& effects,
-      libcomp::DefinitionManager* definitionManager);
+      libhack::DefinitionManager* definitionManager);
 
   /**
    * Add new status effects to the entity and activate them. If there are
@@ -639,7 +639,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    */
   std::set<uint32_t> AddStatusEffects(
       const StatusEffectChanges& effects,
-      libcomp::DefinitionManager* definitionManager, uint32_t now = 0,
+      libhack::DefinitionManager* definitionManager, uint32_t now = 0,
       bool queueChanges = true);
 
   /**
@@ -694,7 +694,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    *  defaults to the current time if not specified
    */
   void SetStatusEffectsActive(bool activate,
-                              libcomp::DefinitionManager* definitionManager,
+                              libhack::DefinitionManager* definitionManager,
                               uint32_t now = 0);
 
   /**
@@ -840,7 +840,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    */
   void ActivateStatusEffect(
       const std::shared_ptr<objects::StatusEffect>& effect,
-      libcomp::DefinitionManager* definitionManager, uint32_t now,
+      libhack::DefinitionManager* definitionManager, uint32_t now,
       uint8_t mode);
 
   /**
@@ -874,7 +874,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    */
   void RegisterStatusEffect(
       const std::shared_ptr<objects::StatusEffect>& effect,
-      libcomp::DefinitionManager* definitionManager);
+      libhack::DefinitionManager* definitionManager);
 
   /**
    * Register the entity's next effect event time with the current zone.
@@ -939,7 +939,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    *  vary between scenarios.
    */
   void GetAdditionalCorrectTbls(
-      libcomp::DefinitionManager* definitionManager,
+      libhack::DefinitionManager* definitionManager,
       std::shared_ptr<objects::CalculatedEntityState> calcState,
       std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
       std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
@@ -953,7 +953,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    */
   void ApplySkillCorrectTbls(
       const std::set<uint32_t>& skillIDs,
-      libcomp::DefinitionManager* definitionManager,
+      libhack::DefinitionManager* definitionManager,
       std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments);
 
   /**
@@ -975,7 +975,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    *  the world (for party members etc), 0 otherwise
    */
   uint8_t RecalculateDemonStats(
-      libcomp::DefinitionManager* definitionManager,
+      libhack::DefinitionManager* definitionManager,
       libcomp::EnumMap<CorrectTbl, int32_t>& stats,
       std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
       std::shared_ptr<objects::CalculatedEntityState> calcState,
@@ -996,7 +996,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    *  the world (for party members etc), 0 otherwise
    */
   uint8_t RecalculateEnemyStats(
-      libcomp::DefinitionManager* definitionManager,
+      libhack::DefinitionManager* definitionManager,
       std::shared_ptr<objects::CalculatedEntityState> calcState,
       std::shared_ptr<objects::MiSkillData> contextSkill);
 
@@ -1008,7 +1008,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    * @return Set of all skill IDs the entity currently has available
    */
   std::set<uint32_t> GetAllEnemySkills(
-      libcomp::DefinitionManager* definitionManager, bool includeTokusei);
+      libhack::DefinitionManager* definitionManager, bool includeTokusei);
 
   /**
    * Calculate the numeric representation (also stored in constants)
@@ -1031,7 +1031,7 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    * @return Set of skill IDs granted by effective tokusei
    */
   std::set<uint32_t> GetEffectiveTokuseiSkills(
-      libcomp::DefinitionManager* definitionManager);
+      libhack::DefinitionManager* definitionManager);
 
   /**
    * Compare and set the entity's current stats and also keep track of if
@@ -1160,7 +1160,7 @@ class ActiveEntityStateImp : public ActiveEntityState {
    *  for definining entity definitions
    */
   void SetEntity(const std::shared_ptr<T>& entity,
-                 libcomp::DefinitionManager* definitionManager);
+                 libhack::DefinitionManager* definitionManager);
 
   virtual std::shared_ptr<objects::EntityStats> GetCoreStats() {
     return mEntity ? mEntity->GetCoreStats().Get() : nullptr;

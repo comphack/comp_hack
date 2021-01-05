@@ -59,7 +59,7 @@ class LoginHandlerThread {
  private:
   bool mDidInit;
 
-  libcomp::ScriptEngine mEngine;
+  libhack::ScriptEngine mEngine;
 };
 
 }  // namespace lobby

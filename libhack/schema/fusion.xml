@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="FusionMistake" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="bool" name="TwoWayEnabled" default="true"/>
+        <member type="bool" name="TwoWaySpecialEnabled" default="true"/>
+        <member type="bool" name="TrifusionEnabled" default="true"/>
+        <member type="bool" name="TrifusionSoloEnabled" default="true"/>
+        <member type="bool" name="OnSuccess"/>
+        <member type="bool" name="OnMaxSuccess"/>
+        <member type="bool" name="OnFailure"/>
+        <member type="bool" name="OnZeroFailure"/>
+        <member type="bool" name="NoSpecialTarget" default="true"/>
+        <member type="float" name="BaseRate" min="0.0" max="100.0"/>
+        <member type="array" name="MoonRates" size="16">
+            <element type="float" default="-1.0" min="-1.0" max="100.0"/>
+        </member>
+        <member type="list" name="SourceTypes">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="SourceRaceIDs">
+            <element type="u8"/>
+        </member>
+        <member type="bool" name="SourceAny"/>
+        <member type="set" name="TargetTypes">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="TargetRaceIDs">
+            <element type="u8"/>
+        </member>
+        <member type="u8" name="TargetLevelMin" min="1" max="99" default="1"/>
+        <member type="u8" name="TargetLevelMax" min="1" max="99" default="99"/>
+        <member type="set" name="ResultTypes">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="ResultRaceIDs">
+            <element type="u8"/>
+        </member>
+        <member type="u8" name="ResultLevelRange" min="0" max="99"/>
+    </object>
+</objgen>

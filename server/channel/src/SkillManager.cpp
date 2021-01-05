@@ -398,7 +398,7 @@ void SkillManager::LoadScripts() {
 
   LogSkillManagerDebugMsg("Loading custom skill logic...\n");
 
-  std::list<std::shared_ptr<libcomp::ServerScript>> scriptDefs;
+  std::list<std::shared_ptr<libhack::ServerScript>> scriptDefs;
   for (auto serverScript : serverDataManager->LoadScripts(
            server->GetDataStore(), "/skills", scriptsLoaded, false)) {
     if (serverScript->Type.ToLower() == "skilllogic") {
@@ -427,7 +427,7 @@ void SkillManager::LoadScripts() {
 
   // Prepare scripts and load settings
   for (auto def : scriptDefs) {
-    auto script = std::make_shared<libcomp::ScriptEngine>();
+    auto script = std::make_shared<libhack::ScriptEngine>();
 
     if (!script->Eval(def->Source)) {
       LogSkillManagerError([def]() {
@@ -3032,7 +3032,7 @@ bool SkillManager::ProcessSkillResult(
           // included on either side (ex: 20 would mean 20% of a full
           // radian on both sides is included and 100 would behave like
           // a source radius AoE)
-          float maxRotOffset = (float)(aoeRange * 0.001 * libcomp::PI);
+          float maxRotOffset = (float)(aoeRange * 0.001 * libhack::PI);
 
           effectiveTargets = ZoneManager::GetEntitiesInFoV(
               potentialTargets, srcPoint.x, srcPoint.y, sourceRot, maxRotOffset,
@@ -7758,7 +7758,7 @@ void SkillManager::HandleFusionGauge(
 
     if (skillHit) {
       int32_t points =
-          (int32_t)libcomp::FUSION_GAUGE_GROWTH[(size_t)actionType][(size_t)(
+          (int32_t)libhack::FUSION_GAUGE_GROWTH[(size_t)actionType][(size_t)(
               (isDemon ? 2 : 0) + (higherLevel ? 1 : 0))];
 
       float fgBonus = server->GetWorldSharedConfig()->GetFusionGaugeBonus();

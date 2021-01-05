@@ -1146,7 +1146,7 @@ bool CharacterManager::UpdateRevivalXP(
   int8_t lvl = cs->GetLevel();
 
   int64_t xpLoss =
-      (int64_t)floorl((double)libcomp::LEVEL_XP_REQUIREMENTS[(size_t)lvl] *
+      (int64_t)floorl((double)libhack::LEVEL_XP_REQUIREMENTS[(size_t)lvl] *
                           (double)lossPercent -
                       0.01);
   if (xpAdjust < 100.0) {
@@ -3493,7 +3493,7 @@ bool CharacterManager::ReunionDemon(
         keepXP = cs->GetXP();
 
         for (int8_t i = 1; i < lvl; i++) {
-          keepXP = keepXP + (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[(size_t)i];
+          keepXP = keepXP + (int64_t)libhack::LEVEL_XP_REQUIREMENTS[(size_t)i];
         }
 
         keepXP = (int64_t)floorl((double)keepXP * (double)stacks * 0.01);
@@ -3508,7 +3508,7 @@ bool CharacterManager::ReunionDemon(
 
         int8_t lvl = 1;
         while (lvl < levelCap && keepXP > 0) {
-          int64_t req = (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[(size_t)lvl];
+          int64_t req = (int64_t)libhack::LEVEL_XP_REQUIREMENTS[(size_t)lvl];
           if (req <= keepXP) {
             lvl = (int8_t)(lvl + 1);
             keepXP = (int64_t)(keepXP - req);
@@ -4204,8 +4204,8 @@ bool CharacterManager::UpdateExperience(
   int64_t xpDelta = stats->GetXP() + xp;
   int64_t xpCurrent = xpDelta;
   while (level < levelCap &&
-         xpDelta >= (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level]) {
-    xpDelta = xpDelta - (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[level++];
+         xpDelta >= (int64_t)libhack::LEVEL_XP_REQUIREMENTS[level]) {
+    xpDelta = xpDelta - (int64_t)libhack::LEVEL_XP_REQUIREMENTS[level++];
   }
 
   if (level == levelCap) {
@@ -4454,9 +4454,9 @@ void CharacterManager::LevelUp(
   int64_t xpGain = 0;
   for (int8_t i = stats->GetLevel(); i < level; i++) {
     if (xpGain == 0) {
-      xpGain += (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[i] - stats->GetXP();
+      xpGain += (int64_t)libhack::LEVEL_XP_REQUIREMENTS[i] - stats->GetXP();
     } else {
-      xpGain += (int64_t)libcomp::LEVEL_XP_REQUIREMENTS[i];
+      xpGain += (int64_t)libhack::LEVEL_XP_REQUIREMENTS[i];
     }
   }
 
@@ -6454,7 +6454,7 @@ libcomp::EnumMap<CorrectTbl, int32_t> CharacterManager::GetDemonBaseStats(
 
 libcomp::EnumMap<CorrectTbl, int32_t> CharacterManager::GetDemonBaseStats(
     const std::shared_ptr<objects::MiDevilData>& demonData,
-    libcomp::DefinitionManager* definitionManager, uint8_t growthType,
+    libhack::DefinitionManager* definitionManager, uint8_t growthType,
     int8_t level) {
   auto stats = GetDemonBaseStats(demonData);
 
@@ -6631,7 +6631,7 @@ void CharacterManager::AdjustDemonBaseStats(
 
       // Only apply if at least one point has been achieved
       if (fVal >= DEMON_FORCE_PRECISION) {
-        CorrectTbl tblID = (CorrectTbl)libcomp::DEMON_FORCE_CONVERSION[i];
+        CorrectTbl tblID = (CorrectTbl)libhack::DEMON_FORCE_CONVERSION[i];
         stats[tblID] = (int32_t)(stats[tblID] + fVal / DEMON_FORCE_PRECISION);
       }
     }
@@ -6641,7 +6641,7 @@ void CharacterManager::AdjustDemonBaseStats(
 void CharacterManager::AdjustMitamaStats(
     const std::shared_ptr<objects::Demon>& demon,
     libcomp::EnumMap<CorrectTbl, int32_t>& stats,
-    libcomp::DefinitionManager* definitionManager, uint8_t reunionMode,
+    libhack::DefinitionManager* definitionManager, uint8_t reunionMode,
     int32_t entityID, bool includeSetBonuses) {
   if (demon && demon->GetMitamaType() > 0) {
     libcomp::EnumMap<CorrectTbl, std::list<int32_t>> bonusStats;
@@ -6758,7 +6758,7 @@ void CharacterManager::AdjustMitamaStats(
 
 bool CharacterManager::GetMitamaBonuses(
     const std::shared_ptr<objects::Demon>& demon,
-    libcomp::DefinitionManager* definitionManager,
+    libhack::DefinitionManager* definitionManager,
     std::unordered_map<uint8_t, uint8_t>& bonuses,
     std::set<uint32_t>& setBonuses, bool excludeTokusei) {
   bonuses.clear();
@@ -6812,7 +6812,7 @@ bool CharacterManager::GetMitamaBonuses(
 
 std::list<int32_t> CharacterManager::GetMitamaIndirectSetBonuses(
     const std::shared_ptr<objects::Demon>& demon,
-    libcomp::DefinitionManager* definitionManager, bool exBonus,
+    libhack::DefinitionManager* definitionManager, bool exBonus,
     int8_t& magReduction) {
   int32_t setReduction = 0;
   std::list<int32_t> tokuseiIDs;
@@ -6870,7 +6870,7 @@ int8_t CharacterManager::CalculateMagReduction(
 std::set<uint32_t> CharacterManager::GetTraitSkills(
     const std::shared_ptr<objects::Demon>& demon,
     const std::shared_ptr<objects::MiDevilData>& demonData,
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   std::set<uint32_t> skillIDs;
 
   auto growth = demonData->GetGrowth();

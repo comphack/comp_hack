@@ -49,7 +49,7 @@
 
 static bool gRunning = true;
 static int gReturnCode = EXIT_SUCCESS;
-static libcomp::ScriptEngine *gEngine = nullptr;
+static libhack::ScriptEngine *gEngine = nullptr;
 
 static void ScriptExit(int returnCode) {
   gReturnCode = returnCode;
@@ -98,7 +98,7 @@ size_t Hash() {
                       : (size_t)(10000 + (int)Hour * 100 + (int)Min));
 }
 
-void RunInteractive(libcomp::ScriptEngine &engine) {
+void RunInteractive(libhack::ScriptEngine &engine) {
   libcomp::String code, script;
 
   std::cout << "sq> ";
@@ -187,10 +187,10 @@ int main(int argc, char *argv[]) {
   libcomp::Exception::RegisterSignalHandler();
 
   // Enable the log so it prints to the console.
-  libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
+  libhack::Log::GetSingletonPtr()->AddStandardOutputHook();
 
   // Create the script engine.
-  libcomp::ScriptEngine engine(true);
+  libhack::ScriptEngine engine(true);
 
   // Register the exit function.
   Sqrat::RootTable(engine.GetVM()).Func("exit", ScriptExit);
@@ -252,7 +252,7 @@ int main(int argc, char *argv[]) {
 
 #ifndef EXOTIC_PLATFORM
   // Stop the logger
-  delete libcomp::Log::GetSingletonPtr();
+  delete libhack::Log::GetSingletonPtr();
 #endif  // !EXOTIC_PLATFORM
 
   return gReturnCode;

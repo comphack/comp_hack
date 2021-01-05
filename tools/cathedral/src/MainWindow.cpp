@@ -129,12 +129,13 @@ MainWindow::~MainWindow() {
   mObjectSelectors.clear();
 
   // Stop the logger
-  delete libcomp::Log::GetSingletonPtr();
+  delete libhack::Log::GetSingletonPtr();
 }
 
 bool MainWindow::Init() {
-  auto log = libcomp::Log::GetSingletonPtr();
-  log->AddLogHook([&](libcomp::LogComponent_t comp, libcomp::Log::Level_t level,
+  auto log = libhack::Log::GetSingletonPtr();
+  log->AddLogHook([&](libcomp::GenericLogComponent_t comp,
+                      libcomp::BaseLog::Level_t level,
                       const libcomp::String& msg) {
     (void)comp;
 
@@ -143,19 +144,19 @@ bool MainWindow::Init() {
 
     bool logCrash = false;
     switch (level) {
-      case libcomp::Log::Level_t::LOG_LEVEL_DEBUG:
+      case libcomp::BaseLog::Level_t::LOG_LEVEL_DEBUG:
         ui->log->setTextColor(QColor(Qt::darkGreen));
         break;
-      case libcomp::Log::Level_t::LOG_LEVEL_INFO:
+      case libcomp::BaseLog::Level_t::LOG_LEVEL_INFO:
         ui->log->setTextColor(QColor(Qt::black));
         break;
-      case libcomp::Log::Level_t::LOG_LEVEL_WARNING:
+      case libcomp::BaseLog::Level_t::LOG_LEVEL_WARNING:
         ui->log->setTextColor(QColor(Qt::darkYellow));
         break;
-      case libcomp::Log::Level_t::LOG_LEVEL_ERROR:
+      case libcomp::BaseLog::Level_t::LOG_LEVEL_ERROR:
         ui->log->setTextColor(QColor(Qt::red));
         break;
-      case libcomp::Log::Level_t::LOG_LEVEL_CRITICAL:
+      case libcomp::BaseLog::Level_t::LOG_LEVEL_CRITICAL:
         ui->log->setTextColor(QColor(Qt::red));
         ui->log->setFontWeight(QFont::Bold);
         logCrash = true;
@@ -184,17 +185,17 @@ bool MainWindow::Init() {
   });
 
   // Set some useful logging levels
-  log->SetLogLevel(libcomp::LogComponent_t::General,
-                   libcomp::Log::Level_t::LOG_LEVEL_DEBUG);
-  log->SetLogLevel(libcomp::LogComponent_t::DefinitionManager,
-                   libcomp::Log::Level_t::LOG_LEVEL_DEBUG);
-  log->SetLogLevel(libcomp::LogComponent_t::ServerDataManager,
-                   libcomp::Log::Level_t::LOG_LEVEL_DEBUG);
+  log->SetLogLevel(to_underlying(libcomp::BaseLogComponent_t::General),
+                   libcomp::BaseLog::Level_t::LOG_LEVEL_DEBUG);
+  log->SetLogLevel(to_underlying(libhack::LogComponent_t::DefinitionManager),
+                   libcomp::BaseLog::Level_t::LOG_LEVEL_DEBUG);
+  log->SetLogLevel(to_underlying(libhack::LogComponent_t::ServerDataManager),
+                   libcomp::BaseLog::Level_t::LOG_LEVEL_DEBUG);
 
   libcomp::Exception::RegisterSignalHandler();
 
   mDatastore = std::make_shared<libcomp::DataStore>("comp_cathedral");
-  mDefinitions = std::make_shared<libcomp::DefinitionManager>();
+  mDefinitions = std::make_shared<libhack::DefinitionManager>();
 
   QSettings settings;
 
@@ -621,7 +622,7 @@ std::shared_ptr<libcomp::DataStore> MainWindow::GetDatastore() const {
   return mDatastore;
 }
 
-std::shared_ptr<libcomp::DefinitionManager> MainWindow::GetDefinitions() const {
+std::shared_ptr<libhack::DefinitionManager> MainWindow::GetDefinitions() const {
   return mDefinitions;
 }
 
@@ -639,7 +640,7 @@ std::shared_ptr<objects::MiCEventMessageData> MainWindow::GetEventMessage(
   return std::dynamic_pointer_cast<objects::MiCEventMessageData>(msg);
 }
 
-std::shared_ptr<libcomp::BinaryDataSet> MainWindow::GetBinaryDataSet(
+std::shared_ptr<libhack::BinaryDataSet> MainWindow::GetBinaryDataSet(
     const libcomp::String& objType) const {
   auto iter = mBinaryDataSets.find(objType);
   return iter != mBinaryDataSets.end() ? iter->second : nullptr;
@@ -647,7 +648,7 @@ std::shared_ptr<libcomp::BinaryDataSet> MainWindow::GetBinaryDataSet(
 
 void MainWindow::RegisterBinaryDataSet(
     const libcomp::String& objType,
-    const std::shared_ptr<libcomp::BinaryDataSet>& dataset,
+    const std::shared_ptr<libhack::BinaryDataSet>& dataset,
     bool createSelector) {
   mBinaryDataSets[objType] = dataset;
 

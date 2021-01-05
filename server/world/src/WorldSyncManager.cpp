@@ -27,9 +27,12 @@
 
 #include "WorldSyncManager.h"
 
+// libhack Includes
+#include <Constants.h>
+#include <PacketCodes.h>
+
 // libcomp Includes
 #include <Log.h>
-#include <PacketCodes.h>
 #include <Randomizer.h>
 
 // Standard C++11 Includes
@@ -62,7 +65,10 @@
 using namespace world;
 
 WorldSyncManager::WorldSyncManager(const std::weak_ptr<WorldServer>& server)
-    : mNextMatchID(0), mServer(server) {
+    : libcomp::DataSyncManager(
+          to_underlying(InternalPacketCode_t::PACKET_DATA_SYNC)),
+      mNextMatchID(0),
+      mServer(server) {
   mPvPReadyTimes[0] = {{0, 0}};
   mPvPReadyTimes[1] = {{0, 0}};
   mUBRecalcMin = {{0, 0, 0}};

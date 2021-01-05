@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCStatusData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" name="name" encoding="default" length="36"/>
+        <member type="string" name="desc" encoding="default" length="260"/>
+        <member type="u16" name="iconID"/>
+        <member type="u16" name="sortOrder"/>
+        <member type="bool" name="badStatusAnimation" pad="3"/>
+        <member type="string" name="mainEffect" length="68" encoding="default"/>
+        <member type="string" name="overheadEffect" length="68" encoding="default"/>
+    </object>
+</objgen>

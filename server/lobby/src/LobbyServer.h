@@ -27,8 +27,10 @@
 #ifndef SERVER_LOBBY_SRC_LOBBYSERVER_H
 #define SERVER_LOBBY_SRC_LOBBYSERVER_H
 
+// libhack Includes
+#include <Server.h>
+
 // libcomp Includes
-#include <BaseServer.h>
 #include <Worker.h>
 
 // lobby Includes
@@ -46,7 +48,7 @@ class AccountManager;
 class LobbySyncManager;
 class ManagerConnection;
 
-class LobbyServer : public libcomp::BaseServer {
+class LobbyServer : public libhack::Server {
  public:
   /**
    * Create a new lobby server.

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCHelpData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="previousID" pad="8"/>
+        <member type="string" name="topic" encoding="default" length="36"/>
+        <member type="string" name="icon" encoding="default" length="68"/>
+        <member type="string" name="text" encoding="default" length="1028"/>
+    </object>
+</objgen>

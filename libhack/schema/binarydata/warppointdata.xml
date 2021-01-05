@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiWarpPointData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="spotID"/>
+        <member type="u32" name="zoneID"/>
+        <member type="float" name="x"/>
+        <member type="float" name="y"/>
+        <member type="float" name="rotation"/>
+        <member type="string" name="name" encoding="default" length="64"/>
+        <member type="u32" name="restrictionType1"/>
+        <member type="u32" name="restrictionValue1"/>
+        <member type="u32" name="restrictionType2"/>
+        <member type="u32" name="restrictionValue2"/>
+        <member type="u32" name="restrictionType3"/>
+        <member type="u32" name="restrictionValue3"/>
+        <member type="u32" name="headerID"/>
+        <member type="u32" name="groupingID"/>
+    </object>
+</objgen>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCSkillBase" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" name="name" encoding="default" round="4"/>
+        <member type="string" name="desc" encoding="default" round="4"/>
+        <member type="u16" name="iconID"/>
+        <member type="bool" name="useWeaponAnimation" pad="1"/>
+    </object>
+    <object name="MiCSkillCast" persistent="false">
+        <member type="u16" name="characterStart"/>
+        <member type="u16" name="characterComplete"/>
+        <member type="u16" name="demonStart"/>
+        <member type="u16" name="demonComplete"/>
+        <member type="bool" name="cast5" pad="3"/>
+        <member type="f32" name="effectScale"/>
+        <member type="u32" name="soundID"/>
+        <member type="u32" name="cast10"/>
+        <member type="array" size="20" name="effectLocations">
+            <element type="string" encoding="default" round="4"/>
+        </member>
+    </object>
+    <object name="MiCSkillShoot" persistent="false">
+        <member type="f32" name="hitEffectDelay" pad="1"/>
+        <member type="bool" name="shoot3"/>
+        <member type="u8" name="shoot4" pad="1"/>
+        <member type="f32" name="hitEffectLinger"/>
+        <member type="string" name="bone" encoding="default" round="4"/>
+        <member type="array" size="20" name="effectLocations">
+            <element type="string" encoding="default" round="4"/>
+        </member>
+    </object>
+    <object name="MiCSkillBullet" persistent="false">
+        <member type="bool" name="hasProjectile"/>
+        <member type="bool" name="hasArc"/>
+        <member type="bool" name="hasTrail"/>
+        <member type="u8" name="projectileSize"/>
+        <member type="f32" name="projectileDelay"/>
+        <member type="f32" name="bullet6"/>
+        <member type="u32" name="bullet7"/>
+        <member type="string" name="bullet8" encoding="default" round="4"/>
+        <member type="array" size="3" name="color" pad="1">
+            <element type="u8"/>
+        </member>
+        <member type="string" name="effectFile" encoding="default" round="4"/>
+    </object>
+    <object name="MiCSkillTarget" persistent="false">
+        <member type="u32" name="soundID"/>
+        <member type="f32" name="target2"/>
+        <member type="u8" name="knockbackShake" pad="3"/>
+        <member type="array" size="20" name="effectLocations">
+            <element type="string" encoding="default" round="4"/>
+        </member>
+    </object>
+    <object name="MiCSkillHit" persistent="false">
+        <member type="f32" name="hitDelay"/>
+        <member type="u8" name="hitProcessing"/>
+        <member type="u8" name="delayProcessing" pad="2"/>
+        <member type="f32" name="aoeHitDelay"/>
+        <member type="f32" name="hit6"/>
+        <member type="f32" name="effectScale"/>
+    </object>
+    <object name="MiCSkillEquipCategory" persistent="false">
+        <member type="array" size="3" name="attackAnimationIDs">
+            <element type="u32"/>
+        </member>
+        <member type="array" size="3" name="hardAttackAnimationIDs">
+            <element type="u32"/>
+        </member>
+        <member type="u32" name="executeSoundID"/>
+        <member type="u32" name="unused"/>
+        <member type="u32" name="hitCount"/>
+        <member type="float" name="multiHitDelay"/>
+        <member type="u32" name="hitSoundID"/>
+    </object>
+    <object name="MiCSkillData" persistent="false">
+        <member type="MiCSkillBase*" name="base"/>
+        <member type="MiCSkillCast*" name="cast"/>
+        <member type="MiCSkillShoot*" name="shoot"/>
+        <member type="MiCSkillBullet*" name="bullet"/>
+        <member type="MiCSkillTarget*" name="target"/>
+        <member type="MiCSkillHit*" name="hit"/>
+        <member type="array" size="20" name="equip">
+            <element type="MiCSkillEquipCategory*"/>
+        </member>
+        <member type="array" size="400" name="effects">
+            <element type="string" encoding="default" round="4"/>
+        </member>
+    </object>
+</objgen>

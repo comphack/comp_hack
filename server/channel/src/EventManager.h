@@ -41,7 +41,7 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 
-namespace libcomp {
+namespace libhack {
 class ScriptEngine;
 }
 
@@ -591,7 +591,7 @@ class EventManager {
       // Make a copy and transform
       ptr = std::make_shared<T>(*ptr);
 
-      auto engine = std::make_shared<libcomp::ScriptEngine>();
+      auto engine = std::make_shared<libhack::ScriptEngine>();
       engine->Using<T>();
       if (PrepareTransformScript(ctx, engine)) {
         // Store the event for transformation
@@ -622,7 +622,7 @@ class EventManager {
    * @return true on success, false on failure
    */
   bool PrepareTransformScript(EventContext& ctx,
-                              std::shared_ptr<libcomp::ScriptEngine> engine);
+                              std::shared_ptr<libhack::ScriptEngine> engine);
 
   /**
    * Finish preparing and execute the tranformation script configured
@@ -632,7 +632,7 @@ class EventManager {
    * @return true on success, false on failure
    */
   bool TransformEvent(EventContext& ctx,
-                      std::shared_ptr<libcomp::ScriptEngine> engine);
+                      std::shared_ptr<libhack::ScriptEngine> engine);
 
   /**
    * Verify if the supplied event can be executed in regards to the event

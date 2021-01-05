@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCSpecialSkillEffectData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="skillID"/>
+        <member type="u32" name="itemID"/>
+        <member type="u16" name="animationID" pad="2"/>
+        <member type="u32" name="soundID"/>
+        <member type="array" size="20" name="effects">
+            <element type="string" encoding="default" round="4"/>
+        </member>
+    </object>
+</objgen>

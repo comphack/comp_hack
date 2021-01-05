@@ -33,7 +33,7 @@
 #include <Constants.h>
 #include <Exception.h>
 #include <Log.h>
-#include <PersistentObject.h>
+#include <PersistentObjectInitialize.h>
 #include <ServerCommandLineParser.h>
 #include <Shutdown.h>
 
@@ -45,9 +45,9 @@ int main(int argc, const char *argv[])
 {
   libcomp::Exception::RegisterSignalHandler();
 
-  libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
+  libhack::Log::GetSingletonPtr()->AddStandardOutputHook();
 
-  libcomp::Config::LogVersion("COMP_hack World Server");
+  libhack::Config::LogVersion("COMP_hack World Server");
 
   std::string configPath =
       libcomp::BaseServer::GetDefaultConfigPath() + "world.xml";
@@ -82,7 +82,7 @@ int main(int argc, const char *argv[])
         "Failed to load the world config file. Default values will be used.\n");
   }
 
-  if (!libcomp::PersistentObject::Initialize()) {
+  if (!libhack::PersistentObjectInitialize()) {
     LogGeneralCriticalMsg(
         "One or more persistent object definition failed to load.\n");
 
@@ -110,7 +110,7 @@ int main(int argc, const char *argv[])
 
 #ifndef EXOTIC_PLATFORM
   // Stop the logger
-  delete libcomp::Log::GetSingletonPtr();
+  delete libhack::Log::GetSingletonPtr();
 #endif  // !EXOTIC_PLATFORM
 
   return returnCode;

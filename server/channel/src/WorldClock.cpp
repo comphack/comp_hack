@@ -36,7 +36,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<WorldClockTime>() {
+BaseScriptEngine& BaseScriptEngine::Using<WorldClockTime>() {
   if (!BindingExists("WorldClockTime", true)) {
     Sqrat::Class<WorldClockTime> binding(mVM, "WorldClockTime");
     binding.Var("MoonPhase", &WorldClockTime::MoonPhase)
@@ -55,7 +55,7 @@ ScriptEngine& ScriptEngine::Using<WorldClockTime>() {
 }
 
 template <>
-ScriptEngine& ScriptEngine::Using<WorldClock>() {
+BaseScriptEngine& BaseScriptEngine::Using<WorldClock>() {
   if (!BindingExists("WorldClock", true)) {
     Using<WorldClockTime>();
 

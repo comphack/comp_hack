@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="Spawn" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="EnemyType"/>
+        <member type="u32" name="VariantType"/>
+        <member type="enum" name="Category" underlying="uint8_t">
+            <value>ENEMY</value>
+            <value>BOSS</value>
+            <value>ALLY</value>
+        </member>
+        <member type="u8" name="BossGroup" max="3"/>
+        <member type="s32" name="FactionGroup" min="0"/>
+        <member type="list" name="Drops">
+            <element type="ItemDrop*"/>
+        </member>
+        <member type="list" name="DropSetIDs">
+            <element type="u32"/>
+        </member>
+        <member type="bool" name="CanRevive"/>
+        <member type="bool" name="InheritDrops" default="true"/>
+        <member type="bool" name="ValidDemonQuestTarget" default="true"/>
+        <member type="list" name="Gifts">
+            <element type="ItemDrop*"/>
+        </member>
+        <member type="list" name="GiftSetIDs">
+            <element type="u32"/>
+        </member>
+        <member type="s8" name="Level" default="-1"/>
+        <member type="s64" name="XP" default="-1"/>
+
+        <member type="s32" name="KillValue" min="0"/>
+        <member type="enum" name="KillValueType" underlying="uint8_t">
+            <value>INHERITED</value>
+            <value>SOUL_POINTS</value>
+            <value>BETHEL</value>
+            <value>UB_POINTS</value>
+            <value>ZIOTITE</value>
+        </member>
+
+        <member type="u16" name="BaseAIType"/>
+        <member type="string" name="AIScriptID"/>
+        <member type="u16" name="LogicGroupID"/>
+
+        <member type="u8" name="TalkResist"/>
+        <!-- Flags: 1 = Can join, 2 = Can gift -->
+        <member type="u8" name="TalkResults" default="3"/>
+    </object>
+    <object name="SpawnGroup" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="map" name="Spawns">
+            <key type="u32"/>   <!-- Spawn ID -->
+            <value type="u16"/> <!-- Count -->
+        </member>
+        <member type="SpawnRestriction*" name="Restrictions"
+            nulldefault="true"/>
+
+        <member type="list" name="SpawnActions">
+            <element type="Action*"/>
+        </member>
+        <member type="list" name="DefeatActions">
+            <element type="Action*"/>
+        </member>
+    </object>
+    <object name="SpawnLocationGroup" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="list" name="GroupIDs">
+            <element type="u32"/>
+        </member>
+        <member type="float" name="RespawnTime"/>
+        <member type="bool" name="ImmediateSpawn"/>
+        <member type="set" name="SpotIDs">
+            <element type="u32"/>
+        </member>
+        <member type="enum" name="SpotSelection" default="RANDOM">
+            <value>RANDOM</value>
+            <value>SPREAD</value>
+        </member>
+        <member type="list" name="Locations">
+            <element type="SpawnLocation*"/>
+        </member>
+    </object>
+    <object name="SpawnLocation" persistent="false">
+        <member type="float" name="X"/>
+        <member type="float" name="Y"/>
+        <member type="float" name="Width"/>
+        <member type="float" name="Height"/>
+    </object>
+    <object name="PlasmaSpawn" baseobject="ServerObjectBase"
+        persistent="false">
+        <member type="u8" name="PointCount"/>
+        <member type="u8" name="Color"/>
+        <member type="u8" name="PickTime"/>
+        <member type="u8" name="PickSpeed"/>
+        <member type="u16" name="PickSize"/>
+        <member type="float" name="RespawnTime"/>
+        <member type="u32" name="DropSetID"/>
+        <member type="SpawnRestriction*" name="Restrictions"
+            nulldefault="true"/>
+
+        <member type="list" name="SuccessActions">
+            <element type="Action*"/>
+        </member>
+        <member type="list" name="FailActions">
+            <element type="Action*"/>
+        </member>
+    </object>
+    <object name="SpawnRestriction" persistent="false">
+        <member type="bool" name="Disabled"/>
+        <member type="map" name="TimeRestriction">
+            <key type="u16" min="0" max="2400"/>   <!-- From -->
+            <value type="u16" min="0" max="2400"/> <!-- To -->
+        </member>
+        <member type="map" name="SystemTimeRestriction">
+            <key type="u16" min="0" max="2400"/>   <!-- From -->
+            <value type="u16" min="0" max="2400"/> <!-- To -->
+        </member>
+        <member type="map" name="DateRestriction">
+            <key type="u16" min="0" max="1231"/>   <!-- From -->
+            <value type="u16" min="0" max="1231"/> <!-- To -->
+        </member>
+        <member type="u16" name="MoonRestriction" default="0xFFFF"/>
+        <member type="u8" name="DayRestriction" default="0x7F"/>
+    </object>
+</objgen>

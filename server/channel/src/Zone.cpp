@@ -63,7 +63,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<DiasporaBaseState>() {
+BaseScriptEngine& BaseScriptEngine::Using<DiasporaBaseState>() {
   if (!BindingExists("DiasporaBaseState", true)) {
     Using<objects::EntityStateObject>();
     Using<objects::DiasporaBase>();
@@ -80,7 +80,7 @@ ScriptEngine& ScriptEngine::Using<DiasporaBaseState>() {
 }
 
 template <>
-ScriptEngine& ScriptEngine::Using<Zone>() {
+BaseScriptEngine& BaseScriptEngine::Using<Zone>() {
   if (!BindingExists("Zone", true)) {
     Using<objects::UBMatch>();
     Using<objects::ZoneObject>();

@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiPMBaseInfo" persistent="false">
+        <member type="string" length="36" name="map"
+            encoding="default"/>
+        <member type="array" size="3" name="info2">
+            <element type="u8"/>
+        </member>
+        <member type="u8" name="info3"/>
+        <member type="f32" name="info4"/>
+        <member type="array" size="3" name="info5">
+            <element type="f32"/>
+        </member>
+        <member type="f32" name="info6"/>
+    </object>
+    <object name="MiPMCameraKeyTbl" persistent="false">
+        <member type="f32" name="camera1"/>
+        <member type="string" length="36" name="name"
+            encoding="default"/>
+        <member type="f32" name="camera3"/>
+        <member type="f32" name="camera4"/>
+    </object>
+    <object name="MiPMMsgKeyTbl" persistent="false">
+        <member type="f32" name="message1"/>
+        <member type="u8" name="message2"/>
+        <member type="u8" name="message3"/>
+        <member type="u16" name="message4"/>
+        <member type="string" length="260" name="message"
+            encoding="default"/>
+        <member type="f32" name="message6"/>
+    </object>
+    <object name="MiPMBGMKeyTbl" persistent="false">
+        <member type="f32" name="bgm1"/>
+        <member type="f32" name="bgm2"/>
+        <member type="u32" name="bgm3"/>
+        <member type="f32" name="bgm4"/>
+        <member type="f32" name="bgm5"/>
+        <member type="f32" name="bgm6"/>
+        <member type="u32" name="bgm7"/>
+        <member type="u32" name="bgm8"/>
+        <member type="u32" name="bgm9"/>
+        <member type="f32" name="bgm10"/>
+        <member type="f32" name="bgm11"/>
+        <member type="f32" name="bgm12"/>
+        <member type="f32" name="bgm13"/>
+        <member type="f32" name="bgm14"/>
+        <member type="f32" name="bgm15"/>
+        <member type="f32" name="bgm16"/>
+        <member type="f32" name="bgm17"/>
+        <member type="f32" name="bgm18"/>
+        <member type="f32" name="bgm19"/>
+        <member type="f32" name="bgm20"/>
+        <member type="f32" name="bgm21"/>
+        <member type="f32" name="bgm22"/>
+        <member type="f32" name="bgm23"/>
+        <member type="f32" name="bgm24"/>
+        <member type="f32" name="bgm25"/>
+        <member type="f32" name="bgm26"/>
+        <member type="f32" name="bgm27"/>
+        <member type="f32" name="bgm28"/>
+        <member type="f32" name="bgm29"/>
+        <member type="f32" name="bgm30"/>
+        <member type="f32" name="bgm31"/>
+        <member type="f32" name="bgm32"/>
+        <member type="f32" name="bgm33"/>
+    </object>
+    <object name="MiPMSEKeyTbl" persistent="false">
+        <member type="f32" name="soundFX1"/>
+        <member type="u32" name="soundFX2"/>
+        <member type="f32" name="soundFX3"/>
+    </object>
+    <object name="MiPMEffectKeyTbl" persistent="false">
+        <member type="f32" name="effect1"/>
+        <member type="f32" name="effect2"/>
+        <member type="string" length="36" name="effect3"
+            encoding="default"/>
+        <member type="string" length="36" name="effect4"
+            encoding="default"/>
+        <member type="f32" name="effect5"/>
+        <member type="f32" name="effect6"/>
+        <member type="u32" name="effect7"/>
+    </object>
+    <object name="MiPMFadeKeyTbl" persistent="false">
+        <member type="f32" name="fade1"/>
+        <member type="u8" name="fade2"/>
+        <member type="u8" name="fade3"/>
+        <member type="u16" name="fade4"/>
+        <member type="f32" name="fade5"/>
+    </object>
+    <object name="MiPMGouraudKeyTbl" persistent="false">
+        <member type="f32" name="gouraud1"/>
+        <member type="f32" name="gouraud2"/>
+        <member type="f32" name="gouraud3"/>
+        <member type="f32" name="gouraud4"/>
+        <member type="f32" name="gouraud5"/>
+        <member type="f32" name="gouraud6"/>
+        <member type="f32" name="gouraud7"/>
+        <member type="f32" name="gouraud8"/>
+        <member type="f32" name="gouraud9"/>
+    </object>
+    <object name="MiPMFogKeyTbl" persistent="false">
+        <member type="f32" name="fog1"/>
+        <member type="array" size="3" name="fog2">
+            <element type="u8"/>
+        </member>
+        <member type="u8" name="fog3"/>
+        <member type="f32" name="fog4"/>
+        <member type="f32" name="fog5"/>
+        <member type="f32" name="fog6"/>
+    </object>
+    <object name="MiPMScalingHelperTbl" persistent="false">
+        <member type="string" length="36" name="helper1"
+            encoding="default"/>
+        <member type="f32" name="helper2"/>
+    </object>
+    <object name="MiPMAttachCharacterTbl" persistent="false">
+        <member type="string" length="36" name="character1"
+            encoding="default"/>
+        <member type="string" length="68" name="character2"
+            encoding="default"/>
+        <member type="f32" name="character3"/>
+        <member type="s32" name="character4"/>
+    </object>
+    <object name="MiPMMotionKeyTbl" persistent="false">
+        <member type="f32" name="motion1"/>
+        <member type="string" length="36" name="motion2"
+            encoding="default"/>
+        <member type="s32" name="motion3"/>
+        <member type="u8" name="motion4"/>
+        <member type="u8" name="motion5"/>
+        <member type="u8" name="motion6"/>
+        <member type="u8" name="motion7"/>
+        <member type="f32" name="motion8"/>
+    </object>
+    <object name="MiCPolygonMovieData" persistent="false">
+        <member type="MiPMBaseInfo*" name="info"/>
+        <member type="list" name="camera">
+            <element type="MiPMCameraKeyTbl*"/>
+        </member>
+        <member type="list" name="message">
+            <element type="MiPMMsgKeyTbl*"/>
+        </member>
+        <member type="list" name="bgm">
+            <element type="MiPMBGMKeyTbl*"/>
+        </member>
+        <member type="list" name="soundFX">
+            <element type="MiPMSEKeyTbl*"/>
+        </member>
+        <member type="list" name="effect">
+            <element type="MiPMEffectKeyTbl*"/>
+        </member>
+        <member type="list" name="fade">
+            <element type="MiPMFadeKeyTbl*"/>
+        </member>
+        <member type="list" name="gouraud">
+            <element type="MiPMGouraudKeyTbl*"/>
+        </member>
+        <member type="list" name="fog">
+            <element type="MiPMFogKeyTbl*"/>
+        </member>
+        <member type="list" name="helper">
+            <element type="MiPMScalingHelperTbl*"/>
+        </member>
+        <member type="list" name="character">
+            <element type="MiPMAttachCharacterTbl*"/>
+        </member>
+        <member type="list" name="motion">
+            <element type="MiPMMotionKeyTbl*"/>
+        </member>
+    </object>
+</objgen>

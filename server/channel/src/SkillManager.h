@@ -33,7 +33,7 @@
 // objgen Includes
 #include <MiSkillBasicData.h>
 
-namespace libcomp {
+namespace libhack {
 class ScriptEngine;
 }
 
@@ -1555,7 +1555,7 @@ class SkillManager {
 
   /// Map of skill function IDs to prepared scripts to be executed during
   /// one of several points during skill processing.
-  std::unordered_map<uint16_t, std::shared_ptr<libcomp::ScriptEngine>>
+  std::unordered_map<uint16_t, std::shared_ptr<libhack::ScriptEngine>>
       mSkillLogicScripts;
 
   /// Map of skill function IDs to script specified settings signifying

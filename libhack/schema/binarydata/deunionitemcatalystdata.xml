@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiDeunionItemCatalystData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="unknown1"/>
+        <member type="f32" name="unknown2"/>
+    </object>
+</objgen>

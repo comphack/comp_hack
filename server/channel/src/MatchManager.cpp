@@ -75,7 +75,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<MatchManager>() {
+BaseScriptEngine& BaseScriptEngine::Using<MatchManager>() {
   if (!BindingExists("MatchManager", true)) {
     Using<objects::MatchEntry>();
     Using<objects::PentalphaMatch>();

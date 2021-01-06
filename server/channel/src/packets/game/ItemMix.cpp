@@ -153,7 +153,7 @@ bool Parsers::ItemMix::Parse(
       expertID ? cState->GetExpertiseRank((uint32_t)expertID, definitionManager)
                : 0;
   // Calculate how much the mixer exceeds the expertise requirements
-  int8_t expertRankDelta = expertRank - (requiredClass * 10 + requiredRank);
+  auto expertRankDelta = expertRank - (requiredClass * 10 + requiredRank);
   if (success && expertID && expertRankDelta < 0) {
     LogItemError([&]() {
       return libcomp::String(

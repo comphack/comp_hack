@@ -382,10 +382,6 @@ bool Parsers::ItemMix::Parse(
     successRate =
         successRate + (uint32_t)(expSuccessBoost * floor(expertRankDelta / 10));
 
-    LogItemDebug([&]() {
-      return libcomp::String("ItemMix success rate: %1\n").Arg(successRate);
-    });
-
     // You cannot get a great success without a great success item
     gSuccessRate =
         item2Type ? (gSuccessRate +

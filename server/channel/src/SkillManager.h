@@ -454,7 +454,8 @@ class SkillManager {
                           std::shared_ptr<SkillExecutionContext> ctx);
 
   /**
-   * Finalize skill processing and send the skill effect reports.
+   * Finalize skill processing and send the skill effect reports, also updates
+   * expertises
    * @param pSkill Current skill processing state
    * @param ctx Special execution state for the skill
    */
@@ -1010,7 +1011,7 @@ class SkillManager {
 
   /**
    * Execute post execution steps like notifying the client that the skill
-   * has executed and updating any related expertises
+   * has executed
    * @param client Pointer to the client connection that activated the skill
    * @param ctx Special execution state for the skill
    * @param activated Pointer to the activated ability instance

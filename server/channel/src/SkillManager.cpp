@@ -3916,10 +3916,10 @@ void SkillManager::ProcessSkillResultFinal(
     HandleNegotiations(source, zone, talkDone);
   }
 
+  auto client =
+      server->GetManagerConnection()->GetEntityClient(source->GetEntityID());
   if (!ctx || !ctx->Executed || !ctx->Finalized) {
     // Send right before finishing execution if we haven't already
-    auto client =
-        server->GetManagerConnection()->GetEntityClient(source->GetEntityID());
     FinalizeSkillExecution(client, ctx, activated);
     FinalizeSkill(ctx, activated);
   }
@@ -4376,6 +4376,36 @@ void SkillManager::ProcessSkillResultFinal(
   if (!skill.InPvP) {
     for (auto entity : durabilityHit) {
       HandleDurabilityDamage(entity, pSkill);
+    }
+  }
+
+  // Update character's expertise, but only if the skill was not nullified or
+  // absorbed by everyone targeted
+  if (client && source->GetEntityType() == EntityType_t::CHARACTER) {
+    bool canGainExpertise = false;
+    for (SkillTargetResult& target : skill.Targets) {
+      if ((target.Flags1 & FLAG1_BLOCK_PHYS) == 0 &&
+          (target.Flags1 & FLAG1_BLOCK_MAGIC) == 0 &&
+          (target.Flags1 & FLAG1_ABSORB) == 0 &&
+          (target.Flags2 & FLAG2_IMPOSSIBLE) == 0) {
+        canGainExpertise = true;
+        break;
+      }
+    }
+
+    if (canGainExpertise) {
+      auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
+      float multiplier = (float)(source->GetCorrectValue(
+                                     CorrectTbl::RATE_EXPERTISE, calcState) *
+                                 0.01);
+
+      float globalExpertiseBonus =
+          mServer.lock()->GetWorldSharedConfig()->GetExpertiseBonus();
+
+      multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
+
+      characterManager->UpdateExpertise(
+          client, pSkill->SkillID, activated->GetExpertiseBoost(), multiplier);
     }
   }
 
@@ -9274,21 +9304,6 @@ void SkillManager::FinalizeSkillExecution(
   // Do not ACTUALLY execute when using Rest
   if (pSkill->FunctionID != SVR_CONST.SKILL_REST) {
     SendExecuteSkill(pSkill);
-  }
-
-  if (client && source->GetEntityType() == EntityType_t::CHARACTER) {
-    auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
-    float multiplier =
-        (float)(source->GetCorrectValue(CorrectTbl::RATE_EXPERTISE, calcState) *
-                0.01);
-
-    float globalExpertiseBonus =
-        mServer.lock()->GetWorldSharedConfig()->GetExpertiseBonus();
-
-    multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
-
-    characterManager->UpdateExpertise(
-        client, pSkill->SkillID, activated->GetExpertiseBoost(), multiplier);
   }
 }
 

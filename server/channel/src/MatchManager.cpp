@@ -4104,7 +4104,7 @@ bool MatchManager::EndUltimateBattlePhase(const std::shared_ptr<Zone>& zone,
     }
 
     // Always increase coins, no tournament needed either
-    int32_t newCoins = (int32_t)(points * coinMultiplier);
+    int32_t newCoins = (int32_t)((double)points * (double)coinMultiplier);
     if (newCoins > coins && coins < (int32_t)ubMatch->GetCoinLimit()) {
       int32_t delta = newCoins - coins;
       if ((delta + coins) > (int32_t)ubMatch->GetCoinLimit()) {

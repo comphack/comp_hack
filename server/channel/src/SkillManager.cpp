@@ -4383,11 +4383,14 @@ void SkillManager::ProcessSkillResultFinal(
   // absorbed by everyone targeted
   if (client && source->GetEntityType() == EntityType_t::CHARACTER) {
     bool canGainExpertise = false;
+    // Rushes add the self as a target to facilitate movement, so an extra check
+    // needs to be done to exclude the rush self-target
     for (SkillTargetResult& target : skill.Targets) {
-      if ((target.Flags1 & FLAG1_BLOCK_PHYS) == 0 &&
-          (target.Flags1 & FLAG1_BLOCK_MAGIC) == 0 &&
-          (target.Flags1 & FLAG1_ABSORB) == 0 &&
-          (target.Flags2 & FLAG2_IMPOSSIBLE) == 0) {
+      if (((target.Flags1 & FLAG1_BLOCK_PHYS) == 0 &&
+           (target.Flags1 & FLAG1_BLOCK_MAGIC) == 0 &&
+           (target.Flags1 & FLAG1_ABSORB) == 0 &&
+           (target.Flags2 & FLAG2_IMPOSSIBLE) == 0) &&
+          !(doRush && target.EntityState == source)) {
         canGainExpertise = true;
         break;
       }

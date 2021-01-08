@@ -37,12 +37,16 @@
 #include <ServerConstants.h>
 
 // object Includes
+#include <ActivatedAbility.h>
 #include <EnchantSpecialData.h>
 #include <Item.h>
 #include <ItemBox.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
+#include <MiSkillData.h>
+#include <MiSkillItemStatusCommonData.h>
 #include <PlayerExchangeSession.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -364,6 +368,24 @@ bool Parsers::Enchant::Parse(
     }
 
     eventManager->UpdateDemonQuestCount(client, dqType, (uint32_t)effectID, 1);
+  }
+
+  // Update expertise
+  auto activated = cState->GetActivatedAbility();
+  uint32_t activatedSkillID =
+      activated ? activated->GetSkillData()->GetCommon()->GetID() : 0;
+  if (activatedSkillID) {
+    cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01;
+    float multiplier =
+        (float)(cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01);
+
+    float globalExpertiseBonus =
+        server->GetWorldSharedConfig()->GetExpertiseBonus();
+
+    multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
+
+    characterManager->UpdateExpertise(
+        client, activatedSkillID, activated->GetExpertiseBoost(), multiplier);
   }
 
   return true;

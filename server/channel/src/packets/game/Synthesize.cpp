@@ -314,7 +314,6 @@ bool Parsers::Synthesize::Parse(
 
   // Update expertise
   if (activatedSkillID && activatedSkillID == synthData->GetBaseSkillID()) {
-    cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01;
     float multiplier =
         (float)(cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01);
 

@@ -11344,7 +11344,20 @@ bool SkillManager::SummonDemon(
 
   ProcessSkillResult(activated, ctx);
 
-  mServer.lock()->GetCharacterManager()->SummonDemon(client, demonID);
+  auto characterManager = mServer.lock()->GetCharacterManager();
+  characterManager->SummonDemon(client, demonID);
+
+  // Update the summoner's Summon expertise
+  float multiplier =
+      (float)(cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01);
+  float globalExpertiseBonus =
+      mServer.lock()->GetWorldSharedConfig()->GetExpertiseBonus();
+
+  multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
+
+  characterManager->UpdateExpertise(
+      client, activated->GetSkillData()->GetCommon()->GetID(),
+      activated->GetExpertiseBoost(), multiplier);
 
   LogSkillManagerDebug([cState, dState]() {
     return libcomp::String("%1 summons %2.\n")

@@ -421,7 +421,6 @@ bool Parsers::DemonCrystallize::Parse(
   uint32_t activatedSkillID =
       activated ? activated->GetSkillData()->GetCommon()->GetID() : 0;
   if (activatedSkillID) {
-    cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01;
     float multiplier =
         (float)(cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01);
 

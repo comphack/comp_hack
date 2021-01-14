@@ -375,16 +375,9 @@ bool Parsers::Enchant::Parse(
   uint32_t activatedSkillID =
       activated ? activated->GetSkillData()->GetCommon()->GetID() : 0;
   if (activatedSkillID) {
-    float multiplier =
-        (float)(cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01);
-
-    float globalExpertiseBonus =
-        server->GetWorldSharedConfig()->GetExpertiseBonus();
-
-    multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
-
-    characterManager->UpdateExpertise(
-        client, activatedSkillID, activated->GetExpertiseBoost(), multiplier);
+    characterManager->UpdateExpertise(client, activatedSkillID,
+                                      activated->GetExpertiseBoost(),
+                                      cState->GetCalculatedState());
   }
 
   return true;

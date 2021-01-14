@@ -314,16 +314,9 @@ bool Parsers::Synthesize::Parse(
 
   // Update expertise
   if (activatedSkillID && activatedSkillID == synthData->GetBaseSkillID()) {
-    float multiplier =
-        (float)(cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01);
-
-    float globalExpertiseBonus =
-        server->GetWorldSharedConfig()->GetExpertiseBonus();
-
-    multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
-
-    characterManager->UpdateExpertise(
-        client, activatedSkillID, activated->GetExpertiseBoost(), multiplier);
+    characterManager->UpdateExpertise(client, activatedSkillID,
+                                      activated->GetExpertiseBoost(),
+                                      cState->GetCalculatedState());
   }
 
   return true;

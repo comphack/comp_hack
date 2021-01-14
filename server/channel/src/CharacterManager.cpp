@@ -4465,13 +4465,22 @@ void CharacterManager::LevelUp(
 
 void CharacterManager::UpdateExpertise(
     const std::shared_ptr<channel::ChannelClientConnection>& client,
-    uint32_t skillID, uint16_t rateBoost, float multiplier) {
+    uint32_t skillID, uint16_t rateBoost,
+    std::shared_ptr<objects::CalculatedEntityState> calcState) {
   auto server = mServer.lock();
   auto definitionManager = server->GetDefinitionManager();
 
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
+
+  float multiplier =
+      (float)(cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE, calcState) *
+              0.01);
+  float globalExpertiseBonus =
+      mServer.lock()->GetWorldSharedConfig()->GetExpertiseBonus();
+
+  multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
 
   auto skill = definitionManager->GetSkillData(skillID);
   if (nullptr == skill) {

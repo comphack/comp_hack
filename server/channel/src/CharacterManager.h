@@ -927,14 +927,13 @@ class CharacterManager {
    *  expertise updated if it is enabled
    * @param rateBoost Optional flat value to add to the expertise
    *  rates for the skill (before calculating final amount)
-   * @param multiplier Expertise point multiplier, defaults to -1
-   *  to differentiate from explicitly being set to 1. If this is
-   *  not set, the character's expertise acquisition rate will be
-   *  used.
+   * @param calcState Override CalculatedEntityState to use instead of
+   *  the entity's default
    */
   void UpdateExpertise(
       const std::shared_ptr<channel::ChannelClientConnection>& client,
-      uint32_t skillID, uint16_t rateBoost = 0, float multiplier = -1.0f);
+      uint32_t skillID, uint16_t rateBoost = 0,
+      std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
   /**
    * Calculate how many expertise points would be gained for a specific

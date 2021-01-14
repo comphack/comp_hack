@@ -4397,18 +4397,9 @@ void SkillManager::ProcessSkillResultFinal(
     }
 
     if (canGainExpertise) {
-      auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
-      float multiplier = (float)(source->GetCorrectValue(
-                                     CorrectTbl::RATE_EXPERTISE, calcState) *
-                                 0.01);
-
-      float globalExpertiseBonus =
-          mServer.lock()->GetWorldSharedConfig()->GetExpertiseBonus();
-
-      multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
-
       characterManager->UpdateExpertise(
-          client, pSkill->SkillID, activated->GetExpertiseBoost(), multiplier);
+          client, pSkill->SkillID, activated->GetExpertiseBoost(),
+          GetCalculatedState(source, pSkill, false, nullptr));
     }
   }
 
@@ -11348,16 +11339,9 @@ bool SkillManager::SummonDemon(
   characterManager->SummonDemon(client, demonID);
 
   // Update the summoner's Summon expertise
-  float multiplier =
-      (float)(cState->GetCorrectValue(CorrectTbl::RATE_EXPERTISE) * 0.01);
-  float globalExpertiseBonus =
-      mServer.lock()->GetWorldSharedConfig()->GetExpertiseBonus();
-
-  multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
-
   characterManager->UpdateExpertise(
       client, activated->GetSkillData()->GetCommon()->GetID(),
-      activated->GetExpertiseBoost(), multiplier);
+      activated->GetExpertiseBoost(), cState->GetCalculatedState());
 
   LogSkillManagerDebug([cState, dState]() {
     return libcomp::String("%1 summons %2.\n")

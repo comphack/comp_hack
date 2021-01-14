@@ -117,7 +117,7 @@
     <constant name="STATUS_DEMON_QUEST_ACTIVE">1030</constant>
     <constant name="STATUS_DIGITALIZE">905,907</constant>
     <constant name="STATUS_DIGITALIZE_COOLDOWN">906</constant>
-	<constant name="STATUS_MITAMA_ALLOCATION_RESET_COOLDOWN">865</constant>
+    <constant name="STATUS_MITAMA_ALLOCATION_RESET_COOLDOWN">865</constant>
     <constant name="STATUS_MOUNT">801</constant>
     <constant name="STATUS_MOUNT_SUPER">1183</constant>
     <constant name="STATUS_REUNION_XP_SAVE">908</constant>

@@ -265,8 +265,8 @@ bool ServerConstants::Initialize(const String& filePath) {
                          sConstants.STATUS_DEMON_QUEST_ACTIVE);
   success &= LoadInteger(constants["STATUS_DIGITALIZE_COOLDOWN"],
                          sConstants.STATUS_DIGITALIZE_COOLDOWN);
-  success &= LoadInteger(constants["STATUS_MITAMA_ALLOCATION_COOLDOWN"],
-                         sConstants.STATUS_MITAMA_ALLOCATION_COOLDOWN);
+  success &= LoadInteger(constants["STATUS_MITAMA_ALLOCATION_RESET_COOLDOWN"],
+                         sConstants.STATUS_MITAMA_ALLOCATION_RESET_COOLDOWN);
   success &= LoadInteger(constants["STATUS_MOUNT"], sConstants.STATUS_MOUNT);
   success &= LoadInteger(constants["STATUS_MOUNT_SUPER"],
                          sConstants.STATUS_MOUNT_SUPER);

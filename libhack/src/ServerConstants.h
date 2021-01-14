@@ -409,7 +409,7 @@ class ServerConstants {
     uint32_t STATUS_DIGITALIZE_COOLDOWN;
 
     /// Status effect ID of Mitama allocation cooldown effect
-    uint32_t STATUS_MITAMA_ALLOCATION_COOLDOWN;
+    uint32_t STATUS_MITAMA_ALLOCATION_RESET_COOLDOWN;
 
     /// Status effect ID of the demon riding mounted state
     uint32_t STATUS_MOUNT;

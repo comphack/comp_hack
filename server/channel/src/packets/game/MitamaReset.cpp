@@ -113,8 +113,9 @@ void HandleMitamaReset(const std::shared_ptr<ChannelServer> server,
   // Set the cooldown status on the client if successful
   if (success) {
     StatusEffectChanges effects;
-    effects[SVR_CONST.STATUS_MITAMA_ALLOCATION_COOLDOWN] = StatusEffectChange(
-        SVR_CONST.STATUS_MITAMA_ALLOCATION_COOLDOWN, 1, true);
+    effects[SVR_CONST.STATUS_MITAMA_ALLOCATION_RESET_COOLDOWN] =
+        StatusEffectChange(SVR_CONST.STATUS_MITAMA_ALLOCATION_RESET_COOLDOWN, 1,
+                           true);
     cState->AddStatusEffects(effects, definitionManager);
   }
 }

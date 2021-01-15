@@ -227,6 +227,7 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
   int64_t coinAdjust = 0;
   std::unordered_map<uint32_t, int32_t> itemAdjustments;
 
+  int32_t cowrieAdjust = 0;
   bool includesBethel = false;
   std::array<int32_t, 5> bethelAdjustments = {{0, 0, 0, 0, 0}};
 
@@ -283,12 +284,20 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
             failed = true;
           }
           break;
-        case objects::MiNPCBarterItemData::Type_t::BETHEL:
+        case objects::MiNPCBarterItemData::Type_t::BETHEL: {
           includesBethel = true;
-          if (itemData->GetSubtype() < 1 || itemData->GetSubtype() > 5) {
-            failed = true;
-          } else {
-            size_t bethelType = (size_t)(itemData->GetSubtype() - 1);
+          size_t bethelType = (size_t)(itemData->GetSubtype());
+          if (bethelType == 0) {
+            // It's cowries
+            cowrieAdjust = (int32_t)(cowrieAdjust - itemData->GetAmount());
+
+            if (character->GetProgress()->GetCowrie() < -cowrieAdjust) {
+              failed = true;
+            }
+          } else if (bethelType > 0 && bethelType < 6) {
+            // It's a colored bethel; subtract the type by 1 and handle it as
+            // such in its adjustment array
+            bethelType -= 1;
             bethelAdjustments[bethelType] = (int32_t)(
                 bethelAdjustments[bethelType] - itemData->GetAmount());
 
@@ -296,8 +305,10 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
                 -bethelAdjustments[bethelType]) {
               failed = true;
             }
+          } else {
+            failed = true;
           }
-          break;
+        } break;
         case objects::MiNPCBarterItemData::Type_t::COIN: {
           int64_t total = (int64_t)((int64_t)itemData->GetSubtype() * 1000000 +
                                     (int64_t)itemData->GetAmount());
@@ -394,16 +405,26 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
           // Calculate the cooldown(s) below (negate for system types)
           cooldowns[-itemData->GetSubtype()] = 0;
           break;
-        case objects::MiNPCBarterItemData::Type_t::BETHEL:
+        case objects::MiNPCBarterItemData::Type_t::BETHEL: {
           includesBethel = true;
-          if (itemData->GetSubtype() < 1 || itemData->GetSubtype() > 5) {
-            failed = true;
-          } else {
-            size_t bethelType = (size_t)(itemData->GetSubtype() - 1);
+          size_t bethelType = (size_t)(itemData->GetSubtype());
+          if (bethelType == 0) {
+            // It's cowries
+            cowrieAdjust = (int32_t)(cowrieAdjust + itemData->GetAmount());
+
+            if (character->GetProgress()->GetCowrie() < -cowrieAdjust) {
+              failed = true;
+            }
+          } else if (bethelType > 0 && bethelType < 6) {
+            // It's a colored bethel; subtract the type by 1 and handle it as
+            // such in its adjustment array
+            bethelType -= 1;
             bethelAdjustments[bethelType] = (int32_t)(
                 bethelAdjustments[bethelType] + itemData->GetAmount());
+          } else {
+            failed = true;
           }
-          break;
+        } break;
         case objects::MiNPCBarterItemData::Type_t::SKILL_CHARACTER:
           characterSkills.push_back(itemData->GetSubtype());
           break;
@@ -574,8 +595,8 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
 
     // Attempt to pay/convert bethel first
     if (includesBethel) {
-      failed |=
-          !characterManager->UpdateCowrieBethel(client, 0, bethelAdjustments);
+      failed |= !characterManager->UpdateCowrieBethel(client, cowrieAdjust,
+                                                      bethelAdjustments);
     }
 
     // Update items first as they're the only thing that can actually

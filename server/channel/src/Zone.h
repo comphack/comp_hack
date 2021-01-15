@@ -593,7 +593,7 @@ class Zone : public objects::ZoneObject {
   bool UpdateTimedSpawns(const WorldClock& clock, bool initializing = false);
 
   /**
-   * Enable or disable the supplied spawn group and also disable (or enable)
+   * Enable or disable the supplied spawn groups and also disable (or enable)
    * any affected spawn location groups
    * @param spawnGroupIDArray Array of strings from Squirrel scripting
    * containing the SpawnGroup IDs to adjust
@@ -605,6 +605,13 @@ class Zone : public objects::ZoneObject {
    */
   bool EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
                                const WorldClock& clock);
+
+  /**
+   * Reactivate and set the respawn timers for the supplied spawn groups
+   * @param spawnGroupIDArray Array of strings from Squirrel scripting
+   * containing the SpawnGroup IDs to adjust
+   */
+  void RespawnSpawnGroup(Sqrat::Array spawnGroupIDArray);
 
   /**
    * Get the set of spawn location groups that need to be respawned.

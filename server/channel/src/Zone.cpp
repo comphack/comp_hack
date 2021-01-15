@@ -111,6 +111,7 @@ BaseScriptEngine& BaseScriptEngine::Using<Zone>() {
         .Func<std::shared_ptr<PlasmaState> (Zone::*)(uint32_t)>(
             "GetPlasma", &Zone::GetPlasma)
         .Func("EnableDisableSpawnGroup", &Zone::EnableDisableSpawnGroup)
+        .Func("RespawnSpawnGroup", &Zone::RespawnSpawnGroup)
         .Func("SpawnedAtSpot", &Zone::SpawnedAtSpot);
 
     Bind<Zone>("Zone", binding);
@@ -1210,8 +1211,15 @@ bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
       if (restriction && TimeRestrictionActive(clock, restriction)) {
         spawnGroupIDs.insert(sgID);
       } else {
-        // Allow these spawngroups to be respawned based on time later
+        // Allow these spawngroups to be respawned later
+        mDisabledSpawnGroups.erase(sgID);
         mDeactivatedSpawnGroups.erase(sgID);
+
+        LogZoneManagerDebug([&]() {
+          return libcomp::String("Activating spawn group %1 in zone %2\n")
+              .Arg(sgID)
+              .Arg(GetDefinitionID());
+        });
       }
     } else {
       spawnGroupIDs.insert(sgID);
@@ -1225,6 +1233,25 @@ bool Zone::EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
   } else {
     return DisableSpawnGroups(spawnGroupIDs, false, true);
   }
+}
+
+void Zone::RespawnSpawnGroup(Sqrat::Array spawnGroupIDArray) {
+  std::set<uint32_t> spawnGroupIDs;
+
+  for (auto i = 0; i < (int)spawnGroupIDArray.GetSize(); ++i) {
+    bool ok = false;
+    auto sgIDString = spawnGroupIDArray.GetValue<libcomp::String>(i);
+    uint32_t sgID = sgIDString ? sgIDString->ToInteger<uint32_t>(&ok) : 0;
+
+    if (!ok) {
+      continue;
+    }
+
+    spawnGroupIDs.insert(sgID);
+  }
+
+  std::lock_guard<std::mutex> lock(mLock);
+  EnableSpawnGroups(spawnGroupIDs, false, true);
 }
 
 std::set<uint32_t> Zone::GetRespawnLocations(uint64_t now) {

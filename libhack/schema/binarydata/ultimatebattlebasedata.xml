@@ -4,23 +4,23 @@
         <member type="u32" name="ID"/>
         <member type="u32" name="unknown1"/>
         <member type="u32" name="unknown2"/>
-        <member type="u32" name="unknown3"/>
-        <member type="u32" name="unknown4"/>
-        <member type="u32" name="unknown5"/>
-        <member type="u32" name="unknown6"/>
-        <member type="u32" name="unknown7"/>
-        <member type="u32" name="unknown8"/>
+        <member type="bool" name="enabled" pad="3"/>
+        <member type="u32" name="zoneID"/>
+        <member type="u32" name="zoneSpotID"/>
+        <member type="u32" name="zoneSpot2"/>
+        <member type="u32" name="lobbyID"/>
+        <member type="u32" name="playerCount"/>
         <member type="u32" name="unknown9"/>
         <member type="u32" name="unknown10"/>
         <member type="u32" name="unknown11"/>
         <member type="u32" name="unknown12"/>
         <member type="u32" name="unknown13"/>
-        <member type="u32" name="unknown14"/>
+        <member type="u32" name="restTime"/>
         <member type="f32" name="unknown15"/>
         <member type="f32" name="unknown16"/>
-        <member type="f32" name="unknown17"/>
+        <member type="f32" name="coinMultiplier"/>
         <member type="f32" name="unknown18"/>
-        <member type="array" size="24" name="unknown19">
+        <member type="array" size="24" name="schedule">
             <element type="u32"/>
         </member>
     </object>

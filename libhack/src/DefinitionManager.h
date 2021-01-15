@@ -96,6 +96,7 @@ class MiTankData;
 class MiTimeLimitData;
 class MiTitleData;
 class MiTriUnionSpecialData;
+class MiUltimateBattleBaseData;
 class MiUraFieldTowerData;
 class MiWarpPointData;
 class MiZoneData;
@@ -724,6 +725,15 @@ class DefinitionManager {
   GetTriUnionSpecialData(uint32_t sourceDemonTypeID);
 
   /**
+   * Get the base data of an Ultimate Battle match type
+   * @param UBTypeID ID of an Ultimate Battle match type
+   * @return Pointer to the matching Ultimate Battle match type definition, null
+   * if it does not exist
+   */
+  const std::shared_ptr<objects::MiUltimateBattleBaseData>
+  GetUltimateBattleBaseData(uint32_t UBTypeID);
+
+  /**
    * Get the (Diaspora) ura field tower corresponding to an ID
    * @param id Ura field tower ID to retrieve
    * @return Pointer to the matching ura field tower information, null
@@ -1231,6 +1241,11 @@ class DefinitionManager {
   /// Map of source demon IDs to special fusions they belong to
   std::unordered_map<uint32_t, std::list<uint32_t>>
       mTriUnionSpecialDataBySourceID;
+
+  /// Map of Ultimate Battle match type definitions by ID
+  std::unordered_map<uint32_t,
+                     std::shared_ptr<objects::MiUltimateBattleBaseData>>
+      mUltimateBattleBaseData;
 
   /// Map of (Diaspora) ura field tower definitions by dungeon ID, then ID
   std::unordered_map<

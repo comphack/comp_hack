@@ -29,13 +29,19 @@
 // libcomp Includes
 #include <ManagerPacket.h>
 #include <Packet.h>
+
+// libhack Includes
 #include <PacketCodes.h>
+#include <ServerConstants.h>
 
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "EventManager.h"
 #include "TokuseiManager.h"
+
+// object Includes
+#include <StatusEffect.h>
 
 using namespace channel;
 
@@ -103,6 +109,15 @@ void HandleMitamaReset(const std::shared_ptr<ChannelServer> server,
   }
 
   client->SendPacket(reply);
+
+  // Set the cooldown status on the client if successful
+  if (success) {
+    StatusEffectChanges effects;
+    effects[SVR_CONST.STATUS_MITAMA_ALLOCATION_RESET_COOLDOWN] =
+        StatusEffectChange(SVR_CONST.STATUS_MITAMA_ALLOCATION_RESET_COOLDOWN, 1,
+                           true);
+    cState->AddStatusEffects(effects, definitionManager);
+  }
 }
 
 bool Parsers::MitamaReset::Parse(

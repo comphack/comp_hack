@@ -411,10 +411,6 @@ void HandleBarter(const std::shared_ptr<ChannelServer> server,
           if (bethelType == 0) {
             // It's cowries
             cowrieAdjust = (int32_t)(cowrieAdjust + itemData->GetAmount());
-
-            if (character->GetProgress()->GetCowrie() < -cowrieAdjust) {
-              failed = true;
-            }
           } else if (bethelType > 0 && bethelType < 6) {
             // It's a colored bethel; subtract the type by 1 and handle it as
             // such in its adjustment array

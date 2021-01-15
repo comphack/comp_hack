@@ -55,13 +55,20 @@ ClientPatches::ClientPatches(ClientPatches* pBase)
 bool ClientPatches::Load(const QString& path) {
   Clear();
 
+  bool noFile = false;
+
   QFile file(path);
   if (!file.open(QIODevice::ReadOnly)) {
-    return false;
+    noFile = true;
   }
 
   if (!mDoc.setContent(&file)) {
-    return false;
+    noFile = true;
+  }
+
+  if (noFile) {
+    mDoc.setContent(
+        QString("<?xml version='1.0' encoding='UTF-8'?>\n<config/>\n"));
   }
 
   QDomElement root = mDoc.documentElement();

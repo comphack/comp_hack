@@ -152,7 +152,9 @@ bool Parsers::ItemMix::Parse(
   uint8_t expertRank =
       expertID ? cState->GetExpertiseRank((uint32_t)expertID, definitionManager)
                : 0;
-  if (success && expertID && (requiredClass * 10 + requiredRank) > expertRank) {
+  // Calculate how much the mixer exceeds the expertise requirements
+  auto expertRankDelta = expertRank - (requiredClass * 10 + requiredRank);
+  if (success && expertID && expertRankDelta < 0) {
     LogItemError([&]() {
       return libcomp::String(
                  "ItemMix attempted without required expertise rank: %1\n")
@@ -375,12 +377,15 @@ bool Parsers::ItemMix::Parse(
       item2Max = (uint16_t)floor((float)item2Max * item2MaxScale);
     }
 
-    // Apply expertise boosts
-    successRate = successRate + (uint32_t)(expSuccessBoost * expertRank);
+    // Apply expertise boosts, which are based on how many expertise
+    // classes above the recipe requirements the player has
+    successRate =
+        successRate + (uint32_t)(expSuccessBoost * floor(expertRankDelta / 10));
 
     // You cannot get a great success without a great success item
     gSuccessRate =
-        item2Type ? (gSuccessRate + (uint32_t)(expGSuccessBoost * expertRank))
+        item2Type ? (gSuccessRate +
+                     (uint32_t)(expGSuccessBoost * floor(expertRankDelta / 10)))
                   : 0;
 
     int32_t outcome = 0;  // Failure
@@ -449,10 +454,14 @@ bool Parsers::ItemMix::Parse(
         insertItems.push_back(newItem);
       }
     } else {
-      // Adjust stack size consumed for failure rate
+      // Adjust stack size consumed for failure rate; must lose at least one
+      // item
       for (auto pair : originalStacks) {
         uint16_t lossCount = (uint16_t)floor(
             (float)(pair.second - updateItems[pair.first]) * lossRate);
+        if (lossCount < 1) {
+          lossCount = 1;
+        }
         updateItems[pair.first] = (uint16_t)(pair.second - lossCount);
       }
     }

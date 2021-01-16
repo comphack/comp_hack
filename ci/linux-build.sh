@@ -71,7 +71,8 @@ cmake -DCMAKE_INSTALL_PREFIX="${ROOT_DIR}/build/install" \
 echo "Running build"
 cmake --build . --target git-version
 cmake --build .
-cmake --build . --target doc
+cmake --build . --target install
+# cmake --build . --target doc
 # cmake --build . --target test
 # cmake --build . --target coveralls
 # cmake --build . --target package
@@ -82,5 +83,10 @@ cmake --build . --target doc
 # find "${ROOT_DIR}/pages" -type d
 
 if [ "${COMPILER}" == "gcc" ]; then
-    bzip2 -k bin/comp_translator
+    mkdir comp_translator
+    cp bin/comp_translator comp_translator/
+    cp -R install/schema comp_translator/
+    cd comp_translator/
+    tar cjf ../comp_translator.tar.bz2 .
+    cd ../
 fi

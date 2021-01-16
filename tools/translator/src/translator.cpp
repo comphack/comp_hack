@@ -195,6 +195,44 @@ static bool DecompileFile(const libcomp::String& bdType,
   return true;
 }
 
+static bool CheckWhitespace(const libcomp::String& path) {
+  std::vector<char> data = libcomp::Crypto::LoadFile(path.ToUtf8());
+
+  auto it = data.begin();
+
+  int line = 0;
+
+  while (it != data.end()) {
+    line++;
+
+    auto next = std::find(it, data.end(), '\n');
+
+    const char* szStart = &*it;
+    const char* szEnd = &*next;
+    size_t len = (size_t)(szEnd - szStart);
+
+    if (len) {
+      auto before = libcomp::String(szStart, len).Replace("\r", "");
+      auto after = before.RightTrimmed();
+
+      if (before != after) {
+        LogGeneralErrorMsg(
+            libcomp::String("File has trailing whitespace on line %2: %1\n")
+                .Arg(path)
+                .Arg(line));
+        LogGeneralErrorMsg(libcomp::String("Original: '%1'\n").Arg(before));
+        LogGeneralErrorMsg(libcomp::String("Trimmed:  '%1'\n").Arg(after));
+
+        return false;
+      }
+    }
+
+    it = ++next;
+  }
+
+  return true;
+}
+
 static bool EncryptFile(const libcomp::String& inPath,
                         const libcomp::String& outPath) {
   std::vector<char> data = libcomp::Crypto::LoadFile(inPath.ToUtf8());
@@ -594,6 +632,7 @@ Translator::Translator(const char* szProgram)
   Sqrat::RootTable(engine.GetVM()).Func("_DecompileFile", DecompileFile);
   Sqrat::RootTable(engine.GetVM())
       .Func("_CompileSplitFiles", CompileSplitFiles);
+  Sqrat::RootTable(engine.GetVM()).Func("_CheckWhitespace", CheckWhitespace);
   Sqrat::RootTable(engine.GetVM()).Func("_EncryptFile", EncryptFile);
   Sqrat::RootTable(engine.GetVM()).Func("_DecryptFile", DecryptFile);
   Sqrat::RootTable(engine.GetVM()).Func("_Include", Include);

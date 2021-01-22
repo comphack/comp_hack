@@ -91,7 +91,8 @@ bool ClientPatches::Load(const QString& path) {
     return false;
   }
 
-  if (!LoadPatchElement(root, "chatTimestampFirst", offsetof(ClientPatches, mChatTimestampFirst),
+  if (!LoadPatchElement(root, "chatTimestampFirst",
+                        offsetof(ClientPatches, mChatTimestampFirst),
                         mChatTimestampFirst, mChatTimestampFirstElement)) {
     return false;
   }
@@ -192,7 +193,8 @@ bool ClientPatches::Save(const QString& path) {
     return false;
   }
 
-  if (!SavePatchElement("chatTimestampFirst", offsetof(ClientPatches, mChatTimestampFirst),
+  if (!SavePatchElement("chatTimestampFirst",
+                        offsetof(ClientPatches, mChatTimestampFirst),
                         mChatTimestampFirst, mChatTimestampFirstElement)) {
     return false;
   }
@@ -351,9 +353,13 @@ bool ClientPatches::GetPackFile() const { return mPackFile; }
 
 void ClientPatches::SetPackFile(bool enabled) { mPackFile = enabled; }
 
-bool ClientPatches::GetChatTimestampFirst() const { return mChatTimestampFirst; }
+bool ClientPatches::GetChatTimestampFirst() const {
+  return mChatTimestampFirst;
+}
 
-void ClientPatches::SetChatTimestampFirst(bool enabled) { mChatTimestampFirst = enabled; }
+void ClientPatches::SetChatTimestampFirst(bool enabled) {
+  mChatTimestampFirst = enabled;
+}
 
 bool ClientPatches::GetExtendedBuffTimerDisplay() const {
   return mExtendedBuffTimerDisplay;

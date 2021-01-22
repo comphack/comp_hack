@@ -49,6 +49,12 @@ class ClientPatches {
   bool GetNoWebAuth() const;
   void SetNoWebAuth(bool enabled);
 
+  bool GetPackFile() const;
+  void SetPackFile(bool enabled);
+
+  bool GetChatTimestampFirst() const;
+  void SetChatTimestampFirst(bool enabled);
+
   bool GetExtendedBuffTimerDisplay() const;
   void SetExtendedBuffTimerDisplay(bool enabled);
 
@@ -122,6 +128,12 @@ class ClientPatches {
 
   bool mNoWebAuth;
   QDomElement mNoWebAuthElement;
+
+  bool mPackFile;
+  QDomElement mPackFileElement;
+
+  bool mChatTimestampFirst;
+  QDomElement mChatTimestampFirstElement;
 
   bool mExtendedBuffTimerDisplay;
   QDomElement mExtendedBuffTimerDisplayElement;

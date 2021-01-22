@@ -257,6 +257,8 @@ void Options::Load() {
 
   ui.patchBlowfishKey->setChecked(mUserPatches.GetBlowfishKey());
   ui.patchNoWebAuth->setChecked(mUserPatches.GetNoWebAuth());
+  ui.patchPackFile->setChecked(mUserPatches.GetPackFile());
+  ui.patchChatTimestampFirst->setChecked(mUserPatches.GetChatTimestampFirst());
   ui.patchExtendedBuffTimerDisplay->setChecked(
       mUserPatches.GetExtendedBuffTimerDisplay());
   ui.patchExtendedEXPDisplay->setChecked(mUserPatches.GetExtendedEXPDisplay());
@@ -352,6 +354,8 @@ void Options::Save() {
 
   mUserPatches.SetBlowfishKey(ui.patchBlowfishKey->isChecked());
   mUserPatches.SetNoWebAuth(ui.patchNoWebAuth->isChecked());
+  mUserPatches.SetPackFile(ui.patchPackFile->isChecked());
+  mUserPatches.SetChatTimestampFirst(ui.patchChatTimestampFirst->isChecked());
   mUserPatches.SetExtendedBuffTimerDisplay(
       ui.patchExtendedBuffTimerDisplay->isChecked());
   mUserPatches.SetExtendedEXPDisplay(ui.patchExtendedEXPDisplay->isChecked());
@@ -413,6 +417,7 @@ void Options::EnableAllPatchSettings() {
   ui.breakClientButton->setEnabled(false);
   ui.patchBlowfishKey->setEnabled(true);
   ui.patchNoWebAuth->setEnabled(true);
+  ui.patchPackFile->setEnabled(true);
   ui.patchCharacterNameCheck->setEnabled(true);
   ui.patchServerPrime->setEnabled(true);
   ui.patchChannelTransfer->setEnabled(true);

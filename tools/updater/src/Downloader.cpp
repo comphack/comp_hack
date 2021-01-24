@@ -82,19 +82,29 @@ QMap<QString, FileData *> Downloader::parseFileList(const QByteArray &d) {
 
   QStringList lines = QString::fromUtf8(d).split("\n");
   foreach (QString line, lines) {
-    QRegExp fileMatcher(
-        "FILE : (.+),([0-9a-fA-F]{32}),([0-9]+),([0-9a-fA-F]{32}),([0-9]+)");
+    static const QRegExp fileMatcher(
+        "^FILE : ([^,]+),([0-9a-fA-F]+),([0-9]+),([0-9a-fA-F]+),([0-9]+)$");
+    static const QRegExp deleteMatcher("^DELETE : ([^,]+)$");
 
-    if (!fileMatcher.exactMatch(line.trimmed())) continue;
+    QString cleanLine = line.trimmed();
 
-    FileData *info = new FileData;
-    info->path = fileMatcher.cap(1).mid(2).replace("\\", "/");
-    info->compressed_hash = fileMatcher.cap(2).toLower();
-    info->compressed_size = fileMatcher.cap(3).toInt();
-    info->uncompressed_hash = fileMatcher.cap(4).toLower();
-    info->uncompressed_size = fileMatcher.cap(5).toInt();
+    if (fileMatcher.exactMatch(cleanLine)) {
+      FileData *info = new FileData;
+      info->path = fileMatcher.cap(1).mid(2).replace("\\", "/");
+      info->compressed_hash = fileMatcher.cap(2).toLower();
+      info->compressed_size = fileMatcher.cap(3).toInt();
+      info->uncompressed_hash = fileMatcher.cap(4).toLower();
+      info->uncompressed_size = fileMatcher.cap(5).toInt();
 
-    files[info->path] = info;
+      files[info->path] = info;
+    } else if (deleteMatcher.exactMatch(cleanLine)) {
+      FileData *info = new FileData;
+      info->path = deleteMatcher.cap(1).mid(2).replace("\\", "/");
+      info->compressed_size = 0;
+      info->uncompressed_size = 0;
+
+      files[info->path] = info;
+    }
   }
 
   return files;
@@ -546,7 +556,44 @@ void Downloader::advanceToNextFile() {
       if (!good) continue;
     }
 
-    if (mOldFiles.contains(info->path)) {
+    bool wasDelete = false;
+
+    if (info->uncompressed_size == 0) {
+      wasDelete = true;
+
+      QString filename = info->path;
+      filename = filename.replace("/", "\\");
+
+      QFileInfo fileInfo(filename);
+
+      if (fileInfo.exists()) {
+        if (fileInfo.isDir()) {
+          log(tr("Deleting directory: %1").arg(filename));
+
+          if (!QDir(filename).removeRecursively()) {
+#ifdef COMP_HACK_LOGSTDOUT
+            std::cout
+                << tr("Delete failed: %1").arg(filename).toUtf8().constData()
+                << std::endl;
+#endif  // COMP_HACK_LOGSTDOUT
+
+            return expressFinish(tr("Delete failed: %1").arg(filename));
+          }
+        } else {
+          log(tr("Deleting file: %1").arg(filename));
+
+          if (!QFile::remove(filename)) {
+#ifdef COMP_HACK_LOGSTDOUT
+            std::cout
+                << tr("Delete failed: %1").arg(filename).toUtf8().constData()
+                << std::endl;
+#endif  // COMP_HACK_LOGSTDOUT
+
+            return expressFinish(tr("Delete failed: %1").arg(filename));
+          }
+        }
+      }
+    } else if (mOldFiles.contains(info->path)) {
       FileData *old = mOldFiles.value(info->path);
       if (old->uncompressed_hash == info->uncompressed_hash) {
         if (mSaveFiles) {
@@ -587,27 +634,29 @@ void Downloader::advanceToNextFile() {
       }
     }
 
-    QDir::current().mkpath(QFileInfo(info->path).path());
+    if (!wasDelete) {
+      QDir::current().mkpath(QFileInfo(info->path).path());
 
-    delete mCurrentFile;
-    mCurrentFile = info;
+      delete mCurrentFile;
+      mCurrentFile = info;
 
-    QString filename = info->path;
-    filename = filename.replace("/", "\\");
-    if (filename.right(11) == ".compressed")
-      filename = filename.left(filename.length() - 11);
+      QString filename = info->path;
+      filename = filename.replace("/", "\\");
+      if (filename.right(11) == ".compressed")
+        filename = filename.left(filename.length() - 11);
 
-    emit currentFileChanged(mTotalFiles - mFiles.count());
-    emit statusChanged(filename);
-    emit downloadSizeChanged(info->compressed_size);
-    emit downloadProgressChanged(0);
+      emit currentFileChanged(mTotalFiles - mFiles.count());
+      emit statusChanged(filename);
+      emit downloadSizeChanged(info->compressed_size);
+      emit downloadProgressChanged(0);
 
-    // Download the new version
-    startDownload(QString("%1/%2").arg(mURL).arg(info->path), info->path);
+      // Download the new version
+      startDownload(QString("%1/%2").arg(mURL).arg(info->path), info->path);
 
-    startedFile = true;
+      startedFile = true;
 
-    break;
+      break;
+    }
   }
 
   if (!startedFile && mFiles.isEmpty()) {

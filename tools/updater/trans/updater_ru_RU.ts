@@ -4,98 +4,116 @@
 <context>
     <name>Downloader</name>
     <message>
-        <location filename="../src/Downloader.cpp" line="167"/>
+        <location filename="../src/Downloader.cpp" line="177"/>
         <source>Starting update</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="170"/>
+        <location filename="../src/Downloader.cpp" line="180"/>
         <source>%1/hashlist.dat</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="172"/>
+        <location filename="../src/Downloader.cpp" line="182"/>
         <source>%1/hashlist.ver</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="181"/>
+        <location filename="../src/Downloader.cpp" line="191"/>
         <source>Download timeout: will retry download</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="186"/>
+        <location filename="../src/Downloader.cpp" line="196"/>
         <source>Download timeout: giving up</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="197"/>
+        <location filename="../src/Downloader.cpp" line="207"/>
         <source>Download failed: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="211"/>
+        <location filename="../src/Downloader.cpp" line="221"/>
         <source>Download failed: Server returned status code %1 %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="223"/>
-        <location filename="../src/Downloader.cpp" line="320"/>
+        <location filename="../src/Downloader.cpp" line="233"/>
+        <location filename="../src/Downloader.cpp" line="330"/>
         <source>Read %1 bytes of data</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="307"/>
+        <location filename="../src/Downloader.cpp" line="317"/>
         <source>-- BEGIN HEADER --</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="309"/>
+        <location filename="../src/Downloader.cpp" line="319"/>
         <source>Header: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="311"/>
+        <location filename="../src/Downloader.cpp" line="321"/>
         <source>-- END HEADER --</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="312"/>
+        <location filename="../src/Downloader.cpp" line="322"/>
         <source>Connection closed but no bytes received</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="323"/>
+        <location filename="../src/Downloader.cpp" line="333"/>
         <source>Download finished</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="342"/>
+        <location filename="../src/Downloader.cpp" line="352"/>
         <source>Checking version: up-to-date</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="349"/>
+        <location filename="../src/Downloader.cpp" line="359"/>
         <source>Checking version: update required</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="618"/>
+        <location filename="../src/Downloader.cpp" line="571"/>
+        <source>Deleting directory: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/Downloader.cpp" line="576"/>
+        <location filename="../src/Downloader.cpp" line="580"/>
+        <location filename="../src/Downloader.cpp" line="588"/>
+        <location filename="../src/Downloader.cpp" line="592"/>
+        <source>Delete failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/Downloader.cpp" line="583"/>
+        <source>Deleting file: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/Downloader.cpp" line="667"/>
         <source>Update finished</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="632"/>
+        <location filename="../src/Downloader.cpp" line="681"/>
         <source>Starting download of %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="638"/>
+        <location filename="../src/Downloader.cpp" line="687"/>
         <source>There is %1 retries left before giving up</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Downloader.cpp" line="671"/>
+        <location filename="../src/Downloader.cpp" line="720"/>
         <source>%1: %2
 </source>
         <translation type="unfinished"></translation>
@@ -104,12 +122,12 @@
 <context>
     <name>LanguageSelection</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_LanguageSelection.h" line="78"/>
+        <location filename="../../../build64/tools/updater/ui_LanguageSelection.h" line="78"/>
         <source>Language Selection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_LanguageSelection.h" line="79"/>
+        <location filename="../../../build64/tools/updater/ui_LanguageSelection.h" line="79"/>
         <source>Please select a language:</source>
         <translation type="unfinished"></translation>
     </message>
@@ -151,267 +169,267 @@
 <context>
     <name>Options</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="369"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="369"/>
         <source>Shin Megami Tensei IMAGINE - Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="370"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="370"/>
         <source>Mode:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="371"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="371"/>
         <source>Window</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="372"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="372"/>
         <source>Full Screen</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="374"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="374"/>
         <source>Video Card:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="375"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="375"/>
         <source>Screen Size:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="376"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="376"/>
         <source>Chat Text Size:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="377"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="377"/>
         <source>Preset</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="378"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="378"/>
         <source>Custom</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="379"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="379"/>
         <source>x</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="380"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="380"/>
         <source>Small (12pt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="381"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="381"/>
         <source>Medium (14pt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="382"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="382"/>
         <source>Large (16pt)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="383"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="383"/>
         <source>Small (12pt no antialiasing)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="384"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="384"/>
         <source>Medium (14pt no antialiasing)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="385"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="385"/>
         <source>Large (16pt no antialiasing)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="387"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="387"/>
         <source>Language:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="388"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="388"/>
         <source>Soundtrack:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="389"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="389"/>
         <source>General</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="391"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="391"/>
         <source>Apply translations from the translation.xml file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="393"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="393"/>
         <source>Client Translation</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="395"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="395"/>
         <source>Set the locale used by the client. This can be used in place of AppLocale / Local Emulator.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="397"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="397"/>
         <source>Apply Locale Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="399"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="399"/>
         <source>Removes the maximum zoom restriction. Careful, zooming too far out may crash the client!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="401"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="401"/>
         <source>Infinite Zoom</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="403"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="403"/>
         <source>Automatically dump a backup of your account when logging in with a character. For large accounts this may fail. In that case, use the test client to backup your character instead.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="405"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="405"/>
         <source>Enable Account Dump</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="407"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="407"/>
         <source>Check that the client was started through the updater. Useful to make sure players are up-to-date.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="409"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="409"/>
         <source>Updater Check</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="411"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="411"/>
         <source>Display the timestamp for chats at the beginning of the line instead of at the end.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="413"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="413"/>
         <source>Chat Timestamp First</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="415"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="415"/>
         <source>Extends buff timer tooltips that show a clock to display seconds.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="417"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="417"/>
         <source>Extended Buff Timer Display</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="419"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="419"/>
         <source>Corrects the experience points messages for large amounts of experience point gain.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="421"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="421"/>
         <source>Experience Points Message Fix</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="423"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="423"/>
         <source>Prevent the input method from being switched to Japanese during character creation (if you have the IME installed).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="425"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="425"/>
         <source>Prevent Input Method Switching</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="427"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="427"/>
         <source>Allow files to be read from packs (archives) in addition to the client directory using a layered filesystem.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="429"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="429"/>
         <source>Packed File I/O</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="431"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="431"/>
         <source>Disable the ability to load a different CSoundData file. Instead of disabling this patch, set the soundtrack to &quot;Original&quot;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="433"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="433"/>
         <source>Soundtrack Selection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="435"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="435"/>
         <source>Restore the channel transfer dialog to the UI. This was used to switch between channels back in the day.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="437"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="437"/>
         <source>Restore Channel Transfer UI</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="439"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="439"/>
         <source>Disable the checks for valid character names during character creation. This allows players to type non-Japanese character names.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="441"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="441"/>
         <source>Disable Character Creation Checks</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="443"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="443"/>
         <source>This replaces the encryption key used for the BinaryData (and a few other things) to match the key used by the COMP_hack tools.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="445"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="445"/>
         <source>Updated Client Encryption Key</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="447"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="447"/>
         <source>Updates the public key for the server to the default one used by COMP_hack. This key does not seem to be used by the client.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="449"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="449"/>
         <source>Updated Server Public Key</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="451"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="451"/>
         <source>This patch will disable the web-based authentication dialog and revert to the classic login method.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="453"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="453"/>
         <source>Disable Web Authentication</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="454"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="454"/>
         <source>I want to break my client</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Options.h" line="455"/>
+        <location filename="../../../build64/tools/updater/ui_Options.h" line="455"/>
         <source>Patches</source>
         <translation type="unfinished"></translation>
     </message>
@@ -501,42 +519,42 @@
 <context>
     <name>Updater</name>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="165"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="165"/>
         <source>COMP_hack Updater v1.0</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="168"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="168"/>
         <source>Please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="169"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="169"/>
         <source>Screenshots</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="170"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="170"/>
         <source>Diagnostics</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="171"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="171"/>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="172"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="172"/>
         <source>Retry</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="173"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="173"/>
         <source>Full Check</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../../../build32/tools/updater/ui_Updater.h" line="174"/>
+        <location filename="../../../build64/tools/updater/ui_Updater.h" line="174"/>
         <source>PLAY GAME</source>
         <translation type="unfinished"></translation>
     </message>

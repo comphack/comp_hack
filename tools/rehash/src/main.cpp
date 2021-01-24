@@ -33,8 +33,8 @@
 // Standard C++11 Includes
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <regex>
-#include <unordered_map>
 #include <vector>
 
 // Standard C Includes
@@ -50,32 +50,40 @@ class FileData {
   int uncompressed_size;
 };
 
-std::unordered_map<libcomp::String, FileData *> ParseFileList(
+std::map<libcomp::String, FileData *> ParseFileList(
     const std::vector<char> data) {
-  std::unordered_map<libcomp::String, FileData *> files;
+  std::map<libcomp::String, FileData *> files;
 
   std::list<libcomp::String> lines =
       libcomp::String(&data[0], data.size()).Split("\n");
 
   static const std::regex fileMatcher(
-      "FILE : (.+),([0-9a-fA-F]{32}),([0-9]+),([0-9a-fA-F]{32}),([0-9]+)");
+      "^FILE : ([^,]+),([0-9a-fA-F]+),([0-9]+),([0-9a-fA-F]+),([0-9]+)$");
+  static const std::regex deleteMatcher("^DELETE : ([^,]+)$");
 
   // Parse each line of the hashlist.dat file.
   for (auto line : lines) {
     std::string cleanLine = line.Trimmed().ToUtf8();
     std::smatch match;
 
-    if (!std::regex_match(cleanLine, match, fileMatcher)) continue;
-
     // Add each file entry to the map.
-    FileData *info = new FileData;
-    info->path = libcomp::String(match[1]).Mid(2).Replace("\\", "/");
-    info->compressed_hash = libcomp::String(match[2]).ToUpper();
-    info->compressed_size = libcomp::String(match[3]).ToInteger<int>();
-    info->uncompressed_hash = libcomp::String(match[4]).ToUpper();
-    info->uncompressed_size = libcomp::String(match[5]).ToInteger<int>();
+    if (std::regex_match(cleanLine, match, fileMatcher)) {
+      FileData *info = new FileData;
+      info->path = libcomp::String(match[1]).Mid(2).Replace("\\", "/");
+      info->compressed_hash = libcomp::String(match[2]).ToUpper();
+      info->compressed_size = libcomp::String(match[3]).ToInteger<int>();
+      info->uncompressed_hash = libcomp::String(match[4]).ToUpper();
+      info->uncompressed_size = libcomp::String(match[5]).ToInteger<int>();
 
-    files[info->path] = info;
+      files[info->path] = info;
+    } else if (std::regex_match(cleanLine, match, deleteMatcher)) {
+      FileData *info = new FileData;
+      info->path = libcomp::String(match[1]).Mid(2).Replace("\\", "/");
+      info->compressed_size = 0;
+      info->uncompressed_size = 0;
+
+      files[info->path] = info;
+    }
   }
 
   return files;
@@ -114,7 +122,7 @@ int main(int argc, char *argv[]) {
   libcomp::String overlay = argv[4];
 
   // Read in the original file list
-  std::unordered_map<libcomp::String, FileData *> files;
+  std::map<libcomp::String, FileData *> files;
 
   {
     // Open and read the hashlist.dat file.
@@ -232,21 +240,27 @@ int main(int argc, char *argv[]) {
   // Add each file in the list.
   for (auto file : files) {
     FileData *d = file.second;
+    libcomp::String line;
 
-    libcomp::String line = "FILE : .\\%1,%2,%3,%4,%5 ";
-    line = line.Arg(d->path.Replace("/", "\\"));
-    line = line.Arg(d->compressed_hash.ToUpper());
-    line = line.Arg(d->compressed_size);
-    line = line.Arg(d->uncompressed_hash.ToUpper());
-    line = line.Arg(d->uncompressed_size);
+    if (d->uncompressed_size == 0) {
+      line = "DELETE : .\\%1";
+      line = line.Arg(d->path.Replace("/", "\\"));
+    } else {
+      line = "FILE : .\\%1,%2,%3,%4,%5";
+      line = line.Arg(d->path.Replace("/", "\\"));
+      line = line.Arg(d->compressed_hash.ToUpper());
+      line = line.Arg(d->compressed_size);
+      line = line.Arg(d->uncompressed_hash.ToUpper());
+      line = line.Arg(d->uncompressed_size);
+    }
 
     auto l = line.ToUtf8();
 
     hashlist.write(l.c_str(), (std::streamsize)l.size());
-    hashlist.write("\r\n", 2);
+    hashlist.write("\n", 1);
   }
 
-  libcomp::String exe = "EXE : .\\ImagineClient.exe ";
+  libcomp::String exe = "EXE : .\\ImagineClient.exe";
   libcomp::String ver = "VERSION : %1";
 
   // Generate a timestamp.
@@ -258,7 +272,7 @@ int main(int argc, char *argv[]) {
 
   auto l = exe.ToUtf8();
   hashlist.write(l.c_str(), (std::streamsize)l.size());
-  hashlist.write("\r\n", 2);
+  hashlist.write("\n", 1);
   l = ver.ToUtf8();
   hashlist.write(l.c_str(), (std::streamsize)l.size());
   hashlist.close();

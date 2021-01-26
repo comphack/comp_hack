@@ -12,5 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion != 'success' }}
     steps:
-      - echo "Either the C/C++ CI or Check Documentation workflow must pass."
-      - exit 1
+      - name: Workflow Failed
+        run: |
+          echo "Either the C/C++ CI or Check Documentation workflow must pass."
+          exit 1

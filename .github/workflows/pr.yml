@@ -8,7 +8,7 @@ on:
       - completed
 
 jobs:
-  check:
+  check-failed:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion != 'success' }}
     steps:
@@ -16,3 +16,11 @@ jobs:
         run: |
           echo "Either the C/C++ CI or Check Documentation workflow must pass."
           exit 1
+
+  check-passed:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Workflow Passed
+        run: |
+          echo "Either the C/C++ CI or Check Documentation workflow passed."

@@ -3,10 +3,16 @@ name: C/C++ CI
 on:
   push:
     paths-ignore:
+      - ".github/**"
+      - "contrib/**"
       - "docs/**"
+      - "README.md"
   pull_request:
     paths-ignore:
+      - ".github/**"
+      - "contrib/**"
       - "docs/**"
+      - "README.md"
 
 jobs:
   clang-format:

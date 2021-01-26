@@ -2,7 +2,7 @@ name: PR Checks Passed
 on:
   workflow_run:
     workflows:
-      - C/C++ CI
+      - Server CI
       - Check Documentation
     types:
       - completed

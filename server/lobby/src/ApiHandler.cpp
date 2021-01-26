@@ -26,6 +26,9 @@
 
 #include "ApiHandler.h"
 
+// libhack Includes
+#include <Constants.h>
+
 // libcomp Includes
 #include <AccountManager.h>
 #include <BaseServer.h>
@@ -99,12 +102,12 @@ ApiHandler::ApiHandler(const std::shared_ptr<objects::LobbyConfig>& config,
 
   LogWebAPIDebugMsg("Loading API binary definitions...\n");
 
-  mDefinitionManager = new libcomp::DefinitionManager;
+  mDefinitionManager = new libhack::DefinitionManager;
 
   mDefinitionManager->LoadData<objects::MiShopProductData>(
       server->GetDataStore());
 
-  auto serverDataManager = new libcomp::ServerDataManager;
+  auto serverDataManager = new libhack::ServerDataManager;
   bool scriptsLoaded = false;
 
   LogWebAPIDebugMsg("Loading web apps...\n");
@@ -250,6 +253,8 @@ bool ApiHandler::Account_GetDetails(
   response["user_level"] = (int)account->GetUserLevel();
   response["enabled"] = account->GetEnabled();
   response["last_login"] = (int)account->GetLastLogin();
+  response["ban_reason"] = account->GetBanReason().ToUtf8();
+  response["ban_initiator"] = account->GetBanInitiator().ToUtf8();
 
   int count = 0;
 
@@ -507,6 +512,8 @@ bool ApiHandler::Admin_GetAccounts(const JsonBox::Object& request,
     obj["user_level"] = (int)account->GetUserLevel();
     obj["enabled"] = account->GetEnabled();
     obj["last_login"] = (int)account->GetLastLogin();
+    obj["ban_reason"] = account->GetBanReason().ToUtf8();
+    obj["ban_initiator"] = account->GetBanInitiator().ToUtf8();
 
     int count = 0;
 
@@ -568,6 +575,8 @@ bool ApiHandler::Admin_GetAccount(const JsonBox::Object& request,
   response["user_level"] = (int)account->GetUserLevel();
   response["enabled"] = account->GetEnabled();
   response["last_login"] = (int)account->GetLastLogin();
+  response["ban_reason"] = account->GetBanReason().ToUtf8();
+  response["ban_initiator"] = account->GetBanInitiator().ToUtf8();
 
   int count = 0;
 
@@ -1411,7 +1420,7 @@ bool ApiHandler::WebApp_Request(const libcomp::String& appName,
     return false;
   }
 
-  auto app = std::make_shared<libcomp::ScriptEngine>();
+  auto app = std::make_shared<libhack::ScriptEngine>();
   app->Using<libcomp::Randomizer>();
   app->Using<objects::Account>();
   app->Using<objects::AccountWorldData>();
@@ -1568,7 +1577,7 @@ bool ApiHandler::WebGame_Start(const JsonBox::Object& request,
     return true;
   }
 
-  webGameSession->gameState = std::make_shared<libcomp::ScriptEngine>();
+  webGameSession->gameState = std::make_shared<libhack::ScriptEngine>();
   webGameSession->gameState->Using<libcomp::Randomizer>();
   webGameSession->gameState->Using<objects::Character>();
   webGameSession->gameState->Using<objects::PostItem>();

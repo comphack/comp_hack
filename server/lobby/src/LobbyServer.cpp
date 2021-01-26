@@ -56,7 +56,7 @@ LobbyServer::LobbyServer(
     const char* szProgram, std::shared_ptr<objects::ServerConfig> config,
     std::shared_ptr<libcomp::ServerCommandLineParser> commandLine,
     bool unitTestMode)
-    : libcomp::BaseServer(szProgram, config, commandLine),
+    : libhack::Server(szProgram, config, commandLine),
       mUnitTestMode(unitTestMode),
       mAccountManager(nullptr),
       mSyncManager(nullptr) {}

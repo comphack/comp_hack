@@ -27,8 +27,10 @@
 #ifndef SERVER_CHANNEL_SRC_CHANNELSERVER_H
 #define SERVER_CHANNEL_SRC_CHANNELSERVER_H
 
+// libhack Includes
+#include <Server.h>
+
 // libcomp Includes
-#include <BaseServer.h>
 #include <InternalConnection.h>
 #include <ManagerConnection.h>
 #include <Worker.h>
@@ -40,10 +42,10 @@
 // channel Includes
 #include "WorldClock.h"
 
-namespace libcomp {
+namespace libhack {
 class DefinitionManager;
 class ServerDataManager;
-}  // namespace libcomp
+}  // namespace libhack
 
 namespace objects {
 class Character;
@@ -71,7 +73,7 @@ class ZoneManager;
 /**
  * Channel server that handles client packets in game.
  */
-class ChannelServer : public libcomp::BaseServer {
+class ChannelServer : public libhack::Server {
  public:
   /**
    * Create a new channel server.
@@ -278,13 +280,13 @@ class ChannelServer : public libcomp::BaseServer {
    * Get a pointer to the definition manager.
    * @return Pointer to the DefinitionManager
    */
-  libcomp::DefinitionManager* GetDefinitionManager() const;
+  libhack::DefinitionManager* GetDefinitionManager() const;
 
   /**
    * Get a pointer to the server data manager.
    * @return Pointer to the ServerDataManager
    */
-  libcomp::ServerDataManager* GetServerDataManager() const;
+  libhack::ServerDataManager* GetServerDataManager() const;
 
   /**
    * Get a pointer to the data sync manager.
@@ -526,10 +528,10 @@ class ChannelServer : public libcomp::BaseServer {
   ZoneManager* mZoneManager;
 
   /// Pointer to the Definition Manager.
-  libcomp::DefinitionManager* mDefinitionManager;
+  libhack::DefinitionManager* mDefinitionManager;
 
   /// Pointer to the Server Data Manager.
-  libcomp::ServerDataManager* mServerDataManager;
+  libhack::ServerDataManager* mServerDataManager;
 
   /// Data sync manager for the server.
   ChannelSyncManager* mSyncManager;

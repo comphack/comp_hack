@@ -79,7 +79,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<ActiveEntityState>() {
+BaseScriptEngine& BaseScriptEngine::Using<ActiveEntityState>() {
   if (!BindingExists("ActiveEntityState", true)) {
     Using<objects::ActiveEntityStateObject>();
     Using<objects::EnemyBase>();
@@ -280,10 +280,10 @@ bool ActiveEntityState::SameFaction(std::shared_ptr<ActiveEntityState> other,
 }
 
 float ActiveEntityState::CorrectRotation(float rot) {
-  if (rot > libcomp::PI) {
-    return rot - (float)(libcomp::PI * 2);
-  } else if (rot < -libcomp::PI) {
-    return -rot - (float)libcomp::PI;
+  if (rot > libhack::PI) {
+    return rot - (float)(libhack::PI * 2);
+  } else if (rot < -libhack::PI) {
+    return -rot - (float)libhack::PI;
   }
 
   return rot;
@@ -422,8 +422,8 @@ void ActiveEntityState::RefreshCurrentPosition(uint64_t now) {
       if (rotDiff) {
         // Bump both origin and destination by 3.14 to range from
         // 0-+6.28 instead of -3.14-+3.14 for simpler math
-        originRot = (float)(originRot + libcomp::PI);
-        destRot = (float)(destRot + libcomp::PI);
+        originRot = (float)(originRot + libhack::PI);
+        destRot = (float)(destRot + libhack::PI);
 
         float newRot = (float)(originRot + (prog * (destRot - originRot)));
 
@@ -733,7 +733,7 @@ uint32_t ActiveEntityState::StatusEffectTimeLeft(uint32_t effectType) {
 
 void ActiveEntityState::SetStatusEffects(
     const std::list<std::shared_ptr<objects::StatusEffect>>& effects,
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   std::lock_guard<std::mutex> lock(mLock);
   mStatusEffects.clear();
   mStatusEffectDefs.clear();
@@ -760,7 +760,7 @@ void ActiveEntityState::SetStatusEffects(
 
 std::set<uint32_t> ActiveEntityState::AddStatusEffects(
     const StatusEffectChanges& effects,
-    libcomp::DefinitionManager* definitionManager, uint32_t now,
+    libhack::DefinitionManager* definitionManager, uint32_t now,
     bool queueChanges) {
   std::set<uint32_t> removes;
 
@@ -1182,7 +1182,7 @@ std::set<uint32_t> ActiveEntityState::CancelStatusEffects(
 }
 
 void ActiveEntityState::SetStatusEffectsActive(
-    bool activate, libcomp::DefinitionManager* definitionManager,
+    bool activate, libhack::DefinitionManager* definitionManager,
     uint32_t now) {
   if (activate && !EntityIsSet()) {
     // Do not activate effects if no entity is set yet
@@ -1410,6 +1410,8 @@ uint8_t ActiveEntityState::PopEffectTicks(uint32_t time, int32_t& hpTDamage,
 }
 
 bool ActiveEntityState::HasSpecialTDamage() { return false; }
+
+libobjgen::UUID ActiveEntityState::GetResponsibleEntity() const { return {}; }
 
 bool ActiveEntityState::ResetUpkeep() {
   std::lock_guard<std::mutex> lock(mLock);
@@ -1661,7 +1663,7 @@ void ActiveEntityState::RemoveStatusEffects(
 
 void ActiveEntityState::ActivateStatusEffect(
     const std::shared_ptr<objects::StatusEffect>& effect,
-    libcomp::DefinitionManager* definitionManager, uint32_t now, uint8_t mode) {
+    libhack::DefinitionManager* definitionManager, uint32_t now, uint8_t mode) {
   auto effectType = effect->GetEffect();
 
   bool timeOnly = mode == 1;
@@ -1847,7 +1849,7 @@ void ActiveEntityState::SetNextEffectTime(uint32_t effectType, uint32_t time) {
 
 void ActiveEntityState::RegisterStatusEffect(
     const std::shared_ptr<objects::StatusEffect>& effect,
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   uint32_t effectType = effect->GetEffect();
   mStatusEffects[effectType] = effect;
 
@@ -1954,7 +1956,7 @@ bool ActiveEntityState::IsLNCType(uint8_t lncType, bool invertFlag) {
 
 // "Abstract implementations" required for Sqrat usage
 uint8_t ActiveEntityState::RecalculateStats(
-    libcomp::DefinitionManager* definitionManager,
+    libhack::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
     std::shared_ptr<objects::MiSkillData> contextSkill) {
   (void)definitionManager;
@@ -1965,7 +1967,7 @@ uint8_t ActiveEntityState::RecalculateStats(
 
 bool ActiveEntityState::CopyToEnemy(
     const std::shared_ptr<ActiveEntityState>& eState,
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   (void)definitionManager;
 
   auto eBase = eState ? eState->GetEnemyBase() : nullptr;
@@ -2010,7 +2012,7 @@ bool ActiveEntityState::CopyToEnemy(
 }
 
 std::set<uint32_t> ActiveEntityState::GetAllSkills(
-    libcomp::DefinitionManager* definitionManager, bool includeTokusei) {
+    libhack::DefinitionManager* definitionManager, bool includeTokusei) {
   (void)definitionManager;
   (void)includeTokusei;
   return std::set<uint32_t>();
@@ -2070,7 +2072,7 @@ ActiveEntityStateImp<objects::Ally>::ActiveEntityStateImp() {
 template <>
 void ActiveEntityStateImp<objects::Character>::SetEntity(
     const std::shared_ptr<objects::Character>& entity,
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   (void)definitionManager;
 
   {
@@ -2109,7 +2111,7 @@ void ActiveEntityStateImp<objects::Character>::SetEntity(
 template <>
 void ActiveEntityStateImp<objects::Demon>::SetEntity(
     const std::shared_ptr<objects::Demon>& entity,
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   {
     std::lock_guard<std::mutex> lock(mLock);
     mEntity = entity;
@@ -2147,7 +2149,7 @@ void ActiveEntityStateImp<objects::Demon>::SetEntity(
 template <>
 void ActiveEntityStateImp<objects::Enemy>::SetEntity(
     const std::shared_ptr<objects::Enemy>& entity,
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   std::lock_guard<std::mutex> lock(mLock);
   mEntity = entity;
 
@@ -2177,7 +2179,7 @@ void ActiveEntityStateImp<objects::Enemy>::SetEntity(
 template <>
 void ActiveEntityStateImp<objects::Ally>::SetEntity(
     const std::shared_ptr<objects::Ally>& entity,
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   std::lock_guard<std::mutex> lock(mLock);
   mEntity = entity;
 
@@ -2630,7 +2632,7 @@ void ActiveEntityState::UpdateNRAChances(
 }
 
 void ActiveEntityState::GetAdditionalCorrectTbls(
-    libcomp::DefinitionManager* definitionManager,
+    libhack::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
     std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
     std::shared_ptr<objects::MiSkillData> contextSkill) {
@@ -2687,7 +2689,7 @@ void ActiveEntityState::GetAdditionalCorrectTbls(
 
 void ActiveEntityState::ApplySkillCorrectTbls(
     const std::set<uint32_t>& skillIDs,
-    libcomp::DefinitionManager* definitionManager,
+    libhack::DefinitionManager* definitionManager,
     std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments) {
   for (auto skillID : skillIDs) {
     auto skillData = definitionManager->GetSkillData(skillID);
@@ -2714,7 +2716,7 @@ void ActiveEntityState::ApplySkillCorrectTbls(
 }
 
 uint8_t ActiveEntityState::RecalculateDemonStats(
-    libcomp::DefinitionManager* definitionManager,
+    libhack::DefinitionManager* definitionManager,
     libcomp::EnumMap<CorrectTbl, int32_t>& stats,
     std::list<std::shared_ptr<objects::MiCorrectTbl>>& adjustments,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
@@ -2759,7 +2761,7 @@ uint8_t ActiveEntityState::RecalculateDemonStats(
 }
 
 uint8_t ActiveEntityState::RecalculateEnemyStats(
-    libcomp::DefinitionManager* definitionManager,
+    libhack::DefinitionManager* definitionManager,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
     std::shared_ptr<objects::MiSkillData> contextSkill) {
   bool selfState = calcState == GetCalculatedState();
@@ -2834,7 +2836,7 @@ uint8_t ActiveEntityState::RecalculateEnemyStats(
 }
 
 std::set<uint32_t> ActiveEntityState::GetAllEnemySkills(
-    libcomp::DefinitionManager* definitionManager, bool includeTokusei) {
+    libhack::DefinitionManager* definitionManager, bool includeTokusei) {
   std::set<uint32_t> skillIDs;
 
   auto eBase = GetEnemyBase();
@@ -2891,7 +2893,7 @@ void ActiveEntityState::RemoveInactiveSwitchSkills() {
 }
 
 std::set<uint32_t> ActiveEntityState::GetEffectiveTokuseiSkills(
-    libcomp::DefinitionManager* definitionManager) {
+    libhack::DefinitionManager* definitionManager) {
   std::set<uint32_t> skillIDs;
 
   for (auto tPair : GetCalculatedState()->GetEffectiveTokusei()) {

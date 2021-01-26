@@ -951,7 +951,7 @@ void EventWindow::FindNextAction() {
         std::dynamic_pointer_cast<objects::EventPerformActions>(fEvent->Event);
     if (pa) {
       auto actions = pa->GetActions();
-      for (auto action : libcomp::ServerDataManager::GetAllActions(actions)) {
+      for (auto action : libhack::ServerDataManager::GetAllActions(actions)) {
         if (action->GetActionType() == actionType) {
           // Match found, go to new event or do nothing if current
           if (mCurrentEvent == fEvent) {
@@ -2382,7 +2382,7 @@ bool EventWindow::ChangeActionEventIDs(
     const std::unordered_map<libcomp::String, libcomp::String>& idMap,
     const std::list<std::shared_ptr<objects::Action>>& actions) {
   bool updated = false;
-  for (auto action : libcomp::ServerDataManager::GetAllActions(actions)) {
+  for (auto action : libhack::ServerDataManager::GetAllActions(actions)) {
     switch (action->GetActionType()) {
       case objects::Action::ActionType_t::START_EVENT: {
         auto act = std::dynamic_pointer_cast<objects::ActionStartEvent>(action);

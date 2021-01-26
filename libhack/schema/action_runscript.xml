@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ActionRunScript" baseobject="Action" persistent="false"
+        scriptenabled="true">
+        <member type="enum" name="actionType" inherited="true" default="RUN_SCRIPT"/>
+        <member type="string" name="scriptID"/>
+        <member type="list" name="params">
+            <element type="string"/>
+        </member>
+    </object>
+</objgen>

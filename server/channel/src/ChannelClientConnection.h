@@ -40,7 +40,7 @@ typedef std::unordered_map<uint32_t, uint64_t> RelativeTimeMap;
 /**
  * Represents a connection to the game client.
  */
-class ChannelClientConnection : public libcomp::ChannelConnection {
+class ChannelClientConnection : public libhack::ChannelConnection {
  public:
   /**
    * Create a new connection.

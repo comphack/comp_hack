@@ -39,6 +39,8 @@ ClientPatches::ClientPatches(ClientPatches* pBase)
     : mBase(pBase),
       mBlowfishKey(true),
       mNoWebAuth(false),
+      mPackFile(true),
+      mChatTimestampFirst(true),
       mExtendedBuffTimerDisplay(true),
       mExtendedEXPDisplay(true),
       mInfiniteZoom(true),
@@ -55,13 +57,20 @@ ClientPatches::ClientPatches(ClientPatches* pBase)
 bool ClientPatches::Load(const QString& path) {
   Clear();
 
+  bool noFile = false;
+
   QFile file(path);
   if (!file.open(QIODevice::ReadOnly)) {
-    return false;
+    noFile = true;
   }
 
   if (!mDoc.setContent(&file)) {
-    return false;
+    noFile = true;
+  }
+
+  if (noFile) {
+    mDoc.setContent(
+        QString("<?xml version='1.0' encoding='UTF-8'?>\n<config/>\n"));
   }
 
   QDomElement root = mDoc.documentElement();
@@ -74,6 +83,17 @@ bool ClientPatches::Load(const QString& path) {
 
   if (!LoadPatchElement(root, "noWebAuth", offsetof(ClientPatches, mNoWebAuth),
                         mNoWebAuth, mNoWebAuthElement)) {
+    return false;
+  }
+
+  if (!LoadPatchElement(root, "packFile", offsetof(ClientPatches, mPackFile),
+                        mPackFile, mPackFileElement)) {
+    return false;
+  }
+
+  if (!LoadPatchElement(root, "chatTimestampFirst",
+                        offsetof(ClientPatches, mChatTimestampFirst),
+                        mChatTimestampFirst, mChatTimestampFirstElement)) {
     return false;
   }
 
@@ -168,6 +188,17 @@ bool ClientPatches::Save(const QString& path) {
     return false;
   }
 
+  if (!SavePatchElement("packFile", offsetof(ClientPatches, mPackFile),
+                        mPackFile, mPackFileElement)) {
+    return false;
+  }
+
+  if (!SavePatchElement("chatTimestampFirst",
+                        offsetof(ClientPatches, mChatTimestampFirst),
+                        mChatTimestampFirst, mChatTimestampFirstElement)) {
+    return false;
+  }
+
   if (!SavePatchElement("extendedBuffTimerDisplay",
                         offsetof(ClientPatches, mExtendedBuffTimerDisplay),
                         mExtendedBuffTimerDisplay,
@@ -259,6 +290,12 @@ void ClientPatches::Clear() {
   mNoWebAuthElement = QDomElement();
   mNoWebAuth = false;
 
+  mPackFileElement = QDomElement();
+  mPackFile = false;
+
+  mChatTimestampFirstElement = QDomElement();
+  mChatTimestampFirst = true;
+
   mExtendedBuffTimerDisplayElement = QDomElement();
   mExtendedBuffTimerDisplay = true;
 
@@ -311,6 +348,18 @@ void ClientPatches::SetBlowfishKey(bool enabled) { mBlowfishKey = enabled; }
 bool ClientPatches::GetNoWebAuth() const { return mNoWebAuth; }
 
 void ClientPatches::SetNoWebAuth(bool enabled) { mNoWebAuth = enabled; }
+
+bool ClientPatches::GetPackFile() const { return mPackFile; }
+
+void ClientPatches::SetPackFile(bool enabled) { mPackFile = enabled; }
+
+bool ClientPatches::GetChatTimestampFirst() const {
+  return mChatTimestampFirst;
+}
+
+void ClientPatches::SetChatTimestampFirst(bool enabled) {
+  mChatTimestampFirst = enabled;
+}
 
 bool ClientPatches::GetExtendedBuffTimerDisplay() const {
   return mExtendedBuffTimerDisplay;

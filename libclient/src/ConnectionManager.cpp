@@ -213,14 +213,14 @@ bool ConnectionManager::ProcessClientMessage(
 bool ConnectionManager::ConnectLobby(const libcomp::String &connectionID,
                                      const libcomp::String &host,
                                      uint16_t port) {
-  return SetupConnection(std::make_shared<libcomp::LobbyConnection>(mService),
+  return SetupConnection(std::make_shared<libhack::LobbyConnection>(mService),
                          connectionID, host, port);
 }
 
 bool ConnectionManager::ConnectChannel(const libcomp::String &connectionID,
                                        const libcomp::String &host,
                                        uint16_t port) {
-  return SetupConnection(std::make_shared<libcomp::ChannelConnection>(mService),
+  return SetupConnection(std::make_shared<libhack::ChannelConnection>(mService),
                          connectionID, host, port);
 }
 
@@ -342,12 +342,12 @@ bool ConnectionManager::IsConnected() const {
 
 bool ConnectionManager::IsLobbyConnection() const {
   return nullptr !=
-         std::dynamic_pointer_cast<libcomp::LobbyConnection>(mActiveConnection)
+         std::dynamic_pointer_cast<libhack::LobbyConnection>(mActiveConnection)
              .get();
 }
 
 bool ConnectionManager::IsChannelConnection() const {
-  return nullptr != std::dynamic_pointer_cast<libcomp::ChannelConnection>(
+  return nullptr != std::dynamic_pointer_cast<libhack::ChannelConnection>(
                         mActiveConnection)
                         .get();
 }

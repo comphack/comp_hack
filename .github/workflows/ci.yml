@@ -1,6 +1,18 @@
-name: C/C++ CI
+name: Server CI
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - ".github/**"
+      - "contrib/**"
+      - "docs/**"
+      - "README.md"
+  pull_request:
+    paths-ignore:
+      - ".github/**"
+      - "contrib/**"
+      - "docs/**"
+      - "README.md"
 
 jobs:
   clang-format:
@@ -47,9 +59,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.get_release.outputs.upload_url }}
-        asset_path: build/bin/comp_translator.bz2
-        asset_name: comp_translator.bz2
-        asset_content_type: application/x-bzip2
+        asset_path: build/comp_translator.tar.bz2
+        asset_name: comp_translator.tar.bz2
+        asset_content_type: application/x-tar
 
   linux-clang-build:
     name: Ubuntu Linux (Clang)

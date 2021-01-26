@@ -255,7 +255,7 @@
             <x>0</x>
             <y>0</y>
             <width>325</width>
-            <height>340</height>
+            <height>386</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -310,6 +310,16 @@
             </widget>
            </item>
            <item>
+            <widget class="QCheckBox" name="patchChatTimestampFirst">
+             <property name="toolTip">
+              <string>Display the timestamp for chats at the beginning of the line instead of at the end.</string>
+             </property>
+             <property name="text">
+              <string>Chat Timestamp First</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QCheckBox" name="patchExtendedBuffTimerDisplay">
              <property name="toolTip">
               <string>Extends buff timer tooltips that show a clock to display seconds.</string>
@@ -336,6 +346,19 @@
              </property>
              <property name="text">
               <string>Prevent Input Method Switching</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchPackFile">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Allow files to be read from packs (archives) in addition to the client directory using a layered filesystem.</string>
+             </property>
+             <property name="text">
+              <string>Packed File I/O</string>
              </property>
             </widget>
            </item>

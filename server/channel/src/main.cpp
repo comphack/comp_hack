@@ -33,7 +33,7 @@
 #include <Constants.h>
 #include <Exception.h>
 #include <Log.h>
-#include <PersistentObject.h>
+#include <PersistentObjectInitialize.h>
 #include <ServerCommandLineParser.h>
 #include <Shutdown.h>
 
@@ -45,9 +45,9 @@ int main(int argc, const char *argv[])
 {
   libcomp::Exception::RegisterSignalHandler();
 
-  libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
+  libhack::Log::GetSingletonPtr()->AddStandardOutputHook();
 
-  libcomp::Config::LogVersion("COMP_hack Channel Server");
+  libhack::Config::LogVersion("COMP_hack Channel Server");
 
   std::string configPath =
       libcomp::BaseServer::GetDefaultConfigPath() + "channel.xml";
@@ -83,7 +83,7 @@ int main(int argc, const char *argv[])
         "used.\n");
   }
 
-  if (!libcomp::PersistentObject::Initialize()) {
+  if (!libhack::PersistentObjectInitialize()) {
     LogGeneralCriticalMsg(
         "One or more persistent object definition failed to load.\n");
 
@@ -111,7 +111,7 @@ int main(int argc, const char *argv[])
   LogGeneralInfoMsg("Bye!\n");
 
   // Stop the logger
-  delete libcomp::Log::GetSingletonPtr();
+  delete libhack::Log::GetSingletonPtr();
 
   return returnCode;
 }

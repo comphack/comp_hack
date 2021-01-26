@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiTriUnionKreuzItemData" persistent="false">
+        <member type="u16" name="ID"/>
+        <member type="u16" name="unknown1"/>
+        <member type="u32" name="unknown2"/>
+        <member type="u8" name="unknown3"/>
+        <member type="u8" name="unknown4"/>
+        <member type="u16" name="unknown5"/>
+        <member type="u16" name="unknown6"/>
+        <member type="u16" name="unknown7"/>
+    </object>
+</objgen>

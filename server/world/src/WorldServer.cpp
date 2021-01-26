@@ -50,7 +50,7 @@ using namespace world;
 WorldServer::WorldServer(
     const char* szProgram, std::shared_ptr<objects::ServerConfig> config,
     std::shared_ptr<libcomp::ServerCommandLineParser> commandLine)
-    : libcomp::BaseServer(szProgram, config, commandLine) {}
+    : libhack::Server(szProgram, config, commandLine) {}
 
 bool WorldServer::Initialize() {
   auto self = std::dynamic_pointer_cast<WorldServer>(shared_from_this());
@@ -150,8 +150,8 @@ void WorldServer::FinishInitialize() {
   // Now Connect to the lobby server.
   asio::io_service service;
 
-  auto lobbyConnection = std::make_shared<libcomp::LobbyConnection>(
-      service, libcomp::LobbyConnection::ConnectionMode_t::MODE_WORLD_UP);
+  auto lobbyConnection = std::make_shared<libhack::LobbyConnection>(
+      service, libhack::LobbyConnection::ConnectionMode_t::MODE_WORLD_UP);
 
   auto messageQueue =
       std::make_shared<libcomp::MessageQueue<libcomp::Message::Message*>>();

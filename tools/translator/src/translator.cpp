@@ -59,10 +59,10 @@ struct Translator {
   Translator(const char* szProgram);
 
   libcomp::DataStore store;
-  libcomp::ScriptEngine engine;
+  libhack::ScriptEngine engine;
   bool didError;
   std::map<std::string,
-           std::pair<std::string, std::function<libcomp::BinaryDataSet*(void)>>>
+           std::pair<std::string, std::function<libhack::BinaryDataSet*(void)>>>
       binaryTypes;
 };
 
@@ -108,7 +108,7 @@ static bool CreateDirectory(const libcomp::String& path) {
 static bool CompileFile(const libcomp::String& bdType,
                         const libcomp::String& inPath,
                         const libcomp::String& outPath) {
-  libcomp::BinaryDataSet* pSet = nullptr;
+  libhack::BinaryDataSet* pSet = nullptr;
 
   auto match = gTranslator->binaryTypes.find(bdType.ToUtf8());
 
@@ -155,7 +155,7 @@ static bool CompileFile(const libcomp::String& bdType,
 static bool DecompileFile(const libcomp::String& bdType,
                           const libcomp::String& inPath,
                           const libcomp::String& outPath) {
-  libcomp::BinaryDataSet* pSet = nullptr;
+  libhack::BinaryDataSet* pSet = nullptr;
 
   auto match = gTranslator->binaryTypes.find(bdType.ToUtf8());
 
@@ -190,6 +190,44 @@ static bool DecompileFile(const libcomp::String& bdType,
         libcomp::String("Failed to save file: %1\n").Arg(outPath));
 
     return false;
+  }
+
+  return true;
+}
+
+static bool CheckWhitespace(const libcomp::String& path) {
+  std::vector<char> data = libcomp::Crypto::LoadFile(path.ToUtf8());
+
+  auto it = data.begin();
+
+  int line = 0;
+
+  while (it != data.end()) {
+    line++;
+
+    auto next = std::find(it, data.end(), '\n');
+
+    const char* szStart = &*it;
+    const char* szEnd = &*next;
+    size_t len = (size_t)(szEnd - szStart);
+
+    if (len) {
+      auto before = libcomp::String(szStart, len).Replace("\r", "");
+      auto after = before.RightTrimmed();
+
+      if (before != after) {
+        LogGeneralErrorMsg(
+            libcomp::String("File has trailing whitespace on line %2: %1\n")
+                .Arg(path)
+                .Arg(line));
+        LogGeneralErrorMsg(libcomp::String("Original: '%1'\n").Arg(before));
+        LogGeneralErrorMsg(libcomp::String("Trimmed:  '%1'\n").Arg(after));
+
+        return false;
+      }
+    }
+
+    it = ++next;
   }
 
   return true;
@@ -361,7 +399,7 @@ static bool CompileSplitFiles(const libcomp::String& bdType,
     return false;
   }
 
-  libcomp::BinaryDataSet* pSet = nullptr;
+  libhack::BinaryDataSet* pSet = nullptr;
 
   auto match = gTranslator->binaryTypes.find(bdType.ToUtf8());
 
@@ -499,8 +537,12 @@ static bool HaveLint() {
 #ifdef _WIN32
   FILE* pPipe = _popen(cmd.C(), "rt");
 #else
-  FILE* pPipe = popen(cmd.C(), "rt");
+  FILE* pPipe = popen(cmd.C(), "r");
 #endif
+
+  if (!pPipe) {
+    return false;
+  }
 
   while (fgets(szBuffer, sizeof(szBuffer), pPipe)) {
     // do nothing with it
@@ -538,8 +580,12 @@ static int LintXml(const libcomp::String& schema, const libcomp::String& xml) {
 #ifdef _WIN32
   FILE* pPipe = _popen(cmd.C(), "rt");
 #else
-  FILE* pPipe = popen(cmd.C(), "rt");
+  FILE* pPipe = popen(cmd.C(), "r");
 #endif
+
+  if (!pPipe) {
+    return -1;
+  }
 
   while (fgets(szBuffer, sizeof(szBuffer), pPipe)) {
     output.push_back(szBuffer);
@@ -586,6 +632,7 @@ Translator::Translator(const char* szProgram)
   Sqrat::RootTable(engine.GetVM()).Func("_DecompileFile", DecompileFile);
   Sqrat::RootTable(engine.GetVM())
       .Func("_CompileSplitFiles", CompileSplitFiles);
+  Sqrat::RootTable(engine.GetVM()).Func("_CheckWhitespace", CheckWhitespace);
   Sqrat::RootTable(engine.GetVM()).Func("_EncryptFile", EncryptFile);
   Sqrat::RootTable(engine.GetVM()).Func("_DecryptFile", DecryptFile);
   Sqrat::RootTable(engine.GetVM()).Func("_Include", Include);
@@ -624,10 +671,10 @@ static bool LoadAndRunScriptFile(const char* szScriptFile) {
 }
 
 int main(int argc, char* argv[]) {
-  libcomp::Log::GetSingletonPtr()->AddStandardOutputHook();
-  std::unique_ptr<libcomp::Log> log(libcomp::Log::GetSingletonPtr());
-  log->SetLogLevel(libcomp::LogComponent_t::ScriptEngine,
-                   libcomp::Log::Level_t::LOG_LEVEL_INFO);
+  libhack::Log::GetSingletonPtr()->AddStandardOutputHook();
+  std::unique_ptr<libcomp::BaseLog> log(libhack::Log::GetSingletonPtr());
+  log->SetLogLevel(to_underlying(libcomp::BaseLogComponent_t::ScriptEngine),
+                   libcomp::BaseLog::Level_t::LOG_LEVEL_INFO);
   log->SetLogPath("build.log", true);
 
   gTranslator.reset(new Translator(argv[0]));

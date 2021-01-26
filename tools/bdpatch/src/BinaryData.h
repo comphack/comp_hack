@@ -190,12 +190,12 @@
 #include DREAM_OBJGEN_INCLUDE_A
 #endif  // DREAM_OBJGEN_INCLUDE_A
 
-class ManualBinaryDataSet : public libcomp::BinaryDataSet {
+class ManualBinaryDataSet : public libhack::BinaryDataSet {
  public:
   ManualBinaryDataSet(
       std::function<std::shared_ptr<libcomp::Object>()> alloc,
       std::function<uint32_t(const std::shared_ptr<libcomp::Object>&)> map)
-      : libcomp::BinaryDataSet(alloc, map) {}
+      : libhack::BinaryDataSet(alloc, map) {}
   virtual ~ManualBinaryDataSet() {}
 
   void AddRecord(std::shared_ptr<libcomp::Object> obj) {
@@ -205,7 +205,7 @@ class ManualBinaryDataSet : public libcomp::BinaryDataSet {
 
 #define ADD_TYPE(desc, key, objname)                                      \
   binaryTypes[key] = std::make_pair(desc, []() {                          \
-    return new libcomp::BinaryDataSet(                                    \
+    return new libhack::BinaryDataSet(                                    \
         []() { return std::make_shared<objects::objname>(); },            \
                                                                           \
         [](const std::shared_ptr<libcomp::Object>& obj) -> uint32_t {     \
@@ -216,7 +216,7 @@ class ManualBinaryDataSet : public libcomp::BinaryDataSet {
 
 #define ADD_TYPE_EX(desc, key, objname, getid)                          \
   binaryTypes[key] = std::make_pair(desc, []() {                        \
-    return new libcomp::BinaryDataSet(                                  \
+    return new libhack::BinaryDataSet(                                  \
         []() { return std::make_shared<objects::objname>(); },          \
                                                                         \
         [](const std::shared_ptr<libcomp::Object>& obj) -> uint32_t {   \
@@ -229,7 +229,7 @@ class ManualBinaryDataSet : public libcomp::BinaryDataSet {
   binaryTypes[key] = std::make_pair(desc, []() {               \
     static uint32_t nextID = 0;                                \
                                                                \
-    return new libcomp::BinaryDataSet(                         \
+    return new libhack::BinaryDataSet(                         \
         []() { return std::make_shared<objects::objname>(); }, \
                                                                \
         [](const std::shared_ptr<libcomp::Object>& obj) {      \
@@ -255,10 +255,10 @@ class ManualBinaryDataSet : public libcomp::BinaryDataSet {
 
 static std::map<
     std::string,
-    std::pair<std::string, std::function<libcomp::BinaryDataSet*(void)>>>
+    std::pair<std::string, std::function<libhack::BinaryDataSet*(void)>>>
 EnumerateBinaryDataTypes() {
   std::map<std::string,
-           std::pair<std::string, std::function<libcomp::BinaryDataSet*(void)>>>
+           std::pair<std::string, std::function<libhack::BinaryDataSet*(void)>>>
       binaryTypes;
 
   // clang-format off

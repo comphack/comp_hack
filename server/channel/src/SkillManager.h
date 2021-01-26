@@ -33,7 +33,7 @@
 // objgen Includes
 #include <MiSkillBasicData.h>
 
-namespace libcomp {
+namespace libhack {
 class ScriptEngine;
 }
 
@@ -454,7 +454,8 @@ class SkillManager {
                           std::shared_ptr<SkillExecutionContext> ctx);
 
   /**
-   * Finalize skill processing and send the skill effect reports.
+   * Finalize skill processing and send the skill effect reports, also updates
+   * expertises
    * @param pSkill Current skill processing state
    * @param ctx Special execution state for the skill
    */
@@ -1010,7 +1011,7 @@ class SkillManager {
 
   /**
    * Execute post execution steps like notifying the client that the skill
-   * has executed and updating any related expertises
+   * has executed
    * @param client Pointer to the client connection that activated the skill
    * @param ctx Special execution state for the skill
    * @param activated Pointer to the activated ability instance
@@ -1407,10 +1408,12 @@ class SkillManager {
   /**
    * Run applicable script pre-actions during execution.
    * @param pSkill Current skill processing state
+   * @param targets List of target states before skill NRA calculation, etc
    * @return false if an error occurred or the skill should fizzle
    */
   bool ExecuteScriptPreActions(
-      const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+      const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+      std::list<std::shared_ptr<channel::ActiveEntityState>> targets);
 
   /**
    * Run applicable script post-actions during execution.
@@ -1507,6 +1510,27 @@ class SkillManager {
    */
   bool IFramesEnabled();
 
+  /**
+   * Check if an entity is responsible for this spawn and if the creation of the
+   * spawn should be denied.
+   * @param responsibleEntity Will be set to the UUID of the responsible entity
+   * or NULL if there is none.
+   * @param managedCountForEntity Output for the current number of spawns
+   * managed by this entity.
+   * @param activated The skill activation.
+   * @param client Client connection.
+   * @param zone Zone the skill was casted in.
+   * @param source Entity that wishes to create the spawn.
+   * @returns true if the spawn may be created; false otherwise
+   * @note If this method returns false, an error has already been sent.
+   */
+  bool CheckResponsibility(
+      libobjgen::UUID& responsibleEntity, int32_t& managedCountForEntity,
+      const std::shared_ptr<objects::ActivatedAbility>& activated,
+      const std::shared_ptr<ChannelClientConnection>& client,
+      const std::shared_ptr<Zone>& zone,
+      const std::shared_ptr<ActiveEntityState>& source);
+
   /// Pointer to the channel server
   std::weak_ptr<ChannelServer> mServer;
 
@@ -1532,7 +1556,7 @@ class SkillManager {
 
   /// Map of skill function IDs to prepared scripts to be executed during
   /// one of several points during skill processing.
-  std::unordered_map<uint16_t, std::shared_ptr<libcomp::ScriptEngine>>
+  std::unordered_map<uint16_t, std::shared_ptr<libhack::ScriptEngine>>
       mSkillLogicScripts;
 
   /// Map of skill function IDs to script specified settings signifying

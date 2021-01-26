@@ -73,16 +73,24 @@ class EnemyState : public ActiveEntityStateImp<objects::Enemy> {
   virtual std::shared_ptr<objects::EnemyBase> GetEnemyBase() const;
 
   virtual uint8_t RecalculateStats(
-      libcomp::DefinitionManager* definitionManager,
+      libhack::DefinitionManager* definitionManager,
       std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr,
       std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
 
   virtual std::set<uint32_t> GetAllSkills(
-      libcomp::DefinitionManager* definitionManager, bool includeTokusei);
+      libhack::DefinitionManager* definitionManager, bool includeTokusei);
 
   virtual uint8_t GetLNCType();
 
   virtual int8_t GetGender();
+
+  virtual libobjgen::UUID GetResponsibleEntity() const;
+
+  /**
+   * Set the UUID of the entity responsible for creating this entity.
+   * @param uuid UUID of entity responsible for creating this entity.
+   */
+  void SetResponsibleEntity(const libobjgen::UUID& uuid);
 
   /**
    * Cast an EntityStateObject into an EnemyState. Useful for script
@@ -93,6 +101,9 @@ class EnemyState : public ActiveEntityStateImp<objects::Enemy> {
       const std::shared_ptr<EntityStateObject>& obj);
 
  private:
+  /// Entity responsible for creating this entity.
+  libobjgen::UUID mResponsibleEntity;
+
   /// Player local entity IDs mapped to the enemy's current talk skill
   /// related points: affability then fear. If either of these
   /// exceeds the demon's set threshold, negotiation will end.

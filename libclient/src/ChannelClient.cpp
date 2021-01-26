@@ -35,6 +35,9 @@
 #include <Login.h>
 #include <TestConfig.h>
 
+// libhack Includes
+#include <Constants.h>
+
 // libcomp Includes
 #include <ChannelConnection.h>
 #include <ScriptEngine.h>

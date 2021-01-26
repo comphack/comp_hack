@@ -927,14 +927,13 @@ class CharacterManager {
    *  expertise updated if it is enabled
    * @param rateBoost Optional flat value to add to the expertise
    *  rates for the skill (before calculating final amount)
-   * @param multiplier Expertise point multiplier, defaults to -1
-   *  to differentiate from explicitly being set to 1. If this is
-   *  not set, the character's expertise acquisition rate will be
-   *  used.
+   * @param calcState Override CalculatedEntityState to use instead of
+   *  the entity's default
    */
   void UpdateExpertise(
       const std::shared_ptr<channel::ChannelClientConnection>& client,
-      uint32_t skillID, uint16_t rateBoost = 0, float multiplier = -1.0f);
+      uint32_t skillID, uint16_t rateBoost = 0,
+      std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
   /**
    * Calculate how many expertise points would be gained for a specific
@@ -1346,7 +1345,7 @@ class CharacterManager {
    */
   static libcomp::EnumMap<CorrectTbl, int32_t> GetDemonBaseStats(
       const std::shared_ptr<objects::MiDevilData>& demonData,
-      libcomp::DefinitionManager* definitionManager, uint8_t growthType,
+      libhack::DefinitionManager* definitionManager, uint8_t growthType,
       int8_t level);
 
   /**
@@ -1387,7 +1386,7 @@ class CharacterManager {
    */
   static void AdjustMitamaStats(const std::shared_ptr<objects::Demon>& demon,
                                 libcomp::EnumMap<CorrectTbl, int32_t>& stats,
-                                libcomp::DefinitionManager* definitionManager,
+                                libhack::DefinitionManager* definitionManager,
                                 uint8_t reunionMode, int32_t entityID = 0,
                                 bool includeSetBonuses = true);
 
@@ -1403,7 +1402,7 @@ class CharacterManager {
    *  active
    */
   static bool GetMitamaBonuses(const std::shared_ptr<objects::Demon>& demon,
-                               libcomp::DefinitionManager* definitionManager,
+                               libhack::DefinitionManager* definitionManager,
                                std::unordered_map<uint8_t, uint8_t>& bonuses,
                                std::set<uint32_t>& setBonuses,
                                bool excludeTokusei);
@@ -1421,7 +1420,7 @@ class CharacterManager {
    */
   static std::list<int32_t> GetMitamaIndirectSetBonuses(
       const std::shared_ptr<objects::Demon>& demon,
-      libcomp::DefinitionManager* definitionManager, bool exBonus,
+      libhack::DefinitionManager* definitionManager, bool exBonus,
       int8_t& magReduction);
 
   /**
@@ -1449,7 +1448,7 @@ class CharacterManager {
   static std::set<uint32_t> GetTraitSkills(
       const std::shared_ptr<objects::Demon>& demon,
       const std::shared_ptr<objects::MiDevilData>& demonData,
-      libcomp::DefinitionManager* definitionManager);
+      libhack::DefinitionManager* definitionManager);
 
   /**
    * Retrieve a map of correct table indexes to corresponding stat values.

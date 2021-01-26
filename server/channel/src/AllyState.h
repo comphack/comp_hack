@@ -52,12 +52,12 @@ class AllyState : public ActiveEntityStateImp<objects::Ally> {
   virtual std::shared_ptr<objects::EnemyBase> GetEnemyBase() const;
 
   virtual uint8_t RecalculateStats(
-      libcomp::DefinitionManager* definitionManager,
+      libhack::DefinitionManager* definitionManager,
       std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr,
       std::shared_ptr<objects::MiSkillData> contextSkill = nullptr);
 
   virtual std::set<uint32_t> GetAllSkills(
-      libcomp::DefinitionManager* definitionManager, bool includeTokusei);
+      libhack::DefinitionManager* definitionManager, bool includeTokusei);
 
   virtual uint8_t GetLNCType();
 

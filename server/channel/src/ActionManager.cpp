@@ -466,7 +466,7 @@ libcomp::String ActionManager::GetActionName(
 }
 
 void ActionManager::BindAllActionTypes(
-    const std::shared_ptr<libcomp::ScriptEngine>& engine) {
+    const std::shared_ptr<libhack::ScriptEngine>& engine) {
   engine->Using<objects::ActionAddRemoveItems>();
   engine->Using<objects::ActionAddRemoveStatus>();
   engine->Using<objects::ActionCreateLoot>();
@@ -2016,7 +2016,7 @@ bool ActionManager::UpdatePoints(ActionContext& ctx) {
     } break;
     case objects::ActionUpdatePoints::PointType_t::SOUL_POINTS: {
       mServer.lock()->GetCharacterManager()->UpdateSoulPoints(
-          ctx.Client, (int32_t)act->GetValue(), !act->GetIsSet());
+          ctx.Client, (int32_t)act->GetValue(), true, !act->GetIsSet());
     } break;
     case objects::ActionUpdatePoints::PointType_t::COINS: {
       mServer.lock()->GetCharacterManager()->UpdateCoinTotal(
@@ -3038,7 +3038,7 @@ bool ActionManager::RunScript(ActionContext& ctx) {
 
   auto script = serverDataManager->GetScript(act->GetScriptID());
   if (script && script->Type.ToLower() == "actioncustom") {
-    auto engine = std::make_shared<libcomp::ScriptEngine>();
+    auto engine = std::make_shared<libhack::ScriptEngine>();
 
     // Bind some defaults
     engine->Using<AllyState>();
@@ -3194,7 +3194,7 @@ bool ActionManager::VerifyZone(ActionContext& ctx,
 }
 
 bool ActionManager::PrepareTransformScript(
-    ActionContext& ctx, std::shared_ptr<libcomp::ScriptEngine> engine) {
+    ActionContext& ctx, std::shared_ptr<libhack::ScriptEngine> engine) {
   auto serverDataManager = mServer.lock()->GetServerDataManager();
   auto act = ctx.Action;
   auto script =
@@ -3226,7 +3226,7 @@ bool ActionManager::PrepareTransformScript(
 }
 
 bool ActionManager::TransformAction(
-    ActionContext& ctx, std::shared_ptr<libcomp::ScriptEngine> engine) {
+    ActionContext& ctx, std::shared_ptr<libhack::ScriptEngine> engine) {
   auto act = ctx.Action;
 
   Sqrat::Array sqParams(engine->GetVM());

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiNPCInvisibleDataEntry" persistent="false">
+        <member type="s8" name="logicGroup"/>
+        <member type="enum" name="type" underlying="int8_t" pad="2">
+            <value num="0">NONE</value>
+            <value num="1">QUEST_PHASE</value>
+            <value num="2">QUEST_STATE</value>
+            <value num="3">QUEST_DATA</value>
+            <value num="4">VALUABLE</value>
+            <value num="5">GAMETIME</value>
+            <value num="6">DATETIME</value>
+            <value num="7">STATUS</value>
+            <value num="8">ITIME</value>
+            <value num="9">SYSTIME</value>
+        </member>
+        <member type="array" size="2" name="mainParams">
+            <element type="s32"/>
+        </member>
+        <member type="array" size="8" name="subParams">
+            <element type="s32"/>
+        </member>
+    </object>
+    <object name="MiNPCInvisibleData" persistent="false">
+        <member type="s16" name="ID"/>
+        <member type="bool" name="show" pad="1"/>
+        <member type="array" size="8" name="entries">
+            <element type="MiNPCInvisibleDataEntry*"/>
+        </member>
+    </object>
+</objgen>

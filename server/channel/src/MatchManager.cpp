@@ -28,9 +28,12 @@
 #include "MatchManager.h"
 
 // libcomp Includes
+#include <Randomizer.h>
+
+// libhack Includes
+#include <DefinitionManager.h>
 #include <Log.h>
 #include <PacketCodes.h>
-#include <Randomizer.h>
 #include <ServerConstants.h>
 #include <ServerDataManager.h>
 
@@ -42,6 +45,7 @@
 #include <DiasporaBase.h>
 #include <InstanceAccess.h>
 #include <MatchEntry.h>
+#include <MiUltimateBattleBaseData.h>
 #include <MiUraFieldTowerData.h>
 #include <PentalphaEntry.h>
 #include <PentalphaMatch.h>
@@ -75,7 +79,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<MatchManager>() {
+BaseScriptEngine& BaseScriptEngine::Using<MatchManager>() {
   if (!BindingExists("MatchManager", true)) {
     Using<objects::MatchEntry>();
     Using<objects::PentalphaMatch>();
@@ -4054,6 +4058,10 @@ bool MatchManager::EndUltimateBattlePhase(const std::shared_ptr<Zone>& zone,
 
   auto server = mServer.lock();
   auto characterManager = server->GetCharacterManager();
+  auto definitionManager = server->GetDefinitionManager();
+  float coinMultiplier =
+      definitionManager->GetUltimateBattleBaseData(ubMatch->GetSubType())
+          ->GetCoinMultiplier();
 
   auto tournament = GetUBTournament();
   std::list<std::shared_ptr<objects::UBResult>> updatedResults;
@@ -4096,8 +4104,9 @@ bool MatchManager::EndUltimateBattlePhase(const std::shared_ptr<Zone>& zone,
     }
 
     // Always increase coins, no tournament needed either
-    if (points > coins && coins < (int32_t)ubMatch->GetCoinLimit()) {
-      int32_t delta = points - coins;
+    int32_t newCoins = (int32_t)((double)points * (double)coinMultiplier);
+    if (newCoins > coins && coins < (int32_t)ubMatch->GetCoinLimit()) {
+      int32_t delta = newCoins - coins;
       if ((delta + coins) > (int32_t)ubMatch->GetCoinLimit()) {
         delta = (int32_t)ubMatch->GetCoinLimit() - coins;
       }

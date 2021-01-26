@@ -59,7 +59,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<ChannelSyncManager>() {
+BaseScriptEngine& BaseScriptEngine::Using<ChannelSyncManager>() {
   if (!BindingExists("ChannelSyncManager", true)) {
     Using<DataSyncManager>();
     Using<objects::Account>();
@@ -88,7 +88,9 @@ ScriptEngine& ScriptEngine::Using<ChannelSyncManager>() {
 
 ChannelSyncManager::ChannelSyncManager(
     const std::weak_ptr<ChannelServer>& server)
-    : mServer(server) {}
+    : libcomp::DataSyncManager(
+          to_underlying(InternalPacketCode_t::PACKET_DATA_SYNC)),
+      mServer(server) {}
 
 ChannelSyncManager::~ChannelSyncManager() {}
 

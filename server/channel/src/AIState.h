@@ -161,13 +161,13 @@ class AIState : public objects::AIStateObject {
    * Get the bound AI script
    * @return Pointer to the bound AI script or null if not bound
    */
-  std::shared_ptr<libcomp::ScriptEngine> GetScript() const;
+  std::shared_ptr<libhack::ScriptEngine> GetScript() const;
 
   /**
    * Bind an AI script to the AI controlled entity
    * @param aiScript Script to bind to the AI controlled entity
    */
-  void SetScript(const std::shared_ptr<libcomp::ScriptEngine>& aiScript);
+  void SetScript(const std::shared_ptr<libhack::ScriptEngine>& aiScript);
 
   /**
    * Get the AI's aggro value from its base AI definition representing
@@ -256,7 +256,7 @@ class AIState : public objects::AIStateObject {
   AISkillMap_t mSkillMap;
 
   /// Pointer to the AI script to use for the AI controlled entity
-  std::shared_ptr<libcomp::ScriptEngine> mAIScript;
+  std::shared_ptr<libhack::ScriptEngine> mAIScript;
 
   /// Current AI status of the entity
   AIStatus_t mStatus;

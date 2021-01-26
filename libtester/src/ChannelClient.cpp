@@ -40,6 +40,9 @@
 #include <Login.h>
 #include <TestConfig.h>
 
+// libhack Includes
+#include <Constants.h>
+
 // libcomp Includes
 #include <ChannelConnection.h>
 #include <ScriptEngine.h>
@@ -66,7 +69,7 @@ ChannelClient::ChannelClient()
     mDemonIDs[i] = -1;
   }
 
-  SetConnection(std::make_shared<libcomp::ChannelConnection>(mService));
+  SetConnection(std::make_shared<libhack::ChannelConnection>(mService));
 }
 
 ChannelClient::ChannelClient(const ChannelClient& other) : TestClient(other) {
@@ -384,7 +387,7 @@ int64_t ChannelClient::GetDemonID(int8_t slot) const {
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<ChannelClient>() {
+BaseScriptEngine& BaseScriptEngine::Using<ChannelClient>() {
   if (!BindingExists("ChannelClient")) {
     // Include the base class
     Using<TestClient>();

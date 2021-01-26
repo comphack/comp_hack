@@ -605,13 +605,16 @@ bool ChatManager::GMCommand_Ban(
   std::list<libcomp::String> argsCopy = args;
   libcomp::String bannedPlayer;
 
-  if (!GetStringArg(bannedPlayer, argsCopy) || argsCopy.size() > 1) {
+  if (!GetStringArg(bannedPlayer, argsCopy)) {
     return SendChatMessage(
         client, ChatType_t::CHAT_SELF,
-        libcomp::String("@ban requires one argument, <username>"));
+        libcomp::String("@ban requires at least one argument, <username>"));
   }
 
   int8_t kickLevel = 1;
+  int8_t kickLevelArg = -1;
+
+  GetIntegerArg(kickLevel, argsCopy);
 
   std::shared_ptr<objects::Character> target;
   std::shared_ptr<objects::Account> targetAccount;
@@ -619,8 +622,8 @@ bool ChatManager::GMCommand_Ban(
   if (!GetTargetCharacterAccount(bannedPlayer, false, target, targetAccount,
                                  targetClient) ||
       (targetAccount && !targetClient)) {
-    if (!GetIntegerArg(kickLevel, argsCopy) || kickLevel == 0 ||
-        kickLevel > 3) {
+    kickLevel = kickLevelArg;
+    if (kickLevelArg <= 0 || kickLevel > 3) {
       kickLevel = 1;
     }
 
@@ -642,8 +645,13 @@ bool ChatManager::GMCommand_Ban(
         "Your user level is lower than the user you tried to ban.");
   }
 
+  libcomp::String reason = libcomp::String::Join(argsCopy, " ");
+
   auto server = mServer.lock();
   targetAccount->SetEnabled(false);
+  targetAccount->SetBanReason(reason);
+  targetAccount->SetBanInitiator(
+      client->GetClientState()->GetAccountLogin()->GetAccount()->GetUsername());
   targetAccount->Update(server->GetLobbyDatabase());
 
   if (targetClient) {
@@ -1698,7 +1706,7 @@ bool ChatManager::GMCommand_Help(
            "Announce a ticker MESSAGE with the specified COLOR.",
        }},
       {"ban",
-       {"@ban NAME [1/2/3]",
+       {"@ban NAME [1/2/3] [REASON...]",
         "Bans the account which owns the character NAME. If the",
         "account is not on the channel, remove them with options",
         "1 (request current channel, default), 2 (request any",

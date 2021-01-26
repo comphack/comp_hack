@@ -67,7 +67,7 @@ class MainWindow : public QMainWindow {
   bool Init();
 
   std::shared_ptr<libcomp::DataStore> GetDatastore() const;
-  std::shared_ptr<libcomp::DefinitionManager> GetDefinitions() const;
+  std::shared_ptr<libhack::DefinitionManager> GetDefinitions() const;
 
   DropSetWindow* GetDropSets() const;
   EventWindow* GetEvents() const;
@@ -76,12 +76,12 @@ class MainWindow : public QMainWindow {
   std::shared_ptr<objects::MiCEventMessageData> GetEventMessage(
       int32_t msgID) const;
 
-  std::shared_ptr<libcomp::BinaryDataSet> GetBinaryDataSet(
+  std::shared_ptr<libhack::BinaryDataSet> GetBinaryDataSet(
       const libcomp::String& objType) const;
 
   void RegisterBinaryDataSet(
       const libcomp::String& objType,
-      const std::shared_ptr<libcomp::BinaryDataSet>& dataset,
+      const std::shared_ptr<libhack::BinaryDataSet>& dataset,
       bool createSelector = true);
 
   ObjectSelectorWindow* GetObjectSelector(const libcomp::String& objType) const;
@@ -128,9 +128,9 @@ class MainWindow : public QMainWindow {
   Ui::MainWindow* ui;
 
   std::shared_ptr<libcomp::DataStore> mDatastore;
-  std::shared_ptr<libcomp::DefinitionManager> mDefinitions;
+  std::shared_ptr<libhack::DefinitionManager> mDefinitions;
 
-  std::unordered_map<libcomp::String, std::shared_ptr<libcomp::BinaryDataSet>>
+  std::unordered_map<libcomp::String, std::shared_ptr<libhack::BinaryDataSet>>
       mBinaryDataSets;
 
   std::unordered_map<libcomp::String, ObjectSelectorWindow*> mObjectSelectors;

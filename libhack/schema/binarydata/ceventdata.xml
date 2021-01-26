@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCEventFrameTbl" persistent="false">
+        <member type="enum" name="type" underlying="int32_t">
+            <value num="0">END</value>
+            <value num="1">STAGE_EFFECT</value>
+            <value num="2">NPC_MESSAGE</value>
+            <value num="3">IMAGE_DISPLAY</value>
+            <value num="4">IMAGE_HIDE</value>
+            <value num="5">WAIT</value>
+            <value num="6">DELAY</value>
+            <value num="7">SOUND_PLAY</value>
+        </member>
+        <member type="array" size="6" name="params">
+            <element type="s32"/>
+        </member>
+        <member type="string" length="132" name="text"
+            encoding="default"/>
+    </object>
+    <object name="MiCEventData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="list" name="frames">
+            <element type="MiCEventFrameTbl*"/>
+        </member>
+    </object>
+</objgen>

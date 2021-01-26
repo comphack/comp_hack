@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCUraFieldData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="unknown1"/>
+        <member type="u32" name="unknown2"/>
+        <member type="u32" name="unknown3"/>
+        <member type="u16" name="unknown4"/>
+        <member type="u16" name="unknown5"/>
+        <member type="u32" name="unknown6"/>
+        <member type="u32" name="unknown7"/>
+        <member type="u32" name="unknown8"/>
+    </object>
+</objgen>

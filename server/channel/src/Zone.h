@@ -593,7 +593,7 @@ class Zone : public objects::ZoneObject {
   bool UpdateTimedSpawns(const WorldClock& clock, bool initializing = false);
 
   /**
-   * Enable or disable the supplied spawn group and also disable (or enable)
+   * Enable or disable the supplied spawn groups and also disable (or enable)
    * any affected spawn location groups
    * @param spawnGroupIDArray Array of strings from Squirrel scripting
    * containing the SpawnGroup IDs to adjust
@@ -605,6 +605,13 @@ class Zone : public objects::ZoneObject {
    */
   bool EnableDisableSpawnGroup(Sqrat::Array spawnGroupIDArray, bool enable,
                                const WorldClock& clock);
+
+  /**
+   * Reactivate and set the respawn timers for the supplied spawn groups
+   * @param spawnGroupIDArray Array of strings from Squirrel scripting
+   * containing the SpawnGroup IDs to adjust
+   */
+  void RespawnSpawnGroup(Sqrat::Array spawnGroupIDArray);
 
   /**
    * Get the set of spawn location groups that need to be respawned.
@@ -794,6 +801,14 @@ class Zone : public objects::ZoneObject {
       const WorldClock& clock,
       const std::shared_ptr<objects::SpawnRestriction>& restriction);
 
+  /**
+   * Get the number of entities for which the given entity is responsible for.
+   * @param responsibleEntity Responsible entity that manages one or more other
+   * entities.
+   * @returns Number of entities for which the given entity is responsible for.
+   */
+  int32_t GetEntitiesManagedBy(const libobjgen::UUID& responsibleEntity);
+
  private:
   /**
    * Register an entity as one that currently exists in the zone
@@ -946,6 +961,10 @@ class Zone : public objects::ZoneObject {
   /// General use flags and associated values used for event sequences etc
   /// keyed on 0 for all characters or world CID if for a specific one
   std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> mFlagStates;
+
+  /// Map of entity UUIDs that are responsible for creating some number of other
+  /// entities.
+  std::unordered_map<libobjgen::UUID, int32_t> mResponsibleEntities;
 
   /// Geometry information bound to the zone
   std::shared_ptr<ZoneGeometry> mGeometry;

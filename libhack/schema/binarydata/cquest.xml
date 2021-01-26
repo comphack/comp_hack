@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiNextEpisodeInfo" persistent="false">
+        <member type="s32" name="questID"/>
+        <member type="s32" name="restrictionType"/>
+        <member type="s32" name="restrictionValue"/>
+    </object>
+    <object name="MiCQuestData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" name="title" encoding="default"
+            round="4" lensz="4"/>
+        <member type="string" name="npc" encoding="default"
+            round="4" lensz="4"/>
+        <member type="s32" name="zoneID"/>
+        <member type="s32" name="xCoordinate"/>
+        <member type="s32" name="yCoordinate"/>
+        <member type="array" size="8" name="lines">
+            <element type="string" round="4" lensz="4" encoding="default"/>
+        </member>
+        <member type="array" size="3" name="next">
+            <element type="MiNextEpisodeInfo*"/>
+        </member>
+    </object>
+</objgen>

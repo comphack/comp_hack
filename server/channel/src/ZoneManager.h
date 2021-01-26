@@ -33,6 +33,9 @@
 // libcomp Includes
 #include <Mutex.h>
 
+// libobjgen Includes
+#include <UUID.h>
+
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "Zone.h"
@@ -565,11 +568,13 @@ class ZoneManager {
    * @param x X coordinate to render the enemy at
    * @param y Y coordinate to render the enemy at
    * @param rot Rotation to render the enemy with
+   * @param responsibleEntity Entity responsible for creating this entity.
    * @return Pointer to the new ActiveEntityState
    */
   std::shared_ptr<ActiveEntityState> CreateEnemy(
       const std::shared_ptr<Zone>& zone, uint32_t demonID, uint32_t spawnID,
-      uint32_t spotID, float x, float y, float rot);
+      uint32_t spotID, float x, float y, float rot,
+      const libobjgen::UUID& responsibleEntity = {});
 
   /**
    * Copy the current skills and stats from one entity onto an enemy or ally
@@ -1214,12 +1219,13 @@ class ZoneManager {
    * @param rot Rotation to render the enemy with
    * @param asAlly Optional override to create an ally regardless of
    *  spawn category, defaults to false
+   * @param responsibleEntity Entity responsible for creating this entity.
    * @return Pointer to the new ActiveEntityState
    */
   std::shared_ptr<ActiveEntityState> CreateEnemy(
       const std::shared_ptr<Zone>& zone, uint32_t demonID,
       const std::shared_ptr<objects::Spawn>& spawn, float x, float y, float rot,
-      bool asAlly = false);
+      bool asAlly = false, const libobjgen::UUID& responsibleEntity = {});
 
   /**
    * Send entity information about an enemy in a zone

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="EventITime" baseobject="EventPrompt" persistent="false"
+        scriptenabled="true">
+        <member type="enum" name="eventType" inherited="true" default="ITIME"/>
+        <member type="s8" name="iTimeID"/>
+        <member type="s32" name="reactionID"/>
+        <member type="s16" name="timeLimit"/>
+        <member type="list" name="giftIDs">
+            <element type="u32"/>
+        </member>
+        <member type="string" name="startActions"/>
+    </object>
+</objgen>

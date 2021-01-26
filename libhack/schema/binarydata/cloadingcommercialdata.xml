@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCLoadingCommercialData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="loading1"/>
+        <member type="u32" name="loading2"/>
+        <member type="float" name="loading3"/>
+        <member type="string" length="256" name="file" encoding="default"/>
+    </object>
+</objgen>

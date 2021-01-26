@@ -1,12 +1,12 @@
 /**
- * @file libcomp/src/ConfigLogVersion.cpp
- * @ingroup libcomp
+ * @file libconfig/src/ConfigLogVersion.cpp
+ * @ingroup libconfig
  *
  * @author COMP Omega <compomega@tutanota.com>
  *
  * @brief Built-in configuration settings.
  *
- * This file is part of the COMP_hack Library (libcomp).
+ * This file is part of the COMP_hack Library (libconfig).
  *
  * Copyright (C) 2012-2020 COMP_hack Team <compomega@tutanota.com>
  *
@@ -31,7 +31,7 @@
 #include "Git.h"
 #include "Log.h"
 
-void libcomp::Config::LogVersion(const char *szServerName) {
+void libhack::Config::LogVersion(const char *szServerName) {
   LogGeneralInfo([&]() {
     return libcomp::String("%1 v%2.%3.%4 (%5)\n")
         .Arg(szServerName)

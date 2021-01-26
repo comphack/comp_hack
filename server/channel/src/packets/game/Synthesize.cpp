@@ -45,6 +45,7 @@
 #include <MiSynthesisData.h>
 #include <MiSynthesisItemData.h>
 #include <PlayerExchangeSession.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -71,6 +72,9 @@ bool Parsers::Synthesize::Parse(
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto exchangeSession = state->GetExchangeSession();
+  auto activated = cState->GetActivatedAbility();
+  uint32_t activatedSkillID =
+      activated ? activated->GetSkillData()->GetCommon()->GetID() : 0;
 
   auto catalyst =
       exchangeSession ? exchangeSession->GetItems(0).Get() : nullptr;
@@ -230,9 +234,6 @@ bool Parsers::Synthesize::Parse(
 
     // Boost the skill execution expertise growth rate based upon
     // success or failure
-    auto activated = cState->GetActivatedAbility();
-    uint32_t activatedSkillID =
-        activated ? activated->GetSkillData()->GetCommon()->GetID() : 0;
     if (activatedSkillID && activatedSkillID == synthData->GetBaseSkillID()) {
       activated->SetExpertiseBoost(synthData->GetExpertBoosts(success ? 1 : 0));
     }
@@ -309,6 +310,13 @@ bool Parsers::Synthesize::Parse(
 
     eventManager->UpdateDemonQuestCount(client, dqType, synthData->GetItemID(),
                                         1);
+  }
+
+  // Update expertise
+  if (activatedSkillID && activatedSkillID == synthData->GetBaseSkillID()) {
+    characterManager->UpdateExpertise(client, activatedSkillID,
+                                      activated->GetExpertiseBoost(),
+                                      cState->GetCalculatedState());
   }
 
   return true;

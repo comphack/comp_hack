@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCIconData" persistent="false">
+        <member type="u16" name="ID" pad="2"/>
+        <member type="string" length="36" name="value" encoding="default"/>
+    </object>
+</objgen>

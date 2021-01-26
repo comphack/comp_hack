@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCDevilBoostIconData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="s8" name="mainIconID"/>
+        <member type="array" name="subIconIDs" size="4" pad="3">
+            <element type="s8"/>
+        </member>
+    </object>
+</objgen>

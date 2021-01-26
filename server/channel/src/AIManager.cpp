@@ -76,12 +76,12 @@
 
 using namespace channel;
 
-std::unordered_map<std::string, std::shared_ptr<libcomp::ScriptEngine>>
+std::unordered_map<std::string, std::shared_ptr<libhack::ScriptEngine>>
     AIManager::sPreparedScripts;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<AIManager>() {
+BaseScriptEngine& BaseScriptEngine::Using<AIManager>() {
   if (!BindingExists("AIManager", true)) {
     Using<ActiveEntityState>();
     Using<Zone>();
@@ -208,7 +208,7 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
     finalAIType = logicGroup->GetDefaultScriptID();
   }
 
-  std::shared_ptr<libcomp::ScriptEngine> aiEngine;
+  std::shared_ptr<libhack::ScriptEngine> aiEngine;
   if (!finalAIType.IsEmpty()) {
     auto it = sPreparedScripts.find(finalAIType.C());
     if (it == sPreparedScripts.end()) {
@@ -222,7 +222,7 @@ bool AIManager::Prepare(const std::shared_ptr<ActiveEntityState>& eState,
         return false;
       }
 
-      aiEngine = std::make_shared<libcomp::ScriptEngine>();
+      aiEngine = std::make_shared<libhack::ScriptEngine>();
       aiEngine->Using<AIManager>();
 
       if (!aiEngine->Eval(script->Source)) {

@@ -36,6 +36,7 @@
 #include <Randomizer.h>
 
 // object Includes
+#include <ActivatedAbility.h>
 #include <DemonBox.h>
 #include <Item.h>
 #include <ItemBox.h>
@@ -45,8 +46,11 @@
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <MiPossessionData.h>
+#include <MiSkillData.h>
+#include <MiSkillItemStatusCommonData.h>
 #include <MiUnionData.h>
 #include <PlayerExchangeSession.h>
+#include <WorldSharedConfig.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -410,6 +414,16 @@ bool Parsers::DemonCrystallize::Parse(
     server->GetEventManager()->UpdateDemonQuestCount(
         client, objects::DemonQuest::Type_t::CRYSTALLIZE,
         enchantData->GetDevilCrystal()->GetItemID(), 1);
+  }
+
+  // Update expertise
+  auto activated = cState->GetActivatedAbility();
+  uint32_t activatedSkillID =
+      activated ? activated->GetSkillData()->GetCommon()->GetID() : 0;
+  if (activatedSkillID) {
+    characterManager->UpdateExpertise(client, activatedSkillID,
+                                      activated->GetExpertiseBoost(),
+                                      cState->GetCalculatedState());
   }
 
   return true;

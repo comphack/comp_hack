@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiGvGArrayData" persistent="false">
+        <member type="u16" name="unknown1"/>
+        <member type="u16" name="unknown2"/>
+    </object>
+    <object name="MiGvGData" persistent="false">
+        <member type="u8" name="ID"/>
+        <member type="u8" name="unknown1"/>
+        <member type="u8" name="unknown2"/>
+        <member type="u8" name="unknown3"/>
+        <member type="u16" name="unknown4"/>
+        <member type="u16" name="unknown5"/>
+        <member type="u16" name="unknown6"/>
+        <member type="u16" name="unknown7"/>
+        <member type="array" size="5" name="unknown8">
+            <element type="u16"/>
+        </member>
+        <member type="u16" name="unknown9"/>
+        <member type="array" size="3" name="unknown10">
+            <element type="MiGvGArrayData*"/>
+        </member>
+    </object>
+</objgen>

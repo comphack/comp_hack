@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiNakamaQuestRewardVariableTbl" persistent="false">
+        <member type="u32" name="unknown1"/>
+        <member type="u16" name="unknown2"/>
+        <member type="u16" name="unknown3"/>
+        <member type="s16" name="unknown4"/>
+        <member type="s16" name="unknown5"/>
+    </object>
+    <object name="MiNakamaQuestRewardFixedData" persistent="false">
+        <member type="u32" name="unknown1"/>
+        <member type="u16" name="unknown2"/>
+        <member type="u16" name="unknown3"/>
+        <member type="u32" name="unknown4"/>
+        <member type="u32" name="unknown5"/>
+    </object>
+    <object name="MiCNakamaQuestRewardData" persistent="false">
+        <member type="u32" name="ID"/>
+
+        <member type="u16" name="reward1_unknown1"/>
+        <member type="u16" name="reward1_unknown2"/>
+        <member type="MiNakamaQuestRewardFixedData*" name="reward1_fixedReward"/>
+        <member type="u16" name="reward1_unknown3"/>
+        <member type="u16" name="reward1_unknown4"/>
+        <member type="list" name="reward1_variableRewards">
+            <element type="MiNakamaQuestRewardVariableTbl*"/>
+        </member>
+
+        <member type="u16" name="reward2_unknown1"/>
+        <member type="u16" name="reward2_unknown2"/>
+        <member type="MiNakamaQuestRewardFixedData*" name="reward2_fixedReward"/>
+        <member type="u16" name="reward2_unknown3"/>
+        <member type="u16" name="reward2_unknown4"/>
+        <member type="list" name="reward2_variableRewards">
+            <element type="MiNakamaQuestRewardVariableTbl*"/>
+        </member>
+
+        <member type="u16" name="reward3_unknown1"/>
+        <member type="u16" name="reward3_unknown2"/>
+        <member type="MiNakamaQuestRewardFixedData*" name="reward3_fixedReward"/>
+        <member type="u16" name="reward3_unknown3"/>
+        <member type="u16" name="reward3_unknown4"/>
+        <member type="list" name="reward3_variableRewards">
+            <element type="MiNakamaQuestRewardVariableTbl*"/>
+        </member>
+
+        <member type="u16" name="reward4_unknown1"/>
+        <member type="u16" name="reward4_unknown2"/>
+        <member type="MiNakamaQuestRewardFixedData*" name="reward4_fixedReward"/>
+        <member type="u16" name="reward4_unknown3"/>
+        <member type="u16" name="reward4_unknown4"/>
+        <member type="list" name="reward4_variableRewards">
+            <element type="MiNakamaQuestRewardVariableTbl*"/>
+        </member>
+    </object>
+</objgen>

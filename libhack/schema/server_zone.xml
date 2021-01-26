@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="ServerZoneSpot" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="list" name="Actions">
+            <element type="Action*"/>
+        </member>
+        <member type="list" name="LeaveActions">
+            <element type="Action*"/>
+        </member>
+        <member type="SpawnLocation*" name="SpawnArea"
+            nulldefault="true"/>
+        <member type="enum" name="MatchSpawn" underlying="uint8_t">
+            <value>NONE</value>
+            <value>ALL</value>
+            <value>PVP_BLUE</value>
+            <value>PVP_RED</value>
+        </member>
+        <member type="u8" name="MatchBase"/>
+        <member type="u8" name="MatchZoneInLimit"/>
+    </object>
+    <object name="ServerZoneTrigger" persistent="false">
+        <member type="enum" name="Trigger" underlying="uint8_t">
+            <value>ON_SETUP</value>
+            <value>ON_LOGIN</value>
+            <value>PRE_ZONE_IN</value>
+            <value>ON_ZONE_IN</value>
+            <value>ON_ZONE_OUT</value>
+            <value>ON_SPAWN</value>
+            <value>ON_DEATH</value>
+            <value>ON_REVIVAL</value>
+            <value>ON_RESPAWN</value>
+            <value>ON_FLAG_SET</value>
+            <value>ON_TIME</value>
+            <value>ON_SYSTEMTIME</value>
+            <value>ON_MOONPHASE</value>
+            <value>ON_PHASE</value>
+            <value>ON_PVP_START</value>
+            <value>ON_PVP_BASE_CAPTURE</value>
+            <value>ON_PVP_COMPLETE</value>
+            <value>ON_DIASPORA_BASE_CAPTURE</value>
+            <value>ON_DIASPORA_BASE_RESET</value>
+            <value>ON_TOKUSEI_EXPIRED</value>
+            <value>ON_UB_TICK</value>
+            <value>ON_UB_GAUGE_OVER</value>
+            <value>ON_UB_GAUGE_UNDER</value>
+        </member>
+        <member type="s32" name="Value"/>
+        <member type="list" name="Actions">
+            <element type="Action*"/>
+        </member>
+    </object>
+    <object name="ServerZone" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="DynamicMapID"/>
+        <member type="bool" name="Global"/>
+        <member type="bool" name="Restricted"/>
+        <member type="u32" name="GroupID"/>
+        <member type="u32" name="GlobalBossGroup"/>
+        <member type="float" name="StartingX"/>
+        <member type="float" name="StartingY"/>
+        <member type="float" name="StartingRotation"/>
+        <member type="float" name="XPMultiplier" default="1.0"/>
+        <member type="u32" name="BazaarMarketCost" default="100"/>
+        <member type="u32" name="BazaarMarketTime" default="60"/>
+        <member type="bool" name="MountDisabled"/>
+        <member type="bool" name="BikeDisabled"/>
+        <member type="bool" name="BikeBoostEnabled"/>
+        <member type="set" name="ValidTeamTypes">
+            <element type="s8"/>
+        </member>
+        <member type="bool" name="TrackTeam"/>
+        <member type="set" name="DropSetIDs">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="GiftSetIDs">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="SkillBlacklist">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="SkillWhitelist">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="NPCs">
+            <element type="ServerNPC*"/>
+        </member>
+        <member type="list" name="Objects">
+            <element type="ServerObject*"/>
+        </member>
+        <member type="list" name="Bazaars">
+            <element type="ServerBazaar*"/>
+        </member>
+        <member type="list" name="CultureMachines">
+            <element type="ServerCultureMachineSet*"/>
+        </member>
+        <member type="map" name="PlasmaSpawns">
+            <key type="u32"/>
+            <value type="PlasmaSpawn*"/>
+        </member>
+        <member type="map" name="Spawns">
+            <key type="u32"/>
+            <value type="Spawn*"/>
+        </member>
+        <member type="map" name="SpawnGroups">
+            <key type="u32"/>
+            <value type="SpawnGroup*"/>
+        </member>
+        <member type="map" name="SpawnLocationGroups">
+            <key type="u32"/>
+            <value type="SpawnLocationGroup*"/>
+        </member>
+        <member type="map" name="Spots">
+            <key type="u32"/>
+            <value type="ServerZoneSpot*"/>
+        </member>
+        <member type="list" name="Triggers">
+            <element type="ServerZoneTrigger*"/>
+        </member>
+    </object>
+    <object name="ServerZonePartial" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="set" name="DynamicMapIDs">
+            <element type="u32"/>
+        </member>
+        <member type="bool" name="AutoApply" default="true"/>
+        <member type="set" name="ValidTeamTypes">
+            <element type="s8"/>
+        </member>
+        <member type="set" name="DropSetIDs">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="GiftSetIDs">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="SkillBlacklist">
+            <element type="u32"/>
+        </member>
+        <member type="set" name="SkillWhitelist">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="NPCs">
+            <element type="ServerNPC*"/>
+        </member>
+        <member type="list" name="Objects">
+            <element type="ServerObject*"/>
+        </member>
+        <member type="map" name="PlasmaSpawns">
+            <key type="u32"/>
+            <value type="PlasmaSpawn*"/>
+        </member>
+        <member type="map" name="Spawns">
+            <key type="u32"/>
+            <value type="Spawn*"/>
+        </member>
+        <member type="map" name="SpawnGroups">
+            <key type="u32"/>
+            <value type="SpawnGroup*"/>
+        </member>
+        <member type="map" name="SpawnLocationGroups">
+            <key type="u32"/>
+            <value type="SpawnLocationGroup*"/>
+        </member>
+        <member type="map" name="Spots">
+            <key type="u32"/>
+            <value type="ServerZoneSpot*"/>
+        </member>
+        <member type="list" name="Triggers">
+            <element type="ServerZoneTrigger*"/>
+        </member>
+    </object>
+    <object name="ServerZoneInstance" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="LobbyID"/>
+        <member type="u32" name="GroupID"/>
+        <member type="s32" name="CreateMessageID"/>
+        <member type="string" name="CreateEventID"/>
+        <member type="string" name="ToLobbyEventID"/>
+        <member type="s32" name="JoinMessageID"/>
+        <member type="list" name="ZoneIDs">
+            <element type="u32"/>
+        </member>
+        <member type="list" name="DynamicMapIDs">
+            <element type="u32"/>
+        </member>
+    </object>
+    <object name="ServerZoneInstanceVariant" persistent="false"
+        scriptenabled="true" inherited-construction="true">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="SubID"/>
+        <member type="enum" name="InstanceType" underlying="uint8_t">
+            <value>NORMAL</value>
+            <value>TIME_TRIAL</value>
+            <value>PVP</value>
+            <value>DEMON_ONLY</value>
+            <value>DIASPORA</value>
+            <value>MISSION</value>
+            <value>PENTALPHA</value>
+            <value>DIGITALIZE</value>
+        </member>
+        <member type="set" name="ZonePartialIDs">
+            <element type="u32"/>
+        </member>
+        <!-- Contextual time limits, rank requirements, etc -->
+        <!-- TIME_TRIAL: Participation time => Rank C => Rank B => Rank A -->
+        <!-- PVP: Match time => start delay => base point interval (optional) -->
+        <!-- DEMON_ONLY: Max time => Rank A (min) => Rank B (min) =>
+             Party member reduction (optional) -->
+        <!-- DIASPORA: Pre-phase time => phase time -->
+        <!-- MISSION: Time limit -->
+        <!-- PENTALPHA: No custom time points -->
+        <!-- DIGITALIZE: Rank B (max) => Rank A (max) -->
+        <member type="list" name="TimePoints">
+            <element type="u16"/>
+        </member>
+        <member type="string" name="TimerExpirationEventID"/>
+        <member type="u32" name="FixedReward"/>
+        <member type="s32" name="RewardModifier"/>
+        <member type="u8" name="DestinyBoxSize" max="100"/>
+        <member type="bool" name="DestinyBoxShared"/>
+        <member type="bool" name="WhitelistSkillsOnly"/>
+    </object>
+    <object name="PvPInstanceVariant" baseobject="ServerZoneInstanceVariant"
+        persistent="false" scriptenabled="true">
+        <member type="enum" name="InstanceType" inherited="true" default="PVP"/>
+        <member type="enum" name="MatchType" underlying="int8_t">
+            <value num="-1">CUSTOM</value>
+            <value num="0">FATE</value>
+            <value num="1">VALHALLA</value>
+        </member>
+        <member type="bool" name="SpecialMode"/>
+        <member type="u8" name="MaxPlayers"/>
+        <member type="u8" name="LimitBlue"/>
+        <member type="u8" name="LimitRed"/>
+        <member type="s32" name="PlayerValue"/>
+        <member type="s32" name="DemonValue"/>
+        <member type="u16" name="MaxPoints"/>
+        <member type="u32" name="DefaultInstanceID"/>
+        <member type="u32" name="XPReward"/>
+        <member type="bool" name="BPWinRequired"/>
+        <member type="float" name="BPKillDeathScale" default="1.0"/>
+        <member type="array" name="PreRankedGP" size="2">
+            <element type="u32"/>
+        </member>
+        <member type="float" name="RankedGPRate" default="1.0"/>
+        <member type="list" name="BaseRanks">
+            <element type="u8"/>
+        </member>
+        <member type="u8" name="BaseSpotType" default="14"/>
+    </object>
+</objgen>

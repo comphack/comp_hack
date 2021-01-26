@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiCItemBaseData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" length="36" name="name"
+            encoding="default"/>
+        <member type="string" length="36" name="name2"
+            encoding="default"/>
+        <member type="string" length="516" name="desc"
+            encoding="default"/>
+        <member type="u16" name="icon"/>
+        <member type="s8" name="category"/>
+        <member type="bool" name="tradeList"/>
+        <member type="u32" name="modelID"/>
+    </object>
+    <object name="MiCItemMotionData" persistent="false">
+        <member type="u32" name="idle"/>
+        <member type="u32" name="combatIdle"/>
+        <member type="u32" name="walk"/>
+        <member type="u32" name="run"/>
+    </object>
+    <object name="MiCItemSPEffectData" persistent="false">
+        <member type="string" length="68" name="shotEffectFile" encoding="default"/>
+        <member type="string" length="68" name="swingEffectFile" encoding="default"/>
+        <member type="array" size="3" name="effectColor" pad="1">
+            <element type="u8"/>
+        </member>
+    </object>
+    <object name="MiCItemData" persistent="false">
+        <member type="MiCItemBaseData*" name="baseData"/>
+        <member type="MiCItemMotionData*" name="motionData"/>
+        <member type="MiCItemSPEffectData*" name="specialEffectData"/>
+    </object>
+</objgen>

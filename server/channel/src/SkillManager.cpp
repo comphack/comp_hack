@@ -41,6 +41,8 @@
 #include <math.h>
 
 // object Includes
+#include <Account.h>
+#include <AccountLogin.h>
 #include <AccountWorldData.h>
 #include <ActionSpawn.h>
 #include <ActivatedAbility.h>
@@ -135,6 +137,7 @@
 #include "ActionManager.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "ChatManager.h"
 #include "EventManager.h"
 #include "ManagerConnection.h"
 #include "MatchManager.h"
@@ -215,6 +218,10 @@ class channel::ProcessingSkill {
   SkillExecutionContext* ExecutionContext = 0;
   uint16_t Modifier1 = 0;
   uint16_t Modifier2 = 0;
+  int8_t TalkAffSuccess = 0;
+  int8_t TalkAffFailure = 0;
+  int8_t TalkFearSuccess = 0;
+  int8_t TalkFearFailure = 0;
   uint8_t BaseAffinity = 0;
   uint8_t EffectiveAffinity = 0;
   uint8_t WeaponAffinity = 0;
@@ -391,7 +398,7 @@ void SkillManager::LoadScripts() {
 
   LogSkillManagerDebugMsg("Loading custom skill logic...\n");
 
-  std::list<std::shared_ptr<libcomp::ServerScript>> scriptDefs;
+  std::list<std::shared_ptr<libhack::ServerScript>> scriptDefs;
   for (auto serverScript : serverDataManager->LoadScripts(
            server->GetDataStore(), "/skills", scriptsLoaded, false)) {
     if (serverScript->Type.ToLower() == "skilllogic") {
@@ -420,7 +427,7 @@ void SkillManager::LoadScripts() {
 
   // Prepare scripts and load settings
   for (auto def : scriptDefs) {
-    auto script = std::make_shared<libcomp::ScriptEngine>();
+    auto script = std::make_shared<libhack::ScriptEngine>();
 
     if (!script->Eval(def->Source)) {
       LogSkillManagerError([def]() {
@@ -502,9 +509,14 @@ void SkillManager::LoadScripts() {
           // during preaction
           .Var("Modifier1", &ProcessingSkill::Modifier1)
           .Var("Modifier2", &ProcessingSkill::Modifier2)
+          .Var("TalkAffSuccess", &ProcessingSkill::TalkAffSuccess)
+          .Var("TalkAffFailure", &ProcessingSkill::TalkAffFailure)
+          .Var("TalkFearSuccess", &ProcessingSkill::TalkFearSuccess)
+          .Var("TalkFearFailure", &ProcessingSkill::TalkFearFailure)
           // Remaining vars are not modifiable and should be used for
           // logic only
           .ConstVar("Activated", &ProcessingSkill::Activated)
+          .ConstVar("Definition", &ProcessingSkill::Definition)
           .ConstVar("EffectiveSource", &ProcessingSkill::EffectiveSource)
           .ConstVar("PrimaryTarget", &ProcessingSkill::PrimaryTarget)
           .ConstVar("SourceExecutionState",
@@ -2570,7 +2582,6 @@ bool SkillManager::DetermineNormalCosts(
   // Only characters and partner demons have to pay item costs
   bool noItem = source->GetEntityType() != EntityType_t::CHARACTER &&
                 source->GetEntityType() != EntityType_t::PARTNER_DEMON;
-
   uint32_t hpCostPercent = 0, mpCostPercent = 0;
   for (auto cost : skillData->GetCondition()->GetCosts()) {
     auto num = cost->GetCost();
@@ -2634,11 +2645,14 @@ bool SkillManager::DetermineNormalCosts(
                                               (float)source->GetMaxHP()));
 
     double multiplier = 1.0;
-    for (double adjust :
-         mServer.lock()->GetTokuseiManager()->GetAspectValueList(
-             source, TokuseiAspectType::HP_COST_ADJUST, calcState)) {
-      multiplier =
-          adjust <= -100.0 ? 0.0 : (multiplier * (1.0 + adjust * 0.01));
+    if ((skillData->GetCast()->GetBasic()->GetAdjustRestrictions() &
+         SKILL_FIXED_HP_COST) == 0) {
+      for (double adjust :
+           mServer.lock()->GetTokuseiManager()->GetAspectValueList(
+               source, TokuseiAspectType::HP_COST_ADJUST, calcState)) {
+        multiplier =
+            adjust <= -100.0 ? 0.0 : (multiplier * (1.0 + adjust * 0.01));
+      }
     }
 
     hpCost = (int32_t)ceil((double)hpCost * multiplier);
@@ -2654,11 +2668,14 @@ bool SkillManager::DetermineNormalCosts(
                                               (float)source->GetMaxMP()));
 
     double multiplier = 1.0;
-    for (double adjust :
-         mServer.lock()->GetTokuseiManager()->GetAspectValueList(
-             source, TokuseiAspectType::MP_COST_ADJUST, calcState)) {
-      multiplier =
-          adjust <= -100.0 ? 0.0 : (multiplier * (1.0 + adjust * 0.01));
+    if ((skillData->GetCast()->GetBasic()->GetAdjustRestrictions() &
+         SKILL_FIXED_MP_COST) == 0) {
+      for (double adjust :
+           mServer.lock()->GetTokuseiManager()->GetAspectValueList(
+               source, TokuseiAspectType::MP_COST_ADJUST, calcState)) {
+        multiplier =
+            adjust <= -100.0 ? 0.0 : (multiplier * (1.0 + adjust * 0.01));
+      }
     }
 
     mpCost = (int32_t)ceil((double)mpCost * multiplier);
@@ -2787,11 +2804,6 @@ bool SkillManager::ProcessSkillResult(
 
   if (pSkill->FunctionID == SVR_CONST.SKILL_DEMON_FUSION &&
       !ProcessFusionExecution(source, pSkill)) {
-    Fizzle(ctx);
-    return false;
-  }
-
-  if (!ExecuteScriptPreActions(pSkill)) {
     Fizzle(ctx);
     return false;
   }
@@ -3020,7 +3032,7 @@ bool SkillManager::ProcessSkillResult(
           // included on either side (ex: 20 would mean 20% of a full
           // radian on both sides is included and 100 would behave like
           // a source radius AoE)
-          float maxRotOffset = (float)(aoeRange * 0.001 * libcomp::PI);
+          float maxRotOffset = (float)(aoeRange * 0.001 * libhack::PI);
 
           effectiveTargets = ZoneManager::GetEntitiesInFoV(
               potentialTargets, srcPoint.x, srcPoint.y, sourceRot, maxRotOffset,
@@ -3245,6 +3257,11 @@ bool SkillManager::ProcessSkillResult(
 
         return false;
       });
+
+  if (!ExecuteScriptPreActions(pSkill, effectiveTargets)) {
+    Fizzle(ctx);
+    return false;
+  }
 
   // Filter down to all valid targets
   uint16_t aoeReflect = 0;
@@ -3899,10 +3916,10 @@ void SkillManager::ProcessSkillResultFinal(
     HandleNegotiations(source, zone, talkDone);
   }
 
+  auto client =
+      server->GetManagerConnection()->GetEntityClient(source->GetEntityID());
   if (!ctx || !ctx->Executed || !ctx->Finalized) {
     // Send right before finishing execution if we haven't already
-    auto client =
-        server->GetManagerConnection()->GetEntityClient(source->GetEntityID());
     FinalizeSkillExecution(client, ctx, activated);
     FinalizeSkill(ctx, activated);
   }
@@ -4362,6 +4379,30 @@ void SkillManager::ProcessSkillResultFinal(
     }
   }
 
+  // Update character's expertise, but only if the skill was not nullified or
+  // absorbed by everyone targeted
+  if (client && source->GetEntityType() == EntityType_t::CHARACTER) {
+    bool canGainExpertise = false;
+    // Rushes add the self as a target to facilitate movement, so an extra check
+    // needs to be done to exclude the rush self-target
+    for (SkillTargetResult& target : skill.Targets) {
+      if (((target.Flags1 & FLAG1_BLOCK_PHYS) == 0 &&
+           (target.Flags1 & FLAG1_BLOCK_MAGIC) == 0 &&
+           (target.Flags1 & FLAG1_ABSORB) == 0 &&
+           (target.Flags2 & FLAG2_IMPOSSIBLE) == 0) &&
+          !(doRush && target.EntityState == source)) {
+        canGainExpertise = true;
+        break;
+      }
+    }
+
+    if (canGainExpertise) {
+      characterManager->UpdateExpertise(
+          client, pSkill->SkillID, activated->GetExpertiseBoost(),
+          GetCalculatedState(source, pSkill, false, nullptr));
+    }
+  }
+
   // Update inherited skills
   for (auto entity : inheritSkill) {
     // Even if the hit is avoided, anything that touches the entity will
@@ -4463,6 +4504,7 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   auto server = mServer.lock();
   auto definitionManager = server->GetDefinitionManager();
   auto skillData = activated->GetSkillData();
+  auto talkDamage = skillData->GetDamage()->GetNegotiationDamage();
   auto source = std::dynamic_pointer_cast<ActiveEntityState>(
       activated->GetSourceEntity());
   auto cSource = std::dynamic_pointer_cast<CharacterState>(source);
@@ -4473,6 +4515,10 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   skill->Activated = activated;
   skill->Modifier1 = skillData->GetDamage()->GetBattleDamage()->GetModifier1();
   skill->Modifier2 = skillData->GetDamage()->GetBattleDamage()->GetModifier2();
+  skill->TalkAffSuccess = talkDamage->GetSuccessAffability();
+  skill->TalkAffFailure = talkDamage->GetFailureAffability();
+  skill->TalkFearSuccess = talkDamage->GetSuccessFear();
+  skill->TalkFearFailure = talkDamage->GetFailureFear();
   skill->BaseAffinity = skill->EffectiveAffinity =
       skillData->GetCommon()->GetAffinity();
   skill->EffectiveDependencyType = skillData->GetBasic()->GetDependencyType();
@@ -5643,15 +5689,27 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
         continue;
       }
 
-      if (nraStatusNull && affinity) {
-        // Optional server setting to nullify status effects with
-        // an affinity type that the target could potentially NRA
-        // (this does not take NRA shields into account since nothing
-        // is "consumed" by this)
+      if (affinity) {
+        // Roll NRA chances; if they succeed don't even bother doing the
+        // status infliction math to see if it'd hit. If the server
+        // setting NRAStatusNull is true, rolls to nullify status effects
+        // with an affinity type that the target could potentially NRA
+        // automatically succeed (this does not take NRA shields into account
+        // since nothing is "consumed" by this)
+        bool nraSuccess = false;
         CorrectTbl nraType = (CorrectTbl)(affinity + NRA_OFFSET);
-        if (eState->GetNRAChance(NRA_NULL, nraType, targetCalc) > 0 ||
-            eState->GetNRAChance(NRA_REFLECT, nraType, targetCalc) > 0 ||
-            eState->GetNRAChance(NRA_ABSORB, nraType, targetCalc) > 0) {
+        for (auto nraIdx : {NRA_ABSORB, NRA_REFLECT, NRA_NULL}) {
+          int16_t chance =
+              eState->GetNRAChance((uint8_t)nraIdx, nraType, targetCalc);
+          if (chance >= 100 ||
+              (chance > 0 &&
+               (nraStatusNull || RNG(int16_t, 1, 100) <= chance))) {
+            nraSuccess = true;
+            break;
+          }
+        }
+
+        if (nraSuccess) {
           continue;
         }
       }
@@ -7011,12 +7069,6 @@ bool SkillManager::ApplyNegotiationDamage(
     return false;
   }
 
-  auto talkDamage = pSkill->Definition->GetDamage()->GetNegotiationDamage();
-  int8_t talkAffSuccess = talkDamage->GetSuccessAffability();
-  int8_t talkAffFailure = talkDamage->GetFailureAffability();
-  int8_t talkFearSuccess = talkDamage->GetSuccessFear();
-  int8_t talkFearFailure = talkDamage->GetFailureFear();
-
   auto spawn = enemy->GetSpawnSource();
   if (enemy->GetCoreStats()->GetLevel() > source->GetLevel()) {
     // Enemies that are a higher level cannot be negotiated with
@@ -7070,8 +7122,9 @@ bool SkillManager::ApplyNegotiationDamage(
   bool isTalkAction = IsTalkSkill(pSkill->Definition, true);
   bool avoided =
       (target.Flags1 & FLAG1_GUARDED) != 0 || (target.Flags1 & FLAG1_DODGED);
-  bool autoJoin = isTalkAction && !talkAffSuccess && !avoided &&
-                  !talkAffFailure && !talkFearSuccess && !talkFearFailure;
+  bool autoJoin = isTalkAction && !pSkill->TalkAffSuccess && !avoided &&
+                  !pSkill->TalkAffFailure && !pSkill->TalkFearSuccess &&
+                  !pSkill->TalkFearFailure;
 
   bool success = false;
   if (autoJoin) {
@@ -7105,10 +7158,12 @@ bool SkillManager::ApplyNegotiationDamage(
 
     success =
         talkSuccess > 0.0 && RNG(uint16_t, 1, 100) <= (uint16_t)talkSuccess;
-    int16_t aff = (int16_t)(talkPoints.first +
-                            (success ? talkAffSuccess : talkAffFailure));
-    int16_t fear = (int16_t)(talkPoints.second +
-                             (success ? talkFearSuccess : talkFearFailure));
+    int16_t aff =
+        (int16_t)(talkPoints.first +
+                  (success ? pSkill->TalkAffSuccess : pSkill->TalkAffFailure));
+    int16_t fear =
+        (int16_t)(talkPoints.second + (success ? pSkill->TalkFearSuccess
+                                               : pSkill->TalkFearFailure));
 
     // Don't let the sums drop below 0 or go over the threshold
     if (aff > affThreshold) {
@@ -7727,7 +7782,7 @@ void SkillManager::HandleFusionGauge(
 
     if (skillHit) {
       int32_t points =
-          (int32_t)libcomp::FUSION_GAUGE_GROWTH[(size_t)actionType][(size_t)(
+          (int32_t)libhack::FUSION_GAUGE_GROWTH[(size_t)actionType][(size_t)(
               (isDemon ? 2 : 0) + (higherLevel ? 1 : 0))];
 
       float fgBonus = server->GetWorldSharedConfig()->GetFusionGaugeBonus();
@@ -9243,21 +9298,6 @@ void SkillManager::FinalizeSkillExecution(
   // Do not ACTUALLY execute when using Rest
   if (pSkill->FunctionID != SVR_CONST.SKILL_REST) {
     SendExecuteSkill(pSkill);
-  }
-
-  if (client && source->GetEntityType() == EntityType_t::CHARACTER) {
-    auto calcState = GetCalculatedState(source, pSkill, false, nullptr);
-    float multiplier =
-        (float)(source->GetCorrectValue(CorrectTbl::RATE_EXPERTISE, calcState) *
-                0.01);
-
-    float globalExpertiseBonus =
-        mServer.lock()->GetWorldSharedConfig()->GetExpertiseBonus();
-
-    multiplier = multiplier * (float)(1.f + globalExpertiseBonus);
-
-    characterManager->UpdateExpertise(
-        client, pSkill->SkillID, activated->GetExpertiseBoost(), multiplier);
   }
 }
 
@@ -10938,6 +10978,16 @@ bool SkillManager::Spawn(
     return false;
   }
 
+  libobjgen::UUID responsibleEntity;
+  int32_t managedCountForEntity;
+
+  if (!CheckResponsibility(responsibleEntity, managedCountForEntity, activated,
+                           client, zone, source)) {
+    return false;
+  }
+
+  int32_t managedCountForEntityAfter = managedCountForEntity;
+
   auto server = mServer.lock();
   auto definitionManager = server->GetDefinitionManager();
   auto serverDataManager = server->GetServerDataManager();
@@ -11014,8 +11064,9 @@ bool SkillManager::Spawn(
                                          center.GetDistance(sp), false, zone);
 
         float rot = ZoneManager::GetRandomRotation();
-        auto enemy = zoneManager->CreateEnemy(zone, spawn->GetEnemyType(), 0, 0,
-                                              sp.x, sp.y, rot);
+        auto enemy =
+            zoneManager->CreateEnemy(zone, spawn->GetEnemyType(), 0, 0, sp.x,
+                                     sp.y, rot, responsibleEntity);
         if (enemy) {
           auto eBase = enemy->GetEnemyBase();
           eBase->SetSpawnSource(spawn);
@@ -11026,6 +11077,7 @@ bool SkillManager::Spawn(
           // be considered part of that group for that zone.
           // eBase->SetSpawnGroupID(spawnGroup->GetID());
 
+          managedCountForEntityAfter++;
           enemies.push_back(enemy);
         } else {
           LogSkillManagerError([&]() {
@@ -11059,6 +11111,19 @@ bool SkillManager::Spawn(
     }
   }
 
+  if ((managedCountForEntityAfter / 10) != (managedCountForEntity / 10)) {
+    auto username = client->GetClientState()
+                        ->GetAccountLogin()
+                        ->GetAccount()
+                        ->GetUsername();
+
+    LogSkillManagerWarning([&]() {
+      return libcomp::String("Account %1 now has %2 managed spawns.")
+          .Arg(username)
+          .Arg(managedCountForEntityAfter);
+    });
+  }
+
   return true;
 }
 
@@ -11075,6 +11140,16 @@ bool SkillManager::SpawnZone(
     SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC);
     return false;
   }
+
+  libobjgen::UUID responsibleEntity;
+  int32_t managedCountForEntity;
+
+  if (!CheckResponsibility(responsibleEntity, managedCountForEntity, activated,
+                           client, zone, source)) {
+    return false;
+  }
+
+  int32_t managedCountForEntityAfter = managedCountForEntity;
 
   auto skillData = activated->GetSkillData();
   auto params = skillData->GetSpecial()->GetSpecialParams();
@@ -11143,13 +11218,15 @@ bool SkillManager::SpawnZone(
                                          center.GetDistance(sp), false, zone);
 
         float rot = ZoneManager::GetRandomRotation();
-        auto enemy = zoneManager->CreateEnemy(
-            zone, spawn->GetEnemyType(), spawn->GetID(), 0, sp.x, sp.y, rot);
+        auto enemy = zoneManager->CreateEnemy(zone, spawn->GetEnemyType(),
+                                              spawn->GetID(), 0, sp.x, sp.y,
+                                              rot, responsibleEntity);
         if (enemy) {
           auto eBase = enemy->GetEnemyBase();
           eBase->SetSpawnSource(spawn);
           eBase->SetSpawnGroupID(spawnGroup->GetID());
           eBase->SetSpawnLocation(spawnLoc);
+          managedCountForEntityAfter++;
           enemies.push_back(enemy);
         } else {
           LogSkillManagerError([&]() {
@@ -11181,6 +11258,19 @@ bool SkillManager::SpawnZone(
       server->GetActionManager()->PerformActions(
           nullptr, spawnGroup->GetSpawnActions(), 0, zone, options);
     }
+  }
+
+  if ((managedCountForEntityAfter / 10) != (managedCountForEntity / 10)) {
+    auto username = client->GetClientState()
+                        ->GetAccountLogin()
+                        ->GetAccount()
+                        ->GetUsername();
+
+    LogSkillManagerWarning([&]() {
+      return libcomp::String("Account %1 now has %2 managed spawns.")
+          .Arg(username)
+          .Arg(managedCountForEntityAfter);
+    });
   }
 
   return true;
@@ -11245,7 +11335,13 @@ bool SkillManager::SummonDemon(
 
   ProcessSkillResult(activated, ctx);
 
-  mServer.lock()->GetCharacterManager()->SummonDemon(client, demonID);
+  auto characterManager = mServer.lock()->GetCharacterManager();
+  characterManager->SummonDemon(client, demonID);
+
+  // Update the summoner's Summon expertise
+  characterManager->UpdateExpertise(
+      client, activated->GetSkillData()->GetCommon()->GetID(),
+      activated->GetExpertiseBoost(), cState->GetCalculatedState());
 
   LogSkillManagerDebug([cState, dState]() {
     return libcomp::String("%1 summons %2.\n")
@@ -11522,7 +11618,8 @@ bool SkillManager::AdjustScriptCosts(
 }
 
 bool SkillManager::ExecuteScriptPreActions(
-    const std::shared_ptr<channel::ProcessingSkill>& pSkill) {
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill,
+    std::list<std::shared_ptr<channel::ActiveEntityState>> targets) {
   if (!pSkill->FunctionID) {
     // Nothing to do
     return true;
@@ -11539,14 +11636,18 @@ bool SkillManager::ExecuteScriptPreActions(
   auto state = source ? ClientState::GetEntityClientState(source->GetEntityID())
                       : nullptr;
 
-  Sqrat::Function f(
-      Sqrat::RootTable(mSkillLogicScripts[pSkill->FunctionID]->GetVM()),
-      "preAction");
+  auto vm = mSkillLogicScripts[pSkill->FunctionID]->GetVM();
+  Sqrat::Array targetStates(vm);
+  for (auto& targetState : targets) {
+    targetStates.Append(targetState);
+  }
+
+  Sqrat::Function f(Sqrat::RootTable(vm), "preAction");
   auto result = !f.IsNull()
                     ? f.Evaluate<int32_t>(
                           source, state ? state->GetCharacterState() : nullptr,
                           state ? state->GetDemonState() : nullptr, pSkill,
-                          pSkill->CurrentZone, mServer.lock())
+                          pSkill->CurrentZone, targetStates, mServer.lock())
                     : 0;
 
   // Print error if cost calculation was not successful (0) and not requested
@@ -11922,4 +12023,119 @@ bool SkillManager::IFramesEnabled() {
   const static bool enabled =
       mServer.lock()->GetWorldSharedConfig()->GetIFramesEnabled();
   return enabled;
+}
+
+bool SkillManager::CheckResponsibility(
+    libobjgen::UUID& responsibleEntity, int32_t& managedCountForEntity,
+    const std::shared_ptr<objects::ActivatedAbility>& activated,
+    const std::shared_ptr<ChannelClientConnection>& client,
+    const std::shared_ptr<Zone>& zone,
+    const std::shared_ptr<ActiveEntityState>& source) {
+  managedCountForEntity = 0;
+
+  bool playerEntity = source->GetEntityType() == EntityType_t::CHARACTER;
+  int32_t managedZoneEntityCap = 0;
+  int32_t managedEntityCap = 0;
+
+  if (playerEntity) {
+    responsibleEntity = client->GetClientState()->GetAccountUID();
+  }
+
+  LogSkillManagerDebug([&]() {
+    return libcomp::String("Responsible entity: %1\n")
+        .Arg(responsibleEntity.ToString());
+  });
+
+  auto server = mServer.lock();
+  auto worldSharedConfig = server->GetWorldSharedConfig();
+
+  if (playerEntity) {
+    LogSkillManagerDebug([&]() {
+      return libcomp::String("Player user level: %1\n")
+          .Arg(client->GetClientState()->GetUserLevel());
+    });
+
+    if (worldSharedConfig->GetSpawnSpamUserLevel() <
+        client->GetClientState()->GetUserLevel()) {
+      responsibleEntity = {};
+    } else {
+      if (zone->GetInstance()) {
+        managedZoneEntityCap = worldSharedConfig->GetSpawnSpamInstanceZoneMax();
+      } else {
+        managedZoneEntityCap = worldSharedConfig->GetSpawnSpamGlobalZoneMax();
+      }
+
+      managedEntityCap = worldSharedConfig->GetSpawnSpamUserMax();
+    }
+  }
+
+  if (managedZoneEntityCap &&
+      zone->GetManagedEntities() >= managedZoneEntityCap) {
+    LogSkillManagerError([&]() {
+      auto username = client->GetClientState()
+                          ->GetAccountLogin()
+                          ->GetAccount()
+                          ->GetUsername();
+
+      return libcomp::String(
+                 "Account %1 tried to spawn more enemies but there is already "
+                 "%2 in zone %3 with a cap of %4.\n")
+          .Arg(username)
+          .Arg(zone->GetManagedEntities())
+          .Arg(zone->GetDefinitionID())
+          .Arg(managedZoneEntityCap);
+    });
+
+    server->GetChatManager()->SendChatMessage(
+        client, ChatType_t::CHAT_SELF,
+        "Zone has reached the maximum number of player spawns.");
+
+    SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::SILENT_FAIL);
+    return false;
+  }
+
+  if (managedEntityCap) {
+    managedCountForEntity = zone->GetEntitiesManagedBy(responsibleEntity);
+  }
+
+  if (managedEntityCap && managedCountForEntity >= managedEntityCap) {
+    LogSkillManagerError([&]() {
+      auto username = client->GetClientState()
+                          ->GetAccountLogin()
+                          ->GetAccount()
+                          ->GetUsername();
+
+      return libcomp::String(
+                 "Account %1 tried to spawn more enemies but they already "
+                 "spawned %2 in zone %3 with a cap of %4.\n")
+          .Arg(username)
+          .Arg(managedCountForEntity)
+          .Arg(zone->GetDefinitionID())
+          .Arg(managedEntityCap);
+    });
+
+    if (worldSharedConfig->GetAutobanSpawnSpammers()) {
+      auto targetAccount =
+          client->GetClientState()->GetAccountLogin()->GetAccount();
+      targetAccount->SetEnabled(false);
+      targetAccount->SetBanReason(
+          libcomp::String(
+              "Account tried to spawn more than %1 enemies into a zone.")
+              .Arg(managedEntityCap));
+      targetAccount->SetBanInitiator("<channel server>");
+      targetAccount->Update(server->GetLobbyDatabase());
+      client->Close();
+
+      return false;
+    }
+
+    server->GetChatManager()->SendChatMessage(
+        client, ChatType_t::CHAT_SELF,
+        "You may not spawn more enemies. Kill the enemies you spawned.");
+
+    SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::SILENT_FAIL);
+    return false;
+  }
+
+  return true;
 }

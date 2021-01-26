@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiActionTblData" persistent="false">
+        <member type="array" size="26" name="unknown">
+            <element type="u32"/>
+        </member>
+    </object>
+    <object name="MiActionLogicData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="array" size="14" name="actionTbl">
+            <element type="MiActionTblData*"/>
+        </member>
+    </object>
+</objgen>

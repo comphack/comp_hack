@@ -64,7 +64,7 @@ using namespace channel;
 
 namespace libcomp {
 template <>
-ScriptEngine& ScriptEngine::Using<ChannelServer>() {
+BaseScriptEngine& BaseScriptEngine::Using<ChannelServer>() {
   if (!BindingExists("ChannelServer", true)) {
     Import("database");
 
@@ -97,7 +97,7 @@ ScriptEngine& ScriptEngine::Using<ChannelServer>() {
 ChannelServer::ChannelServer(
     const char* szProgram, std::shared_ptr<objects::ServerConfig> config,
     std::shared_ptr<libcomp::ServerCommandLineParser> commandLine)
-    : libcomp::BaseServer(szProgram, config, commandLine),
+    : libhack::Server(szProgram, config, commandLine),
       mAccountManager(0),
       mActionManager(0),
       mAIManager(0),
@@ -136,12 +136,12 @@ bool ChannelServer::Initialize() {
 
   auto conf = std::dynamic_pointer_cast<objects::ChannelConfig>(mConfig);
 
-  mDefinitionManager = new libcomp::DefinitionManager();
+  mDefinitionManager = new libhack::DefinitionManager();
   if (!mDefinitionManager->LoadAllData(GetDataStore())) {
     return false;
   }
 
-  mServerDataManager = new libcomp::ServerDataManager();
+  mServerDataManager = new libhack::ServerDataManager();
   if (!mServerDataManager->LoadData(GetDataStore(), mDefinitionManager)) {
     return false;
   }
@@ -986,11 +986,11 @@ SkillManager* ChannelServer::GetSkillManager() const { return mSkillManager; }
 
 ZoneManager* ChannelServer::GetZoneManager() const { return mZoneManager; }
 
-libcomp::DefinitionManager* ChannelServer::GetDefinitionManager() const {
+libhack::DefinitionManager* ChannelServer::GetDefinitionManager() const {
   return mDefinitionManager;
 }
 
-libcomp::ServerDataManager* ChannelServer::GetServerDataManager() const {
+libhack::ServerDataManager* ChannelServer::GetServerDataManager() const {
   return mServerDataManager;
 }
 

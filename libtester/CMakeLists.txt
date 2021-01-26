@@ -54,7 +54,7 @@ SET_TARGET_PROPERTIES(tester PROPERTIES FOLDER "Libraries")
 
 TARGET_INCLUDE_DIRECTORIES(tester PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-TARGET_LINK_LIBRARIES(tester ${CMAKE_THREAD_LIBS_INIT} comp tinyxml2 gtest)
+TARGET_LINK_LIBRARIES(tester ${CMAKE_THREAD_LIBS_INIT} hack comp tinyxml2 gtest)
 
 # Commenting out the Lobby test until it does something useful
 # List of unit tests to add to CTest.

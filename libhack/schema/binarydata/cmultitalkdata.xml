@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiMultiTalkCmdTbl" persistent="false">
+        <member type="enum" name="type" underlying="uint8_t" pad="3">
+            <value num="0">END</value>
+            <value num="1">NPC_MESSAGE</value>
+            <value num="2">STAGE_EFFECT</value>
+            <value num="3">ACTOR_VISIBILITY</value>
+            <value num="4">ACTOR_STATE</value>
+            <value num="5">CAMERA_SWITCH</value>
+            <value num="6">CAMERA_ADJUST</value>
+            <value num="7">UNUSED_7</value>
+            <value num="8">SCREEN_PAINT</value>
+            <value num="9">BGM_CHANGE</value>
+            <value num="10">SOUND_PLAY</value>
+            <value num="11">EFFECT_SHOW</value>
+            <value num="12">INPUT_WAIT</value>
+            <value num="13">WAIT</value>
+            <value num="14">EFFECT_WAIT</value>
+            <value num="15">IMAGE_SHOW</value>
+            <value num="16">IMAGE_HIDE</value>
+        </member>
+        <member type="u32" name="intCmd1"/>
+        <member type="u32" name="intCmd2"/>
+        <member type="u32" name="intCmd3"/>
+        <member type="u32" name="intCmd4"/>
+        <member type="u32" name="intCmd5"/>
+        <member type="u32" name="intCmd6"/>
+        <member type="u32" name="intCmd7"/>
+        <member type="u32" name="intCmd8"/>
+        <member type="f32" name="decCmd1"/>
+        <member type="f32" name="decCmd2"/>
+        <member type="f32" name="decCmd3"/>
+        <member type="f32" name="decCmd4"/>
+        <member type="f32" name="decCmd5"/>
+        <member type="f32" name="decCmd6"/>
+        <member type="f32" name="decCmd7"/>
+        <member type="f32" name="decCmd8"/>
+        <member type="string" length="132" name="strCmd1"
+            encoding="default"/>
+        <member type="string" length="132" name="strCmd2"
+            encoding="default"/>
+    </object>
+    <object name="MiCMultiTalkData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="list" name="commands">
+            <element type="MiMultiTalkCmdTbl*"/>
+        </member>
+    </object>
+    <object name="MiMultiTalkPopCharaTbl" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" length="132" name="actor"
+            encoding="default"/>
+        <member type="f32" name="x"/>
+        <member type="f32" name="y"/>
+        <member type="f32" name="z"/>
+        <member type="f32" name="rotation"/>
+        <member type="u32" name="state"/>
+        <member type="f32" name="chara7"/>
+        <member type="u8" name="chara8"/>
+        <member type="bool" name="show" default="true" pad="2"/>
+    </object>
+    <object name="MiMultiTalkPopCameraTbl" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="f32" name="sourceX"/>
+        <member type="f32" name="sourceY"/>
+        <member type="f32" name="sourceZ"/>
+        <member type="f32" name="targetX"/>
+        <member type="f32" name="targetY"/>
+        <member type="f32" name="targetZ"/>
+        <member type="u8" name="FoV" default="36" pad="3"/>
+    </object>
+    <object name="MiCMultiTalkPopData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" length="36" name="location"
+            encoding="default"/>
+        <member type="u8" name="pop2"/>
+        <member type="u8" name="pop3"/>
+        <member type="u8" name="pop4"/>
+        <member type="u8" name="pop5"/>
+        <member type="list" name="characters">
+            <element type="MiMultiTalkPopCharaTbl*"/>
+        </member>
+        <member type="list" name="cameras">
+            <element type="MiMultiTalkPopCameraTbl*"/>
+        </member>
+    </object>
+    <object name="MiCMultiTalkDirectionData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="string" length="260" name="popFile" encoding="default"/>
+        <member type="string" length="260" name="performFile" encoding="default"/>
+    </object>
+</objgen>

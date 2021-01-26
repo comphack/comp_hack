@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objgen>
+    <object name="MiUltimateBattleBaseData" persistent="false">
+        <member type="u32" name="ID"/>
+        <member type="u32" name="unknown1"/>
+        <member type="u32" name="unknown2"/>
+        <member type="bool" name="enabled" pad="3"/>
+        <member type="u32" name="zoneID"/>
+        <member type="u32" name="zoneSpotID"/>
+        <member type="u32" name="zoneSpot2"/>
+        <member type="u32" name="lobbyID"/>
+        <member type="u32" name="playerCount"/>
+        <member type="u32" name="unknown9"/>
+        <member type="u32" name="unknown10"/>
+        <member type="u32" name="unknown11"/>
+        <member type="u32" name="unknown12"/>
+        <member type="u32" name="unknown13"/>
+        <member type="u32" name="restTime"/>
+        <member type="f32" name="unknown15"/>
+        <member type="f32" name="unknown16"/>
+        <member type="f32" name="coinMultiplier"/>
+        <member type="f32" name="unknown18"/>
+        <member type="array" size="24" name="schedule">
+            <element type="u32"/>
+        </member>
+    </object>
+</objgen>

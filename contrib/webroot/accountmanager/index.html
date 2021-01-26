@@ -317,6 +317,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 if('user_level' in data) {
                     $('#edit_user_level').val(data['user_level']);
                 }
+                if('ban_reason' in data) {
+                    $('#edit_ban_reason').text(data['ban_reason']);
+                }
+                if('ban_initiator' in data) {
+                    $('#edit_ban_initiator').text(data['ban_initiator']);
+                }
 
                 $('#edit').submit(function(event) {
                     UpdateAccount(username);
@@ -406,6 +412,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             $('#last_login').text(account.last_login.toString());
             $('#character_count').text(account.character_count);
             $('#cp').text('' + account.cp);
+            $('#ban_reason').text(account.ban_reason);
+            $('#ban_initiator').text(account.ban_initiator);
             $('#welcome').text(account.disp_name);
 
             if(account.user_level == 1000) {
@@ -514,6 +522,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                         }
                         if('character_count' in data) {
                             account.character_count = data['character_count'];
+                        }
+                        if('ban_reason' in data) {
+                            account.ban_reason = data['ban_reason'];
+                        }
+                        if('ban_initiator' in data) {
+                            account.ban_initiator = data['ban_initiator'];
                         }
 
                         HomePage();

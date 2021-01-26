@@ -2,7 +2,7 @@ Game Content
 ============
 
 This chapter describes how to create and modify game content to
-create a custom feel to your server. Yay?
+create a custom feel to your server.
 
 Zone Definitions
 ----------------

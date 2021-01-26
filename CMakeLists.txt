@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
-bob()
+
 # Option to build the dream (if the folder is there).
 OPTION(BUILD_DREAM "Build the dream." ON)
 

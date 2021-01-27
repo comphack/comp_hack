@@ -1,17 +1,59 @@
-name: C/C++ CI
+name: COMP_hack CI
 
-on:
-  push:
-    paths-ignore:
-      - "docs/**"
-  pull_request:
-    paths-ignore:
-      - "docs/**"
+on: [push, pull_request]
 
 jobs:
+  changes:
+    name: Check Changes
+    runs-on: ubuntu-latest
+    outputs:
+      docs: ${{ steps.changes.outputs.docs }}
+      code: ${{ steps.changes.outputs.code }}
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      if: ${{ github.event_name != 'pull_request' }}
+    - name: Check Changes
+      id: changes
+      uses: dorny/paths-filter@v2
+      with:
+        filters: |
+          docs:
+            - 'docs/**'
+          code:
+            - 'ci/**'
+            - 'client/**'
+            - 'cmake/**'
+            - 'coveralls-cmake/**'
+            - 'deps/**'
+            - 'lib*/**'
+            - 'server/**'
+            - 'tools/**'
+            - 'CMakeLists.txt'
+
+  docs:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.docs == 'true' }}
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+        architecture: 'x64'
+    - name: Install Dependencies
+      run: pip install -r docs/guide/requirements.txt
+    - name: Build Documentation
+      run: cd docs/guide && make html SPHINXOPTS=-nWT
+
   clang-format:
     name: Check Formatting
     runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' }}
     steps:
     - name: Checkout Code
       uses: actions/checkout@v2
@@ -191,3 +233,28 @@ jobs:
         asset_path: build/${{ steps.get_msi_asset_filename.outputs.filename }}
         asset_name: ${{ steps.get_msi_asset_filename.outputs.filename }}
         asset_content_type: application/zip
+
+  status:
+    name: Pipeline Status
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - docs
+      - clang-format
+      - linux-gcc-build
+      - linux-clang-build
+      - win32-msvc2017-build
+      - win64-msvc2017-build
+    steps:
+      - name: Pipeline Passed
+        id: pipeline-passed
+        if: ${{ (needs.docs.result == 'success' || needs.docs.result == 'skipped') && ((needs.clang-format.result == 'success' && needs.linux-gcc-build.result == 'success' && needs.linux-clang-build.result == 'success' && needs.win32-msvc2017-build.result == 'success' && needs.win64-msvc2017-build.result == 'success') || (needs.clang-format.result == 'skipped' && needs.linux-gcc-build.result == 'skipped' && needs.linux-clang-build.result == 'skipped' && needs.win32-msvc2017-build.result == 'skipped' && needs.win64-msvc2017-build.result == 'skipped')) }}
+        run: echo "Pipeline Passed"
+      - name: Pipeline Failed
+        id: pipeline-failed
+        if: ${{ steps.pipeline-passed.outcome != 'success' }}
+        env:
+          NEEDS_OBJ: ${{ toJSON(needs) }}
+        run: |
+          echo "Pipeline Failed"
+          exit 1

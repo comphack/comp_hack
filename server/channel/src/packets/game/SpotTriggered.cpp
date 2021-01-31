@@ -119,6 +119,23 @@ bool Parsers::SpotTriggered::Parse(
   bool entered =
       zoneManager->PointInPolygon(Point(x, y), spotIter->second->Vertices);
 
+  // Check if the destination can actually be reached, cancel if it cannot
+  Point src(entity->GetOriginX(), entity->GetOriginY());
+  Point dest(x, y);
+  ServerTime startTime = entity->GetOriginTicks();
+  ServerTime stopTime = entity->GetDestinationTicks();
+  if (zoneManager->CorrectClientPosition(entity, src, dest, startTime, stopTime,
+                                         true) != 0) {
+    LogGeneralDebug([&]() {
+      return libcomp::String(
+                 "Player spot use canceled due to impossible movement in zone "
+                 "%1: %2\n")
+          .Arg(zone->GetDefinitionID())
+          .Arg(state->GetAccountUID().ToString());
+    });
+    return true;
+  }
+
   // Lookup the spot and see if it has actions.
   auto spot = zoneDef->GetSpots(spotID);
 

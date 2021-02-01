@@ -6371,7 +6371,8 @@ std::list<std::shared_ptr<ActiveEntityState>> ZoneManager::GetEntitiesInFoV(
 
   for (auto e : entities) {
     Point ePoint(e->GetCurrentX(), e->GetCurrentY());
-    float eRot = (float)atan2((float)(y - ePoint.y), (float)(x - ePoint.x));
+    // Rotations are atan2(x, -y)
+    float eRot = (float)atan2((float)(x - ePoint.x), (float)(ePoint.y - y));
 
     if (maxRotL >= eRot && maxRotR <= eRot) {
       results.push_back(e);
@@ -6383,7 +6384,7 @@ std::list<std::shared_ptr<ActiveEntityState>> ZoneManager::GetEntitiesInFoV(
         Point exPoint(ePoint.x, ePoint.y + extend);
         exPoint = RotatePoint(exPoint, ePoint,
                               ActiveEntityState::CorrectRotation(-max));
-        eRot = (float)atan2((float)(y - exPoint.y), (float)(x - exPoint.x));
+        eRot = (float)atan2((float)(x - exPoint.x), (float)(exPoint.y - y));
         if (maxRotL >= eRot && maxRotR <= eRot) {
           results.push_back(e);
           break;

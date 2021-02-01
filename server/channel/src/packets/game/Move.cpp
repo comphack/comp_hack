@@ -168,9 +168,14 @@ bool Parsers::Move::Parse(
   eState->SetDestinationY(destY);
   eState->SetDestinationTicks(stopTime);
 
-  // Calculate rotation from origin and destination
+  // Calculate rotation from origin and destination; destination rotation is set
+  // by atan2(x, -y)
   float originRot = eState->GetCurrentRotation();
-  float destRot = (float)atan2(destY - originY, destX - originX);
+  float destRot = (float)atan2(destX - originX, originY - destY);
+  LogGeneralDebug([&]() {
+    return libcomp::String("Destination Rotation %1\n")
+        .Arg(destRot);
+  });
   eState->SetOriginRotation(originRot);
   eState->SetDestinationRotation(destRot);
 

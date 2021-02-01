@@ -178,8 +178,9 @@ void ActiveEntityState::Move(float xPos, float yPos, uint64_t now) {
     SetOriginY(GetCurrentY());
     SetOriginTicks(now);
 
-    // Rotate instantly
-    float destRot = (float)atan2(GetCurrentY() - yPos, GetCurrentX() - xPos);
+    // Rotate instantly; destination rotation is set
+    // by atan2(currentX - destX, destY - currentY)
+    float destRot = (float)atan2(GetCurrentX() - xPos, yPos - GetCurrentY());
     SetOriginRotation(destRot);
     SetDestinationRotation(destRot);
 

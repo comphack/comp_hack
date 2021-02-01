@@ -2885,10 +2885,11 @@ bool SkillManager::ProcessSkillResult(
 
   if (pSkill->PrimaryTarget) {
     if (pSkill->PrimaryTarget != source) {
-      // Rotate the source to face the target
+      // Rotate the source to face the target; destination rotation is set
+      // by atan2(sourceX - targetX, targetY - sourceY)
       float destRot = (float)atan2(
-          source->GetCurrentY() - pSkill->PrimaryTarget->GetCurrentY(),
-          source->GetCurrentX() - pSkill->PrimaryTarget->GetCurrentX());
+          source->GetCurrentX() - pSkill->PrimaryTarget->GetCurrentX(),
+          pSkill->PrimaryTarget->GetCurrentY() - source->GetCurrentY());
       source->SetCurrentRotation(destRot);
       source->SetOriginRotation(destRot);
       source->SetDestinationRotation(destRot);

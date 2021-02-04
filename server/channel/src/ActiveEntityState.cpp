@@ -325,6 +325,33 @@ bool ActiveEntityState::HasLineOfSight(std::shared_ptr<ActiveEntityState> other,
   return !zone->Collides(Line(src, dest), collidePoint);
 }
 
+bool ActiveEntityState::CanInteract(std::shared_ptr<EntityStateObject> other,
+                                    float maxInteractionDistance,
+                                    uint64_t now) {
+  auto zone = GetZone();
+  if (!other) {
+    return false;
+  }
+
+  if (maxInteractionDistance <= 0.0f) {
+    maxInteractionDistance = MAX_INTERACT_DISTANCE;
+  }
+
+  if (!now) {
+    now = ChannelServer::GetServerTime();
+  }
+
+  RefreshCurrentPosition(now);
+
+  Point src(GetCurrentX(), GetCurrentY());
+  Point dest(other->GetCurrentX(), other->GetCurrentY());
+  Point collidePoint;
+
+  return !zone->Collides(Line(src, dest), collidePoint) &&
+         (GetDistance(other->GetCurrentX(), other->GetCurrentY()) <=
+          maxInteractionDistance);
+}
+
 float ActiveEntityState::GetMovementSpeed(bool ignoreSkill, bool altSpeed) {
   int16_t speed = 0;
   auto activated = ignoreSkill ? nullptr : GetActivatedAbility();

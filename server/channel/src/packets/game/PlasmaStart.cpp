@@ -31,6 +31,9 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// libhack Includes
+#include <Log.h>
+
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
@@ -64,8 +67,20 @@ bool Parsers::PlasmaStart::Parse(
 
   bool success = false;
   if (pState && pointID && eventManager->StartSystemEvent(client, plasmaID)) {
-    auto point = pState->PickPoint((uint32_t)pointID, state->GetWorldCID());
-    success = point != nullptr;
+    auto cState = state->GetCharacterState();
+    if (!cState->CanInteract(pState)) {
+      LogGeneralWarning([&]() {
+        return libcomp::String(
+                   "Player is either too far from plasma in zone %1 to use "
+                   "or does not have line of sight: %2\n")
+            .Arg(zone->GetDefinitionID())
+            .Arg(state->GetAccountUID().ToString());
+      });
+    } else {
+      auto point = pState->PickPoint((uint32_t)pointID, state->GetWorldCID());
+      success = point != nullptr;
+    }
+
     if (!success) {
       eventManager->HandleEvent(client, nullptr);
     }

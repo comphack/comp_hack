@@ -407,14 +407,25 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
                     bool squared = false);
 
   /**
-   * Determine if the entity has line of sight to another, taking into
-   * account normal and one way barriers.
+   * Determine if the entity has line of sight to another active entity, taking
+   * into account normal and one way barriers.
    * @param other Pointer to the other entity
    * @param now Current timestamp of the server
    * @return true if the entity has line of sight
    */
   bool HasLineOfSight(std::shared_ptr<ActiveEntityState> other,
                       uint64_t now = 0);
+
+  /**
+   * Determine if the entity can interact with another.
+   * @param other Pointer to the other entity
+   * @param maxInteractionDistance Maximum allowed distance between the entities
+   * in which the interaction may take place
+   * @param now Current timestamp of the server
+   * @return true if the entity can be interacted with
+   */
+  bool CanInteract(std::shared_ptr<EntityStateObject> other,
+                   float maxInteractionDstance = 0.0f, uint64_t now = 0);
 
   /**
    * Get the entity's adjusted movement speed.

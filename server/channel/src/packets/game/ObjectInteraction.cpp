@@ -119,14 +119,11 @@ bool Parsers::ObjectInteraction::Parse(
         });
       } else {
         auto cState = state->GetCharacterState();
-        cState->RefreshCurrentPosition(ChannelServer::GetServerTime());
-        if (cState->GetDistance(objState->GetCurrentX(),
-                                objState->GetCurrentY()) >
-            MAX_INTERACT_DISTANCE) {
+        if (!cState->CanInteract(objState)) {
           LogGeneralWarning([&]() {
             return libcomp::String(
-                       "Entity %1 is too far from player character to interact "
-                       "with: %1\n")
+                       "Player is too far from entity %1 to interact "
+                       "with or does not have line of sight: %2\n")
                 .Arg(objDef->GetID())
                 .Arg(state->GetAccountUID().ToString());
           });

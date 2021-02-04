@@ -32,6 +32,9 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// libhack includes
+#include <Log.h>
+
 // object Includes
 #include <Loot.h>
 #include <LootBox.h>
@@ -39,6 +42,9 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+
+// channel Includes
+#include "ZoneManager.h"
 
 using namespace channel;
 
@@ -57,6 +63,7 @@ bool Parsers::LootTreasureBox::Parse(
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto characterManager = server->GetCharacterManager();
+  auto zoneManager = server->GetZoneManager();
 
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
@@ -69,9 +76,25 @@ bool Parsers::LootTreasureBox::Parse(
 
   auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
   auto lBox = lState ? lState->GetEntity() : nullptr;
+
+  bool success = false;
   if (lBox && ((lBox->ValidLooterIDsCount() == 0 &&
                 lBox->GetType() != objects::LootBox::Type_t::BOSS_BOX) ||
                lBox->ValidLooterIDsContains(state->GetWorldCID()))) {
+    if (!cState->CanInteract(lState)) {
+      LogGeneralWarning([&]() {
+        return libcomp::String(
+                   "Player is either too far from lootbox in zone %1 to loot "
+                   "or does not have line of sight: %2\n")
+            .Arg(zone->GetDefinitionID())
+            .Arg(state->GetAccountUID().ToString());
+      });
+    } else {
+      success = true;
+    }
+  }
+
+  if (success) {
     reply.WriteS8(0);  // Success
 
     client->QueuePacket(reply);

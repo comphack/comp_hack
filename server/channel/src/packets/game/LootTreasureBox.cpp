@@ -63,7 +63,6 @@ bool Parsers::LootTreasureBox::Parse(
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto characterManager = server->GetCharacterManager();
-  auto zoneManager = server->GetZoneManager();
 
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();

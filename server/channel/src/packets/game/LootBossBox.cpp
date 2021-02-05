@@ -67,7 +67,7 @@ bool Parsers::LootBossBox::Parse(
   auto zone = cState->GetZone();
   auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
   if (lState && !cState->CanInteract(lState)) {
-    // They can't actually make this interaction. Disconnect them.
+    // They can't actually make this interaction. Ignore it.
     LogGeneralWarning([&]() {
       return libcomp::String(
                  "Player is either too far from boss lootbox in zone %1 to "
@@ -77,9 +77,7 @@ bool Parsers::LootBossBox::Parse(
           .Arg(state->GetAccountUID().ToString());
     });
 
-    // client->Kill();
-
-    return false;
+    return true;
   }
 
   libcomp::Packet reply;

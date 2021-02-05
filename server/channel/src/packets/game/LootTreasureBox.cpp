@@ -69,18 +69,17 @@ bool Parsers::LootTreasureBox::Parse(
   auto zone = cState->GetZone();
   auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
   if (lState && !cState->CanInteract(lState)) {
-    // They can't actually make this interaction. Disconnect them.
+    // They can't actually make this interaction. Ignore it.
     LogGeneralWarning([&]() {
       return libcomp::String(
-                 "Player is either too far from lootbox in zone %1 to loot "
+                 "Player is either too far from lootbox in zone %1 to retrieve "
+                 "its information "
                  "or does not have line of sight: %2\n")
           .Arg(zone->GetDefinitionID())
           .Arg(state->GetAccountUID().ToString());
     });
 
-    // client->Kill();
-
-    return false;
+    return true;
   }
   auto lBox = lState ? lState->GetEntity() : nullptr;
 

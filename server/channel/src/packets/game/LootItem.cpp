@@ -89,7 +89,7 @@ bool Parsers::LootItem::Parse(
           .Arg(state->GetAccountUID().ToString());
     });
 
-    //client->Kill();
+    // client->Kill();
 
     return false;
   }

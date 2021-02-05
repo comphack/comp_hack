@@ -73,7 +73,8 @@ bool Parsers::PlasmaItemData::Parse(
   auto pState =
       zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
            : nullptr;
-  if (pState && !cState->CanInteract(pState)) {
+  auto point = pState ? pState->GetPoint((uint32_t)pointID) : nullptr;
+  if (point && !cState->CanInteract(point)) {
     // They can't actually make this interaction. Disconnect them.
     LogGeneralWarning([&]() {
       return libcomp::String(
@@ -88,7 +89,6 @@ bool Parsers::PlasmaItemData::Parse(
 
     return false;
   }
-  auto point = pState ? pState->GetPoint((uint32_t)pointID) : nullptr;
 
   libcomp::Packet reply;
   reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_ITEM_DATA);

@@ -69,8 +69,10 @@ bool Parsers::PlasmaResult::Parse(
   auto pState =
       zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
            : nullptr;
-
-  if (pState && !cState->CanInteract(pState)) {
+  auto point = pState ? pState->SetPickResult((uint32_t)pointID,
+                                              state->GetWorldCID(), result)
+                      : nullptr;
+  if (point && !cState->CanInteract(point)) {
     // They can't actually make this interaction. Disconnect them.
     LogGeneralWarning([&]() {
       return libcomp::String(
@@ -85,10 +87,6 @@ bool Parsers::PlasmaResult::Parse(
 
     return false;
   }
-
-  auto point = pState ? pState->SetPickResult((uint32_t)pointID,
-                                              state->GetWorldCID(), result)
-                      : nullptr;
 
   bool failure = result < 0;
 

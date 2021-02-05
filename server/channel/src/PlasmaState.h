@@ -183,13 +183,12 @@ class PlasmaState : public EntityState<objects::PlasmaSpawn> {
    * "picking" plasma. This is responsible for locking
    * players out if they attempt to access the point after
    * another player has already claimed it
-   * @param pointID ID of the point to pick
+   * @param point Pointer to PlasmaPoint to pick
    * @param looterID ID of the character attempting to loot
    *  the point
-   * @return Pointer to the point if the looter can pick it,
-   *  null if they cannot
+   * @return True if the looter can pick it,  false if they cannot
    */
-  std::shared_ptr<PlasmaPoint> PickPoint(uint32_t pointID, int32_t looterID);
+  bool PickPoint(std::shared_ptr<PlasmaPoint> point, int32_t looterID);
 
   /**
    * Update a plasma point with the result of the picking

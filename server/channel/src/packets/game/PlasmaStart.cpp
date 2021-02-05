@@ -68,7 +68,8 @@ bool Parsers::PlasmaStart::Parse(
   bool success = false;
   if (pState && pointID && eventManager->StartSystemEvent(client, plasmaID)) {
     auto cState = state->GetCharacterState();
-    if (!cState->CanInteract(pState)) {
+    auto point = pState->GetPoint(pointID);
+    if (point && !cState->CanInteract(point)) {
       LogGeneralWarning([&]() {
         return libcomp::String(
                    "Player is either too far from plasma in zone %1 to use "
@@ -77,8 +78,7 @@ bool Parsers::PlasmaStart::Parse(
             .Arg(state->GetAccountUID().ToString());
       });
     } else {
-      auto point = pState->PickPoint((uint32_t)pointID, state->GetWorldCID());
-      success = point != nullptr;
+      success = pState->PickPoint(point, state->GetWorldCID());
     }
 
     if (!success) {

@@ -354,6 +354,34 @@ bool ActiveEntityState::CanInteract(std::shared_ptr<EntityStateObject> other,
           maxInteractionDistance);
 }
 
+bool ActiveEntityState::CanInteract(
+    std::shared_ptr<objects::ServerObjectBase> obj,
+    float maxInteractionDistance, uint64_t now) {
+  auto zone = GetZone();
+  if (!obj) {
+    return false;
+  }
+
+  // Give about 5% leeway in allowed distance.
+  if (maxInteractionDistance <= 0.0f) {
+    maxInteractionDistance = MAX_INTERACT_DISTANCE;
+  }
+  maxInteractionDistance *= 1.05f;
+
+  if (!now) {
+    now = ChannelServer::GetServerTime();
+  }
+
+  RefreshCurrentPosition(now);
+
+  Point src(GetCurrentX(), GetCurrentY());
+  Point dest(obj->GetX(), obj->GetY());
+  Point collidePoint;
+
+  return !zone->Collides(Line(src, dest), collidePoint) &&
+         (GetDistance(obj->GetX(), obj->GetY()) <= maxInteractionDistance);
+}
+
 float ActiveEntityState::GetMovementSpeed(bool ignoreSkill, bool altSpeed) {
   int16_t speed = 0;
   auto activated = ignoreSkill ? nullptr : GetActivatedAbility();

@@ -232,28 +232,24 @@ std::list<std::shared_ptr<PlasmaPoint>> PlasmaState::PopHidePoints(
   return results;
 }
 
-std::shared_ptr<PlasmaPoint> PlasmaState::PickPoint(uint32_t pointID,
-                                                    int32_t looterID) {
+bool PlasmaState::PickPoint(std::shared_ptr<PlasmaPoint> point,
+                            int32_t looterID) {
   std::lock_guard<std::mutex> lock(mLock);
-
-  // Return null if the point does not exist
-  auto it = mPoints.find(pointID);
-  if (it == mPoints.end()) {
-    return nullptr;
+  if (!point) {
+    return false;
   }
 
-  // Return null if the point is already being looted or is
+  // Return false if the point is already being looted or is
   // not currently active
-  auto point = it->second;
   if ((point->mLooterID != 0 && point->mLooterID != looterID) ||
       point->GetState(looterID) != 0) {
     return nullptr;
   }
 
-  // Point is valid, mark state, set looter ID and return it
+  // Point is valid, mark state, set looter ID and return true
   point->mLooterID = looterID;
 
-  return point;
+  return true;
 }
 
 std::shared_ptr<PlasmaPoint> PlasmaState::SetPickResult(uint32_t pointID,

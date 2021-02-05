@@ -34,6 +34,7 @@
 #include <ActiveEntityStateObject.h>
 #include <EntityStats.h>
 #include <MiCorrectTbl.h>
+#include <ServerObjectBase.h>
 #include <StatusEffect.h>
 #include <TokuseiCondition.h>
 
@@ -425,6 +426,17 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    * @return true if the entity can be interacted with
    */
   bool CanInteract(std::shared_ptr<EntityStateObject> other,
+                   float maxInteractionDstance = 0.0f, uint64_t now = 0);
+
+  /**
+   * Determine if the entity can interact with some server object in a zone.
+   * @param obj Pointer to the object
+   * @param maxInteractionDistance Maximum allowed distance between the entities
+   * in which the interaction may take place
+   * @param now Current timestamp of the server
+   * @return true if the entity can be interacted with
+   */
+  bool CanInteract(std::shared_ptr<objects::ServerObjectBase> obj,
                    float maxInteractionDstance = 0.0f, uint64_t now = 0);
 
   /**

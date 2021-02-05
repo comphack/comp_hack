@@ -3832,6 +3832,7 @@ void ZoneManager::FailPlasma(
     int8_t pointID) {
   // Set the result first
   auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
   auto zone = state->GetZone();
   auto pState =
       zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
@@ -3844,7 +3845,7 @@ void ZoneManager::FailPlasma(
     pointID = (int8_t)point->GetID();
   }
 
-  if (point) {
+  if (point && cState->CanInteract(point)) {
     // Send the faillure notification to the player next
     libcomp::Packet notify;
     notify.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_END);
@@ -3863,6 +3864,18 @@ void ZoneManager::FailPlasma(
     BroadcastPacket(zone, notify);
 
     client->FlushOutgoing();
+  } else {
+    // They can't actually make this interaction. Disconnect them.
+    LogGeneralWarning([&]() {
+      return libcomp::String(
+                 "Plasma is either too far from boss lootbox in zone %1 to "
+                 "loot "
+                 "or does not have line of sight: %2\n")
+          .Arg(zone->GetDefinitionID())
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    // client->Kill();
   }
 }
 

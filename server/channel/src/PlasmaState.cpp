@@ -243,7 +243,7 @@ bool PlasmaState::PickPoint(std::shared_ptr<PlasmaPoint> point,
   // not currently active
   if ((point->mLooterID != 0 && point->mLooterID != looterID) ||
       point->GetState(looterID) != 0) {
-    return nullptr;
+    return false;
   }
 
   // Point is valid, mark state, set looter ID and return true

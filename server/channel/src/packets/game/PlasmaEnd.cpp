@@ -64,8 +64,7 @@ bool Parsers::PlasmaEnd::Parse(
   auto pState =
       zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
            : nullptr;
-  auto point = pState ? pState->GetPoint((uint32_t)pointID)
-                      : nullptr;
+  auto point = pState ? pState->GetPoint((uint32_t)pointID) : nullptr;
   if (point && !cState->CanInteract(point)) {
     // They can't legitimately be the one ending this minigame. Disconnect them.
     LogGeneralWarning([&]() {

@@ -73,19 +73,19 @@ bool Parsers::PlasmaResult::Parse(
                                               state->GetWorldCID(), result)
                       : nullptr;
   if (point && !cState->CanInteract(point)) {
-    // They can't actually make this interaction. Disconnect them.
+    // They can't legitimately be the one ending this minigame. Disconnect them.
     LogGeneralWarning([&]() {
       return libcomp::String(
-                 "Plasma is either too far from boss lootbox in zone %1 to "
-                 "loot "
-                 "or does not have line of sight: %2\n")
+                 "Player attempted to end a plasma minigame in zone %1 where "
+                 "they were either too far to send a legitimate result "
+                 "or do not have line of sight: %2\n")
           .Arg(zone->GetDefinitionID())
           .Arg(state->GetAccountUID().ToString());
     });
 
-    // client->Kill();
+    client->Kill();
 
-    return false;
+    return true;
   }
 
   bool failure = result < 0;

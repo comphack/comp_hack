@@ -75,19 +75,16 @@ bool Parsers::PlasmaItemData::Parse(
            : nullptr;
   auto point = pState ? pState->GetPoint((uint32_t)pointID) : nullptr;
   if (point && !cState->CanInteract(point)) {
-    // They can't actually make this interaction. Disconnect them.
+    // They can't actually make this interaction. Ignore it.
     LogGeneralWarning([&]() {
       return libcomp::String(
-                 "Plasma is either too far from boss lootbox in zone %1 to "
-                 "loot "
+                 "Player is either too far from plasma in zone %1 to loot it "
                  "or does not have line of sight: %2\n")
           .Arg(zone->GetDefinitionID())
           .Arg(state->GetAccountUID().ToString());
     });
 
-    // client->Kill();
-
-    return false;
+    return true;
   }
 
   libcomp::Packet reply;

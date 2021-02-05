@@ -72,7 +72,8 @@ bool Parsers::PlasmaStart::Parse(
     if (point && !cState->CanInteract(point)) {
       LogGeneralWarning([&]() {
         return libcomp::String(
-                   "Player is either too far from plasma in zone %1 to use "
+                   "Player is either too far from plasma in zone %1 to "
+                   "interact with it "
                    "or does not have line of sight: %2\n")
             .Arg(zone->GetDefinitionID())
             .Arg(state->GetAccountUID().ToString());

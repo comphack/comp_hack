@@ -201,11 +201,9 @@ void SpawnList::SaveProperties(const std::shared_ptr<libcomp::Object>& obj) {
 
     spawn->SetTalkResist((uint8_t)prop->talkResist->value());
 
-    spawn->SetTalkResults((uint8_t)(prop->canJoin->isChecked()
-                                        ? SPAWN_TALK_RESULT_JOIN
-                                        : 0x00 | prop->canGift->isChecked()
-                                              ? SPAWN_TALK_RESULT_GIFT
-                                              : 0x00));
+    spawn->SetTalkResults((uint8_t)(
+        (prop->canJoin->isChecked() ? SPAWN_TALK_RESULT_JOIN : 0x00) |
+        (prop->canGift->isChecked() ? SPAWN_TALK_RESULT_GIFT : 0x00)));
 
     auto gifts = prop->gifts->GetObjectList<objects::ItemDrop>();
     spawn->SetGifts(gifts);

@@ -68,7 +68,7 @@ bool Parsers::PlasmaStart::Parse(
   bool success = false;
   if (pState && pointID && eventManager->StartSystemEvent(client, plasmaID)) {
     auto cState = state->GetCharacterState();
-    auto point = pState->GetPoint(pointID);
+    auto point = pState->GetPoint((uint32_t)pointID);
     if (point && !cState->CanInteract(point)) {
       LogGeneralWarning([&]() {
         return libcomp::String(

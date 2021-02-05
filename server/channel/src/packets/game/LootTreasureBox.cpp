@@ -78,7 +78,7 @@ bool Parsers::LootTreasureBox::Parse(
           .Arg(state->GetAccountUID().ToString());
     });
 
-    //client->Kill();
+    // client->Kill();
 
     return false;
   }
@@ -92,7 +92,7 @@ bool Parsers::LootTreasureBox::Parse(
   if (lBox && ((lBox->ValidLooterIDsCount() == 0 &&
                 lBox->GetType() != objects::LootBox::Type_t::BOSS_BOX) ||
                lBox->ValidLooterIDsContains(state->GetWorldCID()))) {
-        reply.WriteS8(0);  // Success
+    reply.WriteS8(0);  // Success
 
     client->QueuePacket(reply);
 

@@ -333,9 +333,11 @@ bool ActiveEntityState::CanInteract(std::shared_ptr<EntityStateObject> other,
     return false;
   }
 
+  // Give about 5% leeway in allowed distance.
   if (maxInteractionDistance <= 0.0f) {
     maxInteractionDistance = MAX_INTERACT_DISTANCE;
   }
+  maxInteractionDistance *= 1.05f;
 
   if (!now) {
     now = ChannelServer::GetServerTime();

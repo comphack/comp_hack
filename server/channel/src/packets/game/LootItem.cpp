@@ -33,6 +33,9 @@
 #include <PacketCodes.h>
 #include <Randomizer.h>
 
+// libhack Includes
+#include <Log.h>
+
 // object Includes
 #include <CharacterProgress.h>
 #include <DemonBox.h>
@@ -75,6 +78,21 @@ bool Parsers::LootItem::Parse(
   auto character = cState->GetEntity();
   auto zone = cState->GetZone();
   auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
+  if (lState && !cState->CanInteract(lState)) {
+    // They can't actually make this interaction. Disconnect them.
+    LogGeneralWarning([&]() {
+      return libcomp::String(
+                 "Player is either too far from lootable entity in zone %1 to "
+                 "loot "
+                 "or does not have line of sight: %2\n")
+          .Arg(zone->GetDefinitionID())
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    //client->Kill();
+
+    return false;
+  }
   auto lBox = lState ? lState->GetEntity() : nullptr;
 
   uint32_t demonType = 0;

@@ -32,6 +32,9 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// libhack Includes
+#include <Log.h>
+
 // object Includes
 #include <Loot.h>
 #include <LootBox.h>
@@ -62,13 +65,28 @@ bool Parsers::LootBossBox::Parse(
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto zone = cState->GetZone();
+  auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
+  if (lState && !cState->CanInteract(lState)) {
+    // They can't actually make this interaction. Disconnect them.
+    LogGeneralWarning([&]() {
+      return libcomp::String(
+                 "Player is either too far from boss lootbox in zone %1 to "
+                 "loot "
+                 "or does not have line of sight: %2\n")
+          .Arg(zone->GetDefinitionID())
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    // client->Kill();
+
+    return false;
+  }
 
   libcomp::Packet reply;
   reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_BOSS_BOX);
   reply.WriteS32Little(entityID);
   reply.WriteS32Little(lootEntityID);
 
-  auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
   if (lState && zone->ClaimBossBox(lootEntityID, state->GetWorldCID())) {
     // If the loot time has not already started, set to 60 minutes
     auto lBox = lState->GetEntity();

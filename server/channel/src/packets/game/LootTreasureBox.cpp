@@ -67,34 +67,32 @@ bool Parsers::LootTreasureBox::Parse(
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto zone = cState->GetZone();
+  auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
+  if (lState && !cState->CanInteract(lState)) {
+    // They can't actually make this interaction. Disconnect them.
+    LogGeneralWarning([&]() {
+      return libcomp::String(
+                 "Player is either too far from lootbox in zone %1 to loot "
+                 "or does not have line of sight: %2\n")
+          .Arg(zone->GetDefinitionID())
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    //client->Kill();
+
+    return false;
+  }
+  auto lBox = lState ? lState->GetEntity() : nullptr;
 
   libcomp::Packet reply;
   reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_TREASURE_BOX);
   reply.WriteS32Little(entityID);
   reply.WriteS32Little(lootEntityID);
 
-  auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
-  auto lBox = lState ? lState->GetEntity() : nullptr;
-
-  bool success = false;
   if (lBox && ((lBox->ValidLooterIDsCount() == 0 &&
                 lBox->GetType() != objects::LootBox::Type_t::BOSS_BOX) ||
                lBox->ValidLooterIDsContains(state->GetWorldCID()))) {
-    if (!cState->CanInteract(lState)) {
-      LogGeneralWarning([&]() {
-        return libcomp::String(
-                   "Player is either too far from lootbox in zone %1 to loot "
-                   "or does not have line of sight: %2\n")
-            .Arg(zone->GetDefinitionID())
-            .Arg(state->GetAccountUID().ToString());
-      });
-    } else {
-      success = true;
-    }
-  }
-
-  if (success) {
-    reply.WriteS8(0);  // Success
+        reply.WriteS8(0);  // Success
 
     client->QueuePacket(reply);
 

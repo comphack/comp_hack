@@ -32,6 +32,9 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
+// libhack Includes
+#include <Log.h>
+
 // channel Includes
 #include "ActionManager.h"
 #include "ChannelServer.h"
@@ -55,6 +58,7 @@ bool Parsers::PlasmaResult::Parse(
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
   auto zone = state->GetZone();
 
   auto server =
@@ -65,6 +69,22 @@ bool Parsers::PlasmaResult::Parse(
   auto pState =
       zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
            : nullptr;
+
+  if (pState && !cState->CanInteract(pState)) {
+    // They can't actually make this interaction. Disconnect them.
+    LogGeneralWarning([&]() {
+      return libcomp::String(
+                 "Plasma is either too far from boss lootbox in zone %1 to "
+                 "loot "
+                 "or does not have line of sight: %2\n")
+          .Arg(zone->GetDefinitionID())
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    // client->Kill();
+
+    return false;
+  }
 
   auto point = pState ? pState->SetPickResult((uint32_t)pointID,
                                               state->GetWorldCID(), result)

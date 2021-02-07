@@ -278,8 +278,8 @@ std::shared_ptr<PlasmaPoint> PlasmaState::SetPickResult(uint32_t pointID,
       }
     }
 
-    // Do not update if the point is inactive
-    if (!point || (point && (point->GetState(looterID) != 0))) {
+    // Stop if there is no valid point or it is inactive
+    if (!point || (point->GetState(looterID) != 0)) {
       return nullptr;
     }
   }

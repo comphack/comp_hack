@@ -279,7 +279,7 @@ std::shared_ptr<PlasmaPoint> PlasmaState::SetPickResult(uint32_t pointID,
     }
 
     // Do not update if the point is already open or hidden
-    if (!point || (point && (point->mOpen || point->mHidden))) {
+    if (!point || (point && (point->GetState(looterID) != 0))) {
       return nullptr;
     }
   }

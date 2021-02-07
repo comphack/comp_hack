@@ -67,7 +67,7 @@ bool Parsers::LootDemonEggData::Parse(
   auto zone = cState->GetZone();
   auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
   auto enemy = lState ? lState->GetEntity()->GetEnemy() : nullptr;
-  
+
   if (enemy && !cState->CanInteract(lState)) {
     // They can't actually make this interaction. Ignore it.
     LogGeneralWarning([&]() {

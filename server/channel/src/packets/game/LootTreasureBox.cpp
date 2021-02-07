@@ -68,7 +68,14 @@ bool Parsers::LootTreasureBox::Parse(
   auto cState = state->GetCharacterState();
   auto zone = cState->GetZone();
   auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
-  if (lState && !cState->CanInteract(lState)) {
+  auto lBox = lState ? lState->GetEntity() : nullptr;
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_TREASURE_BOX);
+  reply.WriteS32Little(entityID);
+  reply.WriteS32Little(lootEntityID);
+
+  if (lBox && !cState->CanInteract(lState)) {
     // They can't actually make this interaction. Ignore it.
     LogGeneralWarning([&]() {
       return libcomp::String(
@@ -79,18 +86,12 @@ bool Parsers::LootTreasureBox::Parse(
           .Arg(state->GetAccountUID().ToString());
     });
 
-    return true;
-  }
-  auto lBox = lState ? lState->GetEntity() : nullptr;
+    reply.WriteS8(-1);  // Failure
 
-  libcomp::Packet reply;
-  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_TREASURE_BOX);
-  reply.WriteS32Little(entityID);
-  reply.WriteS32Little(lootEntityID);
-
-  if (lBox && ((lBox->ValidLooterIDsCount() == 0 &&
-                lBox->GetType() != objects::LootBox::Type_t::BOSS_BOX) ||
-               lBox->ValidLooterIDsContains(state->GetWorldCID()))) {
+    client->SendPacket(reply);
+  } else if (lBox && ((lBox->ValidLooterIDsCount() == 0 &&
+                       lBox->GetType() != objects::LootBox::Type_t::BOSS_BOX) ||
+                      lBox->ValidLooterIDsContains(state->GetWorldCID()))) {
     reply.WriteS8(0);  // Success
 
     client->QueuePacket(reply);

@@ -32,12 +32,8 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
-// libhack Includes
-#include <Log.h>
-
 // channel Includes
 #include "ChannelServer.h"
-#include "PlasmaState.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -54,32 +50,9 @@ bool Parsers::PlasmaEnd::Parse(
   int8_t pointID = p.ReadS8();
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto state = client->GetClientState();
-  auto cState = state->GetCharacterState();
-  auto zone = state->GetZone();
 
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
-  auto pState =
-      zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
-           : nullptr;
-  auto point = pState ? pState->GetPoint((uint32_t)pointID) : nullptr;
-  if (point && !cState->CanInteract(point)) {
-    // They can't legitimately be the one ending this minigame. Disconnect them.
-    LogGeneralWarning([&]() {
-      return libcomp::String(
-                 "Player attempted to end a plasma minigame in zone %1 where "
-                 "they were either too far to send a legitimate result "
-                 "or do not have line of sight: %2\n")
-          .Arg(zone->GetDefinitionID())
-          .Arg(state->GetAccountUID().ToString());
-    });
-
-    client->Kill();
-
-    return true;
-  }
 
   server->GetZoneManager()->FailPlasma(client, plasmaID, pointID);
 

@@ -78,7 +78,13 @@ bool Parsers::LootItem::Parse(
   auto character = cState->GetEntity();
   auto zone = cState->GetZone();
   auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
-  if (lState && !cState->CanInteract(lState)) {
+  auto lBox = lState ? lState->GetEntity() : nullptr;
+
+  uint32_t demonType = 0;
+  std::list<int8_t> lootedSlots;
+  std::unordered_map<uint32_t, uint32_t> lootedItems;
+  
+  if (lBox && !cState->CanInteract(lState)) {
     // They can't actually make this interaction. Ignore it.
     LogGeneralWarning([&]() {
       return libcomp::String(
@@ -88,17 +94,9 @@ bool Parsers::LootItem::Parse(
           .Arg(zone->GetDefinitionID())
           .Arg(state->GetAccountUID().ToString());
     });
-
-    return true;
-  }
-  auto lBox = lState ? lState->GetEntity() : nullptr;
-
-  uint32_t demonType = 0;
-  std::list<int8_t> lootedSlots;
-  std::unordered_map<uint32_t, uint32_t> lootedItems;
-  if (lBox && ((lBox->ValidLooterIDsCount() == 0 &&
-                lBox->GetType() != objects::LootBox::Type_t::BOSS_BOX) ||
-               lBox->ValidLooterIDsContains(state->GetWorldCID()))) {
+  } else if (lBox && ((lBox->ValidLooterIDsCount() == 0 &&
+                       lBox->GetType() != objects::LootBox::Type_t::BOSS_BOX) ||
+                      lBox->ValidLooterIDsContains(state->GetWorldCID()))) {
     if (lBox->GetType() == objects::LootBox::Type_t::EGG) {
       // Demon egg
       auto comp = character->GetCOMP().Get();

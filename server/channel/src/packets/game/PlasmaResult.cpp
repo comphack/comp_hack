@@ -32,9 +32,6 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 
-// libhack Includes
-#include <Log.h>
-
 // channel Includes
 #include "ActionManager.h"
 #include "ChannelServer.h"
@@ -58,7 +55,6 @@ bool Parsers::PlasmaResult::Parse(
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
-  auto cState = state->GetCharacterState();
   auto zone = state->GetZone();
 
   auto server =
@@ -69,24 +65,10 @@ bool Parsers::PlasmaResult::Parse(
   auto pState =
       zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
            : nullptr;
+
   auto point = pState ? pState->SetPickResult((uint32_t)pointID,
                                               state->GetWorldCID(), result)
                       : nullptr;
-  if (point && !cState->CanInteract(point)) {
-    // They can't legitimately be the one ending this minigame. Disconnect them.
-    LogGeneralWarning([&]() {
-      return libcomp::String(
-                 "Player attempted to end a plasma minigame in zone %1 where "
-                 "they were either too far to send a legitimate result "
-                 "or do not have line of sight: %2\n")
-          .Arg(zone->GetDefinitionID())
-          .Arg(state->GetAccountUID().ToString());
-    });
-
-    client->Kill();
-
-    return true;
-  }
 
   bool failure = result < 0;
 
@@ -122,7 +104,7 @@ bool Parsers::PlasmaResult::Parse(
   // End the system event
   eventManager->HandleEvent(client, nullptr);
 
-  if (pState) {
+  if (point) {
     std::list<std::shared_ptr<objects::Action>> actions;
     if (!failure) {
       // Update demon quest if active

@@ -66,8 +66,14 @@ bool Parsers::LootBossBox::Parse(
   auto cState = state->GetCharacterState();
   auto zone = cState->GetZone();
   auto lState = zone ? zone->GetLootBox(lootEntityID) : nullptr;
-  if (lState && !cState->CanInteract(lState)) {
-    // They can't actually make this interaction. Ignore it.
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_BOSS_BOX);
+  reply.WriteS32Little(entityID);
+  reply.WriteS32Little(lootEntityID);
+
+  if (!cState->CanInteract(lState)) {
+    // They can't actually make this interaction. Send a reply of failure.
     LogGeneralWarning([&]() {
       return libcomp::String(
                  "Player is either too far from boss lootbox in zone %1 to "
@@ -77,15 +83,10 @@ bool Parsers::LootBossBox::Parse(
           .Arg(state->GetAccountUID().ToString());
     });
 
-    return true;
-  }
+    reply.WriteS8(-1);  // One person, one box error
 
-  libcomp::Packet reply;
-  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_LOOT_BOSS_BOX);
-  reply.WriteS32Little(entityID);
-  reply.WriteS32Little(lootEntityID);
-
-  if (lState && zone->ClaimBossBox(lootEntityID, state->GetWorldCID())) {
+    client->SendPacket(reply);
+  } else if (zone->ClaimBossBox(lootEntityID, state->GetWorldCID())) {
     // If the loot time has not already started, set to 60 minutes
     auto lBox = lState->GetEntity();
     if (lBox->GetLootTime() == 0) {

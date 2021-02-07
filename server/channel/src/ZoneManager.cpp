@@ -3832,7 +3832,6 @@ void ZoneManager::FailPlasma(
     int8_t pointID) {
   // Set the result first
   auto state = client->GetClientState();
-  auto cState = state->GetCharacterState();
   auto zone = state->GetZone();
   auto pState =
       zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))

@@ -74,8 +74,14 @@ bool Parsers::PlasmaItemData::Parse(
       zone ? std::dynamic_pointer_cast<PlasmaState>(zone->GetEntity(plasmaID))
            : nullptr;
   auto point = pState ? pState->GetPoint((uint32_t)pointID) : nullptr;
-  if (point && !cState->CanInteract(point)) {
-    // They can't actually make this interaction. Ignore it.
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_ITEM_DATA);
+  reply.WriteS32Little(plasmaID);
+  reply.WriteS8(pointID);
+
+  if (!cState->CanInteract(point)) {
+    // They can't actually make this interaction. A failure reply will be sent.
     LogGeneralWarning([&]() {
       return libcomp::String(
                  "Player is either too far from plasma in zone %1 to loot it "
@@ -84,15 +90,8 @@ bool Parsers::PlasmaItemData::Parse(
           .Arg(state->GetAccountUID().ToString());
     });
 
-    return true;
-  }
-
-  libcomp::Packet reply;
-  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_PLASMA_ITEM_DATA);
-  reply.WriteS32Little(plasmaID);
-  reply.WriteS8(pointID);
-
-  if (point) {
+    reply.WriteS32Little(-1);
+  } else {
     bool success = true;
 
     auto loot = point->GetLoot();
@@ -135,8 +134,6 @@ bool Parsers::PlasmaItemData::Parse(
         }
       }
     }
-  } else {
-    reply.WriteS32Little(-1);
   }
 
   client->SendPacket(reply);

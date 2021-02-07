@@ -58,18 +58,20 @@ bool Parsers::TradeRequest::Parse(
   auto cState = state->GetCharacterState();
   auto otherClient =
       server->GetManagerConnection()->GetEntityClient((int32_t)targetEntityID);
+  auto otherState = otherClient ? otherClient->GetClientState() : nullptr;
+  auto otherCState = otherState ? otherState->GetCharacterState() : nullptr;
 
   libcomp::Packet reply;
   reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_TRADE_REQUEST);
 
   if (!otherClient || state->GetExchangeSession() ||
-      otherClient->GetClientState()->GetExchangeSession()) {
+      otherState->GetExchangeSession() ||
+      cState->GetDistance(otherCState->GetCurrentX(),
+                          otherCState->GetCurrentY()) > MAX_INTERACT_DISTANCE) {
     reply.WriteS32Little(-1);
     client->SendPacket(reply);
     return true;
   }
-
-  auto otherState = otherClient->GetClientState();
 
   // Set the trade session info
   auto exchangeSession = std::make_shared<objects::PlayerExchangeSession>();

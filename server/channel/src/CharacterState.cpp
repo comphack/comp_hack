@@ -449,7 +449,7 @@ void CharacterState::RecalcEquipState(
         } else {
           auto effectData = definitionManager->GetModificationExtEffectData(
               itemData->GetCommon()->GetCategory()->GetSubCategory(),
-              (uint8_t)i, effectID);
+              (uint8_t)k, effectID);
           tokuseiID = effectData ? effectData->GetTokusei() : 0;
         }
 

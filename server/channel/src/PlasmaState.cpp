@@ -266,9 +266,6 @@ std::shared_ptr<PlasmaPoint> PlasmaState::SetPickResult(uint32_t pointID,
     }
 
     point = it->second;
-    if (looterID > 0 && point->mLooterID != looterID) {
-      return nullptr;
-    }
   } else {
     // Get current point
     for (auto& pair : mPoints) {
@@ -277,11 +274,13 @@ std::shared_ptr<PlasmaPoint> PlasmaState::SetPickResult(uint32_t pointID,
         break;
       }
     }
+  }
 
-    // Stop if there is no valid point or it is inactive
-    if (!point || (point->GetState(looterID) != 0)) {
-      return nullptr;
-    }
+  // Stop if there is no valid point, or if the point is inactive or currently
+  // being looted by another
+  if (!point || (point->mLooterID != 0 && point->mLooterID != looterID) ||
+      point->GetState(looterID) != 0) {
+    return nullptr;
   }
 
   // The result is a relative distance from the center of the "minigame"

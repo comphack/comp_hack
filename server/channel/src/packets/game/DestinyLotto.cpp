@@ -87,7 +87,7 @@ bool Parsers::DestinyLotto::Parse(
     LogGeneralWarning([&]() {
       return libcomp::String(
                  "Player attempted to roll DESTINY lottery before the timer "
-                 "expired: %2\n")
+                 "expired: %1\n")
           .Arg(state->GetAccountUID().ToString());
     });
   } else if (dBox) {

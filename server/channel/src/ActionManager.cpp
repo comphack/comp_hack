@@ -1430,6 +1430,7 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx) {
 
   // Last add demons
   std::unordered_map<std::shared_ptr<objects::MiDevilData>, uint8_t> add;
+  std::unordered_map<uint32_t, int16_t> addedSkills;
   if (act->AddDemonsCount() > 0) {
     auto definitionManager = server->GetDefinitionManager();
     for (auto pair : act->GetAddDemons()) {
@@ -1453,6 +1454,28 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx) {
       freeCount = (uint8_t)(freeCount - pair.second);
 
       add[demonData] = pair.second;
+    }
+
+    // Now construct the added skill map
+    if (act->AddedSkillsCount() > 0) {
+      for (auto pair : act->GetAddedSkills()) {
+        auto skillData = definitionManager->GetSkillData(pair.first);
+        if (skillData == nullptr) {
+          LogActionManagerError([&]() {
+            return libcomp::String("Invalid skill ID encountered: %1\n")
+                .Arg(pair.first);
+          });
+
+          return false;
+        }
+
+        auto progress = pair.second;
+        if (progress > MAX_INHERIT_SKILL) {
+          progress = MAX_INHERIT_SKILL;
+        }
+
+        addedSkills[pair.first] = progress;
+      }
     }
   }
 
@@ -1498,7 +1521,7 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx) {
   if (add.size() > 0) {
     for (auto pair : add) {
       for (uint8_t i = 0; i < pair.second; i++) {
-        if (!characterManager->ContractDemon(ctx.Client, pair.first, 0, 3000)) {
+        if (!characterManager->ContractDemon(ctx.Client, pair.first, 0, 3000, addedSkills)) {
           // Not really a good way to recover from this
           LogActionManagerErrorMsg(
               "Failed to contract one or more demons for COMP add request\n");

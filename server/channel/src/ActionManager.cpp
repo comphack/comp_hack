@@ -1521,7 +1521,8 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx) {
   if (add.size() > 0) {
     for (auto pair : add) {
       for (uint8_t i = 0; i < pair.second; i++) {
-        if (!characterManager->ContractDemon(ctx.Client, pair.first, 0, 3000, addedSkills)) {
+        if (!characterManager->ContractDemon(ctx.Client, pair.first, 0, 3000,
+                                             addedSkills)) {
           // Not really a good way to recover from this
           LogActionManagerErrorMsg(
               "Failed to contract one or more demons for COMP add request\n");

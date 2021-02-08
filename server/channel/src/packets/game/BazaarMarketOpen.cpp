@@ -99,8 +99,9 @@ bool Parsers::BazaarMarketOpen::Parse(
       });
 
       success = false;
-    } else if (bazaarData && bazaarData->GetState() !=
-                                 objects::BazaarData::State_t::BAZAAR_INACTIVE) {
+    } else if (bazaarData &&
+               bazaarData->GetState() !=
+                   objects::BazaarData::State_t::BAZAAR_INACTIVE) {
       LogBazaarError([&]() {
         return libcomp::String(
                    "Player attempted to open another bazaar while already "

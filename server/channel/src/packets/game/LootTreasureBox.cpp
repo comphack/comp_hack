@@ -43,9 +43,6 @@
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 
-// channel Includes
-#include "ZoneManager.h"
-
 using namespace channel;
 
 bool Parsers::LootTreasureBox::Parse(

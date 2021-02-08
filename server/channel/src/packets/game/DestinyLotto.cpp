@@ -83,28 +83,30 @@ bool Parsers::DestinyLotto::Parse(
   std::shared_ptr<objects::Loot> specifiedLoot;
 
   // Only allow the lottery if the instance timer has stopped by expiration
-  if (!instance->GetTimerStop()) {
-    LogGeneralWarning([&]() {
-      return libcomp::String(
-                 "Player attempted to roll DESTINY lottery before the timer "
-                 "expired: %1\n")
-          .Arg(state->GetAccountUID().ToString());
-    });
-  } else if (dBox) {
-    // Make sure the box is full, otherwise fail
-    success = true;
-    loot = dBox->GetLoot();
+  if (dBox) {
+    if (!instance->GetTimerStop()) {
+      LogGeneralWarning([&]() {
+        return libcomp::String(
+                   "Player attempted to roll DESTINY lottery before the timer "
+                   "expired: %1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+    } else {
+      // Make sure the box is full, otherwise fail
+      success = true;
+      loot = dBox->GetLoot();
 
-    uint8_t slot = 0;
-    for (auto l : dBox->GetLoot()) {
-      if (!l) {
-        success = false;
-        break;
-      } else if (slot == itemSlot && slotSpecified) {
-        specifiedLoot = l;
+      uint8_t slot = 0;
+      for (auto l : dBox->GetLoot()) {
+        if (!l) {
+          success = false;
+          break;
+        } else if (slot == itemSlot && slotSpecified) {
+          specifiedLoot = l;
+        }
+
+        slot = (uint8_t)(slot + 1);
       }
-
-      slot = (uint8_t)(slot + 1);
     }
   }
 

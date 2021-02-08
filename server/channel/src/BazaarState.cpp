@@ -275,7 +275,8 @@ bool BazaarState::DropItemInternal(
       libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
 
   auto bItem = bazaarData->GetItems((size_t)srcSlot).Get();
-  if (item == nullptr || bItem == nullptr || bItem->GetItem().Get() != item) {
+  if (item == nullptr || bItem == nullptr || bItem->GetItem().Get() != item ||
+      bItem->GetSold()) {
     LogBazaarErrorMsg(
         "DropItem request encountered with invalid item or source slot\n");
     return false;

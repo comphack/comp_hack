@@ -99,6 +99,16 @@ bool Parsers::BazaarMarketOpen::Parse(
       });
 
       success = false;
+    } else if (bazaarData && bazaarData->GetState() !=
+                                 objects::BazaarData::State_t::BAZAAR_INACTIVE) {
+      LogBazaarError([&]() {
+        return libcomp::String(
+                   "Player attempted to open another bazaar while already "
+                   "having one open: %1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+
+      success = false;
     } else if (maccaCost > 0) {
       success =
           server->GetCharacterManager()->PayMacca(client, (uint64_t)maccaCost);

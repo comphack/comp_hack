@@ -7023,7 +7023,7 @@ std::shared_ptr<Zone> ZoneManager::CreateZone(
     std::list<std::shared_ptr<objects::BazaarData>> activeMarkets;
     for (auto m : objects::BazaarData::LoadBazaarDataListByZone(
              server->GetWorldDatabase(), zoneID)) {
-      if (m->GetState() == objects::BazaarData::State_t::BAZAAR_ACTIVE &&
+      if (m->GetState() != objects::BazaarData::State_t::BAZAAR_INACTIVE &&
           (distributedZones || m->GetChannelID() == channelID)) {
         activeMarkets.push_back(m);
       }

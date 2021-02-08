@@ -247,6 +247,13 @@ void ZoneInstance::SetFlagState(int32_t key, int32_t value, int32_t worldCID) {
 
 std::shared_ptr<objects::DestinyBox> ZoneInstance::GetDestinyBox(
     int32_t worldCID) {
+  // Check if we are in a zone instance that has a DESTINY box
+  auto variant = GetVariant();
+  uint8_t size = variant ? variant->GetDestinyBoxSize() : 0;
+  if (!size) {
+    return nullptr;
+  }
+
   // Default to own box
   auto dBox = GetDestinyBoxes(worldCID);
   if (!dBox && worldCID) {
@@ -254,23 +261,19 @@ std::shared_ptr<objects::DestinyBox> ZoneInstance::GetDestinyBox(
     dBox = GetDestinyBoxes(0);
   }
 
-  auto variant = GetVariant();
-  if (!dBox && variant) {
-    uint8_t size = variant->GetDestinyBoxSize();
-    if (size) {
-      // Box should exist but does not, create it an allocate slots
-      std::lock_guard<std::mutex> lock(mLock);
+  if (!dBox) {
+    // Box should exist but does not, create it and allocate slots
+    std::lock_guard<std::mutex> lock(mLock);
 
-      dBox = std::make_shared<objects::DestinyBox>();
-      for (uint8_t i = 0; i < size; i++) {
-        dBox->AppendLoot(nullptr);
-      }
-
-      int32_t ownerCID = variant->GetDestinyBoxShared() ? 0 : worldCID;
-      dBox->SetOwnerCID(ownerCID);
-
-      SetDestinyBoxes(ownerCID, dBox);
+    dBox = std::make_shared<objects::DestinyBox>();
+    for (uint8_t i = 0; i < size; i++) {
+      dBox->AppendLoot(nullptr);
     }
+
+    int32_t ownerCID = variant->GetDestinyBoxShared() ? 0 : worldCID;
+    dBox->SetOwnerCID(ownerCID);
+
+    SetDestinyBoxes(ownerCID, dBox);
   }
 
   return dBox;

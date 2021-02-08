@@ -82,7 +82,7 @@ bool Parsers::DestinyLotto::Parse(
   std::list<std::shared_ptr<objects::Loot>> loot;
   std::shared_ptr<objects::Loot> specifiedLoot;
 
-  // Only allow the lottery if the instance timer has stopped by expiration
+  // Only allow the lottery if the instance timer has stopped
   if (dBox) {
     if (!instance->GetTimerStop()) {
       LogGeneralWarning([&]() {

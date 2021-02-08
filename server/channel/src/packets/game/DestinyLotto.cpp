@@ -189,7 +189,7 @@ bool Parsers::DestinyLotto::Parse(
   }
 
   std::list<std::shared_ptr<ChannelClientConnection>> clients;
-  if (dBox->GetOwnerCID() != 0 || !success) {
+  if ((dBox && dBox->GetOwnerCID() != 0) || !success) {
     clients.push_back(client);
   } else {
     // Everyone in the instance gets the items

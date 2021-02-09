@@ -79,7 +79,7 @@ bool Parsers::BazaarMarketSales::Parse(
   auto bItem = bazaarData->GetItems((size_t)fromSlot).Get();
 
   bool success = false;
-  if (bItem && amount > 0) {
+  if (bItem && bItem->GetSold() && amount > 0) {
     int64_t newCostPaid = (int64_t)bItem->GetCost() - (int64_t)amount;
     if (newCostPaid >= 0) {
       std::unordered_map<uint32_t, uint32_t> itemCounts;

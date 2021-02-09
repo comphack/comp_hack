@@ -43,6 +43,7 @@
 #include <EventInstance.h>
 #include <EventState.h>
 #include <Item.h>
+#include <ItemBox.h>
 #include <MiCultureItemData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
@@ -71,6 +72,7 @@ void HandleCultureItem(const std::shared_ptr<ChannelServer> server,
 
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
+  auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
   auto character = cState->GetEntity();
   auto cData = character ? character->GetCultureData().Get() : nullptr;
   auto cItem = cData ? cData->GetItem().Get() : nullptr;
@@ -87,7 +89,8 @@ void HandleCultureItem(const std::shared_ptr<ChannelServer> server,
   auto cmDef = cmState ? cmState->GetEntity() : nullptr;
 
   bool match = cData && cData == cmState->GetRentalData();
-  bool success = cmState && cItem && item && match;
+  bool success = cmState && cItem && item &&
+                 (item->GetItemBox() == inventory->GetUUID()) && match;
 
   int8_t pointMode = PMODE_NORMAL;
 

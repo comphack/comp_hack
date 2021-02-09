@@ -65,6 +65,7 @@ bool Parsers::CultureStart::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
+  auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
   auto character = cState->GetEntity();
   auto cData = character ? character->GetCultureData().Get() : nullptr;
   auto zone = cState->GetZone();
@@ -80,7 +81,8 @@ bool Parsers::CultureStart::Parse(
 
   // Item must be specified, machine must not be rented already and current
   // character must not have an active rental
-  bool success = character && item && cmState &&
+  bool success = character && item &&
+                 (item->GetItemBox() == inventory->GetUUID()) && cmState &&
                  cmState->GetRentalData() == nullptr &&
                  (cData == nullptr || !cData->GetActive());
   if (success) {

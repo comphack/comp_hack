@@ -61,7 +61,8 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
 
   auto srcItem = itemBox->GetItems(srcSlot).Get();
 
-  bool valid = srcItem != nullptr;
+  bool valid =
+      (srcItem != nullptr && srcItem->GetItemBox() == itemBox->GetUUID());
   if (valid) {
     bool targetSpecified = targetSlot != static_cast<uint32_t>(-1);
     if (!targetSpecified) {
@@ -150,7 +151,7 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
 
   auto targetItem = itemBox->GetItems(targetSlot).Get();
   auto itemDef =
-      targetItem
+      (targetItem && targetItem->GetItemBox() == itemBox->GetUUID())
           ? server->GetDefinitionManager()->GetItemData(targetItem->GetType())
           : nullptr;
 
@@ -167,7 +168,7 @@ void CombineStacks(const std::shared_ptr<ChannelServer> server,
       uint16_t srcStack = sourceItem.second;
 
       auto srcItem = itemBox->GetItems(srcSlot).Get();
-      if (srcItem) {
+      if (srcItem && srcItem->GetItemBox() == itemBox->GetUUID()) {
         if (srcItem->GetType() != targetItem->GetType()) {
           LogItemError([&]() {
             return libcomp::String(

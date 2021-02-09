@@ -86,7 +86,8 @@ bool Parsers::ItemMove::Parse(
   bool fail = false;
   if (!item || !sourceBox || !destBox ||
       sourceBox->GetItems(sourceSlot).Get() != item ||
-      item->GetItemBox() != sourceBox->GetUUID()) {
+      item->GetItemBox() != sourceBox->GetUUID() ||
+      (otherItem && otherItem->GetItemBox() != destBox->GetUUID())) {
     LogItemDebug([&]() {
       return libcomp::String(
                  "ItemMove request failed. Notifying requestor: %1\n")

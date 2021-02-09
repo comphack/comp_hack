@@ -4865,13 +4865,18 @@ bool CharacterManager::GetSynthOutcome(
   bool isTarot = exchangeSession->GetType() ==
                  objects::PlayerExchangeSession::Type_t::ENCHANT_TAROT;
 
+  auto targetCState = std::dynamic_pointer_cast<CharacterState>(
+      exchangeSession->GetOtherCharacterState());
+  auto targetInventory = targetCState->GetEntity()->GetItemBoxes(0).Get();
+
   std::list<double> rates;
   if (isSoul || isTarot) {
     auto inputItem = exchangeSession->GetItems(0).Get();
     auto crystal = exchangeSession->GetItems(1).Get();
     auto boostItem = exchangeSession->GetItems(2).Get();
 
-    if (crystal && inputItem) {
+    if ((crystal && crystal->GetItemBox() == targetInventory->GetUUID()) &&
+        (inputItem && inputItem->GetItemBox() == targetInventory->GetUUID())) {
       auto enchantData =
           definitionManager->GetEnchantDataByItemID(crystal->GetType());
       auto itemData = definitionManager->GetItemData(
@@ -4918,7 +4923,7 @@ bool CharacterManager::GetSynthOutcome(
           EXPERTISE_CHAIN_SYNTHESIS, definitionManager);
 
       double boostRate = 0.0;
-      if (boostItem) {
+      if (boostItem && boostItem->GetItemBox() == targetInventory->GetUUID()) {
         auto it = SVR_CONST.ADJUSTMENT_ITEMS.find(boostItem->GetType());
         if (it != SVR_CONST.ADJUSTMENT_ITEMS.end() && it->second[0] == 1) {
           boostRate = (double)it->second[1];
@@ -5019,12 +5024,11 @@ bool CharacterManager::GetSynthOutcome(
              objects::PlayerExchangeSession::Type_t::CRYSTALLIZE) {
     auto inputItem = exchangeSession->GetItems(0).Get();
 
-    auto targetCState = std::dynamic_pointer_cast<CharacterState>(
-        exchangeSession->GetOtherCharacterState());
     auto targetDemon = targetCState
                            ? targetCState->GetEntity()->GetActiveDemon().Get()
                            : nullptr;
-    if (targetDemon && inputItem) {
+    if (targetDemon &&
+        (inputItem && inputItem->GetItemBox() == targetInventory->GetUUID())) {
       auto demonData = definitionManager->GetDevilData(targetDemon->GetType());
       auto enchantData = demonData
                              ? definitionManager->GetEnchantDataByDemonID(

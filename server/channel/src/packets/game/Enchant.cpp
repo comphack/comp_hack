@@ -73,6 +73,7 @@ bool Parsers::Enchant::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
+  auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
   auto exchangeSession = state->GetExchangeSession();
 
   EntrustErrorCodes_t responseCode = EntrustErrorCodes_t::SUCCESS;
@@ -95,13 +96,15 @@ bool Parsers::Enchant::Parse(
                          : nullptr;
   auto targetClient = otherClient ? otherClient : client;
   auto targetState = targetClient->GetClientState();
+  auto targetCState = targetState->GetCharacterState();
+  auto targetInventory = targetCState->GetEntity()->GetItemBoxes(0).Get();
 
   // Sort rewards by outcome types: success (0), any (1), failure (2)
   std::unordered_map<uint8_t, std::list<std::shared_ptr<objects::Item>>>
       rewards;
   for (size_t i = 10; i < 22; i++) {
     auto reward = exchangeSession->GetItems(i).Get();
-    if (reward) {
+    if (reward && reward->GetItemBox() == targetInventory->GetUUID()) {
       // If the item cannot be traded, error here
       auto itemData = definitionManager->GetItemData(reward->GetType());
       if ((itemData->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0) {
@@ -123,7 +126,6 @@ bool Parsers::Enchant::Parse(
   // If there are any rewards, check how much inventory space is free
   std::list<int8_t> inventoryFree;
   if (responseCode == EntrustErrorCodes_t::SUCCESS && rewards.size() > 0) {
-    auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
     for (size_t i = 0; i < 50; i++) {
       if (inventory->GetItems(i).IsNull()) {
         inventoryFree.push_back((int8_t)i);
@@ -148,6 +150,10 @@ bool Parsers::Enchant::Parse(
   uint32_t specialEnchantItemType = static_cast<uint32_t>(-1);
 
   auto inputItem = exchangeSession->GetItems(0).Get();
+  // Check if the target has the input item in their inventory.
+  if (inputItem->GetItemBox() != targetInventory->GetUUID()) {
+    responseCode = EntrustErrorCodes_t::SYSTEM_ERROR;
+  }
 
   std::shared_ptr<objects::Item> updateItem;
   if (responseCode == EntrustErrorCodes_t::SUCCESS) {
@@ -208,9 +214,6 @@ bool Parsers::Enchant::Parse(
   client->SendPacket(reply);
 
   if (responseCode == EntrustErrorCodes_t::SUCCESS) {
-    auto targetCState = targetState->GetCharacterState();
-    auto targetInventory = targetCState->GetEntity()->GetItemBoxes(0).Get();
-
     std::list<std::shared_ptr<ChannelClientConnection>> clients;
     clients.push_back(client);
 
@@ -230,8 +233,6 @@ bool Parsers::Enchant::Parse(
 
     std::list<uint16_t> targetSlots;
     if (rewards.size() > 0) {
-      auto sourceInventory = cState->GetEntity()->GetItemBoxes(0).Get();
-
       std::list<uint16_t> sourceSlots;
       for (uint8_t rewardGroup :
            success ? std::set<uint8_t>{0, 1} : std::set<uint8_t>{1, 2}) {
@@ -246,9 +247,9 @@ bool Parsers::Enchant::Parse(
           int8_t openSlot = inventoryFree.front();
           inventoryFree.erase(inventoryFree.begin());
 
-          // Give it to the source
-          sourceInventory->SetItems((size_t)openSlot, reward);
-          reward->SetItemBox(sourceInventory->GetUUID());
+          // Give it to the executor of the skill, the source
+          inventory->SetItems((size_t)openSlot, reward);
+          reward->SetItemBox(inventory->GetUUID());
           reward->SetBoxSlot(openSlot);
 
           sourceSlots.push_back((uint16_t)openSlot);
@@ -258,9 +259,9 @@ bool Parsers::Enchant::Parse(
       }
 
       if (sourceSlots.size() > 0) {
-        dbChanges->Update(sourceInventory);
+        dbChanges->Update(inventory);
 
-        characterManager->SendItemBoxData(client, sourceInventory, sourceSlots);
+        characterManager->SendItemBoxData(client, inventory, sourceSlots);
       }
     }
 
@@ -314,7 +315,7 @@ bool Parsers::Enchant::Parse(
     }
 
     for (auto useItem : useItems) {
-      if (useItem) {
+      if (useItem && useItem->GetItemBox() == targetInventory->GetUUID()) {
         if (useItem->GetStackSize() == 1) {
           targetInventory->SetItems((size_t)useItem->GetBoxSlot(), NULLUUID);
 

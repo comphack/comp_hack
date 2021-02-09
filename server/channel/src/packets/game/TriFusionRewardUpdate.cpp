@@ -34,6 +34,7 @@
 
 // object Includes
 #include <Item.h>
+#include <ItemBox.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <PlayerExchangeSession.h>
@@ -67,6 +68,7 @@ bool Parsers::TriFusionRewardUpdate::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
+  auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
   auto exchangeSession = state->GetExchangeSession();
   auto tfSession =
       std::dynamic_pointer_cast<objects::TriFusionHostSession>(exchangeSession);
@@ -80,7 +82,7 @@ bool Parsers::TriFusionRewardUpdate::Parse(
   std::set<int32_t> participantIDs;
 
   bool failure = exchangeSession == nullptr || item == nullptr;
-  if (item &&
+  if (item && (item->GetItemBox() == inventory->GetUUID()) &&
       (!itemDef || (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0)) {
     LogTradeError([item, state]() {
       return libcomp::String(

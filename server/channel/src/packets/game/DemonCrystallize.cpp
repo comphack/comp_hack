@@ -75,6 +75,7 @@ bool Parsers::DemonCrystallize::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
+  auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
   auto exchangeSession = state->GetExchangeSession();
 
   EntrustErrorCodes_t responseCode = EntrustErrorCodes_t::SUCCESS;
@@ -112,7 +113,8 @@ bool Parsers::DemonCrystallize::Parse(
   auto useItem = exchangeSession->GetItems(0).Get();
 
   // If any of the core parts are missing, stop here
-  if (!targetDemon || !enchantData || !useItem) {
+  if (!targetDemon || !enchantData || !useItem ||
+      (useItem->GetItemBox() != targetInventory->GetUUID())) {
     responseCode = EntrustErrorCodes_t::SYSTEM_ERROR;
   } else if (!targetDState->IsAlive()) {
     responseCode = EntrustErrorCodes_t::INVALID_DEMON_STATE;
@@ -149,7 +151,7 @@ bool Parsers::DemonCrystallize::Parse(
       rewards;
   for (size_t i = 10; i < 22; i++) {
     auto reward = exchangeSession->GetItems(i).Get();
-    if (reward) {
+    if (reward && reward->GetItemBox() == targetInventory->GetUUID()) {
       // If the item cannot be traded, error here
       auto itemData = definitionManager->GetItemData(reward->GetType());
       if ((itemData->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0) {
@@ -221,7 +223,6 @@ bool Parsers::DemonCrystallize::Parse(
   // If there are any rewards, check how much inventory space is free
   std::list<int8_t> sourceInventoryFree;
   if (responseCode == EntrustErrorCodes_t::SUCCESS && rewards.size() > 0) {
-    auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
     for (size_t i = 0; i < 50; i++) {
       if (inventory->GetItems(i).IsNull()) {
         sourceInventoryFree.push_back((int8_t)i);
@@ -295,8 +296,6 @@ bool Parsers::DemonCrystallize::Parse(
 
     std::list<uint16_t> targetSlots;
     if (rewards.size() > 0) {
-      auto sourceInventory = cState->GetEntity()->GetItemBoxes(0).Get();
-
       std::list<uint16_t> sourceSlots;
       for (uint8_t rewardGroup :
            success ? std::set<uint8_t>{0, 1} : std::set<uint8_t>{1, 2}) {
@@ -312,8 +311,8 @@ bool Parsers::DemonCrystallize::Parse(
           sourceInventoryFree.pop_front();
 
           // Give it to the source
-          sourceInventory->SetItems((size_t)openSlot, reward);
-          reward->SetItemBox(sourceInventory->GetUUID());
+          inventory->SetItems((size_t)openSlot, reward);
+          reward->SetItemBox(inventory->GetUUID());
           reward->SetBoxSlot(openSlot);
 
           sourceSlots.push_back((uint16_t)openSlot);
@@ -323,9 +322,9 @@ bool Parsers::DemonCrystallize::Parse(
       }
 
       if (sourceSlots.size() > 0) {
-        dbChanges->Update(sourceInventory);
+        dbChanges->Update(inventory);
 
-        characterManager->SendItemBoxData(client, sourceInventory, sourceSlots);
+        characterManager->SendItemBoxData(client, inventory, sourceSlots);
       }
     }
 

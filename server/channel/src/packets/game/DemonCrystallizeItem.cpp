@@ -35,6 +35,7 @@
 
 // object Includes
 #include <Item.h>
+#include <ItemBox.h>
 #include <PlayerExchangeSession.h>
 
 // channel Includes
@@ -60,6 +61,7 @@ bool Parsers::DemonCrystallizeItem::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
+  auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
   auto exchangeSession = state->GetExchangeSession();
 
   auto otherClient = exchangeSession && exchangeSession->GetSourceEntityID() !=
@@ -78,7 +80,8 @@ bool Parsers::DemonCrystallizeItem::Parse(
                            : nullptr;
 
   bool error = false;
-  if (exchangeSession && (itemID == -1 || item)) {
+  if (exchangeSession &&
+      (itemID == -1 || (item && item->GetItemBox() == inventory->GetUUID()))) {
     auto previous = exchangeSession->GetItems(0);
     exchangeSession->SetItems(0, item);
 

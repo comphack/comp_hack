@@ -36,6 +36,7 @@
 #include <Account.h>
 #include <Character.h>
 #include <Item.h>
+#include <ItemBox.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <PlayerExchangeSession.h>
@@ -67,13 +68,15 @@ bool Parsers::TradeAddItem::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto inventory = character->GetItemBoxes(0).Get();
   auto exchangeSession = state->GetExchangeSession();
 
   auto item = std::dynamic_pointer_cast<objects::Item>(
       libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
 
   bool cancel = false;
-  if (!item || slot >= 30) {
+  if (!item || (item->GetItemBox() != inventory->GetUUID()) || slot >= 30) {
     LogTradeErrorMsg("Invalid item trade request.\n");
 
     cancel = true;

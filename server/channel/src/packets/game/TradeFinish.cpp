@@ -115,7 +115,8 @@ bool Parsers::TradeFinish::Parse(
 
   std::vector<std::shared_ptr<objects::Item>> tradeItems;
   for (auto tradeItem : exchangeSession->GetItems()) {
-    if (!tradeItem.IsNull()) {
+    if (!tradeItem.IsNull() &&
+        tradeItem->GetItemBox() == inventory->GetUUID()) {
       tradeItems.push_back(tradeItem.Get());
       freeSlots.insert((size_t)tradeItem->GetBoxSlot());
     }
@@ -126,7 +127,8 @@ bool Parsers::TradeFinish::Parse(
 
   std::vector<std::shared_ptr<objects::Item>> otherTradeItems;
   for (auto tradeItem : otherSession->GetItems()) {
-    if (!tradeItem.IsNull()) {
+    if (!tradeItem.IsNull() &&
+        tradeItem->GetItemBox() == otherInventory->GetUUID()) {
       otherTradeItems.push_back(tradeItem.Get());
       otherFreeSlots.insert((size_t)tradeItem->GetBoxSlot());
     }

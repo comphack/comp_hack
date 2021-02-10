@@ -85,7 +85,7 @@ bool Parsers::EntrustRewardUpdate::Parse(
            : nullptr;
 
   bool success = false;
-  if (item && (item->GetItemBox() == inventory->GetUUID()) &&
+  if (item &&
       (!itemDef || (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0)) {
     LogTradeError([item, state]() {
       return libcomp::String(
@@ -94,22 +94,26 @@ bool Parsers::EntrustRewardUpdate::Parse(
           .Arg(item->GetType())
           .Arg(state->GetAccountUID().ToString());
     });
-  } else if ((itemID == -1 || item) && otherClient) {
+  } else if ((itemID == -1 ||
+              (item && item->GetItemBox() == inventory->GetUUID())) &&
+             otherClient) {
     success = true;
 
-    // Add to slots 10 to 21, make sure the item is not already there
-    auto items = exchangeSession->GetItems();
-    for (size_t i = 10; i < 22; i++) {
-      if (items[i].Get() == item) {
-        LogTradeError([state]() {
-          return libcomp::String(
-                     "Player attempted to add a synthesis reward item more "
-                     "than once: %1\n")
-              .Arg(state->GetAccountUID().ToString());
-        });
+    if (item) {
+      // Add to slots 10 to 21, make sure the item is not already there
+      auto items = exchangeSession->GetItems();
+      for (size_t i = 10; i < 22; i++) {
+        if (items[i].Get() == item) {
+          LogTradeError([state]() {
+            return libcomp::String(
+                       "Player attempted to add a synthesis reward item more "
+                       "than once: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+          });
 
-        success = false;
-        break;
+          success = false;
+          break;
+        }
       }
     }
 

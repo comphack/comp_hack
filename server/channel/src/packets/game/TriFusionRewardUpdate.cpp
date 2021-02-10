@@ -82,7 +82,7 @@ bool Parsers::TriFusionRewardUpdate::Parse(
   std::set<int32_t> participantIDs;
 
   bool failure = exchangeSession == nullptr || item == nullptr;
-  if (item && (item->GetItemBox() == inventory->GetUUID()) &&
+  if (item &&
       (!itemDef || (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0)) {
     LogTradeError([item, state]() {
       return libcomp::String(
@@ -129,19 +129,21 @@ bool Parsers::TriFusionRewardUpdate::Parse(
           targetState ? targetState->GetExchangeSession() : nullptr;
       if (targetExchange) {
         if (slotID >= 0) {
-          // Adding, make sure the item is not already there
-          auto items = targetExchange->GetItems();
-          for (size_t i = 0; i < 4; i++) {
-            if (items[i].Get() == item) {
-              LogTradeError([state]() {
-                return libcomp::String(
-                           "Player attempted to add a trufusion reward item "
-                           "more than once: %1\n")
-                    .Arg(state->GetAccountUID().ToString());
-              });
+          if (item) {
+            // Adding an item, make sure the item is not already there
+            auto items = targetExchange->GetItems();
+            for (size_t i = 0; i < 4; i++) {
+              if (items[i].Get() == item) {
+                LogTradeError([state]() {
+                  return libcomp::String(
+                             "Player attempted to add a triad fusion reward "
+                             "item more than once: %1\n")
+                      .Arg(state->GetAccountUID().ToString());
+                });
 
-              failure = true;
-              break;
+                failure = true;
+                break;
+              }
             }
           }
 

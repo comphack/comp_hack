@@ -103,13 +103,11 @@ bool Parsers::EntrustRewardUpdate::Parse(
       if (items[i].Get() == item) {
         LogTradeError([state]() {
           return libcomp::String(
-                     "Player attempted to add a trade item more than "
-                     "once: "
-                     "%1\n")
+                     "Player attempted to add a synthesis reward item more "
+                     "than once: %1\n")
               .Arg(state->GetAccountUID().ToString());
         });
 
-        client->Kill();
         success = false;
         break;
       }

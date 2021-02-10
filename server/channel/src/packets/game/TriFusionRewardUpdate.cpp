@@ -133,13 +133,11 @@ bool Parsers::TriFusionRewardUpdate::Parse(
           auto items = targetExchange->GetItems();
           for (size_t i = 0; i < 4; i++) {
             if (items[i].Get() == item) {
-              auto accountUID = state->GetAccountUID();
-              LogTradeDebug([accountUID]() {
+              LogTradeError([state]() {
                 return libcomp::String(
-                           "Player attempted to add a trade item more than "
-                           "once: "
-                           "%1\n")
-                    .Arg(accountUID.ToString());
+                           "Player attempted to add a trufusion reward item "
+                           "more than once: %1\n")
+                    .Arg(state->GetAccountUID().ToString());
               });
 
               failure = true;

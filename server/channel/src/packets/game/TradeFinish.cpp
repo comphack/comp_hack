@@ -115,10 +115,23 @@ bool Parsers::TradeFinish::Parse(
 
   std::vector<std::shared_ptr<objects::Item>> tradeItems;
   for (auto tradeItem : exchangeSession->GetItems()) {
-    if (!tradeItem.IsNull() &&
-        tradeItem->GetItemBox() == inventory->GetUUID()) {
-      tradeItems.push_back(tradeItem.Get());
-      freeSlots.insert((size_t)tradeItem->GetBoxSlot());
+    if (!tradeItem.IsNull()) {
+      if (tradeItem->GetItemBox() == inventory->GetUUID()) {
+        // Attempting to trade away a phantom item. End the trade.
+        characterManager->EndExchange(client, 1);
+        characterManager->EndExchange(otherClient, 1);
+        client->Kill();
+
+        LogTradeWarning([&]() {
+          return libcomp::String("Player attempted to trade phantom item: %1\n")
+              .Arg(state->GetAccountUID().ToString());
+        });
+
+        return true;
+      } else {
+        tradeItems.push_back(tradeItem.Get());
+        freeSlots.insert((size_t)tradeItem->GetBoxSlot());
+      }
     }
   }
 
@@ -127,10 +140,23 @@ bool Parsers::TradeFinish::Parse(
 
   std::vector<std::shared_ptr<objects::Item>> otherTradeItems;
   for (auto tradeItem : otherSession->GetItems()) {
-    if (!tradeItem.IsNull() &&
-        tradeItem->GetItemBox() == otherInventory->GetUUID()) {
-      otherTradeItems.push_back(tradeItem.Get());
-      otherFreeSlots.insert((size_t)tradeItem->GetBoxSlot());
+    if (!tradeItem.IsNull()) {
+      if (tradeItem->GetItemBox() == otherInventory->GetUUID()) {
+        // Attempting to trade away a phantom item. End the trade.
+        characterManager->EndExchange(client, 1);
+        characterManager->EndExchange(otherClient, 1);
+        otherClient->Kill();
+
+        LogTradeWarning([&]() {
+          return libcomp::String("Player attempted to trade phantom item: %1\n")
+              .Arg(otherState->GetAccountUID().ToString());
+        });
+
+        return true;
+      } else {
+        otherTradeItems.push_back(tradeItem.Get());
+        otherFreeSlots.insert((size_t)tradeItem->GetBoxSlot());
+      }
     }
   }
 

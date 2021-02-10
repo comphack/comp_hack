@@ -91,7 +91,9 @@ bool Parsers::ItemMix::Parse(
 
   auto blendData = definitionManager->GetBlendData(blendID);
 
-  bool success = item1 && item2 && blendData;
+  bool success = (item1 && item1->GetItemBox() == inventory->GetUUID()) &&
+                 (item2 && item2->GetItemBox() == inventory->GetUUID()) &&
+                 blendData;
 
   std::list<std::shared_ptr<objects::Item>> extItems;
   std::list<std::shared_ptr<objects::MiBlendExtData>> extItemDefs;

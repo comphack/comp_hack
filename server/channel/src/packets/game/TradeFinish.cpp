@@ -120,13 +120,14 @@ bool Parsers::TradeFinish::Parse(
         // Attempting to trade away a phantom item. End the trade.
         characterManager->EndExchange(client, 1);
         characterManager->EndExchange(otherClient, 1);
-        client->Kill();
 
         LogTradeWarning([&]() {
           return libcomp::String(
                      "Player attempted to trade away a phantom item: %1\n")
               .Arg(state->GetAccountUID().ToString());
         });
+
+        client->Kill();
 
         return true;
       } else {
@@ -146,13 +147,14 @@ bool Parsers::TradeFinish::Parse(
         // Attempting to trade away a phantom item. End the trade.
         characterManager->EndExchange(client, 1);
         characterManager->EndExchange(otherClient, 1);
-        otherClient->Kill();
 
         LogTradeWarning([&]() {
           return libcomp::String(
                      "Player attempted to trade away a phantom item: %1\n")
               .Arg(otherState->GetAccountUID().ToString());
         });
+
+        otherClient->Kill();
 
         return true;
       } else {

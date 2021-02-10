@@ -129,7 +129,27 @@ bool Parsers::TriFusionRewardUpdate::Parse(
           targetState ? targetState->GetExchangeSession() : nullptr;
       if (targetExchange) {
         if (slotID >= 0) {
-          targetExchange->SetItems((size_t)slotID, item);
+          // Adding, make sure the item is not already there
+          auto items = targetExchange->GetItems();
+          for (size_t i = 0; i < 4; i++) {
+            if (items[i].Get() == item) {
+              auto accountUID = state->GetAccountUID();
+              LogTradeDebug([accountUID]() {
+                return libcomp::String(
+                           "Player attempted to add a trade item more than "
+                           "once: "
+                           "%1\n")
+                    .Arg(accountUID.ToString());
+              });
+
+              failure = true;
+              break;
+            }
+          }
+
+          if (!failure) {
+            targetExchange->SetItems((size_t)slotID, item);
+          }
         } else {
           // Actually a remove
           bool found = false;

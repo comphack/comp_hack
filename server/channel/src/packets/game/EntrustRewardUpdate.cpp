@@ -35,6 +35,7 @@
 
 // object Includes
 #include <Item.h>
+#include <ItemBox.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <PlayerExchangeSession.h>
@@ -65,6 +66,8 @@ bool Parsers::EntrustRewardUpdate::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto inventory = character->GetItemBoxes(0).Get();
   auto exchangeSession = state->GetExchangeSession();
 
   auto otherClient = exchangeSession && exchangeSession->GetSourceEntityID() !=
@@ -82,7 +85,7 @@ bool Parsers::EntrustRewardUpdate::Parse(
            : nullptr;
 
   bool success = false;
-  if (item &&
+  if (item && (item->GetItemBox() == inventory->GetUUID()) &&
       (!itemDef || (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_TRADE) == 0)) {
     LogTradeError([item, state]() {
       return libcomp::String(
@@ -92,10 +95,29 @@ bool Parsers::EntrustRewardUpdate::Parse(
           .Arg(state->GetAccountUID().ToString());
     });
   } else if ((itemID == -1 || item) && otherClient) {
-    // Add to slots 10 to 21
-    exchangeSession->SetItems((size_t)(10 + rewardType * 4 + offset), item);
-
     success = true;
+
+    // Add to slots 10 to 21, make sure the item is not already there
+    auto items = exchangeSession->GetItems();
+    for (size_t i = 10; i < 22; i++) {
+      if (items[i].Get() == item) {
+        LogTradeError([state]() {
+          return libcomp::String(
+                     "Player attempted to add a trade item more than "
+                     "once: "
+                     "%1\n")
+              .Arg(state->GetAccountUID().ToString());
+        });
+
+        client->Kill();
+        success = false;
+        break;
+      }
+    }
+
+    if (success) {
+      exchangeSession->SetItems((size_t)(10 + rewardType * 4 + offset), item);
+    }
   }
 
   libcomp::Packet reply;

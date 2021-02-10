@@ -123,7 +123,8 @@ bool Parsers::TradeFinish::Parse(
         client->Kill();
 
         LogTradeWarning([&]() {
-          return libcomp::String("Player attempted to trade phantom item: %1\n")
+          return libcomp::String(
+                     "Player attempted to trade away a phantom item: %1\n")
               .Arg(state->GetAccountUID().ToString());
         });
 
@@ -148,7 +149,8 @@ bool Parsers::TradeFinish::Parse(
         otherClient->Kill();
 
         LogTradeWarning([&]() {
-          return libcomp::String("Player attempted to trade phantom item: %1\n")
+          return libcomp::String(
+                     "Player attempted to trade away a phantom item: %1\n")
               .Arg(otherState->GetAccountUID().ToString());
         });
 

@@ -40,6 +40,7 @@
 
 // object Includes
 #include <Item.h>
+#include <ItemBox.h>
 #include <MiDCategoryData.h>
 #include <MiDevilData.h>
 #include <MiItemBasicData.h>
@@ -72,6 +73,7 @@ bool Parsers::EquipmentSpiritDefuse::Parse(
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
+  auto inventory = character->GetItemBoxes(0).Get();
   auto dState = state->GetDemonState();
 
   auto equipment = std::dynamic_pointer_cast<objects::Item>(
@@ -79,6 +81,7 @@ bool Parsers::EquipmentSpiritDefuse::Parse(
           state->GetObjectUUID(equipID)));
 
   bool error = !equipment ||
+               (equipment->GetItemBox() != inventory->GetUUID()) ||
                (!equipment->GetBasicEffect() && !equipment->GetSpecialEffect());
 
   std::list<std::shared_ptr<objects::Item>> insertItems;

@@ -65,8 +65,8 @@ bool Parsers::CultureStart::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
-  auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
   auto character = cState->GetEntity();
+  auto inventory = character->GetItemBoxes(0).Get();
   auto cData = character ? character->GetCultureData().Get() : nullptr;
   auto zone = cState->GetZone();
 

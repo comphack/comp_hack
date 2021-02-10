@@ -72,8 +72,8 @@ void HandleCultureItem(const std::shared_ptr<ChannelServer> server,
 
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
-  auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
   auto character = cState->GetEntity();
+  auto inventory = character->GetItemBoxes(0).Get();
   auto cData = character ? character->GetCultureData().Get() : nullptr;
   auto cItem = cData ? cData->GetItem().Get() : nullptr;
   auto zone = cState->GetZone();

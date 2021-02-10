@@ -54,6 +54,7 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
               int64_t itemID) {
   auto state = client->GetClientState();
   auto character = state->GetCharacterState()->GetEntity();
+  auto inventory = character->GetItemBoxes(0).Get();
 
   auto uuid = state->GetObjectUUID(itemID);
 
@@ -67,7 +68,7 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
                  libcomp::PersistentObject::GetObjectByUUID(item->GetItemBox()))
            : nullptr;
 
-  if (itemBox && itemDef &&
+  if (itemBox && (itemBox == inventory) && itemDef &&
       (itemDef->GetBasic()->GetFlags() & ITEM_FLAG_DISCARD) != 0) {
     int8_t slot = item->GetBoxSlot();
 

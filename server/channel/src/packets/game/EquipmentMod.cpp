@@ -72,6 +72,8 @@ bool Parsers::EquipmentMod::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto definitionManager = server->GetDefinitionManager();
   auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
 
   int64_t modItemID = p.ReadS64Little();
   int64_t equipmentID = p.ReadS64Little();
@@ -105,7 +107,10 @@ bool Parsers::EquipmentMod::Parse(
   uint16_t greatFailItemCount = 0;
 
   // Make sure we have the 3 main items involved
-  if (modificationItem && equipmentItem && slotItem) {
+  if (modificationItem &&
+      (modificationItem->GetItemBox() == inventory->GetUUID()) &&
+      equipmentItem && (equipmentItem->GetItemBox() == inventory->GetUUID()) &&
+      slotItem && (slotItem->GetItemBox() == inventory->GetUUID())) {
     resultCode = RESULT_CODE_FAIL;
 
     auto equipmentData =
@@ -343,7 +348,9 @@ bool Parsers::EquipmentMod::Parse(
     case RESULT_CODE_FAIL:
     case RESULT_CODE_GREAT_FAIL: {
       auto destroyItem = catalyst;
-      if (resultCode == RESULT_CODE_GREAT_FAIL && !catalyst) {
+      if (resultCode == RESULT_CODE_GREAT_FAIL &&
+          (!catalyst ||
+           (catalyst->GetItemBox() != inventory->GetUUID()))) {
         destroyItem = equipmentItem;
       } else {
         // Drop durability but don't destroy the item

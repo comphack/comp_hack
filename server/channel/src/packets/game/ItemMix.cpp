@@ -103,8 +103,9 @@ bool Parsers::ItemMix::Parse(
           libcomp::PersistentObject::GetObjectByUUID(
               state->GetObjectUUID(extItemID)));
       auto extData =
-          itemExt ? definitionManager->GetBlendExtData(itemExt->GetType())
-                  : nullptr;
+          (itemExt && itemExt->GetItemBox() == inventory->GetUUID())
+              ? definitionManager->GetBlendExtData(itemExt->GetType())
+              : nullptr;
 
       bool failure = !extData;
       if (!failure) {

@@ -116,7 +116,7 @@ bool Parsers::TradeFinish::Parse(
   std::vector<std::shared_ptr<objects::Item>> tradeItems;
   for (auto tradeItem : exchangeSession->GetItems()) {
     if (!tradeItem.IsNull()) {
-      if (tradeItem->GetItemBox() == inventory->GetUUID()) {
+      if (tradeItem->GetItemBox() != inventory->GetUUID()) {
         // Attempting to trade away a phantom item. End the trade.
         characterManager->EndExchange(client, 1);
         characterManager->EndExchange(otherClient, 1);
@@ -142,7 +142,7 @@ bool Parsers::TradeFinish::Parse(
   std::vector<std::shared_ptr<objects::Item>> otherTradeItems;
   for (auto tradeItem : otherSession->GetItems()) {
     if (!tradeItem.IsNull()) {
-      if (tradeItem->GetItemBox() == otherInventory->GetUUID()) {
+      if (tradeItem->GetItemBox() != otherInventory->GetUUID()) {
         // Attempting to trade away a phantom item. End the trade.
         characterManager->EndExchange(client, 1);
         characterManager->EndExchange(otherClient, 1);

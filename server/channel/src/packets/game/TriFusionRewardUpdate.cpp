@@ -129,7 +129,7 @@ bool Parsers::TriFusionRewardUpdate::Parse(
           targetState ? targetState->GetExchangeSession() : nullptr;
       if (targetExchange) {
         if (slotID >= 0) {
-          if (item) {
+          if (item && item->GetItemBox() == inventory->GetUUID()) {
             // Adding an item, make sure the item is not already there
             auto items = targetExchange->GetItems();
             for (size_t i = 0; i < 4; i++) {

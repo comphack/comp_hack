@@ -1713,7 +1713,8 @@ std::list<std::shared_ptr<objects::Item>> CharacterManager::GetExistingItems(
   std::list<std::shared_ptr<objects::Item>> existing;
   for (size_t i = 0; i < 50; i++) {
     auto item = box->GetItems(i).Get();
-    if (item && item->GetType() == itemID && all.find(item) == all.end()) {
+    if (item && item->GetItemBox() == box->GetUUID() &&
+        item->GetType() == itemID && all.find(item) == all.end()) {
       existing.push_back(item);
       all.insert(item);
     }

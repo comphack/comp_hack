@@ -37,6 +37,7 @@
 
 // object Includes
 #include <Item.h>
+#include <ItemBox.h>
 #include <MiDevilBoostData.h>
 #include <MiDevilBoostItemData.h>
 #include <MiDevilBoostRequirementData.h>
@@ -82,6 +83,8 @@ bool Parsers::DemonForce::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto inventory = character->GetItemBoxes(0).Get();
   auto dState = state->GetDemonState();
   auto devilData = dState->GetDevilData();
   auto demon = dState->GetEntity();
@@ -90,8 +93,9 @@ bool Parsers::DemonForce::Parse(
       libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
 
   auto dfData = definitionManager->GetDevilBoostData(dfType);
-  auto dfItem = item ? definitionManager->GetDevilBoostItemData(item->GetType())
-                     : nullptr;
+  auto dfItem = (item && item->GetItemBox() == inventory->GetUUID())
+                    ? definitionManager->GetDevilBoostItemData(item->GetType())
+                    : nullptr;
 
   std::unordered_map<int8_t, int32_t> boosted;
 

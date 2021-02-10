@@ -36,6 +36,7 @@
 
 // objects Includes
 #include <Item.h>
+#include <ItemBox.h>
 #include <MiDisassemblyData.h>
 #include <MiDisassemblyMaterialData.h>
 #include <MiDisassemblyTriggerData.h>
@@ -67,6 +68,7 @@ bool Parsers::ItemDisassemble::Parse(
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
+  auto inventory = character->GetItemBoxes(0).Get();
 
   auto sourceItem = std::dynamic_pointer_cast<objects::Item>(
       libcomp::PersistentObject::GetObjectByUUID(
@@ -92,7 +94,9 @@ bool Parsers::ItemDisassemble::Parse(
   uint16_t disCount = 0;
 
   bool success = false;
-  if (playerHasTank && sourceItem && targetItem && disDef) {
+  if (playerHasTank && sourceItem &&
+      (sourceItem->GetItemBox() == inventory->GetUUID()) && targetItem &&
+      (targetItem->GetItemBox() == inventory->GetUUID()) && disDef) {
     int8_t triggerIdx = -1;
 
     auto rateIter = SVR_CONST.RATE_SCALING_ITEMS[0].begin();

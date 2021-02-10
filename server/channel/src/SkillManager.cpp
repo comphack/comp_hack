@@ -1614,8 +1614,14 @@ int8_t SkillManager::ValidateSkillTarget(
 bool SkillManager::ValidateActivationItem(
     const std::shared_ptr<ActiveEntityState> source,
     const std::shared_ptr<objects::Item>& item) {
-  if (!item || (item->GetRentalExpiration() > 0 &&
-                item->GetRentalExpiration() < (uint32_t)std::time(0))) {
+  auto state = ClientState::GetEntityClientState(source->GetEntityID());
+  auto cState = state ? state->GetCharacterState() : nullptr;
+  auto character = cState ? cState->GetEntity() : nullptr;
+  auto inventory = character ? character->GetItemBoxes(0).Get() : nullptr;
+
+  if (!item || (inventory && item->GetItemBox() != inventory->GetUUID()) &&
+                   (item->GetRentalExpiration() > 0 &&
+                    item->GetRentalExpiration() < (uint32_t)std::time(0))) {
     // Check if the item is invalid or it is an expired rental
     return false;
   } else {

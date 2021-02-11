@@ -101,7 +101,7 @@ bool Parsers::EquipmentSpiritFuse::Parse(
   bool error =
       !mainItem || (mainItem->GetItemBox() != inventory->GetUUID()) ||
       !basicItem || (basicItem->GetItemBox() != inventory->GetUUID()) ||
-      !specialItem || (specialItem->GetItemBox() != specialItem->GetUUID()) ||
+      !specialItem || (specialItem->GetItemBox() != inventory->GetUUID()) ||
       (assistID != -1 && !assistItem) ||
       (assistItem && assistItem->GetItemBox() != inventory->GetUUID()) ||
       !mainItem->GetMaxDurability() || !basicItem->GetMaxDurability() ||

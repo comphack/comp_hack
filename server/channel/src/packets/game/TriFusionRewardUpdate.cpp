@@ -148,13 +148,40 @@ bool Parsers::TriFusionRewardUpdate::Parse(
           }
 
           if (!failure) {
+            // Remove the item from other participants
+            bool foundElsewhere = false;
+            for (auto participant : participantIDs) {
+              if (participant != participantID) {
+                auto participantState =
+                    ClientState::GetEntityClientState(participant, false);
+                auto participantExchange =
+                    participantState ? participantState->GetExchangeSession()
+                                     : nullptr;
+
+                if (participantExchange) {
+                  auto items = participantExchange->GetItems();
+                  for (size_t i = 0; i < 4; i++) {
+                    if (items[i].Get() == item) {
+                      participantExchange->SetItems(i, NULLUUID);
+                      foundElsewhere = true;
+                      break;
+                    }
+                  }
+                }
+
+                if (foundElsewhere) {
+                  break;
+                }
+              }
+            }
             targetExchange->SetItems((size_t)slotID, item);
           }
         } else {
           // Actually a remove
           bool found = false;
+          auto items = targetExchange->GetItems();
           for (size_t i = 0; i < 4; i++) {
-            if (targetExchange->GetItems(i).Get() == item) {
+            if (items[i].Get() == item) {
               targetExchange->SetItems(i, NULLUUID);
               found = true;
               break;

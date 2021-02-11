@@ -83,16 +83,21 @@ bool Parsers::EntrustRequest::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
-
-  libcomp::Packet reply;
-  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_REQUEST);
-
   auto targetClient = cState->GetEntityID() == targetEntityID
                           ? client
                           : server->GetManagerConnection()->GetEntityClient(
                                 (int32_t)targetEntityID);
+  auto targetState = targetClient ? targetClient->GetClientState() : nullptr;
+  auto targetCState = targetState ? targetState->GetCharacterState() : nullptr;
+
+  libcomp::Packet reply;
+  reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_ENTRUST_REQUEST);
+
   if (!targetClient || state->GetExchangeSession() ||
-      targetClient->GetClientState()->GetExchangeSession()) {
+      targetClient->GetClientState()->GetExchangeSession() ||
+      (targetClient != client &&
+       cState->GetDistance(targetCState->GetCurrentX(),
+                           targetCState->GetCurrentY()) > 700.f)) {
     reply.WriteS32Little(-1);
 
     client->SendPacket(reply);
@@ -103,7 +108,6 @@ bool Parsers::EntrustRequest::Parse(
   EntrustErrorCodes_t responseCode = EntrustErrorCodes_t::SUCCESS;
 
   if (sessionType == objects::PlayerExchangeSession::Type_t::CRYSTALLIZE) {
-    auto targetState = targetClient->GetClientState();
     auto targetDemon = targetState->GetDemonState()->GetEntity();
     if (!targetDemon) {
       responseCode = EntrustErrorCodes_t::INVALID_CHAR_STATE;
@@ -127,11 +131,10 @@ bool Parsers::EntrustRequest::Parse(
     exchangeSession->SetSourceEntityID(cState->GetEntityID());
     exchangeSession->SetType(sessionType);
     if (targetClient != client) {
-      auto otherState = targetClient->GetClientState();
-      exchangeSession->SetOtherCharacterState(otherState->GetCharacterState());
+      exchangeSession->SetOtherCharacterState(targetCState);
 
       // When synth is another character, share the exchange session
-      otherState->SetExchangeSession(exchangeSession);
+      targetState->SetExchangeSession(exchangeSession);
 
       libcomp::Packet request;
       request.WritePacketCode(

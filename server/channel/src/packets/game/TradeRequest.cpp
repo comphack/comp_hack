@@ -67,7 +67,7 @@ bool Parsers::TradeRequest::Parse(
   if (!otherClient || state->GetExchangeSession() ||
       otherState->GetExchangeSession() ||
       cState->GetDistance(otherCState->GetCurrentX(),
-                          otherCState->GetCurrentY()) > MAX_INTERACT_DISTANCE) {
+                          otherCState->GetCurrentY()) > 1200.f) {
     reply.WriteS32Little(-1);
     client->SendPacket(reply);
     return true;

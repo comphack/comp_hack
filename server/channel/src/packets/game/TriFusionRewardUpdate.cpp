@@ -34,7 +34,6 @@
 
 // object Includes
 #include <Item.h>
-#include <ItemBox.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
 #include <PlayerExchangeSession.h>
@@ -68,7 +67,6 @@ bool Parsers::TriFusionRewardUpdate::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
-  auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
   auto exchangeSession = state->GetExchangeSession();
   auto tfSession =
       std::dynamic_pointer_cast<objects::TriFusionHostSession>(exchangeSession);
@@ -128,48 +126,20 @@ bool Parsers::TriFusionRewardUpdate::Parse(
       auto targetExchange =
           targetState ? targetState->GetExchangeSession() : nullptr;
       if (targetExchange) {
-        bool found = false;
-        if (item && item->GetItemBox() == inventory->GetUUID()) {
-          // Remove the item from other participants and slots
-          for (auto participant : participantIDs) {
-            auto participantState =
-                ClientState::GetEntityClientState(participant, false);
-            auto participantExchange =
-                participantState ? participantState->GetExchangeSession()
-                                 : nullptr;
-
-            if (participantExchange) {
-              auto items = participantExchange->GetItems();
-              for (size_t i = 0; i < 4; i++) {
-                if (items[i].Get() == item) {
-                  participantExchange->SetItems(i, NULLUUID);
-                  found = true;
-                  break;
-                }
-              }
-            }
-
-            if (found) {
+        if (slotID >= 0) {
+          targetExchange->SetItems((size_t)slotID, item);
+        } else {
+          // Actually a remove
+          bool found = false;
+          for (size_t i = 0; i < 4; i++) {
+            if (targetExchange->GetItems(i).Get() == item) {
+              targetExchange->SetItems(i, NULLUUID);
+              found = true;
               break;
             }
           }
 
-          if (slotID >= 0) {
-            // Add the item.
-            targetExchange->SetItems((size_t)slotID, item);
-          } else {
-            // Actually a remove, send a failure if it was never found somewhere
-            failure = !found;
-          }
-        } else {
-          LogTradeError([state]() {
-            return libcomp::String(
-                       "Player attempted to add a phantom triad fusion reward "
-                       "item: %1\n")
-                .Arg(state->GetAccountUID().ToString());
-          });
-
-          failure = true;
+          failure = !found;
         }
       } else {
         LogGeneralErrorMsg(

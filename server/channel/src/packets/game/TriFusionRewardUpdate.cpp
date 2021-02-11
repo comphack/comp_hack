@@ -128,67 +128,48 @@ bool Parsers::TriFusionRewardUpdate::Parse(
       auto targetExchange =
           targetState ? targetState->GetExchangeSession() : nullptr;
       if (targetExchange) {
-        if (slotID >= 0) {
-          if (item && item->GetItemBox() == inventory->GetUUID()) {
-            // Adding an item, make sure the item is not already there
-            auto items = targetExchange->GetItems();
-            for (size_t i = 0; i < 4; i++) {
-              if (items[i].Get() == item) {
-                LogTradeError([state]() {
-                  return libcomp::String(
-                             "Player attempted to add a triad fusion reward "
-                             "item more than once: %1\n")
-                      .Arg(state->GetAccountUID().ToString());
-                });
+        bool found = false;
+        if (item && item->GetItemBox() == inventory->GetUUID()) {
+          // Remove the item from other participants and slots
+          for (auto participant : participantIDs) {
+            auto participantState =
+                ClientState::GetEntityClientState(participant, false);
+            auto participantExchange =
+                participantState ? participantState->GetExchangeSession()
+                                 : nullptr;
 
-                failure = true;
-                break;
-              }
-            }
-          }
-
-          if (!failure) {
-            // Remove the item from other participants
-            bool foundElsewhere = false;
-            for (auto participant : participantIDs) {
-              if (participant != participantID) {
-                auto participantState =
-                    ClientState::GetEntityClientState(participant, false);
-                auto participantExchange =
-                    participantState ? participantState->GetExchangeSession()
-                                     : nullptr;
-
-                if (participantExchange) {
-                  auto items = participantExchange->GetItems();
-                  for (size_t i = 0; i < 4; i++) {
-                    if (items[i].Get() == item) {
-                      participantExchange->SetItems(i, NULLUUID);
-                      foundElsewhere = true;
-                      break;
-                    }
-                  }
-                }
-
-                if (foundElsewhere) {
+            if (participantExchange) {
+              auto items = participantExchange->GetItems();
+              for (size_t i = 0; i < 4; i++) {
+                if (items[i].Get() == item) {
+                  participantExchange->SetItems(i, NULLUUID);
+                  found = true;
                   break;
                 }
               }
             }
-            targetExchange->SetItems((size_t)slotID, item);
-          }
-        } else {
-          // Actually a remove
-          bool found = false;
-          auto items = targetExchange->GetItems();
-          for (size_t i = 0; i < 4; i++) {
-            if (items[i].Get() == item) {
-              targetExchange->SetItems(i, NULLUUID);
-              found = true;
+
+            if (found) {
               break;
             }
           }
 
-          failure = !found;
+          if (slotID >= 0) {
+            // Add the item.
+            targetExchange->SetItems((size_t)slotID, item);
+          } else {
+            // Actually a remove, send a failure if it was never found somewhere
+            failure = !found;
+          }
+        } else {
+          LogTradeError([state]() {
+            return libcomp::String(
+                       "Player attempted to add a phantom triad fusion reward "
+                       "item: %1\n")
+                .Arg(state->GetAccountUID().ToString());
+          });
+
+          failure = true;
         }
       } else {
         LogGeneralErrorMsg(

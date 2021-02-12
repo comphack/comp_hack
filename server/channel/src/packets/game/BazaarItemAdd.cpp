@@ -57,6 +57,21 @@ bool Parsers::BazaarItemAdd::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto exchangeSession = state->GetExchangeSession();
+  if (exchangeSession) {
+    // The client is in some kind of transaction with another. Kill their
+    // connection, as this is probably a packet injection attemnpt.
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Player attempted to add a bazaar item while in the middle of "
+                 "a transaction with another player: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    client->Kill();
+
+    return true;
+  }
 
   int8_t slot = p.ReadS8();
   int64_t itemID = p.ReadS64Little();

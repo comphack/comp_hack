@@ -1619,10 +1619,10 @@ bool SkillManager::ValidateActivationItem(
   auto character = cState ? cState->GetEntity() : nullptr;
   auto inventory = character ? character->GetItemBoxes(0).Get() : nullptr;
 
-  if (!item || (inventory && item->GetItemBox() != inventory->GetUUID()) &&
-                   (item->GetRentalExpiration() > 0 &&
-                    item->GetRentalExpiration() < (uint32_t)std::time(0))) {
-    // Check if the item is invalid or it is an expired rental
+  if (!item || !inventory || item->GetItemBox() != inventory->GetUUID() ||
+      (item->GetRentalExpiration() > 0 &&
+       item->GetRentalExpiration() < (uint32_t)std::time(0))) {
+    // Item is invalid or it is an expired rental
     return false;
   } else {
     // Check if its use restricted (applies to equipping too)
@@ -1639,15 +1639,10 @@ bool SkillManager::ValidateActivationItem(
     auto equipType = itemDef->GetBasic()->GetEquipType();
     if (equipType != objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_NONE) {
       // Equippable; check if the item is equipped.
-      auto state = ClientState::GetEntityClientState(source->GetEntityID());
-      if (state) {
-        equipped = state->GetCharacterState()
-                       ->GetEntity()
-                       ->GetEquippedItems((size_t)equipType)
-                       .Get() == item;
-      } else {
-        valid = false;
-      }
+      equipped = state->GetCharacterState()
+                     ->GetEntity()
+                     ->GetEquippedItems((size_t)equipType)
+                     .Get() == item;
     }
 
     // The item is not currently equipped, so check restrictions.
@@ -1683,14 +1678,9 @@ bool SkillManager::ValidateActivationItem(
 
       auto pvp = itemDef->GetPvp();
       if (pvp->GetGPRequirement() > 0) {
-        auto state = ClientState::GetEntityClientState(source->GetEntityID());
-        if (state) {
-          auto pvpData =
-              state->GetCharacterState()->GetEntity()->GetPvPData().Get();
-          valid &= pvpData && pvpData->GetGP() >= pvp->GetGPRequirement();
-        } else {
-          valid = false;
-        }
+        auto pvpData =
+            state->GetCharacterState()->GetEntity()->GetPvPData().Get();
+        valid &= pvpData && pvpData->GetGP() >= pvp->GetGPRequirement();
       }
     }
 

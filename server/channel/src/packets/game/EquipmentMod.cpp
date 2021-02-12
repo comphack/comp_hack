@@ -349,8 +349,7 @@ bool Parsers::EquipmentMod::Parse(
     case RESULT_CODE_GREAT_FAIL: {
       auto destroyItem = catalyst;
       if (resultCode == RESULT_CODE_GREAT_FAIL &&
-          (!catalyst ||
-           (catalyst->GetItemBox() != inventory->GetUUID()))) {
+          (!catalyst || (catalyst->GetItemBox() != inventory->GetUUID()))) {
         destroyItem = equipmentItem;
       } else {
         // Drop durability but don't destroy the item

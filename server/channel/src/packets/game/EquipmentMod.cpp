@@ -72,6 +72,20 @@ bool Parsers::EquipmentMod::Parse(
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto definitionManager = server->GetDefinitionManager();
   auto state = client->GetClientState();
+  if (state->GetExchangeSession()) {
+    // The client is in some kind of transaction with another. Kill their
+    // connection, as this is probably a packet injection attemnpt.
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Player attempted to mod an item while in the "
+                 "middle of a transaction with another player: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    client->Kill();
+
+    return true;
+  }
   auto cState = state->GetCharacterState();
   auto inventory = cState->GetEntity()->GetItemBoxes(0).Get();
 

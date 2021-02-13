@@ -53,6 +53,20 @@ void DropItem(const std::shared_ptr<ChannelServer> server,
               const std::shared_ptr<ChannelClientConnection>& client,
               int64_t itemID) {
   auto state = client->GetClientState();
+  if (state->GetExchangeSession()) {
+    // The client is in some kind of transaction with another. Kill their
+    // connection, as this is probably a packet injection attemnpt.
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Player attempted to drop an item while in the "
+                 "middle of a transaction with another player: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    client->Kill();
+
+    return;
+  }
   auto character = state->GetCharacterState()->GetEntity();
   auto inventory = character->GetItemBoxes(0).Get();
 

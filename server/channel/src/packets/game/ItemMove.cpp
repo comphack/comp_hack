@@ -96,13 +96,26 @@ bool Parsers::ItemMove::Parse(
 
     fail = true;
   } else if (sourceBox != destBox) {
-    // Make sure nothing is being moved into an expired box (allow
-    // reorganize because why not?)
+    // Make sure nothing is being moved to another box during an exchange
+    // session, or into an expired box (allow reorganize because why not?)
     uint32_t now = (uint32_t)std::time(0);
-    if ((item && destBox->GetRentalExpiration() &&
-         destBox->GetRentalExpiration() < now) ||
-        (otherItem && sourceBox->GetRentalExpiration() &&
-         sourceBox->GetRentalExpiration() < now)) {
+    if (state->GetExchangeSession()) {
+      // The client is in some kind of transaction with another client. Kill
+      // their connection, as this is probably a packet injection attemnpt.
+      LogGeneralError([&]() {
+        return libcomp::String(
+                   "Player attempted to move an item into another box during "
+                   "a transaction with another player: %1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+
+      client->Kill();
+
+      return true;
+    } else if ((item && destBox->GetRentalExpiration() &&
+                destBox->GetRentalExpiration() < now) ||
+               (otherItem && sourceBox->GetRentalExpiration() &&
+                sourceBox->GetRentalExpiration() < now)) {
       fail = true;
     } else if (destBox != character->GetItemBoxes(0).Get()) {
       // Fail if we attempt to move from the inventory when it cannot

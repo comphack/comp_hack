@@ -79,6 +79,21 @@ bool Parsers::EquipmentSpiritFuse::Parse(
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  if (state->GetExchangeSession()) {
+    // The client is in some kind of transaction with another. Kill their
+    // connection, as this is probably a packet injection attemnpt.
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Player attempted to undergo Spiritual Infusion while in the "
+                 "middle of a transaction with another player: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    client->Kill();
+
+    return true;
+  }
+
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
   auto inventory = character->GetItemBoxes(0).Get();

@@ -72,6 +72,19 @@ bool Parsers::TradeAddItem::Parse(
   auto inventory = character->GetItemBoxes(0).Get();
   auto exchangeSession = state->GetExchangeSession();
 
+  if (exchangeSession->GetLocked()) {
+    LogTradeError([state]() {
+      return libcomp::String(
+                 "Player attempted to add or remove an item during a locked "
+                 "trade: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    client->Kill();
+
+    return true;
+  }
+
   auto item = std::dynamic_pointer_cast<objects::Item>(
       libcomp::PersistentObject::GetObjectByUUID(state->GetObjectUUID(itemID)));
 

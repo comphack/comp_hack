@@ -1629,6 +1629,9 @@ bool SkillManager::ValidateActivationItem(
           .Arg(state->GetAccountUID().ToString());
     });
 
+    auto server = mServer.lock();
+    auto client =
+        server->GetManagerConnection()->GetEntityClient(source->GetEntityID());
     client->Kill();
 
     return false;

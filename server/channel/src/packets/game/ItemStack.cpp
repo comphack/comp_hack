@@ -41,6 +41,7 @@
 #include <ItemBox.h>
 #include <MiItemData.h>
 #include <MiPossessionData.h>
+#include <PlayerExchangeSession.h>
 
 // channel Includes
 #include "ChannelClientConnection.h"
@@ -55,14 +56,18 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
   auto state = client->GetClientState();
   auto character = state->GetCharacterState()->GetEntity();
   auto itemBox = character->GetItemBoxes(0).Get();
+  auto exchangeSession = state->GetExchangeSession();
 
   size_t srcSlot = (size_t)sourceItem.first;
   uint16_t srcStack = sourceItem.second;
 
   auto srcItem = itemBox->GetItems(srcSlot).Get();
 
+  // Ensure the item is in the inventory and that we are not in a post-lock
+  // exchange session.
   bool valid =
-      (srcItem != nullptr && srcItem->GetItemBox() == itemBox->GetUUID());
+      (srcItem != nullptr && srcItem->GetItemBox() == itemBox->GetUUID()) &&
+      (!exchangeSession || (exchangeSession && exchangeSession->GetLocked()));
   if (valid) {
     bool targetSpecified = targetSlot != static_cast<uint32_t>(-1);
     if (!targetSpecified) {

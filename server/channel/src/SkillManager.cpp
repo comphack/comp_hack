@@ -1635,7 +1635,7 @@ bool SkillManager::ValidateActivationItem(
     client->Kill();
 
     return false;
-  } else if (!item || item->IsDeleted() || !inventory ||
+  } else if (!item || !inventory ||
              item->GetItemBox() != inventory->GetUUID() ||
              (item->GetRentalExpiration() > 0 &&
               item->GetRentalExpiration() < (uint32_t)std::time(0))) {

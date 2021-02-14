@@ -86,7 +86,7 @@ bool Parsers::ItemExchange::Parse(
   auto optionDef =
       exchangeDef ? exchangeDef->GetOptions((size_t)optionID) : nullptr;
 
-  if ((item->GetItemBox() != inventory->GetUUID()) || !itemDef || !optionDef) {
+  if (!itemDef || !optionDef || (item->GetItemBox() != inventory->GetUUID())) {
     LogItemError([item, optionID]() {
       return libcomp::String(
                  "Invalid exchange ID encountered for ItemExchange request: "

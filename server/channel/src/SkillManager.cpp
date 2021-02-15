@@ -1619,26 +1619,9 @@ bool SkillManager::ValidateActivationItem(
   auto character = cState ? cState->GetEntity() : nullptr;
   auto inventory = character ? character->GetItemBoxes(0).Get() : nullptr;
 
-  if (state->GetExchangeSession()) {
-    // The client is in some kind of transaction with another. Kill their
-    // connection, as this is probably a packet injection attemnpt.
-    LogItemError([&]() {
-      return libcomp::String(
-                 "Player attempted to use an item while in the middle of "
-                 "a transaction with another player: %1\n")
-          .Arg(state->GetAccountUID().ToString());
-    });
-
-    auto server = mServer.lock();
-    auto client =
-        server->GetManagerConnection()->GetEntityClient(source->GetEntityID());
-    client->Kill();
-
-    return false;
-  } else if (!item || !inventory ||
-             item->GetItemBox() != inventory->GetUUID() ||
-             (item->GetRentalExpiration() > 0 &&
-              item->GetRentalExpiration() < (uint32_t)std::time(0))) {
+  if (!item || !inventory || item->GetItemBox() != inventory->GetUUID() ||
+      (item->GetRentalExpiration() > 0 &&
+       item->GetRentalExpiration() < (uint32_t)std::time(0))) {
     // Item is invalid or it is an expired rental
     return false;
   } else {

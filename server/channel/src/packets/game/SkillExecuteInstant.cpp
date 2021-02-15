@@ -37,9 +37,11 @@
 
 // object Includes
 #include <Item.h>
+#include <PlayerExchangeSession.h>
 
 // channel Includes
 #include "ChannelServer.h"
+#include "CharacterManager.h"
 #include "SkillManager.h"
 
 using namespace channel;
@@ -56,6 +58,33 @@ bool Parsers::SkillExecuteInstant::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto exchangeSession = state->GetExchangeSession();
+  if (exchangeSession) {
+    // The client is in some kind of transaction. Do not execute the skill.
+    LogSkillManagerError([&]() {
+      return libcomp::String(
+                 "Player attempted to use an item or skill while in the middle "
+                 "of a transaction with another player: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    auto otherCState = exchangeSession
+                           ? std::dynamic_pointer_cast<CharacterState>(
+                                 exchangeSession->GetOtherCharacterState())
+                           : nullptr;
+    auto otherClient = otherCState
+                           ? server->GetManagerConnection()->GetEntityClient(
+                                 otherCState->GetEntityID(), false)
+                           : nullptr;
+    auto characterManager = server->GetCharacterManager();
+
+    characterManager->EndExchange(client);
+    if (otherClient) {
+      characterManager->EndExchange(otherClient);
+    }
+
+    return true;
+  }
   auto skillManager = server->GetSkillManager();
 
   int32_t sourceEntityID = p.ReadS32Little();

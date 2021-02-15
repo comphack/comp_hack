@@ -56,18 +56,15 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
   auto state = client->GetClientState();
   auto character = state->GetCharacterState()->GetEntity();
   auto itemBox = character->GetItemBoxes(0).Get();
-  auto exchangeSession = state->GetExchangeSession();
 
   size_t srcSlot = (size_t)sourceItem.first;
   uint16_t srcStack = sourceItem.second;
 
   auto srcItem = itemBox->GetItems(srcSlot).Get();
 
-  // Ensure the item is in the inventory and that we are not in a post-lock
-  // exchange session.
+  // Ensure the item is in the inventory.
   bool valid =
-      (srcItem != nullptr && srcItem->GetItemBox() == itemBox->GetUUID()) &&
-      (!exchangeSession || (exchangeSession && exchangeSession->GetLocked()));
+      (srcItem != nullptr && srcItem->GetItemBox() == itemBox->GetUUID());
   if (valid) {
     bool targetSpecified = targetSlot != static_cast<uint32_t>(-1);
     if (!targetSpecified) {
@@ -306,6 +303,8 @@ bool Parsers::ItemStack::Parse(
   // If the target slot is -1, a split is being requested to the next
   // available slot.
   bool isSplit = true;
+  auto state = client->GetClientState();
+  auto exchangeSession = state->GetExchangeSession();
   uint32_t targetSlot = p.ReadU32Little();
   if (targetSlot != static_cast<uint32_t>(-1)) {
     if (targetSlot >= 50) {
@@ -315,16 +314,35 @@ bool Parsers::ItemStack::Parse(
       return false;
     }
 
-    auto state = client->GetClientState();
     auto character = state->GetCharacterState()->GetEntity();
     auto itemBox = character->GetItemBoxes(0).Get();
     isSplit = itemBox->GetItems((size_t)targetSlot).IsNull();
   }
 
   if (isSplit) {
-    server->QueueWork(SplitStack, server, client, srcItems.front(), targetSlot);
+    if (!exchangeSession ||
+        (exchangeSession && !exchangeSession->GetLocked())) {
+      server->QueueWork(SplitStack, server, client, srcItems.front(),
+                        targetSlot);
+    } else {
+      LogItemError([&]() {
+        return libcomp::String(
+                   "Player attempted to split an item stack while in the "
+                   "middle of a locked transaction with another player: %1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+    }
   } else {
-    server->QueueWork(CombineStacks, server, client, srcItems, targetSlot);
+    if (!exchangeSession) {
+      server->QueueWork(CombineStacks, server, client, srcItems, targetSlot);
+    } else {
+      LogItemError([&]() {
+        return libcomp::String(
+                   "Player attempted to combine an item stack while in the "
+                   "middle of a transaction with another player: %1\n")
+            .Arg(state->GetAccountUID().ToString());
+      });
+    }
   }
 
   return true;

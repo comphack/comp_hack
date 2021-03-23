@@ -351,7 +351,13 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
             for (size_t i = 0; i < boost.size();) {
               int32_t type = boost[i];
               int32_t val = boost[(size_t)(i + 1)];
-              if (type >= 0 && val) {
+              // The CorrectTbl alterations done by the vanilla Laguz/Ingwaz
+              // Mitama sets must be excluded.
+              if (type >= 0 && type != (uint8_t)CorrectTbl::MOVE2 &&
+                  type != (uint8_t)CorrectTbl::RATE_XP &&
+                  type != (uint8_t)CorrectTbl::RATE_MAG &&
+                  type != (uint8_t)CorrectTbl::RATE_HEAL_TAKEN &&
+                  type != (uint8_t)CorrectTbl::BOOST_HEAL && val) {
                 mDigitalizeState->SetCorrectValues(
                     (uint8_t)type, (int16_t)(mDigitalizeState->GetCorrectValues(
                                                  (uint8_t)type) +

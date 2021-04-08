@@ -5579,8 +5579,11 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
       stackScale =
           (int16_t)floor((float)stat * ((float)(100 - params[1]) / 100.f));
 
+      // Enforce scaling minimum and maximum.
       if (stackScale < 1) {
         stackScale = 1;
+      } else if (stackScale > 100) {
+        stackScale = 100;
       }
     }
   }
@@ -8220,10 +8223,18 @@ bool SkillManager::CalculateDamage(
         auto calcState =
             GetCalculatedState(source, pSkill, false, target.EntityState);
 
-        int32_t maxLB =
-            (int32_t)(30000 + floor(tokuseiManager->GetAspectSum(
-                                  source, TokuseiAspectType::LIMIT_BREAK_MAX,
-                                  calcState)));
+        double maxLB_calc =
+            (30000 +
+             floor(tokuseiManager->GetAspectSum(
+                 source, TokuseiAspectType::LIMIT_BREAK_MAX, calcState)));
+
+        // Enforce maximum possible Limit Break damage and prevent overflows
+        int32_t maxLB = 0;
+        if (maxLB_calc > (double)std::numeric_limits<int32_t>::max()) {
+          maxLB = std::numeric_limits<int32_t>::max();
+        } else {
+          maxLB = (int32_t)maxLB_calc;
+        }
 
         if (target.Damage1 > maxLB) {
           target.Damage1 = maxLB;
@@ -8323,6 +8334,16 @@ bool SkillManager::CalculateDamage(
             source, TokuseiAspectType::TECH_ATTACK_POWER, calcState));
         if (techPow > 0.0 && techRate > 0 &&
             (techRate >= 100 || RNG(int32_t, 1, 100) <= techRate)) {
+          double techAttack_calc =
+              floor((double)target.Damage1 * techPow * 0.01);
+
+          // Prevent overflow
+          if (techAttack_calc > (double)std::numeric_limits<int32_t>::max()) {
+            target.TechnicalDamage = std::numeric_limits<int32_t>::max();
+          } else {
+            target.TechnicalDamage = (int32_t)techAttack_calc;
+          }
+
           // Calculate relative damage
           target.TechnicalDamage =
               (int32_t)floor((double)target.Damage1 * techPow * 0.01);
@@ -8335,10 +8356,18 @@ bool SkillManager::CalculateDamage(
           // Apply limits
           if (critLevel == 2) {
             // Cap at LB limit
-            int32_t maxLB = (int32_t)(
-                30000 +
-                floor(tokuseiManager->GetAspectSum(
-                    source, TokuseiAspectType::LIMIT_BREAK_MAX, calcState)));
+            double maxLB_calc =
+                (30000 +
+                 floor(tokuseiManager->GetAspectSum(
+                     source, TokuseiAspectType::LIMIT_BREAK_MAX, calcState)));
+
+            // Enforce maximum possible Limit Break damage and prevent overflows
+            int32_t maxLB = 0;
+            if (maxLB_calc > (double)std::numeric_limits<int32_t>::max()) {
+              maxLB = std::numeric_limits<int32_t>::max();
+            } else {
+              maxLB = (int32_t)maxLB_calc;
+            }
 
             if (target.TechnicalDamage > maxLB) {
               target.TechnicalDamage = maxLB;
@@ -8608,9 +8637,14 @@ int32_t SkillManager::CalculateDamage_Normal(
       // Multiply by 100% + boost
       calc = calc * (1.f + boost);
 
-      // Floor and adjust rates
-      amount = AdjustDamageRates((int32_t)floor(calc), source,
-                                 target.EntityState, pSkill, isHeal, true);
+      // Floor and adjust rates, and prevent overflow
+      if (calc > (float)std::numeric_limits<int32_t>::max()) {
+        amount = AdjustDamageRates(std::numeric_limits<int32_t>::max(), source,
+                                   target.EntityState, pSkill, isHeal, true);
+      } else {
+        amount = AdjustDamageRates((int32_t)floor(calc), source,
+                                   target.EntityState, pSkill, isHeal, true);
+      }
     }
 
     if (amount < 1) {
@@ -8796,9 +8830,11 @@ int32_t SkillManager::AdjustDamageRates(
     }
   }
 
-  // Apply floor
+  // Apply floor and enforce maximum.
   if (calc < 0.f) {
     calc = 0.f;
+  } else if (calc > (float)std::numeric_limits<int32_t>::max()) {
+    return std::numeric_limits<int32_t>::max();
   }
 
   return (int32_t)floor(calc);

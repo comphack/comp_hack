@@ -7464,12 +7464,12 @@ void SkillManager::HandleNegotiations(
         zone->AddLootBox(lState);
       }
 
-      // If a Partner is summoned and they are the same Race as the enemy
+      // If a Partner is summoned and they are the same base type as the enemy
       // negotiation target after a successful negotiation end, increase
       // the Partner's familiarity.
       if (fGainPossible && fType &&
-          (partnerDef->GetCategory()->GetRace() ==
-           eState->GetDevilData()->GetCategory()->GetRace())) {
+          (partnerDef->GetUnionData()->GetBaseDemonID() ==
+           eState->GetDevilData()->GetUnionData()->GetBaseDemonID())) {
         fGain = fGain + (int32_t)fType->GetTalkSuccess();
       }
     }

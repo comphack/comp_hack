@@ -5650,6 +5650,8 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
 
   auto statusAdjusts = tokuseiManager->GetAspectMap(
       source, TokuseiAspectType::STATUS_INFLICT_ADJUST, sourceCalc);
+  auto affinityMaxes = tokuseiManager->GetAspectMap(
+      source, TokuseiAspectType::AFFINITY_CAP_MAX, sourceCalc);
   auto statusNulls = tokuseiManager->GetAspectMap(
       eState, TokuseiAspectType::STATUS_NULL, targetCalc);
 
@@ -5741,7 +5743,8 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
         // Add affinity boost/2
         successRate +=
             (double)GetAffinityBoost(source, sourceCalc,
-                                     (CorrectTbl)(affinity + BOOST_OFFSET)) /
+                                     (CorrectTbl)(affinity + BOOST_OFFSET),
+                                     affinityMaxes[affinity]) /
             2.0;
 
         if (successRate > 0.f && canResist) {
@@ -8454,13 +8457,10 @@ int16_t SkillManager::GetEntityRate(
 float SkillManager::GetAffinityBoost(
     const std::shared_ptr<ActiveEntityState> eState,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
-    CorrectTbl boostType) {
+    CorrectTbl boostType, double affinityMax) {
   float aBoost = (float)eState->GetCorrectValue(boostType, calcState);
   if (aBoost != 0.f) {
     // Limit boost based on tokusei or 100% by default
-    auto tokuseiManager = mServer.lock()->GetTokuseiManager();
-    double affinityMax = tokuseiManager->GetAspectSum(
-        eState, TokuseiAspectType::AFFINITY_CAP_MAX, calcState);
     if ((double)(aBoost - 100.f) > affinityMax) {
       aBoost = (float)(100.0 + affinityMax);
     }
@@ -8492,6 +8492,9 @@ int32_t SkillManager::CalculateDamage_Normal(
       boostTypes.insert(CorrectTbl::BOOST_WEAPON);
     }
 
+    // Get tokusei manager for affinity cap calculations
+    auto tokuseiManager = mServer.lock()->GetTokuseiManager();
+
     // Get the offense value and boost
     uint16_t off = 0;
     float boost = 0.f;
@@ -8502,11 +8505,17 @@ int32_t SkillManager::CalculateDamage_Normal(
         auto dCalcState =
             GetCalculatedState(dState, pSkill, false, target.EntityState);
 
+        auto dAffinityMaxes = tokuseiManager->GetAspectMap(
+            dState, TokuseiAspectType::AFFINITY_CAP_MAX, dCalcState);
+
         combinedVal +=
             CalculateOffenseValue(dState, target.EntityState, pSkill);
 
         for (auto boostType : boostTypes) {
-          boost += GetAffinityBoost(dState, dCalcState, boostType) * 0.01f;
+          boost += GetAffinityBoost(
+                       dState, dCalcState, boostType,
+                       dAffinityMaxes[(uint8_t)boostType - BOOST_OFFSET]) *
+                   0.01f;
         }
       }
 
@@ -8520,8 +8529,14 @@ int32_t SkillManager::CalculateDamage_Normal(
       // Offense value and boost come from normal source
       off = CalculateOffenseValue(source, target.EntityState, pSkill);
 
+      auto affinityMaxes = tokuseiManager->GetAspectMap(
+          source, TokuseiAspectType::AFFINITY_CAP_MAX, calcState);
+
       for (auto boostType : boostTypes) {
-        boost += GetAffinityBoost(source, calcState, boostType) * 0.01f;
+        boost +=
+            GetAffinityBoost(source, calcState, boostType,
+                             affinityMaxes[(uint8_t)boostType - BOOST_OFFSET]) *
+            0.01f;
       }
     }
 

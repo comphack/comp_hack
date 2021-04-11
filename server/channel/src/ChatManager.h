@@ -560,6 +560,16 @@ class ChatManager {
       const std::list<libcomp::String>& args);
 
   /**
+   * GM command to have the client's character forget a skill.
+   * @param client Pointer to the client that sent the command
+   * @param args List of arguments for the command
+   * @return true if the command was handled properly, else false
+   */
+  bool GMCommand_ForgetSkill(
+      const std::shared_ptr<channel::ChannelClientConnection>& client,
+      const std::list<libcomp::String>& args);
+
+  /**
    * GM command to have the client's character gain allocatable
    * skill points.
    * @param client Pointer to the client that sent the command

@@ -842,12 +842,13 @@ class SkillManager {
    * @param eState Pointer to the entity
    * @param calcState Pointer to entity's calculated state
    * @param boostType CorrectTbl index of the boost type
+   * @param boostCap Double of the corresponding affinity type's boost cap
    * @return Calculated boost level as a decimal
    */
   float GetAffinityBoost(
       const std::shared_ptr<ActiveEntityState> eState,
       std::shared_ptr<objects::CalculatedEntityState> calcState,
-      CorrectTbl boostType);
+      CorrectTbl boostType, double boostCap);
 
   /**
    * Calculate skill damage or healing using the default formula

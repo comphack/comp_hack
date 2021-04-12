@@ -1469,12 +1469,12 @@ bool ActionManager::UpdateCOMP(ActionContext& ctx) {
           return false;
         }
 
-        auto progress = pair.second;
-        if (progress > MAX_INHERIT_SKILL) {
-          progress = MAX_INHERIT_SKILL;
+        auto inheritance_progress = pair.second;
+        if (inheritance_progress > MAX_INHERIT_SKILL) {
+          inheritance_progress = MAX_INHERIT_SKILL;
         }
 
-        addedSkills[pair.first] = progress;
+        addedSkills[pair.first] = inheritance_progress;
       }
     }
   }

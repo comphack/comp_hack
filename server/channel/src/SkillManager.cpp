@@ -2456,7 +2456,6 @@ bool SkillManager::DetermineCosts(
   }
 
   auto server = mServer.lock();
-  server->GetSkillManager();
   auto characterManager = server->GetCharacterManager();
 
   int32_t hpCost = 0, mpCost = 0;

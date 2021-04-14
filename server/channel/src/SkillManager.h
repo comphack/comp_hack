@@ -361,6 +361,20 @@ class SkillManager {
       std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
   /**
+   * Pay the costs required to execute a skill, after it was determined they
+   * could be paid.
+   * @param source Pointer to the state of the source entity
+   * @param activated Pointer to the activated ability instance
+   * @param client Pointer to the client connection, can be null if not coming
+   *  from a player entity
+   * @param ctx Special execution state for the skill
+   */
+  void PayCosts(std::shared_ptr<ActiveEntityState> source,
+                std::shared_ptr<objects::ActivatedAbility> activated,
+                const std::shared_ptr<ChannelClientConnection> client,
+                std::shared_ptr<SkillExecutionContext> ctx);
+
+  /**
    * Schedule automatic skill cancellation after a set amount of time
    * as defined by the skill definition. If the skill is mutli-use,
    * this should be called after each non-final execution.

@@ -9,7 +9,7 @@
         <member type="bool" name="MoveCorrection" default="true"/>
         <member type="bool" name="AutoCompressCurrency"/>
         <member type="bool" name="NRAStatusNull" default="true"/>
-        <member type="u8" name="SaveSwitchSkills" default="1"/>
+        <member type="u8" name="SaveSwitchSkills" default="0"/>
         <member type="bool" name="DeathPenaltyDisabled"/>
         <member type="bool" name="DeadTokuseiDisabled"/>
         <member type="float" name="DropLuckScalingCap" default="-1.0"/>

@@ -849,13 +849,11 @@ bool SkillManager::ReactivateSavedSwitchSkills(
 
   // Process the saved switch skill list.
   auto definitionManager = server->GetDefinitionManager();
-  auto characterManager = server->GetCharacterManager();
-  auto tokuseiManager = server->GetTokuseiManager();
 
   for (uint32_t skillID : character->GetSavedSwitchSkills()) {
     auto skillDefinition = definitionManager->GetSkillData(skillID);
     if (!(skillDefinition &&
-          skillDefinition->GetCommon()->GetCategory()->GetMainCategory() !=
+          skillDefinition->GetCommon()->GetCategory()->GetMainCategory() ==
               SKILL_CATEGORY_SWITCH) ||
         !source->CurrentSkillsContains(skillID)) {
       // Somehow lost the skill or managed to insert an invalid skillID, remove
@@ -865,44 +863,14 @@ bool SkillManager::ReactivateSavedSwitchSkills(
     }
 
     if (saveSwitchSkills == 2) {
-      // Determine and pay costs, else continue.
+      // Determine and pay costs, else remove the unpayable skill.
       auto activated = std::make_shared<objects::ActivatedAbility>();
       activated->SetSourceEntity(source);
       activated->SetSkillData(skillDefinition);
       auto ctx = std::make_shared<SkillExecutionContext>();
 
       if (DetermineCosts(source, activated, client, ctx)) {
-        int32_t hpCost = activated->GetHPCost();
-        int32_t mpCost = activated->GetMPCost();
-        bool hpMpCost = hpCost > 0 || mpCost > 0;
-        if (hpMpCost) {
-          std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
-          displayStateModified.insert(source);
-          characterManager->UpdateWorldDisplayState(displayStateModified);
-
-          tokuseiManager->Recalculate(
-              source,
-              std::set<TokuseiConditionType>{TokuseiConditionType::CURRENT_HP,
-                                             TokuseiConditionType::CURRENT_MP});
-        }
-
-        auto itemCosts = activated->GetItemCosts();
-        uint16_t bulletCost = activated->GetBulletCost();
-
-        int64_t targetItem = activated->GetActivationObjectID();
-        if (bulletCost > 0) {
-          auto bullets = character->GetEquippedItems((
-              size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
-          if (bullets) {
-            itemCosts[bullets->GetType()] = (uint32_t)bulletCost;
-            targetItem = state->GetObjectID(bullets.GetUUID());
-          }
-        }
-
-        if (itemCosts.size() > 0) {
-          characterManager->AddRemoveItems(client, itemCosts, false,
-                                           targetItem);
-        }
+        PayCosts(source, activated, client, ctx);
       } else {
         character->RemoveSavedSwitchSkills(skillID);
         continue;
@@ -2802,6 +2770,74 @@ bool SkillManager::DetermineNormalCosts(
   return true;
 }
 
+void SkillManager::PayCosts(
+    std::shared_ptr<ActiveEntityState> source,
+    std::shared_ptr<objects::ActivatedAbility> activated,
+    const std::shared_ptr<ChannelClientConnection> client,
+    std::shared_ptr<SkillExecutionContext> ctx) {
+  auto pSkill = GetProcessingSkill(activated, ctx);
+  auto skillData = pSkill->Definition;
+
+  auto server = mServer.lock();
+  auto characterManager = server->GetCharacterManager();
+  auto tokuseiManager = server->GetTokuseiManager();
+
+  // Cannot get here without costs being determined as payable, so pay them now
+  int32_t hpCost = activated->GetHPCost();
+  int32_t mpCost = activated->GetMPCost();
+  bool hpMpCost = hpCost > 0 || mpCost > 0;
+  if (hpMpCost) {
+    source->SetHPMP((int32_t)-hpCost, (int32_t)-mpCost, true);
+  }
+
+  if (client) {
+    auto state = client->GetClientState();
+    if (hpMpCost) {
+      std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+      displayStateModified.insert(source);
+      characterManager->UpdateWorldDisplayState(displayStateModified);
+
+      tokuseiManager->Recalculate(
+          source,
+          std::set<TokuseiConditionType>{TokuseiConditionType::CURRENT_HP,
+                                         TokuseiConditionType::CURRENT_MP});
+    }
+
+    auto itemCosts = activated->GetItemCosts();
+    uint16_t bulletCost = activated->GetBulletCost();
+
+    int64_t targetItem = activated->GetActivationObjectID();
+    if (bulletCost > 0) {
+      auto character = state->GetCharacterState()->GetEntity();
+      auto bullets = character->GetEquippedItems(
+          (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
+      if (bullets) {
+        itemCosts[bullets->GetType()] = (uint32_t)bulletCost;
+        targetItem = state->GetObjectID(bullets.GetUUID());
+      }
+    }
+
+    if (itemCosts.size() > 0) {
+      characterManager->AddRemoveItems(client, itemCosts, false, targetItem);
+    }
+
+    if (pSkill->FunctionID &&
+        pSkill->FunctionID == SVR_CONST.SKILL_DEMON_FUSION) {
+      // Lower the fusion gauge
+      auto definitionManager = server->GetDefinitionManager();
+      auto fusionData = definitionManager->GetDevilFusionData(pSkill->SkillID);
+      if (fusionData) {
+        int8_t stockCount = fusionData->GetStockCost();
+        characterManager->UpdateFusionGauge(
+            client, (int32_t)(stockCount * -10000), true);
+      }
+
+      // Unhide the demon
+      client->GetClientState()->GetDemonState()->SetAIIgnored(false);
+    }
+  }
+}
+
 void SkillManager::ScheduleAutoCancel(
     const std::shared_ptr<ActiveEntityState> source,
     const std::shared_ptr<objects::ActivatedAbility>& activated) {
@@ -3695,8 +3731,8 @@ void SkillManager::ProcessSkillResultFinal(
         float kb = target.EntityState->UpdateKnockback(
             now, skill.HardStrike ? -1.f : kbMod, kbRecoverBoost);
         if (kb == 0.f) {
-          // STATUS_ADD_KNOCKBACK effects will apply, regardless if target nulls
-          // knockback
+          // STATUS_ADD_KNOCKBACK effects will apply, regardless if target
+          // nulls knockback
           target.ApplyAddedKnockbackEffects = true;
 
           // Check if the target nulls knockback
@@ -3736,8 +3772,8 @@ void SkillManager::ProcessSkillResultFinal(
     }
 
     // Now that damage, knockback, and status effects have been calculated for
-    // the target, cancel any status effects on the source (which were not just
-    // added) that expire on skill execution
+    // the target, cancel any status effects on the source (which were not
+    // just added) that expire on skill execution
     auto selfTarget = GetSelfTarget(source, pSkill->Targets, true, false);
     std::set<uint32_t> ignore;
     if (selfTarget) {
@@ -4497,8 +4533,8 @@ void SkillManager::ProcessSkillResultFinal(
   // absorbed by everyone targeted
   if (client && source->GetEntityType() == EntityType_t::CHARACTER) {
     bool canGainExpertise = false;
-    // Rushes add the self as a target to facilitate movement, so an extra check
-    // needs to be done to exclude the rush self-target
+    // Rushes add the self as a target to facilitate movement, so an extra
+    // check needs to be done to exclude the rush self-target
     for (SkillTargetResult& target : skill.Targets) {
       if (((target.Flags1 & FLAG1_BLOCK_PHYS) == 0 &&
            (target.Flags1 & FLAG1_BLOCK_MAGIC) == 0 &&
@@ -4683,7 +4719,8 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
     }
   }
 
-  // Calculate effective dependency and affinity types if "weapon" is specified
+  // Calculate effective dependency and affinity types if "weapon" is
+  // specified
   if (skill->EffectiveDependencyType == SkillDependencyType_t::WEAPON ||
       skill->BaseAffinity == 1) {
     auto weapon =
@@ -4736,7 +4773,8 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
           }
         }
 
-        // Take the lowest value applied tokusei affinity override if one exists
+        // Take the lowest value applied tokusei affinity override if one
+        // exists
         auto tokuseiOverrides = server->GetTokuseiManager()->GetAspectValueList(
             source, TokuseiAspectType::WEAPON_AFFINITY_OVERRIDE);
         if (tokuseiOverrides.size() > 0) {
@@ -4827,10 +4865,12 @@ SkillManager::GetCalculatedState(
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
 
-    // Determine which tokusei are active and don't need to be calculated again
+    // Determine which tokusei are active and don't need to be calculated
+    // again
     if (!isTarget && otherState && skill.SourceExecutionState &&
         eState == pSkill->Activated->GetSourceEntity()) {
-      // If we're calculating for a skill target, start with the execution state
+      // If we're calculating for a skill target, start with the execution
+      // state
       calcState = skill.SourceExecutionState;
     } else {
       // Otherwise start with the base calculated state
@@ -7812,7 +7852,8 @@ void SkillManager::HandleDurabilityDamage(
 
     characterManager->UpdateDurability(client, weapon, -durabilityLoss);
   } else {
-    // Decrease armor durability on everything equipped but the weapon by value
+    // Decrease armor durability on everything equipped but the weapon by
+    // value
     std::list<std::shared_ptr<objects::Item>> otherEquipment;
     for (size_t i = 0; i < 15; i++) {
       if (i != WEAPON_IDX) {
@@ -7951,8 +7992,6 @@ bool SkillManager::ToggleSwitchSkill(
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
-  auto server = mServer.lock();
-  auto saveSwitchSkills = server->GetWorldSharedConfig()->GetSaveSwitchSkills();
 
   auto skillData = activated->GetSkillData();
   uint32_t skillID = skillData->GetCommon()->GetID();
@@ -7960,14 +7999,10 @@ bool SkillManager::ToggleSwitchSkill(
   bool toggleOn = false;
   if (source->ActiveSwitchSkillsContains(skillID)) {
     source->RemoveActiveSwitchSkills(skillID);
-    if (saveSwitchSkills > 0) {
-      character->RemoveSavedSwitchSkills(skillID);
-    }
+    character->RemoveSavedSwitchSkills(skillID);
   } else {
     source->InsertActiveSwitchSkills(skillID);
-    if (saveSwitchSkills > 0) {
-      character->InsertSavedSwitchSkills(skillID);
-    }
+    character->InsertSavedSwitchSkills(skillID);
     toggleOn = true;
   }
 
@@ -7983,10 +8018,12 @@ bool SkillManager::ToggleSwitchSkill(
 
     client->QueuePacket(p);
 
-    server->GetCharacterManager()->RecalculateTokuseiAndStats(source, client);
+    mServer.lock()->GetCharacterManager()->RecalculateTokuseiAndStats(source,
+                                                                      client);
 
     client->FlushOutgoing();
   } else {
+    auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
 
     server->GetTokuseiManager()->Recalculate(source, false);
@@ -8473,7 +8510,8 @@ bool SkillManager::CalculateDamage(
       }
     }
 
-    // If the damage was actually a heal, invert the amount and change the type
+    // If the damage was actually a heal, invert the amount and change the
+    // type
     if (effectiveHeal) {
       target.Damage1 = target.Damage1 * -1;
       target.Damage2 = target.Damage2 * -1;
@@ -9275,63 +9313,9 @@ void SkillManager::FinalizeSkillExecution(
   auto skillData = pSkill->Definition;
 
   auto server = mServer.lock();
-  auto characterManager = server->GetCharacterManager();
   auto tokuseiManager = server->GetTokuseiManager();
 
-  // Now pay the costs
-  int32_t hpCost = activated->GetHPCost();
-  int32_t mpCost = activated->GetMPCost();
-  bool hpMpCost = hpCost > 0 || mpCost > 0;
-  if (hpMpCost) {
-    source->SetHPMP((int32_t)-hpCost, (int32_t)-mpCost, true);
-  }
-
-  if (client) {
-    auto state = client->GetClientState();
-    if (hpMpCost) {
-      std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
-      displayStateModified.insert(source);
-      characterManager->UpdateWorldDisplayState(displayStateModified);
-
-      tokuseiManager->Recalculate(
-          source,
-          std::set<TokuseiConditionType>{TokuseiConditionType::CURRENT_HP,
-                                         TokuseiConditionType::CURRENT_MP});
-    }
-
-    auto itemCosts = activated->GetItemCosts();
-    uint16_t bulletCost = activated->GetBulletCost();
-
-    int64_t targetItem = activated->GetActivationObjectID();
-    if (bulletCost > 0) {
-      auto character = state->GetCharacterState()->GetEntity();
-      auto bullets = character->GetEquippedItems(
-          (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
-      if (bullets) {
-        itemCosts[bullets->GetType()] = (uint32_t)bulletCost;
-        targetItem = state->GetObjectID(bullets.GetUUID());
-      }
-    }
-
-    if (itemCosts.size() > 0) {
-      characterManager->AddRemoveItems(client, itemCosts, false, targetItem);
-    }
-
-    if (pSkill->FunctionID &&
-        pSkill->FunctionID == SVR_CONST.SKILL_DEMON_FUSION) {
-      // Lower the fusion gauge
-      auto definitionManager = server->GetDefinitionManager();
-      auto fusionData = definitionManager->GetDevilFusionData(pSkill->SkillID);
-      if (fusionData) {
-        int8_t stockCount = fusionData->GetStockCost();
-        characterManager->UpdateFusionGauge(
-            client, (int32_t)(stockCount * -10000), true);
-      }
-
-      // Unhide the demon
-      client->GetClientState()->GetDemonState()->SetAIIgnored(false);
-    }
-  }
+  PayCosts(source, activated, client, ctx);
 
   uint64_t now = ChannelServer::GetServerTime();
   if (pSkill->Definition->GetBasic()->GetActionType() ==
@@ -12191,7 +12175,8 @@ bool SkillManager::CheckResponsibility(
                           ->GetUsername();
 
       return libcomp::String(
-                 "Account %1 tried to spawn more enemies but there is already "
+                 "Account %1 tried to spawn more enemies but there is "
+                 "already "
                  "%2 in zone %3 with a cap of %4.\n")
           .Arg(username)
           .Arg(zone->GetManagedEntities())

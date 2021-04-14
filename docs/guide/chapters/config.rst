@@ -1167,7 +1167,7 @@ SaveSwitchSkills
 
 **Type:** integer
 
-**Default:** 1
+**Default:** 0
 
 If above 0, switch skills that have been activated in a previous
 session will be reactivated when the character next logs in. A

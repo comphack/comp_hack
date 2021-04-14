@@ -891,7 +891,6 @@ bool SkillManager::ReactivateSavedSwitchSkills(
 
         int64_t targetItem = activated->GetActivationObjectID();
         if (bulletCost > 0) {
-          auto character = state->GetCharacterState()->GetEntity();
           auto bullets = character->GetEquippedItems((
               size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
           if (bullets) {

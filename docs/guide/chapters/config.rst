@@ -1162,6 +1162,27 @@ Example
 
     <member name="NRAStatusNull">false</member>
 
+SaveSwitchSkills
+^^^^^^^^^^^^^^^^
+
+**Type:** integer
+
+**Default:** 1
+
+If above 0, switch skills that have been activated in a previous
+session will be reactivated when the character next logs in. A
+setting of 2 results in all normal switch skill costs being
+paid in the process, in the numerical order of skill IDs
+ascending. Any switches whose costs could not be paid
+will not be activated.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="SaveSwitchSkills">1</member>
+
 DeathPenaltyDisabled
 ^^^^^^^^^^^^^^^^^^^^
 

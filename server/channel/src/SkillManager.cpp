@@ -148,6 +148,24 @@
 
 using namespace channel;
 
+namespace libcomp {
+template <>
+BaseScriptEngine& BaseScriptEngine::Using<SkillManager>() {
+  if (!BindingExists("SkillManager", true)) {
+    Using<ActiveEntityState>();
+
+    Sqrat::Class<SkillManager, Sqrat::NoConstructor<SkillManager>> binding(
+        mVM, "SkillManager");
+    binding.Func("ReactivateSavedSwitchSkills",
+                 &SkillManager::ReactivateSavedSwitchSkills);
+
+    Bind<SkillManager>("SkillManager", binding);
+  }
+
+  return *this;
+}
+}  // namespace libcomp
+
 const uint8_t DAMAGE_TYPE_GENERIC = 0;
 const uint8_t DAMAGE_TYPE_HEALING = 1;
 const uint8_t DAMAGE_TYPE_NONE = 2;
@@ -809,6 +827,103 @@ bool SkillManager::ActivateSkill(
       ScheduleAutoCancel(source, activated);
     }
   }
+
+  return true;
+}
+
+bool SkillManager::ReactivateSavedSwitchSkills(
+    const std::shared_ptr<ActiveEntityState>& source) {
+  auto server = mServer.lock();
+  auto client =
+      server->GetManagerConnection()->GetEntityClient(source->GetEntityID());
+  auto state = client->GetClientState();
+  auto character = state->GetCharacterState()->GetEntity();
+  auto saveSwitchSkills = server->GetWorldSharedConfig()->GetSaveSwitchSkills();
+
+  // Clear out saved switch skills and return if the server is set to not do
+  // this.
+  if (!saveSwitchSkills) {
+    character->ClearSavedSwitchSkills();
+    return true;
+  }
+
+  // Process the saved switch skill list.
+  auto definitionManager = server->GetDefinitionManager();
+  auto characterManager = server->GetCharacterManager();
+  auto tokuseiManager = server->GetTokuseiManager();
+
+  for (uint32_t skillID : character->GetSavedSwitchSkills()) {
+    auto skillDefinition = definitionManager->GetSkillData(skillID);
+    if (!(skillDefinition &&
+          skillDefinition->GetCommon()->GetCategory()->GetMainCategory() !=
+              SKILL_CATEGORY_SWITCH) ||
+        !source->CurrentSkillsContains(skillID)) {
+      // Somehow lost the skill or managed to insert an invalid skillID, remove
+      // it from the saved switch skill list and continue.
+      character->RemoveSavedSwitchSkills(skillID);
+      continue;
+    }
+
+    if (saveSwitchSkills == 2) {
+      // Determine and pay costs, else continue.
+      auto activated = std::make_shared<objects::ActivatedAbility>();
+      activated->SetSourceEntity(source);
+      activated->SetSkillData(skillDefinition);
+      auto ctx = std::make_shared<SkillExecutionContext>();
+
+      if (DetermineCosts(source, activated, client, ctx)) {
+        int32_t hpCost = activated->GetHPCost();
+        int32_t mpCost = activated->GetMPCost();
+        bool hpMpCost = hpCost > 0 || mpCost > 0;
+        if (hpMpCost) {
+          std::set<std::shared_ptr<ActiveEntityState>> displayStateModified;
+          displayStateModified.insert(source);
+          characterManager->UpdateWorldDisplayState(displayStateModified);
+
+          tokuseiManager->Recalculate(
+              source,
+              std::set<TokuseiConditionType>{TokuseiConditionType::CURRENT_HP,
+                                             TokuseiConditionType::CURRENT_MP});
+        }
+
+        auto itemCosts = activated->GetItemCosts();
+        uint16_t bulletCost = activated->GetBulletCost();
+
+        int64_t targetItem = activated->GetActivationObjectID();
+        if (bulletCost > 0) {
+          auto character = state->GetCharacterState()->GetEntity();
+          auto bullets = character->GetEquippedItems((
+              size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BULLETS);
+          if (bullets) {
+            itemCosts[bullets->GetType()] = (uint32_t)bulletCost;
+            targetItem = state->GetObjectID(bullets.GetUUID());
+          }
+        }
+
+        if (itemCosts.size() > 0) {
+          characterManager->AddRemoveItems(client, itemCosts, false,
+                                           targetItem);
+        }
+      } else {
+        character->RemoveSavedSwitchSkills(skillID);
+        continue;
+      }
+    }
+
+    source->InsertActiveSwitchSkills(skillID);
+
+    libcomp::Packet p;
+    p.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SKILL_SWITCH);
+    p.WriteS32Little(source->GetEntityID());
+    p.WriteU32Little(skillID);
+    p.WriteS8(1);
+
+    client->QueuePacket(p);
+  }
+
+  // Recalculate tokusei from all these switches.
+  server->GetCharacterManager()->RecalculateTokuseiAndStats(source, client);
+  client->FlushOutgoing();
 
   return true;
 }
@@ -2341,6 +2456,7 @@ bool SkillManager::DetermineCosts(
   }
 
   auto server = mServer.lock();
+  server->GetSkillManager();
   auto characterManager = server->GetCharacterManager();
 
   int32_t hpCost = 0, mpCost = 0;
@@ -7834,6 +7950,11 @@ bool SkillManager::ToggleSwitchSkill(
     const std::shared_ptr<SkillExecutionContext>& ctx) {
   auto source = std::dynamic_pointer_cast<ActiveEntityState>(
       activated->GetSourceEntity());
+  auto sourceState = ClientState::GetEntityClientState(source->GetEntityID());
+  auto cState = sourceState->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto saveSwitchSkills =
+      mServer.lock()->GetWorldSharedConfig()->GetSaveSwitchSkills();
 
   auto skillData = activated->GetSkillData();
   uint32_t skillID = skillData->GetCommon()->GetID();
@@ -7841,8 +7962,14 @@ bool SkillManager::ToggleSwitchSkill(
   bool toggleOn = false;
   if (source->ActiveSwitchSkillsContains(skillID)) {
     source->RemoveActiveSwitchSkills(skillID);
+    if (saveSwitchSkills > 0) {
+      character->RemoveSavedSwitchSkills(skillID);
+    }
   } else {
     source->InsertActiveSwitchSkills(skillID);
+    if (saveSwitchSkills > 0) {
+      character->InsertSavedSwitchSkills(skillID);
+    }
     toggleOn = true;
   }
 

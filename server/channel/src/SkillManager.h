@@ -152,6 +152,13 @@ class SkillManager {
                      std::shared_ptr<SkillExecutionContext> ctx = 0);
 
   /**
+   * Reactivate switch skills that were toggled on in a previous login.
+   * @param source Pointer of the source entity
+   */
+  bool ReactivateSavedSwitchSkills(
+      const std::shared_ptr<ActiveEntityState>& source);
+
+  /**
    * Target/retarget the skill of a character or demon. No response is sent
    * to the clients from this request.
    * @param source Pointer of the entity that activated the skill

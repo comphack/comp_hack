@@ -7949,11 +7949,11 @@ bool SkillManager::ToggleSwitchSkill(
     const std::shared_ptr<SkillExecutionContext>& ctx) {
   auto source = std::dynamic_pointer_cast<ActiveEntityState>(
       activated->GetSourceEntity());
-  auto sourceState = ClientState::GetEntityClientState(source->GetEntityID());
-  auto cState = sourceState->GetCharacterState();
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
-  auto saveSwitchSkills =
-      mServer.lock()->GetWorldSharedConfig()->GetSaveSwitchSkills();
+  auto server = mServer.lock();
+  auto saveSwitchSkills = server->GetWorldSharedConfig()->GetSaveSwitchSkills();
 
   auto skillData = activated->GetSkillData();
   uint32_t skillID = skillData->GetCommon()->GetID();
@@ -7984,12 +7984,10 @@ bool SkillManager::ToggleSwitchSkill(
 
     client->QueuePacket(p);
 
-    mServer.lock()->GetCharacterManager()->RecalculateTokuseiAndStats(source,
-                                                                      client);
+    server->GetCharacterManager()->RecalculateTokuseiAndStats(source, client);
 
     client->FlushOutgoing();
   } else {
-    auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
 
     server->GetTokuseiManager()->Recalculate(source, false);

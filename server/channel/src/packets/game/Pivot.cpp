@@ -92,29 +92,30 @@ bool Parsers::Pivot::Parse(
 
   const static bool moveCorrection =
       server->GetWorldSharedConfig()->GetMoveCorrection();
+  Point dest(x, y);
   if (moveCorrection) {
-    Point dest(x, y);
     if (zoneManager->CorrectClientPosition(eState, dest)) {
       LogGeneralDebug([&]() {
         return libcomp::String("Player pivot corrected in zone %1: %2\n")
             .Arg(zone->GetDefinitionID())
             .Arg(state->GetAccountUID().ToString());
       });
-
-      x = dest.x;
-      y = dest.y;
     }
   }
 
   // Make sure the request is not in the future
   ServerTime now = ChannelServer::GetServerTime();
   if (now >= state->ToServerTime(startTime)) {
-    eState->SetOriginX(x);
-    eState->SetOriginY(y);
+    // Only change X/Y if there was a correction
+    if (x != dest.x || y != dest.y) {
+      eState->SetOriginX(dest.x);
+      eState->SetOriginY(dest.y);
+      eState->SetDestinationX(dest.x);
+      eState->SetDestinationY(dest.y);
+    }
+
     eState->SetOriginRotation(rot);
     eState->SetOriginTicks(now);
-    eState->SetDestinationX(x);
-    eState->SetDestinationY(y);
     eState->SetDestinationRotation(rot);
     eState->SetDestinationTicks(now);
 

@@ -1549,7 +1549,7 @@
     </constant>
     <constant name="CHAR_CREATION_MALE_SKIN">
         <!-- Format: ID or ID range -->
-        <element>101-103</element>
+        <element>100-102</element>
     </constant>
     <constant name="CHAR_CREATION_MALE_FACE">
         <!-- Format: ID or ID range -->
@@ -1582,7 +1582,7 @@
     </constant>
     <constant name="CHAR_CREATION_FEMALE_SKIN">
         <!-- Format: ID or ID range -->
-        <element>201-203</element>
+        <element>200-202</element>
     </constant>
     <constant name="CHAR_CREATION_FEMALE_FACE">
         <!-- Format: ID or ID range -->
@@ -1614,39 +1614,40 @@
         <element>4404</element>
     </constant>
 	<constant name="CHAR_CREATION_HAIRCOLOR">
-        <!-- Format: ID or ID range -->
+        <!-- Format: ID or ID range; by default top to bottom matches left to right in char creation -->
         <element>8</element>
-        <element>13</element>
         <element>15</element>
-        <element>21</element>
-        <element>27</element>
-        <element>42</element>
         <element>48</element>
-        <element>50</element>
-        <element>55</element>
-        <element>56</element>
-        <element>62</element>
-        <element>63</element>
-        <element>79</element>
-        <element>88</element>
-        <element>91</element>
-        <element>95</element>
         <element>98</element>
         <element>100</element>
-    </constant>
-	<constant name="CHAR_CREATION_EYECOLOR">
-        <!-- Format: ID or ID range -->
-        <element>8</element>
-        <element>13</element>
+        <element>42</element>
+        <element>91</element>
         <element>21</element>
         <element>27</element>
-        <element>42</element>
-        <element>48</element>
-        <element>50</element>
-        <element>63</element>
-        <element>88</element>
-        <element>91</element>
+        <element>13</element>
+        <element>79</element>
         <element>95</element>
+        <element>88</element>
+        <element>50</element>
+        <element>56</element>
+        <element>55</element>
+        <element>62</element>
+        <element>63</element>
+    </constant>
+	<constant name="CHAR_CREATION_EYECOLOR">
+        <!-- Format: ID or ID range; by default top to bottom matches left to right in char creation -->
+        <element>8</element>
+        <element>15</element>
+        <element>98</element>
+        <element>100</element>
+        <element>42</element>
+        <element>91</element>
+        <element>21</element>
+        <element>95</element>
+        <element>50</element>
+        <element>56</element>
+        <element>55</element>
+        <element>63</element>
     </constant>
     <constant name="CHAR_CREATION_WEAPON">
         <!-- Format: ID or ID range -->

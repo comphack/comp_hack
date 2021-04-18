@@ -3285,14 +3285,15 @@ bool SkillManager::ProcessSkillResult(
       target.NRAAffinity = skill.NRAAffinity;
     } else if (!target.PrimaryTarget || isSource) {
       // If an AOE target that is not the source is in the set, increase
-      // the number of AOE reflections as needed. It being the source
-      // means they were reflected on. You cannot count on a 
-      // function return getting checked first.
+      // the number of AOE reflections as needed. You cannot count
+      // on a function return getting checked first.
       auto skillWasReflected = SetNRA(target, skill);
       if (skillWasReflected && !isSource) {
         aoeReflect++;
       }
 
+      // If we got here as the source, it means they were reflected on
+      // and get a chance to react to their own attack.
       ApplySecondaryCounter(source, target, pSkill);
     }
 

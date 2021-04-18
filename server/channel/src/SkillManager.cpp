@@ -1871,15 +1871,15 @@ bool SkillManager::PrepareFusionSkill(
     }
   }
 
+  // Skill converted, check target as fusion skills cannot have their
+  // target set after activation
+  skillData = definitionManager->GetSkillData(skillID);
   bool targeted =
       skillData->GetTarget()->GetType() != objects::MiTargetData::Type_t::NONE;
   auto target = zone && targetEntityID > 0 && targeted
                     ? zone->GetActiveEntity(targetEntityID)
                     : nullptr;
 
-  // Skill converted, check target as fusion skills cannot have their
-  // target set after activation
-  skillData = definitionManager->GetSkillData(skillID);
   if (skillData && (target || !targeted)) {
     cState->RefreshCurrentPosition(ChannelServer::GetServerTime());
 

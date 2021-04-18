@@ -3292,8 +3292,8 @@ bool SkillManager::ProcessSkillResult(
         aoeReflect++;
       }
 
-      // If we got here as the source, it means they were reflected on
-      // and get a chance to react to their own attack.
+      // If we got here as the source, they get to react to their own attack if
+      // they were reflected on.
       ApplySecondaryCounter(source, target, pSkill);
     }
 

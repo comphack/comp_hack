@@ -3273,11 +3273,9 @@ bool SkillManager::ProcessSkillResult(
         GetCalculatedState(effectiveTarget, pSkill, true, source);
     GetCalculatedState(source, pSkill, false, effectiveTarget);
 
-    // Set NRA
+    // Set NRA for the target here.
     // If the primary target is still in the set and a reflect did not
     // occur on the original target, apply the initially calculated flags
-    // If an AOE target that is not the source is in the set, increase
-    // the number of AOE reflections as needed
     bool isSource = effectiveTarget == source;
     if (target.PrimaryTarget && !initialHitReflect) {
       target.HitNull = skill.Nulled;
@@ -3285,8 +3283,13 @@ bool SkillManager::ProcessSkillResult(
       target.HitAbsorb = skill.Absorbed;
       target.HitAvoided = skill.Nulled != 0;
       target.NRAAffinity = skill.NRAAffinity;
-    } else {
-      if (SetNRA(target, skill) && !isSource) {
+    } else if (!target.PrimaryTarget || isSource) {
+      // If an AOE target that is not the source is in the set, increase
+      // the number of AOE reflections as needed. It being the source
+      // means they were reflected on. You cannot count on a 
+      // function return getting checked first.
+      auto skillWasReflected = SetNRA(target, skill);
+      if (skillWasReflected && !isSource) {
         aoeReflect++;
       }
 

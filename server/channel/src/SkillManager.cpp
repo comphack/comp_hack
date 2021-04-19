@@ -5354,7 +5354,9 @@ bool SkillManager::HandleCounter(
     const std::shared_ptr<ActiveEntityState>& source, SkillTargetResult& target,
     const std::shared_ptr<ProcessingSkill>& pSkill) {
   auto tActivated = target.EntityState->GetActivatedAbility();
-  if (!tActivated) {
+  if (!tActivated || tActivated->GetExecutionRequestTime()) {
+    // Cannot reuse an executing counter, but that counter cannot be hit
+    // canceled either
     return false;
   }
 

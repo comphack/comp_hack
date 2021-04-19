@@ -3289,7 +3289,7 @@ bool SkillManager::ProcessSkillResult(
       target.HitAvoided = (skill.Nulled != 0 || specialReflectCase);
       target.NRAAffinity = skill.NRAAffinity;
 
-      if(specialReflectCase && !isSource) {
+      if (specialReflectCase && !isSource) {
         // The special cases should increase the number of AOE reflects.
         aoeReflect++;
       }
@@ -3391,38 +3391,7 @@ void SkillManager::ProcessSkillResultFinal(
       return;
     }
 
-    // Now that damage has been calculated, merge final NRA flags in
-    for (SkillTargetResult& target : skill.Targets) {
-      switch (target.HitNull) {
-        case 1:
-          target.Flags1 |= FLAG1_BLOCK_PHYS;
-          break;
-        case 2:
-          target.Flags1 |= FLAG1_BLOCK_MAGIC;
-          break;
-        case 3:
-          target.Flags2 |= FLAG2_BARRIER;
-          target.Damage1Type = DAMAGE_TYPE_GENERIC;
-          break;
-        default:
-          break;
-      }
-
-      switch (target.HitReflect) {
-        case 1:
-          target.Flags1 |= FLAG1_REFLECT_PHYS;
-          break;
-        case 2:
-          target.Flags1 |= FLAG1_REFLECT_MAGIC;
-          break;
-        default:
-          break;
-      }
-
-      if (target.HitAbsorb) {
-        target.Flags1 |= FLAG1_ABSORB;
-      }
-    }
+    SetFinalNRAFlags(pSkill);
 
     // Now that damage is calculated, apply drain
     uint8_t hpDrainPercent = battleDamage->GetHPDrainPercent();
@@ -3475,6 +3444,8 @@ void SkillManager::ProcessSkillResultFinal(
         selfTarget->Damage2 = mpDrain < 0 ? mpDrain : 0;
       }
     }
+  } else {
+    SetFinalNRAFlags(pSkill);
   }
 
   // Get knockback info
@@ -4462,6 +4433,43 @@ void SkillManager::ProcessSkillResultFinal(
   ExecuteScriptPostActions(pSkill);
 }
 
+void SkillManager::SetFinalNRAFlags(
+    const std::shared_ptr<channel::ProcessingSkill>& pSkill) {
+  ProcessingSkill& skill = *pSkill.get();
+
+  for (SkillTargetResult& target : skill.Targets) {
+    switch (target.HitNull) {
+      case 1:
+        target.Flags1 |= FLAG1_BLOCK_PHYS;
+        break;
+      case 2:
+        target.Flags1 |= FLAG1_BLOCK_MAGIC;
+        break;
+      case 3:
+        target.Flags2 |= FLAG2_BARRIER;
+        target.Damage1Type = DAMAGE_TYPE_GENERIC;
+        break;
+      default:
+        break;
+    }
+
+    switch (target.HitReflect) {
+      case 1:
+        target.Flags1 |= FLAG1_REFLECT_PHYS;
+        break;
+      case 2:
+        target.Flags1 |= FLAG1_REFLECT_MAGIC;
+        break;
+      default:
+        break;
+    }
+
+    if (target.HitAbsorb) {
+      target.Flags1 |= FLAG1_ABSORB;
+    }
+  }
+}
+
 bool SkillManager::ProcessFusionExecution(
     std::shared_ptr<ActiveEntityState> source,
     const std::shared_ptr<channel::ProcessingSkill>& pSkill) {
@@ -4580,7 +4588,8 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
     }
   }
 
-  // Calculate effective dependency and affinity types if "weapon" is specified
+  // Calculate effective dependency and affinity types if "weapon" is
+  // specified
   if (skill->EffectiveDependencyType == SkillDependencyType_t::WEAPON ||
       skill->BaseAffinity == 1) {
     auto weapon =
@@ -4633,7 +4642,8 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
           }
         }
 
-        // Take the lowest value applied tokusei affinity override if one exists
+        // Take the lowest value applied tokusei affinity override if one
+        // exists
         auto tokuseiOverrides = server->GetTokuseiManager()->GetAspectValueList(
             source, TokuseiAspectType::WEAPON_AFFINITY_OVERRIDE);
         if (tokuseiOverrides.size() > 0) {
@@ -4724,10 +4734,12 @@ SkillManager::GetCalculatedState(
     auto server = mServer.lock();
     auto definitionManager = server->GetDefinitionManager();
 
-    // Determine which tokusei are active and don't need to be calculated again
+    // Determine which tokusei are active and don't need to be calculated
+    // again
     if (!isTarget && otherState && skill.SourceExecutionState &&
         eState == pSkill->Activated->GetSourceEntity()) {
-      // If we're calculating for a skill target, start with the execution state
+      // If we're calculating for a skill target, start with the execution
+      // state
       calcState = skill.SourceExecutionState;
     } else {
       // Otherwise start with the base calculated state
@@ -7709,7 +7721,8 @@ void SkillManager::HandleDurabilityDamage(
 
     characterManager->UpdateDurability(client, weapon, -durabilityLoss);
   } else {
-    // Decrease armor durability on everything equipped but the weapon by value
+    // Decrease armor durability on everything equipped but the weapon by
+    // value
     std::list<std::shared_ptr<objects::Item>> otherEquipment;
     for (size_t i = 0; i < 15; i++) {
       if (i != WEAPON_IDX) {
@@ -8361,7 +8374,8 @@ bool SkillManager::CalculateDamage(
       }
     }
 
-    // If the damage was actually a heal, invert the amount and change the type
+    // If the damage was actually a heal, invert the amount and change the
+    // type
     if (effectiveHeal) {
       target.Damage1 = target.Damage1 * -1;
       target.Damage2 = target.Damage2 * -1;
@@ -12079,7 +12093,8 @@ bool SkillManager::CheckResponsibility(
                           ->GetUsername();
 
       return libcomp::String(
-                 "Account %1 tried to spawn more enemies but there is already "
+                 "Account %1 tried to spawn more enemies but there is "
+                 "already "
                  "%2 in zone %3 with a cap of %4.\n")
           .Arg(username)
           .Arg(zone->GetManagedEntities())

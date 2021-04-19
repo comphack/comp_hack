@@ -2836,6 +2836,7 @@ bool SkillManager::ProcessSkillResult(
 
   bool initialHitNull = pSkill->Nulled != 0;
   bool initialHitReflect = pSkill->Reflected != 0;
+  bool specialReflectCase = false;
   if (pSkill->Nulled || pSkill->Reflected || pSkill->Absorbed) {
     // Apply original target NRA
     std::shared_ptr<ActiveEntityState> nraTarget;
@@ -2927,7 +2928,10 @@ bool SkillManager::ProcessSkillResult(
       case objects::MiEffectiveRangeData::AreaType_t::FRONT_1:
       case objects::MiEffectiveRangeData::AreaType_t::FRONT_2:
       case objects::MiEffectiveRangeData::AreaType_t::SOURCE:
-        // Ignore what happened to the primary target completely
+        // Ignore what happened to the primary target completely. This is a
+        // special case that requires some handling later to prevent double
+        // reflection onto the skill user.
+        specialReflectCase = true;
         break;
       case objects::MiEffectiveRangeData::AreaType_t::TARGET_RADIUS:
       case objects::MiEffectiveRangeData::AreaType_t::FRONT_3:
@@ -3274,26 +3278,29 @@ bool SkillManager::ProcessSkillResult(
     GetCalculatedState(source, pSkill, false, effectiveTarget);
 
     // Set NRA for the target here.
-    // If the primary target is still in the set and a reflect did not
-    // occur on the original target, apply the initially calculated flags
+    // If the primary target is still in the set, and a reflect did not
+    // occur on the original target or it is one of the special
+    // reflect cases, apply the initially calculated flags
     bool isSource = effectiveTarget == source;
-    if (target.PrimaryTarget && !initialHitReflect) {
+    if (target.PrimaryTarget && (!initialHitReflect || specialReflectCase)) {
       target.HitNull = skill.Nulled;
       target.HitReflect = skill.Reflected;
       target.HitAbsorb = skill.Absorbed;
-      target.HitAvoided = skill.Nulled != 0;
+      target.HitAvoided = (skill.Nulled != 0 || specialReflectCase);
       target.NRAAffinity = skill.NRAAffinity;
-    } else if (!target.PrimaryTarget || isSource) {
+
+      if(specialReflectCase && !isSource) {
+        // The special cases should increase the number of AOE reflects.
+        aoeReflect++;
+      }
+    } else {
       // If an AOE target that is not the source is in the set, increase
-      // the number of AOE reflections as needed. You cannot count
-      // on a function return getting checked first.
+      // the number of AOE reflections as needed
       auto skillWasReflected = SetNRA(target, skill);
       if (skillWasReflected && !isSource) {
         aoeReflect++;
       }
 
-      // If we got here as the source, they get to react to their own attack if
-      // they were reflected on.
       ApplySecondaryCounter(source, target, pSkill);
     }
 

@@ -1043,6 +1043,12 @@ bool SkillManager::ExecuteSkill(
     ctx = std::make_shared<SkillExecutionContext>();
   }
 
+  // Fast track instant skills
+  if (skillData->GetBasic()->GetActivationType() ==
+      SkillActivationType_t::INSTANT) {
+    ctx->FastTrack = true;
+  }
+
   auto pSkill = GetProcessingSkill(activated, ctx);
   pSkill->SourceExecutionState =
       GetCalculatedState(source, pSkill, false, nullptr);

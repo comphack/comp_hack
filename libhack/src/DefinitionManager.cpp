@@ -1858,10 +1858,13 @@ BaseScriptEngine &BaseScriptEngine::Using<DefinitionManager>() {
 
     // These are needed for some methods.
     Using<objects::MiDevilData>();
+    Using<objects::MiItemData>();
 
     binding.Func("LoadAllData", &DefinitionManager::LoadAllData)
         .Func<std::shared_ptr<objects::MiDevilData> (DefinitionManager::*)(
             uint32_t)>("GetDevilData", &DefinitionManager::GetDevilData)
+        .Func<const std::shared_ptr<objects::MiItemData> (DefinitionManager::*)(
+            uint32_t)>("GetItemData", &DefinitionManager::GetItemData)
         // Can't overload because it has the same number of arguments.
         //.Overload<const std::shared_ptr<objects::MiDevilData>
         //(DefinitionManager::*)(const libcomp::String&)>("GetDevilData",

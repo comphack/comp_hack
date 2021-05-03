@@ -29,8 +29,9 @@ function check_or_download {
     fi
 }
 
-# Install packages
+# Install packages after freeing space
 if [ "${INSTALL_TOOLS}" == "YES" ]; then
+    sudo rm -rf /usr/share/dotnet
     sudo apt-get update -q
     sudo apt-get install libssl-dev docbook-xsl doxygen texlive-font-utils \
         xmlto libqt5webkit5-dev unzip -y

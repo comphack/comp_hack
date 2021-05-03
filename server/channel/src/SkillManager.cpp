@@ -5585,8 +5585,11 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
       stackScale =
           (int16_t)floor((float)stat * ((float)(100 - params[1]) / 100.f));
 
+      // Enforce scaling minimum and maximum.
       if (stackScale < 1) {
         stackScale = 1;
+      } else if (stackScale > 100) {
+        stackScale = 100;
       }
     }
   }
@@ -5656,6 +5659,8 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
 
   auto statusAdjusts = tokuseiManager->GetAspectMap(
       source, TokuseiAspectType::STATUS_INFLICT_ADJUST, sourceCalc);
+  auto boostCaps = tokuseiManager->GetAspectMap(
+      source, TokuseiAspectType::AFFINITY_CAP_MAX, sourceCalc);
   auto statusNulls = tokuseiManager->GetAspectMap(
       eState, TokuseiAspectType::STATUS_NULL, targetCalc);
 
@@ -5747,7 +5752,8 @@ std::set<uint32_t> SkillManager::HandleStatusEffects(
         // Add affinity boost/2
         successRate +=
             (double)GetAffinityBoost(source, sourceCalc,
-                                     (CorrectTbl)(affinity + BOOST_OFFSET)) /
+                                     (CorrectTbl)(affinity + BOOST_OFFSET),
+                                     boostCaps[affinity]) /
             2.0;
 
         if (successRate > 0.f && canResist) {
@@ -7415,6 +7421,7 @@ void SkillManager::HandleNegotiations(
     auto eState = std::dynamic_pointer_cast<EnemyState>(pair.first);
     if (pair.second != TALK_DONE_1 && pair.second != TALK_DONE_2) {
       auto enemy = eState->GetEntity();
+      bool fGainPossible = false;
 
       std::shared_ptr<objects::LootBox> lBox;
       switch (pair.second) {
@@ -7434,6 +7441,8 @@ void SkillManager::HandleNegotiations(
           } else {
             joined[enemy->GetType()]++;
           }
+
+          fGainPossible = true;
         } break;
         case TALK_GIVE_ITEM_1:
         case TALK_GIVE_ITEM_2: {
@@ -7445,6 +7454,12 @@ void SkillManager::HandleNegotiations(
           auto gifts = drops[(uint8_t)objects::DropSet::Type_t::NORMAL];
           characterManager->CreateLootFromDrops(lBox, gifts, source->GetLUCK(),
                                                 true);
+
+          fGainPossible = true;
+        } break;
+        case TALK_LEAVE_1:
+        case TALK_LEAVE_2: {
+          fGainPossible = true;
         } break;
         default:
           break;
@@ -7460,14 +7475,19 @@ void SkillManager::HandleNegotiations(
 
         zone->AddLootBox(lState);
       }
-    }
 
-    if (fType) {
-      fGain = fGain + (int32_t)fType->GetTalkSuccess();
+      // If a Partner is summoned and they are the same base type as the enemy
+      // negotiation target after a successful negotiation end, increase
+      // the Partner's familiarity.
+      if (fGainPossible && fType &&
+          (partnerDef->GetUnionData()->GetBaseDemonID() ==
+           eState->GetDevilData()->GetUnionData()->GetBaseDemonID())) {
+        fGain = fGain + (int32_t)fType->GetTalkSuccess();
+      }
     }
   }
 
-  // Show each look box and schedule them for cleanup after their
+  // Show each loot box and schedule them for cleanup after their
   // loot time passes
   if (lStates.size() > 0) {
     // Spawned boxes remain lootable for 120 seconds
@@ -8226,10 +8246,18 @@ bool SkillManager::CalculateDamage(
         auto calcState =
             GetCalculatedState(source, pSkill, false, target.EntityState);
 
-        int32_t maxLB =
-            (int32_t)(30000 + floor(tokuseiManager->GetAspectSum(
-                                  source, TokuseiAspectType::LIMIT_BREAK_MAX,
-                                  calcState)));
+        double maxLB_calc =
+            (30000 +
+             floor(tokuseiManager->GetAspectSum(
+                 source, TokuseiAspectType::LIMIT_BREAK_MAX, calcState)));
+
+        // Enforce maximum possible Limit Break damage and prevent overflows
+        int32_t maxLB = 0;
+        if (maxLB_calc > (double)std::numeric_limits<int32_t>::max()) {
+          maxLB = std::numeric_limits<int32_t>::max();
+        } else {
+          maxLB = (int32_t)maxLB_calc;
+        }
 
         if (target.Damage1 > maxLB) {
           target.Damage1 = maxLB;
@@ -8329,6 +8357,16 @@ bool SkillManager::CalculateDamage(
             source, TokuseiAspectType::TECH_ATTACK_POWER, calcState));
         if (techPow > 0.0 && techRate > 0 &&
             (techRate >= 100 || RNG(int32_t, 1, 100) <= techRate)) {
+          double techAttack_calc =
+              floor((double)target.Damage1 * techPow * 0.01);
+
+          // Prevent overflow
+          if (techAttack_calc > (double)std::numeric_limits<int32_t>::max()) {
+            target.TechnicalDamage = std::numeric_limits<int32_t>::max();
+          } else {
+            target.TechnicalDamage = (int32_t)techAttack_calc;
+          }
+
           // Calculate relative damage
           target.TechnicalDamage =
               (int32_t)floor((double)target.Damage1 * techPow * 0.01);
@@ -8341,10 +8379,18 @@ bool SkillManager::CalculateDamage(
           // Apply limits
           if (critLevel == 2) {
             // Cap at LB limit
-            int32_t maxLB = (int32_t)(
-                30000 +
-                floor(tokuseiManager->GetAspectSum(
-                    source, TokuseiAspectType::LIMIT_BREAK_MAX, calcState)));
+            double maxLB_calc =
+                (30000 +
+                 floor(tokuseiManager->GetAspectSum(
+                     source, TokuseiAspectType::LIMIT_BREAK_MAX, calcState)));
+
+            // Enforce maximum possible Limit Break damage and prevent overflows
+            int32_t maxLB = 0;
+            if (maxLB_calc > (double)std::numeric_limits<int32_t>::max()) {
+              maxLB = std::numeric_limits<int32_t>::max();
+            } else {
+              maxLB = (int32_t)maxLB_calc;
+            }
 
             if (target.TechnicalDamage > maxLB) {
               target.TechnicalDamage = maxLB;
@@ -8460,15 +8506,12 @@ int16_t SkillManager::GetEntityRate(
 float SkillManager::GetAffinityBoost(
     const std::shared_ptr<ActiveEntityState> eState,
     std::shared_ptr<objects::CalculatedEntityState> calcState,
-    CorrectTbl boostType) {
+    CorrectTbl boostType, double boostCap) {
   float aBoost = (float)eState->GetCorrectValue(boostType, calcState);
   if (aBoost != 0.f) {
     // Limit boost based on tokusei or 100% by default
-    auto tokuseiManager = mServer.lock()->GetTokuseiManager();
-    double affinityMax = tokuseiManager->GetAspectSum(
-        eState, TokuseiAspectType::AFFINITY_CAP_MAX, calcState);
-    if ((double)(aBoost - 100.f) > affinityMax) {
-      aBoost = (float)(100.0 + affinityMax);
+    if ((double)(aBoost - 100.f) > boostCap) {
+      aBoost = (float)(100.0 + boostCap);
     }
   }
 
@@ -8498,6 +8541,9 @@ int32_t SkillManager::CalculateDamage_Normal(
       boostTypes.insert(CorrectTbl::BOOST_WEAPON);
     }
 
+    // Get tokusei manager for affinity cap calculations
+    auto tokuseiManager = mServer.lock()->GetTokuseiManager();
+
     // Get the offense value and boost
     uint16_t off = 0;
     float boost = 0.f;
@@ -8508,11 +8554,17 @@ int32_t SkillManager::CalculateDamage_Normal(
         auto dCalcState =
             GetCalculatedState(dState, pSkill, false, target.EntityState);
 
+        auto dBoostCaps = tokuseiManager->GetAspectMap(
+            dState, TokuseiAspectType::AFFINITY_CAP_MAX, dCalcState);
+
         combinedVal +=
             CalculateOffenseValue(dState, target.EntityState, pSkill);
 
         for (auto boostType : boostTypes) {
-          boost += GetAffinityBoost(dState, dCalcState, boostType) * 0.01f;
+          boost +=
+              GetAffinityBoost(dState, dCalcState, boostType,
+                               dBoostCaps[(uint8_t)boostType - BOOST_OFFSET]) *
+              0.01f;
         }
       }
 
@@ -8526,8 +8578,14 @@ int32_t SkillManager::CalculateDamage_Normal(
       // Offense value and boost come from normal source
       off = CalculateOffenseValue(source, target.EntityState, pSkill);
 
+      auto boostCaps = tokuseiManager->GetAspectMap(
+          source, TokuseiAspectType::AFFINITY_CAP_MAX, calcState);
+
       for (auto boostType : boostTypes) {
-        boost += GetAffinityBoost(source, calcState, boostType) * 0.01f;
+        boost +=
+            GetAffinityBoost(source, calcState, boostType,
+                             boostCaps[(uint8_t)boostType - BOOST_OFFSET]) *
+            0.01f;
       }
     }
 
@@ -8614,9 +8672,14 @@ int32_t SkillManager::CalculateDamage_Normal(
       // Multiply by 100% + boost
       calc = calc * (1.f + boost);
 
-      // Floor and adjust rates
-      amount = AdjustDamageRates((int32_t)floor(calc), source,
-                                 target.EntityState, pSkill, isHeal, true);
+      // Floor and adjust rates, and prevent overflow
+      if (calc > (float)std::numeric_limits<int32_t>::max()) {
+        amount = AdjustDamageRates(std::numeric_limits<int32_t>::max(), source,
+                                   target.EntityState, pSkill, isHeal, true);
+      } else {
+        amount = AdjustDamageRates((int32_t)floor(calc), source,
+                                   target.EntityState, pSkill, isHeal, true);
+      }
     }
 
     if (amount < 1) {
@@ -8802,9 +8865,11 @@ int32_t SkillManager::AdjustDamageRates(
     }
   }
 
-  // Apply floor
+  // Apply floor and enforce maximum.
   if (calc < 0.f) {
     calc = 0.f;
+  } else if (calc > (float)std::numeric_limits<int32_t>::max()) {
+    return std::numeric_limits<int32_t>::max();
   }
 
   return (int32_t)floor(calc);

@@ -842,7 +842,7 @@ bool SkillManager::ReactivateSavedSwitchSkills(
 
   // Clear out saved switch skills and return if the server is set to not do
   // this.
-  if (!saveSwitchSkills) {
+  if (saveSwitchSkills == objects::WorldSharedConfig::SaveSwitchSkills_t::NO_REACTIVATION) {
     character->ClearSavedSwitchSkills();
     return true;
   }
@@ -862,7 +862,8 @@ bool SkillManager::ReactivateSavedSwitchSkills(
       continue;
     }
 
-    if (saveSwitchSkills == 2) {
+    if (saveSwitchSkills ==
+        objects::WorldSharedConfig::SaveSwitchSkills_t::PAY_SWITCH_COSTS) {
       // Determine and pay costs, else remove the unpayable skill.
       auto activated = std::make_shared<objects::ActivatedAbility>();
       activated->SetSourceEntity(source);

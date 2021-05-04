@@ -1171,11 +1171,11 @@ SaveSwitchSkills
 
 If set to FREE_SWITCH_REACTIVATION, switch skills that have been
 activated in a previous session will be reactivated when the
-character next logs in. A setting of PAY_SWITCH_COSTS results
-in all normal switch skill costs being paid during reactivation,
-in the numerical order of skill IDs ascending. Any switches
-whose costs could not be paid will not be activated. The
-default setting of NO_REACTIVATION is the normal behavior
+character next logs in. A setting of PAY_SWITCH_REACTIVATION_COSTS
+results in all normal switch skill costs being paid during
+reactivation, in the numerical order of skill IDs ascending.
+Any switches whose costs could not be paid will not be activated.
+The default setting of NO_REACTIVATION is the normal behavior
 of switch skills not being turned back on during login.
 
 Example

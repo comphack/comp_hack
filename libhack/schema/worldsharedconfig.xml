@@ -9,9 +9,9 @@
         <member type="bool" name="MoveCorrection" default="true"/>
         <member type="bool" name="AutoCompressCurrency"/>
         <member type="bool" name="NRAStatusNull" default="true"/>
-        <member type="enum" name="SaveSwitchSkills" default="NO_REACTIVATION" >>
+        <member type="enum" name="SaveSwitchSkills" default="NO_REACTIVATION">
             <value>NO_REACTIVATION</value>
-            <value>FREE_SWITCH_REACTIVATION</value>
+            <value>PAY_SWITCH_REACTIVATION_COSTS</value>
             <value>PAY_SWITCH_COSTS</value>
         </member>
         <member type="bool" name="DeathPenaltyDisabled"/>

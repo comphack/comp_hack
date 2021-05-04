@@ -485,6 +485,13 @@ class SkillManager {
       std::shared_ptr<SkillExecutionContext> ctx);
 
   /**
+   * Set final NRA flags for a skill's targets
+   * @param pSkill Current skill processing state
+   */
+  void SetFinalNRAFlags(
+      const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+  /**
    * Prepare an executing fusion skill by setting the fusion demons that will
    * be used for damage calculation.
    * @param source Pointer to the state of the source entity
@@ -863,12 +870,13 @@ class SkillManager {
    * @param eState Pointer to the entity
    * @param calcState Pointer to entity's calculated state
    * @param boostType CorrectTbl index of the boost type
+   * @param boostCap Double of the corresponding affinity type's boost cap
    * @return Calculated boost level as a decimal
    */
   float GetAffinityBoost(
       const std::shared_ptr<ActiveEntityState> eState,
       std::shared_ptr<objects::CalculatedEntityState> calcState,
-      CorrectTbl boostType);
+      CorrectTbl boostType, double boostCap);
 
   /**
    * Calculate skill damage or healing using the default formula

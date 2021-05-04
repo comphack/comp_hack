@@ -842,7 +842,8 @@ bool SkillManager::ReactivateSavedSwitchSkills(
 
   // Clear out saved switch skills and return if the server is set to not do
   // this.
-  if (saveSwitchSkills == objects::WorldSharedConfig::SaveSwitchSkills_t::NO_REACTIVATION) {
+  if (saveSwitchSkills ==
+      objects::WorldSharedConfig::SaveSwitchSkills_t::NO_REACTIVATION) {
     character->ClearSavedSwitchSkills();
     return true;
   }

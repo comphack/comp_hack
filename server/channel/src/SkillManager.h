@@ -464,6 +464,13 @@ class SkillManager {
       std::shared_ptr<SkillExecutionContext> ctx);
 
   /**
+   * Set final NRA flags for a skill's targets
+   * @param pSkill Current skill processing state
+   */
+  void SetFinalNRAFlags(
+      const std::shared_ptr<channel::ProcessingSkill>& pSkill);
+
+  /**
    * Prepare an executing fusion skill by setting the fusion demons that will
    * be used for damage calculation.
    * @param source Pointer to the state of the source entity

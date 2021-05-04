@@ -863,8 +863,8 @@ bool SkillManager::ReactivateSavedSwitchSkills(
       continue;
     }
 
-    if (saveSwitchSkills ==
-        objects::WorldSharedConfig::SaveSwitchSkills_t::PAY_SWITCH_COSTS) {
+    if (saveSwitchSkills == objects::WorldSharedConfig::SaveSwitchSkills_t::
+                                PAY_SWITCH_REACTIVATION_COSTS) {
       // Determine and pay costs, else remove the unpayable skill.
       auto activated = std::make_shared<objects::ActivatedAbility>();
       activated->SetSourceEntity(source);

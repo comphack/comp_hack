@@ -4120,22 +4120,31 @@ void SkillManager::ProcessSkillResultFinal(
         // AI and skill rules apply
         target.EntityState->SetStatusTimes(STATUS_KNOCKBACK, hitTimings[1]);
 
-        Point rushPoint = zoneManager->GetLinearPoint(
-            originX, originY, primaryTarget->GetCurrentX(),
-            primaryTarget->GetCurrentY(), dist + 250.f, false, zone);
+        Point rushPoint;
 
-        server->ScheduleWork(
-            hitTimings[1],
-            [](std::shared_ptr<ActiveEntityState> source, float originX,
-               float originY, Point rushPoint, uint64_t endTime) {
-              source->SetOriginX(originX);
-              source->SetOriginY(originY);
+        if (source->GetEntityType() == EntityType_t::CHARACTER ||
+            source->GetEntityType() == EntityType_t::PARTNER_DEMON) {
+          // Move player source to destination only after Pivot packet is sent
+          rushPoint = zoneManager->GetLinearPoint(
+              originX, originY, primaryTarget->GetCurrentX(),
+              primaryTarget->GetCurrentY(), dist + 250.f, false, zone);
 
-              source->SetDestinationX(rushPoint.x);
-              source->SetDestinationY(rushPoint.y);
-              source->SetDestinationTicks(endTime);
-            },
-            source, originX, originY, rushPoint, hitTimings[1]);
+          server->ScheduleWork(
+              hitTimings[1],
+              [](std::shared_ptr<ActiveEntityState> source, float originX,
+                 float originY, Point rushPoint, uint64_t endTime) {
+                source->SetDestinationX(rushPoint.x);
+                source->SetDestinationY(rushPoint.y);
+                source->SetDestinationTicks(endTime);
+              },
+              source, originX, originY, rushPoint, hitTimings[1]);
+        } else {
+          // Move enemy source immediately
+          rushPoint = zoneManager->MoveRelative(
+              source, primaryTarget->GetCurrentX(),
+              primaryTarget->GetCurrentY(), dist + 250.f, false, now,
+              hitTimings[1]);
+        }
 
         p.WriteFloat(rushPoint.x);
         p.WriteFloat(rushPoint.y);

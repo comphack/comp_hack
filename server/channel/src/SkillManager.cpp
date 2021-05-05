@@ -4113,14 +4113,29 @@ void SkillManager::ProcessSkillResultFinal(
 
         hitTimings[0] = now;
         hitTimings[1] = now + 200000ULL;
+        auto originX = source->GetCurrentX();
+        auto originY = source->GetCurrentY();
 
         // Count rushing as knockback because functionally the same
         // AI and skill rules apply
         target.EntityState->SetStatusTimes(STATUS_KNOCKBACK, hitTimings[1]);
 
-        Point rushPoint = zoneManager->MoveRelative(
-            source, primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(),
-            dist + 250.f, false, now, hitTimings[1]);
+        Point rushPoint = zoneManager->GetLinearPoint(
+            originX, originY, primaryTarget->GetCurrentX(),
+            primaryTarget->GetCurrentY(), dist + 250.f, false, zone);
+
+        server->ScheduleWork(
+            hitTimings[1],
+            [](std::shared_ptr<ActiveEntityState> source, float originX,
+               float originY, Point rushPoint, uint64_t endTime) {
+              source->SetOriginX(originX);
+              source->SetOriginY(originY);
+
+              source->SetDestinationX(rushPoint.x);
+              source->SetDestinationY(rushPoint.y);
+              source->SetDestinationTicks(endTime);
+            },
+            source, originX, originY, rushPoint, hitTimings[1]);
 
         p.WriteFloat(rushPoint.x);
         p.WriteFloat(rushPoint.y);

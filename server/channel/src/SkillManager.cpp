@@ -4113,8 +4113,6 @@ void SkillManager::ProcessSkillResultFinal(
 
         hitTimings[0] = now;
         hitTimings[1] = now + 200000ULL;
-        auto originX = source->GetCurrentX();
-        auto originY = source->GetCurrentY();
 
         // Count rushing as knockback because functionally the same
         // AI and skill rules apply
@@ -4126,18 +4124,19 @@ void SkillManager::ProcessSkillResultFinal(
             source->GetEntityType() == EntityType_t::PARTNER_DEMON) {
           // Move player source to destination only after Pivot packet is sent
           rushPoint = zoneManager->GetLinearPoint(
-              originX, originY, primaryTarget->GetCurrentX(),
-              primaryTarget->GetCurrentY(), dist + 250.f, false, zone);
+              source->GetCurrentX(), source->GetCurrentY(),
+              primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(),
+              dist + 250.f, false, zone);
 
           server->ScheduleWork(
               hitTimings[1],
-              [](std::shared_ptr<ActiveEntityState> source, float originX,
-                 float originY, Point rushPoint, uint64_t endTime) {
+              [](std::shared_ptr<ActiveEntityState> source, Point rushPoint,
+                 uint64_t endTime) {
                 source->SetDestinationX(rushPoint.x);
                 source->SetDestinationY(rushPoint.y);
                 source->SetDestinationTicks(endTime);
               },
-              source, originX, originY, rushPoint, hitTimings[1]);
+              source, rushPoint, hitTimings[1]);
         } else {
           // Move enemy source immediately
           rushPoint = zoneManager->MoveRelative(

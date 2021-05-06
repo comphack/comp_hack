@@ -8731,7 +8731,7 @@ int32_t SkillManager::AdjustDamageRates(
   }
 
   // Get general damage dealt/taken tokusei adjustments
-  double tokuseiBoost =
+  double tokuseiDamageDealt =
       adjustPower ? (tokuseiManager->GetAspectSum(
                          source, TokuseiAspectType::EFFECT_POWER, calcState) *
                      0.01)
@@ -8740,9 +8740,10 @@ int32_t SkillManager::AdjustDamageRates(
   if (!isHeal) {
     // Only apply damage adjustments if not healing
     if (source != target) {
-      tokuseiBoost += tokuseiManager->GetAspectSum(
-                          source, TokuseiAspectType::DAMAGE_DEALT, calcState) *
-                      0.01;
+      tokuseiDamageDealt +=
+          tokuseiManager->GetAspectSum(source, TokuseiAspectType::DAMAGE_DEALT,
+                                       calcState) *
+          0.01;
     }
 
     // DAMAGE_TAKEN tokusei intended to reduce damage are negative
@@ -8751,8 +8752,8 @@ int32_t SkillManager::AdjustDamageRates(
                                      targetState) *
         0.01;
 
-    if (tokuseiBoost < 0.0) {
-      tokuseiBoost = 0.0;
+    if (tokuseiDamageDealt < 0.0) {
+      tokuseiDamageDealt = 0.0;
     }
 
     // Cannot take less than 0% damage
@@ -8779,9 +8780,9 @@ int32_t SkillManager::AdjustDamageRates(
     calc = calc * (float)(dependencyDealt * 0.01);
   }
 
-  if (tokuseiBoost != 0.0) {
-    // Multiply by 1 + remaining power boosts/100
-    calc = calc * (float)(1.0 + tokuseiBoost);
+  if (tokuseiDamageDealt != 0.0) {
+    // Multiply by 1 + remaining power increases/100
+    calc = calc * (float)(1.0 + tokuseiDamageDealt);
   }
 
   // Multiply by dependency rate taken

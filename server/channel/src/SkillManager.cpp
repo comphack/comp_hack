@@ -8789,7 +8789,7 @@ int32_t SkillManager::AdjustDamageRates(
   rateTaken.push_back((float)(dependencyTaken * 0.01));
 
   // Multiply by 100% + -general rate taken, calculated earluer
-  rateTaken.push_back((float)(tokuseiDamageTaken));
+  rateTaken.push_back((float)tokuseiDamageTaken);
 
   for (float taken : rateTaken) {
     // Apply rate taken if not piercing or rate is not a reduction

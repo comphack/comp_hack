@@ -4130,11 +4130,11 @@ void SkillManager::ProcessSkillResultFinal(
 
           server->ScheduleWork(
               hitTimings[1],
-              [](std::shared_ptr<ActiveEntityState> source, Point rushPoint,
+              [](std::shared_ptr<ActiveEntityState> pSource, Point pRushPoint,
                  uint64_t endTime) {
-                source->SetDestinationX(rushPoint.x);
-                source->SetDestinationY(rushPoint.y);
-                source->SetDestinationTicks(endTime);
+                pSource->SetDestinationX(pRushPoint.x);
+                pSource->SetDestinationY(pRushPoint.y);
+                pSource->SetDestinationTicks(endTime);
               },
               source, rushPoint, hitTimings[1]);
         } else {

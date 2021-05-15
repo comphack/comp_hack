@@ -998,12 +998,9 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
     }
 
     auto activated = eState->GetActivatedAbility();
-    if (activated && (aiState->GetPreviousStatus() == AIStatus_t::AGGRO ||
-                      aiState->GetPreviousStatus() == AIStatus_t::COMBAT)) {
+    if (activated && (aiState->GetStatus() != AIStatus_t::AGGRO &&
+                      aiState->GetStatus() != AIStatus_t::COMBAT)) {
       // Leftover combat skill, cancel it now
-      LogAIManagerDebug([&]() {
-        return libcomp::String("Cancelling skill due to moving from aggro to combat state.\n");
-      });
       mServer.lock()->GetSkillManager()->CancelSkill(
           eState, activated->GetActivationID());
     }
@@ -1234,9 +1231,6 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
                                           activated->GetTargetObjectID()) &&
               eState->GetActivatedAbility() == activated) {
             if (!CanRetrySkill(eState, activated)) {
-              LogAIManagerDebug([&]() {
-                return libcomp::String("Cancelling skill due to no retry allowed.\n");
-              });
               skillManager->CancelSkill(eState, activated->GetActivationID());
             }
           }
@@ -1355,10 +1349,6 @@ bool AIManager::UpdateEnemyState(
   if (!target) {
     // No target could be found, stop combat and quit
     if (activated) {
-      LogAIManagerDebug([&]() {
-        return libcomp::String(
-                   "Cancelling skill due to no targets.\n");
-      });
       server->GetSkillManager()->CancelSkill(eState,
                                              activated->GetActivationID());
     }
@@ -1412,9 +1402,6 @@ bool AIManager::UpdateEnemyState(
                eState->GetDistance(zone->GetActiveEntity(
                    aiState->GetFollowEntityID())) > FOLLOW_DISTANCE_MAX) {
       // Cancel to pursue follow target
-      LogAIManagerDebug([&]() {
-        return libcomp::String("Cancelling skill to follow target.\n");
-      });
       server->GetSkillManager()->CancelSkill(eState,
                                              activated->GetActivationID());
       return false;
@@ -1438,9 +1425,6 @@ bool AIManager::UpdateEnemyState(
     }
 
     if (cancelAndReset) {
-      LogAIManagerDebug([&]() {
-        return libcomp::String("Cancelling skill due to a reset.\n");
-      });
       server->GetSkillManager()->CancelSkill(eState,
                                              activated->GetActivationID());
       activated = nullptr;
@@ -1471,9 +1455,6 @@ bool AIManager::UpdateEnemyState(
       if (skillActivationWait) {
         return false;
       } else {
-        LogAIManagerDebug([&]() {
-          return libcomp::String("Cancelling skill due to being unable to wait.\n");
-        });
         skillManager->CancelSkill(eState, activated->GetActivationID());
       }
     } else if (CanRetrySkill(eState, activated)) {

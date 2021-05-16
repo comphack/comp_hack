@@ -305,8 +305,16 @@ const std::shared_ptr<objects::MiEnchantData>
 DefinitionManager::GetEnchantDataByItemID(uint32_t itemID) {
   auto iter = mEnchantItemLookup.find(itemID);
   if (iter != mEnchantItemLookup.end()) {
+    LogDefinitionManagerWarning([&]() {
+      return libcomp::String("Found EnchantData for item: %1\n").Arg(itemID);
+    });
     return GetEnchantData(iter->second);
   }
+
+  LogDefinitionManagerWarning([&]() {
+    return libcomp::String("Unable to find EnchantData for item: %1\n")
+        .Arg(itemID);
+  });
 
   return nullptr;
 }
@@ -1858,17 +1866,18 @@ BaseScriptEngine &BaseScriptEngine::Using<DefinitionManager>() {
 
     // These are needed for some methods.
     Using<objects::MiDevilData>();
+    Using<objects::MiEnchantData>();
     Using<objects::MiItemData>();
 
     binding.Func("LoadAllData", &DefinitionManager::LoadAllData)
         .Func<std::shared_ptr<objects::MiDevilData> (DefinitionManager::*)(
             uint32_t)>("GetDevilData", &DefinitionManager::GetDevilData)
-        .Func<const std::shared_ptr<objects::MiItemData> (DefinitionManager::*)(
-            uint32_t)>("GetItemData", &DefinitionManager::GetItemData)
         .Func<const std::shared_ptr<objects::MiEnchantData> (
             DefinitionManager::*)(uint32_t)>(
             "GetEnchantDataByItemID",
             &DefinitionManager::GetEnchantDataByItemID)
+        .Func<const std::shared_ptr<objects::MiItemData> (DefinitionManager::*)(
+            uint32_t)>("GetItemData", &DefinitionManager::GetItemData)
         // Can't overload because it has the same number of arguments.
         //.Overload<const std::shared_ptr<objects::MiDevilData>
         //(DefinitionManager::*)(const libcomp::String&)>("GetDevilData",

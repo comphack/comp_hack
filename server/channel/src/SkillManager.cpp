@@ -231,7 +231,7 @@ class channel::ProcessingSkill {
   uint8_t KnowledgeRank = 0;
   int32_t AbsoluteDamage = 0;
   int16_t ChargeReduce = 0;
-  bool IsItemSkill = false;
+  uint32_t ItemID = 0;
   bool IsProjectile = false;
   bool CanNRA = true;
   uint8_t Nulled = 0;
@@ -517,6 +517,7 @@ void SkillManager::LoadScripts() {
           // logic only
           .ConstVar("Activated", &ProcessingSkill::Activated)
           .ConstVar("Definition", &ProcessingSkill::Definition)
+          .ConstVar("ItemID", &ProcessingSkill::ItemID)
           .ConstVar("EffectiveSource", &ProcessingSkill::EffectiveSource)
           .ConstVar("PrimaryTarget", &ProcessingSkill::PrimaryTarget)
           .ConstVar("SourceExecutionState",
@@ -697,7 +698,7 @@ bool SkillManager::ActivateSkill(
         maxStacks +
         tokuseiManager->GetAspectSum(
             source, TokuseiAspectType::SKILL_ITEM_STACK_ADJUST, calcState) +
-        (!pSkill->IsItemSkill
+        (!pSkill->ItemID
              ? tokuseiManager->GetAspectSum(
                    source, TokuseiAspectType::SKILL_STACK_ADJUST, calcState)
              : 0));
@@ -2464,18 +2465,13 @@ bool SkillManager::DetermineCosts(
     }
   }
 
-  if (pSkill->IsItemSkill) {
+  if (pSkill->ItemID > 0) {
     // If using an item skill and the item is a specific type and
     // non-rental but the skill does not specify a cost for it, it is
     // still consumed.
-    int64_t targetObjectID = activated->GetActivationObjectID();
-    auto item = targetObjectID ? std::dynamic_pointer_cast<objects::Item>(
-                                     libcomp::PersistentObject::GetObjectByUUID(
-                                         state->GetObjectUUID(targetObjectID)))
-                               : nullptr;
-    if (item && itemCosts.find(item->GetType()) == itemCosts.end()) {
+    if (itemCosts.find(pSkill->ItemID) == itemCosts.end()) {
       auto itemData =
-          server->GetDefinitionManager()->GetItemData(item->GetType());
+          server->GetDefinitionManager()->GetItemData(pSkill->ItemID);
       auto category = itemData->GetCommon()->GetCategory();
 
       bool isRental = itemData->GetRental()->GetRental() != 0;
@@ -2485,7 +2481,7 @@ bool SkillManager::DetermineCosts(
       bool isDemonInstItem =
           isActive && category->GetSubCategory() == ITEM_SUBCATEGORY_DEMON_SOLO;
       if (!isRental && (isGeneric || isDemonInstItem)) {
-        itemCosts[item->GetType()] = 1;
+        itemCosts[pSkill->ItemID] = 1;
       }
     }
   }
@@ -4508,6 +4504,7 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   auto source = std::dynamic_pointer_cast<ActiveEntityState>(
       activated->GetSourceEntity());
   auto cSource = std::dynamic_pointer_cast<CharacterState>(source);
+  auto state = ClientState::GetEntityClientState(source->GetEntityID(), false);
 
   auto skill = std::make_shared<ProcessingSkill>();
   skill->SkillID = skillData->GetCommon()->GetID();
@@ -4526,9 +4523,6 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   skill->CurrentZone = source->GetZone();
   skill->InPvP = skill->CurrentZone &&
                  skill->CurrentZone->GetInstanceType() == InstanceType_t::PVP;
-  skill->IsItemSkill =
-      skillData->GetBasic()->GetFamily() == SkillFamily_t::ITEM ||
-      skillData->GetBasic()->GetFamily() == SkillFamily_t::DEMON_SOLO;
   skill->IsProjectile =
       skillData->GetDischarge()->GetProjectileSpeed() &&
       skillData->GetTarget()->GetType() != objects::MiTargetData::Type_t::NONE;
@@ -4539,6 +4533,18 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   skill->CanNRA = skillData->GetBasic()->GetCombatSkill() &&
                   (!skill->FunctionID ||
                    skill->FunctionID != SVR_CONST.SKILL_ZONE_TARGET_ALL);
+
+  // Set item ID for the skill.
+  if (state &&
+      (skillData->GetBasic()->GetFamily() == SkillFamily_t::ITEM ||
+       skillData->GetBasic()->GetFamily() == SkillFamily_t::DEMON_SOLO)) {
+    int64_t targetObjectID = activated->GetActivationObjectID();
+    auto item = targetObjectID ? std::dynamic_pointer_cast<objects::Item>(
+                                     libcomp::PersistentObject::GetObjectByUUID(
+                                         state->GetObjectUUID(targetObjectID)))
+                               : nullptr;
+    skill->ItemID = item ? item->GetType() : 0;
+  }
 
   if (skill->FunctionID &&
       (skill->FunctionID == SVR_CONST.SKILL_ABS_DAMAGE ||

@@ -1865,6 +1865,10 @@ BaseScriptEngine &BaseScriptEngine::Using<DefinitionManager>() {
             uint32_t)>("GetDevilData", &DefinitionManager::GetDevilData)
         .Func<const std::shared_ptr<objects::MiItemData> (DefinitionManager::*)(
             uint32_t)>("GetItemData", &DefinitionManager::GetItemData)
+        .Func<const std::shared_ptr<objects::MiEnchantData> (
+            DefinitionManager::*)(uint32_t)>(
+            "GetEnchantDataByItemID",
+            &DefinitionManager::GetEnchantDataByItemID)
         // Can't overload because it has the same number of arguments.
         //.Overload<const std::shared_ptr<objects::MiDevilData>
         //(DefinitionManager::*)(const libcomp::String&)>("GetDevilData",

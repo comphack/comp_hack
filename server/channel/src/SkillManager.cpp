@@ -6006,7 +6006,7 @@ void SkillManager::HandleKills(
         auto server = mServer.lock();
         server->ScheduleWork(
             expireTime,
-            [](ActiveEntityState* pEntity,
+            [](std::shared_ptr<ActiveEntityState> pEntity,
                const channel::ServerTime pExpireTime) {
               pEntity->ExpireStatusTimes(pExpireTime);
             },

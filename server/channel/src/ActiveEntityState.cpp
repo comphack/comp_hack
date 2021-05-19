@@ -667,13 +667,7 @@ bool ActiveEntityState::SetHPMP(int32_t hp, int32_t mp, bool adjust,
     // Update if the entity is alive or not
     if (startingHP > 0 && newHP == 0) {
       mAlive = false;
-      auto now = ChannelServer::GetServerTime();
-      if (GetEntityType() == EntityType_t::PARTNER_DEMON) {
-        // Set a status that will lock out targeted revival skills
-        // for one second, preventing a permanent death bug.
-        SetStatusTimes(STATUS_WAITING, now + 1000000ULL);
-      }
-      Stop(now);
+      Stop(ChannelServer::GetServerTime());
       result = true;
     } else if (startingHP == 0 && newHP > 0) {
       mAlive = true;

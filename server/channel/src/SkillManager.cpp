@@ -1551,7 +1551,6 @@ int8_t SkillManager::ValidateSkillTarget(
 
           if (targetClientState->GetDemonState() == target &&
               !targetLivingStateInvalid) {
-            target->ExpireStatusTimes(ChannelServer::GetServerTime());
             targetLivingStateInvalid =
                 target->StatusTimesKeyExists(STATUS_WAITING);
           }
@@ -3175,13 +3174,6 @@ bool SkillManager::ProcessSkillResult(
       effectiveTargets.remove_if(
           [effectiveSource, deadOnly,
            now](const std::shared_ptr<ActiveEntityState>& target) {
-            // Expire target status times if it's a partner demon to remove any
-            // revival lockouts.
-            if (deadOnly &&
-                target->GetEntityType() == EntityType_t::PARTNER_DEMON) {
-              target->ExpireStatusTimes(now);
-            }
-
             return !effectiveSource->SameFaction(target) ||
                    (deadOnly ==
                     (target->IsAlive() &&
@@ -6007,6 +5999,18 @@ void SkillManager::HandleKills(
         int32_t adjust = (int32_t)sourceDemonFType->GetDeath();
         adjusts.push_back(
             std::pair<int32_t, int32_t>(entity->GetEntityID(), adjust));
+
+        auto expireTime =
+            (channel::ServerTime)(ChannelServer::GetServerTime() + 1250000ULL);
+        entity->SetStatusTimes(STATUS_WAITING, expireTime);
+        auto server = mServer.lock();
+        server->ScheduleWork(
+            expireTime,
+            [](ActiveEntityState* pEntity,
+               const channel::ServerTime pExpireTime) {
+              pEntity->ExpireStatusTimes(pExpireTime);
+            },
+            entity, expireTime);
       }
 
       if (entity != source &&

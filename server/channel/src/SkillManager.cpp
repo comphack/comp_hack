@@ -1543,19 +1543,18 @@ int8_t SkillManager::ValidateSkillTarget(
           // revival from others, or if it is a partner demon outside of
           // demon-only instances and it has been dead for less than
           // the revival lockout timer.
-          if (targetClientState->GetDemonState() == target) {
-            target->ExpireStatusTimes(ChannelServer::GetServerTime());
-          }
-
           targetInvalid =
               (!targetClientState->GetAcceptRevival() &&
                (targetClientState->GetCharacterState() == target ||
                 (targetClientState->GetDemonState() == target &&
                  zone->GetInstanceType() == InstanceType_t::DEMON_ONLY)));
 
-          targetLivingStateInvalid &=
-              (targetClientState->GetDemonState() == target &&
-               target->StatusTimesKeyExists(STATUS_WAITING));
+          if (targetClientState->GetDemonState() == target &&
+              !targetLivingStateInvalid) {
+            target->ExpireStatusTimes(ChannelServer::GetServerTime());
+            targetLivingStateInvalid =
+                target->StatusTimesKeyExists(STATUS_WAITING);
+          }
         }
       }
       break;

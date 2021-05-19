@@ -1544,10 +1544,10 @@ int8_t SkillManager::ValidateSkillTarget(
           // demon-only instances and it has been dead for less than
           // the revival lockout timer.
           targetInvalid =
-              (!targetClientState->GetAcceptRevival() &&
-               (targetClientState->GetCharacterState() == target ||
-                (targetClientState->GetDemonState() == target &&
-                 zone->GetInstanceType() == InstanceType_t::DEMON_ONLY)));
+              !targetClientState->GetAcceptRevival() &&
+              (targetClientState->GetCharacterState() == target ||
+               (targetClientState->GetDemonState() == target &&
+                zone->GetInstanceType() == InstanceType_t::DEMON_ONLY));
 
           if (targetClientState->GetDemonState() == target &&
               !targetLivingStateInvalid) {
@@ -3172,8 +3172,8 @@ bool SkillManager::ProcessSkillResult(
 
       auto now = ChannelServer::GetServerTime();
       effectiveTargets.remove_if(
-          [effectiveSource, deadOnly,
-           now](const std::shared_ptr<ActiveEntityState>& target) {
+          [effectiveSource,
+           deadOnly](const std::shared_ptr<ActiveEntityState>& target) {
             return !effectiveSource->SameFaction(target) ||
                    (deadOnly ==
                     (target->IsAlive() &&

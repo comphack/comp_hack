@@ -1539,11 +1539,23 @@ int8_t SkillManager::ValidateSkillTarget(
             ClientState::GetEntityClientState(target->GetEntityID());
         auto zone = target->GetZone();
         if (isRevive && targetClientState && zone) {
+          // Target is invalid if either the controlling player has not accepted
+          // revival from others, or if it is a partner demon outside of
+          // demon-only instances and it has been dead for less than
+          // the revival lockout timer.
+          if (targetClientState->GetDemonState() == target) {
+            target->ExpireStatusTimes(ChannelServer::GetServerTime());
+          }
+
           targetInvalid =
-              !targetClientState->GetAcceptRevival() &&
-              (targetClientState->GetCharacterState() == target ||
-               (targetClientState->GetDemonState() == target &&
-                zone->GetInstanceType() == InstanceType_t::DEMON_ONLY));
+              (!targetClientState->GetAcceptRevival() &&
+               (targetClientState->GetCharacterState() == target ||
+                (targetClientState->GetDemonState() == target &&
+                 zone->GetInstanceType() == InstanceType_t::DEMON_ONLY)));
+
+          targetLivingStateInvalid &=
+              (targetClientState->GetDemonState() == target &&
+               target->StatusTimesKeyExists(STATUS_WAITING));
         }
       }
       break;
@@ -3159,11 +3171,24 @@ bool SkillManager::ProcessSkillResult(
       bool deadOnly =
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY ||
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY;
+
+      auto now = ChannelServer::GetServerTime();
       effectiveTargets.remove_if(
-          [effectiveSource,
-           deadOnly](const std::shared_ptr<ActiveEntityState>& target) {
+          [effectiveSource, deadOnly,
+           now](const std::shared_ptr<ActiveEntityState>& target) {
+            // Expire target status times if it's a partner demon to remove any
+            // revival lockouts.
+            if (deadOnly &&
+                target->GetEntityType() == EntityType_t::PARTNER_DEMON) {
+              target->ExpireStatusTimes(now);
+            }
+
             return !effectiveSource->SameFaction(target) ||
-                   (deadOnly == target->IsAlive());
+                   (deadOnly ==
+                    (target->IsAlive() &&
+                     (target->GetEntityType() == EntityType_t::PARTNER_DEMON
+                          ? !target->StatusTimesKeyExists(STATUS_WAITING)
+                          : true)));
           });
 
       // Work around CAVE setting a validtype of PARTY while setting a

@@ -35,6 +35,10 @@
 #include <ServerConstants.h>
 #include <ServerDataManager.h>
 
+#ifndef EXOTIC_PLATFORM
+#include "BaseScriptEngine.h"
+#endif  // !EXOTIC_PLATFORM
+
 // Standard C++11 Includes
 #include <math.h>
 
@@ -118,6 +122,25 @@
 #include "ZoneManager.h"
 
 using namespace channel;
+namespace libcomp {
+template <>
+BaseScriptEngine& BaseScriptEngine::Using<EventManager>() {
+  if (!BindingExists("EventManager")) {
+    Sqrat::Class<EventManager> binding(mVM, "EventManager");
+    Bind<EventManager>("EventManager", binding);
+
+    // These are needed for some methods.
+    Using<Zone>();
+
+    binding.Func<bool (EventManager::*)(
+        const std::shared_ptr<ChannelClientConnection>&, const libcomp::String&,
+        int32_t, const std::shared_ptr<Zone>&, EventOptions)>(
+        "HandleEventWithoutContext", &EventManager::HandleEvent);
+  }
+
+  return *this;
+}
+}  // namespace libcomp
 
 const uint16_t EVENT_COMPARE_NUMERIC = (uint16_t)EventCompareMode::EQUAL |
                                        (uint16_t)EventCompareMode::LT |

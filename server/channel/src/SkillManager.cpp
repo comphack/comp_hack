@@ -3170,7 +3170,6 @@ bool SkillManager::ProcessSkillResult(
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY ||
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY;
 
-      auto now = ChannelServer::GetServerTime();
       effectiveTargets.remove_if(
           [effectiveSource,
            deadOnly](const std::shared_ptr<ActiveEntityState>& target) {

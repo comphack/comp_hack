@@ -6106,12 +6106,12 @@ void SkillManager::HandleKills(
     for (auto eState : enemiesKilled) {
       aiManager->UpdateAggro(eState, -1);
 
-      zone->RemoveEntity(eState->GetEntityID(), 1);
       levels.push_back(eState->GetLevel());
 
       if (eState->GetEnemyBase()->GetCanRevive()) {
         canRevive.insert(eState->GetEntityID());
       } else {
+        zone->RemoveEntity(eState->GetEntityID(), 1);
         removeIDs.push_back(eState->GetEntityID());
       }
     }

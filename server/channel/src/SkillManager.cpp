@@ -6807,7 +6807,7 @@ void SkillManager::HandleRevives(
 
   for (auto entity : revived) {
     libcomp::Packet p;
-    if (characterManager->GetEntityRevivalPacket(p, entity, 3)) {
+    if (characterManager->GetEntityRevivalPacket(p, entity, 2)) {
       zoneManager->BroadcastPacket(zone, p);
     }
 

@@ -3170,15 +3170,45 @@ bool SkillManager::ProcessSkillResult(
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY ||
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY;
 
+      bool isRevive = false;
+      switch (skillData->GetDamage()->GetBattleDamage()->GetFormula()) {
+        case objects::MiBattleDamageData::Formula_t::HEAL_NORMAL:
+        case objects::MiBattleDamageData::Formula_t::HEAL_STATIC:
+        case objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT:
+          isRevive = true;
+          break;
+        default:
+          break;
+      }
+
       effectiveTargets.remove_if(
-          [effectiveSource,
-           deadOnly](const std::shared_ptr<ActiveEntityState>& target) {
+          [effectiveSource, deadOnly, isRevive,
+           zone](const std::shared_ptr<ActiveEntityState>& target) {
+            bool targetInvalidForDeadOnlySkills = target->IsAlive();
+            auto targetClientState =
+                ClientState::GetEntityClientState(target->GetEntityID());
+
+            if (isRevive && targetClientState && zone &&
+                !targetInvalidForDeadOnlySkills) {
+              // Target is invalid if either the controlling player has not
+              // accepted revival from others, or if it is a partner demon
+              // outside of demon-only instances and it has been dead for less
+              // than the revival lockout timer.
+              targetInvalidForDeadOnlySkills =
+                  !targetClientState->GetAcceptRevival() &&
+                  (targetClientState->GetCharacterState() == target ||
+                   (targetClientState->GetDemonState() == target &&
+                    zone->GetInstanceType() == InstanceType_t::DEMON_ONLY));
+
+              if (targetClientState->GetDemonState() == target &&
+                  !targetInvalidForDeadOnlySkills) {
+                targetInvalidForDeadOnlySkills =
+                    target->StatusTimesKeyExists(STATUS_WAITING);
+              }
+            }
+
             return !effectiveSource->SameFaction(target) ||
-                   (deadOnly ==
-                    (target->IsAlive() &&
-                     (target->GetEntityType() == EntityType_t::PARTNER_DEMON
-                          ? !target->StatusTimesKeyExists(STATUS_WAITING)
-                          : true)));
+                   (deadOnly == !targetInvalidForDeadOnlySkills);
           });
 
       // Work around CAVE setting a validtype of PARTY while setting a

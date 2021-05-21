@@ -3208,7 +3208,7 @@ bool SkillManager::ProcessSkillResult(
             }
 
             return !effectiveSource->SameFaction(target) ||
-                   (deadOnly == !targetInvalidForDeadOnlySkills);
+                   (deadOnly == targetInvalidForDeadOnlySkills);
           });
 
       // Work around CAVE setting a validtype of PARTY while setting a
@@ -6807,7 +6807,7 @@ void SkillManager::HandleRevives(
 
   for (auto entity : revived) {
     libcomp::Packet p;
-    if (characterManager->GetEntityRevivalPacket(p, entity, 2)) {
+    if (characterManager->GetEntityRevivalPacket(p, entity, 6)) {
       zoneManager->BroadcastPacket(zone, p);
     }
 

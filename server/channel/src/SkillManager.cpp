@@ -6032,7 +6032,6 @@ void SkillManager::HandleKills(
         auto expireTime =
             (channel::ServerTime)(ChannelServer::GetServerTime() + 1250000ULL);
         entity->SetStatusTimes(STATUS_WAITING, expireTime);
-        auto server = mServer.lock();
         server->ScheduleWork(
             expireTime,
             [](std::shared_ptr<ActiveEntityState> pEntity,

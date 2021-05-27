@@ -35,10 +35,6 @@
 #include <ServerConstants.h>
 #include <ServerDataManager.h>
 
-#ifndef EXOTIC_PLATFORM
-#include "BaseScriptEngine.h"
-#endif  // !EXOTIC_PLATFORM
-
 // Standard C++11 Includes
 #include <math.h>
 
@@ -122,20 +118,18 @@
 #include "ZoneManager.h"
 
 using namespace channel;
+
 namespace libcomp {
 template <>
 BaseScriptEngine& BaseScriptEngine::Using<EventManager>() {
-  if (!BindingExists("EventManager")) {
-    Sqrat::Class<EventManager> binding(mVM, "EventManager");
+  if (!BindingExists("EventManager"), true) {
+    Sqrat::Class<EventManager, Sqrat::NoConstructor<EventManager>> binding(
+        mVM, "EventManager");
+
+    binding.Func("HandleEventForClientByCharacter",
+                 &EventManager::HandleEventForClientByCharacter);
+
     Bind<EventManager>("EventManager", binding);
-
-    // These are needed for some methods.
-    Using<Zone>();
-
-    binding.Func<bool (EventManager::*)(
-        const std::shared_ptr<ChannelClientConnection>&, const libcomp::String&,
-        int32_t, const std::shared_ptr<Zone>&, EventOptions)>(
-        "HandleEventWithoutContext", &EventManager::HandleEvent);
   }
 
   return *this;
@@ -171,6 +165,36 @@ bool EventManager::HandleEvent(
                : zone;
     ctx.AutoOnly = options.AutoOnly || !client;
     ctx.TransformScriptParams = options.TransformScriptParams;
+
+    return HandleEvent(ctx);
+  }
+
+  return false;
+}
+
+bool EventManager::HandleEventForClientByCharacter(
+    const std::shared_ptr<CharacterState>& cState,
+    const libcomp::String& eventID, int32_t sourceEntityID,
+    uint32_t actionGroupID, bool autoOnly, bool noInterrupt) {
+  auto client = cState
+                    ? mServer.lock()->GetManagerConnection()->GetEntityClient(
+                          cState->GetEntityID(), false)
+                    : nullptr;
+
+  if (!client) {
+    return false;
+  }
+
+  auto instance = PrepareEvent(eventID, sourceEntityID);
+  if (instance) {
+    instance->SetActionGroupID(actionGroupID);
+    instance->SetNoInterrupt(noInterrupt);
+
+    EventContext ctx;
+    ctx.Client = client;
+    ctx.EventInstance = instance;
+    ctx.CurrentZone = cState->GetZone();
+    ctx.AutoOnly = autoOnly;
 
     return HandleEvent(ctx);
   }

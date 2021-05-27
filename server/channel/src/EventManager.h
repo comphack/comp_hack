@@ -115,6 +115,27 @@ class EventManager {
                    EventOptions options = {});
 
   /**
+   * Handle a new event based upon the supplied event ID, relative
+   * to an optional entity, with the client set based on a supplied
+   * CharacterState (used for scripting)
+   * @param cState Pointer to the cState of the client the event affects
+   * @param eventID ID of the event to handle
+   * @param sourceEntityID Optional source of an event to focus on
+   * @param actionGroupID Optional integer for actionGroupID, used since
+   * Sqrat cannot bind to structs
+   * @param autoOnly Optional boolean to determine if the event should be
+   * auto-only, used since Sqrat cannot bind to structs
+   * @param noInterrupt Optional boolean to determine if the event is
+   * interruptable, used since Sqrat cannot bind to structs
+   * @return true on success, false on failure
+   */
+  bool HandleEventForClientByCharacter(
+      const std::shared_ptr<CharacterState>& cState,
+      const libcomp::String& eventID, int32_t sourceEntityID,
+      uint32_t actionGroupID = 0, bool autoOnly = false,
+      bool noInterrupt = false);
+
+  /**
    * Prepare a new event based upon the supplied ID, relative to an
    * optional entity
    * @param eventID ID of the event to handle

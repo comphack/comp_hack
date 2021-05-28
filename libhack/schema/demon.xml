@@ -15,6 +15,7 @@
         <member type="s32" name="BenefitGauge"/>
         <member type="u16" name="ForceStackPending"/>
         <member type="bool" name="HasQuest"/>
+        <member type="u32" name="DemonTypePreMitama" default="0"/>
 
         <!-- Collections -->
         <member type="list" name="AcquiredSkills">

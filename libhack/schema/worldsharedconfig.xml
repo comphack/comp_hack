@@ -9,6 +9,10 @@
         <member type="bool" name="MoveCorrection" default="true"/>
         <member type="bool" name="AutoCompressCurrency"/>
         <member type="bool" name="NRAStatusNull" default="true"/>
+        <member type="enum" name="RebirthExtractionMode" default="REVERT_TO_BASE">
+            <value>REVERT_TO_BASE</value>
+            <value>PRESERVE_VARIANTS</value>
+        </member>
         <member type="bool" name="DeathPenaltyDisabled"/>
         <member type="bool" name="DeadTokuseiDisabled"/>
         <member type="float" name="DropLuckScalingCap" default="-1.0"/>

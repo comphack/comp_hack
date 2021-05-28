@@ -575,6 +575,10 @@ class ServerConstants {
     /// Item IDs that allow creation of VA items from a normal one
     std::set<uint32_t> VA_ADD_ITEMS;
 
+    /// Demon IDs that may not be reverted back to during Rebirth Extraction
+    /// if using the PRESERVE_VARIANTS RebirthExtractionMode
+    std::set<uint32_t> PROHIBITED_EXTRACTION_VARIANT_REVERSIONS;
+
     //
     // API Admin Levels
     //

@@ -1158,6 +1158,33 @@ bool ServerConstants::Initialize(const String& filePath) {
     return false;
   }
 
+  complexIter =
+      complexConstants.find("PROHIBITED_EXTRACTION_VARIANT_REVERSIONS");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg(
+          "Failed to load PROHIBITED_EXTRACTION_VARIANT_REVERSIONS\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        uint32_t entry = 0;
+        if (LoadInteger(elemStr.C(), entry)) {
+          sConstants.PROHIBITED_EXTRACTION_VARIANT_REVERSIONS.insert(entry);
+        } else {
+          LogServerConstantsErrorMsg(
+              "Failed to load an element in "
+              "PROHIBITED_EXTRACTION_VARIANT_REVERSIONS\n");
+          return false;
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg(
+        "PROHIBITED_EXTRACTION_VARIANT_REVERSIONS not found\n");
+    return false;
+  }
+
   //
   // API Admin Levels
   //

@@ -46,6 +46,7 @@
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "FusionTables.h"
+#include "WorldSharedConfig.h"
 
 using namespace channel;
 
@@ -107,6 +108,29 @@ void ExtractReunionPoints(
     }
   }
 
+  // Mitama'd types reset all mitama information. If PRESERVE_VARIANTS is set,
+  // they revert to their original variant if that information is available
+  // and that variant is not on the prohibited reversion list.
+  uint32_t baseDemonType = demon->GetDemonTypePreMitama();
+
+  if ((server->GetWorldSharedConfig()->GetRebirthExtractionMode() ==
+       objects::WorldSharedConfig::RebirthExtractionMode_t::
+           PRESERVE_VARIANTS) &&
+      baseDemonType) {
+    for (uint32_t prohibitedDemonReversionID :
+         SVR_CONST.PROHIBITED_EXTRACTION_VARIANT_REVERSIONS) {
+      if (baseDemonType == prohibitedDemonReversionID) {
+        // Variant prohibited from being reverted to, revert the
+        // demon back to the base type.
+        baseDemonType = demonData->GetUnionData()->GetBaseDemonID();
+        break;
+      }
+    }
+  } else {
+    // Revert to base type.
+    baseDemonType = demonData->GetUnionData()->GetBaseDemonID();
+  }
+
   libcomp::Packet reply;
   reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_REUNION_EXTRACT);
   reply.WriteS32Little(0);  // Unknown
@@ -114,8 +138,7 @@ void ExtractReunionPoints(
   reply.WriteS32Little(rPoints);
   reply.WriteS32Little(mPoints);
   reply.WriteU32Little(demonData ? demonData->GetBasic()->GetID() : 0);
-  reply.WriteU32Little(demonData ? demonData->GetUnionData()->GetBaseDemonID()
-                                 : 0);
+  reply.WriteU32Little((demonData && baseDemonType) ? baseDemonType : 0);
 
   client->QueuePacket(reply);
 
@@ -142,9 +165,6 @@ void ExtractReunionPoints(
       demon->SetReunion(i, 0);
     }
 
-    // Mitama'd types revert to their base demon type and reset all mitama
-    // information
-    uint32_t baseDemonType = demonData->GetUnionData()->GetBaseDemonID();
     if (characterManager->IsMitamaDemon(demonData) && baseDemonType) {
       uint32_t currentType = demon->GetType();
 
@@ -154,6 +174,7 @@ void ExtractReunionPoints(
       demon->SetType(baseDemonType);
       demon->SetMitamaRank(0);
       demon->SetMitamaType(0);
+      demon->SetDemonTypePreMitama(0);
 
       for (size_t i = 0; i < demon->MitamaReunionCount(); i++) {
         demon->SetMitamaReunion(i, 0);

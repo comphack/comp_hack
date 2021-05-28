@@ -1547,6 +1547,10 @@
         <element>21937</element>
         <element>21938</element>
     </constant>
+    <constant name="PROHIBITED_EXTRACTION_VARIANT_REVERSIONS">
+        <!-- Format: demon ID -->
+        <element>0</element>
+    </constant>
 
     <!-- API Admin Levels -->
     <constant name="API_ADMIN_LVL_CREATE_PROMO">300</constant>

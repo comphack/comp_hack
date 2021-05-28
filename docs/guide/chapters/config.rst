@@ -1173,11 +1173,12 @@ If set to REVERT_TO_BASE, the usual behavior of extracting Rebirth Points
 using a syringe reverts the selected demon back to its base variant. If
 set to PRESERVE_VARIANTS, any demon which has undergone Mitama Fusion since
 this feature was introduced will instead be reverted to the variant it was
-prior to that fusion, provided that said variant is not one of the special
-reversions listed in SPECIAL_REBIRTH_EXTRACTIONS within the constants.xml
-file. Demons that underwent Mitama Fusion prior to this feature's existence
-will always be reverted back to their base variant, if not a special
-extraction.
+prior to that fusion. Demons that underwent Mitama Fusion prior to this
+feature's existence will be reverted back to their base variant.
+
+The behavior of this setting can be overridden on a case-by-case basis
+by specifying SPECIAL_REBIRTH_EXTRACTIONS within the constants.xml
+file.
 
 Example
 """""""

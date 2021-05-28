@@ -110,24 +110,25 @@ void ExtractReunionPoints(
 
   // Mitama'd types reset all mitama information. If PRESERVE_VARIANTS is set,
   // they revert to their original variant if that information is available
-  // and that variant is not on the prohibited reversion list.
-  uint32_t baseDemonType = demon->GetDemonTypePreMitama();
+  // and that extraction is not special.
+  uint32_t baseDemonType =
+      (server->GetWorldSharedConfig()->GetRebirthExtractionMode() ==
+       objects::WorldSharedConfig::RebirthExtractionMode_t::PRESERVE_VARIANTS)
+          ? demon->GetDemonTypePreMitama()
+          : 0;
 
-  if ((server->GetWorldSharedConfig()->GetRebirthExtractionMode() ==
-       objects::WorldSharedConfig::RebirthExtractionMode_t::
-           PRESERVE_VARIANTS) &&
-      baseDemonType) {
-    for (uint32_t prohibitedDemonReversionID :
-         SVR_CONST.PROHIBITED_EXTRACTION_VARIANT_REVERSIONS) {
-      if (baseDemonType == prohibitedDemonReversionID) {
-        // Variant prohibited from being reverted to, revert the
-        // demon back to the base type.
-        baseDemonType = demonData->GetUnionData()->GetBaseDemonID();
-        break;
-      }
-    }
-  } else {
-    // Revert to base type.
+  // Process special extractions.
+  auto specialExtractionIterator =
+      SVR_CONST.SPECIAL_REBIRTH_EXTRACTIONS.find(demon->GetType());
+  if (specialExtractionIterator !=
+      SVR_CONST.SPECIAL_REBIRTH_EXTRACTIONS.end()) {
+    baseDemonType = specialExtractionIterator->second;
+  }
+
+  // Check that the given extraction actually exists, just in case. If
+  // we are still at no variant, use the normal version of the demon.
+  auto definitionManager = server->GetDefinitionManager();
+  if (!baseDemonType || !definitionManager->GetDevilData(baseDemonType)) {
     baseDemonType = demonData->GetUnionData()->GetBaseDemonID();
   }
 
@@ -168,7 +169,6 @@ void ExtractReunionPoints(
     if (characterManager->IsMitamaDemon(demonData) && baseDemonType) {
       uint32_t currentType = demon->GetType();
 
-      auto definitionManager = server->GetDefinitionManager();
       newDemonData = definitionManager->GetDevilData(baseDemonType);
 
       demon->SetType(baseDemonType);

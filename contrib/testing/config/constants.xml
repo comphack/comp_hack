@@ -1547,9 +1547,12 @@
         <element>21937</element>
         <element>21938</element>
     </constant>
-    <constant name="PROHIBITED_EXTRACTION_VARIANT_REVERSIONS">
-        <!-- Format: demon ID -->
-        <element>0</element>
+    <constant name="SPECIAL_REBIRTH_EXTRACTIONS">
+        <!-- Format: extracted demon ID => result demon ID -->
+        <pair>
+            <key>0</key>
+            <value>0</value>
+        </pair>
     </constant>
 
     <!-- API Admin Levels -->

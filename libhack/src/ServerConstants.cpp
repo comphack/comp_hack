@@ -1158,30 +1158,17 @@ bool ServerConstants::Initialize(const String& filePath) {
     return false;
   }
 
-  complexIter =
-      complexConstants.find("PROHIBITED_EXTRACTION_VARIANT_REVERSIONS");
+  complexIter = complexConstants.find("SPECIAL_REBIRTH_EXTRACTIONS");
   if (complexIter != complexConstants.end()) {
-    std::list<String> strList;
-    if (!LoadStringList(complexIter->second, strList)) {
+    std::unordered_map<std::string, std::string> map;
+    if (!LoadKeyValueStrings(complexIter->second, map) ||
+        !LoadIntegerMap(map, sConstants.SPECIAL_REBIRTH_EXTRACTIONS)) {
       LogServerConstantsErrorMsg(
-          "Failed to load PROHIBITED_EXTRACTION_VARIANT_REVERSIONS\n");
+          "Failed to load SPECIAL_REBIRTH_EXTRACTIONS\n");
       return false;
-    } else {
-      for (auto elemStr : strList) {
-        uint32_t entry = 0;
-        if (LoadInteger(elemStr.C(), entry)) {
-          sConstants.PROHIBITED_EXTRACTION_VARIANT_REVERSIONS.insert(entry);
-        } else {
-          LogServerConstantsErrorMsg(
-              "Failed to load an element in "
-              "PROHIBITED_EXTRACTION_VARIANT_REVERSIONS\n");
-          return false;
-        }
-      }
     }
   } else {
-    LogServerConstantsErrorMsg(
-        "PROHIBITED_EXTRACTION_VARIANT_REVERSIONS not found\n");
+    LogServerConstantsErrorMsg("SPECIAL_REBIRTH_EXTRACTIONS not found\n");
     return false;
   }
 

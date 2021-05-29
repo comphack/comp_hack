@@ -1554,6 +1554,10 @@
             <value>0</value>
         </pair>
     </constant>
+    <constant name="REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES">
+        <!-- Format: prohibited demon feature's skillID -->
+        <element>0</element>
+    </constant>
 
     <!-- API Admin Levels -->
     <constant name="API_ADMIN_LVL_CREATE_PROMO">300</constant>

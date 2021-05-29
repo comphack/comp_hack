@@ -9,9 +9,10 @@
         <member type="bool" name="MoveCorrection" default="true"/>
         <member type="bool" name="AutoCompressCurrency"/>
         <member type="bool" name="NRAStatusNull" default="true"/>
-        <member type="enum" name="RebirthExtractionMode" default="REVERT_TO_BASE">
-            <value>REVERT_TO_BASE</value>
-            <value>PRESERVE_VARIANTS</value>
+        <member type="enum" name="RebirthExtractionMode" default="REVERT_MITAMA_DEMONS_TO_BASE">
+            <value>REVERT_MITAMA_DEMONS_TO_BASE</value>
+            <value>REVERT_ALL_DEMONS_TO_BASE</value>
+            <value>PRESERVE_MITAMA_DEMON_VARIANTS</value>
         </member>
         <member type="bool" name="DeathPenaltyDisabled"/>
         <member type="bool" name="DeadTokuseiDisabled"/>

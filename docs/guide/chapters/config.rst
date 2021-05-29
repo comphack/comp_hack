@@ -1167,14 +1167,27 @@ RebirthExtractionMode
 
 **Type:** enumeration
 
-**Default:** REVERT_TO_BASE
+**Default:** REVERT_MITAMA_DEMONS_TO_BASE
 
-If set to REVERT_TO_BASE, the usual behavior of extracting Rebirth Points
-using a syringe reverts the selected demon back to its base variant. If
-set to PRESERVE_VARIANTS, any demon which has undergone Mitama Fusion since
-this feature was introduced will instead be reverted to the variant it was
-prior to that fusion. Demons that underwent Mitama Fusion prior to this
-feature's existence will be reverted back to their base variant.
+If set to REVERT_MITAMA_DEMONS_TO_BASE, the usual behavior of extracting
+Rebirth Points from a demon which underwent Mitama Fusion reverting the
+selected demon back to its base form occurs.
+
+If set to REVERT_ALL_DEMONS_TO_BASE, all demons, regardless of Mitama
+Fusion status, are reverted to their base form after Rebirth Point
+Extraction.
+
+If set to PRESERVE_MITAMA_DEMON_VARIANTS, any demon which has undergone
+Mitama Fusion since this feature was introduced will instead be reverted
+to the variant it was prior to that fusion. However, if one of the
+features of the post-extraction result demon is listed within the
+REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES within the
+constants.xml file, the demon will be reverted back to its
+base form.
+
+Demons that underwent Mitama Fusion prior to this feature's existence
+will be reverted back to their base variant, as the information needed
+to determine their pre-Mitama form does not exist.
 
 The behavior of this setting can be overridden on a case-by-case basis
 by specifying SPECIAL_REBIRTH_EXTRACTIONS within the constants.xml
@@ -1184,7 +1197,7 @@ Example
 """""""
 
 .. code-block:: xml
-    <member name="RebirthExtractionMode">PRESERVE_VARIANTS</member>
+    <member name="RebirthExtractionMode">PRESERVE_MITAMA_DEMON_VARIANTS</member>
 
 
 DeathPenaltyDisabled

@@ -1159,6 +1159,35 @@ bool ServerConstants::Initialize(const String& filePath) {
   }
 
   complexIter = complexConstants.find(
+      "REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg(
+          "Failed to load "
+          "REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        uint32_t entry = 0;
+        if (LoadInteger(elemStr.C(), entry)) {
+          sConstants.REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES
+              .insert(entry);
+        } else {
+          LogServerConstantsErrorMsg(
+              "Failed to load an element in "
+              "REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES\n");
+          return false;
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg(
+        "REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find(
       "REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES");
   if (complexIter != complexConstants.end()) {
     std::list<String> strList;

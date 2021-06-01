@@ -575,6 +575,10 @@ class ServerConstants {
     /// Item IDs that allow creation of VA items from a normal one
     std::set<uint32_t> VA_ADD_ITEMS;
 
+    /// Skill IDs of prohibited features in pre-Mitama Rebirth Extraction
+    /// results
+    std::set<uint32_t> REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES;
+
     /// Skill IDs of prohibited features in Mitama Rebirth Extraction results
     std::set<uint32_t> REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES;
 

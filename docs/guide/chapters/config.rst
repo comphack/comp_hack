@@ -1185,6 +1185,11 @@ REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES within the
 constants.xml file, the demon will be reverted back to its
 base form.
 
+Server owners who wish to revert non-Mitama demons with certain features
+back to their base form may list those features in the new server constant
+REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES in order
+to accomplish this.
+
 Demons that underwent Mitama Fusion prior to this feature's existence
 will be reverted back to their base variant, as the information needed
 to determine their pre-Mitama form does not exist.

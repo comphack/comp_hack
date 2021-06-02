@@ -135,7 +135,7 @@ void ExtractReunionPoints(
     // being extracted results in the Mitama Extraction feature
     // exclusion list being checked, while non-Mitama Demons
     // get their exclusion list checked.
-    bool prohibitedReversion = false;
+    bool prohibitedVariantReversion = false;
     std::shared_ptr<objects::MiDevilData> checkedDemonData = nullptr;
     std::set<uint32_t> prohibitedFeatures = {};
 
@@ -161,14 +161,14 @@ void ExtractReunionPoints(
         if (traitID) {
           for (uint32_t prohibitedFeature : prohibitedFeatures) {
             if (traitID == prohibitedFeature) {
-              prohibitedReversion = true;
+              prohibitedVariantReversion = true;
               break;
             }
           }
         }
 
-        if (prohibitedReversion) {
-          revertDemonType = 0;
+        if (prohibitedVariantReversion) {
+          revertDemonType = baseType;
           break;
         }
       }

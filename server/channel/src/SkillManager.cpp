@@ -10399,9 +10399,9 @@ bool SkillManager::MinionSpawn(
       return false;
     }
 
-    uint32_t spotID = (uint32_t)params[3];
+    uint32_t spotID = libcomp::Randomizer::GetEntry(slg->GetSpotIDs());
     if (spotID) {
-      // Check the supplied spot's validity.
+      // Check the supplied spot's validity, just in case.
       float xCoord = 0.f;
       float yCoord = 0.f;
       float rot = 0.f;

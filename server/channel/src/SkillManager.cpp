@@ -1218,8 +1218,9 @@ bool SkillManager::SkillRestricted(
       // Allow if its a digitalized demon skill
       auto cState = std::dynamic_pointer_cast<CharacterState>(source);
       auto dgState = cState ? cState->GetDigitalizeState() : nullptr;
-      isDigiSkill = available = dgState && dgState->ActiveSkillsContains(
-                                               skillData->GetCommon()->GetID());
+      isDigiSkill = available =
+          dgState &&
+          dgState->ActiveSkillsContains(skillData->GetCommon()->GetID());
     }
 
     if (!available) {
@@ -1236,8 +1237,9 @@ bool SkillManager::SkillRestricted(
             auto itemDef = mServer.lock()->GetDefinitionManager()->GetItemData(
                 item->GetType());
 
-            isUseSkill = itemDef && itemDef->GetPossession()->GetUseSkill() ==
-                                        skillData->GetCommon()->GetID();
+            isUseSkill = itemDef &&
+                         itemDef->GetPossession()->GetUseSkill() ==
+                             skillData->GetCommon()->GetID();
           }
         }
       }
@@ -1319,8 +1321,8 @@ bool SkillManager::SkillRestricted(
     }
 
     // "No weapon" counts as close range
-    bool longRange =
-        weaponDef && weaponDef->GetBasic()->GetWeaponType() ==
+    bool longRange = weaponDef &&
+                     weaponDef->GetBasic()->GetWeaponType() ==
                          objects::MiItemBasicData::WeaponType_t::LONG_RANGE;
 
     // Check digi or normal restriction depending on if the skill
@@ -1439,8 +1441,9 @@ int8_t SkillManager::ValidateSkillTarget(
   // Target must be ready (ignore display state for skills targeting
   // hidden sources)
   if (!target ||
-      !target->Ready(target == source && source->GetDisplayState() ==
-                                             ActiveDisplayState_t::ACTIVE)) {
+      !target->Ready(target == source &&
+                     source->GetDisplayState() ==
+                         ActiveDisplayState_t::ACTIVE)) {
     return (int8_t)SkillErrorCodes_t::SILENT_FAIL;
   }
 
@@ -1761,8 +1764,9 @@ bool SkillManager::PrepareFusionSkill(
 
   // If the executing skill is not the expected type, fail now
   auto skillData = definitionManager->GetSkillData(skillID);
-  if (!skillData || skillData->GetDamage()->GetFunctionID() !=
-                        SVR_CONST.SKILL_DEMON_FUSION_EXECUTE) {
+  if (!skillData ||
+      skillData->GetDamage()->GetFunctionID() !=
+          SVR_CONST.SKILL_DEMON_FUSION_EXECUTE) {
     SendFailure(cState, skillID, client,
                 (uint8_t)SkillErrorCodes_t::ACTIVATION_FAILURE);
     return false;
@@ -2238,14 +2242,14 @@ bool SkillManager::CompleteSkillExecution(
       activated->SetHitTime(delay);
 
       auto server = mServer.lock();
-      server->ScheduleWork(
-          delay,
-          [](std::shared_ptr<ChannelServer> pServer,
-             std::shared_ptr<ProcessingSkill> prSkill,
-             std::shared_ptr<SkillExecutionContext> pCtx) {
-            pServer->GetSkillManager()->ProjectileHit(prSkill, pCtx);
-          },
-          server, pSkill, ctx);
+      server->ScheduleWork(delay,
+                           [](std::shared_ptr<ChannelServer> pServer,
+                              std::shared_ptr<ProcessingSkill> prSkill,
+                              std::shared_ptr<SkillExecutionContext> pCtx) {
+                             pServer->GetSkillManager()->ProjectileHit(prSkill,
+                                                                       pCtx);
+                           },
+                           server, pSkill, ctx);
     } else {
       activated->SetHitTime(syncTime);
 
@@ -3159,12 +3163,11 @@ bool SkillManager::ProcessSkillResult(
       bool deadOnly =
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY ||
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY;
-      effectiveTargets.remove_if(
-          [effectiveSource,
-           deadOnly](const std::shared_ptr<ActiveEntityState>& target) {
-            return !effectiveSource->SameFaction(target) ||
-                   (deadOnly == target->IsAlive());
-          });
+      effectiveTargets.remove_if([effectiveSource, deadOnly](
+          const std::shared_ptr<ActiveEntityState>& target) {
+        return !effectiveSource->SameFaction(target) ||
+               (deadOnly == target->IsAlive());
+      });
 
       // Work around CAVE setting a validtype of PARTY while setting a
       // targetype of ALLY by skipping further target removal in that case
@@ -3179,14 +3182,12 @@ bool SkillManager::ProcessSkillResult(
             ClientState::GetEntityClientState(effectiveSource->GetEntityID());
         uint32_t sourcePartyID = sourceState ? sourceState->GetPartyID() : 0;
 
-        effectiveTargets.remove_if(
-            [sourceState,
-             sourcePartyID](const std::shared_ptr<ActiveEntityState>& target) {
-              auto state =
-                  ClientState::GetEntityClientState(target->GetEntityID());
-              return !state || (!sourcePartyID && state != sourceState) ||
-                     (sourcePartyID && state->GetPartyID() != sourcePartyID);
-            });
+        effectiveTargets.remove_if([sourceState, sourcePartyID](
+            const std::shared_ptr<ActiveEntityState>& target) {
+          auto state = ClientState::GetEntityClientState(target->GetEntityID());
+          return !state || (!sourcePartyID && state != sourceState) ||
+                 (sourcePartyID && state->GetPartyID() != sourcePartyID);
+        });
       }
     } break;
     case objects::MiEffectiveRangeData::ValidType_t::SOURCE:
@@ -3209,11 +3210,10 @@ bool SkillManager::ProcessSkillResult(
           }
         }
 
-        effectiveTargets.remove_if(
-            [effectiveSource,
-             otherValid](const std::shared_ptr<ActiveEntityState>& target) {
-              return target != effectiveSource && target != otherValid;
-            });
+        effectiveTargets.remove_if([effectiveSource, otherValid](
+            const std::shared_ptr<ActiveEntityState>& target) {
+          return target != effectiveSource && target != otherValid;
+        });
       }
       break;
     default:
@@ -4573,11 +4573,12 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   if (skill->EffectiveDependencyType == SkillDependencyType_t::WEAPON ||
       skill->BaseAffinity == 1) {
     auto weapon =
-        cSource ? cSource->GetEntity()
-                      ->GetEquippedItems((size_t)objects::MiItemBasicData::
-                                             EquipType_t::EQUIP_TYPE_WEAPON)
-                      .Get()
-                : nullptr;
+        cSource
+            ? cSource->GetEntity()
+                  ->GetEquippedItems((size_t)objects::MiItemBasicData::
+                                         EquipType_t::EQUIP_TYPE_WEAPON)
+                  .Get()
+            : nullptr;
     auto weaponDef =
         weapon ? definitionManager->GetItemData(weapon->GetType()) : nullptr;
 
@@ -4598,12 +4599,13 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
         if (weaponDef->GetBasic()->GetWeaponType() ==
             objects::MiItemBasicData::WeaponType_t::LONG_RANGE) {
           // If the bullet has an affinity, use that instead
-          auto bullet = cSource ? cSource->GetEntity()
-                                      ->GetEquippedItems(
-                                          (size_t)objects::MiItemBasicData::
-                                              EquipType_t::EQUIP_TYPE_BULLETS)
-                                      .Get()
-                                : nullptr;
+          auto bullet =
+              cSource
+                  ? cSource->GetEntity()
+                        ->GetEquippedItems((size_t)objects::MiItemBasicData::
+                                               EquipType_t::EQUIP_TYPE_BULLETS)
+                        .Get()
+                  : nullptr;
           auto bulletDef =
               bullet ? definitionManager->GetItemData(bullet->GetType())
                      : nullptr;
@@ -4741,8 +4743,9 @@ SkillManager::GetCalculatedState(
       // guarding too)
       auto otherSkill = eState->GetActivatedAbility();
       auto otherDef = otherSkill ? otherSkill->GetSkillData() : nullptr;
-      if (otherDef && otherDef->GetBasic()->GetActionType() ==
-                          objects::MiSkillBasicData::ActionType_t::GUARD) {
+      if (otherDef &&
+          otherDef->GetBasic()->GetActionType() ==
+              objects::MiSkillBasicData::ActionType_t::GUARD) {
         contextSkill = otherDef;
       }
     }
@@ -5924,8 +5927,7 @@ void SkillManager::HandleKills(
   std::list<std::shared_ptr<ActiveEntityState>> partnerDemonsKilled;
   std::list<std::shared_ptr<ActiveEntityState>> playersKilled;
   libcomp::EnumMap<objects::Spawn::KillValueType_t,
-                   std::list<std::shared_ptr<ActiveEntityState>>>
-      killValues;
+                   std::list<std::shared_ptr<ActiveEntityState>>> killValues;
   for (auto entity : killed) {
     // Remove all opponents
     characterManager->AddRemoveOpponent(false, entity, nullptr);
@@ -6098,8 +6100,7 @@ void SkillManager::HandleKills(
 
     // Transform enemies into loot bodies and gather quest kills
     std::unordered_map<std::shared_ptr<LootBoxState>,
-                       std::shared_ptr<ActiveEntityState>>
-        lStates;
+                       std::shared_ptr<ActiveEntityState>> lStates;
     std::unordered_map<uint32_t, int32_t> questKills;
     std::unordered_map<uint32_t, uint32_t> encounterGroups;
     std::list<std::shared_ptr<ActiveEntityState>> dgEnemies;
@@ -6119,8 +6120,9 @@ void SkillManager::HandleKills(
         }
 
         // Add recently killed here as any source counts as a kill
-        if (ubMatch && spawn->GetKillValueType() ==
-                           objects::Spawn::KillValueType_t::UB_POINTS) {
+        if (ubMatch &&
+            spawn->GetKillValueType() ==
+                objects::Spawn::KillValueType_t::UB_POINTS) {
           ubMatch->AppendRecentlyKilled(spawn);
         }
       }
@@ -7395,9 +7397,10 @@ void SkillManager::HandleNegotiations(
   int32_t fGain = 0;
   auto partnerDef = sourceState->GetDemonState()->GetDevilData();
   auto fType =
-      partnerDef ? server->GetServerDataManager()->GetDemonFamiliarityTypeData(
-                       partnerDef->GetFamiliarity()->GetFamiliarityType())
-                 : nullptr;
+      partnerDef
+          ? server->GetServerDataManager()->GetDemonFamiliarityTypeData(
+                partnerDef->GetFamiliarity()->GetFamiliarityType())
+          : nullptr;
 
   // Keep track of demons that have "joined" for demon quests
   std::unordered_map<uint32_t, int32_t> joined;
@@ -9487,9 +9490,9 @@ bool SkillManager::Cameo(
   // Drop the durability of the equipped ring by 1000 points,
   // fail if we can't
   auto item =
-      character
-          ->GetEquippedItems(
-              (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING)
+      character->GetEquippedItems(
+                   (size_t)
+                       objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING)
           .Get();
 
   auto transformIter = item ? SVR_CONST.CAMEO_MAP.find(item->GetType())
@@ -10396,18 +10399,17 @@ bool SkillManager::MinionSpawn(
       return false;
     }
 
-    // Pick one spot ID (default to source spot if its one of them)
-    uint32_t sourceSpotID = source && source->GetEnemyBase()
-                                ? source->GetEnemyBase()->GetSpawnSpotID()
-                                : 0;
-    uint32_t spotID = sourceSpotID && slg->SpotIDsContains(sourceSpotID)
-                          ? sourceSpotID
-                          : libcomp::Randomizer::GetEntry(slg->GetSpotIDs());
+    uint32_t spotID = (uint32_t)params[3];
+    if (spotID) {
+      // Check the supplied spot's validity.
+      float xCoord = 0.f;
+      float yCoord = 0.f;
+      float rot = 0.f;
 
-    // If no spot currently selected, default to the summoner's spot
-    // regardless
-    if (!spotID) {
-      spotID = sourceSpotID;
+      if (!zoneManager->GetSpotPosition(zoneDef->GetDynamicMapID(), spotID,
+                                        xCoord, yCoord, rot)) {
+        spotID = 0;
+      }
     }
 
     std::list<std::shared_ptr<ActiveEntityState>> enemies;
@@ -10423,8 +10425,38 @@ bool SkillManager::MinionSpawn(
       }
 
       for (uint16_t i = 0; i < spawnPair.second; i++) {
-        auto enemy = zoneManager->CreateEnemy(
-            zone, spawn->GetEnemyType(), spawn->GetID(), spotID, 0.f, 0.f, 0.f);
+        std::shared_ptr<channel::ActiveEntityState> enemy = nullptr;
+
+        if (!spotID) {
+          // Spawn unit based on distance from its summoner.
+          Point center(source->GetCurrentX(), source->GetCurrentY());
+          float spawnDistance = (float)((uint32_t)params[2]);
+          auto spawnLoc = std::make_shared<objects::SpawnLocation>();
+
+          spawnLoc->SetX(center.x - spawnDistance);
+          spawnLoc->SetY(center.y + spawnDistance);
+          spawnLoc->SetWidth(2000.f);
+          spawnLoc->SetHeight(2000.f);
+
+          auto sp = zoneManager->GetRandomPoint(2000.f, 2000.f);
+          sp.x += spawnLoc->GetX();
+          sp.y = spawnLoc->GetY() - sp.y;
+
+          // Make sure we don't spawn out of bounds
+          sp = zoneManager->GetLinearPoint(center.x, center.y, sp.x, sp.y,
+                                           center.GetDistance(sp), false, zone);
+
+          float rot = ZoneManager::GetRandomRotation();
+          enemy =
+              zoneManager->CreateEnemy(zone, spawn->GetEnemyType(), 0, 0, sp.x,
+                                       sp.y, rot, source->GetEntityUUID());
+        } else {
+          // Use the specified spotID.
+          enemy =
+              zoneManager->CreateEnemy(zone, spawn->GetEnemyType(),
+                                       spawn->GetID(), spotID, 0.f, 0.f, 0.f);
+        }
+
         if (enemy) {
           auto eBase = enemy->GetEnemyBase();
           eBase->SetSpawnGroupID(sgID);
@@ -10649,9 +10681,9 @@ bool SkillManager::Mount(
     }
 
     auto ring =
-        character
-            ->GetEquippedItems(
-                (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING)
+        character->GetEquippedItems(
+                     (size_t)
+                         objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING)
             .Get();
     bool ringValid = false;
     if (ring) {
@@ -11460,8 +11492,9 @@ bool SkillManager::Traesto(
   auto zoneDef = server->GetServerDataManager()->GetZoneData(zoneID, 0);
   uint32_t dynamicMapID = zoneDef ? zoneDef->GetDynamicMapID() : 0;
 
-  if (!zoneDef || !zoneManager->GetSpotPosition(dynamicMapID, spotID, xCoord,
-                                                yCoord, rot)) {
+  if (!zoneDef ||
+      !zoneManager->GetSpotPosition(dynamicMapID, spotID, xCoord, yCoord,
+                                    rot)) {
     SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::ZONE_INVALID);
     return false;
   }

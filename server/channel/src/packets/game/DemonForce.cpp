@@ -53,9 +53,9 @@
 using namespace channel;
 
 bool Parsers::DemonForce::Parse(
-    libcomp::ManagerPacket* pPacketManager,
-    const std::shared_ptr<libcomp::TcpConnection>& connection,
-    libcomp::ReadOnlyPacket& p) const {
+    libcomp::ManagerPacket *pPacketManager,
+    const std::shared_ptr<libcomp::TcpConnection> &connection,
+    libcomp::ReadOnlyPacket &p) const {
   if (p.Size() < 21) {
     return false;
   }
@@ -136,26 +136,26 @@ bool Parsers::DemonForce::Parse(
 
     for (auto req : dfData->GetRequirements()) {
       switch (req->GetType()) {
-        case objects::MiDevilBoostRequirementData::Type_t::LNC:
-          // LAW/NEUTRAL/CHAOS = 0/1/2
-          if ((int32_t)(dState->GetLNCType() / 2) != req->GetValue1()) {
-            success = false;
-          }
-          break;
-        case objects::MiDevilBoostRequirementData::Type_t::FAMILIARITY: {
-          // Familiarity requirements are listed as 1-8 from max
-          // to min rank
-          int32_t fRank = (int32_t)(characterManager->GetFamiliarityRank(
-                                        demon->GetFamiliarity()) +
-                                    3);
-          if ((req->GetValue1() > 0 && (8 - req->GetValue1()) > fRank) ||
-              (req->GetValue2() > 0 && (8 - req->GetValue2()) < fRank)) {
-            success = false;
-          }
-        } break;
-        case objects::MiDevilBoostRequirementData::Type_t::NONE:
-        default:
-          break;
+      case objects::MiDevilBoostRequirementData::Type_t::LNC:
+        // LAW/NEUTRAL/CHAOS = 0/1/2
+        if ((int32_t)(dState->GetLNCType() / 2) != req->GetValue1()) {
+          success = false;
+        }
+        break;
+      case objects::MiDevilBoostRequirementData::Type_t::FAMILIARITY: {
+        // Familiarity requirements are listed as 1-8 from max
+        // to min rank
+        int32_t fRank = (int32_t)(characterManager->GetFamiliarityRank(
+                                      demon->GetFamiliarity()) +
+                                  3);
+        if ((req->GetValue1() > 0 && (8 - req->GetValue1()) > fRank) ||
+            (req->GetValue2() > 0 && (8 - req->GetValue2()) < fRank)) {
+          success = false;
+        }
+      } break;
+      case objects::MiDevilBoostRequirementData::Type_t::NONE:
+      default:
+        break;
       }
     }
   }
@@ -202,7 +202,7 @@ bool Parsers::DemonForce::Parse(
       auto dbChanges =
           libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
 
-      for (auto& bPair : boosted) {
+      for (auto &bPair : boosted) {
         demon->SetForceValues((size_t)bPair.first, bPair.second);
       }
 
@@ -251,52 +251,52 @@ bool Parsers::DemonForce::Parse(
 
     reply.WriteS8((int8_t)boosted.size());
 
-    for (auto& bPair : boosted) {
+    for (auto &bPair : boosted) {
       reply.WriteS8(bPair.first);
       reply.WriteS32Little(bPair.second);
 
       // If base or derived stat is not sent, the value will drop to 0. Oddly
       // enough, this doesn't happen if multiple stats update at once.
       switch ((CorrectTbl)libhack::DEMON_FORCE_CONVERSION[bPair.first]) {
-        case CorrectTbl::STR:
-          reply.WriteS16(demon->GetCoreStats()->GetSTR());
-          break;
-        case CorrectTbl::MAGIC:
-          reply.WriteS16(demon->GetCoreStats()->GetMAGIC());
-          break;
-        case CorrectTbl::VIT:
-          reply.WriteS16(demon->GetCoreStats()->GetVIT());
-          break;
-        case CorrectTbl::INT:
-          reply.WriteS16(demon->GetCoreStats()->GetINTEL());
-          break;
-        case CorrectTbl::SPEED:
-          reply.WriteS16(demon->GetCoreStats()->GetSPEED());
-          break;
-        case CorrectTbl::LUCK:
-          reply.WriteS16(demon->GetCoreStats()->GetLUCK());
-          break;
-        case CorrectTbl::CLSR:
-          reply.WriteS16(demon->GetCoreStats()->GetCLSR());
-          break;
-        case CorrectTbl::LNGR:
-          reply.WriteS16(demon->GetCoreStats()->GetLNGR());
-          break;
-        case CorrectTbl::SPELL:
-          reply.WriteS16(demon->GetCoreStats()->GetSPELL());
-          break;
-        case CorrectTbl::SUPPORT:
-          reply.WriteS16(demon->GetCoreStats()->GetSUPPORT());
-          break;
-        case CorrectTbl::PDEF:
-          reply.WriteS16(demon->GetCoreStats()->GetPDEF());
-          break;
-        case CorrectTbl::MDEF:
-          reply.WriteS16(demon->GetCoreStats()->GetMDEF());
-          break;
-        default:
-          reply.WriteS16(0);  // Not necessary
-          break;
+      case CorrectTbl::STR:
+        reply.WriteS16(demon->GetCoreStats()->GetSTR());
+        break;
+      case CorrectTbl::MAGIC:
+        reply.WriteS16(demon->GetCoreStats()->GetMAGIC());
+        break;
+      case CorrectTbl::VIT:
+        reply.WriteS16(demon->GetCoreStats()->GetVIT());
+        break;
+      case CorrectTbl::INT:
+        reply.WriteS16(demon->GetCoreStats()->GetINTEL());
+        break;
+      case CorrectTbl::SPEED:
+        reply.WriteS16(demon->GetCoreStats()->GetSPEED());
+        break;
+      case CorrectTbl::LUCK:
+        reply.WriteS16(demon->GetCoreStats()->GetLUCK());
+        break;
+      case CorrectTbl::CLSR:
+        reply.WriteS16(demon->GetCoreStats()->GetCLSR());
+        break;
+      case CorrectTbl::LNGR:
+        reply.WriteS16(demon->GetCoreStats()->GetLNGR());
+        break;
+      case CorrectTbl::SPELL:
+        reply.WriteS16(demon->GetCoreStats()->GetSPELL());
+        break;
+      case CorrectTbl::SUPPORT:
+        reply.WriteS16(demon->GetCoreStats()->GetSUPPORT());
+        break;
+      case CorrectTbl::PDEF:
+        reply.WriteS16(demon->GetCoreStats()->GetPDEF());
+        break;
+      case CorrectTbl::MDEF:
+        reply.WriteS16(demon->GetCoreStats()->GetMDEF());
+        break;
+      default:
+        reply.WriteS16(0); // Not necessary
+        break;
       }
     }
 

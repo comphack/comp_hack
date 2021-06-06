@@ -693,14 +693,16 @@ bool SkillManager::ActivateSkill(
   if ((castBasic->GetAdjustRestrictions() & SKILL_FIXED_STACK) == 0 &&
       !fusionSkill && activationType != SkillActivationType_t::SPECIAL &&
       activationType != SkillActivationType_t::ON_TOGGLE) {
-    maxStacks = (uint8_t)(
-        maxStacks +
-        tokuseiManager->GetAspectSum(
-            source, TokuseiAspectType::SKILL_ITEM_STACK_ADJUST, calcState) +
-        (!pSkill->IsItemSkill
-             ? tokuseiManager->GetAspectSum(
-                   source, TokuseiAspectType::SKILL_STACK_ADJUST, calcState)
-             : 0));
+    maxStacks =
+        (uint8_t)(maxStacks +
+                  tokuseiManager->GetAspectSum(
+                      source, TokuseiAspectType::SKILL_ITEM_STACK_ADJUST,
+                      calcState) +
+                  (!pSkill->IsItemSkill
+                       ? tokuseiManager->GetAspectSum(
+                             source, TokuseiAspectType::SKILL_STACK_ADJUST,
+                             calcState)
+                       : 0));
   }
 
   activated->SetMaxUseCount(maxStacks);
@@ -1218,9 +1220,8 @@ bool SkillManager::SkillRestricted(
       // Allow if its a digitalized demon skill
       auto cState = std::dynamic_pointer_cast<CharacterState>(source);
       auto dgState = cState ? cState->GetDigitalizeState() : nullptr;
-      isDigiSkill = available =
-          dgState &&
-          dgState->ActiveSkillsContains(skillData->GetCommon()->GetID());
+      isDigiSkill = available = dgState && dgState->ActiveSkillsContains(
+                                               skillData->GetCommon()->GetID());
     }
 
     if (!available) {
@@ -1237,9 +1238,8 @@ bool SkillManager::SkillRestricted(
             auto itemDef = mServer.lock()->GetDefinitionManager()->GetItemData(
                 item->GetType());
 
-            isUseSkill = itemDef &&
-                         itemDef->GetPossession()->GetUseSkill() ==
-                             skillData->GetCommon()->GetID();
+            isUseSkill = itemDef && itemDef->GetPossession()->GetUseSkill() ==
+                                        skillData->GetCommon()->GetID();
           }
         }
       }
@@ -1321,8 +1321,8 @@ bool SkillManager::SkillRestricted(
     }
 
     // "No weapon" counts as close range
-    bool longRange = weaponDef &&
-                     weaponDef->GetBasic()->GetWeaponType() ==
+    bool longRange =
+        weaponDef && weaponDef->GetBasic()->GetWeaponType() ==
                          objects::MiItemBasicData::WeaponType_t::LONG_RANGE;
 
     // Check digi or normal restriction depending on if the skill
@@ -1441,9 +1441,8 @@ int8_t SkillManager::ValidateSkillTarget(
   // Target must be ready (ignore display state for skills targeting
   // hidden sources)
   if (!target ||
-      !target->Ready(target == source &&
-                     source->GetDisplayState() ==
-                         ActiveDisplayState_t::ACTIVE)) {
+      !target->Ready(target == source && source->GetDisplayState() ==
+                                             ActiveDisplayState_t::ACTIVE)) {
     return (int8_t)SkillErrorCodes_t::SILENT_FAIL;
   }
 
@@ -1764,9 +1763,8 @@ bool SkillManager::PrepareFusionSkill(
 
   // If the executing skill is not the expected type, fail now
   auto skillData = definitionManager->GetSkillData(skillID);
-  if (!skillData ||
-      skillData->GetDamage()->GetFunctionID() !=
-          SVR_CONST.SKILL_DEMON_FUSION_EXECUTE) {
+  if (!skillData || skillData->GetDamage()->GetFunctionID() !=
+                        SVR_CONST.SKILL_DEMON_FUSION_EXECUTE) {
     SendFailure(cState, skillID, client,
                 (uint8_t)SkillErrorCodes_t::ACTIVATION_FAILURE);
     return false;
@@ -2221,8 +2219,9 @@ bool SkillManager::CompleteSkillExecution(
 
           auto discharge = pSkill->Definition->GetDischarge();
           uint32_t projectileSpeed = discharge->GetProjectileSpeed();
-          projectileTime = (uint64_t)(
-              distAdjust / (double)(projectileSpeed * 10) * 1000000.0);
+          projectileTime =
+              (uint64_t)(distAdjust / (double)(projectileSpeed * 10) *
+                         1000000.0);
         }
 
         if (projectileTime < 100000) {
@@ -2242,14 +2241,14 @@ bool SkillManager::CompleteSkillExecution(
       activated->SetHitTime(delay);
 
       auto server = mServer.lock();
-      server->ScheduleWork(delay,
-                           [](std::shared_ptr<ChannelServer> pServer,
-                              std::shared_ptr<ProcessingSkill> prSkill,
-                              std::shared_ptr<SkillExecutionContext> pCtx) {
-                             pServer->GetSkillManager()->ProjectileHit(prSkill,
-                                                                       pCtx);
-                           },
-                           server, pSkill, ctx);
+      server->ScheduleWork(
+          delay,
+          [](std::shared_ptr<ChannelServer> pServer,
+             std::shared_ptr<ProcessingSkill> prSkill,
+             std::shared_ptr<SkillExecutionContext> pCtx) {
+            pServer->GetSkillManager()->ProjectileHit(prSkill, pCtx);
+          },
+          server, pSkill, ctx);
     } else {
       activated->SetHitTime(syncTime);
 
@@ -3163,11 +3162,12 @@ bool SkillManager::ProcessSkillResult(
       bool deadOnly =
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY ||
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY;
-      effectiveTargets.remove_if([effectiveSource, deadOnly](
-          const std::shared_ptr<ActiveEntityState>& target) {
-        return !effectiveSource->SameFaction(target) ||
-               (deadOnly == target->IsAlive());
-      });
+      effectiveTargets.remove_if(
+          [effectiveSource,
+           deadOnly](const std::shared_ptr<ActiveEntityState>& target) {
+            return !effectiveSource->SameFaction(target) ||
+                   (deadOnly == target->IsAlive());
+          });
 
       // Work around CAVE setting a validtype of PARTY while setting a
       // targetype of ALLY by skipping further target removal in that case
@@ -3182,12 +3182,14 @@ bool SkillManager::ProcessSkillResult(
             ClientState::GetEntityClientState(effectiveSource->GetEntityID());
         uint32_t sourcePartyID = sourceState ? sourceState->GetPartyID() : 0;
 
-        effectiveTargets.remove_if([sourceState, sourcePartyID](
-            const std::shared_ptr<ActiveEntityState>& target) {
-          auto state = ClientState::GetEntityClientState(target->GetEntityID());
-          return !state || (!sourcePartyID && state != sourceState) ||
-                 (sourcePartyID && state->GetPartyID() != sourcePartyID);
-        });
+        effectiveTargets.remove_if(
+            [sourceState,
+             sourcePartyID](const std::shared_ptr<ActiveEntityState>& target) {
+              auto state =
+                  ClientState::GetEntityClientState(target->GetEntityID());
+              return !state || (!sourcePartyID && state != sourceState) ||
+                     (sourcePartyID && state->GetPartyID() != sourcePartyID);
+            });
       }
     } break;
     case objects::MiEffectiveRangeData::ValidType_t::SOURCE:
@@ -3210,10 +3212,11 @@ bool SkillManager::ProcessSkillResult(
           }
         }
 
-        effectiveTargets.remove_if([effectiveSource, otherValid](
-            const std::shared_ptr<ActiveEntityState>& target) {
-          return target != effectiveSource && target != otherValid;
-        });
+        effectiveTargets.remove_if(
+            [effectiveSource,
+             otherValid](const std::shared_ptr<ActiveEntityState>& target) {
+              return target != effectiveSource && target != otherValid;
+            });
       }
       break;
     default:
@@ -4573,12 +4576,11 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   if (skill->EffectiveDependencyType == SkillDependencyType_t::WEAPON ||
       skill->BaseAffinity == 1) {
     auto weapon =
-        cSource
-            ? cSource->GetEntity()
-                  ->GetEquippedItems((size_t)objects::MiItemBasicData::
-                                         EquipType_t::EQUIP_TYPE_WEAPON)
-                  .Get()
-            : nullptr;
+        cSource ? cSource->GetEntity()
+                      ->GetEquippedItems((size_t)objects::MiItemBasicData::
+                                             EquipType_t::EQUIP_TYPE_WEAPON)
+                      .Get()
+                : nullptr;
     auto weaponDef =
         weapon ? definitionManager->GetItemData(weapon->GetType()) : nullptr;
 
@@ -4599,13 +4601,12 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
         if (weaponDef->GetBasic()->GetWeaponType() ==
             objects::MiItemBasicData::WeaponType_t::LONG_RANGE) {
           // If the bullet has an affinity, use that instead
-          auto bullet =
-              cSource
-                  ? cSource->GetEntity()
-                        ->GetEquippedItems((size_t)objects::MiItemBasicData::
-                                               EquipType_t::EQUIP_TYPE_BULLETS)
-                        .Get()
-                  : nullptr;
+          auto bullet = cSource ? cSource->GetEntity()
+                                      ->GetEquippedItems(
+                                          (size_t)objects::MiItemBasicData::
+                                              EquipType_t::EQUIP_TYPE_BULLETS)
+                                      .Get()
+                                : nullptr;
           auto bulletDef =
               bullet ? definitionManager->GetItemData(bullet->GetType())
                      : nullptr;
@@ -4743,9 +4744,8 @@ SkillManager::GetCalculatedState(
       // guarding too)
       auto otherSkill = eState->GetActivatedAbility();
       auto otherDef = otherSkill ? otherSkill->GetSkillData() : nullptr;
-      if (otherDef &&
-          otherDef->GetBasic()->GetActionType() ==
-              objects::MiSkillBasicData::ActionType_t::GUARD) {
+      if (otherDef && otherDef->GetBasic()->GetActionType() ==
+                          objects::MiSkillBasicData::ActionType_t::GUARD) {
         contextSkill = otherDef;
       }
     }
@@ -5510,8 +5510,9 @@ bool SkillManager::HandleSkillInterrupt(
           // Interrupted before shot
           applyInterrupt = true;
         } else if (hit < tActivated->GetHitTime()) {
-          uint64_t hitWindowAdjust = (uint64_t)(
-              500000.0 * (double)tDischarge->GetCompleteDelay() * 0.01);
+          uint64_t hitWindowAdjust =
+              (uint64_t)(500000.0 * (double)tDischarge->GetCompleteDelay() *
+                         0.01);
           uint64_t hitTime = 0;
           if (tSkillData->GetBasic()->GetActionType() ==
               objects::MiSkillBasicData::ActionType_t::RUSH) {
@@ -5927,7 +5928,8 @@ void SkillManager::HandleKills(
   std::list<std::shared_ptr<ActiveEntityState>> partnerDemonsKilled;
   std::list<std::shared_ptr<ActiveEntityState>> playersKilled;
   libcomp::EnumMap<objects::Spawn::KillValueType_t,
-                   std::list<std::shared_ptr<ActiveEntityState>>> killValues;
+                   std::list<std::shared_ptr<ActiveEntityState>>>
+      killValues;
   for (auto entity : killed) {
     // Remove all opponents
     characterManager->AddRemoveOpponent(false, entity, nullptr);
@@ -6100,7 +6102,8 @@ void SkillManager::HandleKills(
 
     // Transform enemies into loot bodies and gather quest kills
     std::unordered_map<std::shared_ptr<LootBoxState>,
-                       std::shared_ptr<ActiveEntityState>> lStates;
+                       std::shared_ptr<ActiveEntityState>>
+        lStates;
     std::unordered_map<uint32_t, int32_t> questKills;
     std::unordered_map<uint32_t, uint32_t> encounterGroups;
     std::list<std::shared_ptr<ActiveEntityState>> dgEnemies;
@@ -6120,9 +6123,8 @@ void SkillManager::HandleKills(
         }
 
         // Add recently killed here as any source counts as a kill
-        if (ubMatch &&
-            spawn->GetKillValueType() ==
-                objects::Spawn::KillValueType_t::UB_POINTS) {
+        if (ubMatch && spawn->GetKillValueType() ==
+                           objects::Spawn::KillValueType_t::UB_POINTS) {
           ubMatch->AppendRecentlyKilled(spawn);
         }
       }
@@ -6665,9 +6667,9 @@ void SkillManager::HandleDigitalizeXP(
   // Sum points gained from all enemies
   int32_t dxp = 0;
   for (auto enemy : enemies) {
-    dxp = (int32_t)(
-        dxp +
-        (int32_t)enemy->GetDevilData()->GetBattleData()->GetDigitalizeXP());
+    dxp = (int32_t)(dxp + (int32_t)enemy->GetDevilData()
+                              ->GetBattleData()
+                              ->GetDigitalizeXP());
   }
 
   // Apply global XP bonus
@@ -7397,10 +7399,9 @@ void SkillManager::HandleNegotiations(
   int32_t fGain = 0;
   auto partnerDef = sourceState->GetDemonState()->GetDevilData();
   auto fType =
-      partnerDef
-          ? server->GetServerDataManager()->GetDemonFamiliarityTypeData(
-                partnerDef->GetFamiliarity()->GetFamiliarityType())
-          : nullptr;
+      partnerDef ? server->GetServerDataManager()->GetDemonFamiliarityTypeData(
+                       partnerDef->GetFamiliarity()->GetFamiliarityType())
+                 : nullptr;
 
   // Keep track of demons that have "joined" for demon quests
   std::unordered_map<uint32_t, int32_t> joined;
@@ -7785,8 +7786,8 @@ void SkillManager::HandleFusionGauge(
 
     if (skillHit) {
       int32_t points =
-          (int32_t)libhack::FUSION_GAUGE_GROWTH[(size_t)actionType][(size_t)(
-              (isDemon ? 2 : 0) + (higherLevel ? 1 : 0))];
+          (int32_t)libhack::FUSION_GAUGE_GROWTH[(size_t)actionType][(
+              size_t)((isDemon ? 2 : 0) + (higherLevel ? 1 : 0))];
 
       float fgBonus = server->GetWorldSharedConfig()->GetFusionGaugeBonus();
       if (fgBonus > 0.f) {
@@ -8338,10 +8339,11 @@ bool SkillManager::CalculateDamage(
           // Apply limits
           if (critLevel == 2) {
             // Cap at LB limit
-            int32_t maxLB = (int32_t)(
-                30000 +
-                floor(tokuseiManager->GetAspectSum(
-                    source, TokuseiAspectType::LIMIT_BREAK_MAX, calcState)));
+            int32_t maxLB =
+                (int32_t)(30000 +
+                          floor(tokuseiManager->GetAspectSum(
+                              source, TokuseiAspectType::LIMIT_BREAK_MAX,
+                              calcState)));
 
             if (target.TechnicalDamage > maxLB) {
               target.TechnicalDamage = maxLB;
@@ -8405,15 +8407,15 @@ uint8_t SkillManager::GetCritLevel(
   if (critValue > 0) {
     int16_t critDef1 = targetState->GetCorrectTbl((size_t)CorrectTbl::CRIT_DEF);
     if (sourceLuck < 50) {
-      critDef1 = (int16_t)(
-          critDef1 + targetState->GetCorrectTbl((size_t)CorrectTbl::LUCK));
+      critDef1 = (int16_t)(critDef1 + targetState->GetCorrectTbl(
+                                          (size_t)CorrectTbl::LUCK));
     } else if (sourceLuck < 67) {
       critDef1 = (int16_t)(critDef1 + 50);
     } else {
-      critDef1 = (int16_t)(
-          (float)critDef1 +
-          floor((float)targetState->GetCorrectTbl((size_t)CorrectTbl::LUCK) *
-                0.75f));
+      critDef1 =
+          (int16_t)((float)critDef1 + floor((float)targetState->GetCorrectTbl(
+                                                (size_t)CorrectTbl::LUCK) *
+                                            0.75f));
     }
 
     int16_t critDef2 = (int16_t)(10 + floor((float)targetState->GetCorrectTbl(
@@ -8449,8 +8451,8 @@ int16_t SkillManager::GetEntityRate(
     return calcState->GetCorrectTbl(
         (size_t)(taken ? CorrectTbl::RATE_PC_TAKEN : CorrectTbl::RATE_PC));
   } else {
-    return calcState->GetCorrectTbl((size_t)(
-        taken ? CorrectTbl::RATE_DEMON_TAKEN : CorrectTbl::RATE_DEMON));
+    return calcState->GetCorrectTbl((
+        size_t)(taken ? CorrectTbl::RATE_DEMON_TAKEN : CorrectTbl::RATE_DEMON));
   }
 }
 
@@ -9490,9 +9492,9 @@ bool SkillManager::Cameo(
   // Drop the durability of the equipped ring by 1000 points,
   // fail if we can't
   auto item =
-      character->GetEquippedItems(
-                   (size_t)
-                       objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING)
+      character
+          ->GetEquippedItems(
+              (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING)
           .Get();
 
   auto transformIter = item ? SVR_CONST.CAMEO_MAP.find(item->GetType())
@@ -10681,9 +10683,9 @@ bool SkillManager::Mount(
     }
 
     auto ring =
-        character->GetEquippedItems(
-                     (size_t)
-                         objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING)
+        character
+            ->GetEquippedItems(
+                (size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_RING)
             .Get();
     bool ringValid = false;
     if (ring) {
@@ -11492,9 +11494,8 @@ bool SkillManager::Traesto(
   auto zoneDef = server->GetServerDataManager()->GetZoneData(zoneID, 0);
   uint32_t dynamicMapID = zoneDef ? zoneDef->GetDynamicMapID() : 0;
 
-  if (!zoneDef ||
-      !zoneManager->GetSpotPosition(dynamicMapID, spotID, xCoord, yCoord,
-                                    rot)) {
+  if (!zoneDef || !zoneManager->GetSpotPosition(dynamicMapID, spotID, xCoord,
+                                                yCoord, rot)) {
     SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::ZONE_INVALID);
     return false;
   }

@@ -693,14 +693,16 @@ bool SkillManager::ActivateSkill(
   if ((castBasic->GetAdjustRestrictions() & SKILL_FIXED_STACK) == 0 &&
       !fusionSkill && activationType != SkillActivationType_t::SPECIAL &&
       activationType != SkillActivationType_t::ON_TOGGLE) {
-    maxStacks = (uint8_t)(
-        maxStacks +
-        tokuseiManager->GetAspectSum(
-            source, TokuseiAspectType::SKILL_ITEM_STACK_ADJUST, calcState) +
-        (!pSkill->IsItemSkill
-             ? tokuseiManager->GetAspectSum(
-                   source, TokuseiAspectType::SKILL_STACK_ADJUST, calcState)
-             : 0));
+    maxStacks =
+        (uint8_t)(maxStacks +
+                  tokuseiManager->GetAspectSum(
+                      source, TokuseiAspectType::SKILL_ITEM_STACK_ADJUST,
+                      calcState) +
+                  (!pSkill->IsItemSkill
+                       ? tokuseiManager->GetAspectSum(
+                             source, TokuseiAspectType::SKILL_STACK_ADJUST,
+                             calcState)
+                       : 0));
   }
 
   activated->SetMaxUseCount(maxStacks);
@@ -2217,8 +2219,9 @@ bool SkillManager::CompleteSkillExecution(
 
           auto discharge = pSkill->Definition->GetDischarge();
           uint32_t projectileSpeed = discharge->GetProjectileSpeed();
-          projectileTime = (uint64_t)(
-              distAdjust / (double)(projectileSpeed * 10) * 1000000.0);
+          projectileTime =
+              (uint64_t)(distAdjust / (double)(projectileSpeed * 10) *
+                         1000000.0);
         }
 
         if (projectileTime < 100000) {
@@ -5507,8 +5510,9 @@ bool SkillManager::HandleSkillInterrupt(
           // Interrupted before shot
           applyInterrupt = true;
         } else if (hit < tActivated->GetHitTime()) {
-          uint64_t hitWindowAdjust = (uint64_t)(
-              500000.0 * (double)tDischarge->GetCompleteDelay() * 0.01);
+          uint64_t hitWindowAdjust =
+              (uint64_t)(500000.0 * (double)tDischarge->GetCompleteDelay() *
+                         0.01);
           uint64_t hitTime = 0;
           if (tSkillData->GetBasic()->GetActionType() ==
               objects::MiSkillBasicData::ActionType_t::RUSH) {
@@ -6663,9 +6667,9 @@ void SkillManager::HandleDigitalizeXP(
   // Sum points gained from all enemies
   int32_t dxp = 0;
   for (auto enemy : enemies) {
-    dxp = (int32_t)(
-        dxp +
-        (int32_t)enemy->GetDevilData()->GetBattleData()->GetDigitalizeXP());
+    dxp = (int32_t)(dxp + (int32_t)enemy->GetDevilData()
+                              ->GetBattleData()
+                              ->GetDigitalizeXP());
   }
 
   // Apply global XP bonus
@@ -7782,8 +7786,8 @@ void SkillManager::HandleFusionGauge(
 
     if (skillHit) {
       int32_t points =
-          (int32_t)libhack::FUSION_GAUGE_GROWTH[(size_t)actionType][(size_t)(
-              (isDemon ? 2 : 0) + (higherLevel ? 1 : 0))];
+          (int32_t)libhack::FUSION_GAUGE_GROWTH[(size_t)actionType][(
+              size_t)((isDemon ? 2 : 0) + (higherLevel ? 1 : 0))];
 
       float fgBonus = server->GetWorldSharedConfig()->GetFusionGaugeBonus();
       if (fgBonus > 0.f) {
@@ -8335,10 +8339,11 @@ bool SkillManager::CalculateDamage(
           // Apply limits
           if (critLevel == 2) {
             // Cap at LB limit
-            int32_t maxLB = (int32_t)(
-                30000 +
-                floor(tokuseiManager->GetAspectSum(
-                    source, TokuseiAspectType::LIMIT_BREAK_MAX, calcState)));
+            int32_t maxLB =
+                (int32_t)(30000 +
+                          floor(tokuseiManager->GetAspectSum(
+                              source, TokuseiAspectType::LIMIT_BREAK_MAX,
+                              calcState)));
 
             if (target.TechnicalDamage > maxLB) {
               target.TechnicalDamage = maxLB;
@@ -8402,15 +8407,15 @@ uint8_t SkillManager::GetCritLevel(
   if (critValue > 0) {
     int16_t critDef1 = targetState->GetCorrectTbl((size_t)CorrectTbl::CRIT_DEF);
     if (sourceLuck < 50) {
-      critDef1 = (int16_t)(
-          critDef1 + targetState->GetCorrectTbl((size_t)CorrectTbl::LUCK));
+      critDef1 = (int16_t)(critDef1 + targetState->GetCorrectTbl(
+                                          (size_t)CorrectTbl::LUCK));
     } else if (sourceLuck < 67) {
       critDef1 = (int16_t)(critDef1 + 50);
     } else {
-      critDef1 = (int16_t)(
-          (float)critDef1 +
-          floor((float)targetState->GetCorrectTbl((size_t)CorrectTbl::LUCK) *
-                0.75f));
+      critDef1 =
+          (int16_t)((float)critDef1 + floor((float)targetState->GetCorrectTbl(
+                                                (size_t)CorrectTbl::LUCK) *
+                                            0.75f));
     }
 
     int16_t critDef2 = (int16_t)(10 + floor((float)targetState->GetCorrectTbl(
@@ -8446,8 +8451,8 @@ int16_t SkillManager::GetEntityRate(
     return calcState->GetCorrectTbl(
         (size_t)(taken ? CorrectTbl::RATE_PC_TAKEN : CorrectTbl::RATE_PC));
   } else {
-    return calcState->GetCorrectTbl((size_t)(
-        taken ? CorrectTbl::RATE_DEMON_TAKEN : CorrectTbl::RATE_DEMON));
+    return calcState->GetCorrectTbl((
+        size_t)(taken ? CorrectTbl::RATE_DEMON_TAKEN : CorrectTbl::RATE_DEMON));
   }
 }
 

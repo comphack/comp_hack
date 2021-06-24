@@ -53,9 +53,9 @@
 using namespace channel;
 
 bool Parsers::DemonForce::Parse(
-    libcomp::ManagerPacket *pPacketManager,
-    const std::shared_ptr<libcomp::TcpConnection> &connection,
-    libcomp::ReadOnlyPacket &p) const {
+    libcomp::ManagerPacket* pPacketManager,
+    const std::shared_ptr<libcomp::TcpConnection>& connection,
+    libcomp::ReadOnlyPacket& p) const {
   if (p.Size() < 21) {
     return false;
   }
@@ -202,7 +202,7 @@ bool Parsers::DemonForce::Parse(
       auto dbChanges =
           libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
 
-      for (auto &bPair : boosted) {
+      for (auto& bPair : boosted) {
         demon->SetForceValues((size_t)bPair.first, bPair.second);
       }
 
@@ -251,7 +251,7 @@ bool Parsers::DemonForce::Parse(
 
     reply.WriteS8((int8_t)boosted.size());
 
-    for (auto &bPair : boosted) {
+    for (auto& bPair : boosted) {
       reply.WriteS8(bPair.first);
       reply.WriteS32Little(bPair.second);
 

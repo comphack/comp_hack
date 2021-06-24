@@ -12,6 +12,7 @@ export COVERALLS_ENABLE=OFF
 if [ "${COMPILER}" == "clang" ]; then
     export SINGLE_OBJGEN=ON
     export USE_COTIRE=OFF
+    export LIBCXX_PACKAGES="libc++-11-dev libc++abi-11-dev"
 else
     export SINGLE_OBJGEN=OFF
     export USE_COTIRE=ON
@@ -34,7 +35,7 @@ if [ "${INSTALL_TOOLS}" == "YES" ]; then
     sudo rm -rf /usr/share/dotnet
     sudo apt-get update -q
     sudo apt-get install libssl-dev docbook-xsl doxygen texlive-font-utils \
-        xmlto libqt5webkit5-dev unzip -y
+        xmlto libqt5webkit5-dev unzip ${LIBCXX_PACKAGES} -y
 
     if [ "${GENERATOR}" == "Ninja" ]; then
         sudo apt-get install ninja-build -y

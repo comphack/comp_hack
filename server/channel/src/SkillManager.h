@@ -152,6 +152,13 @@ class SkillManager {
                      std::shared_ptr<SkillExecutionContext> ctx = 0);
 
   /**
+   * Reactivate switch skills that were toggled on in a previous login.
+   * @param source Pointer of the source entity
+   */
+  bool ReactivateSavedSwitchSkills(
+      const std::shared_ptr<ActiveEntityState>& source);
+
+  /**
    * Target/retarget the skill of a character or demon. No response is sent
    * to the clients from this request.
    * @param source Pointer of the entity that activated the skill
@@ -354,6 +361,20 @@ class SkillManager {
       std::shared_ptr<objects::CalculatedEntityState> calcState = nullptr);
 
   /**
+   * Pay the costs required to execute a skill, after it was determined they
+   * could be paid.
+   * @param source Pointer to the state of the source entity
+   * @param activated Pointer to the activated ability instance
+   * @param client Pointer to the client connection, can be null if not coming
+   *  from a player entity
+   * @param ctx Special execution state for the skill
+   */
+  void PayCosts(std::shared_ptr<ActiveEntityState> source,
+                std::shared_ptr<objects::ActivatedAbility> activated,
+                const std::shared_ptr<ChannelClientConnection> client,
+                std::shared_ptr<SkillExecutionContext> ctx);
+
+  /**
    * Schedule automatic skill cancellation after a set amount of time
    * as defined by the skill definition. If the skill is mutli-use,
    * this should be called after each non-final execution.
@@ -462,6 +483,13 @@ class SkillManager {
   void ProcessSkillResultFinal(
       const std::shared_ptr<channel::ProcessingSkill>& pSkill,
       std::shared_ptr<SkillExecutionContext> ctx);
+
+  /**
+   * Set final NRA flags for a skill's targets
+   * @param pSkill Current skill processing state
+   */
+  void SetFinalNRAFlags(
+      const std::shared_ptr<channel::ProcessingSkill>& pSkill);
 
   /**
    * Prepare an executing fusion skill by setting the fusion demons that will
@@ -842,12 +870,13 @@ class SkillManager {
    * @param eState Pointer to the entity
    * @param calcState Pointer to entity's calculated state
    * @param boostType CorrectTbl index of the boost type
+   * @param boostCap Double of the corresponding affinity type's boost cap
    * @return Calculated boost level as a decimal
    */
   float GetAffinityBoost(
       const std::shared_ptr<ActiveEntityState> eState,
       std::shared_ptr<objects::CalculatedEntityState> calcState,
-      CorrectTbl boostType);
+      CorrectTbl boostType, double boostCap);
 
   /**
    * Calculate skill damage or healing using the default formula

@@ -134,6 +134,7 @@ ChatManager::ChatManager(const std::weak_ptr<ChannelServer>& server)
   mGMands["reunion"] = &ChatManager::GMCommand_Reunion;
   mGMands["scrap"] = &ChatManager::GMCommand_Scrap;
   mGMands["skill"] = &ChatManager::GMCommand_Skill;
+  mGMands["forgetskill"] = &ChatManager::GMCommand_ForgetSkill;
   mGMands["skillpoint"] = &ChatManager::GMCommand_SkillPoint;
   mGMands["slotadd"] = &ChatManager::GMCommand_SlotAdd;
   mGMands["sp"] = &ChatManager::GMCommand_SoulPoints;
@@ -1778,6 +1779,11 @@ bool ChatManager::GMCommand_Help(
        {"@familiarity VALUE",
         "Updates the current partner's familiarity to the given",
         "VALUE which can be in the range [0-10000]."}},
+      {"fgauge",
+       {"@fgauge VALUE",
+        "Updates the current character's fusion gauge to the given",
+        "VALUE which can be in the range of [0-10000] times the",
+        "number of fusion gauge stocks available."}},
       {"flag",
        {
            "@flag TYPE [CID KEY [VALUE]]",
@@ -1785,11 +1791,9 @@ bool ChatManager::GMCommand_Help(
            "CID may be 0 for no specific character. If VALUE is not",
            "given the key is printed out instead of set.",
        }},
-      {"fgauge",
-       {"@fgauge VALUE",
-        "Updates the current character's fusion gauge to the given",
-        "VALUE which can be in the range of [0-10000] times the",
-        "number of fusion gauge stocks available."}},
+      {"forgetskill",
+       {"@forgetskill ID",
+        "Removes the skill with the specified ID from the player."}},
       {"goto",
        {"@goto [SELF] NAME",
         "If SELF is set to 'self' the player is moved to the",
@@ -3039,6 +3043,51 @@ bool ChatManager::GMCommand_Skill(
 
   return mServer.lock()->GetCharacterManager()->LearnSkill(client, entityID,
                                                            skillID);
+}
+
+bool ChatManager::GMCommand_ForgetSkill(
+    const std::shared_ptr<channel::ChannelClientConnection>& client,
+    const std::list<libcomp::String>& args) {
+  if (!HaveUserLevel(client, SVR_CONST.GM_CMD_LVL_SKILL)) {
+    return true;
+  }
+
+  std::list<libcomp::String> argsCopy = args;
+
+  auto server = mServer.lock();
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto definitionManager = server->GetDefinitionManager();
+
+  uint32_t skillID;
+
+  if (!GetIntegerArg<uint32_t>(skillID, argsCopy)) {
+    return false;
+  }
+
+  auto skill = definitionManager->GetSkillData(skillID);
+
+  if (skill == nullptr) {
+    return false;
+  }
+
+  if (!character->LearnedSkillsContains(skillID)) {
+    // Character does not know the skill, do nothing
+    return true;
+  }
+
+  // Remove the skill from the character and update states and DB as
+  // appropriate.
+  character->RemoveLearnedSkills(skillID);
+
+  cState->RecalcDisabledSkills(definitionManager);
+  state->GetDemonState()->UpdateDemonState(definitionManager);
+  server->GetCharacterManager()->RecalculateTokuseiAndStats(cState, client);
+
+  server->GetWorldDatabase()->QueueUpdate(character, state->GetAccountUID());
+
+  return true;
 }
 
 bool ChatManager::GMCommand_SkillPoint(

@@ -12,6 +12,10 @@
             <key type="u32"/>
             <value type="u8"/>
         </member>
+        <member type="map" name="addedSkills">
+            <key type="u32"/>
+            <value type="s16"/>
+        </member>
         <member type="bool" name="unsummon"/>
     </object>
 </objgen>

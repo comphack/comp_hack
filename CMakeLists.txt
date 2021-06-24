@@ -336,6 +336,8 @@ IF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         MESSAGE(FATAL_ERROR "GCC version must be at least 4.9!")
     ENDIF()
 
+    MESSAGE("-- Using libstdc++")
+
     ADD_COMPILER_FLAGS(AUTO -fno-strict-aliasing)
 ELSEIF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     SET(SPECIAL_COMPILER_FLAGS "-stdlib=libc++")
@@ -344,6 +346,8 @@ ELSEIF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     IF(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 3.4)
         MESSAGE(FATAL_ERROR "Clang version must be at least 3.4!")
     ENDIF()
+
+    MESSAGE("-- Using libc++")
 ELSEIF("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     # There is nothing special needed for MSVC.
 ELSE()

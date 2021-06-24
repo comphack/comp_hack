@@ -575,6 +575,57 @@ class ServerConstants {
     /// Item IDs that allow creation of VA items from a normal one
     std::set<uint32_t> VA_ADD_ITEMS;
 
+    /// IDs of valid male skins in char creation
+    std::set<uint32_t> CHAR_CREATION_MALE_SKIN;
+
+    /// IDs of valid male faces in char creation
+    std::set<uint32_t> CHAR_CREATION_MALE_FACE;
+
+    /// IDs of valid male hairs in char creation
+    std::set<uint32_t> CHAR_CREATION_MALE_HAIR;
+
+    /// IDs of valid male tops in char creation
+    std::set<uint32_t> CHAR_CREATION_MALE_TOP;
+
+    /// IDs of valid male bottoms in char creation
+    std::set<uint32_t> CHAR_CREATION_MALE_BOTTOM;
+
+    /// IDs of valid male feet in char creation
+    std::set<uint32_t> CHAR_CREATION_MALE_FEET;
+
+    /// IDs of valid male COMPs in char creation
+    std::set<uint32_t> CHAR_CREATION_MALE_COMP;
+
+    /// IDs of valid female skins in char creation
+    std::set<uint32_t> CHAR_CREATION_FEMALE_SKIN;
+
+    /// IDs of valid female faces in char creation
+    std::set<uint32_t> CHAR_CREATION_FEMALE_FACE;
+
+    /// IDs of valid female hairs in char creation
+    std::set<uint32_t> CHAR_CREATION_FEMALE_HAIR;
+
+    /// IDs of valid female tops in char creation
+    std::set<uint32_t> CHAR_CREATION_FEMALE_TOP;
+
+    /// IDs of valid female bottoms in char creation
+    std::set<uint32_t> CHAR_CREATION_FEMALE_BOTTOM;
+
+    /// IDs of valid female feet in char creation
+    std::set<uint32_t> CHAR_CREATION_FEMALE_FEET;
+
+    /// IDs of valid female COMPs in char creation
+    std::set<uint32_t> CHAR_CREATION_FEMALE_COMP;
+
+    /// IDs of valid hair colors in char creation
+    std::set<uint32_t> CHAR_CREATION_HAIRCOLOR;
+
+    /// IDs of valid male eye colors in char creation
+    std::set<uint32_t> CHAR_CREATION_EYECOLOR;
+
+    /// IDs of valid weapons in char creation
+    std::set<uint32_t> CHAR_CREATION_WEAPON;
+
     //
     // API Admin Levels
     //

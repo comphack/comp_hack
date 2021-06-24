@@ -46,7 +46,18 @@ void DemonLockSet(const std::shared_ptr<ChannelClientConnection> client,
       libcomp::PersistentObject::GetObjectByUUID(
           state->GetObjectUUID(demonID)));
 
-  if (demon) {
+  // A demon may not be unlocked if they are wearing Demon Equipment.
+  bool equipped = false;
+  if (demon && demon->GetLocked()) {
+    for (auto equip : demon->GetEquippedItems()) {
+      if (!equip.IsNull()) {
+        equipped = true;
+        break;
+      }
+    }
+  }
+
+  if (demon && !equipped) {
     demon->SetLocked(lock);
 
     libcomp::Packet reply;

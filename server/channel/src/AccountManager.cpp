@@ -202,7 +202,7 @@ void AccountManager::HandleLoginResponse(
     // Recalculate current character learned skills here in order to rebuild the
     // demon state properly, because it checks the availability
     // of the skill that grants extra Mitama Set Bonuses.
-    cState->SetCurrentSkills(cState->GetAllSkills(definitionManager, false));
+    cState->SetCurrentSkills(cState->GetAllSkills(definitionManager, true));
 
     dState->UpdateSharedState(character.Get(), definitionManager);
     dState->UpdateDemonState(definitionManager);

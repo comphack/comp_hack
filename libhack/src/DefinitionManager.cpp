@@ -305,9 +305,6 @@ const std::shared_ptr<objects::MiEnchantData>
 DefinitionManager::GetEnchantDataByItemID(uint32_t itemID) {
   auto iter = mEnchantItemLookup.find(itemID);
   if (iter != mEnchantItemLookup.end()) {
-    LogDefinitionManagerWarning([&]() {
-      return libcomp::String("Found EnchantData for item: %1\n").Arg(itemID);
-    });
     return GetEnchantData(iter->second);
   }
 

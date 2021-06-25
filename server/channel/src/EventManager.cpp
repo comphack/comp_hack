@@ -122,7 +122,7 @@ using namespace channel;
 namespace libcomp {
 template <>
 BaseScriptEngine& BaseScriptEngine::Using<EventManager>() {
-  if (!BindingExists("EventManager"), true) {
+  if (!BindingExists("EventManager", true)) {
     Sqrat::Class<EventManager, Sqrat::NoConstructor<EventManager>> binding(
         mVM, "EventManager");
 

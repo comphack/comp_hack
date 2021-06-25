@@ -2994,7 +2994,7 @@ bool SkillManager::ProcessSkillResult(
 
   bool initialHitNull = pSkill->Nulled != 0;
   bool initialHitReflect = pSkill->Reflected != 0;
-  bool specialReflectCase = false;
+  bool initialHitReflectNoAOECancel = false;
   if (pSkill->Nulled || pSkill->Reflected || pSkill->Absorbed) {
     // Apply original target NRA
     std::shared_ptr<ActiveEntityState> nraTarget;
@@ -3089,7 +3089,7 @@ bool SkillManager::ProcessSkillResult(
         // Ignore what happened to the primary target completely. This is a
         // special case that requires some handling later to prevent double
         // reflection onto the skill user.
-        specialReflectCase = true;
+        initialHitReflectNoAOECancel = initialHitReflect;
         break;
       case objects::MiEffectiveRangeData::AreaType_t::TARGET_RADIUS:
       case objects::MiEffectiveRangeData::AreaType_t::FRONT_3:
@@ -3440,15 +3440,18 @@ bool SkillManager::ProcessSkillResult(
     // occur on the original target or it is one of the special
     // reflect cases, apply the initially calculated flags
     bool isSource = effectiveTarget == source;
-    if (target.PrimaryTarget && (!initialHitReflect || specialReflectCase)) {
+    if (target.PrimaryTarget &&
+        (!initialHitReflect || initialHitReflectNoAOECancel)) {
       target.HitNull = skill.Nulled;
       target.HitReflect = skill.Reflected;
       target.HitAbsorb = skill.Absorbed;
-      target.HitAvoided = (skill.Nulled != 0 || specialReflectCase);
+      target.HitAvoided = (skill.Nulled != 0 || initialHitReflectNoAOECancel);
       target.NRAAffinity = skill.NRAAffinity;
 
-      if (specialReflectCase && !isSource) {
-        // The special cases should increase the number of AOE reflects.
+      if (initialHitReflectNoAOECancel && !isSource) {
+        // This is a spin or other radial attack that the initial target
+        // reflected, without canceling the AOE. Treat the initial
+        // reflection as an additional AOE reflect.
         aoeReflect++;
       }
     } else {

@@ -75,7 +75,7 @@ bool Parsers::DemonBoxMove::Parse(
           state->GetObjectUUID(demonID)));
 
   if (!srcDemon) {
-    LogDemonDebug([&]() {
+    LogDemonError([&]() {
       return libcomp::String(
                  "DemonBoxMove request by account %1 failed due to invalid "
                  "demon ID %2\n")

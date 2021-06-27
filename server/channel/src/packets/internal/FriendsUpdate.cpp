@@ -150,8 +150,8 @@ bool Parsers::FriendsUpdate::Parse(
         return true;
       }
 
-      server->QueueWork(SendFriendInfo, server, client, logins,
-                        ChannelToClientPacketCode_t::PACKET_FRIEND_INFO);
+      SendFriendInfo(server, client, logins,
+                     ChannelToClientPacketCode_t::PACKET_FRIEND_INFO);
     } break;
     case InternalPacketAction_t::PACKET_ACTION_YN_REQUEST: {
       libcomp::Packet request;
@@ -214,9 +214,8 @@ bool Parsers::FriendsUpdate::Parse(
 
         std::vector<std::shared_ptr<objects::CharacterLogin>> logins;
         logins.push_back(login);
-        server->QueueWork(
-            SendFriendInfo, server, client, logins,
-            ChannelToClientPacketCode_t::PACKET_FRIEND_ADD_REMOVE);
+        SendFriendInfo(server, client, logins,
+                       ChannelToClientPacketCode_t::PACKET_FRIEND_ADD_REMOVE);
       } else {
         int32_t removedCID = p.ReadS32Little();
 

@@ -325,12 +325,7 @@ int8_t WorldSyncManager::Update<objects::Character>(
     if (source == "lobby") {
       // Delete is valid, queue the delete
       auto server = mServer.lock();
-      server->QueueWork(
-          [](std::shared_ptr<WorldServer> pServer,
-             std::shared_ptr<objects::Character> character) {
-            pServer->GetAccountManager()->DeleteCharacter(character);
-          },
-          server, entry);
+      server->GetAccountManager()->DeleteCharacter(entry);
     } else {
       LogDataSyncManagerError([&]() {
         return libcomp::String(

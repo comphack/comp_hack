@@ -329,7 +329,7 @@ bool Parsers::FriendsUpdate::Parse(
 
   if ((InternalPacketAction_t)mode ==
       InternalPacketAction_t::PACKET_ACTION_GROUP_LIST) {
-    server->QueueWork(FriendList, server, connection, cLogin);
+    FriendList(server, connection, cLogin);
   } else if ((InternalPacketAction_t)mode ==
              InternalPacketAction_t::PACKET_ACTION_REMOVE) {
     if (p.Left() < 4) {
@@ -342,7 +342,7 @@ bool Parsers::FriendsUpdate::Parse(
     }
 
     int32_t targetCID = p.ReadS32Little();
-    server->QueueWork(FriendRemoved, server, connection, cLogin, targetCID);
+    FriendRemoved(server, connection, cLogin, targetCID);
   } else {
     if (p.Left() < 2 || (p.Left() < (uint32_t)(2 + p.PeekU16Little()))) {
       LogFriendError([&]() {
@@ -370,17 +370,16 @@ bool Parsers::FriendsUpdate::Parse(
 
     switch ((InternalPacketAction_t)mode) {
       case InternalPacketAction_t::PACKET_ACTION_YN_REQUEST:
-        server->QueueWork(FriendRequest, server, connection, cLogin, sourceName,
-                          targetName);
+        FriendRequest(server, connection, cLogin, sourceName, targetName);
         break;
       case InternalPacketAction_t::PACKET_ACTION_ADD:
       case InternalPacketAction_t::PACKET_ACTION_RESPONSE_YES:
-        server->QueueWork(FriendRequestAccepted, server, connection, cLogin,
-                          sourceName, targetName);
+        FriendRequestAccepted(server, connection, cLogin, sourceName,
+                              targetName);
         break;
       case InternalPacketAction_t::PACKET_ACTION_RESPONSE_NO:
-        server->QueueWork(FriendRequestCancelled, server, connection, cLogin,
-                          sourceName, targetName);
+        FriendRequestCancelled(server, connection, cLogin, sourceName,
+                               targetName);
         break;
       default:
         LogGeneralError([&]() {

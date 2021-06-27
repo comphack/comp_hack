@@ -462,19 +462,12 @@ bool ChatManager::HandleGMand(
     argsList.remove_if(
         [](const libcomp::String& value) { return value.IsEmpty(); });
 
-    mServer.lock()->QueueWork(
-        [](ChatManager* pChatManager,
-           const std::shared_ptr<ChannelClientConnection>& cmdClient,
-           const libcomp::String& cmd,
-           const std::list<libcomp::String>& cmdArgs) {
-          if (!pChatManager->ExecuteGMCommand(cmdClient, cmd, cmdArgs)) {
-            LogChatManagerWarning([&]() {
-              return libcomp::String("GM command could not be processed: %1\n")
-                  .Arg(cmd);
-            });
-          }
-        },
-        this, client, command, argsList);
+    if (!ExecuteGMCommand(client, command, argsList)) {
+      LogChatManagerWarning([&]() {
+        return libcomp::String("GM command could not be processed: %1\n")
+            .Arg(command);
+      });
+    }
 
     return true;
   }

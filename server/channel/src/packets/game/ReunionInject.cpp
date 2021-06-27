@@ -46,11 +46,11 @@
 
 using namespace channel;
 
-void InjectReunionPoints(const std::shared_ptr<ChannelServer> server,
-                         const std::shared_ptr<ChannelClientConnection> client,
-                         uint8_t growthType, uint8_t mitamaType,
-                         std::array<int8_t, 12> rPointSet,
-                         std::array<int8_t, 12> mPointSet) {
+static void InjectReunionPoints(
+    const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client, uint8_t growthType,
+    uint8_t mitamaType, std::array<int8_t, 12> rPointSet,
+    std::array<int8_t, 12> mPointSet) {
   auto characterManager = server->GetCharacterManager();
 
   auto state = client->GetClientState();
@@ -213,8 +213,8 @@ bool Parsers::ReunionInject::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-  server->QueueWork(InjectReunionPoints, server, client, growthType, mitamaType,
-                    rPointSet, mPointSet);
+  InjectReunionPoints(server, client, growthType, mitamaType, rPointSet,
+                      mPointSet);
 
   return true;
 }

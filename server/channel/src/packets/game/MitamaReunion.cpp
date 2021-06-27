@@ -52,9 +52,10 @@
 
 using namespace channel;
 
-void HandleMitamaReunion(const std::shared_ptr<ChannelServer> server,
-                         const std::shared_ptr<ChannelClientConnection> client,
-                         int64_t mitamaID, int8_t reunionIdx) {
+static void HandleMitamaReunion(
+    const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client, int64_t mitamaID,
+    int8_t reunionIdx) {
   auto characterManager = server->GetCharacterManager();
   auto definitionManager = server->GetDefinitionManager();
   auto fusionManager = server->GetFusionManager();
@@ -198,7 +199,7 @@ bool Parsers::MitamaReunion::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-  server->QueueWork(HandleMitamaReunion, server, client, mitamaID, reunionIdx);
+  HandleMitamaReunion(server, client, mitamaID, reunionIdx);
 
   return true;
 }

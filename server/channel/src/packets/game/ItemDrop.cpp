@@ -49,9 +49,9 @@
 
 using namespace channel;
 
-void DropItem(const std::shared_ptr<ChannelServer> server,
-              const std::shared_ptr<ChannelClientConnection>& client,
-              int64_t itemID) {
+static void DropItem(const std::shared_ptr<ChannelServer> server,
+                     const std::shared_ptr<ChannelClientConnection>& client,
+                     int64_t itemID) {
   auto state = client->GetClientState();
   auto character = state->GetCharacterState()->GetEntity();
 
@@ -113,7 +113,7 @@ bool Parsers::ItemDrop::Parse(
 
   int64_t itemID = p.ReadS64Little();
 
-  server->QueueWork(DropItem, server, client, itemID);
+  DropItem(server, client, itemID);
 
   return true;
 }

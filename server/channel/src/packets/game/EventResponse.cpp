@@ -50,13 +50,7 @@ bool Parsers::EventResponse::Parse(
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-  server->QueueWork(
-      [](const std::shared_ptr<ChannelServer>& pServer,
-         const std::shared_ptr<ChannelClientConnection> pClient,
-         int32_t pOptionID) {
-        pServer->GetEventManager()->HandleResponse(pClient, pOptionID);
-      },
-      server, client, optionID);
+  server->GetEventManager()->HandleResponse(client, optionID);
 
   return true;
 }

@@ -39,9 +39,9 @@
 
 using namespace channel;
 
-void LoginAccount(AccountManager* accountManager,
-                  std::shared_ptr<ChannelClientConnection> client,
-                  const libcomp::String username, uint32_t sessionKey) {
+static void LoginAccount(AccountManager* accountManager,
+                         std::shared_ptr<ChannelClientConnection> client,
+                         const libcomp::String username, uint32_t sessionKey) {
   accountManager->HandleLoginRequest(client, username, sessionKey);
 }
 
@@ -61,8 +61,7 @@ bool Parsers::Login::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-  server->QueueWork(LoginAccount, server->GetAccountManager(), client, username,
-                    sessionKey);
+  LoginAccount(server->GetAccountManager(), client, username, sessionKey);
 
   return true;
 }

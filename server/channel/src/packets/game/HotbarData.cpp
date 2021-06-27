@@ -44,8 +44,8 @@
 
 using namespace channel;
 
-void SendHotbarData(const std::shared_ptr<ChannelClientConnection> client,
-                    size_t page) {
+static void SendHotbarData(
+    const std::shared_ptr<ChannelClientConnection> client, size_t page) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
@@ -88,7 +88,7 @@ bool Parsers::HotbarData::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-  server->QueueWork(SendHotbarData, client, (size_t)page);
+  SendHotbarData(client, (size_t)page);
 
   return true;
 }

@@ -68,14 +68,8 @@ bool Parsers::TriFusionSolo::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-  server->QueueWork(
-      [](const std::shared_ptr<ChannelServer> pServer,
-         const std::shared_ptr<ChannelClientConnection> pClient,
-         int64_t pDemonID1, int64_t pDemonID2, int64_t pDemonID3) {
-        pServer->GetFusionManager()->HandleTriFusion(
-            pClient, pDemonID1, pDemonID2, pDemonID3, true);
-      },
-      server, client, demonID1, demonID2, demonID3);
+  server->GetFusionManager()->HandleTriFusion(client, demonID1, demonID2,
+                                              demonID3, true);
 
   return true;
 }

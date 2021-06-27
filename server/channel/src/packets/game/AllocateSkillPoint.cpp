@@ -43,9 +43,9 @@
 
 using namespace channel;
 
-void AllocatePoint(const std::shared_ptr<ChannelServer> server,
-                   const std::shared_ptr<ChannelClientConnection> client,
-                   int8_t correctStatOffset) {
+static void AllocatePoint(const std::shared_ptr<ChannelServer> server,
+                          const std::shared_ptr<ChannelClientConnection> client,
+                          int8_t correctStatOffset) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
@@ -155,7 +155,7 @@ bool Parsers::AllocateSkillPoint::Parse(
     return false;
   }
 
-  server->QueueWork(AllocatePoint, server, client, correctStatOffset);
+  AllocatePoint(server, client, correctStatOffset);
 
   return true;
 }

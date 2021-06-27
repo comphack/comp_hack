@@ -69,13 +69,7 @@ bool Parsers::SkillExecute::Parse(
     return true;
   }
 
-  server->QueueWork(
-      [](SkillManager* pSkillManager,
-         const std::shared_ptr<ActiveEntityState> pSource, int8_t pActivationID,
-         int64_t pTargetObjectID) {
-        pSkillManager->ExecuteSkill(pSource, pActivationID, pTargetObjectID);
-      },
-      skillManager, source, activationID, targetObjectID);
+  skillManager->ExecuteSkill(source, activationID, targetObjectID);
 
   return true;
 }

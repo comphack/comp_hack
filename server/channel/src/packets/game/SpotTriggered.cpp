@@ -175,16 +175,9 @@ bool Parsers::SpotTriggered::Parse(
     });
 
     // Perform the action(s) in the list.
-    server->QueueWork(
-        [](const std::shared_ptr<ChannelServer>& serverWork,
-           const std::shared_ptr<ChannelClientConnection> clientWork,
-           gsl::owner<ActionListB*> pActionListWork) {
-          serverWork->GetActionManager()->PerformActions(
-              clientWork, pActionListWork->actions, 0);
+    server->GetActionManager()->PerformActions(client, pActionList->actions, 0);
 
-          delete pActionListWork;
-        },
-        server, client, pActionList);
+    delete pActionList;
   } else {
     LogGeneralDebug([spotID, zoneID, accountUID]() {
       return libcomp::String(

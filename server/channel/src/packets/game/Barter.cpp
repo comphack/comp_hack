@@ -62,7 +62,7 @@
 
 using namespace channel;
 
-bool BarterConditionValid(
+static bool BarterConditionValid(
     const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<CharacterState>& cState,
     const std::shared_ptr<DemonState>& dState,
@@ -203,9 +203,9 @@ bool BarterConditionValid(
   return true;
 }
 
-void HandleBarter(const std::shared_ptr<ChannelServer> server,
-                  const std::shared_ptr<ChannelClientConnection> client,
-                  uint16_t barterID) {
+static void HandleBarter(const std::shared_ptr<ChannelServer> server,
+                         const std::shared_ptr<ChannelClientConnection> client,
+                         uint16_t barterID) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto dState = state->GetDemonState();
@@ -721,7 +721,7 @@ bool Parsers::Barter::Parse(
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-  server->QueueWork(HandleBarter, server, client, barterID);
+  HandleBarter(server, client, barterID);
 
   return true;
 }

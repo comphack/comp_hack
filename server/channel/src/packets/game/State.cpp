@@ -51,8 +51,9 @@
 
 using namespace channel;
 
-void SendStateData(std::shared_ptr<ChannelServer> server,
-                   const std::shared_ptr<ChannelClientConnection> client) {
+static void SendStateData(
+    std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto channelLogin = state->GetChannelLogin();
@@ -191,7 +192,7 @@ bool Parsers::State::Parse(
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-  server->QueueWork(SendStateData, server, client);
+  SendStateData(server, client);
 
   return true;
 }

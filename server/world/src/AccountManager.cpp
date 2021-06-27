@@ -256,15 +256,9 @@ bool AccountManager::ChannelLogin(
         // If the character is in a clan, queue up a recalculation of
         // the clan level and sending of the character updates
         if (cLogin->GetClanID()) {
-          server->QueueWork(
-              [](std::shared_ptr<WorldServer> pServer,
-                 std::shared_ptr<objects::CharacterLogin> pLogin,
-                 int32_t pClanID) {
-                auto characterManager = pServer->GetCharacterManager();
-                characterManager->SendClanMemberInfo(pLogin);
-                characterManager->RecalculateClanLevel(pClanID);
-              },
-              server, cLogin, cLogin->GetClanID());
+          auto characterManager = server->GetCharacterManager();
+          characterManager->SendClanMemberInfo(cLogin);
+          characterManager->RecalculateClanLevel(cLogin->GetClanID());
         }
       }
     }

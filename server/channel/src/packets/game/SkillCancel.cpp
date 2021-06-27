@@ -67,13 +67,7 @@ bool Parsers::SkillCancel::Parse(
     return true;
   }
 
-  server->QueueWork(
-      [](SkillManager* pSkillManager,
-         const std::shared_ptr<ActiveEntityState> pSource,
-         int8_t pActivationID) {
-        pSkillManager->CancelSkill(pSource, pActivationID);
-      },
-      skillManager, source, activationID);
+  skillManager->CancelSkill(source, activationID);
 
   return true;
 }

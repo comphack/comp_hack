@@ -56,8 +56,9 @@ using namespace channel;
 // 0: Success
 // -1: too many items
 // anything else: generic error
-void SendShopSaleReply(const std::shared_ptr<ChannelClientConnection> client,
-                       int32_t shopID, int32_t result, bool queue) {
+static void SendShopSaleReply(
+    const std::shared_ptr<ChannelClientConnection> client, int32_t shopID,
+    int32_t result, bool queue) {
   libcomp::Packet reply;
   reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_SHOP_SELL);
   reply.WriteS32Little(shopID);
@@ -70,10 +71,10 @@ void SendShopSaleReply(const std::shared_ptr<ChannelClientConnection> client,
   }
 }
 
-void HandleShopSale(const std::shared_ptr<ChannelServer> server,
-                    const std::shared_ptr<ChannelClientConnection> client,
-                    int32_t shopID,
-                    std::list<std::pair<uint32_t, int64_t>> itemsSold) {
+static void HandleShopSale(
+    const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client, int32_t shopID,
+    std::list<std::pair<uint32_t, int64_t>> itemsSold) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
@@ -307,7 +308,7 @@ bool Parsers::ShopSell::Parse(
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-  server->QueueWork(HandleShopSale, server, client, shopID, itemsSold);
+  HandleShopSale(server, client, shopID, itemsSold);
 
   return true;
 }

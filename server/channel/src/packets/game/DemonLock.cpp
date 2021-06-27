@@ -37,8 +37,8 @@
 
 using namespace channel;
 
-void DemonLockSet(const std::shared_ptr<ChannelClientConnection> client,
-                  int64_t demonID, bool lock) {
+static void DemonLockSet(const std::shared_ptr<ChannelClientConnection> client,
+                         int64_t demonID, bool lock) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
@@ -102,7 +102,7 @@ bool Parsers::DemonLock::Parse(
     return false;
   }
 
-  server->QueueWork(DemonLockSet, client, demonID, lock == 1);
+  DemonLockSet(client, demonID, lock == 1);
 
   return true;
 }

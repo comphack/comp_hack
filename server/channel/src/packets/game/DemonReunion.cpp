@@ -53,14 +53,8 @@ bool Parsers::DemonReunion::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-  server->QueueWork(
-      [](const std::shared_ptr<ChannelServer> pServer,
-         const std::shared_ptr<ChannelClientConnection> pClient,
-         int64_t pDemonID, uint8_t pGrowthType, uint32_t pCostItemType) {
-        pServer->GetCharacterManager()->ReunionDemon(
-            pClient, pDemonID, pGrowthType, pCostItemType, true);
-      },
-      server, client, demonID, growthType, costItemType);
+  server->GetCharacterManager()->ReunionDemon(client, demonID, growthType,
+                                              costItemType, true);
 
   return true;
 }

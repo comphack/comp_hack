@@ -166,7 +166,7 @@ bool Parsers::AccountLogin::Parse(
       }
     }
 
-    server->QueueWork(UpdateAccountLogin, server, response);
+    UpdateAccountLogin(server, response);
   } else if (p.Left() > 2 && p.Left() == (uint16_t)(2 + p.PeekU16Little())) {
     // Failure, disconnect the client if they're here
     auto username =

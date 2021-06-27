@@ -68,22 +68,17 @@ bool Parsers::PopulateZone::Parse(
 
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  server->QueueWork(
-      [](ZoneManager* manager,
-         const std::shared_ptr<ChannelClientConnection> pClient) {
-        if (!manager->SendPopulateZoneData(pClient)) {
-          auto pState = pClient->GetClientState();
-          auto uuid = pState ? pState->GetAccountUID() : NULLUUID;
 
-          LogZoneManagerError([&]() {
-            return libcomp::String(
-                       "PopulateZone response failed to send data for account: "
-                       "%1\n")
-                .Arg(uuid.ToString());
-          });
-        }
-      },
-      server->GetZoneManager(), client);
+  if (!server->GetZoneManager()->SendPopulateZoneData(client)) {
+    auto uuid = state ? state->GetAccountUID() : NULLUUID;
+
+    LogZoneManagerError([&]() {
+      return libcomp::String(
+                 "PopulateZone response failed to send data for account: "
+                 "%1\n")
+          .Arg(uuid.ToString());
+    });
+  }
 
   return true;
 }

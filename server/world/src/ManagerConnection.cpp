@@ -127,44 +127,40 @@ void ManagerConnection::RemoveConnection(
     auto db = server->GetWorldDatabase();
     svr->Delete(db);
 
-    server->QueueWork(
-        [](std::shared_ptr<WorldServer> worldServer, int8_t channelID) {
-          auto accountManager = worldServer->GetAccountManager();
-          auto characterManager = worldServer->GetCharacterManager();
-          auto syncManager = worldServer->GetWorldSyncManager();
-          auto loggedOut = accountManager->LogoutUsersOnChannel(channelID);
+    auto accountManager = server->GetAccountManager();
+    auto characterManager = server->GetCharacterManager();
+    auto syncManager = server->GetWorldSyncManager();
+    auto loggedOut = accountManager->LogoutUsersOnChannel((int8_t)svr->GetID());
 
-          if (loggedOut.size() > 0) {
-            LogConnectionWarning([&]() {
-              return libcomp::String(
-                         "%1 user(s) forcefully logged out from channel %2.\n")
-                  .Arg(loggedOut.size())
-                  .Arg(channelID);
-            });
+    if (loggedOut.size() > 0) {
+      LogConnectionWarning([&]() {
+        return libcomp::String(
+                   "%1 user(s) forcefully logged out from channel %2.\n")
+            .Arg(loggedOut.size())
+            .Arg(svr->GetID());
+      });
 
-            bool flushSyncData = false;
-            std::list<std::shared_ptr<objects::CharacterLogin>> cLogOuts;
-            for (auto logOut : loggedOut) {
-              auto cLogin = logOut->GetCharacterLogin();
+      bool flushSyncData = false;
+      std::list<std::shared_ptr<objects::CharacterLogin>> cLogOuts;
+      for (auto logOut : loggedOut) {
+        auto cLogin = logOut->GetCharacterLogin();
 
-              characterManager->PartyLeave(cLogin, nullptr);
-              characterManager->TeamLeave(cLogin);
+        characterManager->PartyLeave(cLogin, nullptr);
+        characterManager->TeamLeave(cLogin);
 
-              flushSyncData |=
-                  syncManager->CleanUpCharacterLogin(cLogin->GetWorldCID());
+        flushSyncData |=
+            syncManager->CleanUpCharacterLogin(cLogin->GetWorldCID());
 
-              cLogOuts.push_back(cLogin);
-            }
+        cLogOuts.push_back(cLogin);
+      }
 
-            if (flushSyncData) {
-              syncManager->SyncOutgoing();
-            }
+      if (flushSyncData) {
+        syncManager->SyncOutgoing();
+      }
 
-            characterManager->SendStatusToRelatedCharacters(
-                cLogOuts, (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC);
-          }
-        },
-        server, svr->GetID());
+      characterManager->SendStatusToRelatedCharacters(
+          cLogOuts, (uint8_t)CharacterLoginStateFlag_t::CHARLOGIN_BASIC);
+    }
 
     std::list<std::shared_ptr<libcomp::TcpConnection>> connections;
     connections.push_back(mLobbyConnection);

@@ -206,14 +206,8 @@ bool Parsers::TriFusionAccept::Parse(
   }
 
   if (doFusion) {
-    server->QueueWork(
-        [](const std::shared_ptr<ChannelServer> pServer,
-           const std::shared_ptr<ChannelClientConnection> pClient,
-           int64_t pDemonID1, int64_t pDemonID2, int64_t pDemonID3) {
-          pServer->GetFusionManager()->HandleTriFusion(
-              pClient, pDemonID1, pDemonID2, pDemonID3, false);
-        },
-        server, client, demonIDs[0], demonIDs[1], demonIDs[2]);
+    server->GetFusionManager()->HandleTriFusion(
+        client, demonIDs[0], demonIDs[1], demonIDs[2], false);
   }
 
   return true;

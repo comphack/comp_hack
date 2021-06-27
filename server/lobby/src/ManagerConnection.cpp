@@ -270,24 +270,21 @@ void ManagerConnection::RemoveWorld(std::shared_ptr<lobby::World>& world) {
               .Arg(svr->GetName());
         });
 
-        server->QueueWork(
-            [](std::shared_ptr<LobbyServer> lobbyServer, int8_t worldID) {
-              auto accountManager = lobbyServer->GetAccountManager();
-              auto usernames = accountManager->LogoutUsersInWorld(worldID);
+        auto accountManager = server->GetAccountManager();
+        auto usernames =
+            accountManager->LogoutUsersInWorld((int8_t)svr->GetID());
 
-              if (usernames.size() > 0) {
-                LogConnectionWarning([&]() {
-                  return libcomp::String(
-                             "%1 user(s) forcefully logged out from world "
-                             "%2.\n")
-                      .Arg(usernames.size())
-                      .Arg(worldID);
-                });
-              }
+        if (usernames.size() > 0) {
+          LogConnectionWarning([&]() {
+            return libcomp::String(
+                       "%1 user(s) forcefully logged out from world "
+                       "%2.\n")
+                .Arg(usernames.size())
+                .Arg(svr->GetID());
+          });
+        }
 
-              lobbyServer->SendWorldList(nullptr);
-            },
-            server, svr->GetID());
+        server->SendWorldList(nullptr);
       } else {
         LogConnectionWarningMsg("Uninitialized world connection closed.\n");
       }

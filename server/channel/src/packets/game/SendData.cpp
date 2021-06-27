@@ -53,7 +53,7 @@
 
 using namespace channel;
 
-void SendClientReadyData(
+static void SendClientReadyData(
     std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client) {
   auto characterManager = server->GetCharacterManager();
@@ -249,7 +249,7 @@ bool Parsers::SendData::Parse(
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-  server->QueueWork(SendClientReadyData, server, client);
+  SendClientReadyData(server, client);
 
   return true;
 }

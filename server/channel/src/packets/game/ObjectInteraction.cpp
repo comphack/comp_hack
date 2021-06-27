@@ -200,17 +200,10 @@ bool Parsers::ObjectInteraction::Parse(
     }
 
     // Perform the action(s) in the list.
-    server->QueueWork(
-        [](const std::shared_ptr<ChannelServer>& serverWork,
-           const std::shared_ptr<ChannelClientConnection> clientWork,
-           gsl::owner<ActionList*> pActionListWork) {
-          serverWork->GetActionManager()->PerformActions(
-              clientWork, pActionListWork->actions,
-              pActionListWork->sourceEntityID);
+    server->GetActionManager()->PerformActions(client, pActionList->actions,
+                                               pActionList->sourceEntityID);
 
-          delete pActionListWork;
-        },
-        server, client, pActionList);
+    delete pActionList;
   }
 
   return true;

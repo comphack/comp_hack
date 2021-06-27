@@ -49,9 +49,10 @@
 
 using namespace channel;
 
-void SplitStack(const std::shared_ptr<ChannelServer> server,
-                const std::shared_ptr<ChannelClientConnection> client,
-                std::pair<uint32_t, uint16_t> sourceItem, uint32_t targetSlot) {
+static void SplitStack(const std::shared_ptr<ChannelServer> server,
+                       const std::shared_ptr<ChannelClientConnection> client,
+                       std::pair<uint32_t, uint16_t> sourceItem,
+                       uint32_t targetSlot) {
   auto state = client->GetClientState();
   auto character = state->GetCharacterState()->GetEntity();
   auto itemBox = character->GetItemBoxes(0).Get();
@@ -140,10 +141,11 @@ void SplitStack(const std::shared_ptr<ChannelServer> server,
   }
 }
 
-void CombineStacks(const std::shared_ptr<ChannelServer> server,
-                   const std::shared_ptr<ChannelClientConnection> client,
-                   const std::list<std::pair<uint32_t, uint16_t>> sourceItems,
-                   uint32_t targetSlot) {
+static void CombineStacks(
+    const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client,
+    const std::list<std::pair<uint32_t, uint16_t>> sourceItems,
+    uint32_t targetSlot) {
   auto state = client->GetClientState();
   auto character = state->GetCharacterState()->GetEntity();
   auto itemBox = character->GetItemBoxes(0).Get();
@@ -316,9 +318,9 @@ bool Parsers::ItemStack::Parse(
   }
 
   if (isSplit) {
-    server->QueueWork(SplitStack, server, client, srcItems.front(), targetSlot);
+    SplitStack(server, client, srcItems.front(), targetSlot);
   } else {
-    server->QueueWork(CombineStacks, server, client, srcItems, targetSlot);
+    CombineStacks(server, client, srcItems, targetSlot);
   }
 
   return true;

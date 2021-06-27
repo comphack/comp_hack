@@ -61,14 +61,7 @@ bool Parsers::ITimeTalk::Parse(
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-  server->QueueWork(
-      [](const std::shared_ptr<ChannelServer>& pServer,
-         const std::shared_ptr<ChannelClientConnection> pClient,
-         int8_t pRequestID, int64_t pItemID) {
-        pServer->GetEventManager()->HandleResponse(pClient, pRequestID,
-                                                   pItemID);
-      },
-      server, client, requestID, itemID);
+  server->GetEventManager()->HandleResponse(client, requestID, itemID);
 
   return true;
 }

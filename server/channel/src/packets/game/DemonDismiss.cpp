@@ -42,9 +42,9 @@
 
 using namespace channel;
 
-void DismissDemon(const std::shared_ptr<ChannelServer> server,
-                  const std::shared_ptr<ChannelClientConnection> client,
-                  int64_t demonID) {
+static void DismissDemon(const std::shared_ptr<ChannelServer> server,
+                         const std::shared_ptr<ChannelClientConnection> client,
+                         int64_t demonID) {
   auto state = client->GetClientState();
   auto dState = state->GetDemonState();
   auto cState = state->GetCharacterState();
@@ -108,7 +108,7 @@ bool Parsers::DemonDismiss::Parse(
     return false;
   }
 
-  server->QueueWork(DismissDemon, server, client, demonID);
+  DismissDemon(server, client, demonID);
 
   return true;
 }

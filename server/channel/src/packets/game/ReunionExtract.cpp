@@ -49,7 +49,7 @@
 
 using namespace channel;
 
-void ExtractReunionPoints(
+static void ExtractReunionPoints(
     const std::shared_ptr<ChannelServer> server,
     const std::shared_ptr<ChannelClientConnection> client) {
   auto characterManager = server->GetCharacterManager();
@@ -211,7 +211,7 @@ bool Parsers::ReunionExtract::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-  server->QueueWork(ExtractReunionPoints, server, client);
+  ExtractReunionPoints(server, client);
 
   return true;
 }

@@ -45,9 +45,9 @@
 
 using namespace channel;
 
-void HandleMitamaReset(const std::shared_ptr<ChannelServer> server,
-                       const std::shared_ptr<ChannelClientConnection> client,
-                       int8_t reunionIdx) {
+static void HandleMitamaReset(
+    const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client, int8_t reunionIdx) {
   auto characterManager = server->GetCharacterManager();
   auto definitionManager = server->GetDefinitionManager();
 
@@ -134,7 +134,7 @@ bool Parsers::MitamaReset::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-  server->QueueWork(HandleMitamaReset, server, client, reunionIdx);
+  HandleMitamaReset(server, client, reunionIdx);
 
   return true;
 }

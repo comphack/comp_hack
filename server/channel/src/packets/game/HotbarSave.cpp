@@ -51,9 +51,10 @@ struct HotbarItemRequest {
   int64_t ObjectID;
 };
 
-void SaveHotbarItems(const std::shared_ptr<ChannelServer> server,
-                     const std::shared_ptr<ChannelClientConnection> client,
-                     size_t page, std::vector<HotbarItemRequest> items) {
+static void SaveHotbarItems(
+    const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client, size_t page,
+    std::vector<HotbarItemRequest> items) {
   auto state = client->GetClientState();
   auto character = state->GetCharacterState()->GetEntity();
   auto hotbar = character->GetHotbars(page).Get();
@@ -118,7 +119,7 @@ bool Parsers::HotbarSave::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-  server->QueueWork(SaveHotbarItems, server, client, (size_t)page, items);
+  SaveHotbarItems(server, client, (size_t)page, items);
 
   return true;
 }

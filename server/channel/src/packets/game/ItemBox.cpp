@@ -65,13 +65,7 @@ bool Parsers::ItemBox::Parse(
 
   auto itemBox = characterManager->GetItemBox(state, type, boxID);
   if (nullptr != itemBox) {
-    server->QueueWork(
-        [](CharacterManager* pCharacterManager,
-           const std::shared_ptr<ChannelClientConnection>& pClient,
-           const std::shared_ptr<objects::ItemBox>& pBox) {
-          pCharacterManager->SendItemBoxData(pClient, pBox);
-        },
-        characterManager, client, itemBox);
+    characterManager->SendItemBoxData(client, itemBox);
   }
 
   return true;

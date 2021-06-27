@@ -43,9 +43,9 @@
 
 using namespace channel;
 
-void SendDemonQuestData(const std::shared_ptr<ChannelServer> server,
-                        const std::shared_ptr<ChannelClientConnection> client,
-                        int64_t demonID) {
+static void SendDemonQuestData(
+    const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client, int64_t demonID) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
@@ -129,7 +129,7 @@ bool Parsers::DemonQuestData::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-  server->QueueWork(SendDemonQuestData, server, client, demonID);
+  SendDemonQuestData(server, client, demonID);
 
   return true;
 }

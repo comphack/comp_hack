@@ -48,9 +48,10 @@ const int8_t ACTION_MOVE = 2;
 
 using namespace channel;
 
-void UpdateDemonSkill(const std::shared_ptr<ChannelServer> server,
-                      const std::shared_ptr<ChannelClientConnection> client,
-                      int32_t entityID, int8_t skillSlot, uint32_t skillID) {
+static void UpdateDemonSkill(
+    const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client, int32_t entityID,
+    int8_t skillSlot, uint32_t skillID) {
   auto state = client->GetClientState();
   auto dState = state->GetDemonState();
   auto demon = dState->GetEntity();
@@ -185,8 +186,7 @@ bool Parsers::DemonSkillUpdate::Parse(
     return false;
   }
 
-  server->QueueWork(UpdateDemonSkill, server, client, entityID, skillSlot,
-                    skillID);
+  UpdateDemonSkill(server, client, entityID, skillSlot, skillID);
 
   return true;
 }

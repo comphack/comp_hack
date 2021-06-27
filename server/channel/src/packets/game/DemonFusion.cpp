@@ -77,14 +77,8 @@ bool Parsers::DemonFusion::Parse(
     }
   }
 
-  server->QueueWork(
-      [](const std::shared_ptr<ChannelServer> pServer,
-         const std::shared_ptr<ChannelClientConnection> pClient,
-         int64_t pDemonID1, int64_t pDemonID2, uint32_t pCostItemType) {
-        pServer->GetFusionManager()->HandleFusion(pClient, pDemonID1, pDemonID2,
-                                                  pCostItemType);
-      },
-      server, client, demonID1, demonID2, costItemType);
+  server->GetFusionManager()->HandleFusion(client, demonID1, demonID2,
+                                           costItemType);
 
   return true;
 }

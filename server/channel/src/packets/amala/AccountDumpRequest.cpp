@@ -43,8 +43,8 @@ using namespace channel;
 
 #define PART_SIZE (1024)
 
-void DumpAccount(AccountManager* accountManager,
-                 const std::shared_ptr<ChannelClientConnection> client) {
+static void DumpAccount(AccountManager* accountManager,
+                        const std::shared_ptr<ChannelClientConnection> client) {
   auto state = client->GetClientState();
 
   std::string dump = accountManager->DumpAccount(state).ToUtf8();
@@ -107,7 +107,7 @@ bool Parsers::AmalaAccountDumpRequest::Parse(
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-  server->QueueWork(DumpAccount, server->GetAccountManager(), client);
+  DumpAccount(server->GetAccountManager(), client);
 
   return true;
 }

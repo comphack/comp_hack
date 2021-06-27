@@ -67,7 +67,7 @@ using namespace channel;
 // 0: Normal Success
 // -1: too many items
 // anything else: error dialog
-void SendShopPurchaseReply(
+static void SendShopPurchaseReply(
     const std::shared_ptr<ChannelClientConnection> client, int32_t shopID,
     int32_t productID, int32_t result, bool queue) {
   libcomp::Packet reply;
@@ -85,12 +85,11 @@ void SendShopPurchaseReply(
   }
 }
 
-void HandleShopPurchase(const std::shared_ptr<ChannelServer> server,
-                        const std::shared_ptr<ChannelClientConnection> client,
-                        int32_t shopID, int32_t clientTrendTime,
-                        int32_t productID, int32_t quantity,
-                        libcomp::String gifteeName,
-                        libcomp::String giftMessage) {
+static void HandleShopPurchase(
+    const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client, int32_t shopID,
+    int32_t clientTrendTime, int32_t productID, int32_t quantity,
+    libcomp::String gifteeName, libcomp::String giftMessage) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
@@ -448,8 +447,8 @@ bool Parsers::ShopBuy::Parse(
   auto server =
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
 
-  server->QueueWork(HandleShopPurchase, server, client, shopID, clientTrendTime,
-                    productID, quantity, gifteeName, giftMessage);
+  HandleShopPurchase(server, client, shopID, clientTrendTime, productID,
+                     quantity, gifteeName, giftMessage);
 
   return true;
 }

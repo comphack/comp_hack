@@ -148,7 +148,7 @@ bool Parsers::AccountLogin::Parse(
       }
     }
 
-    server->QueueWork(HandleLoginResponse, server->GetAccountManager(), client);
+    HandleLoginResponse(server->GetAccountManager(), client);
   } else if (responseCode == 2) {
     // World is requesting information about which channel to log
     // a player into from the lobby

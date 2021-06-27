@@ -59,9 +59,10 @@
 
 using namespace channel;
 
-void HandleCultureItem(const std::shared_ptr<ChannelServer> server,
-                       const std::shared_ptr<ChannelClientConnection> client,
-                       int64_t itemID, int8_t day) {
+static void HandleCultureItem(
+    const std::shared_ptr<ChannelServer> server,
+    const std::shared_ptr<ChannelClientConnection> client, int64_t itemID,
+    int8_t day) {
   const int8_t PMODE_NORMAL = 0;
   const int8_t PMODE_MAX = 1;
   const int8_t PMODE_MAX_ALL = 2;
@@ -338,7 +339,7 @@ bool Parsers::CultureItem::Parse(
       std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
 
-  server->QueueWork(HandleCultureItem, server, client, itemID, day);
+  HandleCultureItem(server, client, itemID, day);
 
   return true;
 }

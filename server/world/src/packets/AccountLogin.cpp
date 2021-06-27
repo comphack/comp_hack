@@ -62,12 +62,7 @@ bool Parsers::AccountLogin::Parse(
       return false;
     }
 
-    server->QueueWork(
-        [](std::shared_ptr<WorldServer> pServer,
-           std::shared_ptr<objects::AccountLogin> pLogin) {
-          pServer->GetAccountManager()->HandleLobbyLogin(pLogin);
-        },
-        server, login);
+    server->GetAccountManager()->HandleLobbyLogin(login);
   } else {
     if (p.ReadU8() == 0) {
       // The channel is requesting session info
@@ -75,14 +70,8 @@ bool Parsers::AccountLogin::Parse(
           libcomp::Convert::Encoding_t::ENCODING_UTF8, true);
       uint32_t sessionKey = p.ReadU32();
 
-      server->QueueWork(
-          [](std::shared_ptr<WorldServer> pServer,
-             const std::shared_ptr<libcomp::InternalConnection>& pChannel,
-             uint32_t pSessionKey, const libcomp::String pUsername) {
-            pServer->GetAccountManager()->HandleChannelLogin(
-                pChannel, pSessionKey, pUsername);
-          },
-          server, iConnection, sessionKey, username);
+      server->GetAccountManager()->HandleChannelLogin(iConnection, sessionKey,
+                                                      username);
     } else {
       // The channel is supplying requested first login info
       auto login = std::make_shared<objects::AccountLogin>();
@@ -104,14 +93,7 @@ bool Parsers::AccountLogin::Parse(
         return false;
       }
 
-      server->QueueWork(
-          [](std::shared_ptr<WorldServer> pServer,
-             std::shared_ptr<objects::AccountLogin> pLogin,
-             std::shared_ptr<objects::ChannelLogin> pChannelLogin) {
-            pServer->GetAccountManager()->CompleteLobbyLogin(pLogin,
-                                                             pChannelLogin);
-          },
-          server, login, channelLogin);
+      server->GetAccountManager()->CompleteLobbyLogin(login, channelLogin);
     }
   }
 

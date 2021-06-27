@@ -69,25 +69,19 @@ bool Parsers::DeleteCharacter::Parse(
     auto world = server->GetWorldByID(deleteCharacter->GetWorldID());
     auto worldDB = world->GetWorldDatabase();
 
-    server->QueueWork(
-        [](const std::shared_ptr<LobbyClientConnection> client, uint8_t c,
-           std::shared_ptr<LobbyServer> s) {
-          libcomp::Packet reply;
-          reply.WritePacketCode(
-              LobbyToClientPacketCode_t::PACKET_DELETE_CHARACTER);
+    libcomp::Packet reply;
+    reply.WritePacketCode(LobbyToClientPacketCode_t::PACKET_DELETE_CHARACTER);
 
-          if (s->GetAccountManager()->UpdateKillTime(
-                  client->GetClientState()->GetAccount()->GetUsername(), c,
-                  s)) {
-            reply.WriteS8((int8_t)c);
-          } else {
-            // Send failure
-            reply.WriteS8(-1);
-          }
+    if (server->GetAccountManager()->UpdateKillTime(
+            lobbyConnection->GetClientState()->GetAccount()->GetUsername(), cid,
+            server)) {
+      reply.WriteS8((int8_t)cid);
+    } else {
+      // Send failure
+      reply.WriteS8(-1);
+    }
 
-          client->SendPacket(reply);
-        },
-        lobbyConnection, cid, server);
+    lobbyConnection->SendPacket(reply);
   } else {
     LogGeneralError([&]() {
       return libcomp::String(

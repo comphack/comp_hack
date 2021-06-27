@@ -66,13 +66,7 @@ bool Parsers::SkillTarget::Parse(
     return false;
   }
 
-  server->QueueWork(
-      [](SkillManager* pSkillManager,
-         const std::shared_ptr<ActiveEntityState> pSource,
-         int64_t pTargetObjectID) {
-        pSkillManager->TargetSkill(pSource, pTargetObjectID);
-      },
-      skillManager, source, targetObjectID);
+  skillManager->TargetSkill(source, targetObjectID);
 
   return true;
 }

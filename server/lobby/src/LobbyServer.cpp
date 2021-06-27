@@ -93,7 +93,7 @@ bool LobbyServer::Initialize() {
   }
 
   mManagerConnection = std::make_shared<ManagerConnection>(
-      self, &mService, mMainWorker.GetMessageQueue());
+      self, &mService, mMainWorker->GetMessageQueue());
 
   mAccountManager = new AccountManager(this);
   mSyncManager = new LobbySyncManager(self);
@@ -109,6 +109,8 @@ bool LobbyServer::Initialize() {
   }
 
   auto internalPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
+  internalPacketManager->AddPurposeFilter(
+      libcomp::TcpConnection::Purpose_t::INTERNAL);
   internalPacketManager->AddParser<Parsers::SetWorldInfo>(
       to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_INFO));
   internalPacketManager->AddParser<Parsers::SetChannelInfo>(
@@ -123,10 +125,12 @@ bool LobbyServer::Initialize() {
       to_underlying(InternalPacketCode_t::PACKET_WEB_GAME));
 
   // Add the managers to the main worker.
-  mMainWorker.AddManager(internalPacketManager);
-  mMainWorker.AddManager(mManagerConnection);
+  mMainWorker->AddManager(internalPacketManager);
+  mMainWorker->AddManager(mManagerConnection);
 
   auto clientPacketManager = std::make_shared<ManagerClientPacket>(self);
+  clientPacketManager->AddPurposeFilter(
+      libcomp::TcpConnection::Purpose_t::CLIENT);
   clientPacketManager->AddParser<Parsers::Login>(
       to_underlying(ClientToLobbyPacketCode_t::PACKET_LOGIN));
   clientPacketManager->AddParser<Parsers::Auth>(
@@ -146,10 +150,15 @@ bool LobbyServer::Initialize() {
   clientPacketManager->AddParser<Parsers::PurchaseTicket>(
       to_underlying(ClientToLobbyPacketCode_t::PACKET_PURCHASE_TICKET));
 
+  bool multithread = mConfig->GetMultithreadMode();
+
   // Add the managers to the generic workers.
   for (auto worker : mWorkers) {
     worker->AddManager(clientPacketManager);
-    worker->AddManager(mManagerConnection);
+
+    if (multithread) {
+      worker->AddManager(mManagerConnection);
+    }
   }
 
   return true;
@@ -250,6 +259,10 @@ std::shared_ptr<libcomp::TcpConnection> LobbyServer::CreateConnection(
 
   // Set a unique connection ID for the name of the connection.
   connection->SetName(libcomp::String("client:%1").Arg(connectionID++));
+
+  // Set the purpose for this connection so it is handled properly by the
+  // managers.
+  connection->SetPurpose(libcomp::TcpConnection::Purpose_t::CLIENT);
 
   if (AssignMessageQueue(connection)) {
     // Give the connection a new client state object.

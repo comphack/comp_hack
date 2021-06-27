@@ -89,6 +89,7 @@ bool ManagerConnection::ProcessMessage(
 
       worldConnection->SetName(
           libcomp::String("world:%1:%2").Arg(address).Arg(port));
+      worldConnection->SetPurpose(libcomp::TcpConnection::Purpose_t::INTERNAL);
       worldConnection->SetMessageQueue(mMessageQueue);
 
       // Connect and stay connected until either of us shutdown

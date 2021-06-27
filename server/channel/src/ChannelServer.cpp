@@ -158,6 +158,8 @@ bool ChannelServer::Initialize() {
   mManagerConnection = std::make_shared<ManagerConnection>(self);
 
   auto internalPacketManager = std::make_shared<libcomp::ManagerPacket>(self);
+  internalPacketManager->AddPurposeFilter(
+      libcomp::TcpConnection::Purpose_t::INTERNAL);
   internalPacketManager->AddParser<Parsers::SetWorldInfo>(
       to_underlying(InternalPacketCode_t::PACKET_SET_WORLD_INFO));
   internalPacketManager->AddParser<Parsers::SetOtherChannelInfo>(
@@ -184,15 +186,17 @@ bool ChannelServer::Initialize() {
       to_underlying(InternalPacketCode_t::PACKET_TEAM_UPDATE));
 
   // Add the managers to the main worker.
-  mMainWorker.AddManager(internalPacketManager);
-  mMainWorker.AddManager(mManagerConnection);
+  mMainWorker->AddManager(internalPacketManager);
+  mMainWorker->AddManager(mManagerConnection);
 
   // Add managers to the queue worker.
   auto systemManager = std::make_shared<channel::ManagerSystem>(self);
-  mQueueWorker.AddManager(systemManager);
+  mQueueWorker->AddManager(systemManager);
 
   // Map packet parsers to supported packets
   auto clientPacketManager = std::make_shared<ManagerClientPacket>(self);
+  clientPacketManager->AddPurposeFilter(
+      libcomp::TcpConnection::Purpose_t::CLIENT);
   clientPacketManager->AddParser<Parsers::Login>(
       to_underlying(ClientToChannelPacketCode_t::PACKET_LOGIN));
   clientPacketManager->AddParser<Parsers::Auth>(
@@ -716,10 +720,15 @@ bool ChannelServer::Initialize() {
   clientPacketManager->AddParser<Parsers::Unsupported>(
       to_underlying(ClientToChannelPacketCode_t::PACKET_RECEIVED_LISTS));
 
+  bool multithread = mConfig->GetMultithreadMode();
+
   // Add the managers to the generic workers.
   for (auto worker : mWorkers) {
     worker->AddManager(clientPacketManager);
-    worker->AddManager(mManagerConnection);
+
+    if (multithread) {
+      worker->AddManager(mManagerConnection);
+    }
   }
 
   auto channelPtr = std::dynamic_pointer_cast<ChannelServer>(self);
@@ -745,7 +754,8 @@ bool ChannelServer::Initialize() {
   auto worldConnection =
       std::make_shared<libcomp::InternalConnection>(mService);
   worldConnection->SetName("world");
-  worldConnection->SetMessageQueue(mMainWorker.GetMessageQueue());
+  worldConnection->SetPurpose(libcomp::TcpConnection::Purpose_t::INTERNAL);
+  worldConnection->SetMessageQueue(mMainWorker->GetMessageQueue());
 
   mManagerConnection->SetWorldConnection(worldConnection);
 
@@ -1097,7 +1107,7 @@ void ChannelServer::Tick() {
 
   // Queue any work that has been scheduled
   if (schedule.size() > 0) {
-    auto queue = mQueueWorker.GetMessageQueue();
+    auto queue = mQueueWorker->GetMessageQueue();
     for (auto it = schedule.begin(); it != schedule.end(); it++) {
       for (auto it2 = it->second.begin(); it2 != it->second.end(); it2++) {
         queue->Enqueue(*it2);
@@ -1157,7 +1167,7 @@ void ChannelServer::StartGameTick() {
           }
         }
       },
-      mQueueWorker.GetMessageQueue(), &mTickRunning);
+      mQueueWorker->GetMessageQueue(), &mTickRunning);
 }
 
 bool ChannelServer::SendSystemMessage(
@@ -1340,6 +1350,7 @@ std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
       socket, LoadDiffieHellman(GetDiffieHellman()->GetPrime()));
   connection->SetServerConfig(mConfig);
   connection->SetName(libcomp::String("client:%1").Arg(connectionID++));
+  connection->SetPurpose(libcomp::TcpConnection::Purpose_t::CLIENT);
 
   if (AssignMessageQueue(connection)) {
     // Make sure this is called after connecting.

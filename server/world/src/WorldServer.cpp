@@ -95,6 +95,8 @@ void WorldServer::FinishInitialize() {
 
   // Build the lobby manager
   auto packetManager = std::make_shared<libcomp::ManagerPacket>(self);
+  packetManager->AddPurposeFilter(
+      libcomp::TcpConnection::Purpose_t::MAIN_INTERNAL);
   packetManager->AddParser<Parsers::GetWorldInfo>(
       to_underlying(InternalPacketCode_t::PACKET_GET_WORLD_INFO));
   packetManager->AddParser<Parsers::SetChannelInfo>(
@@ -111,11 +113,12 @@ void WorldServer::FinishInitialize() {
       to_underlying(InternalPacketCode_t::PACKET_WEB_GAME));
 
   // Add the managers to the main worker.
-  mMainWorker.AddManager(packetManager);
-  mMainWorker.AddManager(connectionManager);
+  mMainWorker->AddManager(packetManager);
+  mMainWorker->AddManager(connectionManager);
 
   // Build the channel manager
   packetManager = std::make_shared<libcomp::ManagerPacket>(self);
+  packetManager->AddPurposeFilter(libcomp::TcpConnection::Purpose_t::INTERNAL);
   packetManager->AddParser<Parsers::GetWorldInfo>(
       to_underlying(InternalPacketCode_t::PACKET_GET_WORLD_INFO));
   packetManager->AddParser<Parsers::SetChannelInfo>(
@@ -141,10 +144,15 @@ void WorldServer::FinishInitialize() {
   packetManager->AddParser<Parsers::TeamUpdate>(
       to_underlying(InternalPacketCode_t::PACKET_TEAM_UPDATE));
 
+  bool multithread = mConfig->GetMultithreadMode();
+
   // Add the managers to the generic workers.
   for (auto worker : mWorkers) {
     worker->AddManager(packetManager);
-    worker->AddManager(connectionManager);
+
+    if (multithread) {
+      worker->AddManager(connectionManager);
+    }
   }
 
   // Now Connect to the lobby server.
@@ -398,12 +406,14 @@ std::shared_ptr<libcomp::TcpConnection> WorldServer::CreateConnection(
 
   if (!mManagerConnection->LobbyConnected()) {
     // Assign this to the main worker.
-    connection->SetMessageQueue(mMainWorker.GetMessageQueue());
+    connection->SetMessageQueue(mMainWorker->GetMessageQueue());
     connection->ConnectionSuccess();
     connection->SetName(libcomp::String("%1:lobby").Arg(connectionID++));
+    connection->SetPurpose(libcomp::TcpConnection::Purpose_t::MAIN_INTERNAL);
   } else if (true)  /// @todo: ensure that channels can start connecting
   {
     connection->SetName(libcomp::String("%1:channel").Arg(connectionID++));
+    connection->SetPurpose(libcomp::TcpConnection::Purpose_t::INTERNAL);
 
     if (AssignMessageQueue(connection)) {
       connection->ConnectionSuccess();

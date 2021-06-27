@@ -42,6 +42,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -49,6 +50,8 @@ bool Parsers::DestinyLotto::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 8) {
     return false;
   }
@@ -67,12 +70,11 @@ bool Parsers::DestinyLotto::Parse(
     }
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  auto characterManager = server->GetCharacterManager();
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto characterManager = server->GetCharacterManager();
   auto zone = state->GetZone();
   auto instance = zone ? zone->GetInstance() : nullptr;
   auto dBox =

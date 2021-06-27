@@ -33,6 +33,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "EventManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -40,6 +41,8 @@ bool Parsers::EventResponse::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 4) {
     return false;
   }
@@ -47,8 +50,9 @@ bool Parsers::EventResponse::Parse(
   int32_t optionID = p.ReadS32Little();
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   server->GetEventManager()->HandleResponse(client, optionID);
 

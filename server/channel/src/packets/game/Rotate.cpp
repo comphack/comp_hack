@@ -38,6 +38,7 @@
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
 #include "ClientState.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -46,14 +47,16 @@ bool Parsers::Rotate::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 16) {
     return false;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   int32_t entityID = p.ReadS32Little();
 

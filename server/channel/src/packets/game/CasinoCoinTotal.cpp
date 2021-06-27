@@ -35,6 +35,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -42,6 +43,8 @@ bool Parsers::CasinoCoinTotal::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 4) {
     return false;
   }
@@ -49,10 +52,10 @@ bool Parsers::CasinoCoinTotal::Parse(
   int32_t unknown = p.ReadS32Little();
   (void)unknown;
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   server->GetCharacterManager()->SendCoinTotal(client, false);
 

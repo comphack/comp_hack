@@ -36,6 +36,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -68,8 +69,8 @@ bool Parsers::ReportPlayer::Parse(
         p.ReadString16Little(state->GetClientStringEncoding(), true);
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto worldDB = server->GetWorldDatabase();
 
   auto player = objects::Character::LoadCharacterByName(worldDB, textParams[0]);

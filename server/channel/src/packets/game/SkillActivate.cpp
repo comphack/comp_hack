@@ -37,6 +37,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "Prefecture.h"
 #include "SkillManager.h"
 
 using namespace channel;
@@ -45,14 +46,16 @@ bool Parsers::SkillActivate::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 12) {
     return false;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto skillManager = server->GetSkillManager();
 
   int32_t sourceEntityID = p.ReadS32Little();

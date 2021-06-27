@@ -44,6 +44,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 #include "SkillManager.h"
 
 using namespace channel;
@@ -52,6 +53,8 @@ bool Parsers::ItemRepairMax::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 13) {
     return false;
   }
@@ -76,8 +79,8 @@ bool Parsers::ItemRepairMax::Parse(
     return true;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto characterManager = server->GetCharacterManager();
 
   auto item = std::dynamic_pointer_cast<objects::Item>(

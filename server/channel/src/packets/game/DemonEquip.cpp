@@ -45,6 +45,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 #include "TokuseiManager.h"
 
 using namespace channel;
@@ -53,6 +54,8 @@ bool Parsers::DemonEquip::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 27) {
     return false;
   }
@@ -64,13 +67,12 @@ bool Parsers::DemonEquip::Parse(
   uint8_t targetSlot = p.ReadU8();
   int64_t targetItemID = p.ReadS64Little();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  auto characterManager = server->GetCharacterManager();
-  auto definitionManager = server->GetDefinitionManager();
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto characterManager = server->GetCharacterManager();
+  auto definitionManager = server->GetDefinitionManager();
   auto cState = state->GetCharacterState();
   auto dState = state->GetDemonState();
 

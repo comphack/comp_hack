@@ -37,6 +37,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "MatchManager.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -45,6 +46,8 @@ bool Parsers::UBLeave::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 4) {
     return false;
   }
@@ -65,8 +68,8 @@ bool Parsers::UBLeave::Parse(
 
     client->QueuePacket(reply);
 
-    auto server =
-        std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto prefecture = state->GetPrefecture();
+    auto server = prefecture->GetServer();
     auto zoneManager = server->GetZoneManager();
 
     zoneManager->MoveToLobby(client);

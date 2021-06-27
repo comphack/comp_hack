@@ -45,6 +45,7 @@
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "CultureMachineState.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -53,17 +54,18 @@ bool Parsers::CultureStart::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 8) {
     return false;
   }
 
   int64_t itemID = p.ReadS64Little();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
   auto cData = character ? character->GetCultureData().Get() : nullptr;

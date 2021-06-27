@@ -66,6 +66,7 @@ class ChatManager;
 class EventManager;
 class FusionManager;
 class MatchManager;
+class Prefecture;
 class SkillManager;
 class TokuseiManager;
 class ZoneManager;
@@ -577,6 +578,9 @@ class ChannelServer : public libhack::Server {
 
   /// If the tick thread should continue running.
   volatile bool mTickRunning;
+
+  /// @todo Test prefecture that needs to be removed.
+  std::shared_ptr<Prefecture> mPrefecture;
 };
 
 }  // namespace channel

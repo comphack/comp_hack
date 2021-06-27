@@ -36,6 +36,7 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -44,6 +45,8 @@ bool Parsers::PopulateZone::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 4) {
     return false;
   }
@@ -66,8 +69,8 @@ bool Parsers::PopulateZone::Parse(
     return true;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   if (!server->GetZoneManager()->SendPopulateZoneData(client)) {
     auto uuid = state ? state->GetAccountUID() : NULLUUID;

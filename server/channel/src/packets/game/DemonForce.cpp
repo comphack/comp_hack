@@ -47,6 +47,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
 
@@ -56,6 +57,8 @@ bool Parsers::DemonForce::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 21) {
     return false;
   }
@@ -74,13 +77,12 @@ bool Parsers::DemonForce::Parse(
     }
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  auto characterManager = server->GetCharacterManager();
-  auto definitionManager = server->GetDefinitionManager();
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto characterManager = server->GetCharacterManager();
+  auto definitionManager = server->GetDefinitionManager();
   auto cState = state->GetCharacterState();
   auto dState = state->GetDemonState();
   auto devilData = dState->GetDevilData();

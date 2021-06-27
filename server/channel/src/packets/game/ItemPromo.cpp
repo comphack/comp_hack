@@ -39,6 +39,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -46,16 +47,17 @@ bool Parsers::ItemPromo::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Left() != (uint16_t)(2 + p.PeekU16Little())) {
     return false;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  auto db = server->GetLobbyDatabase();
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto db = server->GetLobbyDatabase();
   auto cState = state->GetCharacterState();
 
   libcomp::String code =

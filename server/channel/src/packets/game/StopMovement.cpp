@@ -38,6 +38,7 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -46,6 +47,8 @@ bool Parsers::StopMovement::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 16) {
     return false;
   }
@@ -80,8 +83,8 @@ bool Parsers::StopMovement::Parse(
     return true;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto zoneManager = server->GetZoneManager();
 
   float destX = p.ReadFloat();

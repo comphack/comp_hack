@@ -34,6 +34,7 @@
 // channel Includes
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -49,10 +50,10 @@ bool Parsers::DemonAISet::Parse(
 
   uint16_t attackSettings = p.ReadU16Little();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto dState = state->GetDemonState();
   auto demon = dState->GetEntity();
 

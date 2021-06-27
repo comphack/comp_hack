@@ -42,6 +42,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "ChannelSyncManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -49,12 +50,16 @@ bool Parsers::SearchList::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 12) {
     return false;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto syncManager = server->GetChannelSyncManager();
   auto worldDB = server->GetWorldDatabase();
 
@@ -123,9 +128,6 @@ bool Parsers::SearchList::Parse(
         clanEventView = viewMode == 0;
         if (clanEventView) {
           // Filter out zones that are not in the current event zone
-          auto client =
-              std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-          auto state = client->GetClientState();
           auto current = state->GetEventState()->GetCurrent();
           int32_t eventZoneID = state->GetCurrentMenuShopID();
           if (eventZoneID != 0) {

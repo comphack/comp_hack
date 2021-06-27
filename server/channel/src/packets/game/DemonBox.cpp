@@ -43,6 +43,7 @@
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -50,15 +51,18 @@ bool Parsers::DemonBox::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 1) {
     return false;
   }
 
   int8_t boxID = p.ReadS8();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   server->GetCharacterManager()->SendDemonBoxData(client, boxID);
 

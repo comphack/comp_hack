@@ -37,6 +37,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -86,8 +87,8 @@ bool Parsers::Pivot::Parse(
   float startTime = p.ReadFloat();
   float stopTime = p.ReadFloat();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto zoneManager = server->GetZoneManager();
 
   const static bool moveCorrection =

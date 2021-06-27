@@ -39,6 +39,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "ManagerConnection.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -46,14 +47,16 @@ bool Parsers::FriendData::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 2) {
     return false;
   }
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto cLogin = state->GetAccountLogin()->GetCharacterLogin();
   auto character = cLogin->GetCharacter().Get();
   auto fSettings = character->GetFriendSettings().Get();

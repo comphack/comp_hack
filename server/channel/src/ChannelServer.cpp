@@ -56,6 +56,7 @@
 #include "MatchManager.h"
 #include "Packets.h"
 #include "PerformanceTimer.h"
+#include "Prefecture.h"
 #include "SkillManager.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
@@ -750,6 +751,9 @@ bool ChannelServer::Initialize() {
 
   mZoneManager = new ZoneManager(channelPtr);
 
+  /// @todo Set the test prefecture.
+  mPrefecture = std::make_shared<Prefecture>(channelPtr);
+
   // Now connect to the world server.
   auto worldConnection =
       std::make_shared<libcomp::InternalConnection>(mService);
@@ -1351,6 +1355,9 @@ std::shared_ptr<libcomp::TcpConnection> ChannelServer::CreateConnection(
   connection->SetServerConfig(mConfig);
   connection->SetName(libcomp::String("client:%1").Arg(connectionID++));
   connection->SetPurpose(libcomp::TcpConnection::Purpose_t::CLIENT);
+
+  /// @todo Set a proper starting prefecture for the client.
+  connection->GetClientState()->SetPrefecture(mPrefecture);
 
   if (AssignMessageQueue(connection)) {
     // Make sure this is called after connecting.

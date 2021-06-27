@@ -49,6 +49,7 @@
 // channel Includes
 #include "ActionManager.h"
 #include "ChannelServer.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -63,6 +64,8 @@ bool Parsers::ObjectInteraction::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   // Sanity check the packet size.
   if (sizeof(uint32_t) != p.Left()) {
     return false;
@@ -72,8 +75,9 @@ bool Parsers::ObjectInteraction::Parse(
   int32_t entityID = p.ReadS32Little();
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto zone = server->GetZoneManager()->GetCurrentZone(client);
   auto zoneDef = zone ? zone->GetDefinition() : nullptr;
 
@@ -105,8 +109,6 @@ bool Parsers::ObjectInteraction::Parse(
 
   bool valid = false;
   if (objDef) {
-    auto state = client->GetClientState();
-
     bool skipChecks = state->GetUserLevel() > 0;
     if (!skipChecks) {
       if (isHidden) {

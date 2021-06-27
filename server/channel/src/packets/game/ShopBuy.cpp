@@ -58,6 +58,7 @@
 #include "ChannelServer.h"
 #include "ChannelSyncManager.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -412,6 +413,8 @@ bool Parsers::ShopBuy::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 22) {
     return false;
   }
@@ -444,8 +447,8 @@ bool Parsers::ShopBuy::Parse(
     return true;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   HandleShopPurchase(server, client, shopID, clientTrendTime, productID,
                      quantity, gifteeName, giftMessage);

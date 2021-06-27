@@ -46,6 +46,7 @@
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -267,6 +268,8 @@ bool Parsers::ItemStack::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 14) {
     return false;
   }
@@ -294,9 +297,10 @@ bool Parsers::ItemStack::Parse(
     return false;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   // A stack is being requested when the target slot contains an item.
   // If the target slot is -1, a split is being requested to the next
@@ -311,7 +315,6 @@ bool Parsers::ItemStack::Parse(
       return false;
     }
 
-    auto state = client->GetClientState();
     auto character = state->GetCharacterState()->GetEntity();
     auto itemBox = character->GetItemBoxes(0).Get();
     isSplit = itemBox->GetItems((size_t)targetSlot).IsNull();

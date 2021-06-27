@@ -49,6 +49,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -56,6 +57,8 @@ bool Parsers::EquipmentSpiritDefuse::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 12) {
     return false;
   }
@@ -63,13 +66,12 @@ bool Parsers::EquipmentSpiritDefuse::Parse(
   int64_t equipID = p.ReadS64Little();
   uint32_t fuseItemType = p.ReadU32Little();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  auto characterManager = server->GetCharacterManager();
-  auto definitionManager = server->GetDefinitionManager();
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto characterManager = server->GetCharacterManager();
+  auto definitionManager = server->GetDefinitionManager();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
   auto dState = state->GetDemonState();

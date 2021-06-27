@@ -34,6 +34,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "ManagerConnection.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -41,6 +42,8 @@ bool Parsers::TeamKick::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 8) {
     return false;
   }
@@ -48,11 +51,10 @@ bool Parsers::TeamKick::Parse(
   int32_t teamID = p.ReadS32Little();
   int32_t worldCID = p.ReadS32Little();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   libcomp::Packet request;
   request.WritePacketCode(InternalPacketCode_t::PACKET_TEAM_UPDATE);

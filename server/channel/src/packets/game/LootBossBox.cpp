@@ -39,6 +39,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -47,6 +48,8 @@ bool Parsers::LootBossBox::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 8) {
     return false;
   }
@@ -55,11 +58,11 @@ bool Parsers::LootBossBox::Parse(
   int32_t lootEntityID = p.ReadS32Little();
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto characterManager = server->GetCharacterManager();
 
-  auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto zone = cState->GetZone();
 

@@ -44,6 +44,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -51,6 +52,8 @@ bool Parsers::SynthesizeRecipe::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 20) {
     return false;
   }
@@ -61,12 +64,11 @@ bool Parsers::SynthesizeRecipe::Parse(
   // Apparently this was never implemented
   int64_t protectionItemID = p.ReadS64Little();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  auto definitionManager = server->GetDefinitionManager();
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto definitionManager = server->GetDefinitionManager();
   auto cState = state->GetCharacterState();
   auto exchangeSession = state->GetExchangeSession();
 

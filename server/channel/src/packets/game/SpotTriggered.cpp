@@ -47,6 +47,7 @@
 // channel Includes
 #include "ActionManager.h"
 #include "ChannelServer.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -60,6 +61,8 @@ bool Parsers::SpotTriggered::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   // Sanity check the packet size.
   if ((5 * sizeof(uint32_t)) != p.Left()) {
     return false;
@@ -74,8 +77,8 @@ bool Parsers::SpotTriggered::Parse(
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto zoneManager = server->GetZoneManager();
   auto entity = state->GetCharacterState();
   auto zone = zoneManager->GetCurrentZone(client);

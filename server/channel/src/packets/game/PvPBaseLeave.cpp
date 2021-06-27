@@ -40,6 +40,7 @@
 #include "ChannelServer.h"
 #include "EventManager.h"
 #include "MatchManager.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -48,15 +49,16 @@ bool Parsers::PvPBaseLeave::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 0) {
     return false;
   }
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
-
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   int32_t baseID = state->GetEventSourceEntityID();
   server->GetMatchManager()->LeaveBase(client, baseID);

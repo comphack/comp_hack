@@ -37,6 +37,7 @@
 #include "AccountManager.h"
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -44,13 +45,16 @@ bool Parsers::Logout::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 4) {
     return false;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   uint32_t codeValue = p.ReadU32Little();
   if (LogoutCode_t::LOGOUT_CODE_UNKNOWN_MIN >= codeValue ||

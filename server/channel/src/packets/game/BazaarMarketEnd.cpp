@@ -38,6 +38,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "EventManager.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -46,6 +47,8 @@ bool Parsers::BazaarMarketEnd::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 8) {
     return false;
   }
@@ -54,10 +57,10 @@ bool Parsers::BazaarMarketEnd::Parse(
   int32_t responseID = p.ReadS32Little();
   (void)responseID;
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   // If the player's own market was the market being interacted with and is
   // currently marked as "preparing", make it active now and update the zone

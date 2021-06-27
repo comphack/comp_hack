@@ -44,6 +44,7 @@
 #include "CharacterManager.h"
 #include "DefinitionManager.h"
 #include "ManagerConnection.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -51,6 +52,8 @@ bool Parsers::TriFusionRewardUpdate::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 13) {
     return false;
   }
@@ -59,13 +62,12 @@ bool Parsers::TriFusionRewardUpdate::Parse(
   int32_t participantID = p.ReadS32Little();
   int8_t slotID = p.ReadS8();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  auto characterManager = server->GetCharacterManager();
-  auto managerConnection = server->GetManagerConnection();
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto characterManager = server->GetCharacterManager();
+  auto managerConnection = server->GetManagerConnection();
   auto cState = state->GetCharacterState();
   auto exchangeSession = state->GetExchangeSession();
   auto tfSession =

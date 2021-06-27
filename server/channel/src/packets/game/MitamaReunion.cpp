@@ -48,6 +48,7 @@
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "FusionManager.h"
+#include "Prefecture.h"
 #include "TokuseiManager.h"
 
 using namespace channel;
@@ -188,6 +189,8 @@ bool Parsers::MitamaReunion::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 9) {
     return false;
   }
@@ -195,9 +198,10 @@ bool Parsers::MitamaReunion::Parse(
   int64_t mitamaID = p.ReadS64Little();
   int8_t reunionIdx = p.ReadS8();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   HandleMitamaReunion(server, client, mitamaID, reunionIdx);
 

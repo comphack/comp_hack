@@ -40,6 +40,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "FusionManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -47,6 +48,8 @@ bool Parsers::DemonFusion::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 28) {
     return false;
   }
@@ -58,10 +61,10 @@ bool Parsers::DemonFusion::Parse(
   (void)fusionType;
   (void)unknown;
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto eState = state->GetEventState();
   auto current = eState ? eState->GetCurrent() : nullptr;
 

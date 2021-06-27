@@ -36,6 +36,7 @@
 #include "AccountManager.h"
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -49,6 +50,8 @@ bool Parsers::Login::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   // Classic authentication method: username followed by the session key
   libcomp::String username =
       p.ReadString16(libcomp::Convert::ENCODING_UTF8, true);
@@ -57,9 +60,10 @@ bool Parsers::Login::Parse(
   connection->SetName(
       libcomp::String("%1:%2").Arg(connection->GetName()).Arg(username));
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   LoginAccount(server->GetAccountManager(), client, username, sessionKey);
 

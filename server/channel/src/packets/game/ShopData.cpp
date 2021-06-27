@@ -50,6 +50,7 @@
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "EventManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -67,8 +68,11 @@ bool Parsers::ShopData::Parse(
   int32_t clientTrendTime = p.ReadS32Little();
   (void)clientTrendTime;
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+
   auto definitionManager = server->GetDefinitionManager();
   auto serverDataManager = server->GetServerDataManager();
 
@@ -81,8 +85,6 @@ bool Parsers::ShopData::Parse(
     return true;
   }
 
-  auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto state = client->GetClientState();
   auto zone = state->GetZone();
   auto cEvent = state->GetEventState()->GetCurrent();
 

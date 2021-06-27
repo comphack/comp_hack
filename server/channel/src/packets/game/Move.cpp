@@ -46,6 +46,7 @@
 #include "ChannelClientConnection.h"
 #include "ChannelServer.h"
 #include "ClientState.h"
+#include "Prefecture.h"
 #include "TokuseiManager.h"
 #include "ZoneManager.h"
 
@@ -55,6 +56,8 @@ bool Parsers::Move::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 32) {
     return false;
   }
@@ -85,8 +88,8 @@ bool Parsers::Move::Parse(
     return true;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto zoneManager = server->GetZoneManager();
 
   float destX = p.ReadFloat();

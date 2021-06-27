@@ -34,6 +34,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "MatchManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -41,6 +42,8 @@ bool Parsers::PvPJoin::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 1) {
     return false;
   }
@@ -48,8 +51,9 @@ bool Parsers::PvPJoin::Parse(
   int8_t type = p.ReadS8();
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   if (!server->GetMatchManager()->JoinQueue(client, type)) {
     libcomp::Packet reply;

@@ -56,6 +56,7 @@
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "EventManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -63,15 +64,17 @@ bool Parsers::EquipmentMod::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 32) {
     return false;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto definitionManager = server->GetDefinitionManager();
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto definitionManager = server->GetDefinitionManager();
 
   int64_t modItemID = p.ReadS64Little();
   int64_t equipmentID = p.ReadS64Little();

@@ -39,6 +39,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "EventManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -46,6 +47,8 @@ bool Parsers::BazaarInteract::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 8) {
     return false;
   }
@@ -53,9 +56,10 @@ bool Parsers::BazaarInteract::Parse(
   int32_t bazaarEntityID = p.ReadS32Little();
   int32_t bazaarMarketID = p.ReadS32Little();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto eventManager = server->GetEventManager();
 
   if (!eventManager->RequestMenu(client, (int32_t)SVR_CONST.MENU_BAZAAR,

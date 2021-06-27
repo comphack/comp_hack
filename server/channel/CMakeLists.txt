@@ -78,6 +78,7 @@ SET(${PROJECT_NAME}_SRCS
     src/ZoneGeometry.cpp
     src/ZoneGeometryLoader.cpp
     src/ZoneManager.cpp
+    src/Prefecture.cpp
     src/main.cpp
 )
 
@@ -119,6 +120,7 @@ SET(${PROJECT_NAME}_HDRS
     src/ZoneGeometry.h
     src/ZoneGeometryLoader.h
     src/ZoneManager.h
+    src/Prefecture.h
 )
 
 SET(${PROJECT_NAME}_SCHEMA

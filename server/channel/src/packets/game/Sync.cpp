@@ -41,6 +41,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "ManagerPacket.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -72,8 +73,8 @@ bool Parsers::Sync::Parse(
   ServerTime lastClientTime = state->GetLastClientTimestamp();
 
   if (lastServerTime) {
-    auto server =
-        std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+    auto prefecture = state->GetPrefecture();
+    auto server = prefecture->GetServer();
 
     ServerTime serverDelta = currentServerTime - lastServerTime;
     ServerTime clientDelta = currentClientTimeInServerTime - lastClientTime;

@@ -39,6 +39,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 #include "TokuseiManager.h"
 
 using namespace channel;
@@ -138,6 +139,8 @@ bool Parsers::AllocateSkillPoint::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 5) {
     return false;
   }
@@ -146,9 +149,9 @@ bool Parsers::AllocateSkillPoint::Parse(
   int8_t correctStatOffset = p.ReadS8();
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto cState = state->GetCharacterState();
 
   if (cState->GetEntityID() != entityID) {

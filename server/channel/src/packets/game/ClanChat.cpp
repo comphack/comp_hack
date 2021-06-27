@@ -36,6 +36,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "ChatManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -43,16 +44,17 @@ bool Parsers::ClanChat::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 6) {
     return false;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  auto chatManager = server->GetChatManager();
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto chatManager = server->GetChatManager();
 
   int32_t clanID = p.ReadS32Little();
   libcomp::String message =

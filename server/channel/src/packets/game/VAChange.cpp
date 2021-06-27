@@ -33,6 +33,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -41,6 +42,8 @@ bool Parsers::VAChange::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 8) {
     return false;
   }
@@ -61,11 +64,10 @@ bool Parsers::VAChange::Parse(
     changeMap.push_back(std::pair<int8_t, uint32_t>(slot, itemType));
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
 

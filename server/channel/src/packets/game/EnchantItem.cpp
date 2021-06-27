@@ -39,6 +39,7 @@
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "ManagerConnection.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -46,6 +47,8 @@ bool Parsers::EnchantItem::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 12) {
     return false;
   }
@@ -53,11 +56,11 @@ bool Parsers::EnchantItem::Parse(
   int64_t itemID = p.ReadS64Little();
   int32_t functionalType = p.ReadS32Little();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  auto characterManager = server->GetCharacterManager();
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto characterManager = server->GetCharacterManager();
   auto cState = state->GetCharacterState();
   auto exchangeSession = state->GetExchangeSession();
 

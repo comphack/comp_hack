@@ -43,6 +43,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 #include "Zone.h"
 #include "ZoneManager.h"
 
@@ -52,19 +53,20 @@ bool Parsers::BazaarMarketOpen::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 4) {
     return false;
   }
 
   int32_t maccaCost = p.ReadS32Little();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  auto zoneManager = server->GetZoneManager();
-  auto worldDB = server->GetWorldDatabase();
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto zoneManager = server->GetZoneManager();
+  auto worldDB = server->GetWorldDatabase();
   auto cState = state->GetCharacterState();
   auto zone = cState->GetZone();
 

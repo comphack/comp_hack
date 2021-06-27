@@ -45,6 +45,7 @@
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "MatchManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -52,6 +53,8 @@ bool Parsers::TeamForm::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 6) {
     return false;
   }
@@ -87,8 +90,8 @@ bool Parsers::TeamForm::Parse(
         [&]() { return libcomp::String("TeamForm 5: %1\n").Arg(unk5); });
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto characterManager = server->GetCharacterManager();
 
   auto cState = state->GetCharacterState();

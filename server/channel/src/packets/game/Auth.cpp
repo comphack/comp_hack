@@ -35,6 +35,7 @@
 // channel Includes
 #include "AccountManager.h"
 #include "ChannelServer.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -86,8 +87,9 @@ bool Parsers::Auth::Parse(
   }
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   AuthenticateAccount(server->GetAccountManager(), client);
 

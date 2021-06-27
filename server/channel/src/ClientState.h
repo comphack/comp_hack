@@ -49,6 +49,7 @@ class ClientCostAdjustment;
 namespace channel {
 
 class BazaarState;
+class Prefecture;
 class Zone;
 
 typedef float ClientTime;
@@ -323,6 +324,18 @@ class ClientState : public objects::ClientStateObject {
   std::list<std::shared_ptr<objects::ClientCostAdjustment>> GetCostAdjustments(
       int32_t entityID);
 
+  /**
+   * Get the prefecture this connection is a resident of.
+   * @returns Prefecture this connection is a resident of.
+   */
+  std::shared_ptr<Prefecture> GetPrefecture() const;
+
+  /**
+   * Set the prefecture this connection is a resident of.
+   * @param prefecture Prefecture this connection is a resident of.
+   */
+  void SetPrefecture(const std::weak_ptr<Prefecture>& prefecture);
+
  private:
   /// Static registry of all client states sorted as world (true) or
   /// local entity IDs (false) and their respective IDs
@@ -367,6 +380,9 @@ class ClientState : public objects::ClientStateObject {
 
   /// Server lock for shared resources
   std::mutex mLock;
+
+  /// Prefecture this connection is a resident of.
+  std::weak_ptr<Prefecture> mPrefecture;
 };
 
 }  // namespace channel

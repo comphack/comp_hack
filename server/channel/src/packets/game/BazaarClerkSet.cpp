@@ -37,6 +37,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "Prefecture.h"
 #include "ZoneManager.h"
 
 using namespace channel;
@@ -45,16 +46,18 @@ bool Parsers::BazaarClerkSet::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 2) {
     return false;
   }
 
   int16_t npcType = p.ReadS16Little();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto bState = state->GetBazaarState();
   auto cState = state->GetCharacterState();
   auto zone = cState->GetZone();

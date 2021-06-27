@@ -34,6 +34,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "EventManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -41,6 +42,8 @@ bool Parsers::ITimeTalk::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() < 2) {
     return false;
   }
@@ -58,8 +61,9 @@ bool Parsers::ITimeTalk::Parse(
   }
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   server->GetEventManager()->HandleResponse(client, requestID, itemID);
 

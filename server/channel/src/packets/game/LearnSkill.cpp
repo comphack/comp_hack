@@ -42,6 +42,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -49,6 +50,8 @@ bool Parsers::LearnSkill::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 8) {
     return false;
   }
@@ -56,12 +59,11 @@ bool Parsers::LearnSkill::Parse(
   int32_t entityID = p.ReadS32Little();
   uint32_t skillID = p.ReadU32Little();
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-  auto definitionManager = server->GetDefinitionManager();
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
+  auto definitionManager = server->GetDefinitionManager();
   auto cState = state->GetCharacterState();
 
   if (cState->GetEntityID() != entityID) {

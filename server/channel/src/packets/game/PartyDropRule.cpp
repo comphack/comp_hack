@@ -34,6 +34,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "ManagerConnection.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -41,6 +42,8 @@ bool Parsers::PartyDropRule::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 1) {
     return false;
   }
@@ -48,9 +51,9 @@ bool Parsers::PartyDropRule::Parse(
   uint8_t rule = p.ReadU8();
 
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   libcomp::Packet request;
   request.WritePacketCode(InternalPacketCode_t::PACKET_PARTY_UPDATE);

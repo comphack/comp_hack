@@ -43,6 +43,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -50,13 +51,16 @@ bool Parsers::BazaarMarketSales::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 6) {
     return false;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   int8_t fromSlot = p.ReadS8();
   int32_t amount = p.ReadS32Little();
@@ -65,7 +69,6 @@ bool Parsers::BazaarMarketSales::Parse(
   // Ignore the "to slot" so macca compression can be done
   (void)toSlot;
 
-  auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto inventory = cState->GetEntity()->GetItemBoxes(0);
   auto worldDB = server->GetWorldDatabase();

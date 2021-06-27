@@ -35,6 +35,7 @@
 // channel Includes
 #include "ChannelServer.h"
 #include "FusionManager.h"
+#include "Prefecture.h"
 
 using namespace channel;
 
@@ -42,6 +43,8 @@ bool Parsers::TriFusionSolo::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 31) {
     return false;
   }
@@ -64,9 +67,10 @@ bool Parsers::TriFusionSolo::Parse(
     return false;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
+  auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
 
   server->GetFusionManager()->HandleTriFusion(client, demonID1, demonID2,
                                               demonID3, true);

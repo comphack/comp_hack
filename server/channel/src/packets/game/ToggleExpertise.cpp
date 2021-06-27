@@ -33,6 +33,7 @@
 
 // channel Includes
 #include "ChannelServer.h"
+#include "Prefecture.h"
 
 // objects Includes
 #include <Character.h>
@@ -44,6 +45,8 @@ bool Parsers::ToggleExpertise::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  (void)pPacketManager;
+
   if (p.Size() != 6) {
     return false;
   }
@@ -57,11 +60,10 @@ bool Parsers::ToggleExpertise::Parse(
     return false;
   }
 
-  auto server =
-      std::dynamic_pointer_cast<ChannelServer>(pPacketManager->GetServer());
-
   auto client = std::dynamic_pointer_cast<ChannelClientConnection>(connection);
   auto state = client->GetClientState();
+  auto prefecture = state->GetPrefecture();
+  auto server = prefecture->GetServer();
   auto cState = state->GetCharacterState();
 
   if (cState->GetEntityID() != entityID) {

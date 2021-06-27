@@ -431,3 +431,11 @@ ClientState::GetCostAdjustments(int32_t entityID) {
              ? it->second
              : std::list<std::shared_ptr<objects::ClientCostAdjustment>>();
 }
+
+std::shared_ptr<Prefecture> ClientState::GetPrefecture() const {
+  return mPrefecture.lock();
+}
+
+void ClientState::SetPrefecture(const std::weak_ptr<Prefecture>& prefecture) {
+  mPrefecture = prefecture;
+}

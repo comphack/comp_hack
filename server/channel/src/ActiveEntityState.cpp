@@ -2883,15 +2883,6 @@ uint8_t ActiveEntityState::CalculateLNCType(int16_t lncPoints) const {
   }
 }
 
-void ActiveEntityState::RemoveInactiveSwitchSkills() {
-  auto previousSwitchSkills = GetActiveSwitchSkills();
-  for (uint32_t skillID : previousSwitchSkills) {
-    if (!CurrentSkillsContains(skillID)) {
-      RemoveActiveSwitchSkills(skillID);
-    }
-  }
-}
-
 std::set<uint32_t> ActiveEntityState::GetEffectiveTokuseiSkills(
     libhack::DefinitionManager* definitionManager) {
   std::set<uint32_t> skillIDs;

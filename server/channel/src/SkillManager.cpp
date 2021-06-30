@@ -2994,7 +2994,7 @@ bool SkillManager::ProcessSkillResult(
 
   bool initialHitNull = pSkill->Nulled != 0;
   bool initialHitReflect = pSkill->Reflected != 0;
-  bool specialReflectCase = false;
+  bool initialHitReflectWithoutAOECancel = false;
   if (pSkill->Nulled || pSkill->Reflected || pSkill->Absorbed) {
     // Apply original target NRA
     std::shared_ptr<ActiveEntityState> nraTarget;
@@ -3089,7 +3089,7 @@ bool SkillManager::ProcessSkillResult(
         // Ignore what happened to the primary target completely. This is a
         // special case that requires some handling later to prevent double
         // reflection onto the skill user.
-        specialReflectCase = true;
+        initialHitReflectWithoutAOECancel = initialHitReflect;
         break;
       case objects::MiEffectiveRangeData::AreaType_t::TARGET_RADIUS:
       case objects::MiEffectiveRangeData::AreaType_t::FRONT_3:
@@ -3440,15 +3440,19 @@ bool SkillManager::ProcessSkillResult(
     // occur on the original target or it is one of the special
     // reflect cases, apply the initially calculated flags
     bool isSource = effectiveTarget == source;
-    if (target.PrimaryTarget && (!initialHitReflect || specialReflectCase)) {
+    if (target.PrimaryTarget &&
+        (!initialHitReflect || initialHitReflectWithoutAOECancel)) {
       target.HitNull = skill.Nulled;
       target.HitReflect = skill.Reflected;
       target.HitAbsorb = skill.Absorbed;
-      target.HitAvoided = (skill.Nulled != 0 || specialReflectCase);
+      target.HitAvoided =
+          (skill.Nulled != 0 || initialHitReflectWithoutAOECancel);
       target.NRAAffinity = skill.NRAAffinity;
 
-      if (specialReflectCase && !isSource) {
-        // The special cases should increase the number of AOE reflects.
+      if (initialHitReflectWithoutAOECancel && !isSource) {
+        // This is a spin or other radial attack that the initial target
+        // reflected, without canceling the AOE. Treat the initial
+        // reflection as an additional AOE reflect.
         aoeReflect++;
       }
     } else {
@@ -4252,9 +4256,32 @@ void SkillManager::ProcessSkillResultFinal(
         // AI and skill rules apply
         target.EntityState->SetStatusTimes(STATUS_KNOCKBACK, hitTimings[1]);
 
-        Point rushPoint = zoneManager->MoveRelative(
-            source, primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(),
-            dist + 250.f, false, now, hitTimings[1]);
+        Point rushPoint;
+
+        if (source->GetEntityType() == EntityType_t::CHARACTER ||
+            source->GetEntityType() == EntityType_t::PARTNER_DEMON) {
+          // Move player source to destination only after Pivot packet is sent
+          rushPoint = zoneManager->GetLinearPoint(
+              source->GetCurrentX(), source->GetCurrentY(),
+              primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(),
+              dist + 250.f, false, zone);
+
+          server->ScheduleWork(
+              hitTimings[1],
+              [](std::shared_ptr<ActiveEntityState> pSource, Point pRushPoint,
+                 uint64_t endTime) {
+                pSource->SetDestinationX(pRushPoint.x);
+                pSource->SetDestinationY(pRushPoint.y);
+                pSource->SetDestinationTicks(endTime);
+              },
+              source, rushPoint, hitTimings[1]);
+        } else {
+          // Move enemy source immediately
+          rushPoint = zoneManager->MoveRelative(
+              source, primaryTarget->GetCurrentX(),
+              primaryTarget->GetCurrentY(), dist + 250.f, false, now,
+              hitTimings[1]);
+        }
 
         p.WriteFloat(rushPoint.x);
         p.WriteFloat(rushPoint.y);

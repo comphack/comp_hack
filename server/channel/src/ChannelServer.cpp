@@ -71,6 +71,7 @@ BaseScriptEngine& BaseScriptEngine::Using<ChannelServer>() {
     Using<AIManager>();
     Using<ChannelSyncManager>();
     Using<MatchManager>();
+    Using<SkillManager>();
     Using<WorldClock>();
     Using<ZoneManager>();
 
@@ -82,6 +83,7 @@ BaseScriptEngine& BaseScriptEngine::Using<ChannelServer>() {
         .Func("GetAIManager", &ChannelServer::GetAIManager)
         .Func("GetChannelSyncManager", &ChannelServer::GetChannelSyncManager)
         .Func("GetMatchManager", &ChannelServer::GetMatchManager)
+        .Func("GetSkillManager", &ChannelServer::GetSkillManager)
         .Func("GetZoneManager", &ChannelServer::GetZoneManager)
         .StaticFunc("GetServerTime", &ChannelServer::GetServerTime)
         .StaticFunc("GetExpirationInSeconds",

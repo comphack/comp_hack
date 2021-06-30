@@ -3954,7 +3954,7 @@ bool MatchManager::ValidateMatchEntries(
     auto state = first->GetClientState();
     auto team = state->GetTeam();
 
-    if (!team && (int8_t)team->GetCategory() != teamCategory) {
+    if (!team || (int8_t)team->GetCategory() != teamCategory) {
       LogMatchManagerDebugMsg(
           "Match entry validation failed: invalid team type encountered\n");
 

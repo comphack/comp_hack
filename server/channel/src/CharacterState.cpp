@@ -46,6 +46,7 @@
 #include <Item.h>
 #include <MiCategoryData.h>
 #include <MiConditionData.h>
+#include <MiCorrectTbl.h>
 #include <MiDCategoryData.h>
 #include <MiDamageData.h>
 #include <MiDevilBoostExtraData.h>
@@ -64,6 +65,7 @@
 #include <MiGuardianAssistData.h>
 #include <MiItemBasicData.h>
 #include <MiItemData.h>
+#include <MiMitamaReunionSetBonusData.h>
 #include <MiModificationExtEffectData.h>
 #include <MiModifiedEffectData.h>
 #include <MiQuestData.h>
@@ -299,14 +301,14 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
 
   // Get mitama default stats
   CharacterManager::AdjustMitamaStats(demon, demonStats, definitionManager, 1,
-                                      GetEntityID(), mitamaSet);
+                                      GetEntityID(), false);
 
   // Calculate HP/MP values
   CharacterManager::CalculateDependentStats(demonStats, demonLvl, true, 0x01);
 
   // Get mitama summoned stats
   CharacterManager::AdjustMitamaStats(demon, demonStats, definitionManager, 2,
-                                      GetEntityID(), mitamaSet);
+                                      GetEntityID(), false);
 
   // Add base stats and HP/MP
   for (uint8_t i = (size_t)CorrectTbl::STR; i <= (uint8_t)CorrectTbl::MP_MAX;
@@ -329,6 +331,44 @@ std::shared_ptr<objects::DigitalizeState> CharacterState::Digitalize(
     for (uint8_t i = (size_t)CorrectTbl::RES_DEFAULT;
          i <= (uint8_t)CorrectTbl::NRA_MAGIC; i++) {
       mDigitalizeState->SetCorrectValues(i, (int16_t)demonStats[(CorrectTbl)i]);
+    }
+  }
+
+  if (mitamaSet) {
+    // Add on Mitama Set Bonuses that are not tokusei.
+    std::unordered_map<uint8_t, uint8_t> bonuses;
+    std::set<uint32_t> setBonuses;
+    libcomp::EnumMap<CorrectTbl, std::list<int32_t>> bonusStats;
+    if (CharacterManager::GetMitamaBonuses(demon, definitionManager, bonuses,
+                                           setBonuses, true)) {
+      if (setBonuses.size() > 0) {
+        // Add reunion set bonuses
+        bool exBonus = SkillAvailable(SVR_CONST.MITAMA_SET_BOOST);
+        for (auto& pair : definitionManager->GetMitamaReunionSetBonusData()) {
+          if (setBonuses.find(pair.first) != setBonuses.end()) {
+            auto boost =
+                exBonus ? pair.second->GetBonusEx() : pair.second->GetBonus();
+            for (size_t i = 0; i < boost.size();) {
+              int32_t type = boost[i];
+              int32_t val = boost[(size_t)(i + 1)];
+              // The CorrectTbl alterations done by the vanilla Laguz/Ingwaz
+              // Mitama sets must be excluded.
+              if (type >= 0 && type != (uint8_t)CorrectTbl::MOVE2 &&
+                  type != (uint8_t)CorrectTbl::RATE_XP &&
+                  type != (uint8_t)CorrectTbl::RATE_MAG &&
+                  type != (uint8_t)CorrectTbl::RATE_HEAL_TAKEN &&
+                  type != (uint8_t)CorrectTbl::BOOST_HEAL && val) {
+                mDigitalizeState->SetCorrectValues(
+                    (uint8_t)type, (int16_t)(mDigitalizeState->GetCorrectValues(
+                                                 (uint8_t)type) +
+                                             val));
+              }
+
+              i += 2;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -449,7 +489,7 @@ void CharacterState::RecalcEquipState(
         } else {
           auto effectData = definitionManager->GetModificationExtEffectData(
               itemData->GetCommon()->GetCategory()->GetSubCategory(),
-              (uint8_t)i, effectID);
+              (uint8_t)k, effectID);
           tokuseiID = effectData ? effectData->GetTokusei() : 0;
         }
 
@@ -869,8 +909,17 @@ uint8_t CharacterState::RecalculateStats(
     }
     result = skillsChanged ? ENTITY_CALC_SKILL : 0x00;
 
-    // Remove any switch skills no longer available
-    RemoveInactiveSwitchSkills();
+    // Remove any switch skills no longer available if skills have been changed
+    if (skillsChanged) {
+      auto previousSwitchSkills = GetActiveSwitchSkills();
+
+      for (uint32_t switchSkillID : previousSwitchSkills) {
+        if (!CurrentSkillsContains(switchSkillID)) {
+          RemoveActiveSwitchSkills(switchSkillID);
+          c->RemoveSavedSwitchSkills(switchSkillID);
+        }
+      }
+    }
   }
 
   auto stats = CharacterManager::GetCharacterBaseStats(cs);

@@ -998,8 +998,11 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
     }
 
     auto activated = eState->GetActivatedAbility();
-    if (activated && (aiState->GetPreviousStatus() == AIStatus_t::AGGRO ||
-                      aiState->GetPreviousStatus() == AIStatus_t::COMBAT)) {
+    if (activated &&
+        (aiState->GetPreviousStatus() == AIStatus_t::AGGRO ||
+         aiState->GetPreviousStatus() == AIStatus_t::COMBAT) &&
+        (aiState->GetStatus() != AIStatus_t::AGGRO &&
+         aiState->GetStatus() != AIStatus_t::COMBAT)) {
       // Leftover combat skill, cancel it now
       mServer.lock()->GetSkillManager()->CancelSkill(
           eState, activated->GetActivationID());

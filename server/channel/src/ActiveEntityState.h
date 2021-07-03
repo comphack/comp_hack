@@ -1019,12 +1019,6 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
   uint8_t CalculateLNCType(int16_t lncPoints) const;
 
   /**
-   * Remove any switch skills marked as active that are no longer available
-   * to the entity.
-   */
-  void RemoveInactiveSwitchSkills();
-
-  /**
    * Get the set of skill IDs granted by effective tokusei.
    * @param definitionManager Pointer to the definition manager to use
    *  for tokusei definitions

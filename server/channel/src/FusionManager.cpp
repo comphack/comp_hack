@@ -774,8 +774,6 @@ uint32_t FusionManager::GetResultDemon(
       }
 
       uint8_t resultRace = FUSION_RACE_MAP[race1Idx + 1][race2Idx];
-      resultDef = GetResultDemon(
-          resultRace, GetAdjustedLevelSum(otherDef1.first, otherDef2.first));
       if (resultRace == eRace) {
         LogFusionManagerErrorMsg(
             "Single element, dual fusion race for trifusion resulted in a "
@@ -784,12 +782,12 @@ uint32_t FusionManager::GetResultDemon(
         return 0;
       }
 
-      if (resultDef) {
-        resultDef = GetResultDemon(
-            resultRace,
-            GetAdjustedLevelSum(elemDef.first,
-                                resultDef->GetGrowth()->GetBaseLevel()));
-      }
+      // In trifusion, one Element does not result in a rankup, but adds
+      // 10 levels to the pre-adjusted level sum regardless of its
+      // own level.
+      uint16_t levelSum = (uint16_t)(otherDef1.first + otherDef2.first + 10);
+      int8_t adjustedLevelSum = (int8_t)(((float)levelSum / 2.f) + 1.f);
+      resultDef = GetResultDemon(resultRace, adjustedLevelSum);
     } else {
       // Perform normal TriFusion
       int8_t finalLevelAdjust = 0;
@@ -1785,6 +1783,8 @@ int8_t FusionManager::ProcessFusion(
     characterManager->CalculateDemonBaseStats(nonMitama);
 
     resultDemon = nonMitama;
+
+    changes->Update(resultDemon);
   } else {
     // Create the new demon
     resultDemon = characterManager->GenerateDemon(demonData, familiarity);

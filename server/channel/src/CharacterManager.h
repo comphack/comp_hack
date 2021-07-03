@@ -674,12 +674,16 @@ class CharacterManager {
    *  the demon
    * @param familiarity Optional familiarity level on the contracted
    *  demon, defaults to 0
+   * @param addedSkills Optional unordered map of skills to be added to the
+   * demon at defined mastery levels
    * @return Pointer to the newly created demon
    */
   std::shared_ptr<objects::Demon> ContractDemon(
       const std::shared_ptr<channel::ChannelClientConnection>& client,
       const std::shared_ptr<objects::MiDevilData>& demonData,
-      int32_t sourceEntityID, uint16_t familiarity = 0);
+      int32_t sourceEntityID, uint16_t familiarity = 0,
+      const std::unordered_map<uint32_t, int16_t>& addedSkills =
+          std::unordered_map<uint32_t, int16_t>());
 
   /**
    * Create a demon and add it to a character's COMP.
@@ -688,12 +692,16 @@ class CharacterManager {
    *  the demon to create
    * @param familiarity Optional familiarity level on the contracted
    *  demon, defaults to 0
+   * @param addedSkills Optional unordered map of skills to be added to the
+   * demon at defined mastery levels
    * @return Pointer to the newly created demon
    */
   std::shared_ptr<objects::Demon> ContractDemon(
       const std::shared_ptr<objects::Character>& character,
       const std::shared_ptr<objects::MiDevilData>& demonData,
-      uint16_t familiarity = 0);
+      uint16_t familiarity = 0,
+      const std::unordered_map<uint32_t, int16_t>& addedSkills =
+          std::unordered_map<uint32_t, int16_t>());
 
   /**
    * Create a demon.

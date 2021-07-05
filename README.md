@@ -2,16 +2,16 @@
 
 [![AGPL License](http://img.shields.io/badge/license-AGPL-brightgreen.svg)](https://opensource.org/licenses/AGPL-3.0)
 [![Latest Release](https://img.shields.io/github/downloads/comphack/comp_hack/v4.12.2-wyrd-hotfix2/total.svg)](https://github.com/comphack/comp_hack/releases/tag/v4.12.2-wyrd-hotfix2)
-[![Discord Chat](https://img.shields.io/discord/322024695266541579.svg)](http://discord.gg/9jXeKcJ)
+[![Discord Chat](https://img.shields.io/discord/322024695266541579.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](http://discord.gg/9jXeKcJ)
 
 [![Build Status](https://travis-ci.com/comphack/comp_hack.svg?branch=develop)](https://travis-ci.com/comphack/comp_hack)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/9671/badge.svg)](https://scan.coverity.com/projects/comphack-comp_hack)
 [![Coverage Status](https://coveralls.io/repos/github/comphack/comp_hack/badge.svg?branch=develop)](https://coveralls.io/github/comphack/comp_hack?branch=develop)
 [![Documentation Status](https://readthedocs.org/projects/comp-hack/badge/?version=latest)](https://comp-hack.readthedocs.io/en/latest/?badge=latest)
 
-## 真・女神転生IMAGINE Private Server ##
+## Shin Megami Tensei IMAGINE (真・女神転生IMAGINE) Private Server ##
 
-The is server software to revive an MMO that has been shutdown (SMT: IMAGINE). It's a complete re-implementation of the server from scratch and fully open source. The best place for documentation is the [Definitive Guide](https://comp-hack.readthedocs.io/en/latest/) so be sure to check it out.
+The is server software to revive an MMO that has been shutdown (SMT: IMAGINE). It's a complete re-implementation of the server from scratch and fully open source. The best place for documentation is the [Definitive Guide](https://comp-hack.readthedocs.io/en/latest/) so be sure to check it out. If you need additional support or have a question, stop by the [Discord](http://discord.gg/9jXeKcJ) server (be sure to read the rules channel to get to the community discussion) or start a [GitHub discussion](https://github.com/comphack/comp_hack/discussions).
 
 ### Building on Linux ###
 

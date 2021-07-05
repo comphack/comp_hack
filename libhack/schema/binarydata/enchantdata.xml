@@ -22,7 +22,7 @@
             <element type="MiSpecialConditionData*"/>
         </member>
     </object>
-    <object name="MiDevilCrystalData" persistent="false">
+    <object name="MiDevilCrystalData" persistent="false" scriptenabled="true">
         <member type="u32" name="demonID"/>
         <member type="u32" name="itemID"/>
         <member type="s16" name="difficulty"/>
@@ -30,7 +30,7 @@
         <member type="MiEnchantCharasticData*" name="tarot"/>
         <member type="MiEnchantCharasticData*" name="soul"/>
     </object>
-    <object name="MiEnchantData" persistent="false">
+    <object name="MiEnchantData" persistent="false" scriptenabled="true">
         <member type="s16" name="ID" pad="2"/>
         <member type="MiDevilCrystalData*" name="devilCrystal"/>
     </object>

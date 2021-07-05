@@ -75,7 +75,7 @@ bool Parsers::StartGame::Parse(
   auto character = account->GetCharacters(cid).Get();
 
   // What? Go away hacker.
-  if (!character) {
+  if (!character || character->GetKillTime() != 0) {
     LogGeneralErrorMsg("Failed to get character?!\n");
 
     return false;

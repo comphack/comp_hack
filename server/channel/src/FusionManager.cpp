@@ -602,9 +602,8 @@ uint32_t FusionManager::GetResultDemon(
     uint8_t darkCount = (uint8_t)((race1 == dRace1 || race1 == dRace2 ? 1 : 0) +
                                   (race2 == dRace1 || race2 == dRace2 ? 1 : 0) +
                                   (race3 == dRace1 || race3 == dRace2 ? 1 : 0));
-    uint8_t elementalCount =
-        (uint8_t)((f1 == eFam ? 1 : 0) + (f2 == eFam ? 1 : 0) +
-                  (f3 == eFam ? 1 : 0));
+    uint8_t elementalCount = (uint8_t)(
+        (f1 == eFam ? 1 : 0) + (f2 == eFam ? 1 : 0) + (f3 == eFam ? 1 : 0));
     uint8_t godCount = (uint8_t)((f1 == gFam ? 1 : 0) + (f2 == gFam ? 1 : 0) +
                                  (f3 == gFam ? 1 : 0));
     if (darkCount > 0) {

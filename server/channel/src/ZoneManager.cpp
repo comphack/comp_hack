@@ -4507,7 +4507,8 @@ bool ZoneManager::ExtendInstanceTimer(
       instVariant ? instVariant->GetInstanceType() : InstanceType_t::NORMAL;
 
   switch (instType) {
-    case InstanceType_t::MISSION: {
+    case InstanceType_t::MISSION:
+    case InstanceType_t::DIASPORA: {
       uint64_t expireTime = instance->GetTimerExpire();
       expireTime = expireTime + (uint64_t)seconds * 1000000ULL;
 

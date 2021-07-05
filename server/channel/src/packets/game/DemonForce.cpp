@@ -255,7 +255,7 @@ bool Parsers::DemonForce::Parse(
       reply.WriteS8(bPair.first);
       reply.WriteS32Little(bPair.second);
 
-      // If base stat is not sent, the value will drop to 0. Oddly
+      // If base or derived stat is not sent, the value will drop to 0. Oddly
       // enough, this doesn't happen if multiple stats update at once.
       switch ((CorrectTbl)libhack::DEMON_FORCE_CONVERSION[bPair.first]) {
         case CorrectTbl::STR:
@@ -275,6 +275,24 @@ bool Parsers::DemonForce::Parse(
           break;
         case CorrectTbl::LUCK:
           reply.WriteS16(demon->GetCoreStats()->GetLUCK());
+          break;
+        case CorrectTbl::CLSR:
+          reply.WriteS16(demon->GetCoreStats()->GetCLSR());
+          break;
+        case CorrectTbl::LNGR:
+          reply.WriteS16(demon->GetCoreStats()->GetLNGR());
+          break;
+        case CorrectTbl::SPELL:
+          reply.WriteS16(demon->GetCoreStats()->GetSPELL());
+          break;
+        case CorrectTbl::SUPPORT:
+          reply.WriteS16(demon->GetCoreStats()->GetSUPPORT());
+          break;
+        case CorrectTbl::PDEF:
+          reply.WriteS16(demon->GetCoreStats()->GetPDEF());
+          break;
+        case CorrectTbl::MDEF:
+          reply.WriteS16(demon->GetCoreStats()->GetMDEF());
           break;
         default:
           reply.WriteS16(0);  // Not necessary

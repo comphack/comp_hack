@@ -113,9 +113,10 @@ QMap<QString, FileData *> Downloader::parseFileList(const QByteArray &d) {
 Downloader::Downloader(const QString &url, QObject *p)
     : QObject(p),
       mTotalFiles(0),
-      mCurrentReq(0),
+      mCurrentReq(nullptr),
       mHaveVersion(false),
-      mCurrentFile(0),
+      mConnection(nullptr),
+      mCurrentFile(nullptr),
       mActiveRetries(0),
       mLog("ImagineUpdate.log") {
   mLog.open(QIODevice::WriteOnly);
@@ -172,6 +173,7 @@ void Downloader::triggerKill() {
 }
 
 void Downloader::startUpdate() {
+  delete mConnection;
   mConnection = new QNetworkAccessManager;
 
   log(tr("Starting update"));

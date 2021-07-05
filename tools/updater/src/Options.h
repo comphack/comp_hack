@@ -67,6 +67,7 @@ class Options : public QDialog {
 
   void LanguageChanged();
   void EnableAllPatchSettings();
+  void ApplyEnforcement();
 
  protected:
   virtual void changeEvent(QEvent *pEvent);

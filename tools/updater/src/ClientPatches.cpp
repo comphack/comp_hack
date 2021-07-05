@@ -29,6 +29,7 @@
 // Ignore warnings
 #include <PushIgnore.h>
 
+#include <QCheckBox>
 #include <QFile>
 #include <QMessageBox>
 
@@ -52,7 +53,8 @@ ClientPatches::ClientPatches(ClientPatches* pBase)
       mCustomPackets(true),
       mUpdaterCheck(true),
       mLocale(true),
-      mSoundtrackPatch(true) {}
+      mSoundtrackPatch(true),
+      mAllowAll(true) {}
 
 bool ClientPatches::Load(const QString& path) {
   Clear();
@@ -172,6 +174,31 @@ bool ClientPatches::Load(const QString& path) {
                          offsetof(ClientPatches, mSoundtrack), mSoundtrack,
                          mSoundtrackElement)) {
     return false;
+  }
+
+  auto enforcement = GetFirstElement(root, "enforcement");
+
+  if (!enforcement.isNull()) {
+    auto allowAll = enforcement.attribute("allow-all", "true").toLower();
+    mAllowAll = "true" == allowAll || "on" == allowAll || "yes" == allowAll;
+
+    auto elements = root.elementsByTagName("require");
+
+    for (int i = 0; i < elements.size(); ++i) {
+      mRequiredPatches.append(elements.at(i).toElement().text().trimmed());
+    }
+
+    elements = root.elementsByTagName("allow");
+
+    for (int i = 0; i < elements.size(); ++i) {
+      mAllowedPatches.append(elements.at(i).toElement().text().trimmed());
+    }
+
+    elements = root.elementsByTagName("block");
+
+    for (int i = 0; i < elements.size(); ++i) {
+      mBlockedPatches.append(elements.at(i).toElement().text().trimmed());
+    }
   }
 
   return true;
@@ -339,6 +366,62 @@ void ClientPatches::Clear() {
   mDoc.appendChild(mDoc.createProcessingInstruction(
       "xml", "version=\"1.0\" encoding=\"UTF-8\""));
   mDoc.appendChild(mDoc.createElement("config"));
+
+  mAllowAll = true;
+  mRequiredPatches.clear();
+  mAllowedPatches.clear();
+  mBlockedPatches.clear();
+}
+
+void ClientPatches::ApplyEnforcement(const ClientPatches* pBase) {
+  ApplyEnforcement(pBase, "blowfishKey", mBlowfishKey);
+  ApplyEnforcement(pBase, "noWebAuth", mNoWebAuth);
+  ApplyEnforcement(pBase, "packFile", mPackFile);
+  ApplyEnforcement(pBase, "chatTimestampFirst", mChatTimestampFirst);
+  ApplyEnforcement(pBase, "extendedBuffTimerDisplay",
+                   mExtendedBuffTimerDisplay);
+  ApplyEnforcement(pBase, "extendedEXPDisplay", mExtendedEXPDisplay);
+  ApplyEnforcement(pBase, "infiniteZoom", mInfiniteZoom);
+  ApplyEnforcement(pBase, "characterNameCheck", mCharacterNameCheck);
+  ApplyEnforcement(pBase, "lobbyIME", mLobbyIME);
+  ApplyEnforcement(pBase, "serverPrime", mServerPrime);
+  ApplyEnforcement(pBase, "translation", mTranslation);
+  ApplyEnforcement(pBase, "channelTransfer", mChannelTransfer);
+  ApplyEnforcement(pBase, "customPackets", mCustomPackets);
+  ApplyEnforcement(pBase, "updaterCheck", mUpdaterCheck);
+  ApplyEnforcement(pBase, "locale", mLocale);
+  ApplyEnforcement(pBase, "soundtrackPatch", mSoundtrackPatch);
+}
+
+void ClientPatches::ApplyEnforcement(const QString& patchName,
+                                     QCheckBox* pCheckBox) {
+  if (mAllowAll) {
+    if (mRequiredPatches.contains(patchName) ||
+        mBlockedPatches.contains(patchName)) {
+      pCheckBox->setEnabled(false);
+    }
+  } else {
+    if (!mAllowedPatches.contains(patchName)) {
+      pCheckBox->setEnabled(false);
+    }
+  }
+}
+
+void ClientPatches::ApplyEnforcement(const ClientPatches* pBase,
+                                     const QString& patchName,
+                                     bool& patchValue) {
+  if (mAllowAll) {
+    if (pBase->mRequiredPatches.contains(patchName)) {
+      patchValue = true;
+    } else if (pBase->mBlockedPatches.contains(patchName)) {
+      patchValue = false;
+    }
+  } else {
+    if (!pBase->mRequiredPatches.contains(patchName) &&
+        !pBase->mAllowedPatches.contains(patchName)) {
+      patchValue = false;
+    }
+  }
 }
 
 bool ClientPatches::GetBlowfishKey() const { return mBlowfishKey; }
@@ -430,6 +513,16 @@ QString ClientPatches::GetSoundtrack() const { return mSoundtrack; }
 void ClientPatches::SetSoundtrack(const QString& soundtrack) {
   mSoundtrack = soundtrack;
 }
+
+bool ClientPatches::GetAllowAll() const { return mAllowAll; }
+
+QStringList ClientPatches::GetRequiredPatches() const {
+  return mRequiredPatches;
+}
+
+QStringList ClientPatches::GetAllowedPatches() const { return mAllowedPatches; }
+
+QStringList ClientPatches::GetBlockedPatches() const { return mBlockedPatches; }
 
 bool ClientPatches::LoadStringElement(const QDomElement& root,
                                       const QString& tag,

@@ -797,7 +797,8 @@ ClientPatchVersion
 
 **Default:** 2.0
 
-The major and minor version number of the client patch that is required.
+The major and minor version number of the client patch DLL that is
+required for the client to connect to the server.
 
 Example
 """""""

@@ -254,6 +254,8 @@ void Options::Load() {
 
   mBasePatches.Load("comp_client.xml");
   mUserPatches.Load("comp_client-user.xml");
+  mUserPatches.ApplyEnforcement(&mBasePatches);
+  ApplyEnforcement();
 
   ui.patchBlowfishKey->setChecked(mUserPatches.GetBlowfishKey());
   ui.patchNoWebAuth->setChecked(mUserPatches.GetNoWebAuth());
@@ -422,6 +424,31 @@ void Options::EnableAllPatchSettings() {
   ui.patchServerPrime->setEnabled(true);
   ui.patchChannelTransfer->setEnabled(true);
   ui.patchSoundtrack->setEnabled(true);
+
+  ApplyEnforcement();
+}
+
+void Options::ApplyEnforcement() {
+  mBasePatches.ApplyEnforcement("blowfishKey", ui.patchBlowfishKey);
+  mBasePatches.ApplyEnforcement("noWebAuth", ui.patchNoWebAuth);
+  mBasePatches.ApplyEnforcement("packFile", ui.patchPackFile);
+  mBasePatches.ApplyEnforcement("chatTimestampFirst",
+                                ui.patchChatTimestampFirst);
+  mBasePatches.ApplyEnforcement("extendedBuffTimerDisplay",
+                                ui.patchExtendedBuffTimerDisplay);
+  mBasePatches.ApplyEnforcement("extendedEXPDisplay",
+                                ui.patchExtendedEXPDisplay);
+  mBasePatches.ApplyEnforcement("infiniteZoom", ui.patchInfiniteZoom);
+  mBasePatches.ApplyEnforcement("characterNameCheck",
+                                ui.patchCharacterNameCheck);
+  mBasePatches.ApplyEnforcement("lobbyIME", ui.patchLobbyIME);
+  mBasePatches.ApplyEnforcement("serverPrime", ui.patchServerPrime);
+  mBasePatches.ApplyEnforcement("translation", ui.patchTranslation);
+  mBasePatches.ApplyEnforcement("channelTransfer", ui.patchChannelTransfer);
+  mBasePatches.ApplyEnforcement("customPackets", ui.patchCustomPackets);
+  mBasePatches.ApplyEnforcement("updaterCheck", ui.patchUpdaterCheck);
+  mBasePatches.ApplyEnforcement("locale", ui.patchLocale);
+  mBasePatches.ApplyEnforcement("soundtrack", ui.patchSoundtrack);
 }
 
 #endif  // Q_OS_WIN32

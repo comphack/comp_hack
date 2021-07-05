@@ -31,9 +31,12 @@
 #include <PushIgnore.h>
 
 #include <QDomDocument>
+#include <QStringList>
 
 // Stop ignoring warnings
 #include <PopIgnore.h>
+
+class QCheckBox;
 
 class ClientPatches {
  public:
@@ -42,6 +45,9 @@ class ClientPatches {
   bool Load(const QString& path);
   bool Save(const QString& path);
   void Clear();
+
+  void ApplyEnforcement(const ClientPatches* pBase);
+  void ApplyEnforcement(const QString& patchName, QCheckBox* pCheckBox);
 
   bool GetBlowfishKey() const;
   void SetBlowfishKey(bool enabled);
@@ -94,7 +100,15 @@ class ClientPatches {
   QString GetSoundtrack() const;
   void SetSoundtrack(const QString& soundtrack);
 
+  bool GetAllowAll() const;
+  QStringList GetRequiredPatches() const;
+  QStringList GetAllowedPatches() const;
+  QStringList GetBlockedPatches() const;
+
  private:
+  void ApplyEnforcement(const ClientPatches* pBase, const QString& patchName,
+                        bool& patchValue);
+
   bool LoadStringElement(const QDomElement& root, const QString& tag,
                          std::size_t baseValueOffset, QString& value,
                          QDomElement& element, const QString& attr = {},
@@ -173,6 +187,11 @@ class ClientPatches {
 
   QString mSoundtrack;
   QDomElement mSoundtrackElement;
+
+  bool mAllowAll;
+  QStringList mRequiredPatches;
+  QStringList mAllowedPatches;
+  QStringList mBlockedPatches;
 };
 
 #endif  // TOOLS_UPDATER_SRC_CLIENTPATCHES_H

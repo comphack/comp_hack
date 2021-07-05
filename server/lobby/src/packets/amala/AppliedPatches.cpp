@@ -78,7 +78,7 @@ bool Parsers::AmalaAppliedPatches::Parse(
     return true;
   }
 
-  // Client patch version is alwas enforced.
+  // Client patch version is always enforced.
   uint32_t actualVersion =
       static_cast<uint32_t>((majorVersion * 1000) + minorVersion);
   uint32_t expectedVersion =

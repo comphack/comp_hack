@@ -1794,14 +1794,19 @@ std::shared_ptr<objects::Item> CharacterManager::GenerateItem(
 bool CharacterManager::AddRemoveItems(
     const std::shared_ptr<channel::ChannelClientConnection>& client,
     std::unordered_map<uint32_t, uint32_t> itemCounts, bool add,
-    int64_t skillTargetID) {
+    int64_t skillTargetID,
+    const std::shared_ptr<libcomp::DatabaseChangeSet>& changes) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
   auto itemBox = character->GetItemBoxes(0).Get();
 
   auto server = mServer.lock();
-  auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+  auto dbChanges =
+      changes ? changes
+              : libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+
+  bool queueChanges = !changes;
 
   const static bool autoCompressCurrency =
       server->GetWorldSharedConfig()->GetAutoCompressCurrency();
@@ -2080,7 +2085,9 @@ bool CharacterManager::AddRemoveItems(
 
   dbChanges->Update(itemBox);
 
-  server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+  if (queueChanges) {
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+  }
 
   return true;
 }
@@ -2106,7 +2113,8 @@ uint64_t CharacterManager::GetTotalMacca(
 
 bool CharacterManager::PayMacca(
     const std::shared_ptr<channel::ChannelClientConnection>& client,
-    uint64_t amount) {
+    uint64_t amount,
+    const std::shared_ptr<libcomp::DatabaseChangeSet>& changes) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
@@ -2116,7 +2124,8 @@ bool CharacterManager::PayMacca(
   std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
 
   return CalculateMaccaPayment(client, amount, insertItems, stackAdjustItems) &&
-         UpdateItems(client, false, insertItems, stackAdjustItems);
+         UpdateItems(client, false, insertItems, stackAdjustItems, true,
+                     changes);
 }
 
 bool CharacterManager::CalculateMaccaPayment(
@@ -2238,7 +2247,8 @@ bool CharacterManager::UpdateItems(
     bool validateOnly, std::list<std::shared_ptr<objects::Item>>& insertItems,
     std::unordered_map<std::shared_ptr<objects::Item>, uint16_t>
         stackAdjustItems,
-    bool notifyClient) {
+    bool notifyClient,
+    const std::shared_ptr<libcomp::DatabaseChangeSet>& _changes) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
@@ -2283,7 +2293,8 @@ bool CharacterManager::UpdateItems(
     return true;
   }
 
-  auto changes = libcomp::DatabaseChangeSet::Create();
+  auto changes = _changes ? _changes : libcomp::DatabaseChangeSet::Create();
+  bool queueChanges = !_changes;
   std::list<uint16_t> updatedSlots;
 
   for (auto iPair : stackAdjustItems) {
@@ -2322,7 +2333,7 @@ bool CharacterManager::UpdateItems(
 
   // Process all changes as a transaction
   auto worldDB = mServer.lock()->GetWorldDatabase();
-  if (!worldDB->ProcessChangeSet(changes)) {
+  if (queueChanges && !worldDB->ProcessChangeSet(changes)) {
     return false;
   }
 
@@ -2597,11 +2608,12 @@ std::list<std::shared_ptr<objects::ItemDrop>> CharacterManager::DetermineDrops(
       // luck, 12.78% at 750 luck 0.1% base -> 0.89% at 600 luck, 1.39% at 800
       // luck, 1.95% at 999 luck
       double deltaDiff = (double)(100.0 - baseRate);
-      dropRate = (uint32_t)(
-          baseRate *
-          (100.f +
-           100.f * (float)(((double)luck / 30.0) * 10.0 * (double)luck) /
-               (1000.0 + 7.0 * (double)luck + (deltaDiff * deltaDiff))));
+      dropRate =
+          (uint32_t)(baseRate * (100.f + 100.f *
+                                             (float)(((double)luck / 30.0) *
+                                                     10.0 * (double)luck) /
+                                             (1000.0 + 7.0 * (double)luck +
+                                              (deltaDiff * deltaDiff))));
 
       // Limit luck scaling based on cap
       if (scalingCap > 0.f &&
@@ -7024,24 +7036,30 @@ void CharacterManager::CalculateDependentStats(
                                     (level * 0.1)));
     } else {
       // Round the results down
-      adjusted[CorrectTbl::CLSR] = (int32_t)(
-          stats[CorrectTbl::CLSR] +
-          (int32_t)floorl((stats[CorrectTbl::STR] * 0.5) + (level * 0.1)));
-      adjusted[CorrectTbl::LNGR] = (int32_t)(
-          stats[CorrectTbl::LNGR] +
-          (int32_t)floorl((stats[CorrectTbl::SPEED] * 0.5) + (level * 0.1)));
-      adjusted[CorrectTbl::SPELL] = (int32_t)(
-          stats[CorrectTbl::SPELL] +
-          (int32_t)floorl((stats[CorrectTbl::MAGIC] * 0.5) + (level * 0.1)));
-      adjusted[CorrectTbl::SUPPORT] = (int32_t)(
-          stats[CorrectTbl::SUPPORT] +
-          (int32_t)floorl((stats[CorrectTbl::INT] * 0.5) + (level * 0.1)));
-      adjusted[CorrectTbl::PDEF] = (int32_t)(
-          stats[CorrectTbl::PDEF] +
-          (int32_t)floorl((stats[CorrectTbl::VIT] * 0.1) + (level * 0.1)));
-      adjusted[CorrectTbl::MDEF] = (int32_t)(
-          stats[CorrectTbl::MDEF] +
-          (int32_t)floorl((stats[CorrectTbl::INT] * 0.1) + (level * 0.1)));
+      adjusted[CorrectTbl::CLSR] =
+          (int32_t)(stats[CorrectTbl::CLSR] +
+                    (int32_t)floorl((stats[CorrectTbl::STR] * 0.5) +
+                                    (level * 0.1)));
+      adjusted[CorrectTbl::LNGR] =
+          (int32_t)(stats[CorrectTbl::LNGR] +
+                    (int32_t)floorl((stats[CorrectTbl::SPEED] * 0.5) +
+                                    (level * 0.1)));
+      adjusted[CorrectTbl::SPELL] =
+          (int32_t)(stats[CorrectTbl::SPELL] +
+                    (int32_t)floorl((stats[CorrectTbl::MAGIC] * 0.5) +
+                                    (level * 0.1)));
+      adjusted[CorrectTbl::SUPPORT] =
+          (int32_t)(stats[CorrectTbl::SUPPORT] +
+                    (int32_t)floorl((stats[CorrectTbl::INT] * 0.5) +
+                                    (level * 0.1)));
+      adjusted[CorrectTbl::PDEF] =
+          (int32_t)(stats[CorrectTbl::PDEF] +
+                    (int32_t)floorl((stats[CorrectTbl::VIT] * 0.1) +
+                                    (level * 0.1)));
+      adjusted[CorrectTbl::MDEF] =
+          (int32_t)(stats[CorrectTbl::MDEF] +
+                    (int32_t)floorl((stats[CorrectTbl::INT] * 0.1) +
+                                    (level * 0.1)));
     }
   }
 
@@ -7510,14 +7528,16 @@ void CharacterManager::BoostStats(
     const std::shared_ptr<objects::MiDevilLVUpData>& data, int boostLevel) {
   stats[CorrectTbl::STR] = (int32_t)(stats[CorrectTbl::STR] +
                                      (int32_t)(data->GetSTR() * boostLevel));
-  stats[CorrectTbl::MAGIC] = (int32_t)(
-      stats[CorrectTbl::MAGIC] + (int32_t)(data->GetMAGIC() * boostLevel));
+  stats[CorrectTbl::MAGIC] =
+      (int32_t)(stats[CorrectTbl::MAGIC] +
+                (int32_t)(data->GetMAGIC() * boostLevel));
   stats[CorrectTbl::VIT] = (int32_t)(stats[CorrectTbl::VIT] +
                                      (int32_t)(data->GetVIT() * boostLevel));
   stats[CorrectTbl::INT] = (int32_t)(stats[CorrectTbl::INT] +
                                      (int32_t)(data->GetINTEL() * boostLevel));
-  stats[CorrectTbl::SPEED] = (int32_t)(
-      stats[CorrectTbl::SPEED] + (int32_t)(data->GetSPEED() * boostLevel));
+  stats[CorrectTbl::SPEED] =
+      (int32_t)(stats[CorrectTbl::SPEED] +
+                (int32_t)(data->GetSPEED() * boostLevel));
   stats[CorrectTbl::LUCK] = (int32_t)(stats[CorrectTbl::LUCK] +
                                       (int32_t)(data->GetLUCK() * boostLevel));
 }

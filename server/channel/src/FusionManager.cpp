@@ -135,8 +135,9 @@ bool FusionManager::HandleTriFusion(
       soloFusion ? SVR_CONST.ITEM_KREUZ : SVR_CONST.ITEM_MACCA;
 
   std::shared_ptr<objects::Demon> resultDemon;
+  auto changes = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
   int8_t result = ProcessFusion(client, demonID1, demonID2, demonID3,
-                                costItemType, resultDemon);
+                                costItemType, resultDemon, changes);
 
   if (soloFusion) {
     libcomp::Packet reply;
@@ -152,6 +153,8 @@ bool FusionManager::HandleTriFusion(
 
     if (!tfSession) {
       // Weird but not an error
+      server->GetWorldDatabase()->ProcessChangeSet(changes);
+
       return true;
     }
 
@@ -243,14 +246,12 @@ bool FusionManager::HandleTriFusion(
         }
       }
 
-      if (newItemMap.size() > 0) {
-        // Items updated
-        std::unordered_map<std::shared_ptr<ChannelClientConnection>,
-                           std::list<uint16_t>>
-            updatedSlots;
+      // Items updated
+      std::unordered_map<std::shared_ptr<ChannelClientConnection>,
+                         std::list<uint16_t>>
+          updatedSlots;
 
-        auto changes =
-            libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+      if (newItemMap.size() > 0) {
         for (auto clientPair : freeSlots) {
           auto pClient = clientPair.first;
 
@@ -286,23 +287,25 @@ bool FusionManager::HandleTriFusion(
             }
           }
         }
+      }
 
-        if (!server->GetWorldDatabase()->ProcessChangeSet(changes)) {
-          LogFusionManagerError([&]() {
-            return libcomp::String(
-                       "TriFusion items failed to save for account '%1'. "
-                       "Disconnecting all participants to avoid additional "
-                       "errors.\n")
-                .Arg(state->GetAccountUID().ToString());
-          });
+      if (!server->GetWorldDatabase()->ProcessChangeSet(changes)) {
+        LogFusionManagerError([&]() {
+          return libcomp::String(
+                     "TriFusion items failed to save for account '%1'. "
+                     "Disconnecting all participants to avoid additional "
+                     "errors.\n")
+              .Arg(state->GetAccountUID().ToString());
+        });
 
-          for (auto pClient : pClients) {
-            pClient->Kill();
-          }
-
-          return false;
+        for (auto pClient : pClients) {
+          pClient->Kill();
         }
 
+        return false;
+      }
+
+      if (newItemMap.size() > 0) {
         // Now send the updates
         for (auto updatePair : updatedSlots) {
           auto pCharacter = updatePair.first->GetClientState()
@@ -599,8 +602,9 @@ uint32_t FusionManager::GetResultDemon(
     uint8_t darkCount = (uint8_t)((race1 == dRace1 || race1 == dRace2 ? 1 : 0) +
                                   (race2 == dRace1 || race2 == dRace2 ? 1 : 0) +
                                   (race3 == dRace1 || race3 == dRace2 ? 1 : 0));
-    uint8_t elementalCount = (uint8_t)(
-        (f1 == eFam ? 1 : 0) + (f2 == eFam ? 1 : 0) + (f3 == eFam ? 1 : 0));
+    uint8_t elementalCount =
+        (uint8_t)((f1 == eFam ? 1 : 0) + (f2 == eFam ? 1 : 0) +
+                  (f3 == eFam ? 1 : 0));
     uint8_t godCount = (uint8_t)((f1 == gFam ? 1 : 0) + (f2 == gFam ? 1 : 0) +
                                  (f3 == gFam ? 1 : 0));
     if (darkCount > 0) {
@@ -1366,7 +1370,8 @@ void FusionManager::EndExchange(
 int8_t FusionManager::ProcessFusion(
     const std::shared_ptr<ChannelClientConnection>& client, int64_t demonID1,
     int64_t demonID2, int64_t demonID3, uint32_t costItemType,
-    std::shared_ptr<objects::Demon>& resultDemon) {
+    std::shared_ptr<objects::Demon>& resultDemon,
+    const std::shared_ptr<libcomp::DatabaseChangeSet>& _changes) {
   auto state = client->GetClientState();
 
   auto demon1 = std::dynamic_pointer_cast<objects::Demon>(
@@ -1404,6 +1409,11 @@ int8_t FusionManager::ProcessFusion(
 
   bool mitamaFusion = characterManager->IsMitamaDemon(demonData);
 
+  auto changes =
+      _changes ? _changes
+               : libcomp::DatabaseChangeSet::Create(character->GetAccount());
+  bool queueChanges = !_changes;
+
   // Costs get paid regardless of outcome
   bool paymentSuccess = true;
   if (costItemType == 0 || costItemType == SVR_CONST.ITEM_MACCA) {
@@ -1419,8 +1429,9 @@ int8_t FusionManager::ProcessFusion(
       maccaCost = (uint32_t)floor(0.5 * pow(baseLevel, 2));
     }
 
-    paymentSuccess = maccaCost == 0 ||
-                     characterManager->PayMacca(client, (uint64_t)maccaCost);
+    paymentSuccess =
+        maccaCost == 0 ||
+        characterManager->PayMacca(client, (uint64_t)maccaCost, changes);
   } else if (costItemType == SVR_CONST.ITEM_KREUZ) {
     std::unordered_map<uint32_t, uint32_t> itemCost;
 
@@ -1443,8 +1454,9 @@ int8_t FusionManager::ProcessFusion(
       itemCost[SVR_CONST.ITEM_KREUZ] = kreuzCost;
     }
 
-    paymentSuccess = itemCost.size() == 0 ||
-                     characterManager->AddRemoveItems(client, itemCost, false);
+    paymentSuccess =
+        itemCost.size() == 0 ||
+        characterManager->AddRemoveItems(client, itemCost, false, 0, changes);
   } else {
     LogFusionManagerError([&]() {
       return libcomp::String(
@@ -1684,6 +1696,10 @@ int8_t FusionManager::ProcessFusion(
       });
     }
 
+    if (queueChanges) {
+      server->GetWorldDatabase()->QueueChangeSet(changes);
+    }
+
     return 1;
   }
 
@@ -1742,7 +1758,6 @@ int8_t FusionManager::ProcessFusion(
     }
   }
 
-  auto changes = libcomp::DatabaseChangeSet::Create(character->GetAccount());
   if (mitamaFusion) {
     // Perform mitama process on existing demon
     auto mitama = demon1;
@@ -1884,7 +1899,9 @@ int8_t FusionManager::ProcessFusion(
     }
   }
 
-  server->GetWorldDatabase()->QueueChangeSet(changes);
+  if (queueChanges) {
+    server->GetWorldDatabase()->QueueChangeSet(changes);
+  }
 
   // Update demon quest if active
   server->GetEventManager()->UpdateDemonQuestCount(

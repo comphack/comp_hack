@@ -45,6 +45,9 @@
         <member type="set" name="LearnedSkills">
             <element type="u32"/>
         </member>
+        <member type="set" name="SavedSwitchSkills">
+            <element type="u32"/>
+        </member>
         <member type="array" name="EquippedItems" size="15">
             <element type="Item*"/>
         </member>

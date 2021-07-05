@@ -1204,6 +1204,29 @@ Example
 .. code-block:: xml
     <member name="RebirthExtractionMode">PRESERVE_MITAMA_DEMON_VARIANTS</member>
 
+SaveSwitchSkills
+^^^^^^^^^^^^^^^^
+
+**Type:** enumeration
+
+**Default:** NO_REACTIVATION
+
+If set to FREE_SWITCH_REACTIVATION, switch skills that have been
+activated in a previous session will be reactivated when the
+character next logs in. A setting of PAY_SWITCH_REACTIVATION_COSTS
+results in all normal switch skill costs being paid during
+reactivation, in the numerical order of skill IDs ascending.
+Any switches whose costs could not be paid will not be activated.
+The default setting of NO_REACTIVATION is the normal behavior
+of switch skills not being turned back on during login.
+>>>>>>> 1b165a092939b746f602b4f084f9a952d97604a3
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="SaveSwitchSkills">FREE_SWITCH_REACTIVATION</member>
 
 DeathPenaltyDisabled
 ^^^^^^^^^^^^^^^^^^^^

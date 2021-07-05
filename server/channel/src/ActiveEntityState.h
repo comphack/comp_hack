@@ -91,7 +91,8 @@ const uint8_t STATUS_RESTING = 0x10;
 /// Entity is still affected by a skill's lockout time
 const uint8_t STATUS_LOCKOUT = 0x20;
 
-/// Entity is waiting (used by AI controlled entity)
+/// Entity is waiting in general (used by AI controlled entity) or waiting
+/// for a revival lockout to expire
 const uint8_t STATUS_WAITING = 0x40;
 
 /// Entity is ignoring other entities and will not be seen by searching AI
@@ -1017,12 +1018,6 @@ class ActiveEntityState : public objects::ActiveEntityStateObject {
    * @return Numeric representation of the entity's current alignment
    */
   uint8_t CalculateLNCType(int16_t lncPoints) const;
-
-  /**
-   * Remove any switch skills marked as active that are no longer available
-   * to the entity.
-   */
-  void RemoveInactiveSwitchSkills();
 
   /**
    * Get the set of skill IDs granted by effective tokusei.

@@ -3206,12 +3206,13 @@ void CharacterManager::UpdateLNC(
 std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     const std::shared_ptr<channel::ChannelClientConnection>& client,
     const std::shared_ptr<objects::MiDevilData>& demonData,
-    int32_t sourceEntityID, uint16_t familiarity) {
+    int32_t sourceEntityID, uint16_t familiarity,
+    const std::unordered_map<uint32_t, int16_t>& addedSkills) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
 
-  auto demon = ContractDemon(character, demonData, familiarity);
+  auto demon = ContractDemon(character, demonData, familiarity, addedSkills);
 
   if (!demon) {
     LogCharacterManagerErrorMsg("Failed to contract demon!\n");
@@ -3240,7 +3241,8 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
 std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
     const std::shared_ptr<objects::Character>& character,
     const std::shared_ptr<objects::MiDevilData>& demonData,
-    uint16_t familiarity) {
+    uint16_t familiarity,
+    const std::unordered_map<uint32_t, int16_t>& addedSkills) {
   auto comp = character->GetCOMP().Get();
   auto progress = character->GetProgress();
 
@@ -3278,6 +3280,20 @@ std::shared_ptr<objects::Demon> CharacterManager::ContractDemon(
   auto dbChanges = libcomp::DatabaseChangeSet::Create(character->GetAccount());
   dbChanges->Insert(d);
   dbChanges->Insert(ds);
+
+  // Now we can add skills.
+  if (addedSkills.size() > 0) {
+    for (auto pair : addedSkills) {
+      auto iSkill =
+          libcomp::PersistentObject::New<objects::InheritedSkill>(true);
+      iSkill->SetSkill(pair.first);
+      iSkill->SetProgress(pair.second);
+      iSkill->SetDemon(d->GetUUID());
+      d->AppendInheritedSkills(iSkill);
+
+      dbChanges->Insert(iSkill);
+    }
+  }
   dbChanges->Update(comp);
 
   auto server = mServer.lock();

@@ -14,6 +14,11 @@
             <value>REVERT_ALL_DEMONS_TO_BASE</value>
             <value>PRESERVE_MITAMA_DEMON_VARIANTS</value>
         </member>
+        <member type="enum" name="SaveSwitchSkills" default="NO_REACTIVATION">
+            <value>NO_REACTIVATION</value>
+            <value>FREE_SWITCH_REACTIVATION</value>
+            <value>PAY_SWITCH_REACTIVATION_COSTS</value>
+        </member>
         <member type="bool" name="DeathPenaltyDisabled"/>
         <member type="bool" name="DeadTokuseiDisabled"/>
         <member type="float" name="DropLuckScalingCap" default="-1.0"/>

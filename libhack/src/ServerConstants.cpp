@@ -1230,6 +1230,460 @@ bool ServerConstants::Initialize(const String& filePath) {
     return false;
   }
 
+  complexIter = complexConstants.find("CHAR_CREATION_MALE_SKIN");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_MALE_SKIN\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_MALE_SKIN.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in CHAR_CREATION_MALE_SKIN\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_MALE_SKIN not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_MALE_FACE");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_MALE_FACE\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_MALE_FACE.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in CHAR_CREATION_MALE_FACE\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_MALE_FACE not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_MALE_HAIR");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_MALE_HAIR\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_MALE_HAIR.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in CHAR_CREATION_MALE_HAIR\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_MALE_HAIR not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_MALE_TOP");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_MALE_TOP\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_MALE_TOP.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in CHAR_CREATION_MALE_TOP\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_MALE_TOP not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_MALE_BOTTOM");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_MALE_BOTTOM\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_MALE_BOTTOM.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in "
+                "CHAR_CREATION_MALE_BOTTOM\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_MALE_BOTTOM not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_MALE_FEET");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_MALE_FEET\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_MALE_FEET.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in CHAR_CREATION_MALE_FEET\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_MALE_FEET not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_MALE_COMP");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_MALE_COMP\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_MALE_COMP.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in CHAR_CREATION_MALE_COMP\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_MALE_COMP not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_FEMALE_SKIN");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_FEMALE_SKIN\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_FEMALE_SKIN.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in "
+                "CHAR_CREATION_FEMALE_SKIN\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_FEMALE_SKIN not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_FEMALE_FACE");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_FEMALE_FACE\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_FEMALE_FACE.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in "
+                "CHAR_CREATION_FEMALE_FACE\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_FEMALE_FACE not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_FEMALE_HAIR");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_FEMALE_HAIR\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_FEMALE_HAIR.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in "
+                "CHAR_CREATION_FEMALE_HAIR\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_FEMALE_HAIR not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_FEMALE_TOP");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_FEMALE_TOP\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_FEMALE_TOP.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in "
+                "CHAR_CREATION_FEMALE_TOP\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_FEMALE_TOP not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_FEMALE_BOTTOM");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg(
+          "Failed to load CHAR_CREATION_FEMALE_BOTTOM\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_FEMALE_BOTTOM.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in "
+                "CHAR_CREATION_FEMALE_BOTTOM\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_FEMALE_BOTTOM not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_FEMALE_FEET");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_FEMALE_FEET\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_FEMALE_FEET.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in "
+                "CHAR_CREATION_FEMALE_FEET\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_FEMALE_FEET not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_FEMALE_COMP");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_FEMALE_COMP\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_FEMALE_COMP.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in "
+                "CHAR_CREATION_FEMALE_COMP\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_FEMALE_COMP not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_HAIRCOLOR");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_HAIRCOLOR\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_HAIRCOLOR.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in "
+                "CHAR_CREATION_HAIRCOLOR\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_HAIRCOLOR not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_EYECOLOR");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_EYECOLOR\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_EYECOLOR.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in "
+                "CHAR_CREATION_EYECOLOR\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_EYECOLOR not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("CHAR_CREATION_WEAPON");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg("Failed to load CHAR_CREATION_WEAPON\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        if (!elemStr.IsEmpty()) {
+          for (uint32_t p : ToIntegerRange<uint32_t>(elemStr.C(), success)) {
+            sConstants.CHAR_CREATION_WEAPON.insert(p);
+          }
+
+          if (!success) {
+            LogServerConstantsErrorMsg(
+                "Failed to load an element in "
+                "CHAR_CREATION_WEAPON\n");
+            return false;
+          }
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg("CHAR_CREATION_WEAPON not found\n");
+    return false;
+  }
+
   //
   // API Admin Levels
   //

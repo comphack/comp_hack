@@ -32,6 +32,7 @@
 #include <Packet.h>
 #include <PacketCodes.h>
 #include <ReadOnlyPacket.h>
+#include <ServerConstants.h>
 #include <TcpConnection.h>
 
 // object Includes
@@ -161,85 +162,164 @@ bool Parsers::CreateCharacter::Parse(
                                     ? ((faceType - 1) % 3 + 1)
                                     : ((faceType - 101) % 3 + 101));
 
-    auto character = libcomp::PersistentObject::New<objects::Character>();
-    character->SetWorldID(worldID);
-    character->SetName(name);
-    character->SetGender(gender);
-    character->SetSkinType((uint8_t)skinType);
-    character->SetFaceType((uint8_t)faceType);
-    character->SetHairType((uint8_t)hairType);
-    character->SetHairColor((uint8_t)hairColor);
-    character->SetEyeType((uint8_t)eyeType);
-    character->SetLeftEyeColor((uint8_t)eyeColor);
-    character->SetRightEyeColor((uint8_t)eyeColor);
-    character->SetAccount(account->GetUUID());
-    character->Register(character);
-
-    std::unordered_map<size_t, std::shared_ptr<objects::Item>> equipMap;
-
-    auto itemTop = libcomp::PersistentObject::New<objects::Item>();
-    itemTop->SetType(equipTop);
-    equipMap[(size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP] =
-        itemTop;
-
-    auto itemBottom = libcomp::PersistentObject::New<objects::Item>();
-    itemBottom->SetType(equipBottom);
-    equipMap[(size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM] =
-        itemBottom;
-
-    auto itemFeet = libcomp::PersistentObject::New<objects::Item>();
-    itemFeet->SetType(equipFeet);
-    equipMap[(size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET] =
-        itemFeet;
-
-    auto comp = libcomp::PersistentObject::New<objects::Item>();
-    comp->SetType(equipComp);
-    equipMap[(size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP] =
-        comp;
-
-    auto weapon = libcomp::PersistentObject::New<objects::Item>();
-    weapon->SetType(equipWeapon);
-    equipMap[(size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON] =
-        weapon;
-
-    auto stats = libcomp::PersistentObject::New<objects::EntityStats>();
-    stats->Register(stats);
-    stats->SetEntity(character->GetUUID());
-    character->SetCoreStats(stats);
-
-    bool equipped = true;
-    for (auto pair : equipMap) {
-      auto equip = pair.second;
-      equipped &= equip->Register(equip) && equip->Insert(worldDB) &&
-                  character->SetEquippedItems(pair.first, equip);
+    // Check the validity of the various parameters.
+    bool validCharacter = (gender == objects::Character::Gender_t::MALE ||
+                           gender == objects::Character::Gender_t::FEMALE);
+    if (gender == objects::Character::Gender_t::MALE) {
+      validCharacter &= (SVR_CONST.CHAR_CREATION_MALE_SKIN.find(skinType) !=
+                         SVR_CONST.CHAR_CREATION_MALE_SKIN.end());
+      validCharacter &= (SVR_CONST.CHAR_CREATION_MALE_FACE.find(faceType) !=
+                         SVR_CONST.CHAR_CREATION_MALE_FACE.end());
+      validCharacter &= (SVR_CONST.CHAR_CREATION_MALE_HAIR.find(hairType) !=
+                         SVR_CONST.CHAR_CREATION_MALE_HAIR.end());
+      validCharacter &= (SVR_CONST.CHAR_CREATION_MALE_TOP.find(equipTop) !=
+                         SVR_CONST.CHAR_CREATION_MALE_TOP.end());
+      validCharacter &=
+          (SVR_CONST.CHAR_CREATION_MALE_BOTTOM.find(equipBottom) !=
+           SVR_CONST.CHAR_CREATION_MALE_BOTTOM.end());
+      validCharacter &= (SVR_CONST.CHAR_CREATION_MALE_FEET.find(equipFeet) !=
+                         SVR_CONST.CHAR_CREATION_MALE_FEET.end());
+      validCharacter &= (SVR_CONST.CHAR_CREATION_MALE_COMP.find(equipComp) !=
+                         SVR_CONST.CHAR_CREATION_MALE_COMP.end());
+    } else {
+      validCharacter &= (SVR_CONST.CHAR_CREATION_FEMALE_SKIN.find(skinType) !=
+                         SVR_CONST.CHAR_CREATION_FEMALE_SKIN.end());
+      validCharacter &= (SVR_CONST.CHAR_CREATION_FEMALE_FACE.find(faceType) !=
+                         SVR_CONST.CHAR_CREATION_FEMALE_FACE.end());
+      validCharacter &= (SVR_CONST.CHAR_CREATION_FEMALE_HAIR.find(hairType) !=
+                         SVR_CONST.CHAR_CREATION_FEMALE_HAIR.end());
+      validCharacter &= (SVR_CONST.CHAR_CREATION_FEMALE_TOP.find(equipTop) !=
+                         SVR_CONST.CHAR_CREATION_FEMALE_TOP.end());
+      validCharacter &=
+          (SVR_CONST.CHAR_CREATION_FEMALE_BOTTOM.find(equipBottom) !=
+           SVR_CONST.CHAR_CREATION_FEMALE_BOTTOM.end());
+      validCharacter &= (SVR_CONST.CHAR_CREATION_FEMALE_FEET.find(equipFeet) !=
+                         SVR_CONST.CHAR_CREATION_FEMALE_FEET.end());
+      validCharacter &= (SVR_CONST.CHAR_CREATION_FEMALE_COMP.find(equipComp) !=
+                         SVR_CONST.CHAR_CREATION_FEMALE_COMP.end());
     }
+    validCharacter &= (SVR_CONST.CHAR_CREATION_HAIRCOLOR.find(hairColor) !=
+                       SVR_CONST.CHAR_CREATION_HAIRCOLOR.end());
+    validCharacter &= (SVR_CONST.CHAR_CREATION_EYECOLOR.find(eyeColor) !=
+                       SVR_CONST.CHAR_CREATION_EYECOLOR.end());
+    validCharacter &= (SVR_CONST.CHAR_CREATION_WEAPON.find(equipWeapon) !=
+                       SVR_CONST.CHAR_CREATION_WEAPON.end());
 
-    if (!equipped) {
+    // Only continue processing if everything is valid.
+    if (!validCharacter) {
       LogGeneralError([&]() {
         return libcomp::String(
-                   "Character item data failed to save for account %1\n")
-            .Arg(account->GetUUID().ToString());
+                   "Character creation with invalid parameters attempted by "
+                   "account %1, parameters used:\n"
+                   "Gender: %2\n"
+                   "Skin Type: %3\n"
+                   "Face Type: %4\n"
+                   "Hair Type: %5\n"
+                   "Weapon Equipped: %6\n"
+                   "Top Equipped: %7\n"
+                   "Bottom Equipped: %8\n"
+                   "Shoes Equipped: %9\n"
+                   "COMP Equipped: %10\n"
+                   "Hair Color: %11\n"
+                   "Eye Color: %12\n")
+            .Arg(account->GetUUID().ToString())
+            .Arg((uint8_t)gender)
+            .Arg(skinType)
+            .Arg(faceType)
+            .Arg(hairType)
+            .Arg(equipWeapon)
+            .Arg(equipTop)
+            .Arg(equipBottom)
+            .Arg(equipFeet)
+            .Arg(equipComp)
+            .Arg(hairColor)
+            .Arg(eyeColor);
       });
 
-      errorCode = static_cast<uint32_t>(-1);
-    } else if (!stats->Insert(worldDB) || !character->Insert(worldDB)) {
-      LogGeneralError([&]() {
-        return libcomp::String("Character failed to save for account %1\n")
-            .Arg(account->GetUUID().ToString());
-      });
-
-      errorCode = static_cast<uint32_t>(-1);
-    } else if (!account->SetTicketCount((uint8_t)(ticketCount - 1)) ||
-               !server->GetAccountManager()->SetCharacterOnAccount(account,
-                                                                   character)) {
-      account->SetTicketCount(ticketCount);  // Put the ticket back
       errorCode = static_cast<uint32_t>(-1);
     } else {
-      LogGeneralDebug([&]() {
-        return libcomp::String("Created character '%1' on world: %2\n")
-            .Arg(name)
-            .Arg(worldID);
-      });
+      auto character = libcomp::PersistentObject::New<objects::Character>();
+      character->SetWorldID(worldID);
+      character->SetName(name);
+      character->SetGender(gender);
+      character->SetSkinType((uint8_t)skinType);
+      character->SetFaceType((uint8_t)faceType);
+      character->SetHairType((uint8_t)hairType);
+      character->SetHairColor((uint8_t)hairColor);
+      character->SetEyeType((uint8_t)eyeType);
+      character->SetLeftEyeColor((uint8_t)eyeColor);
+      character->SetRightEyeColor((uint8_t)eyeColor);
+      character->SetAccount(account->GetUUID());
+      character->Register(character);
+
+      std::unordered_map<size_t, std::shared_ptr<objects::Item>> equipMap;
+
+      auto itemTop = libcomp::PersistentObject::New<objects::Item>();
+      itemTop->SetType(equipTop);
+      equipMap[(size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_TOP] =
+          itemTop;
+
+      auto itemBottom = libcomp::PersistentObject::New<objects::Item>();
+      itemBottom->SetType(equipBottom);
+      equipMap[(
+          size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_BOTTOM] =
+          itemBottom;
+
+      auto itemFeet = libcomp::PersistentObject::New<objects::Item>();
+      itemFeet->SetType(equipFeet);
+      equipMap[(size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_FEET] =
+          itemFeet;
+
+      auto comp = libcomp::PersistentObject::New<objects::Item>();
+      comp->SetType(equipComp);
+      equipMap[(size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_COMP] =
+          comp;
+
+      auto weapon = libcomp::PersistentObject::New<objects::Item>();
+      weapon->SetType(equipWeapon);
+      equipMap[(
+          size_t)objects::MiItemBasicData::EquipType_t::EQUIP_TYPE_WEAPON] =
+          weapon;
+
+      auto stats = libcomp::PersistentObject::New<objects::EntityStats>();
+      stats->Register(stats);
+      stats->SetEntity(character->GetUUID());
+      character->SetCoreStats(stats);
+
+      bool equipped = true;
+      for (auto pair : equipMap) {
+        auto equip = pair.second;
+        equipped &= equip->Register(equip) && equip->Insert(worldDB) &&
+                    character->SetEquippedItems(pair.first, equip);
+      }
+
+      if (!equipped) {
+        LogGeneralError([&]() {
+          return libcomp::String(
+                     "Character item data failed to save for account %1\n")
+              .Arg(account->GetUUID().ToString());
+        });
+
+        errorCode = static_cast<uint32_t>(-1);
+      } else if (!stats->Insert(worldDB) || !character->Insert(worldDB)) {
+        LogGeneralError([&]() {
+          return libcomp::String("Character failed to save for account %1\n")
+              .Arg(account->GetUUID().ToString());
+        });
+
+        errorCode = static_cast<uint32_t>(-1);
+      } else if (!account->SetTicketCount((uint8_t)(ticketCount - 1)) ||
+                 !server->GetAccountManager()->SetCharacterOnAccount(
+                     account, character)) {
+        account->SetTicketCount(ticketCount);  // Put the ticket back
+        errorCode = static_cast<uint32_t>(-1);
+      } else {
+        LogGeneralDebug([&]() {
+          return libcomp::String("Created character '%1' on world: %2\n")
+              .Arg(name)
+              .Arg(worldID);
+        });
+      }
     }
   }
 

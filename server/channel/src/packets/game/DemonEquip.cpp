@@ -288,6 +288,16 @@ bool Parsers::DemonEquip::Parse(
     }
   }
 
+  if (success && (cState->HasActiveEvent() || dState->HasActiveEvent())) {
+    LogDemonError([&]() {
+      return libcomp::String(
+                 "DemonEquip action attempted while an event was running: %1\n")
+          .Arg(state->GetAccountUID().ToString());
+    });
+
+    success = false;
+  }
+
   libcomp::Packet reply;
   reply.WritePacketCode(ChannelToClientPacketCode_t::PACKET_DEMON_EQUIP);
   reply.WriteS64Little(demonID);

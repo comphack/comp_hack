@@ -73,6 +73,19 @@ bool Parsers::DemonBoxMove::Parse(
   auto srcDemon = std::dynamic_pointer_cast<objects::Demon>(
       libcomp::PersistentObject::GetObjectByUUID(
           state->GetObjectUUID(demonID)));
+
+  if (!srcDemon) {
+    LogDemonError([&]() {
+      return libcomp::String(
+                 "DemonBoxMove request by account %1 failed due to invalid "
+                 "demon ID %2\n")
+          .Arg(state->GetAccountUID().ToString())
+          .Arg(demonID);
+    });
+
+    return false;
+  }
+
   auto destDemon =
       destBox ? destBox->GetDemons((size_t)destSlot).Get() : nullptr;
 

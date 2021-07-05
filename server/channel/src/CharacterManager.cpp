@@ -3661,8 +3661,7 @@ bool CharacterManager::MitamaDemon(
       LogCharacterManagerDebug([&]() {
         return libcomp::String(
                    "Demon type %1 became type %2 with mitama type %3 and "
-                   "growth "
-                   "type %4: %5\n")
+                   "growth type %4: %5\n")
             .Arg(currentType)
             .Arg(newType)
             .Arg(mitamaType)

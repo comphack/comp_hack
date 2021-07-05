@@ -1349,8 +1349,7 @@ bool ServerConstants::Initialize(const String& filePath) {
 
           if (!success) {
             LogServerConstantsErrorMsg(
-                "Failed to load an element in "
-                "CHAR_CREATION_MALE_BOTTOM\n");
+                "Failed to load an element in CHAR_CREATION_MALE_BOTTOM\n");
             return false;
           }
         }
@@ -1455,8 +1454,7 @@ bool ServerConstants::Initialize(const String& filePath) {
 
           if (!success) {
             LogServerConstantsErrorMsg(
-                "Failed to load an element in "
-                "CHAR_CREATION_FEMALE_FACE\n");
+                "Failed to load an element in CHAR_CREATION_FEMALE_FACE\n");
             return false;
           }
         }
@@ -1564,8 +1562,7 @@ bool ServerConstants::Initialize(const String& filePath) {
 
           if (!success) {
             LogServerConstantsErrorMsg(
-                "Failed to load an element in "
-                "CHAR_CREATION_FEMALE_FEET\n");
+                "Failed to load an element in CHAR_CREATION_FEMALE_FEET\n");
             return false;
           }
         }
@@ -1591,8 +1588,7 @@ bool ServerConstants::Initialize(const String& filePath) {
 
           if (!success) {
             LogServerConstantsErrorMsg(
-                "Failed to load an element in "
-                "CHAR_CREATION_FEMALE_COMP\n");
+                "Failed to load an element in CHAR_CREATION_FEMALE_COMP\n");
             return false;
           }
         }
@@ -1618,8 +1614,7 @@ bool ServerConstants::Initialize(const String& filePath) {
 
           if (!success) {
             LogServerConstantsErrorMsg(
-                "Failed to load an element in "
-                "CHAR_CREATION_HAIRCOLOR\n");
+                "Failed to load an element in CHAR_CREATION_HAIRCOLOR\n");
             return false;
           }
         }
@@ -1645,8 +1640,7 @@ bool ServerConstants::Initialize(const String& filePath) {
 
           if (!success) {
             LogServerConstantsErrorMsg(
-                "Failed to load an element in "
-                "CHAR_CREATION_EYECOLOR\n");
+                "Failed to load an element in CHAR_CREATION_EYECOLOR\n");
             return false;
           }
         }

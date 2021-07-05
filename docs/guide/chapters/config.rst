@@ -1202,6 +1202,7 @@ Example
 """""""
 
 .. code-block:: xml
+
     <member name="RebirthExtractionMode">PRESERVE_MITAMA_DEMON_VARIANTS</member>
 
 SaveSwitchSkills
@@ -1219,7 +1220,6 @@ reactivation, in the numerical order of skill IDs ascending.
 Any switches whose costs could not be paid will not be activated.
 The default setting of NO_REACTIVATION is the normal behavior
 of switch skills not being turned back on during login.
->>>>>>> 1b165a092939b746f602b4f084f9a952d97604a3
 
 Example
 """""""

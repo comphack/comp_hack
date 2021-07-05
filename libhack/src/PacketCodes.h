@@ -55,6 +55,12 @@ enum class ClientToLobbyPacketCode_t : uint16_t {
   PACKET_QUERY_PURCHASE_TICKET = 0x0011,
   /// Purchase ticket request.
   PACKET_PURCHASE_TICKET = 0x0013,
+
+  //
+  // Custom Packets (Amala Network)
+  //
+  /// Notify the server of applied client patches.
+  PACKET_AMALA_APPLIED_PATCHES = 0x1003,
 };
 
 /**
@@ -79,6 +85,18 @@ enum class LobbyToClientPacketCode_t : uint16_t {
   PACKET_QUERY_PURCHASE_TICKET = 0x0012,
   /// Purchase ticket response.
   PACKET_PURCHASE_TICKET = 0x0014,
+
+  //
+  // Custom Packets (Amala Network)
+  //
+  /// Query the client for information about the client patches.
+  PACKET_AMALA_QUERY_CLIENT_PATCH = 0x1003,
+  /// Notify the client that the patch verison is wrong.
+  PACKET_AMALA_WRONG_CLIENT_PATCH_VERSION = 0x1004,
+  /// Notify the client that a patch is missing.
+  PACKET_AMALA_CLIENT_PATCH_MISSING = 0x1005,
+  /// Notify the client that a patch is blocked.
+  PACKET_AMALA_CLIENT_PATCH_BLOCKED = 0x1006,
 };
 
 /**

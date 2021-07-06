@@ -575,6 +575,17 @@ class ServerConstants {
     /// Item IDs that allow creation of VA items from a normal one
     std::set<uint32_t> VA_ADD_ITEMS;
 
+    /// Skill IDs of prohibited features in pre-Mitama Rebirth Extraction
+    /// results
+    std::set<uint32_t> REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES;
+
+    /// Skill IDs of prohibited features in Mitama Rebirth Extraction results
+    std::set<uint32_t> REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES;
+
+    /// Map of special Demon Rebirth Extraction results, useful for
+    /// forcing certain results, such as always going back to base.
+    std::unordered_map<uint32_t, uint32_t> SPECIAL_REBIRTH_EXTRACTIONS;
+
     /// IDs of valid male skins in char creation
     std::set<uint32_t> CHAR_CREATION_MALE_SKIN;
 

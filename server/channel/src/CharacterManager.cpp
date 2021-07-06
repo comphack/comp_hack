@@ -3665,13 +3665,14 @@ bool CharacterManager::MitamaDemon(
       demon->SetType(newType);
       demon->SetMitamaRank((uint8_t)mRank);
       demon->SetMitamaType(mitamaType);
+      demon->SetDemonTypePreMitama(currentType);
 
       success = true;
 
       LogCharacterManagerDebug([&]() {
         return libcomp::String(
-                   "Demon type %1 became type %2 with mitama type %3 and growh "
-                   "type %4: %5\n")
+                   "Demon type %1 became type %2 with mitama type %3 and "
+                   "growth type %4: %5\n")
             .Arg(currentType)
             .Arg(newType)
             .Arg(mitamaType)

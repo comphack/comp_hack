@@ -49,6 +49,14 @@ bool Parsers::Login::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
     libcomp::ReadOnlyPacket& p) const {
+  if ((sizeof(uint16_t) + sizeof(uint32_t)) > p.Size()) {
+    return false;
+  }
+
+  if ((p.PeekU16() + sizeof(uint16_t) + sizeof(uint32_t)) != p.Size()) {
+    return false;
+  }
+
   // Classic authentication method: username followed by the session key
   libcomp::String username =
       p.ReadString16(libcomp::Convert::ENCODING_UTF8, true);

@@ -1158,6 +1158,78 @@ bool ServerConstants::Initialize(const String& filePath) {
     return false;
   }
 
+  complexIter = complexConstants.find(
+      "REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg(
+          "Failed to load "
+          "REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        uint32_t entry = 0;
+        if (LoadInteger(elemStr.C(), entry)) {
+          sConstants.REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES
+              .insert(entry);
+        } else {
+          LogServerConstantsErrorMsg(
+              "Failed to load an element in "
+              "REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES\n");
+          return false;
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg(
+        "REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find(
+      "REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES");
+  if (complexIter != complexConstants.end()) {
+    std::list<String> strList;
+    if (!LoadStringList(complexIter->second, strList)) {
+      LogServerConstantsErrorMsg(
+          "Failed to load "
+          "REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES\n");
+      return false;
+    } else {
+      for (auto elemStr : strList) {
+        uint32_t entry = 0;
+        if (LoadInteger(elemStr.C(), entry)) {
+          sConstants.REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES
+              .insert(entry);
+        } else {
+          LogServerConstantsErrorMsg(
+              "Failed to load an element in "
+              "REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES\n");
+          return false;
+        }
+      }
+    }
+  } else {
+    LogServerConstantsErrorMsg(
+        "REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES not found\n");
+    return false;
+  }
+
+  complexIter = complexConstants.find("SPECIAL_REBIRTH_EXTRACTIONS");
+  if (complexIter != complexConstants.end()) {
+    std::unordered_map<std::string, std::string> map;
+    if (!LoadKeyValueStrings(complexIter->second, map) ||
+        !LoadIntegerMap(map, sConstants.SPECIAL_REBIRTH_EXTRACTIONS)) {
+      LogServerConstantsErrorMsg(
+          "Failed to load SPECIAL_REBIRTH_EXTRACTIONS\n");
+      return false;
+    }
+  } else {
+    LogServerConstantsErrorMsg("SPECIAL_REBIRTH_EXTRACTIONS not found\n");
+    return false;
+  }
+
   complexIter = complexConstants.find("CHAR_CREATION_MALE_SKIN");
   if (complexIter != complexConstants.end()) {
     std::list<String> strList;
@@ -1355,7 +1427,8 @@ bool ServerConstants::Initialize(const String& filePath) {
 
           if (!success) {
             LogServerConstantsErrorMsg(
-                "Failed to load an element in CHAR_CREATION_FEMALE_SKIN\n");
+                "Failed to load an element in "
+                "CHAR_CREATION_FEMALE_SKIN\n");
             return false;
           }
         }
@@ -1407,7 +1480,8 @@ bool ServerConstants::Initialize(const String& filePath) {
 
           if (!success) {
             LogServerConstantsErrorMsg(
-                "Failed to load an element in CHAR_CREATION_FEMALE_HAIR\n");
+                "Failed to load an element in "
+                "CHAR_CREATION_FEMALE_HAIR\n");
             return false;
           }
         }
@@ -1433,7 +1507,8 @@ bool ServerConstants::Initialize(const String& filePath) {
 
           if (!success) {
             LogServerConstantsErrorMsg(
-                "Failed to load an element in CHAR_CREATION_FEMALE_TOP\n");
+                "Failed to load an element in "
+                "CHAR_CREATION_FEMALE_TOP\n");
             return false;
           }
         }
@@ -1460,7 +1535,8 @@ bool ServerConstants::Initialize(const String& filePath) {
 
           if (!success) {
             LogServerConstantsErrorMsg(
-                "Failed to load an element in CHAR_CREATION_FEMALE_BOTTOM\n");
+                "Failed to load an element in "
+                "CHAR_CREATION_FEMALE_BOTTOM\n");
             return false;
           }
         }
@@ -1590,7 +1666,8 @@ bool ServerConstants::Initialize(const String& filePath) {
 
           if (!success) {
             LogServerConstantsErrorMsg(
-                "Failed to load an element in CHAR_CREATION_WEAPON\n");
+                "Failed to load an element in "
+                "CHAR_CREATION_WEAPON\n");
             return false;
           }
         }

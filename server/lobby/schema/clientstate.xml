@@ -5,5 +5,6 @@
         <member type="string" name="Username"/>
         <member type="Account*" name="Account"/>
         <member type="u32" name="Challenge"/>
+        <member type="bool" name="HaveValidClientPatches"/>
     </object>
 </objgen>

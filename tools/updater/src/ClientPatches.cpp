@@ -29,6 +29,7 @@
 // Ignore warnings
 #include <PushIgnore.h>
 
+#include <QCheckBox>
 #include <QFile>
 #include <QMessageBox>
 
@@ -52,7 +53,10 @@ ClientPatches::ClientPatches(ClientPatches* pBase)
       mCustomPackets(true),
       mUpdaterCheck(true),
       mLocale(true),
-      mSoundtrackPatch(true) {}
+      mSoundtrackPatch(true),
+      mKillCounterSpacing(true),
+      mAccountDump(true),
+      mAllowAll(true) {}
 
 bool ClientPatches::Load(const QString& path) {
   Clear();
@@ -174,6 +178,43 @@ bool ClientPatches::Load(const QString& path) {
     return false;
   }
 
+  if (!LoadPatchElement(root, "killCounterSpacing",
+                        offsetof(ClientPatches, mKillCounterSpacing),
+                        mKillCounterSpacing, mKillCounterSpacingElement)) {
+    return false;
+  }
+
+  if (!LoadPatchElement(root, "accountDump",
+                        offsetof(ClientPatches, mAccountDump), mAccountDump,
+                        mAccountDumpElement)) {
+    return false;
+  }
+
+  auto enforcement = GetFirstElement(root, "enforcement");
+
+  if (!enforcement.isNull()) {
+    auto allowAll = enforcement.attribute("allow-all", "true").toLower();
+    mAllowAll = "true" == allowAll || "on" == allowAll || "yes" == allowAll;
+
+    auto elements = root.elementsByTagName("require");
+
+    for (int i = 0; i < elements.size(); ++i) {
+      mRequiredPatches.append(elements.at(i).toElement().text().trimmed());
+    }
+
+    elements = root.elementsByTagName("allow");
+
+    for (int i = 0; i < elements.size(); ++i) {
+      mAllowedPatches.append(elements.at(i).toElement().text().trimmed());
+    }
+
+    elements = root.elementsByTagName("block");
+
+    for (int i = 0; i < elements.size(); ++i) {
+      mBlockedPatches.append(elements.at(i).toElement().text().trimmed());
+    }
+  }
+
   return true;
 }
 
@@ -271,6 +312,17 @@ bool ClientPatches::Save(const QString& path) {
     return false;
   }
 
+  if (!SavePatchElement("killCounterSpacing",
+                        offsetof(ClientPatches, mKillCounterSpacing),
+                        mKillCounterSpacing, mKillCounterSpacingElement)) {
+    return false;
+  }
+
+  if (!SavePatchElement("accountDump", offsetof(ClientPatches, mAccountDump),
+                        mAccountDump, mAccountDumpElement)) {
+    return false;
+  }
+
   QFile file(path);
   if (!file.open(QIODevice::WriteOnly)) {
     return false;
@@ -332,6 +384,12 @@ void ClientPatches::Clear() {
   mSoundtrackPatchElement = QDomElement();
   mSoundtrackPatch = true;
 
+  mKillCounterSpacingElement = QDomElement();
+  mKillCounterSpacing = true;
+
+  mAccountDumpElement = QDomElement();
+  mAccountDump = true;
+
   mSoundtrackElement = QDomElement();
   mSoundtrack.clear();
 
@@ -339,6 +397,64 @@ void ClientPatches::Clear() {
   mDoc.appendChild(mDoc.createProcessingInstruction(
       "xml", "version=\"1.0\" encoding=\"UTF-8\""));
   mDoc.appendChild(mDoc.createElement("config"));
+
+  mAllowAll = true;
+  mRequiredPatches.clear();
+  mAllowedPatches.clear();
+  mBlockedPatches.clear();
+}
+
+void ClientPatches::ApplyEnforcement(const ClientPatches* pBase) {
+  ApplyEnforcement(pBase, "blowfishKey", mBlowfishKey);
+  ApplyEnforcement(pBase, "noWebAuth", mNoWebAuth);
+  ApplyEnforcement(pBase, "packFile", mPackFile);
+  ApplyEnforcement(pBase, "chatTimestampFirst", mChatTimestampFirst);
+  ApplyEnforcement(pBase, "extendedBuffTimerDisplay",
+                   mExtendedBuffTimerDisplay);
+  ApplyEnforcement(pBase, "extendedEXPDisplay", mExtendedEXPDisplay);
+  ApplyEnforcement(pBase, "infiniteZoom", mInfiniteZoom);
+  ApplyEnforcement(pBase, "characterNameCheck", mCharacterNameCheck);
+  ApplyEnforcement(pBase, "lobbyIME", mLobbyIME);
+  ApplyEnforcement(pBase, "serverPrime", mServerPrime);
+  ApplyEnforcement(pBase, "translation", mTranslation);
+  ApplyEnforcement(pBase, "channelTransfer", mChannelTransfer);
+  ApplyEnforcement(pBase, "customPackets", mCustomPackets);
+  ApplyEnforcement(pBase, "updaterCheck", mUpdaterCheck);
+  ApplyEnforcement(pBase, "locale", mLocale);
+  ApplyEnforcement(pBase, "soundtrackPatch", mSoundtrackPatch);
+  ApplyEnforcement(pBase, "killCounterSpacing", mKillCounterSpacing);
+  ApplyEnforcement(pBase, "accountDump", mAccountDump);
+}
+
+void ClientPatches::ApplyEnforcement(const QString& patchName,
+                                     QCheckBox* pCheckBox) {
+  if (mAllowAll) {
+    if (mRequiredPatches.contains(patchName) ||
+        mBlockedPatches.contains(patchName)) {
+      pCheckBox->setEnabled(false);
+    }
+  } else {
+    if (!mAllowedPatches.contains(patchName)) {
+      pCheckBox->setEnabled(false);
+    }
+  }
+}
+
+void ClientPatches::ApplyEnforcement(const ClientPatches* pBase,
+                                     const QString& patchName,
+                                     bool& patchValue) {
+  if (mAllowAll) {
+    if (pBase->mRequiredPatches.contains(patchName)) {
+      patchValue = true;
+    } else if (pBase->mBlockedPatches.contains(patchName)) {
+      patchValue = false;
+    }
+  } else {
+    if (!pBase->mRequiredPatches.contains(patchName) &&
+        !pBase->mAllowedPatches.contains(patchName)) {
+      patchValue = false;
+    }
+  }
 }
 
 bool ClientPatches::GetBlowfishKey() const { return mBlowfishKey; }
@@ -425,11 +541,33 @@ void ClientPatches::SetSoundtrackPatch(bool enabled) {
   mSoundtrackPatch = enabled;
 }
 
+bool ClientPatches::GetKillCounterSpacing() const {
+  return mKillCounterSpacing;
+}
+
+void ClientPatches::SetKillCounterSpacing(bool enabled) {
+  mKillCounterSpacing = enabled;
+}
+
+bool ClientPatches::GetAccountDump() const { return mAccountDump; }
+
+void ClientPatches::SetAccountDump(bool enabled) { mAccountDump = enabled; }
+
 QString ClientPatches::GetSoundtrack() const { return mSoundtrack; }
 
 void ClientPatches::SetSoundtrack(const QString& soundtrack) {
   mSoundtrack = soundtrack;
 }
+
+bool ClientPatches::GetAllowAll() const { return mAllowAll; }
+
+QStringList ClientPatches::GetRequiredPatches() const {
+  return mRequiredPatches;
+}
+
+QStringList ClientPatches::GetAllowedPatches() const { return mAllowedPatches; }
+
+QStringList ClientPatches::GetBlockedPatches() const { return mBlockedPatches; }
 
 bool ClientPatches::LoadStringElement(const QDomElement& root,
                                       const QString& tag,

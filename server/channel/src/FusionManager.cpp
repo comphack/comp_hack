@@ -1783,6 +1783,8 @@ int8_t FusionManager::ProcessFusion(
     characterManager->CalculateDemonBaseStats(nonMitama);
 
     resultDemon = nonMitama;
+
+    changes->Update(resultDemon);
   } else {
     // Create the new demon
     resultDemon = characterManager->GenerateDemon(demonData, familiarity);

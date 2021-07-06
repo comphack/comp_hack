@@ -109,13 +109,16 @@ SET(${PROJECT_NAME}_PACKETS
     src/packets/game/QueryPurchaseTicket.cpp # 0x0011
     src/packets/game/PurchaseTicket.cpp      # 0x0013
 
-    #Internal packets
-    src/packets/internal/SetWorldInfo.cpp      # 0x1002
-    src/packets/internal/SetChannelInfo.cpp    # 0x1003
-    src/packets/internal/AccountLogin.cpp      # 0x1004
-    src/packets/internal/AccountLogout.cpp     # 0x1005
-    src/packets/internal/DataSync.cpp          # 0x1007
-    src/packets/internal/WebGame.cpp           # 0x100C
+    # Amala Packets
+    src/packets/amala/AppliedPatches.cpp     # 0x1003
+
+    # Internal Packets
+    src/packets/internal/SetWorldInfo.cpp    # 0x1002
+    src/packets/internal/SetChannelInfo.cpp  # 0x1003
+    src/packets/internal/AccountLogin.cpp    # 0x1004
+    src/packets/internal/AccountLogout.cpp   # 0x1005
+    src/packets/internal/DataSync.cpp        # 0x1007
+    src/packets/internal/WebGame.cpp         # 0x100C
 )
 
 IF(SINGLE_SOURCE_PACKETS)

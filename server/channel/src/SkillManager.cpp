@@ -249,7 +249,7 @@ class channel::ProcessingSkill {
   uint8_t KnowledgeRank = 0;
   int32_t AbsoluteDamage = 0;
   int16_t ChargeReduce = 0;
-  bool IsItemSkill = false;
+  uint32_t ItemID = 0;
   bool IsProjectile = false;
   bool CanNRA = true;
   uint8_t Nulled = 0;
@@ -535,6 +535,7 @@ void SkillManager::LoadScripts() {
           // logic only
           .ConstVar("Activated", &ProcessingSkill::Activated)
           .ConstVar("Definition", &ProcessingSkill::Definition)
+          .ConstVar("ItemID", &ProcessingSkill::ItemID)
           .ConstVar("EffectiveSource", &ProcessingSkill::EffectiveSource)
           .ConstVar("PrimaryTarget", &ProcessingSkill::PrimaryTarget)
           .ConstVar("SourceExecutionState",
@@ -715,7 +716,7 @@ bool SkillManager::ActivateSkill(
         maxStacks +
         tokuseiManager->GetAspectSum(
             source, TokuseiAspectType::SKILL_ITEM_STACK_ADJUST, calcState) +
-        (!pSkill->IsItemSkill
+        (!pSkill->ItemID
              ? tokuseiManager->GetAspectSum(
                    source, TokuseiAspectType::SKILL_STACK_ADJUST, calcState)
              : 0));
@@ -1629,11 +1630,21 @@ int8_t SkillManager::ValidateSkillTarget(
             ClientState::GetEntityClientState(target->GetEntityID());
         auto zone = target->GetZone();
         if (isRevive && targetClientState && zone) {
+          // Target is invalid if either the controlling player has not accepted
+          // revival from others, or if it is a partner demon outside of
+          // demon-only instances and it has been dead for less than
+          // the revival lockout timer.
           targetInvalid =
               !targetClientState->GetAcceptRevival() &&
               (targetClientState->GetCharacterState() == target ||
                (targetClientState->GetDemonState() == target &&
                 zone->GetInstanceType() == InstanceType_t::DEMON_ONLY));
+
+          if (targetClientState->GetDemonState() == target &&
+              !targetLivingStateInvalid) {
+            targetLivingStateInvalid =
+                target->StatusTimesKeyExists(STATUS_WAITING);
+          }
         }
       }
       break;
@@ -2554,18 +2565,13 @@ bool SkillManager::DetermineCosts(
     }
   }
 
-  if (pSkill->IsItemSkill) {
+  if (pSkill->ItemID > 0) {
     // If using an item skill and the item is a specific type and
     // non-rental but the skill does not specify a cost for it, it is
     // still consumed.
-    int64_t targetObjectID = activated->GetActivationObjectID();
-    auto item = targetObjectID ? std::dynamic_pointer_cast<objects::Item>(
-                                     libcomp::PersistentObject::GetObjectByUUID(
-                                         state->GetObjectUUID(targetObjectID)))
-                               : nullptr;
-    if (item && itemCosts.find(item->GetType()) == itemCosts.end()) {
+    if (itemCosts.find(pSkill->ItemID) == itemCosts.end()) {
       auto itemData =
-          server->GetDefinitionManager()->GetItemData(item->GetType());
+          server->GetDefinitionManager()->GetItemData(pSkill->ItemID);
       auto category = itemData->GetCommon()->GetCategory();
 
       bool isRental = itemData->GetRental()->GetRental() != 0;
@@ -2575,7 +2581,7 @@ bool SkillManager::DetermineCosts(
       bool isDemonInstItem =
           isActive && category->GetSubCategory() == ITEM_SUBCATEGORY_DEMON_SOLO;
       if (!isRental && (isGeneric || isDemonInstItem)) {
-        itemCosts[item->GetType()] = 1;
+        itemCosts[pSkill->ItemID] = 1;
       }
     }
   }
@@ -2994,7 +3000,7 @@ bool SkillManager::ProcessSkillResult(
 
   bool initialHitNull = pSkill->Nulled != 0;
   bool initialHitReflect = pSkill->Reflected != 0;
-  bool specialReflectCase = false;
+  bool initialHitReflectWithoutAOECancel = false;
   if (pSkill->Nulled || pSkill->Reflected || pSkill->Absorbed) {
     // Apply original target NRA
     std::shared_ptr<ActiveEntityState> nraTarget;
@@ -3089,7 +3095,7 @@ bool SkillManager::ProcessSkillResult(
         // Ignore what happened to the primary target completely. This is a
         // special case that requires some handling later to prevent double
         // reflection onto the skill user.
-        specialReflectCase = true;
+        initialHitReflectWithoutAOECancel = initialHitReflect;
         break;
       case objects::MiEffectiveRangeData::AreaType_t::TARGET_RADIUS:
       case objects::MiEffectiveRangeData::AreaType_t::FRONT_3:
@@ -3321,11 +3327,46 @@ bool SkillManager::ProcessSkillResult(
       bool deadOnly =
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY ||
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY;
+
+      bool isRevive = false;
+      switch (skillData->GetDamage()->GetBattleDamage()->GetFormula()) {
+        case objects::MiBattleDamageData::Formula_t::HEAL_NORMAL:
+        case objects::MiBattleDamageData::Formula_t::HEAL_STATIC:
+        case objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT:
+          isRevive = true;
+          break;
+        default:
+          break;
+      }
+
       effectiveTargets.remove_if(
-          [effectiveSource,
-           deadOnly](const std::shared_ptr<ActiveEntityState>& target) {
+          [effectiveSource, deadOnly, isRevive,
+           zone](const std::shared_ptr<ActiveEntityState>& target) {
+            bool targetInvalidForDeadOnlySkills = target->IsAlive();
+            auto targetClientState =
+                ClientState::GetEntityClientState(target->GetEntityID());
+
+            if (isRevive && targetClientState && zone &&
+                !targetInvalidForDeadOnlySkills) {
+              // Target is invalid if either the controlling player has not
+              // accepted revival from others, or if it is a partner demon
+              // outside of demon-only instances and it has been dead for less
+              // than the revival lockout timer.
+              targetInvalidForDeadOnlySkills =
+                  !targetClientState->GetAcceptRevival() &&
+                  (targetClientState->GetCharacterState() == target ||
+                   (targetClientState->GetDemonState() == target &&
+                    zone->GetInstanceType() == InstanceType_t::DEMON_ONLY));
+
+              if (targetClientState->GetDemonState() == target &&
+                  !targetInvalidForDeadOnlySkills) {
+                targetInvalidForDeadOnlySkills =
+                    target->StatusTimesKeyExists(STATUS_WAITING);
+              }
+            }
+
             return !effectiveSource->SameFaction(target) ||
-                   (deadOnly == target->IsAlive());
+                   (deadOnly == targetInvalidForDeadOnlySkills);
           });
 
       // Work around CAVE setting a validtype of PARTY while setting a
@@ -3440,15 +3481,19 @@ bool SkillManager::ProcessSkillResult(
     // occur on the original target or it is one of the special
     // reflect cases, apply the initially calculated flags
     bool isSource = effectiveTarget == source;
-    if (target.PrimaryTarget && (!initialHitReflect || specialReflectCase)) {
+    if (target.PrimaryTarget &&
+        (!initialHitReflect || initialHitReflectWithoutAOECancel)) {
       target.HitNull = skill.Nulled;
       target.HitReflect = skill.Reflected;
       target.HitAbsorb = skill.Absorbed;
-      target.HitAvoided = (skill.Nulled != 0 || specialReflectCase);
+      target.HitAvoided =
+          (skill.Nulled != 0 || initialHitReflectWithoutAOECancel);
       target.NRAAffinity = skill.NRAAffinity;
 
-      if (specialReflectCase && !isSource) {
-        // The special cases should increase the number of AOE reflects.
+      if (initialHitReflectWithoutAOECancel && !isSource) {
+        // This is a spin or other radial attack that the initial target
+        // reflected, without canceling the AOE. Treat the initial
+        // reflection as an additional AOE reflect.
         aoeReflect++;
       }
     } else {
@@ -4252,9 +4297,32 @@ void SkillManager::ProcessSkillResultFinal(
         // AI and skill rules apply
         target.EntityState->SetStatusTimes(STATUS_KNOCKBACK, hitTimings[1]);
 
-        Point rushPoint = zoneManager->MoveRelative(
-            source, primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(),
-            dist + 250.f, false, now, hitTimings[1]);
+        Point rushPoint;
+
+        if (source->GetEntityType() == EntityType_t::CHARACTER ||
+            source->GetEntityType() == EntityType_t::PARTNER_DEMON) {
+          // Move player source to destination only after Pivot packet is sent
+          rushPoint = zoneManager->GetLinearPoint(
+              source->GetCurrentX(), source->GetCurrentY(),
+              primaryTarget->GetCurrentX(), primaryTarget->GetCurrentY(),
+              dist + 250.f, false, zone);
+
+          server->ScheduleWork(
+              hitTimings[1],
+              [](std::shared_ptr<ActiveEntityState> pSource, Point pRushPoint,
+                 uint64_t endTime) {
+                pSource->SetDestinationX(pRushPoint.x);
+                pSource->SetDestinationY(pRushPoint.y);
+                pSource->SetDestinationTicks(endTime);
+              },
+              source, rushPoint, hitTimings[1]);
+        } else {
+          // Move enemy source immediately
+          rushPoint = zoneManager->MoveRelative(
+              source, primaryTarget->GetCurrentX(),
+              primaryTarget->GetCurrentY(), dist + 250.f, false, now,
+              hitTimings[1]);
+        }
 
         p.WriteFloat(rushPoint.x);
         p.WriteFloat(rushPoint.y);
@@ -4679,6 +4747,7 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   auto source = std::dynamic_pointer_cast<ActiveEntityState>(
       activated->GetSourceEntity());
   auto cSource = std::dynamic_pointer_cast<CharacterState>(source);
+  auto state = ClientState::GetEntityClientState(source->GetEntityID(), false);
 
   auto skill = std::make_shared<ProcessingSkill>();
   skill->SkillID = skillData->GetCommon()->GetID();
@@ -4697,9 +4766,6 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   skill->CurrentZone = source->GetZone();
   skill->InPvP = skill->CurrentZone &&
                  skill->CurrentZone->GetInstanceType() == InstanceType_t::PVP;
-  skill->IsItemSkill =
-      skillData->GetBasic()->GetFamily() == SkillFamily_t::ITEM ||
-      skillData->GetBasic()->GetFamily() == SkillFamily_t::DEMON_SOLO;
   skill->IsProjectile =
       skillData->GetDischarge()->GetProjectileSpeed() &&
       skillData->GetTarget()->GetType() != objects::MiTargetData::Type_t::NONE;
@@ -4710,6 +4776,18 @@ std::shared_ptr<ProcessingSkill> SkillManager::GetProcessingSkill(
   skill->CanNRA = skillData->GetBasic()->GetCombatSkill() &&
                   (!skill->FunctionID ||
                    skill->FunctionID != SVR_CONST.SKILL_ZONE_TARGET_ALL);
+
+  // Set item ID for the skill.
+  if (state &&
+      (skillData->GetBasic()->GetFamily() == SkillFamily_t::ITEM ||
+       skillData->GetBasic()->GetFamily() == SkillFamily_t::DEMON_SOLO)) {
+    int64_t targetObjectID = activated->GetActivationObjectID();
+    auto item = targetObjectID ? std::dynamic_pointer_cast<objects::Item>(
+                                     libcomp::PersistentObject::GetObjectByUUID(
+                                         state->GetObjectUUID(targetObjectID)))
+                               : nullptr;
+    skill->ItemID = item ? item->GetType() : 0;
+  }
 
   if (skill->FunctionID &&
       (skill->FunctionID == SVR_CONST.SKILL_ABS_DAMAGE ||
@@ -6166,6 +6244,17 @@ void SkillManager::HandleKills(
         int32_t adjust = (int32_t)sourceDemonFType->GetDeath();
         adjusts.push_back(
             std::pair<int32_t, int32_t>(entity->GetEntityID(), adjust));
+
+        auto expireTime =
+            (channel::ServerTime)(ChannelServer::GetServerTime() + 1250000ULL);
+        entity->SetStatusTimes(STATUS_WAITING, expireTime);
+        server->ScheduleWork(
+            expireTime,
+            [](std::shared_ptr<ActiveEntityState> pEntity,
+               const channel::ServerTime pExpireTime) {
+              pEntity->ExpireStatusTimes(pExpireTime);
+            },
+            entity, expireTime);
       }
 
       if (entity != source &&
@@ -6262,12 +6351,12 @@ void SkillManager::HandleKills(
     for (auto eState : enemiesKilled) {
       aiManager->UpdateAggro(eState, -1);
 
-      zone->RemoveEntity(eState->GetEntityID(), 1);
       levels.push_back(eState->GetLevel());
 
       if (eState->GetEnemyBase()->GetCanRevive()) {
         canRevive.insert(eState->GetEntityID());
       } else {
+        zone->RemoveEntity(eState->GetEntityID(), 1);
         removeIDs.push_back(eState->GetEntityID());
       }
     }
@@ -8977,32 +9066,35 @@ int32_t SkillManager::AdjustDamageRates(
     dependencyTaken = 0;
   }
 
-  // Get tokusei adjustments
-  double tokuseiBoost =
+  // Get general damage dealt/taken tokusei adjustments
+  double tokuseiDamageDealt =
       adjustPower ? (tokuseiManager->GetAspectSum(
                          source, TokuseiAspectType::EFFECT_POWER, calcState) *
                      0.01)
                   : 0.0;
-  double tokuseiReduction = 0.0;
+  double tokuseiDamageTaken = 1.0;
   if (!isHeal) {
     // Only apply damage adjustments if not healing
     if (source != target) {
-      tokuseiBoost += tokuseiManager->GetAspectSum(
-                          source, TokuseiAspectType::DAMAGE_DEALT, calcState) *
-                      0.01;
+      tokuseiDamageDealt +=
+          tokuseiManager->GetAspectSum(source, TokuseiAspectType::DAMAGE_DEALT,
+                                       calcState) *
+          0.01;
     }
 
-    tokuseiReduction -=
+    // DAMAGE_TAKEN tokusei intended to reduce damage are negative
+    tokuseiDamageTaken +=
         tokuseiManager->GetAspectSum(target, TokuseiAspectType::DAMAGE_TAKEN,
                                      targetState) *
         0.01;
 
-    if (tokuseiBoost < 0.0) {
-      tokuseiBoost = 0.0;
+    if (tokuseiDamageDealt < 0.0) {
+      tokuseiDamageDealt = 0.0;
     }
 
-    if (tokuseiReduction < 0.0) {
-      tokuseiReduction = 0.0;
+    // Cannot take less than 0% damage
+    if (tokuseiDamageTaken < 0.0) {
+      tokuseiDamageTaken = 0.0;
     }
   }
 
@@ -9024,16 +9116,16 @@ int32_t SkillManager::AdjustDamageRates(
     calc = calc * (float)(dependencyDealt * 0.01);
   }
 
-  if (tokuseiBoost != 0.0) {
-    // Multiply by 1 + remaining power boosts/100
-    calc = calc * (float)(1.0 + tokuseiBoost);
+  if (tokuseiDamageDealt != 0.0) {
+    // Multiply by 1 + remaining power increases/100
+    calc = calc * (float)(1.0 + tokuseiDamageDealt);
   }
 
   // Multiply by dependency rate taken
   rateTaken.push_back((float)(dependencyTaken * 0.01));
 
-  // Multiply by 100% + -general rate taken
-  rateTaken.push_back((float)(1.0 + tokuseiReduction));
+  // Multiply by 100% + -general rate taken, calculated earluer
+  rateTaken.push_back((float)tokuseiDamageTaken);
 
   for (float taken : rateTaken) {
     // Apply rate taken if not piercing or rate is not a reduction
@@ -10591,18 +10683,17 @@ bool SkillManager::MinionSpawn(
       return false;
     }
 
-    // Pick one spot ID (default to source spot if its one of them)
-    uint32_t sourceSpotID = source && source->GetEnemyBase()
-                                ? source->GetEnemyBase()->GetSpawnSpotID()
-                                : 0;
-    uint32_t spotID = sourceSpotID && slg->SpotIDsContains(sourceSpotID)
-                          ? sourceSpotID
-                          : libcomp::Randomizer::GetEntry(slg->GetSpotIDs());
+    uint32_t spotID = libcomp::Randomizer::GetEntry(slg->GetSpotIDs());
+    if (spotID) {
+      // Check the supplied spot's validity, just in case.
+      float xCoord = 0.f;
+      float yCoord = 0.f;
+      float rot = 0.f;
 
-    // If no spot currently selected, default to the summoner's spot
-    // regardless
-    if (!spotID) {
-      spotID = sourceSpotID;
+      if (!zoneManager->GetSpotPosition(zoneDef->GetDynamicMapID(), spotID,
+                                        xCoord, yCoord, rot)) {
+        spotID = 0;
+      }
     }
 
     std::list<std::shared_ptr<ActiveEntityState>> enemies;
@@ -10618,8 +10709,38 @@ bool SkillManager::MinionSpawn(
       }
 
       for (uint16_t i = 0; i < spawnPair.second; i++) {
-        auto enemy = zoneManager->CreateEnemy(
-            zone, spawn->GetEnemyType(), spawn->GetID(), spotID, 0.f, 0.f, 0.f);
+        std::shared_ptr<channel::ActiveEntityState> enemy = nullptr;
+
+        if (!spotID) {
+          // Spawn unit based on distance from its summoner.
+          Point center(source->GetCurrentX(), source->GetCurrentY());
+          float spawnDistance = (float)((uint32_t)params[2]);
+          auto spawnLoc = std::make_shared<objects::SpawnLocation>();
+
+          spawnLoc->SetX(center.x - spawnDistance);
+          spawnLoc->SetY(center.y + spawnDistance);
+          spawnLoc->SetWidth(2000.f);
+          spawnLoc->SetHeight(2000.f);
+
+          auto sp = zoneManager->GetRandomPoint(2000.f, 2000.f);
+          sp.x += spawnLoc->GetX();
+          sp.y = spawnLoc->GetY() - sp.y;
+
+          // Make sure we don't spawn out of bounds
+          sp = zoneManager->GetLinearPoint(center.x, center.y, sp.x, sp.y,
+                                           center.GetDistance(sp), false, zone);
+
+          float rot = ZoneManager::GetRandomRotation();
+          enemy =
+              zoneManager->CreateEnemy(zone, spawn->GetEnemyType(), 0, 0, sp.x,
+                                       sp.y, rot, source->GetEntityUUID());
+        } else {
+          // Use the specified spotID.
+          enemy =
+              zoneManager->CreateEnemy(zone, spawn->GetEnemyType(),
+                                       spawn->GetID(), spotID, 0.f, 0.f, 0.f);
+        }
+
         if (enemy) {
           auto eBase = enemy->GetEnemyBase();
           eBase->SetSpawnGroupID(sgID);
@@ -11611,6 +11732,19 @@ bool SkillManager::Traesto(
 
   auto server = mServer.lock();
   auto zoneManager = server->GetZoneManager();
+  int32_t targetEntityID = (int32_t)activated->GetTargetObjectID();
+  auto targetConnection =
+      (targetEntityID > 0)
+          ? server->GetManagerConnection()->GetEntityClient(targetEntityID)
+          : nullptr;
+  auto state = targetConnection ? targetConnection->GetClientState() : nullptr;
+  auto tState = state ? state->GetCharacterState() : nullptr;
+  auto target = tState ? tState->GetEntity() : nullptr;
+
+  if (!target) {
+    SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+    return false;
+  }
 
   auto pSkill = GetProcessingSkill(activated, ctx);
   auto skillData = pSkill->Definition;
@@ -11619,12 +11753,8 @@ bool SkillManager::Traesto(
   uint32_t zoneID = 0;
   uint32_t spotID = 0;
   if (functionID == SVR_CONST.SKILL_TRAESTO) {
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-
-    zoneID = character->GetHomepointZone();
-    spotID = character->GetHomepointSpotID();
+    zoneID = target->GetHomepointZone();
+    spotID = target->GetHomepointSpotID();
   } else if (functionID == (uint16_t)SVR_CONST.SKILL_TRAESTO_ARCADIA[0]) {
     zoneID = SVR_CONST.SKILL_TRAESTO_ARCADIA[1];
     spotID = SVR_CONST.SKILL_TRAESTO_ARCADIA[2];
@@ -11662,8 +11792,9 @@ bool SkillManager::Traesto(
   }
 
   if (ProcessSkillResult(activated, ctx) &&
-      zoneManager->EnterZone(client, zoneID, zoneDef->GetDynamicMapID(), xCoord,
-                             yCoord, rot, true)) {
+      zoneManager->EnterZone(targetConnection, zoneID,
+                             zoneDef->GetDynamicMapID(), xCoord, yCoord, rot,
+                             true)) {
     return true;
   } else {
     SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC_USE);

@@ -764,6 +764,104 @@ Example
 
     <member name="MaxClients">2</member>
 
+ClientPatchEnforcement
+^^^^^^^^^^^^^^^^^^^^^^
+
+**Type:** enumeration
+
+**Default:** NONE
+
+When set to any value other than NONE, this setting will enforce the
+version and of client patches that are applied. If set to VERSION_ONLY,
+the version of the client patch DLL will be enforced but any
+configuration of patches is allowed. If set to ALLOW_ANY, patches
+that are listed in ClientRequiredPatches must be applied and patches
+listed in ClientBlockedPatches must not be applied. If set to
+ALLOW_ONLY_LISTED, patches not listed in ClientRequiredPatches or
+ClientAllowedPatches must not be applied. If enforced, the client
+will be notified that they may not connect to the server after
+entering the lobby. If no client patch is applied the client will
+be disconnected if they attempt to start the game with a character.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="ClientPatchEnforcement">ALLOW_ANY</member>
+
+ClientPatchVersion
+^^^^^^^^^^^^^^^^^^
+
+**Type:** float
+
+**Default:** 2.0
+
+The major and minor version number of the client patch DLL that is
+required for the client to connect to the server.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="ClientPatchVersion">2.1</member>
+
+ClientRequiredPatches
+^^^^^^^^^^^^^^^^^^^^^
+
+**Type:** list
+
+**Default:** NONE
+
+A list of client patches that must be applied.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="ClientRequiredPatches">
+        <element>updaterCheck</element>
+    </member>
+
+ClientAllowedPatches
+^^^^^^^^^^^^^^^^^^^^
+
+**Type:** list
+
+**Default:** NONE
+
+A list of client patches that may or may not be applied if
+ClientPatchEnforcement is set to ALLOW_ONLY_LISTED.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="ClientAllowedPatches">
+        <element>translation</element>
+    </member>
+
+ClientBlockedPatches
+^^^^^^^^^^^^^^^^^^^^
+
+**Type:** list
+
+**Default:** NONE
+
+A list of client patches that must not applied.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="ClientBlockedPatches">
+        <element>channelTransfer</element>
+    </member>
+
 
 World Server Configuration
 --------------------------
@@ -1161,6 +1259,49 @@ Example
 .. code-block:: xml
 
     <member name="NRAStatusNull">false</member>
+
+RebirthExtractionMode
+^^^^^^^^^^^^^^^^^^^^^
+
+**Type:** enumeration
+
+**Default:** REVERT_MITAMA_DEMONS_TO_BASE
+
+If set to REVERT_MITAMA_DEMONS_TO_BASE, the usual behavior of extracting
+Rebirth Points from a demon which underwent Mitama Fusion reverting the
+selected demon back to its base form occurs.
+
+If set to REVERT_ALL_DEMONS_TO_BASE, all demons, regardless of Mitama
+Fusion status, are reverted to their base form after Rebirth Point
+Extraction.
+
+If set to PRESERVE_MITAMA_DEMON_VARIANTS, any demon which has undergone
+Mitama Fusion since this feature was introduced will instead be reverted
+to the variant it was prior to that fusion. However, if one of the
+features of the post-extraction result demon is listed within the
+REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES within the
+constants.xml file, the demon will be reverted back to its
+base form.
+
+Server owners who wish to revert non-Mitama demons with certain features
+back to their base form may list those features in the new server constant
+REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES in order
+to accomplish this.
+
+Demons that underwent Mitama Fusion prior to this feature's existence
+will be reverted back to their base variant, as the information needed
+to determine their pre-Mitama form does not exist.
+
+The behavior of this setting can be overridden on a case-by-case basis
+by specifying SPECIAL_REBIRTH_EXTRACTIONS within the constants.xml
+file.
+
+Example
+"""""""
+
+.. code-block:: xml
+
+    <member name="RebirthExtractionMode">PRESERVE_MITAMA_DEMON_VARIANTS</member>
 
 SaveSwitchSkills
 ^^^^^^^^^^^^^^^^

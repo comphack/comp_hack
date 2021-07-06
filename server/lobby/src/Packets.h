@@ -44,6 +44,9 @@ PACKET_PARSER_DECL(DeleteCharacter);      // 0x000F
 PACKET_PARSER_DECL(QueryPurchaseTicket);  // 0x0011
 PACKET_PARSER_DECL(PurchaseTicket);       // 0x0013
 
+// Amala Packets
+PACKET_PARSER_DECL(AmalaAppliedPatches);  // 0x1003
+
 // Internal Packets
 PACKET_PARSER_DECL(SetWorldInfo);    // 0x1002
 PACKET_PARSER_DECL(SetChannelInfo);  // 0x1003

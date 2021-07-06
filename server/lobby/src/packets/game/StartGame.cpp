@@ -71,8 +71,24 @@ bool Parsers::StartGame::Parse(
       std::dynamic_pointer_cast<LobbyServer>(pPacketManager->GetServer());
 
   // We need all this jazz too.
+  auto conf = config(pPacketManager);
   auto accountManager = server->GetAccountManager();
   auto character = account->GetCharacters(cid).Get();
+
+  // Deny login if client patch enforcement is on and the client
+  // has not provided the correct patch configuration.
+  if (objects::LobbyConfig::ClientPatchEnforcement_t::NONE !=
+          conf->GetClientPatchEnforcement() &&
+      !state->GetHaveValidClientPatches()) {
+    LogGeneralError([&]() {
+      return libcomp::String(
+                 "Client '%1' somehow got past the client patch requirement "
+                 "error (maybe they have no patch at all?). Closing their "
+                 "connection.\n")
+          .Arg(username);
+    });
+    return false;
+  }
 
   // What? Go away hacker.
   if (!character || character->GetKillTime() != 0) {

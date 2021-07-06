@@ -24,5 +24,21 @@
         <member type="s32" name="ImportMaxPayload" default="5120" min="0"/>
         <member type="u8" name="ImportWorld" default="0"/>
         <member type="s32" name="MaxClients" default="0"/>
+        <member type="list" name="ClientRequiredPatches">
+            <element type="string"/>
+        </member>
+        <member type="list" name="ClientAllowedPatches">
+            <element type="string"/>
+        </member>
+        <member type="list" name="ClientBlockedPatches">
+            <element type="string"/>
+        </member>
+        <member type="float" name="ClientPatchVersion" default="2.0"/>
+        <member type="enum" name="ClientPatchEnforcement" default="NONE">
+            <value>NONE</value>
+            <value>VERSION_ONLY</value>
+            <value>ALLOW_ONLY_LISTED</value>
+            <value>ALLOW_ANY</value>
+        </member>
     </object>
 </objgen>

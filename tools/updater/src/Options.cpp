@@ -274,6 +274,8 @@ void Options::Load() {
   ui.patchUpdaterCheck->setChecked(mUserPatches.GetUpdaterCheck());
   ui.patchLocale->setChecked(mUserPatches.GetLocale());
   ui.patchSoundtrack->setChecked(mUserPatches.GetSoundtrackPatch());
+  ui.patchKillCounterSpacing->setChecked(mUserPatches.GetKillCounterSpacing());
+  ui.patchAccountDump->setChecked(mUserPatches.GetAccountDump());
 
   int soundtrackIndex =
       ui.soundtrackList->findData(mUserPatches.GetSoundtrack());
@@ -371,6 +373,8 @@ void Options::Save() {
   mUserPatches.SetUpdaterCheck(ui.patchUpdaterCheck->isChecked());
   mUserPatches.SetLocale(ui.patchLocale->isChecked());
   mUserPatches.SetSoundtrackPatch(ui.patchSoundtrack->isChecked());
+  mUserPatches.SetKillCounterSpacing(ui.patchKillCounterSpacing->isChecked());
+  mUserPatches.SetAccountDump(ui.patchAccountDump->isChecked());
 
   mUserPatches.SetSoundtrack(ui.soundtrackList->currentData().toString());
 
@@ -424,6 +428,7 @@ void Options::EnableAllPatchSettings() {
   ui.patchServerPrime->setEnabled(true);
   ui.patchChannelTransfer->setEnabled(true);
   ui.patchSoundtrack->setEnabled(true);
+  ui.patchAccountDump->setEnabled(true);
 
   ApplyEnforcement();
 }
@@ -449,6 +454,9 @@ void Options::ApplyEnforcement() {
   mBasePatches.ApplyEnforcement("updaterCheck", ui.patchUpdaterCheck);
   mBasePatches.ApplyEnforcement("locale", ui.patchLocale);
   mBasePatches.ApplyEnforcement("soundtrack", ui.patchSoundtrack);
+  mBasePatches.ApplyEnforcement("killCounterSpacing",
+                                ui.patchKillCounterSpacing);
+  mBasePatches.ApplyEnforcement("accountDump", ui.patchAccountDump);
 }
 
 #endif  // Q_OS_WIN32

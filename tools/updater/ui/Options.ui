@@ -255,7 +255,7 @@
             <x>0</x>
             <y>0</y>
             <width>325</width>
-            <height>386</height>
+            <height>432</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -290,7 +290,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="patchCustomPackets">
+            <widget class="QCheckBox" name="patchAccountDump">
              <property name="toolTip">
               <string>Automatically dump a backup of your account when logging in with a character. For large accounts this may fail. In that case, use the test client to backup your character instead.</string>
              </property>
@@ -340,12 +340,35 @@
             </widget>
            </item>
            <item>
+            <widget class="QCheckBox" name="patchKillCounterSpacing">
+             <property name="toolTip">
+              <string>Places spacing between a demon's title and its name in various kill counters for easier readability in certain languages. Disable if using a language that does not require such spacing.</string>
+             </property>
+             <property name="text">
+              <string>Kill Counter Spacing Fix</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QCheckBox" name="patchLobbyIME">
              <property name="toolTip">
               <string>Prevent the input method from being switched to Japanese during character creation (if you have the IME installed).</string>
              </property>
              <property name="text">
               <string>Prevent Input Method Switching</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="patchCustomPackets">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="toolTip">
+              <string>Allows other patches to send and receive custom packets. Required to enforce client patch settings server-side.</string>
+             </property>
+             <property name="text">
+              <string>Custom Packets</string>
              </property>
             </widget>
            </item>

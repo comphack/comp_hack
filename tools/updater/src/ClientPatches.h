@@ -97,6 +97,12 @@ class ClientPatches {
   bool GetSoundtrackPatch() const;
   void SetSoundtrackPatch(bool enabled);
 
+  bool GetKillCounterSpacing() const;
+  void SetKillCounterSpacing(bool enabled);
+
+  bool GetAccountDump() const;
+  void SetAccountDump(bool enabled);
+
   QString GetSoundtrack() const;
   void SetSoundtrack(const QString& soundtrack);
 
@@ -184,6 +190,12 @@ class ClientPatches {
 
   bool mSoundtrackPatch;
   QDomElement mSoundtrackPatchElement;
+
+  bool mKillCounterSpacing;
+  QDomElement mKillCounterSpacingElement;
+
+  bool mAccountDump;
+  QDomElement mAccountDumpElement;
 
   QString mSoundtrack;
   QDomElement mSoundtrackElement;

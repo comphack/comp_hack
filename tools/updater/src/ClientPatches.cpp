@@ -54,6 +54,8 @@ ClientPatches::ClientPatches(ClientPatches* pBase)
       mUpdaterCheck(true),
       mLocale(true),
       mSoundtrackPatch(true),
+      mKillCounterSpacing(true),
+      mAccountDump(true),
       mAllowAll(true) {}
 
 bool ClientPatches::Load(const QString& path) {
@@ -173,6 +175,18 @@ bool ClientPatches::Load(const QString& path) {
   if (!LoadStringElement(root, "soundtrack",
                          offsetof(ClientPatches, mSoundtrack), mSoundtrack,
                          mSoundtrackElement)) {
+    return false;
+  }
+
+  if (!LoadPatchElement(root, "killCounterSpacing",
+                        offsetof(ClientPatches, mKillCounterSpacing),
+                        mKillCounterSpacing, mKillCounterSpacingElement)) {
+    return false;
+  }
+
+  if (!LoadPatchElement(root, "accountDump",
+                        offsetof(ClientPatches, mAccountDump), mAccountDump,
+                        mAccountDumpElement)) {
     return false;
   }
 
@@ -298,6 +312,17 @@ bool ClientPatches::Save(const QString& path) {
     return false;
   }
 
+  if (!SavePatchElement("killCounterSpacing",
+                        offsetof(ClientPatches, mKillCounterSpacing),
+                        mKillCounterSpacing, mKillCounterSpacingElement)) {
+    return false;
+  }
+
+  if (!SavePatchElement("accountDump", offsetof(ClientPatches, mAccountDump),
+                        mAccountDump, mAccountDumpElement)) {
+    return false;
+  }
+
   QFile file(path);
   if (!file.open(QIODevice::WriteOnly)) {
     return false;
@@ -359,6 +384,12 @@ void ClientPatches::Clear() {
   mSoundtrackPatchElement = QDomElement();
   mSoundtrackPatch = true;
 
+  mKillCounterSpacingElement = QDomElement();
+  mKillCounterSpacing = true;
+
+  mAccountDumpElement = QDomElement();
+  mAccountDump = true;
+
   mSoundtrackElement = QDomElement();
   mSoundtrack.clear();
 
@@ -391,6 +422,8 @@ void ClientPatches::ApplyEnforcement(const ClientPatches* pBase) {
   ApplyEnforcement(pBase, "updaterCheck", mUpdaterCheck);
   ApplyEnforcement(pBase, "locale", mLocale);
   ApplyEnforcement(pBase, "soundtrackPatch", mSoundtrackPatch);
+  ApplyEnforcement(pBase, "killCounterSpacing", mKillCounterSpacing);
+  ApplyEnforcement(pBase, "accountDump", mAccountDump);
 }
 
 void ClientPatches::ApplyEnforcement(const QString& patchName,
@@ -507,6 +540,18 @@ bool ClientPatches::GetSoundtrackPatch() const { return mSoundtrackPatch; }
 void ClientPatches::SetSoundtrackPatch(bool enabled) {
   mSoundtrackPatch = enabled;
 }
+
+bool ClientPatches::GetKillCounterSpacing() const {
+  return mKillCounterSpacing;
+}
+
+void ClientPatches::SetKillCounterSpacing(bool enabled) {
+  mKillCounterSpacing = enabled;
+}
+
+bool ClientPatches::GetAccountDump() const { return mAccountDump; }
+
+void ClientPatches::SetAccountDump(bool enabled) { mAccountDump = enabled; }
 
 QString ClientPatches::GetSoundtrack() const { return mSoundtrack; }
 

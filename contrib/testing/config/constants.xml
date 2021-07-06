@@ -1547,6 +1547,21 @@
         <element>21937</element>
         <element>21938</element>
     </constant>
+	<constant name="REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES">
+        <!-- Format: prohibited demon feature's skillID -->
+        <element>0</element>
+    </constant>
+    <constant name="REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES">
+        <!-- Format: prohibited demon feature's skillID -->
+        <element>0</element>
+    </constant>
+    <constant name="SPECIAL_REBIRTH_EXTRACTIONS">
+        <!-- Format: extracted demon ID => result demon ID -->
+        <pair>
+            <key>0</key>
+            <value>0</value>
+        </pair>
+    </constant>
     <constant name="CHAR_CREATION_MALE_SKIN">
         <!-- Format: ID or ID range -->
         <element>100-102</element>

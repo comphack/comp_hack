@@ -50,6 +50,10 @@
 // tinyxml2 Includes
 #include <tinyxml2.h>
 
+// ttvfs Includes
+#include <ttvfs/VFSTools.h>
+#include <ttvfs/miniz.h>
+
 // Stop ignoring warnings
 #include <PopIgnore.h>
 
@@ -617,6 +621,134 @@ static int LintXml(const libcomp::String& schema, const libcomp::String& xml) {
   }
 }
 
+static ttvfs::StringList GetRecursiveFileList(const std::string& dirPath) {
+  ttvfs::StringList dirs;
+  ttvfs::StringList allFiles;
+
+  (void)ttvfs::GetDirList(dirPath.c_str(), dirs, -1);
+  (void)ttvfs::GetFileList(dirPath.c_str(), allFiles);
+
+  for (std::deque<std::string>::const_iterator it = dirs.begin();
+       it != dirs.end(); ++it) {
+    std::string externalDirPath = dirPath + std::string("/") + (*it);
+    std::string internalDirPath = *it;
+
+    ttvfs::FixPath(externalDirPath);
+
+    ttvfs::StringList files;
+
+    (void)ttvfs::GetFileList(externalDirPath.c_str(), files);
+
+    for (std::deque<std::string>::const_iterator it2 = files.begin();
+         it2 != files.end(); ++it2) {
+      std::string internalPath = internalDirPath + std::string("/") + *it2;
+
+      ttvfs::FixPath(internalPath);
+
+      allFiles.push_back(internalPath);
+    }
+  }
+
+  return allFiles;
+}
+
+static bool ZipDirectory(const libcomp::String& dirPath,
+                         const libcomp::String& zipPath) {
+  ttvfs::StringList files = GetRecursiveFileList(dirPath.ToUtf8());
+
+  mz_zip_archive zip;
+  memset(&zip, 0, sizeof(zip));
+
+  if (MZ_FALSE == mz_zip_writer_init_file(&zip, zipPath.C(), 0)) {
+    LogGeneralErrorMsg(
+        libcomp::String("Failed to open zip archive for writing: %1\n")
+            .Arg(zipPath));
+
+    return false;
+  }
+
+  for (std::deque<std::string>::const_iterator it = files.begin();
+       it != files.end(); ++it) {
+    std::string externalPath = dirPath.ToUtf8() + std::string("/") + (*it);
+    std::string internalPath = *it;
+
+    ttvfs::FixPath(externalPath);
+
+    if (MZ_FALSE == mz_zip_writer_add_file(&zip, internalPath.c_str(),
+                                           externalPath.c_str(), NULL, 0,
+                                           MZ_DEFAULT_COMPRESSION)) {
+      LogGeneralErrorMsg(libcomp::String("Failed to add file to archive: %1\n")
+                             .Arg(externalPath));
+
+      mz_zip_writer_end(&zip);
+
+      return false;
+    }
+  }
+
+  if (MZ_FALSE == mz_zip_writer_finalize_archive(&zip)) {
+    LogGeneralErrorMsg(
+        libcomp::String("Failed to finalize archive: %1\n").Arg(zipPath));
+
+    mz_zip_writer_end(&zip);
+
+    return false;
+  }
+
+  if (MZ_FALSE == mz_zip_writer_end(&zip)) {
+    LogGeneralErrorMsg(
+        libcomp::String("Failed to close archive: %1\n").Arg(zipPath));
+
+    return false;
+  }
+
+  return true;
+}
+
+static bool CopyDirectory(const libcomp::String& inPath,
+                          const libcomp::String& outPath) {
+  std::list<libcomp::String> files, dirs, symLinks;
+
+  if (gTranslator->store.GetListing(inPath, files, dirs, symLinks, true)) {
+    Sqrat::Array arr(gTranslator->engine.GetVM(), (SQInteger)files.size());
+
+    if (!gTranslator->store.Exists(outPath)) {
+      if (!gTranslator->store.CreateDirectory(outPath)) {
+        LogGeneralErrorMsg(
+            libcomp::String("Failed to create directory: %1\n").Arg(outPath));
+
+        return false;
+      }
+    }
+
+    for (auto dir : dirs) {
+      if (!gTranslator->store.CreateDirectory(
+              libcomp::String("%1/%2").Arg(outPath).Arg(dir))) {
+        LogGeneralErrorMsg(
+            libcomp::String("Failed to create directory: %1/%2\n")
+                .Arg(outPath)
+                .Arg(dir));
+
+        return false;
+      }
+    }
+
+    for (auto file : files) {
+      if (!CopyFile(libcomp::String("%1/%2").Arg(inPath).Arg(file),
+                    libcomp::String("%1/%2").Arg(outPath).Arg(file))) {
+        return false;
+      }
+    }
+
+    return true;
+  } else {
+    LogGeneralErrorMsg(
+        libcomp::String("Failed to get directory listing: %1\n").Arg(inPath));
+
+    return false;
+  }
+}
+
 Translator::Translator(const char* szProgram)
     : store(szProgram), engine(true), didError(false) {
   Sqrat::RootTable(engine.GetVM()).Func("LogInfo", LogInfo);
@@ -644,6 +776,8 @@ Translator::Translator(const char* szProgram)
   Sqrat::RootTable(engine.GetVM()).Func("_LintXml", LintXml);
   Sqrat::RootTable(engine.GetVM()).Func("SetLintPath", SetLintPath);
   Sqrat::RootTable(engine.GetVM()).Func("HaveLint", HaveLint);
+  Sqrat::RootTable(engine.GetVM()).Func("_ZipDirectory", ZipDirectory);
+  Sqrat::RootTable(engine.GetVM()).Func("_CopyDirectory", CopyDirectory);
 
   binaryTypes = EnumerateBinaryDataTypes();
 }

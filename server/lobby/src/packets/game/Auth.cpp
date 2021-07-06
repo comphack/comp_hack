@@ -105,11 +105,11 @@ static bool CompleteLogin(
 
     if (objects::LobbyConfig::ClientPatchEnforcement_t::NONE !=
         conf->GetClientPatchEnforcement()) {
-      libcomp::Packet reply;
-      reply.WritePacketCode(
+      libcomp::Packet reply2;
+      reply2.WritePacketCode(
           LobbyToClientPacketCode_t::PACKET_AMALA_QUERY_CLIENT_PATCH);
 
-      connection->SendPacket(reply);
+      connection->SendPacket(reply2);
     }
   } else {
     return LoginAuthError(connection, errorCode);

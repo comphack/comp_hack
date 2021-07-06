@@ -1630,11 +1630,21 @@ int8_t SkillManager::ValidateSkillTarget(
             ClientState::GetEntityClientState(target->GetEntityID());
         auto zone = target->GetZone();
         if (isRevive && targetClientState && zone) {
+          // Target is invalid if either the controlling player has not accepted
+          // revival from others, or if it is a partner demon outside of
+          // demon-only instances and it has been dead for less than
+          // the revival lockout timer.
           targetInvalid =
               !targetClientState->GetAcceptRevival() &&
               (targetClientState->GetCharacterState() == target ||
                (targetClientState->GetDemonState() == target &&
                 zone->GetInstanceType() == InstanceType_t::DEMON_ONLY));
+
+          if (targetClientState->GetDemonState() == target &&
+              !targetLivingStateInvalid) {
+            targetLivingStateInvalid =
+                target->StatusTimesKeyExists(STATUS_WAITING);
+          }
         }
       }
       break;
@@ -3317,11 +3327,46 @@ bool SkillManager::ProcessSkillResult(
       bool deadOnly =
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_ALLY ||
           validType == objects::MiEffectiveRangeData::ValidType_t::DEAD_PARTY;
+
+      bool isRevive = false;
+      switch (skillData->GetDamage()->GetBattleDamage()->GetFormula()) {
+        case objects::MiBattleDamageData::Formula_t::HEAL_NORMAL:
+        case objects::MiBattleDamageData::Formula_t::HEAL_STATIC:
+        case objects::MiBattleDamageData::Formula_t::HEAL_MAX_PERCENT:
+          isRevive = true;
+          break;
+        default:
+          break;
+      }
+
       effectiveTargets.remove_if(
-          [effectiveSource,
-           deadOnly](const std::shared_ptr<ActiveEntityState>& target) {
+          [effectiveSource, deadOnly, isRevive,
+           zone](const std::shared_ptr<ActiveEntityState>& target) {
+            bool targetInvalidForDeadOnlySkills = target->IsAlive();
+            auto targetClientState =
+                ClientState::GetEntityClientState(target->GetEntityID());
+
+            if (isRevive && targetClientState && zone &&
+                !targetInvalidForDeadOnlySkills) {
+              // Target is invalid if either the controlling player has not
+              // accepted revival from others, or if it is a partner demon
+              // outside of demon-only instances and it has been dead for less
+              // than the revival lockout timer.
+              targetInvalidForDeadOnlySkills =
+                  !targetClientState->GetAcceptRevival() &&
+                  (targetClientState->GetCharacterState() == target ||
+                   (targetClientState->GetDemonState() == target &&
+                    zone->GetInstanceType() == InstanceType_t::DEMON_ONLY));
+
+              if (targetClientState->GetDemonState() == target &&
+                  !targetInvalidForDeadOnlySkills) {
+                targetInvalidForDeadOnlySkills =
+                    target->StatusTimesKeyExists(STATUS_WAITING);
+              }
+            }
+
             return !effectiveSource->SameFaction(target) ||
-                   (deadOnly == target->IsAlive());
+                   (deadOnly == targetInvalidForDeadOnlySkills);
           });
 
       // Work around CAVE setting a validtype of PARTY while setting a
@@ -6199,6 +6244,17 @@ void SkillManager::HandleKills(
         int32_t adjust = (int32_t)sourceDemonFType->GetDeath();
         adjusts.push_back(
             std::pair<int32_t, int32_t>(entity->GetEntityID(), adjust));
+
+        auto expireTime =
+            (channel::ServerTime)(ChannelServer::GetServerTime() + 1250000ULL);
+        entity->SetStatusTimes(STATUS_WAITING, expireTime);
+        server->ScheduleWork(
+            expireTime,
+            [](std::shared_ptr<ActiveEntityState> pEntity,
+               const channel::ServerTime pExpireTime) {
+              pEntity->ExpireStatusTimes(pExpireTime);
+            },
+            entity, expireTime);
       }
 
       if (entity != source &&
@@ -6295,12 +6351,12 @@ void SkillManager::HandleKills(
     for (auto eState : enemiesKilled) {
       aiManager->UpdateAggro(eState, -1);
 
-      zone->RemoveEntity(eState->GetEntityID(), 1);
       levels.push_back(eState->GetLevel());
 
       if (eState->GetEnemyBase()->GetCanRevive()) {
         canRevive.insert(eState->GetEntityID());
       } else {
+        zone->RemoveEntity(eState->GetEntityID(), 1);
         removeIDs.push_back(eState->GetEntityID());
       }
     }
@@ -11676,6 +11732,19 @@ bool SkillManager::Traesto(
 
   auto server = mServer.lock();
   auto zoneManager = server->GetZoneManager();
+  int32_t targetEntityID = (int32_t)activated->GetTargetObjectID();
+  auto targetConnection =
+      (targetEntityID > 0)
+          ? server->GetManagerConnection()->GetEntityClient(targetEntityID)
+          : nullptr;
+  auto state = targetConnection ? targetConnection->GetClientState() : nullptr;
+  auto tState = state ? state->GetCharacterState() : nullptr;
+  auto target = tState ? tState->GetEntity() : nullptr;
+
+  if (!target) {
+    SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::TARGET_INVALID);
+    return false;
+  }
 
   auto pSkill = GetProcessingSkill(activated, ctx);
   auto skillData = pSkill->Definition;
@@ -11684,12 +11753,8 @@ bool SkillManager::Traesto(
   uint32_t zoneID = 0;
   uint32_t spotID = 0;
   if (functionID == SVR_CONST.SKILL_TRAESTO) {
-    auto state = client->GetClientState();
-    auto cState = state->GetCharacterState();
-    auto character = cState->GetEntity();
-
-    zoneID = character->GetHomepointZone();
-    spotID = character->GetHomepointSpotID();
+    zoneID = target->GetHomepointZone();
+    spotID = target->GetHomepointSpotID();
   } else if (functionID == (uint16_t)SVR_CONST.SKILL_TRAESTO_ARCADIA[0]) {
     zoneID = SVR_CONST.SKILL_TRAESTO_ARCADIA[1];
     spotID = SVR_CONST.SKILL_TRAESTO_ARCADIA[2];
@@ -11727,8 +11792,9 @@ bool SkillManager::Traesto(
   }
 
   if (ProcessSkillResult(activated, ctx) &&
-      zoneManager->EnterZone(client, zoneID, zoneDef->GetDynamicMapID(), xCoord,
-                             yCoord, rot, true)) {
+      zoneManager->EnterZone(targetConnection, zoneID,
+                             zoneDef->GetDynamicMapID(), xCoord, yCoord, rot,
+                             true)) {
     return true;
   } else {
     SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC_USE);

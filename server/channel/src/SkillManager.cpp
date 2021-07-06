@@ -11791,10 +11791,26 @@ bool SkillManager::Traesto(
     return false;
   }
 
-  if (ProcessSkillResult(activated, ctx) &&
-      zoneManager->EnterZone(targetConnection, zoneID,
-                             zoneDef->GetDynamicMapID(), xCoord, yCoord, rot,
-                             true)) {
+  if (ProcessSkillResult(activated, ctx)) {
+    if (pSkill->PrimaryTarget != source) {
+      server->ScheduleWork(
+          ChannelServer::GetServerTime() + 100000ULL,
+          [](const std::shared_ptr<ChannelServer> pServer,
+             const std::shared_ptr<ChannelClientConnection> pTargetConnection,
+             const uint32_t pZoneID, const uint32_t pDynamicMapID,
+             const float pXCoord, const float pYCoord, const float pRot) {
+            auto pZoneManager = pServer->GetZoneManager();
+            if (pZoneManager) {
+              pZoneManager->EnterZone(pTargetConnection, pZoneID, pDynamicMapID,
+                                      pXCoord, pYCoord, pRot, true);
+            }
+          },
+          server, targetConnection, zoneID, dynamicMapID, xCoord, yCoord, rot);
+    } else {
+      zoneManager->EnterZone(targetConnection, zoneID, dynamicMapID, xCoord,
+                             yCoord, rot, true);
+    }
+
     return true;
   } else {
     SendFailure(activated, client, (uint8_t)SkillErrorCodes_t::GENERIC_USE);

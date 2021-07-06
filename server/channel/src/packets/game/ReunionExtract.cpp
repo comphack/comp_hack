@@ -46,6 +46,7 @@
 #include "ChannelServer.h"
 #include "CharacterManager.h"
 #include "FusionTables.h"
+#include "WorldSharedConfig.h"
 
 using namespace channel;
 
@@ -61,6 +62,7 @@ void ExtractReunionPoints(
   auto dState = state->GetDemonState();
   auto demon = dState->GetEntity();
   auto demonData = dState->GetDevilData();
+  bool isExtractingMitamaDemon = characterManager->IsMitamaDemon(demonData);
 
   // Get the highest priority extraction item type available
   uint32_t extractItem = 0;
@@ -73,7 +75,89 @@ void ExtractReunionPoints(
 
   int32_t rPoints = 0, mPoints = 0;
 
-  bool success = awd && extractItem && demon && demonData;
+  // If PRESERVE_MITAMA_DEMON_VARIANTS is set, an extracted-from Mitama Demon
+  // reverts to their original variant if that information is available and
+  // that extraction result is not special or has a prohibited feature.
+  auto rebirthExtractionMode =
+      server->GetWorldSharedConfig()->GetRebirthExtractionMode();
+  auto definitionManager = server->GetDefinitionManager();
+  uint32_t currentType = demon->GetType();
+  uint32_t baseType = demonData->GetUnionData()->GetBaseDemonID();
+  uint32_t newDemonType = (rebirthExtractionMode ==
+                           objects::WorldSharedConfig::RebirthExtractionMode_t::
+                               PRESERVE_MITAMA_DEMON_VARIANTS)
+                              ? demon->GetDemonTypePreMitama()
+                              : 0;
+
+  // Process special extractions.
+  auto specialExtractionIterator =
+      SVR_CONST.SPECIAL_REBIRTH_EXTRACTIONS.find(currentType);
+  if (specialExtractionIterator !=
+      SVR_CONST.SPECIAL_REBIRTH_EXTRACTIONS.end()) {
+    newDemonType = specialExtractionIterator->second;
+  } else {
+    // No special case, so check for feature exclusions. Mitama Demons
+    // being extracted results in the Mitama Extraction feature
+    // exclusion list being checked, while non-Mitama Demons
+    // get their exclusion list checked.
+    bool prohibitedVariantReversion = false;
+    std::shared_ptr<objects::MiDevilData> checkedDemonData = nullptr;
+    std::set<uint32_t> prohibitedFeatures = {};
+
+    if (newDemonType) {
+      checkedDemonData = definitionManager->GetDevilData(newDemonType);
+    } else if (!isExtractingMitamaDemon && (currentType != baseType) &&
+               (rebirthExtractionMode !=
+                objects::WorldSharedConfig::RebirthExtractionMode_t::
+                    REVERT_ALL_DEMONS_TO_BASE)) {
+      checkedDemonData = definitionManager->GetDevilData(currentType);
+    }
+
+    if (checkedDemonData) {
+      if (isExtractingMitamaDemon) {
+        prohibitedFeatures =
+            SVR_CONST.REBIRTH_MITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES;
+      } else {
+        prohibitedFeatures =
+            SVR_CONST.REBIRTH_PREMITAMA_EXTRACTION_PROHIBITED_RESULT_FEATURES;
+      }
+
+      for (uint32_t traitID : checkedDemonData->GetGrowth()->GetTraits()) {
+        if (traitID) {
+          for (uint32_t prohibitedFeature : prohibitedFeatures) {
+            if (traitID == prohibitedFeature) {
+              prohibitedVariantReversion = true;
+              break;
+            }
+          }
+        }
+
+        if (prohibitedVariantReversion) {
+          newDemonType = baseType;
+          break;
+        }
+      }
+    }
+  }
+
+  // Check that the given extraction actually exists, just in case. If
+  // we are still at no variant and the demon is Mitama'd, use the
+  // normal version of the demon. Non-Mitama'd demons always keep
+  // their variant, unless REVERT_ALL_DEMONS_TO_BASE is set.
+  if (!newDemonType) {
+    if (isExtractingMitamaDemon ||
+        (rebirthExtractionMode ==
+         objects::WorldSharedConfig::RebirthExtractionMode_t::
+             REVERT_ALL_DEMONS_TO_BASE)) {
+      newDemonType = baseType;
+    } else {
+      newDemonType = currentType;
+    }
+  }
+
+  auto newDemonData = definitionManager->GetDevilData(newDemonType);
+
+  bool success = awd && extractItem && demon && newDemonData;
   if (success) {
     // Consume the item and store the demon
     std::unordered_map<uint32_t, uint32_t> items;
@@ -89,7 +173,7 @@ void ExtractReunionPoints(
         }
       }
 
-      if (characterManager->IsMitamaDemon(demonData)) {
+      if (isExtractingMitamaDemon) {
         mPoints = points;
 
         if (points > 0) {
@@ -113,9 +197,8 @@ void ExtractReunionPoints(
   reply.WriteS32Little(success ? 0 : -1);
   reply.WriteS32Little(rPoints);
   reply.WriteS32Little(mPoints);
-  reply.WriteU32Little(demonData ? demonData->GetBasic()->GetID() : 0);
-  reply.WriteU32Little(demonData ? demonData->GetUnionData()->GetBaseDemonID()
-                                 : 0);
+  reply.WriteU32Little(newDemonData ? newDemonData->GetBasic()->GetID() : 0);
+  reply.WriteU32Little(newDemonData ? newDemonType : 0);
 
   client->QueuePacket(reply);
 
@@ -137,23 +220,19 @@ void ExtractReunionPoints(
     awd->SetMitamaReunionPoints((uint32_t)mPoints);
 
     // All reunion ranks reset
-    auto newDemonData = demonData;
     for (size_t i = 0; i < demon->ReunionCount(); i++) {
       demon->SetReunion(i, 0);
     }
 
-    // Mitama'd types revert to their base demon type and reset all mitama
-    // information
-    uint32_t baseDemonType = demonData->GetUnionData()->GetBaseDemonID();
-    if (characterManager->IsMitamaDemon(demonData) && baseDemonType) {
-      uint32_t currentType = demon->GetType();
+    if (newDemonType != currentType) {
+      demon->SetType(newDemonType);
+    }
 
-      auto definitionManager = server->GetDefinitionManager();
-      newDemonData = definitionManager->GetDevilData(baseDemonType);
-
-      demon->SetType(baseDemonType);
+    if (isExtractingMitamaDemon) {
+      // Mitama'd types reset all mitama information.
       demon->SetMitamaRank(0);
       demon->SetMitamaType(0);
+      demon->SetDemonTypePreMitama(0);
 
       for (size_t i = 0; i < demon->MitamaReunionCount(); i++) {
         demon->SetMitamaReunion(i, 0);
@@ -162,11 +241,11 @@ void ExtractReunionPoints(
       LogCharacterManagerDebug([&]() {
         return libcomp::String(
                    "Extracting %1 reunion point(s), %2 mitama point(s) and "
-                   "reverting demon type %3 to base type %4: %5\n")
+                   "reverting demon type %3 to type %4: %5\n")
             .Arg(rPoints)
             .Arg(mPoints)
             .Arg(currentType)
-            .Arg(baseDemonType)
+            .Arg(newDemonType)
             .Arg(demon->GetUUID().ToString());
       });
     } else {

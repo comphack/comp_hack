@@ -403,13 +403,15 @@ class CharacterManager {
    *  be removed
    * @param skillTargetID Object ID of an item used for a skill. If
    *  this is specified for a remove command, it will be removed first
+   * @param changes Optional database changeset to add the macca change to
    * @return true if the items were added, false if one or more couldn't
    *  be added
    */
   bool AddRemoveItems(
       const std::shared_ptr<channel::ChannelClientConnection>& client,
       std::unordered_map<uint32_t, uint32_t> itemCounts, bool add,
-      int64_t skillTargetID = 0);
+      int64_t skillTargetID = 0,
+      const std::shared_ptr<libcomp::DatabaseChangeSet>& changes = {});
 
   /**
    * Get the total macca amount from the supplied character's inventory
@@ -422,10 +424,13 @@ class CharacterManager {
    * Pay a specified macca amount
    * @param client Pointer to the client connection to pay macca
    * @param amount Amount of macca to pay
+   * @param changes Optional database changeset to add the macca change to
    * @return true if the amount was paid, false it was not
    */
-  bool PayMacca(const std::shared_ptr<channel::ChannelClientConnection>& client,
-                uint64_t amount);
+  bool PayMacca(
+      const std::shared_ptr<channel::ChannelClientConnection>& client,
+      uint64_t amount,
+      const std::shared_ptr<libcomp::DatabaseChangeSet>& changes = {});
 
   /**
    * Calculate the item updates needed to pay a specified macca amount
@@ -469,6 +474,7 @@ class CharacterManager {
    *  deletes listed with stack size 0
    * @param notifyClient Optional parameter to not send the updated slot
    * information to the client
+   * @param changes Optional database changeset to add the macca change to
    * @return true if the changes could be applied (or validated), false if
    *  they cannot
    */
@@ -477,7 +483,8 @@ class CharacterManager {
       bool validateOnly, std::list<std::shared_ptr<objects::Item>>& insertItems,
       std::unordered_map<std::shared_ptr<objects::Item>, uint16_t>
           stackAdjustItems,
-      bool notifyClient = true);
+      bool notifyClient = true,
+      const std::shared_ptr<libcomp::DatabaseChangeSet>& changes = {});
 
   /**
    * Expire the supplied culture machine related character data, whether

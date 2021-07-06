@@ -129,6 +129,7 @@ class FusionManager {
    * @param costItemType Optional cost item type used to pay for the fusion,
    *  defaults to macca
    * @param resultDemon Output parameter to return the resulting demon in
+   * @param changes Optional database changeset to add the macca change to
    * @return Error code associated to the reason why any failure may have
    *  ocurred:
    *  2 = Fusion mistake
@@ -139,10 +140,11 @@ class FusionManager {
    *  -3 = Supplied cost type is not valid
    *  -4 = Cost could not be paid
    */
-  int8_t ProcessFusion(const std::shared_ptr<ChannelClientConnection>& client,
-                       int64_t demonID1, int64_t demonID2, int64_t demonID3,
-                       uint32_t costItemType,
-                       std::shared_ptr<objects::Demon>& resultDemon);
+  int8_t ProcessFusion(
+      const std::shared_ptr<ChannelClientConnection>& client, int64_t demonID1,
+      int64_t demonID2, int64_t demonID3, uint32_t costItemType,
+      std::shared_ptr<objects::Demon>& resultDemon,
+      const std::shared_ptr<libcomp::DatabaseChangeSet>& changes = {});
 
   /**
    * Calculate the resulting demon based upon the supplied demon IDs

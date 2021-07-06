@@ -1794,14 +1794,19 @@ std::shared_ptr<objects::Item> CharacterManager::GenerateItem(
 bool CharacterManager::AddRemoveItems(
     const std::shared_ptr<channel::ChannelClientConnection>& client,
     std::unordered_map<uint32_t, uint32_t> itemCounts, bool add,
-    int64_t skillTargetID) {
+    int64_t skillTargetID,
+    const std::shared_ptr<libcomp::DatabaseChangeSet>& changes) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
   auto itemBox = character->GetItemBoxes(0).Get();
 
   auto server = mServer.lock();
-  auto dbChanges = libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+  auto dbChanges =
+      changes ? changes
+              : libcomp::DatabaseChangeSet::Create(state->GetAccountUID());
+
+  bool queueChanges = !changes;
 
   const static bool autoCompressCurrency =
       server->GetWorldSharedConfig()->GetAutoCompressCurrency();
@@ -2080,7 +2085,9 @@ bool CharacterManager::AddRemoveItems(
 
   dbChanges->Update(itemBox);
 
-  server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+  if (queueChanges) {
+    server->GetWorldDatabase()->QueueChangeSet(dbChanges);
+  }
 
   return true;
 }
@@ -2106,7 +2113,8 @@ uint64_t CharacterManager::GetTotalMacca(
 
 bool CharacterManager::PayMacca(
     const std::shared_ptr<channel::ChannelClientConnection>& client,
-    uint64_t amount) {
+    uint64_t amount,
+    const std::shared_ptr<libcomp::DatabaseChangeSet>& changes) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
@@ -2116,7 +2124,8 @@ bool CharacterManager::PayMacca(
   std::unordered_map<std::shared_ptr<objects::Item>, uint16_t> stackAdjustItems;
 
   return CalculateMaccaPayment(client, amount, insertItems, stackAdjustItems) &&
-         UpdateItems(client, false, insertItems, stackAdjustItems);
+         UpdateItems(client, false, insertItems, stackAdjustItems, true,
+                     changes);
 }
 
 bool CharacterManager::CalculateMaccaPayment(
@@ -2238,7 +2247,8 @@ bool CharacterManager::UpdateItems(
     bool validateOnly, std::list<std::shared_ptr<objects::Item>>& insertItems,
     std::unordered_map<std::shared_ptr<objects::Item>, uint16_t>
         stackAdjustItems,
-    bool notifyClient) {
+    bool notifyClient,
+    const std::shared_ptr<libcomp::DatabaseChangeSet>& _changes) {
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
@@ -2283,7 +2293,8 @@ bool CharacterManager::UpdateItems(
     return true;
   }
 
-  auto changes = libcomp::DatabaseChangeSet::Create();
+  auto changes = _changes ? _changes : libcomp::DatabaseChangeSet::Create();
+  bool queueChanges = !_changes;
   std::list<uint16_t> updatedSlots;
 
   for (auto iPair : stackAdjustItems) {
@@ -2322,7 +2333,7 @@ bool CharacterManager::UpdateItems(
 
   // Process all changes as a transaction
   auto worldDB = mServer.lock()->GetWorldDatabase();
-  if (!worldDB->ProcessChangeSet(changes)) {
+  if (queueChanges && !worldDB->ProcessChangeSet(changes)) {
     return false;
   }
 

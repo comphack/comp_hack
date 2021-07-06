@@ -146,6 +146,10 @@ bool LobbyServer::Initialize() {
   clientPacketManager->AddParser<Parsers::PurchaseTicket>(
       to_underlying(ClientToLobbyPacketCode_t::PACKET_PURCHASE_TICKET));
 
+  // Map Amala Network packet parsers to supported packets
+  clientPacketManager->AddParser<Parsers::AmalaAppliedPatches>(
+      to_underlying(ClientToLobbyPacketCode_t::PACKET_AMALA_APPLIED_PATCHES));
+
   // Add the managers to the generic workers.
   for (auto worker : mWorkers) {
     worker->AddManager(clientPacketManager);

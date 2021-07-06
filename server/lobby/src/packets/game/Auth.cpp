@@ -102,6 +102,15 @@ static bool CompleteLogin(
     reply.WriteString16Little(libcomp::Convert::ENCODING_UTF8, sid2, true);
 
     connection->SendPacket(reply);
+
+    if (objects::LobbyConfig::ClientPatchEnforcement_t::NONE !=
+        conf->GetClientPatchEnforcement()) {
+      libcomp::Packet reply2;
+      reply2.WritePacketCode(
+          LobbyToClientPacketCode_t::PACKET_AMALA_QUERY_CLIENT_PATCH);
+
+      connection->SendPacket(reply2);
+    }
   } else {
     return LoginAuthError(connection, errorCode);
   }

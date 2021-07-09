@@ -5944,7 +5944,7 @@ bool CharacterManager::AddRemoveOpponent(
       }
 
       auto aiState = entity->GetAIState();
-      if (aiState && !aiState->IsEnraged()) {
+      if (aiState && !aiState->InCombat()) {
         aiState->SetStatus(AIStatus_t::COMBAT);
       }
 

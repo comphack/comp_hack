@@ -985,7 +985,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
 
   if (aiState->StatusChanged()) {
     // Do not clear actions if going from aggro to a combat state
-    if (!(aiState->GetStatus() >= AIStatus_t::COMBAT &&
+    if (!(aiState->InCombat() &&
           aiState->GetPreviousStatus() == AIStatus_t::AGGRO)) {
       auto cmd = aiState->GetCurrentCommand();
       aiState->ClearCommands();
@@ -1000,20 +1000,32 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
     auto activated = eState->GetActivatedAbility();
     if (activated) {
       bool cancelActivatedSkill = false;
-      auto skillActionType =
-          activated->GetSkillData()->GetBasic()->GetActionType();
 
-      // Nested for readability.
-      if (aiState->GetStatus() == AIStatus_t::ENRAGED &&
-          (skillActionType == SkillActionType_t::COUNTER ||
-           skillActionType == SkillActionType_t::DODGE ||
-           skillActionType == SkillActionType_t::GUARD)) {
-        // Target has been taunted, defensive skills
-        cancelActivatedSkill = true;
-      } else if (aiState->GetPreviousStatus() >= AIStatus_t::AGGRO &&
-                 aiState->GetStatus() < AIStatus_t::AGGRO) {
-        // Leftover combat skill, cancel it now
-        cancelActivatedSkill = true;
+      switch (aiState->GetStatus()) {
+        case AIStatus_t::IDLE:
+        case AIStatus_t::WANDERING:
+        case AIStatus_t::FOLLOWING:
+          if (aiState->GetPreviousStatus() == AIStatus_t::AGGRO ||
+              aiState->GetPreviousStatus() == AIStatus_t::COMBAT ||
+              aiState->GetPreviousStatus() == AIStatus_t::ENRAGED) {
+            // Leftover combat skill, cancel it
+            cancelActivatedSkill = true;
+          }
+          break;
+        case AIStatus_t::ENRAGED: {
+          auto skillActionType =
+              activated->GetSkillData()->GetBasic()->GetActionType();
+              
+          if (skillActionType == SkillActionType_t::COUNTER ||
+              skillActionType == SkillActionType_t::DODGE ||
+              skillActionType == SkillActionType_t::GUARD) {
+            // Target has been taunted, defensive skills will be canceled
+            cancelActivatedSkill = true;
+          }
+          break;
+        }
+        default:
+          break;
       }
 
       if (cancelActivatedSkill) {
@@ -1022,10 +1034,12 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
       }
     }
 
-    // If the status has been changed to or from ENRAGED, refresh the skill map.
-    if (aiState->GetStatus() == AIStatus_t::ENRAGED ||
+    // If the status has been changed to or from ENRAGED, refresh the skill map so that
+    // appropriate skills are selectable.
+    if (aiState->IsEnraged() ||
         aiState->GetPreviousStatus() == AIStatus_t::ENRAGED) {
       aiState->ResetSkillsMapped();
+      RefreshSkillMap(eState, aiState);
     }
 
     aiState->ResetStatusChanged();

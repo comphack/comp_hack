@@ -597,7 +597,9 @@ bool EventManager::UpdateQuest(
 
     return false;
   } else if ((phase < -1 && !forceUpdate) || phase < -2 ||
-             phase > (int8_t)questData->GetPhaseCount()) {
+             phase > (int8_t)(questData->GetPhaseCount() - 1)) {
+    // Quest phases start at index 0, hence the need to subtract from the phase
+    // count in the above check.
     LogEventManagerError([&]() {
       return libcomp::String("Invalid phase '%1' supplied for quest: %2\n")
           .Arg(phase)

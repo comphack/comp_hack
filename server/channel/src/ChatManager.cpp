@@ -2004,8 +2004,7 @@ bool ChatManager::GMCommand_Help(
         "demon if DEMON is set to 'demon'. If no name is",
         "specified, the current account is targeted.",
         "STACK must be specified if CLEAR is not set to",
-        "'clear'. DEMON may not be specified if CLEAR",
-        "is set."}},
+        "'clear'. DEMON may not be specified if CLEAR", "is set."}},
       {"valuable",
        {"@valuable ID [REMOVE]",
         "Grants the player the valuable with the given ID. If",
@@ -2979,7 +2978,9 @@ bool ChatManager::GMCommand_Quest(
   if (!GetIntegerArg<int8_t>(phase, argsCopy)) {
     return SendChatMessage(client, ChatType_t::CHAT_SELF,
                            "No phase specified for @quest command");
-  } else if (phase < -2 || (int8_t)questData->GetPhaseCount() < phase) {
+  } else if (phase < -2 || (int8_t)(questData->GetPhaseCount() - 1) < phase) {
+    // Quest phases start at index 0, hence the need to subtract from the phase
+    // count in the above check.
     return SendChatMessage(
         client, ChatType_t::CHAT_SELF,
         libcomp::String("Invalid phase '%1' supplied for quest: %2")

@@ -35,13 +35,12 @@
 
 // object Includes
 #include <ActivatedAbility.h>
+#include <CharacterProgress.h>
 #include <Item.h>
 #include <MiConditionData.h>
 #include <MiSkillBasicData.h>
 #include <MiSkillData.h>
 #include <MiWarpPointData.h>
-
-#include "CharacterProgress.h"
 
 // channel Includes
 #include "ChannelServer.h"

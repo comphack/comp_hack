@@ -2978,9 +2978,9 @@ bool ChatManager::GMCommand_Quest(
   if (!GetIntegerArg<int8_t>(phase, argsCopy)) {
     return SendChatMessage(client, ChatType_t::CHAT_SELF,
                            "No phase specified for @quest command");
-  } else if (phase < -2 || (int8_t)(questData->GetPhaseCount() - 1) < phase) {
-    // Quest phases start at index 0, hence the need to subtract from the phase
-    // count in the above check.
+  } else if (phase < -2 || (int8_t)questData->GetPhaseCount() <= phase) {
+    // Quest phases start at index 0, hence the need for a less-than-or-equal
+    // comparison.
     return SendChatMessage(
         client, ChatType_t::CHAT_SELF,
         libcomp::String("Invalid phase '%1' supplied for quest: %2")
@@ -3785,7 +3785,7 @@ bool ChatManager::GMCommand_Zone(
     } else if (!GetDecimalArg<float>(xCoord, argsCopy) ||
                !GetDecimalArg<float>(yCoord, argsCopy)) {
       return SendChatMessage(client, ChatType_t::CHAT_SELF,
-                             "ERROR: One of the inputs is not a number.  "
+                             "ERROR: One of the coordinate inputs is not a number. "
                              "Please re-enter the command with proper inputs.");
     }
 

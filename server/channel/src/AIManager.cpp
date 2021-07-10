@@ -2137,7 +2137,7 @@ void AIManager::RefreshSkillMap(
         case objects::MiSkillBasicData::ActionType_t::GUARD:
         case objects::MiSkillBasicData::ActionType_t::COUNTER:
         case objects::MiSkillBasicData::ActionType_t::DODGE:
-          if (aiState->GetStatus() != AIStatus_t::ENRAGED) {
+          if (!aiState->IsEnraged()) {
             skillType = (int16_t)AI_SKILL_TYPE_DEF;
           }
           break;

@@ -1015,7 +1015,7 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
         case AIStatus_t::ENRAGED: {
           auto skillActionType =
               activated->GetSkillData()->GetBasic()->GetActionType();
-              
+
           if (skillActionType == SkillActionType_t::COUNTER ||
               skillActionType == SkillActionType_t::DODGE ||
               skillActionType == SkillActionType_t::GUARD) {
@@ -1034,8 +1034,8 @@ bool AIManager::UpdateState(const std::shared_ptr<ActiveEntityState>& eState,
       }
     }
 
-    // If the status has been changed to or from ENRAGED, refresh the skill map so that
-    // appropriate skills are selectable.
+    // If the status has been changed to or from ENRAGED, refresh the skill map
+    // so that appropriate skills are selectable.
     if (aiState->IsEnraged() ||
         aiState->GetPreviousStatus() == AIStatus_t::ENRAGED) {
       aiState->ResetSkillsMapped();

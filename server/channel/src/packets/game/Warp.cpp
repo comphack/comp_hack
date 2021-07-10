@@ -109,11 +109,10 @@ bool Parsers::Warp::Parse(
       for (auto i = 0; i < 3; ++i) {
         if (warpRestrictions[i].first == 1) {
           // Character must have completed a quest
-          uint16_t questID = (uint16_t)warpRestrictions[i].second;
-
           size_t index;
           uint8_t shiftVal;
-          characterManager->ConvertIDToMaskValues(questID, index, shiftVal);
+          characterManager->ConvertIDToMaskValues(
+              (uint16_t)warpRestrictions[i].second, index, shiftVal);
 
           uint8_t indexVal = progress->GetCompletedQuests(index);
 
@@ -123,8 +122,8 @@ bool Parsers::Warp::Parse(
             break;
           }
         } else if (warpRestrictions[i].first == 3 &&
-                   !characterManager->HasValuable(character,
-                                                  warpRestrictions[i].second)) {
+                   !characterManager->HasValuable(
+                       character, (uint16_t)warpRestrictions[i].second)) {
           // Character lacks a required valuable
           warpConditionsMet = false;
           break;

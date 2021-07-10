@@ -41,6 +41,8 @@
 #include <MiSkillData.h>
 #include <MiWarpPointData.h>
 
+#include "CharacterProgress.h"
+
 // channel Includes
 #include "ChannelServer.h"
 #include "CharacterManager.h"
@@ -81,6 +83,10 @@ bool Parsers::Warp::Parse(
   auto definitionManager = server->GetDefinitionManager();
   auto skillManager = server->GetSkillManager();
   auto zoneManager = server->GetZoneManager();
+  auto characterManager = server->GetCharacterManager();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character->GetProgress().Get();
 
   auto activatedAbility = sourceState->GetSpecialActivations(activationID);
   if (!activatedAbility) {
@@ -90,10 +96,45 @@ bool Parsers::Warp::Parse(
         libcomp::PersistentObject::GetObjectByUUID(
             state->GetObjectUUID(activatedAbility->GetActivationObjectID())));
 
-    // Warp is valid if the item was consumed or the skill wasn't an item skill
+    // Warp is valid if required conditions are met, and the item was consumed
+    // or the skill wasn't an item skill
     auto warpDef = definitionManager->GetWarpPointData(warpPointID);
+    bool warpConditionsMet = warpDef ? true : false;
+    if (warpDef) {
+      // Always 3 restrictions
+      std::pair<uint32_t, uint32_t> warpRestrictions[3] = {
+          {warpDef->GetRestrictionType1(), warpDef->GetRestrictionValue1()},
+          {warpDef->GetRestrictionType2(), warpDef->GetRestrictionValue2()},
+          {warpDef->GetRestrictionType3(), warpDef->GetRestrictionValue3()}};
+
+      for (auto i = 0; i < 3; ++i) {
+        if (warpRestrictions[i].first == 1) {
+          // Character must have completed a quest
+          uint16_t questID = (uint16_t)warpRestrictions[i].second;
+
+          size_t index;
+          uint8_t shiftVal;
+          characterManager->ConvertIDToMaskValues(questID, index, shiftVal);
+
+          uint8_t indexVal = progress->GetCompletedQuests(index);
+
+          if ((indexVal & shiftVal) == 0) {
+            // Quest not completed
+            warpConditionsMet = false;
+            break;
+          }
+        } else if (warpRestrictions[i].first == 3 &&
+                   !characterManager->HasValuable(character,
+                                                  warpRestrictions[i].second)) {
+          // Character lacks a required valuable
+          warpConditionsMet = false;
+          break;
+        }
+      }
+    }
+
     auto skillData = activatedAbility->GetSkillData();
-    if (warpDef &&
+    if (warpConditionsMet &&
         (item ||
          (skillData->GetBasic()->GetFamily() != SkillFamily_t::ITEM &&
           skillData->GetBasic()->GetFamily() != SkillFamily_t::DEMON_SOLO))) {

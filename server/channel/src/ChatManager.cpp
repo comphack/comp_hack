@@ -3784,9 +3784,10 @@ bool ChatManager::GMCommand_Zone(
       rotation = zoneData->GetStartingRotation();
     } else if (!GetDecimalArg<float>(xCoord, argsCopy) ||
                !GetDecimalArg<float>(yCoord, argsCopy)) {
-      return SendChatMessage(client, ChatType_t::CHAT_SELF,
-                             "ERROR: One of the coordinate inputs is not a number. "
-                             "Please re-enter the command with proper inputs.");
+      return SendChatMessage(
+          client, ChatType_t::CHAT_SELF,
+          "ERROR: One of the coordinate inputs is not a number. "
+          "Please re-enter the command with proper inputs.");
     }
 
     if (!zoneManager->EnterZone(client, zoneID, dynamicMapID, xCoord, yCoord,

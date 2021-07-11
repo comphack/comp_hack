@@ -1126,10 +1126,9 @@ uint32_t FusionManager::GetMistakeResultType(
   auto state = client->GetClientState();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
-  auto progress = character->GetProgress();
-
+  auto progress = character->GetProgress().Get();
   mistakeDefs.remove_if(
-      [character](const std::shared_ptr<objects::FusionMistake>& m) {
+      [progress](const std::shared_ptr<objects::FusionMistake>& m) {
         // Check that the player has all required plugins
         bool missingPlugin = false;
         for (auto plugin : m->GetRequiredPlugins()) {
@@ -1139,7 +1138,7 @@ uint32_t FusionManager::GetMistakeResultType(
           CharacterManager::ConvertIDToMaskValues((uint16_t)plugin, index,
                                                   shiftVal);
 
-          uint8_t indexVal = character->GetProgress()->GetPlugins(index);
+          uint8_t indexVal = progress->GetPlugins(index);
 
           if ((indexVal & shiftVal) == 0) {
             missingPlugin = true;

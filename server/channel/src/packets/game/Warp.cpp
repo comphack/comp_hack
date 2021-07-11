@@ -37,10 +37,12 @@
 #include <ActivatedAbility.h>
 #include <CharacterProgress.h>
 #include <Item.h>
+#include <ItemBox.h>
 #include <MiConditionData.h>
 #include <MiSkillBasicData.h>
 #include <MiSkillData.h>
 #include <MiWarpPointData.h>
+#include <MiWarpRestriction.h>
 
 // channel Includes
 #include "ChannelServer.h"
@@ -49,6 +51,13 @@
 #include "ZoneManager.h"
 
 using namespace channel;
+
+enum class WarpRestrictionType : uint32_t {
+  NONE = 0,                   //!< No restriction
+  HAS_COMPLETED_QUEST = 1,    //!< Requires quest completion
+  HAS_ITEM_IN_INVENTORY = 2,  //!< Requires item in inventory
+  HAS_VALUABLE = 3,           //!< Requires valuable
+};
 
 bool Parsers::Warp::Parse(
     libcomp::ManagerPacket* pPacketManager,
@@ -85,6 +94,7 @@ bool Parsers::Warp::Parse(
   auto characterManager = server->GetCharacterManager();
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
+  auto inventory = character->GetItemBoxes(0).Get();
   auto progress = character->GetProgress().Get();
 
   auto activatedAbility = sourceState->GetSpecialActivations(activationID);
@@ -101,31 +111,44 @@ bool Parsers::Warp::Parse(
     bool warpConditionsMet = warpDef ? true : false;
     if (warpDef) {
       // Always 3 restrictions
-      std::pair<uint32_t, uint32_t> warpRestrictions[3] = {
-          {warpDef->GetRestrictionType1(), warpDef->GetRestrictionValue1()},
-          {warpDef->GetRestrictionType2(), warpDef->GetRestrictionValue2()},
-          {warpDef->GetRestrictionType3(), warpDef->GetRestrictionValue3()}};
+      auto warpRestrictions = warpDef->GetWarpRestrictions();
 
       for (auto i = 0; i < 3; ++i) {
-        if (warpRestrictions[i].first == 1) {
-          // Character must have completed a quest
-          size_t index;
-          uint8_t shiftVal;
-          characterManager->ConvertIDToMaskValues(
-              (uint16_t)warpRestrictions[i].second, index, shiftVal);
+        switch (warpRestrictions[i]->GetRestrictionType()) {
+          case objects::MiWarpRestriction::RestrictionType_t::
+              HAS_COMPLETED_QUEST: {
+            size_t index;
+            uint8_t shiftVal;
+            characterManager->ConvertIDToMaskValues(
+                (uint16_t)warpRestrictions[i]->GetRestrictionValue(), index, shiftVal);
 
-          uint8_t indexVal = progress->GetCompletedQuests(index);
+            uint8_t indexVal = progress->GetCompletedQuests(index);
 
-          if ((indexVal & shiftVal) == 0) {
-            // Quest not completed
-            warpConditionsMet = false;
+            if ((indexVal & shiftVal) == 0) {
+              // Quest not completed
+              warpConditionsMet = false;
+            }
+          } break;
+          case objects::MiWarpRestriction::RestrictionType_t::
+              HAS_ITEM_IN_INVENTORY: {
+            if (!characterManager->GetExistingItemCount(
+                    character,
+                    (uint16_t)warpRestrictions[i]->GetRestrictionValue())) {
+              warpConditionsMet = false;
+            }
+          } break;
+          case objects::MiWarpRestriction::RestrictionType_t::HAS_VALUABLE: {
+            if (!characterManager->HasValuable(
+                    character,
+                    (uint16_t)warpRestrictions[i]->GetRestrictionValue())) {
+              warpConditionsMet = false;
+            }
+          } break;
+          default:
             break;
-          }
-        } else if (warpRestrictions[i].first == 3 &&
-                   !characterManager->HasValuable(
-                       character, (uint16_t)warpRestrictions[i].second)) {
-          // Character lacks a required valuable
-          warpConditionsMet = false;
+        }
+
+        if (!warpConditionsMet) {
           break;
         }
       }

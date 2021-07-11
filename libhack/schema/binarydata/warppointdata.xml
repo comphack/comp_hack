@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objgen>
+    <object name="MiWarpRestriction" persistent="false">
+        <member type="enum" name="restrictionType" underlying="uint32_t">
+            <value num="0">NONE</value>
+            <value num="1">HAS_COMPLETED_QUEST</value>
+            <value num="2">HAS_ITEM_IN_INVENTORY</value>
+            <value num="3">HAS_VALUABLE</value>
+        </member>
+        <member type="u32" name="restrictionValue"/>
+    </object>
     <object name="MiWarpPointData" persistent="false">
         <member type="u32" name="ID"/>
         <member type="u32" name="spotID"/>
@@ -8,12 +17,9 @@
         <member type="float" name="y"/>
         <member type="float" name="rotation"/>
         <member type="string" name="name" encoding="default" length="64"/>
-        <member type="u32" name="restrictionType1"/>
-        <member type="u32" name="restrictionValue1"/>
-        <member type="u32" name="restrictionType2"/>
-        <member type="u32" name="restrictionValue2"/>
-        <member type="u32" name="restrictionType3"/>
-        <member type="u32" name="restrictionValue3"/>
+        <member type="array" size="3" name="warpRestrictions">
+            <element type="MiWarpRestriction*"/>
+        </member>
         <member type="u32" name="headerID"/>
         <member type="u32" name="groupingID"/>
     </object>

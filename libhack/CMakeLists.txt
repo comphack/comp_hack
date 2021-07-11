@@ -1007,6 +1007,8 @@ OBJGEN_XML(${PROJECT_NAME}_STRUCTS
     MiUltimateBattleBaseData.h
     MiSpotData.cpp
     MiSpotData.h
+    MiWarpRestriction.cpp
+    MiWarpRestriction.h
     MiWarpPointData.cpp
     MiWarpPointData.h
     MiWorldData.cpp

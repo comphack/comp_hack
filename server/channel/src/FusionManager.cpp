@@ -1127,27 +1127,28 @@ uint32_t FusionManager::GetMistakeResultType(
   auto cState = state->GetCharacterState();
   auto character = cState->GetEntity();
   auto progress = character->GetProgress();
-  
-  mistakeDefs.remove_if([character](const std::shared_ptr<objects::FusionMistake>& m) {
-    // Check that the player has all required plugins
-    bool missingPlugin = false;
-    for (auto plugin : m->GetRequiredPlugins()) {
-      size_t index;
-      uint8_t shiftVal;
 
-      CharacterManager::ConvertIDToMaskValues((uint16_t)plugin, index,
-                                              shiftVal);
+  mistakeDefs.remove_if(
+      [character](const std::shared_ptr<objects::FusionMistake>& m) {
+        // Check that the player has all required plugins
+        bool missingPlugin = false;
+        for (auto plugin : m->GetRequiredPlugins()) {
+          size_t index;
+          uint8_t shiftVal;
 
-      uint8_t indexVal = character->GetProgress()->GetPlugins(index);
+          CharacterManager::ConvertIDToMaskValues((uint16_t)plugin, index,
+                                                  shiftVal);
 
-      if (indexVal & shiftVal == 0) {
-        missingPlugin = true;
-        break;
-      }
-    }
+          uint8_t indexVal = character->GetProgress()->GetPlugins(index);
 
-    return missingPlugin;
-  });
+          if ((indexVal & shiftVal) == 0) {
+            missingPlugin = true;
+            break;
+          }
+        }
+
+        return missingPlugin;
+      });
 
   mistakeDefs.remove_if([targetDef, targetLevel](
                             const std::shared_ptr<objects::FusionMistake>& m) {

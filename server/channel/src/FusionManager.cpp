@@ -1011,9 +1011,9 @@ uint32_t FusionManager::GetResultDemon(
 }
 
 uint32_t FusionManager::GetMistakeResultType(
-    uint32_t demonType1, uint32_t demonType2, uint32_t demonType3,
-    uint32_t targetType, bool success, bool specialFusion, bool specialTarget,
-    double successRate) {
+    const std::shared_ptr<ChannelClientConnection>& client, uint32_t demonType1,
+    uint32_t demonType2, uint32_t demonType3, uint32_t targetType, bool success,
+    bool specialFusion, bool specialTarget, double successRate) {
   auto server = mServer.lock();
   bool triFusion = demonType3 != 0;
 
@@ -1121,6 +1121,32 @@ uint32_t FusionManager::GetMistakeResultType(
     return m->TargetTypesCount() > 0 &&
            !m->TargetTypesContains(targetDef->GetBasic()->GetID()) &&
            !m->TargetTypesContains(targetDef->GetUnionData()->GetBaseDemonID());
+  });
+
+  auto state = client->GetClientState();
+  auto cState = state->GetCharacterState();
+  auto character = cState->GetEntity();
+  auto progress = character->GetProgress();
+  
+  mistakeDefs.remove_if([character](const std::shared_ptr<objects::FusionMistake>& m) {
+    // Check that the player has all required plugins
+    bool missingPlugin = false;
+    for (auto plugin : m->GetRequiredPlugins()) {
+      size_t index;
+      uint8_t shiftVal;
+
+      CharacterManager::ConvertIDToMaskValues((uint16_t)plugin, index,
+                                              shiftVal);
+
+      uint8_t indexVal = character->GetProgress()->GetPlugins(index);
+
+      if (indexVal & shiftVal == 0) {
+        missingPlugin = true;
+        break;
+      }
+    }
+
+    return missingPlugin;
   });
 
   mistakeDefs.remove_if([targetDef, targetLevel](
@@ -1612,8 +1638,9 @@ int8_t FusionManager::ProcessFusion(
     bool specialFusion = costItemType == SVR_CONST.ITEM_KREUZ;
 
     uint32_t mistakeType = GetMistakeResultType(
-        demon1->GetType(), demon2->GetType(), demon3 ? demon3->GetType() : 0,
-        resultDemonType, !failed, specialFusion, specialResult, successRate);
+        client, demon1->GetType(), demon2->GetType(),
+        demon3 ? demon3->GetType() : 0, resultDemonType, !failed, specialFusion,
+        specialResult, successRate);
     if (mistakeType) {
       if (demon3) {
         LogFusionManagerDebug([&]() {

@@ -52,13 +52,6 @@
 
 using namespace channel;
 
-enum class WarpRestrictionType : uint32_t {
-  NONE = 0,                   //!< No restriction
-  HAS_COMPLETED_QUEST = 1,    //!< Requires quest completion
-  HAS_ITEM_IN_INVENTORY = 2,  //!< Requires item in inventory
-  HAS_VALUABLE = 3,           //!< Requires valuable
-};
-
 bool Parsers::Warp::Parse(
     libcomp::ManagerPacket* pPacketManager,
     const std::shared_ptr<libcomp::TcpConnection>& connection,
@@ -113,14 +106,22 @@ bool Parsers::Warp::Parse(
       // Always 3 restrictions
       auto warpRestrictions = warpDef->GetWarpRestrictions();
 
-      for (auto i = 0; i < 3; ++i) {
+      for (auto i = 0; i < warpDef->WarpRestrictionsCount(); ++i) {
+        LogGeneralError([&]() {
+          return libcomp::String(
+                     "AllocateSkillPoint failed to process operational "
+                     "changeset "
+                     "when updating stats: %1\n")
+              .Arg(state->GetAccountUID().ToString());
+        });
         switch (warpRestrictions[i]->GetRestrictionType()) {
           case objects::MiWarpRestriction::RestrictionType_t::
               HAS_COMPLETED_QUEST: {
             size_t index;
             uint8_t shiftVal;
             characterManager->ConvertIDToMaskValues(
-                (uint16_t)warpRestrictions[i]->GetRestrictionValue(), index, shiftVal);
+                (uint16_t)warpRestrictions[i]->GetRestrictionValue(), index,
+                shiftVal);
 
             uint8_t indexVal = progress->GetCompletedQuests(index);
 
@@ -144,8 +145,19 @@ bool Parsers::Warp::Parse(
               warpConditionsMet = false;
             }
           } break;
-          default:
+          case objects::MiWarpRestriction::RestrictionType_t::NONE:
             break;
+          default: {
+            LogGeneralError([&]() {
+              return libcomp::String(
+                         "WarpPoint ID %1 has an invalid WarpRestriction type "
+                         "that resolves to %2\n")
+                  .Arg(warpDef->GetID())
+                  .Arg(warpRestrictions[i]->GetRestrictionTypeValue());
+            });
+
+            warpConditionsMet = false;
+          } break;
         }
 
         if (!warpConditionsMet) {

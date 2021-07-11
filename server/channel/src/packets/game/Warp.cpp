@@ -106,7 +106,7 @@ bool Parsers::Warp::Parse(
       // Always 3 restrictions
       auto warpRestrictions = warpDef->GetWarpRestrictions();
 
-      for (auto i = 0; i < warpDef->WarpRestrictionsCount(); ++i) {
+      for (size_t i = 0; i < warpDef->WarpRestrictionsCount(); ++i) {
         switch (warpRestrictions[i]->GetRestrictionType()) {
           case objects::MiWarpRestriction::RestrictionType_t::
               HAS_COMPLETED_QUEST: {

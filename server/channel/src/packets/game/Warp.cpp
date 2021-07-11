@@ -107,13 +107,6 @@ bool Parsers::Warp::Parse(
       auto warpRestrictions = warpDef->GetWarpRestrictions();
 
       for (auto i = 0; i < warpDef->WarpRestrictionsCount(); ++i) {
-        LogGeneralError([&]() {
-          return libcomp::String(
-                     "AllocateSkillPoint failed to process operational "
-                     "changeset "
-                     "when updating stats: %1\n")
-              .Arg(state->GetAccountUID().ToString());
-        });
         switch (warpRestrictions[i]->GetRestrictionType()) {
           case objects::MiWarpRestriction::RestrictionType_t::
               HAS_COMPLETED_QUEST: {

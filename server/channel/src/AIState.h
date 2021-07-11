@@ -68,6 +68,8 @@ enum AIStatus_t : uint8_t {
   FOLLOWING,  //!< Entity is following its follow target (if possible)
   AGGRO,      //!< Entity is not in combat yet but is pursuing a target
   COMBAT,     //!< Entity is engaged in combat with one or more opponent
+  ENRAGED,    //!< Entity is engaged in combat and enraged by a skill such as
+              //!< Liberama or Mass Taunt
 };
 
 /**
@@ -109,14 +111,21 @@ class AIState : public objects::AIStateObject {
   bool SetStatus(AIStatus_t status, bool isDefault = false);
 
   /**
+   * Check if the status is set to enraged
+   * @return true if the status is set to enraged
+   */
+  bool IsEnraged() const;
+
+  /**
    * Check if the status is set to combat
+   * @param includeEnraged Optional parameter to include the emraged state too
    * @return true if the status is set to combat
    */
-  bool InCombat() const;
+  bool InCombat(bool includeEnraged = true) const;
 
   /**
    * Check if the status is set to aggro (or optionally combat)
-   * @param includeCombat Optional parameter to include the combat state too
+   * @param includeCombat Optional parameter to include combat states too
    * @return true if the status is set to aggro (or optionally combat)
    */
   bool IsAggro(bool includeCombat = true) const;

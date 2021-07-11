@@ -55,6 +55,7 @@ BaseScriptEngine& BaseScriptEngine::Using<AIState>() {
     e.Const("FOLLOWING", (int32_t)AIStatus_t::FOLLOWING);
     e.Const("AGGRO", (int32_t)AIStatus_t::AGGRO);
     e.Const("COMBAT", (int32_t)AIStatus_t::COMBAT);
+    e.Const("ENRAGED", (int32_t)AIStatus_t::ENRAGED);
 
     Sqrat::ConstTable(mVM).Enum("AIStatus_t", e);
 
@@ -91,7 +92,7 @@ bool AIState::SetStatus(AIStatus_t status, bool isDefault) {
   // Disallow default setting to target dependent status
   if (isDefault &&
       (status == AIStatus_t::AGGRO || status == AIStatus_t::COMBAT ||
-       status == AIStatus_t::FOLLOWING)) {
+       status == AIStatus_t::ENRAGED || status == AIStatus_t::FOLLOWING)) {
     return false;
   }
 
@@ -132,11 +133,14 @@ bool AIState::SetStatus(AIStatus_t status, bool isDefault) {
   return true;
 }
 
-bool AIState::InCombat() const { return mStatus == AIStatus_t::COMBAT; }
+bool AIState::IsEnraged() const { return mStatus == AIStatus_t::ENRAGED; }
+
+bool AIState::InCombat(bool includeEnraged) const {
+  return mStatus == AIStatus_t::COMBAT || (includeEnraged && IsEnraged());
+}
 
 bool AIState::IsAggro(bool includeCombat) const {
-  return mStatus == AIStatus_t::AGGRO ||
-         (includeCombat && mStatus == AIStatus_t::COMBAT);
+  return mStatus == AIStatus_t::AGGRO || (includeCombat && InCombat());
 }
 
 bool AIState::IsFollowing() const { return mStatus == AIStatus_t::FOLLOWING; }

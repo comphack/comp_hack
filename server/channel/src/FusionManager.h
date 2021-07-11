@@ -164,6 +164,7 @@ class FusionManager {
    * Calculate the resulting mistake demon based upon the supplied demon
    * types and potential outcome already determined. Should be ignored
    * for mitama fusions.
+   * @param client Pointer to the client performing the fusion
    * @param demonType1 Type ID of the first demon being fused
    * @param demonType2 Type ID of the second demon being fused
    * @param demonType3 Type ID of the third demon being fused
@@ -175,10 +176,11 @@ class FusionManager {
    * @param successRate Fusion sucess rate checked to determine the result
    * @return Type ID of a mistake outcome
    */
-  uint32_t GetMistakeResultType(uint32_t demonType1, uint32_t demonType2,
-                                uint32_t demonType3, uint32_t targetType,
-                                bool success, bool specialFusion,
-                                bool specialTarget, double successRate);
+  uint32_t GetMistakeResultType(
+      const std::shared_ptr<ChannelClientConnection>& client,
+      uint32_t demonType1, uint32_t demonType2, uint32_t demonType3,
+      uint32_t targetType, bool success, bool specialFusion, bool specialTarget,
+      double successRate);
 
   /**
    * Utility function to check if any or all match set entries are present

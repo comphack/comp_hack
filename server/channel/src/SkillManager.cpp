@@ -10580,6 +10580,7 @@ bool SkillManager::Liberama(
   for (SkillTargetResult& target : pSkill->Targets) {
     auto aiState = target.EntityState->GetAIState();
     if (aiState) {
+      aiState->SetStatus(AIStatus_t::ENRAGED);
       aiManager->UpdateAggro(target.EntityState, source->GetEntityID());
     }
   }

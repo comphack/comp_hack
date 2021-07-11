@@ -6,6 +6,9 @@
         <member type="bool" name="TwoWaySpecialEnabled" default="true"/>
         <member type="bool" name="TrifusionEnabled" default="true"/>
         <member type="bool" name="TrifusionSoloEnabled" default="true"/>
+        <member type="set" name="RequiredPlugins">
+            <element type="u32"/>
+        </member>
         <member type="bool" name="OnSuccess"/>
         <member type="bool" name="OnMaxSuccess"/>
         <member type="bool" name="OnFailure"/>

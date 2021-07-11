@@ -80,7 +80,7 @@ void InjectReunionPoints(const std::shared_ptr<ChannelServer> server,
         int8_t setVal = rPointSet[rIdx];
         int8_t rank = demon->GetReunion(rIdx);
         if (setVal > 0 && rank < setVal) {
-          for (int8_t p = rank; p <= setVal && p < 10; p++) {
+          for (int8_t p = (int8_t)(rank + 1); p <= setVal && p < 10; p++) {
             rPoints = (int32_t)(rPoints - REUNION_RANK_POINTS[(size_t)p]);
           }
         }
@@ -91,7 +91,7 @@ void InjectReunionPoints(const std::shared_ptr<ChannelServer> server,
         int8_t setVal = mPointSet[rIdx];
         int8_t rank = (int8_t)demon->GetMitamaReunion(rIdx);
         if (setVal > 0 && rank < setVal) {
-          for (int8_t p = rank; p <= setVal && p < 10; p++) {
+          for (int8_t p = (int8_t)(rank + 1); p <= setVal && p < 10; p++) {
             mPoints = (int32_t)(mPoints - REUNION_RANK_POINTS[(size_t)p]);
           }
         }

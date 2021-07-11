@@ -1070,21 +1070,50 @@ bool ChatManager::GMCommand_Effect(
                            "@effect requires a stack count");
   }
 
-  auto state = client->GetClientState();
-
+  std::shared_ptr<channel::ChannelClientConnection> targetClient = client;
   libcomp::String target;
   bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
-  auto eState =
-      isDemon
-          ? std::dynamic_pointer_cast<ActiveEntityState>(state->GetDemonState())
-          : std::dynamic_pointer_cast<ActiveEntityState>(
-                state->GetCharacterState());
+
+  libcomp::String name;
+  if (GetStringArg(name, argsCopy)) {
+    std::shared_ptr<objects::Character> targetCharacter;
+    std::shared_ptr<objects::Account> targetAccount;
+    if (!GetTargetCharacterAccount(name, false, targetCharacter, targetAccount,
+                                   targetClient)) {
+      return SendChatMessage(
+          client, ChatType_t::CHAT_SELF,
+          libcomp::String(
+              "Invalid character name supplied for effect command: %1")
+              .Arg(name));
+    } else {
+      auto login = server->GetAccountManager()->GetActiveLogin(
+          targetCharacter->GetUUID());
+
+      uint32_t zoneID = login ? login->GetZoneID() : 0;
+
+      if (!zoneID) {
+        return SendChatMessage(
+            client, ChatType_t::CHAT_SELF,
+            libcomp::String(
+                "Character name supplied for effect command is not online: %1")
+                .Arg(name));
+      }
+    }
+  }
+
+  auto targetState = targetClient->GetClientState();
+
+  auto eState = isDemon ? std::dynamic_pointer_cast<ActiveEntityState>(
+                              targetState->GetDemonState())
+                        : std::dynamic_pointer_cast<ActiveEntityState>(
+                              targetState->GetCharacterState());
 
   StatusEffectChanges effects;
   effects[effectID] = StatusEffectChange(effectID, stack, !isAdd);
   eState->AddStatusEffects(effects, definitionManager);
 
-  server->GetCharacterManager()->RecalculateTokuseiAndStats(eState, client);
+  server->GetCharacterManager()->RecalculateTokuseiAndStats(eState,
+                                                            targetClient);
 
   return true;
 }
@@ -1348,30 +1377,53 @@ bool ChatManager::GMCommand_ExpertiseExtend(
     return false;
   }
 
-  auto state = client->GetClientState();
-  auto cState = state->GetCharacterState();
-  auto character = cState->GetEntity();
+  std::shared_ptr<channel::ChannelClientConnection> targetClient = client;
+  std::shared_ptr<objects::Character> targetCharacter =
+      targetClient->GetClientState()->GetCharacterState()->GetEntity();
 
-  if (character) {
+  libcomp::String name;
+  if (GetStringArg(name, argsCopy)) {
+    std::shared_ptr<objects::Account> targetAccount;
+    if (!GetTargetCharacterAccount(name, false, targetCharacter, targetAccount,
+                                   targetClient)) {
+      return SendChatMessage(
+          client, ChatType_t::CHAT_SELF,
+          libcomp::String(
+              "Invalid character name supplied for expertisemax command: %1")
+              .Arg(name));
+    }
+  }
+
+  auto targetState = targetClient->GetClientState();
+
+  if (targetCharacter) {
     int8_t newVal = 0;
     if (val == -1) {
       // No cap
       newVal = val;
     } else {
-      newVal = (int8_t)((character->GetExpertiseExtension() + val) > 127
+      newVal = (int8_t)((targetCharacter->GetExpertiseExtension() + val) > 127
                             ? 127
-                            : (character->GetExpertiseExtension() + val));
+                            : (targetCharacter->GetExpertiseExtension() + val));
     }
 
-    if (newVal != character->GetExpertiseExtension()) {
+    if (newVal != targetCharacter->GetExpertiseExtension()) {
       auto server = mServer.lock();
       auto characterManager = server->GetCharacterManager();
 
-      character->SetExpertiseExtension(newVal);
+      targetCharacter->SetExpertiseExtension(newVal);
 
-      characterManager->SendExpertiseExtension(client);
-      server->GetWorldDatabase()->QueueUpdate(character,
-                                              state->GetAccountUID());
+      auto login = server->GetAccountManager()->GetActiveLogin(
+          targetCharacter->GetUUID());
+      uint32_t zoneID = login ? login->GetZoneID() : 0;
+
+      if (zoneID) {
+        // Character is online, so send them the update.
+        characterManager->SendExpertiseExtension(targetClient);
+      }
+
+      server->GetWorldDatabase()->QueueUpdate(targetCharacter,
+                                              targetState->GetAccountUID());
     }
 
     return true;
@@ -1744,9 +1796,11 @@ bool ChatManager::GMCommand_Help(
        {"@dxp RACEID POINTS",
         "Gain digitalize XP for the specified demon race ID."}},
       {"effect",
-       {"@effect ID [+/-]STACK [DEMON]",
+       {"@effect ID [+/-]STACK [DEMON] [NAME]",
         "Add or sets the stack count for status effect with",
-        "the given ID for the player or demon if DEMON is set", "to 'demon'."}},
+        "the given ID to the character specified by NAME, or,"
+        "the demon if DEMON is set to 'demon'. IF NAME is",
+        "not set, the current account is targeted."}},
       {"enchant",
        {
            "@enchant EQUIP TAROT SOUL",
@@ -1772,9 +1826,11 @@ bool ChatManager::GMCommand_Help(
       {"expertise",
        {"@expertise ID RANK", "Sets the expertise by ID to a specified RANK."}},
       {"expertisemax",
-       {"@expertisemax STACKS",
-        "Adds STACKS * 1000 points to the expertise cap.",
-        "Maximum expertise cap is 154,000."}},
+       {"@expertisemax STACKS [NAME]",
+        "Adds STACKS * 1000 points to the expertise cap of the",
+        "character specified by NAME. If no name is supplied,",
+        "the current character is targeted.",
+        "The maximum expertise cap is 154,000."}},
       {"familiarity",
        {"@familiarity VALUE",
         "Updates the current partner's familiarity to the given",
@@ -1942,11 +1998,13 @@ bool ChatManager::GMCommand_Help(
       {"title",
        {"@title ID", "Grants the player a new character title by ID."}},
       {"tokusei",
-       {"@tokusei CLEAR|ID [STACK] [DEMON]",
+       {"@tokusei CLEAR|ID [STACK] [DEMON] [NAME]",
         "Adds STACK of a tokusei given by the specified ID",
-        "to the player or the player's demon if DEMON is set",
-        "to 'demon'. STACK must be specified if CLEAR is not",
-        "set to 'clear'. DEMON may not be specified if CLEAR", "is set."}},
+        "to the player specified by NAME or the player's",
+        "demon if DEMON is set to 'demon'. If no name is",
+        "specified, the current account is targeted.",
+        "STACK must be specified if CLEAR is not set to",
+        "'clear'. DEMON may not be specified if CLEAR", "is set."}},
       {"valuable",
        {"@valuable ID [REMOVE]",
         "Grants the player the valuable with the given ID. If",
@@ -2920,7 +2978,9 @@ bool ChatManager::GMCommand_Quest(
   if (!GetIntegerArg<int8_t>(phase, argsCopy)) {
     return SendChatMessage(client, ChatType_t::CHAT_SELF,
                            "No phase specified for @quest command");
-  } else if (phase < -2 || (int8_t)questData->GetPhaseCount() < phase) {
+  } else if (phase < -2 || (int8_t)questData->GetPhaseCount() <= phase) {
+    // Quest phases start at index 0, hence the need for a less-than-or-equal
+    // comparison.
     return SendChatMessage(
         client, ChatType_t::CHAT_SELF,
         libcomp::String("Invalid phase '%1' supplied for quest: %2")
@@ -3483,23 +3543,51 @@ bool ChatManager::GMCommand_Tokusei(
                            "@tokusei requires an effect count if not clearing");
   }
 
-  auto state = client->GetClientState();
-
+  std::shared_ptr<channel::ChannelClientConnection> targetClient = client;
   libcomp::String target;
   bool isDemon = GetStringArg(target, argsCopy) && target.ToLower() == "demon";
-  auto eState =
-      isDemon
-          ? std::dynamic_pointer_cast<ActiveEntityState>(state->GetDemonState())
-          : std::dynamic_pointer_cast<ActiveEntityState>(
-                state->GetCharacterState());
 
-  if (isClear) {
-    eState->ClearAdditionalTokusei();
-  } else {
-    eState->SetAdditionalTokusei(tokuseiID, count);
+  libcomp::String name;
+  if (GetStringArg(name, argsCopy)) {
+    std::shared_ptr<objects::Character> targetCharacter;
+    std::shared_ptr<objects::Account> targetAccount;
+    if (!GetTargetCharacterAccount(name, false, targetCharacter, targetAccount,
+                                   targetClient)) {
+      return SendChatMessage(
+          client, ChatType_t::CHAT_SELF,
+          libcomp::String(
+              "Invalid character name supplied for tokusei command: %1")
+              .Arg(name));
+    } else {
+      auto login = server->GetAccountManager()->GetActiveLogin(
+          targetCharacter->GetUUID());
+
+      uint32_t zoneID = login ? login->GetZoneID() : 0;
+
+      if (!zoneID) {
+        return SendChatMessage(
+            client, ChatType_t::CHAT_SELF,
+            libcomp::String(
+                "Character name supplied for tokusei command is not online: %1")
+                .Arg(name));
+      }
+    }
   }
 
-  server->GetTokuseiManager()->Recalculate(state->GetCharacterState(), true);
+  auto targetState = targetClient->GetClientState();
+  auto targetEState = isDemon ? std::dynamic_pointer_cast<ActiveEntityState>(
+                                    targetState->GetDemonState())
+                              : std::dynamic_pointer_cast<ActiveEntityState>(
+                                    targetState->GetCharacterState());
+
+  if (isClear) {
+    targetEState->ClearAdditionalTokusei();
+  } else {
+    targetEState->SetAdditionalTokusei(tokuseiID, count);
+  }
+
+  server->GetTokuseiManager()->Recalculate(targetState->GetCharacterState(),
+                                           true);
 
   return true;
 }
@@ -3696,9 +3784,10 @@ bool ChatManager::GMCommand_Zone(
       rotation = zoneData->GetStartingRotation();
     } else if (!GetDecimalArg<float>(xCoord, argsCopy) ||
                !GetDecimalArg<float>(yCoord, argsCopy)) {
-      return SendChatMessage(client, ChatType_t::CHAT_SELF,
-                             "ERROR: One of the inputs is not a number.  "
-                             "Please re-enter the command with proper inputs.");
+      return SendChatMessage(
+          client, ChatType_t::CHAT_SELF,
+          "ERROR: One of the coordinate inputs is not a number. "
+          "Please re-enter the command with proper inputs.");
     }
 
     if (!zoneManager->EnterZone(client, zoneID, dynamicMapID, xCoord, yCoord,

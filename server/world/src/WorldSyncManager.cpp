@@ -609,7 +609,8 @@ void WorldSyncManager::SyncComplete<objects::EventCounter>(
             }
           } else if (e->GetStandaloneWorldCounter()) {
             if (!sWCounter) {
-              // First copy of standalone world counter found, set it up for update
+              // First copy of standalone world counter found, set it up for
+              // update
               sWCounter = e;
               dbChanges->Update(e);
               updates.insert(e);
@@ -685,7 +686,7 @@ void WorldSyncManager::SyncComplete<objects::EventCounter>(
           dbChanges->Update(gCounter);
 
           updates.insert(gCounter);
-        } 
+        }
       }
 
       worldDB->ProcessChangeSet(dbChanges);

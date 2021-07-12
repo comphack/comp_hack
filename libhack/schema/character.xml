@@ -280,7 +280,8 @@
         <member type="s32" name="Type" key="true" unique="false"/>
         <member type="s32" name="Counter"/>
         <member type="s32" name="PreExpireType"/>
-        <member type="bool" name="GroupCounter" key="true" unique="false"/>
+        <member type="bool" name="GroupCounter" key="true" unique="false" default="false"/>
+        <member type="bool" name="StandaloneWorldCounter" key="true" unique="false" default="false"/>
         <member type="u32" name="Timestamp"/>
     </object>
 </objgen>

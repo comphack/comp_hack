@@ -592,26 +592,40 @@ void WorldSyncManager::SyncComplete<objects::EventCounter>(
       for (int32_t t : eventTypes) {
         int32_t sum = 0;
         std::shared_ptr<objects::EventCounter> gCounter;
+        std::shared_ptr<objects::EventCounter> sWCounter;
         std::unordered_map<std::string, std::shared_ptr<objects::EventCounter>>
             cCounters;
 
         for (auto e :
              objects::EventCounter::LoadEventCounterListByType(worldDB, t)) {
-          if (e->GetCharacter().IsNull()) {
+          if (e->GetGroupCounter()) {
             if (!gCounter) {
               // Group master found
               gCounter = e;
             } else {
-              // Delete duplicate
+              // Delete duplicate group counter
               dbChanges->Delete(e);
               deletes.insert(e);
             }
-          } else {
+          } else if (e->GetStandaloneWorldCounter()) {
+            if (!sWCounter) {
+              // First copy of standalone world counter found, set it up for update
+              sWCounter = e;
+              dbChanges->Update(e);
+              updates.insert(e);
+            } else {
+              // Delete duplicate standalone world counter
+              dbChanges->Delete(e);
+              deletes.insert(e);
+            }
+          } else if (!e->GetCharacter().IsNull()) {
+            // Should be a character counter at this point
             sum += e->GetCounter();
 
-            if (e->GetGroupCounter()) {
-              // Character counters cannot be group counters
+            if (e->GetGroupCounter() || e->GetStandaloneWorldCounter()) {
+              // Character counters cannot be group or standalone world counters
               e->SetGroupCounter(false);
+              e->SetStandaloneWorldCounter(false);
 
               dbChanges->Update(e);
 
@@ -644,10 +658,16 @@ void WorldSyncManager::SyncComplete<objects::EventCounter>(
             } else {
               cCounters[uid] = e;
             }
+          } else {
+            // Broken counter, remove it
+            dbChanges->Delete(e);
+            deletes.insert(e);
           }
         }
 
-        if (!gCounter) {
+        if (!gCounter && !sWCounter) {
+          // A character counter lacking a world group master counter was found,
+          // create group counter
           gCounter =
               libcomp::PersistentObject::New<objects::EventCounter>(true);
           gCounter->SetType(t);
@@ -658,13 +678,14 @@ void WorldSyncManager::SyncComplete<objects::EventCounter>(
           dbChanges->Insert(gCounter);
 
           updates.insert(gCounter);
-        } else if (gCounter->GetCounter() != sum) {
+        } else if (gCounter && gCounter->GetCounter() != sum) {
+          // Update group master counter with the sum of all character counters
           gCounter->SetCounter(sum);
 
           dbChanges->Update(gCounter);
 
           updates.insert(gCounter);
-        }
+        } 
       }
 
       worldDB->ProcessChangeSet(dbChanges);

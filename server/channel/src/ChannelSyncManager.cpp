@@ -190,6 +190,13 @@ bool ChannelSyncManager::Initialize() {
     mEventCounters[c->GetType()] = c;
   }
 
+  // Load all standalone world counters
+  for (auto c :
+       objects::EventCounter::LoadEventCounterListByStandaloneWorldCounter(
+           worldDB, true)) {
+    mEventCounters[c->GetType()] = c;
+  }
+
   // Add the world connection
   const std::set<std::string> worldTypes = {
       "Account",        "CharacterLogin", "CharacterProgress", "EventCounter",
